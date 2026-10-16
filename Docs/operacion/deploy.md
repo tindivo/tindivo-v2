@@ -169,13 +169,44 @@ migración **no** inserta la fila: la fija el operador (el PATCH de ajustes de l
 8. Smoke: un `POST` con solo la clave anónima y un `event_id` inventado debe dar **409**; sin `event_id`, **400**;
    un pedido de prueba real debe seguir notificando.
 
-**Entre el deploy y el corte** la función nueva responde **409 a todo**: los avisos de esos instantes se pierden.
-El dueño lo aceptó; por eso el paso 5 va justo después del minuto de espera.
+**Entre el deploy y el corte** la función nueva responde **409 a todo `POST` con `event_id`** (no hay corte, así que
+no reclama nada): los avisos de esos instantes se pierden. El dueño lo aceptó; por eso el paso 5 va justo después
+del minuto de espera. No les pasa a los `POST` sin `event_id` (siguen en 400) ni a `OpsAlert` (tiene su propio
+secreto y no pasa por el reclamo).
 
-**Rollback.** Redesplegar la función anterior (el cuerpo conserva `event_type`, `aggregate_id` y `payload`).
-Para volver a la nueva: `functions deploy send-push` → esperar 1 minuto → repetir el paso 5 (el corte pasa a
-`now()`), de modo que lo que la vieja envió entre medias quede no reclamable. Para volver también la base:
-`supabase/rollbacks/0264_send_push_reclama_el_evento_en_la_base.rollback.sql` (no borra la fila del corte).
+**Rollback.** El orden importa: el corte se invalida **antes** de redesplegar la función anterior. Mientras la
+vieja está viva envía sin escribir `push_claimed_at`; si el corte antiguo siguiera ahí, al volver a la nueva esos
+eventos serían posteriores a él y reclamables otra vez (segundo envío, CAX-001).
+
+1. Invalida el corte (SQL de escritura contra `tindivo-prod`, ejecutado por ti):
+
+   ```sql
+   delete from public.app_settings where key = 'push_claim_since';
+   ```
+
+   Comprueba (solo lectura): `select count(*) from public.app_settings where key = 'push_claim_since';` debe dar **0**.
+   Desde ese instante la función nueva, si aún estuviera viva, responde 409 a todo `POST` con `event_id`
+   (fallo cerrado).
+2. Redespliega la función anterior: `supabase functions deploy send-push` desde el commit previo a la 0264 (el
+   cuerpo conserva `event_type`, `aggregate_id` y `payload`, así que sigue funcionando).
+   Comprueba (solo lectura): un pedido de prueba real notifica.
+3. Solo si también vuelve la base: `supabase/rollbacks/0264_send_push_reclama_el_evento_en_la_base.rollback.sql`
+   (borra además la fila del corte, por si se hubiera vuelto a fijar). Comprueba (solo lectura):
+   `select count(*) from pg_proc where proname = 'claim_push_event';` debe dar **0**.
+
+**Volver a la función nueva** es idéntico al primer despliegue: `supabase functions deploy send-push` → **esperar
+1 minuto** → fijar el corte a `now()` (paso 5 del orden seguro) → comprobar el paso 6. La fila del corte tiene
+que estar ausente al hacer el deploy; si no lo estuviera (se redesplegó sin invalidarla), bórrala **antes** de
+seguir:
+
+```sql
+delete from public.app_settings where key = 'push_claim_since';
+```
+
+con su comprobación (`select count(*) … where key = 'push_claim_since'` = 0).
+
+**Regla fija:** si alguna vez se redespliega la función nueva con una fila de corte vieja presente, primero se
+borra la fila.
 
 ## 2.1 Supabase Auth — onboarding del cliente **[tú]**
 

@@ -3,10 +3,13 @@
 -- Quita `claim_push_event` y la columna `push_claimed_at`, y deja `dispatch_event` tal cual la 0238
 -- (cuerpo sin `event_id`). SIN ESTO, si queda desplegada la función nueva de send-push, rechaza
 -- todo evento normal con 400. Redesplegar antes la función anterior.
--- La fila `app_settings.push_claim_since` (si el operador la fijó) NO se borra: es un dato y, sin
--- `claim_push_event`, no hace nada. Si se vuelve a aplicar la 0264, el corte sigue vigente; hay que
--- actualizarlo a now() tras redesplegar la función nueva (Docs/operacion/deploy.md §2.2).
+-- También BORRA la fila `app_settings.push_claim_since`: es configuración de esta migración, no un
+-- dato de negocio, y dejarla viva reabre el doble envío (la función vieja envía sin sellar y, al
+-- volver la nueva con un corte antiguo, esos eventos serían reclamables otra vez; CAX-001). Así,
+-- re-aplicar la 0264 tras este rollback arranca en fallo cerrado, como el primer despliegue: el corte
+-- se fija a now() tras redesplegar la función nueva y esperar 1 minuto (Docs/operacion/deploy.md §2.2).
 
+DELETE FROM public.app_settings WHERE key = 'push_claim_since';
 DROP FUNCTION IF EXISTS public.claim_push_event(uuid);
 ALTER TABLE public.domain_events DROP COLUMN IF EXISTS push_claimed_at;
 

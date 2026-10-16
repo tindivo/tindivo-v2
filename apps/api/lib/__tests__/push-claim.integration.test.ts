@@ -237,6 +237,41 @@ rollback;
     expect(marca(out, 'I6')).toBe('0')
   })
 
+  it('rollback -> retorno (CAX-001): borrar la fila del corte en el rollback deja E no reclamable hasta y después del corte nuevo', () => {
+    const NOW_ISO = `to_jsonb(to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'))`
+    const out = psql(`
+begin;
+-- 1. Corte vigente T0 (el del primer despliegue de la función nueva).
+${corte(`to_jsonb(to_char((now() - interval '10 minutes') at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'))`)}
+-- 2. Evento E posterior a T0 que envió la función VIEJA durante el rollback: sin sellar push_claimed_at.
+${EV(7, "now() - interval '1 minute'")}
+select 'E0|' || (select push_claimed_at is null from public.domain_events where id = '00000000-0000-4000-8000-0000000000c7');
+-- 3. Paso 1 del rollback: invalidar el corte.
+delete from public.app_settings where key = 'push_claim_since';
+select 'FILA|' || (select count(*) from public.app_settings where key = 'push_claim_since');
+-- 4. Vuelve la función nueva, ANTES de fijar el corte nuevo: E no se reclama.
+select 'E1|' || ${CLAIM(7)};
+select 'S1|' || (select push_claimed_at is null from public.domain_events where id = '00000000-0000-4000-8000-0000000000c7');
+-- 5. Se fija el corte nuevo a now(): E sigue sin reclamarse.
+${corte(NOW_ISO)}
+select 'E2|' || ${CLAIM(7)};
+select 'S2|' || (select push_claimed_at is null from public.domain_events where id = '00000000-0000-4000-8000-0000000000c7');
+-- 6. Un evento F posterior al corte nuevo se reclama una sola vez.
+${EV(8, "now() + interval '1 second'")}
+select 'F1|' || ${CLAIM(8)};
+select 'F2|' || ${CLAIM(8)};
+rollback;
+`)
+    expect(marca(out, 'E0')).toBe('true') // E nace sin sellar (lo envió la vieja)
+    expect(marca(out, 'FILA')).toBe('0') // el rollback dejó la base sin fila de corte
+    expect(marca(out, 'E1')).toBe('0') // sin fila: fallo cerrado, E no se reclama
+    expect(marca(out, 'S1')).toBe('true')
+    expect(marca(out, 'E2')).toBe('0') // con el corte nuevo, E (anterior) sigue sin reclamarse
+    expect(marca(out, 'S2')).toBe('true')
+    expect(marca(out, 'F1')).toBe('1') // F, posterior al corte nuevo, se reclama
+    expect(marca(out, 'F2')).toBe('0') // y solo una vez
+  })
+
   it('la fila real de app_settings queda como estaba (los tests no la tocan fuera de transacción)', () => {
     const antes = psql(
       `select coalesce((select value::text from public.app_settings where key='push_claim_since'),'SIN-FILA');`,

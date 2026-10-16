@@ -32,6 +32,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { cleanup, localClient, type SeededOrder, seedPrepaidOrder } from './helpers/local-db'
+import {
+  prepareIsolation,
+  type Row,
+  type RowStore,
+  SettingsSnapshot,
+} from './helpers/settings-snapshot'
 
 const ENABLED = process.env.TINDIVO_EDGE_HTTP === '1'
 const OPS_SECRET = process.env.TINDIVO_EDGE_OPS_ALERT_SECRET ?? ''
@@ -124,12 +130,53 @@ async function deliveryLogCount(subscriptionId: string): Promise<number> {
   return count ?? 0
 }
 
+// ── Respaldo de las filas de la base compartida (CAX-003) ──────────────────────
+// Tres ids, tres estados (ver helpers/settings-snapshot.ts): no se toca nada hasta haber leído y respaldado.
+const THROTTLE_KIND = 'otp_phone_limit_misconfigured'
+const ID_DISPATCH = 'app_settings:push_dispatch'
+const ID_CUT = 'app_settings:push_claim_since'
+const ID_THROTTLE = `ops_alert_throttle:${THROTTLE_KIND}`
+
+function target(id: string): {
+  table: 'app_settings' | 'ops_alert_throttle'
+  col: string
+  val: string
+} {
+  const [table, ...rest] = id.split(':')
+  const val = rest.join(':')
+  if (table === 'app_settings') return { table, col: 'key', val }
+  if (table === 'ops_alert_throttle') return { table, col: 'kind', val }
+  throw new Error(`id de respaldo desconocido: ${id}`)
+}
+
+const settingsStore: RowStore = {
+  async read(id) {
+    const t = target(id)
+    const { data, error } = await localClient
+      .from(t.table)
+      .select('*')
+      .eq(t.col, t.val)
+      .maybeSingle()
+    if (error) return { data: null, error: error.message }
+    return { data: (data as Row | null) ?? null, error: null }
+  },
+  async remove(id) {
+    const t = target(id)
+    const { error } = await localClient.from(t.table).delete().eq(t.col, t.val)
+    return { error: error?.message ?? null }
+  },
+  async write(id, row) {
+    const t = target(id)
+    const { error } = await localClient.from(t.table).insert(row as never)
+    return { error: error?.message ?? null }
+  },
+}
+
 describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servida (CAX-002)', () => {
   let seed: SeededOrder
   let subscriptionId = ''
   const eventIds: string[] = []
-  const savedRows = new Map<string, Record<string, unknown> | null>()
-  let throttleRow: Record<string, unknown> | null = null
+  const snapshot = new SettingsSnapshot(settingsStore, [ID_DISPATCH, ID_CUT, ID_THROTTLE])
 
   async function track(id: string): Promise<string> {
     eventIds.push(id)
@@ -137,29 +184,36 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
   }
 
   beforeAll(async () => {
-    if (!OPS_SECRET) {
-      throw new Error(
-        'Falta TINDIVO_EDGE_OPS_ALERT_SECRET (el mismo OPS_ALERT_SECRET del --env-file).',
-      )
-    }
-    // Guardar y quitar/restaurar las filas que cambian el comportamiento (ver «LA CARRERA DEL TRIGGER»).
-    for (const key of ['push_dispatch', 'push_claim_since']) {
-      const { data, error } = await localClient
-        .from('app_settings')
-        .select('*')
-        .eq('key', key)
-        .maybeSingle()
-      if (error) throw new Error(error.message)
-      savedRows.set(key, (data as Record<string, unknown> | null) ?? null)
-    }
-    const del = await localClient.from('app_settings').delete().eq('key', 'push_dispatch')
-    if (del.error) throw new Error(del.error.message)
-    const { data: thr } = await localClient
-      .from('ops_alert_throttle')
-      .select('*')
-      .eq('kind', 'otp_phone_limit_misconfigured')
-      .maybeSingle()
-    throttleRow = (thr as Record<string, unknown> | null) ?? null
+    // Orden: 1) precondiciones, sin leer ni tocar nada; 2) respaldo de las filas; 3) quitar push_dispatch.
+    // Ver «LA CARRERA DEL TRIGGER» y helpers/settings-snapshot.ts.
+    await prepareIsolation({
+      preconditions: [
+        () => {
+          if (!OPS_SECRET) {
+            throw new Error(
+              'Falta TINDIVO_EDGE_OPS_ALERT_SECRET (el mismo OPS_ALERT_SECRET del --env-file).',
+            )
+          }
+        },
+        async () => {
+          // La función debe estar servida: un POST vacío no tiene efectos y responde 400.
+          const res = await fetch(FN_URL, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: `Bearer ${ANON_KEY}` },
+            body: '{}',
+          }).catch((e: unknown) => {
+            throw new Error(
+              `La función send-push no es alcanzable en ${FN_URL}: ${e instanceof Error ? e.message : String(e)}`,
+            )
+          })
+          if (res.status !== 400) {
+            throw new Error(`send-push respondió ${res.status} a un cuerpo vacío; se esperaba 400.`)
+          }
+        },
+      ],
+      snapshot,
+      removeIds: [ID_DISPATCH],
+    })
 
     // Un negocio con un pedido en pending_acceptance y UNA suscripción (endpoint que no existe: el envío
     // falla, pero cada intento queda en push_delivery_log, que es lo observable).
@@ -180,21 +234,20 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
   })
 
   afterAll(async () => {
+    const errors: string[] = []
     try {
       if (eventIds.length) await localClient.from('domain_events').delete().in('id', eventIds)
       if (seed) await cleanup(seed)
-    } finally {
-      for (const key of ['push_dispatch', 'push_claim_since']) {
-        const row = savedRows.get(key) ?? null
-        if (row) await localClient.from('app_settings').upsert(row as never, { onConflict: 'key' })
-        else await localClient.from('app_settings').delete().eq('key', key)
-      }
-      await localClient
-        .from('ops_alert_throttle')
-        .delete()
-        .eq('kind', 'otp_phone_limit_misconfigured')
-      if (throttleRow) await localClient.from('ops_alert_throttle').insert(throttleRow as never)
+    } catch (e) {
+      errors.push(`limpieza de fixtures: ${e instanceof Error ? e.message : String(e)}`)
     }
+    // Cada fila se restaura por su cuenta; si alguna falla, el error queda visible y lista cuáles.
+    try {
+      await snapshot.restoreAll()
+    } catch (e) {
+      errors.push(e instanceof Error ? e.message : String(e))
+    }
+    if (errors.length > 0) throw new Error(errors.join('\n'))
   })
 
   // ── Validación del cuerpo ──────────────────────────────────────────────────
@@ -253,6 +306,58 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
     )
     expect((await post({ event_id: id })).status).toBe(409)
     expect(await claimedAt(id)).toBeNull()
+  })
+
+  it('rollback -> retorno (CAX-001): E enviado por la vieja no se reclama ni sin fila ni con el corte nuevo; F sí', async () => {
+    const antes = await deliveryLogCount(subscriptionId)
+    // Corte T0 fijado y evento E posterior a T0, sin sellar: lo que la función VIEJA envió durante el rollback.
+    await setCut(iso(-10 * MIN))
+    const e = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    expect(await claimedAt(e)).toBeNull()
+
+    // Paso 1 del rollback (deploy.md §2.2): invalidar el corte. Vuelve la función nueva ANTES de fijar el corte nuevo.
+    const del = await localClient.from('app_settings').delete().eq('key', 'push_claim_since')
+    expect(del.error).toBeNull()
+    const sinFila = await post({ event_id: e })
+    expect(sinFila.status).toBe(409)
+    expect(await claimedAt(e)).toBeNull()
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes)
+
+    // Se fija el corte nuevo (posterior a E, tomando el instante de E de la base: sin depender de relojes).
+    const { data: ev, error } = await localClient
+      .from('domain_events')
+      .select('occurred_at')
+      .eq('id', e)
+      .single()
+    expect(error).toBeNull()
+    const corteNuevo = new Date(
+      new Date((ev as { occurred_at: string }).occurred_at).getTime() + 1000,
+    )
+    await setCut(corteNuevo.toISOString())
+    const conCorte = await post({ event_id: e })
+    expect(conCorte.status).toBe(409)
+    expect(await claimedAt(e)).toBeNull()
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes)
+
+    // Un evento F posterior al corte nuevo sí notifica, una sola vez.
+    const f = await track(
+      await insertEvent({
+        eventType: 'OrderCreated',
+        aggregateId: seed.orderId,
+        occurredAt: new Date(corteNuevo.getTime() + 1000).toISOString(),
+      }),
+    )
+    const rf = await post({ event_id: f })
+    expect(rf.status).toBe(200)
+    expect(rf.json.ok).toBe(true)
+    expect(await claimedAt(f)).not.toBeNull()
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1)
+    expect((await post({ event_id: f })).status).toBe(409)
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1)
+    // E sigue sin sellar al final.
+    expect(await claimedAt(e)).toBeNull()
   })
 
   // ── Éxito, un solo uso y concurrencia ──────────────────────────────────────
