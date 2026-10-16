@@ -63,6 +63,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/strikes', label: 'Strikes', icon: Ico.shield },
       { href: '/auditoria', label: 'Auditoría', icon: Ico.audit },
       { href: '/configuracion', label: 'Configuración', icon: Ico.config },
+      { href: '/apps', label: 'Apps', icon: Ico.phone },
     ],
   },
 ]

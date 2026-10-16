@@ -29,7 +29,7 @@ Runbook de CLI-14 y OPS-6. Lo usan Jesús y los agentes. Alcance, fases y decisi
 
 ## Si algo sale mal
 
-- Apagar la función con su *kill switch* en `GET /api/v1/config`.
+- Apagar la función con su *kill switch*: Admin → Apps, interruptor de la función (`app_settings.client_features`, que sale en `GET /api/v1/config`; las apps muestran su `message`). Una función nueva y arriesgada se declara con una migración que añade su clave a `client_features.features` (el admin no crea claves); una clave que la app no encuentra = usa su valor por defecto compilado.
 - Corregir y publicar una versión nueva por este mismo procedimiento.
 - Si la versión rota impide usar la app, subir la versión mínima, para que las rotas reciban `426 client_upgrade_required`, cuando la corregida esté disponible al 100 % en la tienda. Subir la mínima se registra en `Docs/trabajo/decisiones-abiertas.md` (CLI-15).
 
