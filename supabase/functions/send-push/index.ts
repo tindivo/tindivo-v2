@@ -4,6 +4,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { classifyRequest } from './request-kind.ts'
 import {
   isOpsCaller,
   OPS_ALERT_SECRET_HEADER,
@@ -1216,13 +1217,29 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { event_type, aggregate_id, payload } = await req.json()
+    const body = await req.json()
+    const req_kind = classifyRequest(body)
+    if (req_kind.kind === 'invalid') {
+      return new Response(JSON.stringify({ ok: false, error: 'event_id invalido' }), {
+        status: 400,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
 
-    // `OpsAlert` solo lo manda la API (apps/api/lib/ops/alert-ops.ts). Las demás
-    // ramas las dispara el trigger de la base con la clave anónima (hallazgo
-    // aparte, no se toca aquí); ESTA consulta destinatarios con service role y
-    // por eso exige además un emisor interno y su propio límite de frecuencia.
-    if (event_type === 'OpsAlert') {
+    let event_type: string
+    let aggregate_id: string
+    let payload: Record<string, unknown>
+
+    // Selección EXCLUYENTE del origen, antes de cualquier otra consulta con service role:
+    //  - `OpsAlert` (cadena exacta) solo lo manda la API: exige su secreto
+    //    (`x-ops-alert-secret` / `OPS_ALERT_SECRET`) y su límite de frecuencia.
+    //  - Todo lo demás es un evento del outbox: el cuerpo solo aporta el `event_id`; la base
+    //    lo reclama UNA vez (`claim_push_event`, evento reciente) y el resto del flujo usa
+    //    event_type / aggregate_id / payload DE LA BASE, ignorando los del cuerpo.
+    if (req_kind.kind === 'ops') {
+      event_type = 'OpsAlert'
+      aggregate_id = body.aggregate_id
+      payload = body.payload
       if (!isOpsCaller(req.headers.get(OPS_ALERT_SECRET_HEADER), Deno.env.get('OPS_ALERT_SECRET'))) {
         return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
           status: 403,
@@ -1252,6 +1269,34 @@ Deno.serve(async (req: Request) => {
           headers: { 'content-type': 'application/json' },
         })
       }
+    } else {
+      const { data: claimed, error: claimErr } = await db.rpc('claim_push_event', {
+        p_event_id: req_kind.eventId,
+      })
+      if (claimErr) {
+        console.error('[send-push] claim_push_event falló:', claimErr.message)
+        return new Response(JSON.stringify({ ok: false, error: 'claim' }), {
+          status: 503,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      const row = Array.isArray(claimed) ? claimed[0] : null
+      if (!row) {
+        // Inexistente, viejo (>15 min) o ya reclamado: ningún push.
+        return new Response(JSON.stringify({ ok: false, error: 'evento no reclamable' }), {
+          status: 409,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      // `OpsAlert` solo entra por su rama (con secreto): un evento de la base con ese tipo no hace nada.
+      if (row.event_type === 'OpsAlert') {
+        return new Response(JSON.stringify({ ok: true, recipients: 0, sent: 0, failed: 0 }), {
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      event_type = row.event_type
+      aggregate_id = row.aggregate_id
+      payload = row.payload
     }
     const notes = await buildNotes(event_type, aggregate_id, payload ?? {})
     let sent = 0

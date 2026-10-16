@@ -1442,6 +1442,11 @@ const NO_INSERCIONES: Record<string, { n: number; motivo: string }> = {
     n: 1,
     motivo: 'el UPDATE que redacta los eventos del cliente (0259); se lee más abajo',
   },
+  claim_push_event: {
+    n: 1,
+    motivo:
+      'el UPDATE que sella push_claimed_at y devuelve el evento a send-push (0264); no crea eventos',
+  },
   personal_data_inventory: {
     n: 1,
     motivo:
