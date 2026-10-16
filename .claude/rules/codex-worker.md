@@ -624,6 +624,63 @@ Se PROHÍBEN `--dangerously-bypass-approvals-and-sandbox`, `--approve-for-me`, `
 
 Si el sandbox no puede aplicarse en la plataforma, la invocación falla y no hay firma. No se ejecuta sin aislamiento como alternativa. El preflight se repite cuando cambia la CLI, perfil, sistema operativo, política administrada o herramientas disponibles.
 
+### 13.1 bis. Modo provisional Windows — riesgo aceptado (Codex CLI 0.162.0)
+
+**Autorización:** Jesús, 2026-10-15, explícita y con el riesgo residual descrito abajo aceptado por escrito.
+**Vigencia:** del 2026-10-15 al **2026-11-14** (30 días). Caduca antes si cambia la versión de la CLI, el sistema
+operativo o el perfil. Al caducar, Codex vuelve a quedar bloqueado como auditor hasta que Jesús lo renueve o se
+cumpla el punto 7 de §13.1.
+
+**Por qué existe.** El punto 7 de §13.1 no puede cumplirse en esta máquina sin otra cuenta de Windows o una VM
+(medido el 2026-10-15; preflight en `Docs/operacion/agentes-en-esta-maquina.md`):
+
+- Backend **no elevado**: lee, pero rechaza cualquier lista de lectura restringida o de rutas prohibidas
+  («Restricted read-only access requires the elevated Windows sandbox backend»).
+- Backend **elevado**: exige leer `:root` y para ello concede lectura a su grupo `CodexSandboxUsers` en todo el
+  perfil del usuario; PowerShell no arranca para `CodexSandboxOffline` (error `8009001d`) y Codex no puede leer
+  ni el código. No se usa.
+- `codex exec --ignore-user-config` **no aplica** el archivo de `--profile`: los ajustes del perfil se pasan
+  además como `-c`/`--disable` en cada llamada (§13.2).
+
+**Configuración obligatoria del modo** (cada una verificada en el preflight): backend `windows.sandbox="unelevated"`,
+`:read-only`, red de comandos desactivada, `web_search` desactivado, `agents.enabled=false` (quita `spawn_agent` y
+el resto de herramientas de colaboración, que `--disable multi_agent` no quita), `allow_login_shell=false`
+(PowerShell sin el perfil del usuario), `--disable goals`, y el resto de
+`--disable` de §13.2. Sin MCP: `--ignore-user-config` evita cargar los servidores de `config.toml`.
+
+**Riesgo residual aceptado — NO es aislamiento.** El estado es `PROVISIONAL_RIESGO_ACEPTADO`; ningún documento,
+registro o resumen puede llamarlo «aislado» ni «sandbox seguro».
+
+1. Codex puede **leer todo lo que lee el usuario**: `~/.codex/auth.json` (tokens de ChatGPT), los `.env.local`
+   del repo, `AppData` (sesiones de navegador, token de `gh`), `~/.supabase` (token de gestión de producción),
+   `~/.npmrc`, historiales de shell. Lo que lea viaja a OpenAI como contexto del modelo.
+2. Solo lo frena la instrucción del encargo; un contenido hostil dentro del código auditado podría intentar
+   desviarla (§1.6).
+3. **Mitigado:** sin `allow_login_shell=false`, PowerShell carga el perfil personal del usuario en cada comando
+   (medido; Codex lo marcó como acceso fuera de la copia en la Ronda 1 del #61, CAX-003). Con esa opción, Codex
+   lanza `powershell.exe -NoProfile` (medido el 2026-10-15). Es obligatoria en `COMMON`.
+4. Escritura y red: **verificadas** como denegadas; no forman parte del riesgo aceptado.
+
+**Mitigaciones obligatorias** (no convierten el modo en aislamiento):
+
+1. Se audita **solo una copia** hecha con `git archive <candidato>` en una carpeta fuera del repo (por ejemplo
+   `../tindivo-auditorias/<tema>/audit-root`): sin `.env.local`, `node_modules` ni `.git`. `--cd` apunta a esa
+   copia.
+2. Después de cada ronda, antes de leer el veredicto: `node scripts/codex-audit-scope-check.mjs
+   <NN-codex.events.jsonl> <AUDIT_ROOT>`. **Solo un 0 explícito valida la ronda.** Con 1 (algo marcado o registro
+   incompleto: vacío, sin `thread.started` o `turn.completed`, con `turn.failed`/`error`, líneas que no son JSON, o
+   herramientas no permitidas en cualquier evento de item) o con 2 (uso incorrecto o error del propio control),
+   **la ronda no vale**, no cuenta como firma y se abre incidente; si el comando marcado toca una credencial, se
+   rota esa credencial. Un hallazgo puede ser un falso positivo (por ejemplo, rutas inventadas dentro de un script
+   de prueba del auditor): se documenta en el expediente con el comando completo, pero la ronda sigue sin valer.
+   Es detección, no prevención: la cabecera del script enumera lo que no ve (rutas armadas por partes, leídas de
+   variables o archivos, comandos codificados, accesos de programas lanzados).
+3. El expediente conserva `NN-codex.events.jsonl`, `NN-codex.stderr.log`, `NN-codex.exit` y `NN-alcance.txt` (la
+   salida del control) **fuera del candidato**, y el sobre de atestación registra el SHA-256 del JSONL y de
+   `NN-alcance.txt` junto al candidato y al thread.
+4. Cada expediente de este modo lleva la línea literal `MODO: PROVISIONAL_RIESGO_ACEPTADO (§13.1 bis)` y el
+   resultado del paso 2.
+
 ### 13.2. Variables y opciones comunes
 
 Ejecutar en Bash. Los directorios, el perfil y el modelo ya deben estar preparados y validados. El snapshot se mantiene inmóvil durante cada invocación. `AUDIT_ROOT` conserva la misma ruta para las reanudaciones; Claude actualiza sus copias entre rondas y comprueba hashes antes y después.
@@ -647,11 +704,20 @@ COMMON=(
   -c 'permissions.auditor.extends=":read-only"'
   -c 'permissions.auditor.network.enabled=false'
   -c 'web_search="disabled"'
+  -c 'windows.sandbox="unelevated"'
+  -c 'agents.enabled=false'
+  -c 'allow_login_shell=false'
   --disable apps --disable plugins --disable hooks --disable multi_agent
   --disable browser_use --disable browser_use_external --disable computer_use
   --disable image_generation --disable memories --disable shell_snapshot
+  --disable goals
 )
 ```
+
+Las líneas `-c` y `--disable` **no son redundantes con el perfil**: `exec --ignore-user-config` no aplica el
+archivo de `--profile` (medido con 0.162.0), así que son las que de verdad configuran la sesión. `--profile` se
+mantiene por si una versión futura lo aplica. Cada `--disable` debe existir en `codex features list` de la CLI
+instalada; `goals` existe desde la 0.162.0.
 
 El orquestador toma un lock exclusivo del tema antes de ejecutar y verifica el contador central de rondas. Las llamadas siguientes son el puente CLI; no sustituyen el clasificador, el lock ni el gate de §7. Nunca se lanzan dos revisiones concurrentes del mismo tema/thread.
 
