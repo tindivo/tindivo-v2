@@ -7,3 +7,12 @@ major_version = 17
 
 [db.migrations]
 schema_paths = ["./migrations"]
+
+# send-push lo llama el trigger `dispatch_event` (pg_net) con la clave anónima como Bearer y el
+# `event_id` del evento en el cuerpo (0264). `verify_jwt = true` es el valor por defecto, declarado
+# a propósito: NO es una defensa (la clave anónima es un JWT válido y viaja en los bundles web); la
+# defensa es que la función reclama ese evento en la base (`claim_push_event`) antes de enviar nada.
+# Local: `supabase functions serve` honra este valor. Producción: `functions deploy` lo aplica;
+# no cambia lo que ya está desplegado (el defecto ya era true).
+[functions.send-push]
+verify_jwt = true
