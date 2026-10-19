@@ -284,7 +284,9 @@ describe('intercambio cruzado simultáneo por la ruta real (CAX-001)', () => {
       }
     }
     expect([...vistos].every((s) => s === 200 || s === 409)).toBe(true)
-  })
+    // Cada abrazo mortal tarda `deadlock_timeout` (1 s) en detectarse, más los reintentos con espera:
+    // 20 rondas no caben en los 15 s por defecto cuando la suite entera carga la base.
+  }, 90_000)
 })
 
 describe('registro y borrado de cuenta simultáneos (dos sesiones)', () => {
