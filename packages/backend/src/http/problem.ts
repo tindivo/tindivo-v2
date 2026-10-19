@@ -72,7 +72,10 @@ export function handleError(err: unknown, requestId?: string, req?: Request): Re
   if (err instanceof DomainError) {
     return problem(err.code, { detail: err.message, requestId, headers })
   }
-  logger.error('unhandled_error', { ...(requestId === undefined ? {} : { requestId }), err })
+  logger.error('unhandled_error', {
+    ...(requestId === undefined ? {} : { requestId }),
+    failure: err,
+  })
   return problem('internal_error', { detail: 'Ocurrió un error interno', requestId, headers })
 }
 
