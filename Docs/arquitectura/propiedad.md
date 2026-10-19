@@ -173,6 +173,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `point_in_ring` | función | sin asignar |  |
 | `promo_settle_redemption` | función | sin asignar |  |
 | `prune_creation_idempotency` | función | sin asignar |  |
+| `push_token_hash` | función | notifications | 0268; hash SHA-256 del token para su unicidad; solo `service_role` |
 | `queue_lead_minutes` | función | sin asignar |  |
 | `recalc_business_balance` | función | sin asignar |  |
 | `redact_personal_json` | función | sin asignar |  |

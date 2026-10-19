@@ -2747,6 +2747,7 @@ export type Database = {
           platform: string
           timezone: string | null
           token: string
+          token_sha256: string
           updated_at: string
           user_id: string
         }
@@ -2770,6 +2771,7 @@ export type Database = {
           platform: string
           timezone?: string | null
           token: string
+          token_sha256?: string
           updated_at?: string
           user_id: string
         }
@@ -2793,6 +2795,7 @@ export type Database = {
           platform?: string
           timezone?: string | null
           token?: string
+          token_sha256?: string
           updated_at?: string
           user_id?: string
         }
@@ -3760,6 +3763,7 @@ export type Database = {
         Returns: boolean
       }
       prune_creation_idempotency: { Args: never; Returns: number }
+      push_token_hash: { Args: { p_token: string }; Returns: string }
       queue_lead_minutes: { Args: never; Returns: number }
       refresh_customer_profile_risk: {
         Args: { p_phone: string; p_user_id: string }
@@ -3813,6 +3817,7 @@ export type Database = {
           platform: string
           timezone: string | null
           token: string
+          token_sha256: string
           updated_at: string
           user_id: string
         }

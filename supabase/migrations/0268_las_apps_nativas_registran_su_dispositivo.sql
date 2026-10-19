@@ -13,6 +13,15 @@
 -- al borrar la cuenta, `delete_customer_account` (0259) borra la identidad y los tokens
 -- caen con ella (DB-13).
 --
+-- UNICIDAD DEL TOKEN. Un token puede medir hasta 4096 caracteres y una entrada de índice B-tree
+-- con bloques de 8 KiB no admite textos así de poco compresibles (el INSERT fallaría con un
+-- error de base, un 500). Por eso la unicidad vive en `token_sha256`, columna generada con el
+-- SHA-256 de los bytes UTF-8 del token (32 bytes siempre), y `token` no lleva índice. Una
+-- colisión de SHA-256 se trata como imposible; si ocurriera, el `unique` rechaza el INSERT y
+-- nada se pisa. El hash se calcula con `push_token_hash`, un envoltorio IMMUTABLE: Postgres
+-- exige una expresión inmutable en una columna generada y `convert_to` está marcada STABLE.
+-- Es inmutable de verdad aquí: la base es UTF8 y no cambia de codificación.
+--
 -- `register_push_device` (DEFINER, solo `service_role`, DB-3 y DB-4), en UNA transacción:
 --   1. Candado de aviso sobre el hash del token: dos registros del MISMO token desde dos
 --      instalaciones se serializan, así que el segundo no choca contra el `unique` (sería un
@@ -33,6 +42,15 @@
 -- Rollback: supabase/rollbacks/0268_las_apps_nativas_registran_su_dispositivo.rollback.sql
 -- ============================================================================
 
+create or replace function public.push_token_hash(p_token text) returns bytea
+language sql
+immutable
+set search_path = ''
+as $fn$ select sha256(convert_to(p_token, 'UTF8')) $fn$;
+
+revoke execute on function public.push_token_hash(text) from public, anon, authenticated;
+grant execute on function public.push_token_hash(text) to service_role;
+
 create table if not exists public.push_devices (
   id                    uuid primary key default gen_random_uuid(),
   user_id               uuid not null references auth.users (id) on delete cascade,
@@ -40,8 +58,10 @@ create table if not exists public.push_devices (
                           check (char_length(install_id) between 8 and 64),
   platform              text not null check (platform in ('ios', 'android')),
   app                   text not null check (app in ('customer', 'negocios', 'motorizados')),
-  token                 text not null unique
+  token                 text not null
                           check (char_length(token) between 32 and 4096),
+  token_sha256          bytea generated always as (public.push_token_hash(token)) stored not null
+                          unique,
   environment           text not null default 'production'
                           check (environment in ('production', 'sandbox')),
   app_version           text not null check (char_length(app_version) between 1 and 64),
@@ -117,7 +137,7 @@ begin
   end if;
 
   delete from public.push_devices d
-  where d.token = p_token and d.install_id <> p_install_id;
+  where d.token_sha256 = public.push_token_hash(p_token) and d.install_id <> p_install_id;
 
   insert into public.push_devices as d (
     user_id, install_id, platform, app, token, environment, app_version,
@@ -222,6 +242,11 @@ begin
       raise exception '0268: permisos de % incorrectos (solo service_role)', v_name;
     end if;
   end loop;
+  if has_function_privilege('anon', 'public.push_token_hash(text)', 'execute')
+     or has_function_privilege('authenticated', 'public.push_token_hash(text)', 'execute')
+     or not has_function_privilege('service_role', 'public.push_token_hash(text)', 'execute') then
+    raise exception '0268: permisos de push_token_hash incorrectos (solo service_role)';
+  end if;
   if not (select c.relrowsecurity from pg_class c
            where c.oid = 'public.push_devices'::regclass) then
     raise exception '0268: push_devices sin RLS';

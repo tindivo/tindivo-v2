@@ -16,8 +16,9 @@
  * Usuarios propios (`push-devices-<run>@integration.local`); `afterAll` los borra y sus filas caen en cascada.
  */
 import { execFileSync } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it, vi } from 'vitest'
 import { DELETE as deleteAccount } from '../../app/api/v1/customer/account/route'
 import { DELETE, PUT } from '../../app/api/v1/push/devices/[installId]/route'
 import { localClient as db } from './helpers/local-db'
@@ -459,6 +460,91 @@ describe('concurrencia (TST-2)', () => {
   })
 })
 
+/** 4096 caracteres de base64url de bytes aleatorios: el máximo que admite el contrato y casi incompresible. */
+const tokenMaximo = (): string => randomBytes(3072).toString('base64url')
+
+/** Cuántas filas tienen ese token, contadas por su hash (el token de 4096 no cabe en una URL de PostgREST). */
+function filasPorHash(token: string): number {
+  return Number(
+    psql(
+      `select count(*) from public.push_devices where token_sha256 = sha256(convert_to('${token}', 'UTF8'));`,
+    ),
+  )
+}
+
+describe('token de 4096 caracteres (CAX-002)', () => {
+  it('registro, repetición, rotación y transferencia a otra instalación, sin 500 y sin filtrar el token', async () => {
+    const u = await crearUsuario()
+    const stdout = vi.spyOn(process.stdout, 'write')
+    const stderr = vi.spyOn(process.stderr, 'write')
+    try {
+      const instalacionA = nuevoInstallId()
+      const instalacionB = nuevoInstallId()
+      const t1 = tokenMaximo()
+      const t2 = tokenMaximo()
+      expect(t1).toHaveLength(4096)
+
+      const alta = await registrar(u, instalacionA, t1)
+      expect(alta.status).toBe(200)
+      expect(alta.raw).not.toContain(t1)
+      expect(filasPorHash(t1)).toBe(1)
+
+      const repetida = await registrar(u, instalacionA, t1)
+      expect(repetida.status).toBe(200)
+      expect(repetida.raw).not.toContain(t1)
+      expect(filasPorHash(t1)).toBe(1)
+
+      const rotada = await registrar(u, instalacionA, t2)
+      expect(rotada.status).toBe(200)
+      expect(filasPorHash(t1)).toBe(0)
+      expect(filasPorHash(t2)).toBe(1)
+      expect(await fila(instalacionA)).toMatchObject({ token: t2 })
+
+      const transferida = await registrar(u, instalacionB, t2)
+      expect(transferida.status).toBe(200)
+      expect(transferida.raw).not.toContain(t2)
+      expect(await fila(instalacionA)).toBeNull()
+      expect(await fila(instalacionB)).toMatchObject({ token: t2 })
+      expect(filasPorHash(t2)).toBe(1)
+
+      const escrito = [...stdout.mock.calls, ...stderr.mock.calls]
+        .map(([chunk]) => String(chunk))
+        .join('')
+      expect(escrito).not.toContain(t1)
+      expect(escrito).not.toContain(t2)
+      expect(escrito).toContain('/api/v1/push/devices/{installId}')
+    } finally {
+      stdout.mockRestore()
+      stderr.mockRestore()
+    }
+  })
+
+  it('la unicidad es por hash: un mismo token no entra dos veces y token no tiene índice propio', async () => {
+    const u = await crearUsuario()
+    const token = tokenMaximo()
+    expect((await registrar(u, nuevoInstallId(), token)).status).toBe(200)
+    const { error } = await db.from('push_devices').insert({
+      user_id: u.id,
+      install_id: nuevoInstallId(),
+      platform: 'ios',
+      app: 'customer',
+      token,
+      app_version: '1.0.0',
+      notifications_enabled: true,
+    })
+    expect(error?.code).toBe('23505')
+    expect(error?.message).toContain('token_sha256')
+    expect(filasPorHash(token)).toBe(1)
+
+    const out = psql(`
+select 'IDX|' || indexdef from pg_indexes where schemaname = 'public' and tablename = 'push_devices' order by indexname;
+`)
+    const indices = out.split('\n').filter((l) => l.startsWith('IDX|'))
+    expect(indices.some((l) => l.includes('(token_sha256)') && l.includes('UNIQUE'))).toBe(true)
+    expect(indices.some((l) => l.includes('(token)'))).toBe(false)
+  })
+})
+
 describe('catálogo: permisos y RLS', () => {
   it('RLS activada, tabla marcada server-only y sin políticas', () => {
     const out = psql(`
@@ -480,6 +566,9 @@ select 'FN|' || p.proname || '|' || p.prosecdef::text || '|' || coalesce(p.proco
 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and p.proname in ('register_push_device', 'unregister_push_device')
 order by p.proname;
+select 'HASH|' || has_function_privilege('anon', 'public.push_token_hash(text)', 'execute')::text
+  || '|' || has_function_privilege('authenticated', 'public.push_token_hash(text)', 'execute')::text
+  || '|' || has_function_privilege('service_role', 'public.push_token_hash(text)', 'execute')::text;
 select 'TABLA|anon=' || has_table_privilege('anon', 'public.push_devices', 'select')::text
   || '|auth=' || has_table_privilege('authenticated', 'public.push_devices', 'select')::text
   || '|service=' || has_table_privilege('service_role', 'public.push_devices', 'select')::text;
@@ -490,6 +579,7 @@ select 'TABLA|anon=' || has_table_privilege('anon', 'public.push_devices', 'sele
       'FN|unregister_push_device|true|{"search_path=\\"\\""}|anon=false|auth=false|service=true',
     ])
     expect(out).toContain('TABLA|anon=false|auth=false|service=true')
+    expect(out).toContain('HASH|false|false|true')
   })
 
   it('un usuario autenticado no puede llamar las funciones ni leer la tabla por PostgREST', async () => {

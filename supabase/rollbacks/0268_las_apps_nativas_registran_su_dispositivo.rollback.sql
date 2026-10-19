@@ -9,13 +9,14 @@ drop function if exists public.register_push_device(
   uuid, text, text, text, text, text, text, text, text, text, text, boolean
 );
 drop table if exists public.push_devices;
+drop function if exists public.push_token_hash(text);
 
 do $check$
 begin
   if to_regclass('public.push_devices') is not null
      or exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
                  where s.nspname = 'public'
-                   and p.proname in ('register_push_device', 'unregister_push_device')) then
+                   and p.proname in ('register_push_device', 'unregister_push_device', 'push_token_hash')) then
     raise exception 'rollback 0268 abortado: quedan objetos de la 0268';
   end if;
 end
