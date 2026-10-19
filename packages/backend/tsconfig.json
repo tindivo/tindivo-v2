@@ -1,0 +1,8 @@
+{
+  "extends": "@tindivo/tsconfig/node-library.json",
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

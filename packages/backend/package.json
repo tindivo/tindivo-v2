@@ -1,0 +1,29 @@
+{
+  "name": "@tindivo/backend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./http": "./src/http/index.ts",
+    "./shared": "./src/shared/index.ts",
+    "./composition": "./src/composition/index.ts",
+    "./identity": "./src/modules/identity/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "catalog:",
+    "@tindivo/contracts": "workspace:*",
+    "@tindivo/core": "workspace:*",
+    "@tindivo/supabase": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@tindivo/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
