@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createLogger, type LogLevel } from '../../../shared'
-import type { ProofObject, ProofStorage, PurgeOutcome, RetentionRepository } from './ports'
+import type {
+  DueAccount,
+  DueCursor,
+  ProofObject,
+  ProofStorage,
+  PurgeOutcome,
+  RetentionRepository,
+} from './ports'
 import { purgeDeletedAccountProofs } from './purge-deleted-account-proofs'
 
 const USER_A = '11111111-1111-4111-8111-111111111111'
@@ -17,17 +24,33 @@ interface Fakes {
 function build(options: {
   objects: Record<string, ProofObject[]>
   failRemoveFor?: (bucket: string, paths: string[]) => boolean
-  due?: () => string[]
-}): Fakes {
+  failFinishFor?: (userId: string) => boolean
+}): Fakes & { pages: (DueCursor | undefined)[] } {
+  const pages: (DueCursor | undefined)[] = []
   const removed: { bucket: string; paths: string[] }[] = []
   const finished: string[] = []
   const lines: string[] = []
   const done = new Set<string>()
   const retention: RetentionRepository = {
-    listDueAccounts: async () =>
-      options.due ? options.due() : Object.keys(options.objects).filter((id) => !done.has(id)),
+    // Orden estable `(deletedAt, userId)` con cursor, como la función de la base.
+    listDueAccounts: async (limit, after) => {
+      pages.push(after)
+      const all: DueAccount[] = Object.keys(options.objects)
+        .map((userId, i) => ({
+          userId,
+          deletedAt: new Date(Date.UTC(2026, 0, 1) + i * 60_000).toISOString(),
+        }))
+        .filter((r) => !done.has(r.userId))
+        .sort((x, y) => x.deletedAt.localeCompare(y.deletedAt) || x.userId.localeCompare(y.userId))
+      return all
+        .filter(
+          (r) => !after || `${r.deletedAt}|${r.userId}` > `${after.deletedAt}|${after.userId}`,
+        )
+        .slice(0, limit)
+    },
     listProofObjects: async (userId) => options.objects[userId] ?? [],
     finishPurge: async (userId): Promise<PurgeOutcome> => {
+      if (options.failFinishFor?.(userId)) throw new Error('non_canonical_refs')
       finished.push(userId)
       done.add(userId)
       return { status: 'purged', orders: 1, reports: 1 }
@@ -39,7 +62,7 @@ function build(options: {
       removed.push({ bucket, paths })
     },
   }
-  return { retention, storage, removed, finished, lines }
+  return { retention, storage, removed, finished, lines, pages }
 }
 
 function loggerInto(lines: string[]) {
@@ -97,22 +120,57 @@ describe('purgeDeletedAccountProofs', () => {
     expect(summary).toEqual({ accounts: 1, objects: 1, rows: 2, failed: 1 })
   })
 
-  it('una cuenta que falla no se vuelve a pedir en bucle dentro de la misma corrida', async () => {
-    let calls = 0
+  it('avanza por cursor: 100 cuentas que siempre fallan no tapan a la 101', async () => {
+    const ids = Array.from(
+      { length: 101 },
+      (_, i) => `${String(i).padStart(8, '0')}-0000-4000-8000-000000000000`,
+    )
+    const objects = Object.fromEntries(ids.map((id) => [id, objectsOf(id, 1)]))
+    // Con 100 fallos seguidos, un Storage que falla para las 100 primeras.
+    const fallan = new Set(ids.slice(0, 100))
     const f = build({
-      objects: { [USER_A]: objectsOf(USER_A, 1) },
-      failRemoveFor: () => true,
-      due: () => {
-        calls += 1
-        return [USER_A]
-      },
+      objects,
+      failRemoveFor: (_bucket, paths) => fallan.has((paths[0] as string).split('/')[0] as string),
     })
-    await purgeDeletedAccountProofs({
+    const summary = await purgeDeletedAccountProofs({
       retention: f.retention,
       storage: f.storage,
       logger: loggerInto(f.lines),
     })
-    expect(calls).toBe(2)
+    expect(f.finished).toEqual([ids[100]])
+    expect(summary).toEqual({ accounts: 1, objects: 1, rows: 2, failed: 100 })
+    // La segunda página parte del cursor de la última cuenta de la primera.
+    expect(f.pages[0]).toBeUndefined()
+    expect(f.pages[1]?.userId).toBe(ids[99])
+  })
+
+  it('respeta el presupuesto de 10 lotes por corrida', async () => {
+    const ids = Array.from(
+      { length: 1050 },
+      (_, i) => `${String(i).padStart(8, '0')}-0000-4000-8000-000000000000`,
+    )
+    const f = build({ objects: Object.fromEntries(ids.map((id) => [id, []])) })
+    const summary = await purgeDeletedAccountProofs({
+      retention: f.retention,
+      storage: f.storage,
+      logger: loggerInto(f.lines),
+    })
+    expect(summary.accounts).toBe(1000)
+    expect(f.pages).toHaveLength(10)
+  })
+
+  it('un aborto de la base al cerrar (por ejemplo non_canonical_refs) deja la cuenta pendiente y sigue', async () => {
+    const f = build({
+      objects: { [USER_A]: objectsOf(USER_A, 1), [USER_B]: objectsOf(USER_B, 1) },
+      failFinishFor: (id) => id === USER_A,
+    })
+    const summary = await purgeDeletedAccountProofs({
+      retention: f.retention,
+      storage: f.storage,
+      logger: loggerInto(f.lines),
+    })
+    expect(summary).toMatchObject({ accounts: 1, failed: 1 })
+    expect(f.finished).toEqual([USER_B])
   })
 
   it('parte el borrado en bloques de 100 archivos por bucket', async () => {

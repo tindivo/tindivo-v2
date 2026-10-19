@@ -4,6 +4,15 @@ export interface ProofObject {
   path: string
 }
 
+/** Una cuenta vencida y su posición en el orden estable de la lista (`deletedAt` tal como lo da la base). */
+export interface DueAccount {
+  userId: string
+  deletedAt: string
+}
+
+/** Posición desde la que sigue la lista: la última cuenta ya vista. */
+export type DueCursor = DueAccount
+
 /** Lo que dejó `finish_proof_purge` (migración 0269). */
 export interface PurgeOutcome {
   status: 'purged' | 'already_purged'
@@ -15,8 +24,11 @@ export interface PurgeOutcome {
 
 /** Las tres funciones de la base que reparten el trabajo de la purga (migración 0269). */
 export interface RetentionRepository {
-  /** Cuentas borradas hace más del plazo de `app_settings.account_deletion` y sin purgar. Como mucho `limit` (1 a 100). */
-  listDueAccounts(limit: number): Promise<string[]>
+  /**
+   * Cuentas borradas hace más del plazo de `app_settings.account_deletion` y sin purgar, en orden
+   * `(deletedAt, userId)` y solo las que vienen DESPUÉS del cursor. Como mucho `limit` (1 a 100).
+   */
+  listDueAccounts(limit: number, after?: DueCursor): Promise<DueAccount[]>
   /** Objetos de la cuenta en `payment-proofs` y `receipts`. */
   listProofObjects(userId: string): Promise<ProofObject[]>
   /**

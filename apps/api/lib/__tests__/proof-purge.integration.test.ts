@@ -64,6 +64,7 @@ interface Cliente {
 
 let world: LedgerWorld
 const creados: string[] = []
+const masaFiles: string[] = []
 const runId = crypto.randomUUID().slice(0, 8)
 const prepared = new Map<string, Cliente>()
 
@@ -237,7 +238,7 @@ afterAll(async () => {
     await db.storage.from('payment-proofs').remove(cl.files.map((f) => f.path))
     await db.storage.from('receipts').remove(cl.files.map((f) => f.path))
   }
-  await db.storage.from('payment-proofs').remove([decoyPrefijo, decoyIgual])
+  await db.storage.from('payment-proofs').remove([decoyPrefijo, decoyIgual, ...masaFiles])
   if (world) {
     await db.from('reports').delete().in('order_id', world.orderIds)
     await cleanupLedgerWorld(world)
@@ -457,4 +458,76 @@ describe('CAX-001 · solo se anulan las referencias canónicas y propias', () =>
     expect(await referencia(a.orderId)).toBeNull()
     expect(purgada(a)).not.toBe('null')
   })
+})
+
+describe('CAX-002 · las cuentas que siempre fallan no tapan a las de atrás', () => {
+  it('con 101 cuentas vencidas y las 100 primeras fallando, la 101 se purga en la misma corrida', async () => {
+    const N = 101
+    const ids: string[] = []
+    for (let from = 0; from < N; from += 10) {
+      const lote = await Promise.all(
+        Array.from({ length: Math.min(10, N - from) }, async (_, k) => {
+          const { data, error } = await db.auth.admin.createUser({
+            email: `purga-masa-${from + k}-${runId}@integration.local`,
+            password: CLAVE,
+            email_confirm: true,
+          })
+          if (error) throw new Error(`crear el cliente falló: ${error.message}`)
+          creados.push(data.user.id)
+          const path = `${data.user.id}/masa-${runId}.png`
+          if (!(await subir('payment-proofs', path))) throw new Error(`no se pudo subir ${path}`)
+          masaFiles.push(path)
+          const { error: derr } = await rpc('delete_customer_account', { p_user_id: data.user.id })
+          if (derr) throw new Error(`borrar la cuenta falló: ${derr.message}`)
+          return data.user.id
+        }),
+      )
+      ids.push(...lote)
+    }
+    // Orden estable por `deleted_at`: antes que cualquier otra cuenta vencida, con la 0 la más antigua.
+    sql(
+      ids
+        .map(
+          (id, n) =>
+            `update public.users set deleted_at = now() - interval '300 days' + interval '${n} minutes' where id = '${id}';`,
+        )
+        .join('\n'),
+    )
+    const fallan = new Set(ids.slice(0, 100))
+    const real = new SupabaseProofStorage(() => db)
+    const lines: string[] = []
+    const result = await purgeDeletedAccountProofs({
+      retention: new SupabaseRetentionRepository(() => db),
+      storage: {
+        remove: async (bucket, paths) => {
+          if (fallan.has((paths[0] as string).split('/')[0] as string)) {
+            throw new Error('Storage caído a propósito')
+          }
+          await real.remove(bucket, paths)
+        },
+      },
+      logger: createLogger({
+        module: 'test',
+        sink: { write: (_l: LogLevel, line: string) => void lines.push(line) },
+      }),
+    })
+    expect(result.failed).toBe(100)
+    expect(result.accounts).toBe(1)
+    const ultima = ids[100] as string
+    expect(await existe('payment-proofs', `${ultima}/masa-${runId}.png`)).toBe(false)
+    expect(
+      sql(`select (proofs_purged_at is not null)::text from public.users where id = '${ultima}';`),
+    ).toBe('true')
+    for (const id of ids.slice(0, 100)) {
+      expect(
+        sql(`select (proofs_purged_at is null)::text from public.users where id = '${id}';`),
+      ).toBe('true')
+    }
+    expect(lines.join('\n')).not.toContain(ultima)
+
+    // Con Storage sano, la siguiente corrida cierra las 100 que quedaban.
+    const despues = await correr().summary
+    expect(despues.failed).toBe(0)
+    expect(despues.accounts).toBe(100)
+  }, 120_000)
 })

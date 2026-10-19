@@ -1,6 +1,12 @@
 import type { TypedSupabaseClient } from '@tindivo/supabase'
 import { z } from 'zod'
-import type { ProofObject, PurgeOutcome, RetentionRepository } from '../application/ports'
+import type {
+  DueAccount,
+  DueCursor,
+  ProofObject,
+  PurgeOutcome,
+  RetentionRepository,
+} from '../application/ports'
 
 interface RpcError {
   message: string
@@ -14,8 +20,11 @@ interface RpcError {
 interface RetentionRpcClient {
   rpc(
     name: 'list_proof_purge_due',
-    args: { p_limit: number },
-  ): PromiseLike<{ data: { user_id: string }[] | null; error: RpcError | null }>
+    args: { p_limit: number; p_after_deleted_at?: string; p_after_user_id?: string },
+  ): PromiseLike<{
+    data: { user_id: string; deleted_at: string }[] | null
+    error: RpcError | null
+  }>
   rpc(
     name: 'list_user_proof_objects',
     args: { p_user_id: string },
@@ -40,10 +49,13 @@ export class SupabaseRetentionRepository implements RetentionRepository {
     return this.supabase() as unknown as RetentionRpcClient
   }
 
-  async listDueAccounts(limit: number): Promise<string[]> {
-    const { data, error } = await this.client().rpc('list_proof_purge_due', { p_limit: limit })
+  async listDueAccounts(limit: number, after?: DueCursor): Promise<DueAccount[]> {
+    const { data, error } = await this.client().rpc('list_proof_purge_due', {
+      p_limit: limit,
+      ...(after ? { p_after_deleted_at: after.deletedAt, p_after_user_id: after.userId } : {}),
+    })
     if (error) throw new Error(`No se pudo listar las cuentas por purgar: ${error.message}`)
-    return (data ?? []).map((row) => row.user_id)
+    return (data ?? []).map((row) => ({ userId: row.user_id, deletedAt: row.deleted_at }))
   }
 
   async listProofObjects(userId: string): Promise<ProofObject[]> {

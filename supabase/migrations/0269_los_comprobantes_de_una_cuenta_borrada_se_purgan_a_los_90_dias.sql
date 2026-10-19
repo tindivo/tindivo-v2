@@ -8,7 +8,7 @@
 --
 -- Reparto del trabajo (los archivos NO se borran por SQL: borrar filas de `storage.objects`
 -- deja el archivo en el disco; el borrado va por la API de Storage con service-role):
---   1. `list_proof_purge_due(p_limit)`     cuentas borradas vencidas y sin purgar.
+--   1. `list_proof_purge_due(p_limit, cursor)` cuentas borradas vencidas y sin purgar, por cursor estable.
 --   2. `list_user_proof_objects(p_user)`   sus objetos en `payment-proofs` y `receipts`
 --                                          (primera carpeta = id del usuario, 0258).
 --   3. (API de Storage)                    el caso de uso de `packages/backend` los borra.
@@ -69,8 +69,20 @@ end;
 $$;
 
 -- ── list_proof_purge_due ────────────────────────────────────────────────────
-create or replace function public.list_proof_purge_due(p_limit integer)
-returns table (user_id uuid)
+-- Paginación por cursor estable: orden `(deleted_at, id)` y, con cursor, solo lo que viene
+-- DESPUÉS de él (`(deleted_at, id) > (p_after_deleted_at, p_after_user_id)`). Así una cuenta
+-- que siempre falla no tapa a las que vienen detrás. Sin cursor, empieza por el principio.
+-- Revisiones anteriores de esta migración creaban `list_proof_purge_due(integer)`: se quita
+-- para que reaplicarla no deje una sobrecarga (supabase/AGENTS.md).
+drop function if exists public.list_proof_purge_due(integer);
+drop function if exists public.list_proof_purge_due(integer, timestamptz, uuid);
+
+create function public.list_proof_purge_due(
+  p_limit            integer,
+  p_after_deleted_at timestamptz default null,
+  p_after_user_id    uuid default null
+)
+returns table (user_id uuid, deleted_at timestamptz)
 language plpgsql
 security definer
 set search_path = ''
@@ -95,19 +107,21 @@ begin
   v_days := (v_raw #>> '{}')::integer;
 
   return query
-  select u.id
+  select u.id, u.deleted_at
   from public.users u
   where u.deleted_at is not null
     and u.proofs_purged_at is null
     and u.deleted_at <= now() - make_interval(days => v_days)
+    and (p_after_deleted_at is null or p_after_user_id is null
+         or (u.deleted_at, u.id) > (p_after_deleted_at, p_after_user_id))
   order by u.deleted_at, u.id
   limit least(greatest(coalesce(p_limit, 100), 1), 100);
 end;
 $$;
 
-revoke execute on function public.list_proof_purge_due(integer)
+revoke execute on function public.list_proof_purge_due(integer, timestamptz, uuid)
   from public, anon, authenticated;
-grant execute on function public.list_proof_purge_due(integer) to service_role;
+grant execute on function public.list_proof_purge_due(integer, timestamptz, uuid) to service_role;
 
 -- ── list_user_proof_objects ─────────────────────────────────────────────────
 create or replace function public.list_user_proof_objects(p_user_id uuid)

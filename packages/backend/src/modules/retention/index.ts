@@ -1,4 +1,6 @@
 export type {
+  DueAccount,
+  DueCursor,
   ProofObject,
   ProofStorage,
   PurgeOutcome,

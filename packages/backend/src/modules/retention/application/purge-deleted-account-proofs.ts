@@ -1,11 +1,14 @@
 import type { Logger } from '../../../shared'
-import type { ProofObject, ProofStorage, RetentionRepository } from './ports'
+import type { DueCursor, ProofObject, ProofStorage, RetentionRepository } from './ports'
 
 /** Cuentas que la base entrega por consulta (su tope, `list_proof_purge_due`). */
 const ACCOUNTS_PER_BATCH = 100
 /** Archivos por llamada a Storage. */
 const OBJECTS_PER_REMOVE = 100
-/** Tope de consultas por corrida: hasta 1000 cuentas; lo que sobre sigue vencido para mañana. */
+/**
+ * Presupuesto por corrida: hasta 10 lotes (1000 cuentas). La lista avanza por cursor estable, así
+ * que una cuenta que siempre falla no tapa a las de atrás; lo que sobre sigue vencido para mañana.
+ */
 const MAX_BATCHES = 10
 
 export interface PurgeSummary {
@@ -44,16 +47,15 @@ function groupByBucket(objects: ProofObject[]): Map<string, string[]> {
 export async function purgeDeletedAccountProofs(deps: PurgeDeps): Promise<PurgeSummary> {
   const { retention, storage, logger } = deps
   const summary: PurgeSummary = { accounts: 0, objects: 0, rows: 0, failed: 0 }
-  const attempted = new Set<string>()
+  let cursor: DueCursor | undefined
 
   for (let batch = 0; batch < MAX_BATCHES; batch++) {
-    const due = await retention.listDueAccounts(ACCOUNTS_PER_BATCH)
-    const fresh = due.filter((userId) => !attempted.has(userId))
-    // Todo lo que queda ya se intentó (y falló): volver a pedirlo no avanza.
-    if (fresh.length === 0) break
+    const due = await retention.listDueAccounts(ACCOUNTS_PER_BATCH, cursor)
+    const last = due.at(-1)
+    if (!last) break
+    cursor = last
 
-    for (const userId of fresh) {
-      attempted.add(userId)
+    for (const { userId } of due) {
       try {
         const objects = await retention.listProofObjects(userId)
         for (const [bucket, paths] of groupByBucket(objects)) {
@@ -70,6 +72,7 @@ export async function purgeDeletedAccountProofs(deps: PurgeDeps): Promise<PurgeS
         logger.error('proof_purge_account_failed', { error })
       }
     }
+    if (due.length < ACCOUNTS_PER_BATCH) break
   }
 
   logger.info('proof_purge_done', { ...summary })

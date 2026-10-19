@@ -6,6 +6,7 @@
 
 drop function if exists public.finish_proof_purge(uuid);
 drop function if exists public.list_user_proof_objects(uuid);
+drop function if exists public.list_proof_purge_due(integer, timestamptz, uuid);
 drop function if exists public.list_proof_purge_due(integer);
 
 create or replace function public.orders_proof_immutable()
