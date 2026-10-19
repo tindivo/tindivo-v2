@@ -68,14 +68,26 @@ const masaFiles: string[] = []
 const runId = crypto.randomUUID().slice(0, 8)
 const prepared = new Map<string, Cliente>()
 
-async function subir(bucket: string, path: string): Promise<boolean> {
+/** Sube un archivo; si Storage lo rechaza, el test falla (nunca se da por subido sin comprobarlo). */
+async function subir(bucket: string, path: string): Promise<true> {
   const { error } = await db.storage.from(bucket).upload(path, PNG, { contentType: 'image/png' })
-  return !error
+  if (error) throw new Error(`subir ${bucket}/${path} falló: ${error.message}`)
+  return true
 }
 
+/**
+ * ¿Existe el objeto? `false` solo con la respuesta contractual de Storage local para un objeto
+ * inexistente (`statusCode` 404, «Object not found»); 401, 403, 5xx o un fallo de transporte
+ * hacen fallar el test en vez de parecer una ausencia.
+ */
 async function existe(bucket: string, path: string): Promise<boolean> {
   const { data, error } = await db.storage.from(bucket).download(path)
-  return !error && data !== null
+  if (!error) return data !== null
+  const e = error as { statusCode?: string; message?: string }
+  if (e.statusCode === '404' && e.message === 'Object not found') return false
+  throw new Error(
+    `Storage respondió algo que no es «no existe» para ${bucket}/${path}: ${JSON.stringify(error)}`,
+  )
 }
 
 /** Cliente con un pedido cancelado que referencia su comprobante, y los archivos subidos. */
@@ -111,13 +123,14 @@ async function crearCliente(etiqueta: string, withReceipt = false): Promise<Clie
   ]
   if (withReceipt) {
     const receipt = `${id}/recibo-${runId}.png`
-    if (await subir('receipts', receipt)) {
-      files.push({ bucket: 'receipts', path: receipt })
-    }
+    await subir('receipts', receipt)
+    files.push({ bucket: 'receipts', path: receipt })
   }
   for (const f of files.filter((x) => x.bucket === 'payment-proofs')) {
-    if (!(await subir(f.bucket, f.path))) throw new Error(`no se pudo subir ${f.path}`)
+    await subir(f.bucket, f.path)
   }
+  // Presencia previa: la ausencia de después solo vale si antes estaban.
+  for (const f of files) expect(await existe(f.bucket, f.path), `${f.bucket}/${f.path}`).toBe(true)
   const cliente = { id, orderId, proof, files }
   prepared.set(etiqueta, cliente)
   return cliente
@@ -188,15 +201,17 @@ let settingOriginal: string
 beforeAll(async () => {
   world = await seedLedgerWorld()
   a = await crearCliente('a', true)
-  b = await crearCliente('b')
+  b = await crearCliente('b', true)
   c = await crearCliente('c')
   e = await crearCliente('e')
 
   // Carpetas ajenas con un prefijo común con el id de A: no son suyas.
   decoyPrefijo = `${a.id.slice(0, 8)}/decoy-${runId}.png`
   decoyIgual = `${a.id}-otro/decoy-${runId}.png`
-  expect(await subir('payment-proofs', decoyPrefijo)).toBe(true)
-  expect(await subir('payment-proofs', decoyIgual)).toBe(true)
+  await subir('payment-proofs', decoyPrefijo)
+  await subir('payment-proofs', decoyIgual)
+  expect(await existe('payment-proofs', decoyPrefijo)).toBe(true)
+  expect(await existe('payment-proofs', decoyIgual)).toBe(true)
 
   await borrarCuenta(a)
   await borrarCuenta(c)
@@ -250,6 +265,17 @@ afterAll(async () => {
 })
 
 describe('purga de comprobantes de cuentas borradas (0269)', () => {
+  it('antes de purgar, los archivos de A y B existen en los dos buckets', async () => {
+    for (const cl of [a, b]) {
+      expect(cl.files.map((x) => x.bucket).sort()).toEqual([
+        'payment-proofs',
+        'payment-proofs',
+        'receipts',
+      ])
+      for (const x of cl.files) expect(await existe(x.bucket, x.path)).toBe(true)
+    }
+  })
+
   it('la clave de ajustes sembrada es 90 días', () => {
     expect(JSON.parse(settingOriginal)).toEqual({ proofRetentionDays: 90 })
   })
@@ -475,7 +501,7 @@ describe('CAX-002 · las cuentas que siempre fallan no tapan a las de atrás', (
           if (error) throw new Error(`crear el cliente falló: ${error.message}`)
           creados.push(data.user.id)
           const path = `${data.user.id}/masa-${runId}.png`
-          if (!(await subir('payment-proofs', path))) throw new Error(`no se pudo subir ${path}`)
+          await subir('payment-proofs', path)
           masaFiles.push(path)
           const { error: derr } = await rpc('delete_customer_account', { p_user_id: data.user.id })
           if (derr) throw new Error(`borrar la cuenta falló: ${derr.message}`)
