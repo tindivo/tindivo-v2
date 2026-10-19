@@ -61,6 +61,11 @@ jobs:
       - name: Documentación que manda (enlaces, rutas y cabeceras)
         run: pnpm check:docs
 
+      # Fronteras de arquitectura (ADR 0039): ninguna app cliente importa packages/backend, el backend no
+      # importa next, domain/ no toca infra ni SDK, y un módulo solo importa el index de otro.
+      - name: Fronteras de arquitectura (dependency-cruiser)
+        run: pnpm check:deps
+
       - name: Type-check (incluye el drift de enums compile-time)
         run: pnpm type-check
 
