@@ -286,6 +286,21 @@ describe('defineHandler: respuesta', () => {
     expect(res.headers.get('cache-control')).toBeNull()
   })
 
+  it('no acepta un x-request-id del cliente que no tenga forma de identificador corto', async () => {
+    const { deps } = makeDeps({ ids: ['id-88'] })
+    const handler = defineHandler(
+      { ...noUser, response: z.object({ ok: z.boolean() }) },
+      async () => ({ ok: true }),
+    ).withDeps(deps)
+    const res = await handler(
+      new Request('http://localhost/api/v1/test/ping', {
+        headers: { 'x-request-id': `x${'a'.repeat(200)}` },
+      }),
+      {},
+    )
+    expect(res.headers.get('x-request-id')).toBe('id-88')
+  })
+
   it("responde 204 sin cuerpo con response 'empty'", async () => {
     const { deps } = makeDeps()
     const handler = defineHandler(

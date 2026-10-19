@@ -57,6 +57,14 @@ export type DefinedHandler<P, Q, B, R> = Handler & {
 
 export const DEFAULT_MAX_BODY_BYTES = 64 * 1024
 
+const REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/
+
+/** Cabecera de cliente (CLI-3) acotada para el log: la escribe el cliente. */
+function clientHeader(request: Request, name: string): string | null {
+  const value = request.headers.get(name)
+  return value === null ? null : value.slice(0, 64)
+}
+
 /** El cuerpo supera el límite: sin código propio en el contrato, es un 422 `validation_error`. */
 class BodyTooLargeError extends DomainError {
   constructor(maxBytes: number) {
@@ -147,7 +155,9 @@ export function defineHandler<
     return async (request, rawParams) => {
       const deps = resolveDeps()
       const startedAt = performance.now()
-      const requestId = request.headers.get('x-request-id') || deps.ids.uuid()
+      const incomingId = request.headers.get('x-request-id')
+      // Lo manda el cliente: solo se acepta con forma de identificador corto, porque va al log y se devuelve.
+      const requestId = incomingId && REQUEST_ID.test(incomingId) ? incomingId : deps.ids.uuid()
       const logger = deps.logger.child(spec.module)
 
       const finalize = (response: Response): Response => {
@@ -159,10 +169,10 @@ export function defineHandler<
           path: spec.path,
           status: response.status,
           durationMs: Math.round(performance.now() - startedAt),
-          clientPlatform: request.headers.get('x-tindivo-platform'),
-          clientApp: request.headers.get('x-tindivo-app'),
-          clientAppVersion: request.headers.get('x-tindivo-app-version'),
-          clientBuild: request.headers.get('x-tindivo-build'),
+          clientPlatform: clientHeader(request, 'x-tindivo-platform'),
+          clientApp: clientHeader(request, 'x-tindivo-app'),
+          clientAppVersion: clientHeader(request, 'x-tindivo-app-version'),
+          clientBuild: clientHeader(request, 'x-tindivo-build'),
         })
         return response
       }
