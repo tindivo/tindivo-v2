@@ -6,6 +6,11 @@ export type {
   PurgeOutcome,
   RetentionRepository,
 } from './application/ports'
+export {
+  PURGE_ABORT_REASONS,
+  PurgeAbortedError,
+  type PurgeAbortReason,
+} from './application/ports'
 export type { PurgeDeps, PurgeSummary } from './application/purge-deleted-account-proofs'
 export { purgeDeletedAccountProofs } from './application/purge-deleted-account-proofs'
 export { SupabaseProofStorage } from './infra/supabase-proof-storage'

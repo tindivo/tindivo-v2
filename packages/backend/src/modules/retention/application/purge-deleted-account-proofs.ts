@@ -1,5 +1,11 @@
 import type { Logger } from '../../../shared'
-import type { DueCursor, ProofObject, ProofStorage, RetentionRepository } from './ports'
+import {
+  type DueCursor,
+  type ProofObject,
+  type ProofStorage,
+  PurgeAbortedError,
+  type RetentionRepository,
+} from './ports'
 
 /** Cuentas que la base entrega por consulta (su tope, `list_proof_purge_due`). */
 const ACCOUNTS_PER_BATCH = 100
@@ -69,7 +75,12 @@ export async function purgeDeletedAccountProofs(deps: PurgeDeps): Promise<PurgeS
         summary.rows += outcome.orders + outcome.reports
       } catch (error) {
         summary.failed += 1
-        logger.error('proof_purge_account_failed', { error })
+        if (error instanceof PurgeAbortedError) {
+          // La base se negó por una razón de negocio: la cuenta queda pendiente. Solo viaja la razón (campo `abort`: `reason` lo describe el logger como un fallo).
+          logger.warn('proof_purge_account_aborted', { abort: error.reason })
+        } else {
+          logger.error('proof_purge_account_failed', { error })
+        }
       }
     }
     if (due.length < ACCOUNTS_PER_BATCH) break

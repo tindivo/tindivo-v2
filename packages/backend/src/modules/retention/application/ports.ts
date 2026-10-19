@@ -13,6 +13,23 @@ export interface DueAccount {
 /** Posición desde la que sigue la lista: la última cuenta ya vista. */
 export type DueCursor = DueAccount
 
+/** Por qué la base se negó a cerrar una purga (mensajes de `finish_proof_purge`, migración 0269). */
+export const PURGE_ABORT_REASONS = [
+  'not_due',
+  'proof_objects_remain',
+  'non_canonical_refs',
+  'user_not_found',
+] as const
+export type PurgeAbortReason = (typeof PURGE_ABORT_REASONS)[number]
+
+/** `finishPurge` la lanza cuando la base aborta por una razón de negocio: la cuenta queda pendiente. */
+export class PurgeAbortedError extends Error {
+  constructor(readonly reason: PurgeAbortReason) {
+    super(`purge_aborted:${reason}`)
+    this.name = 'PurgeAbortedError'
+  }
+}
+
 /** Lo que dejó `finish_proof_purge` (migración 0269). */
 export interface PurgeOutcome {
   status: 'purged' | 'already_purged'

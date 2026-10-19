@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createLogger, type LogLevel } from '../../../shared'
-import type {
-  DueAccount,
-  DueCursor,
-  ProofObject,
-  ProofStorage,
-  PurgeOutcome,
-  RetentionRepository,
+import {
+  type DueAccount,
+  type DueCursor,
+  type ProofObject,
+  type ProofStorage,
+  PurgeAbortedError,
+  type PurgeOutcome,
+  type RetentionRepository,
 } from './ports'
 import { purgeDeletedAccountProofs } from './purge-deleted-account-proofs'
 
@@ -50,7 +51,7 @@ function build(options: {
     },
     listProofObjects: async (userId) => options.objects[userId] ?? [],
     finishPurge: async (userId): Promise<PurgeOutcome> => {
-      if (options.failFinishFor?.(userId)) throw new Error('non_canonical_refs')
+      if (options.failFinishFor?.(userId)) throw new PurgeAbortedError('non_canonical_refs')
       finished.push(userId)
       done.add(userId)
       return { status: 'purged', orders: 1, reports: 1 }
@@ -171,6 +172,8 @@ describe('purgeDeletedAccountProofs', () => {
     })
     expect(summary).toMatchObject({ accounts: 1, failed: 1 })
     expect(f.finished).toEqual([USER_B])
+    expect(f.lines.join(String.fromCharCode(10))).toContain('non_canonical_refs')
+    expect(f.lines.join(String.fromCharCode(10))).not.toContain(USER_A)
   })
 
   it('parte el borrado en bloques de 100 archivos por bucket', async () => {
