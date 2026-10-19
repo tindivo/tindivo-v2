@@ -413,12 +413,14 @@ describe('purga de comprobantes de cuentas borradas (0269)', () => {
              has_function_privilege('service_role', p.oid, 'execute')
         from pg_proc p join pg_namespace s on s.oid = p.pronamespace
        where s.nspname = 'public'
-         and p.proname in ('list_proof_purge_due', 'list_user_proof_objects', 'finish_proof_purge')
+         and p.proname in ('list_proof_purge_due', 'list_user_proof_objects', 'finish_proof_purge',
+           'proof_purge_precheck')
        order by p.proname;`).split('\n')
     expect(filas).toEqual([
       'finish_proof_purge|true|true|false|false|false|true',
       'list_proof_purge_due|true|true|false|false|false|true',
       'list_user_proof_objects|true|true|false|false|false|true',
+      'proof_purge_precheck|true|true|false|false|false|true',
     ])
   })
 
@@ -454,6 +456,12 @@ describe('CAX-001 · solo se anulan las referencias canónicas y propias', () =>
     await borrarCuenta(f)
     envejecer(f, 91)
 
+    // El precheck lo ve antes de tocar Storage; finish conserva su propia comprobación.
+    expect((await rpc('proof_purge_precheck', { p_user_id: f.id })).data).toBe('non_canonical_refs')
+    expect((await rpc('proof_purge_precheck', { p_user_id: b.id })).data).toBe('not_due')
+    expect((await rpc('proof_purge_precheck', { p_user_id: crypto.randomUUID() })).data).toBe(
+      'user_not_found',
+    )
     const r = await rpc('finish_proof_purge', { p_user_id: f.id })
     expect(r.error?.code).toBe('P0001')
     expect(r.error?.message).toBe('non_canonical_refs')
@@ -478,6 +486,7 @@ describe('CAX-001 · solo se anulan las referencias canónicas y propias', () =>
        where customer_user_id = '${f.id}' and comprobante_prepago_url is not null;
       commit;`)
     expect((await correr().summary).failed).toBe(0)
+    for (const x of f.files) expect(await existe(x.bucket, x.path), x.path).toBe(false)
     expect(purgada(f)).not.toBe('null')
   })
 
@@ -639,6 +648,7 @@ describe('CAX-004 · por PostgREST, nadie sin service_role alcanza la purga', ()
         cli.rpc('list_proof_purge_due', { p_limit: 100 } as never),
         cli.rpc('list_user_proof_objects', { p_user_id: b.id } as never),
         cli.rpc('finish_proof_purge', { p_user_id: b.id } as never),
+        cli.rpc('proof_purge_precheck', { p_user_id: b.id } as never),
       ]
       for (const r of await Promise.all(llamadas)) {
         expect(r.error, nombre).not.toBeNull()
@@ -706,7 +716,8 @@ describe('CAX-004 · por PostgREST, nadie sin service_role alcanza la purga', ()
     const exec = sql(`
       select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace
        where s.nspname = 'public'
-         and p.proname in ('list_proof_purge_due', 'list_user_proof_objects', 'finish_proof_purge')
+         and p.proname in ('list_proof_purge_due', 'list_user_proof_objects', 'finish_proof_purge',
+           'proof_purge_precheck')
          and (has_function_privilege('anon', p.oid, 'execute')
            or has_function_privilege('authenticated', p.oid, 'execute'));`)
     expect(exec).toBe('0')

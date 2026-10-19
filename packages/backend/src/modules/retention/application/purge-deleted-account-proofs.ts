@@ -63,6 +63,9 @@ export async function purgeDeletedAccountProofs(deps: PurgeDeps): Promise<PurgeS
 
     for (const { userId } of due) {
       try {
+        // Antes de tocar Storage: una cuenta que la base no va a cerrar no pierde ningún archivo.
+        const verdict = await retention.precheck(userId)
+        if (verdict !== 'ok') throw new PurgeAbortedError(verdict)
         const objects = await retention.listProofObjects(userId)
         for (const [bucket, paths] of groupByBucket(objects)) {
           for (let i = 0; i < paths.length; i += OBJECTS_PER_REMOVE) {

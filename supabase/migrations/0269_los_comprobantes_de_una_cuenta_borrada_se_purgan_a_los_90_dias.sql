@@ -11,6 +11,8 @@
 --   1. `list_proof_purge_due(p_limit, cursor)` cuentas borradas vencidas y sin purgar, por cursor estable.
 --   2. `list_user_proof_objects(p_user)`   sus objetos en `payment-proofs` y `receipts`
 --                                          (primera carpeta = id del usuario, 0258).
+--   2b. `proof_purge_precheck(p_user)`     ok | not_due | non_canonical_refs | user_not_found,
+--                                          ANTES de tocar Storage (nada se borra si no es ok).
 --   3. (API de Storage)                    el caso de uso de `packages/backend` los borra.
 --   4. `finish_proof_purge(p_user)`        SOLO si ya no queda ningún objeto: pone a NULL
 --                                          las referencias y marca `users.proofs_purged_at`.
@@ -143,27 +145,26 @@ revoke execute on function public.list_user_proof_objects(uuid)
   from public, anon, authenticated;
 grant execute on function public.list_user_proof_objects(uuid) to service_role;
 
--- ── finish_proof_purge ──────────────────────────────────────────────────────
-create or replace function public.finish_proof_purge(p_user_id uuid)
-returns jsonb
+-- ── proof_purge_precheck ────────────────────────────────────────────────────
+-- Se llama ANTES de tocar Storage: si la cuenta no se puede cerrar por una razón que ya se ve
+-- en la base, no se borra ningún archivo. `finish_proof_purge` llama a esta misma función (la
+-- regla vive en un solo sitio) y además comprueba lo de Storage.
+-- Devuelve: ok | not_due | non_canonical_refs | user_not_found.
+create or replace function public.proof_purge_precheck(p_user_id uuid)
+returns text
 language plpgsql
 security definer
 set search_path = ''
+stable
 as $$
 declare
-  v_user    public.users%rowtype;
-  v_raw     jsonb;
-  v_days    integer;
-  v_orders  integer;
-  v_reports integer;
+  v_user public.users%rowtype;
+  v_raw  jsonb;
+  v_days integer;
 begin
-  select * into v_user from public.users where id = p_user_id for update;
+  select * into v_user from public.users where id = p_user_id;
   if not found then
-    raise exception using errcode = 'P0002', message = 'user_not_found';
-  end if;
-
-  if v_user.proofs_purged_at is not null then
-    return jsonb_build_object('status', 'already_purged', 'orders', 0, 'reports', 0);
+    return 'user_not_found';
   end if;
 
   select s.value -> 'proofRetentionDays' into v_raw
@@ -173,20 +174,20 @@ begin
      or (v_raw #>> '{}')::numeric <> trunc((v_raw #>> '{}')::numeric)
      or (v_raw #>> '{}')::numeric < 1
      or (v_raw #>> '{}')::numeric > 36500 then
-    raise exception using errcode = 'P0001', message = 'not_due';
+    return 'not_due';
   end if;
   v_days := (v_raw #>> '{}')::integer;
 
   if v_user.deleted_at is null
      or v_user.deleted_at > now() - make_interval(days => v_days) then
-    raise exception using errcode = 'P0001', message = 'not_due';
+    return 'not_due';
   end if;
 
   -- Solo se anula una referencia CANÓNICA y propia (`<id del cliente>/…`, sin `http`): su
-  -- archivo vive en la carpeta que se acaba de vaciar. Cualquier otra referencia no nula del
+  -- archivo vive en la carpeta que se va a vaciar. Cualquier otra referencia no nula del
   -- cliente (URL completa, carpeta ajena, otro formato) apunta a un archivo que esta purga
-  -- no borra: anularla lo dejaría en Storage sin que nada lo señale. Se aborta, sin tocar
-  -- nada, y la cuenta queda pendiente para que una persona la revise.
+  -- no borra: anularla lo dejaría en Storage sin que nada lo señale. La cuenta queda
+  -- pendiente para que una persona la revise, y antes de eso no se borra nada.
   if exists (
     select 1 from public.orders ord
     where ord.customer_user_id = p_user_id
@@ -200,7 +201,42 @@ begin
       and not (split_part(r.evidence_url, '/', 1) = p_user_id::text
                and r.evidence_url not like 'http%')
   ) then
-    raise exception using errcode = 'P0001', message = 'non_canonical_refs';
+    return 'non_canonical_refs';
+  end if;
+
+  return 'ok';
+end;
+$$;
+
+revoke execute on function public.proof_purge_precheck(uuid) from public, anon, authenticated;
+grant execute on function public.proof_purge_precheck(uuid) to service_role;
+
+-- ── finish_proof_purge ──────────────────────────────────────────────────────
+create or replace function public.finish_proof_purge(p_user_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user    public.users%rowtype;
+  v_check   text;
+  v_orders  integer;
+  v_reports integer;
+begin
+  select * into v_user from public.users where id = p_user_id for update;
+  if not found then
+    raise exception using errcode = 'P0002', message = 'user_not_found';
+  end if;
+
+  if v_user.proofs_purged_at is not null then
+    return jsonb_build_object('status', 'already_purged', 'orders', 0, 'reports', 0);
+  end if;
+
+  -- Mismas razones que el precheck del caso de uso, por si algo cambió entre uno y otro.
+  v_check := public.proof_purge_precheck(p_user_id);
+  if v_check <> 'ok' then
+    raise exception using errcode = 'P0001', message = v_check;
   end if;
 
   if exists (
@@ -250,7 +286,7 @@ declare
   v_secdef boolean;
   v_cfg    text[];
 begin
-  foreach v_name in array array['list_proof_purge_due', 'list_user_proof_objects', 'finish_proof_purge'] loop
+  foreach v_name in array array['list_proof_purge_due', 'list_user_proof_objects', 'proof_purge_precheck', 'finish_proof_purge'] loop
     select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
      where s.nspname = 'public' and p.proname = v_name;
     if n <> 1 then

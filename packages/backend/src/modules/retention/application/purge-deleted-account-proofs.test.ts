@@ -6,6 +6,7 @@ import {
   type ProofObject,
   type ProofStorage,
   PurgeAbortedError,
+  type PurgeAbortReason,
   type PurgeOutcome,
   type RetentionRepository,
 } from './ports'
@@ -26,8 +27,10 @@ function build(options: {
   objects: Record<string, ProofObject[]>
   failRemoveFor?: (bucket: string, paths: string[]) => boolean
   failFinishFor?: (userId: string) => boolean
-}): Fakes & { pages: (DueCursor | undefined)[] } {
+  precheckFor?: (userId: string) => 'ok' | PurgeAbortReason
+}): Fakes & { pages: (DueCursor | undefined)[]; listed: string[] } {
   const pages: (DueCursor | undefined)[] = []
+  const listed: string[] = []
   const removed: { bucket: string; paths: string[] }[] = []
   const finished: string[] = []
   const lines: string[] = []
@@ -49,7 +52,11 @@ function build(options: {
         )
         .slice(0, limit)
     },
-    listProofObjects: async (userId) => options.objects[userId] ?? [],
+    precheck: async (userId) => options.precheckFor?.(userId) ?? 'ok',
+    listProofObjects: async (userId) => {
+      listed.push(userId)
+      return options.objects[userId] ?? []
+    },
     finishPurge: async (userId): Promise<PurgeOutcome> => {
       if (options.failFinishFor?.(userId)) throw new PurgeAbortedError('non_canonical_refs')
       finished.push(userId)
@@ -63,7 +70,7 @@ function build(options: {
       removed.push({ bucket, paths })
     },
   }
-  return { retention, storage, removed, finished, lines, pages }
+  return { retention, storage, removed, finished, lines, pages, listed }
 }
 
 function loggerInto(lines: string[]) {
@@ -174,6 +181,25 @@ describe('purgeDeletedAccountProofs', () => {
     expect(f.finished).toEqual([USER_B])
     expect(f.lines.join(String.fromCharCode(10))).toContain('non_canonical_refs')
     expect(f.lines.join(String.fromCharCode(10))).not.toContain(USER_A)
+  })
+
+  it('si el precheck no da ok, no lista ni borra nada de esa cuenta y sigue con la siguiente', async () => {
+    const f = build({
+      objects: { [USER_A]: objectsOf(USER_A, 2), [USER_B]: objectsOf(USER_B, 1) },
+      precheckFor: (id) => (id === USER_A ? 'non_canonical_refs' : 'ok'),
+    })
+    const summary = await purgeDeletedAccountProofs({
+      retention: f.retention,
+      storage: f.storage,
+      logger: loggerInto(f.lines),
+    })
+    expect(f.listed).toEqual([USER_B])
+    expect(f.removed.flatMap((r) => r.paths).some((path) => path.startsWith(USER_A))).toBe(false)
+    expect(f.finished).toEqual([USER_B])
+    expect(summary).toMatchObject({ accounts: 1, failed: 1 })
+    const log = f.lines.join(String.fromCharCode(10))
+    expect(log).toContain('non_canonical_refs')
+    expect(log).not.toContain(USER_A)
   })
 
   it('parte el borrado en bloques de 100 archivos por bucket', async () => {

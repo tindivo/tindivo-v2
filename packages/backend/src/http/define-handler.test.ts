@@ -42,6 +42,7 @@ function makeDeps(options: { roles?: Actor['roles']; ids?: string[] } = {}) {
     },
     retention: {
       listDueAccounts: async () => [],
+      precheck: async () => 'ok',
       listProofObjects: async () => [],
       finishPurge: async () => {
         throw new Error('no se usa en estas pruebas')

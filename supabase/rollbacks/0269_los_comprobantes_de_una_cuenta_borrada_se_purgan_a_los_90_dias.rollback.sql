@@ -5,6 +5,7 @@
 -- recuperan. Restaura `orders_proof_immutable` con el texto exacto de la 0249 (byte a byte).
 
 drop function if exists public.finish_proof_purge(uuid);
+drop function if exists public.proof_purge_precheck(uuid);
 drop function if exists public.list_user_proof_objects(uuid);
 drop function if exists public.list_proof_purge_due(integer, timestamptz, uuid);
 drop function if exists public.list_proof_purge_due(integer);
@@ -33,7 +34,8 @@ do $check$
 begin
   if exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
               where s.nspname = 'public'
-                and p.proname in ('list_proof_purge_due', 'list_user_proof_objects', 'finish_proof_purge'))
+                and p.proname in ('list_proof_purge_due', 'list_user_proof_objects', 'proof_purge_precheck',
+                     'finish_proof_purge'))
      or exists (select 1 from information_schema.columns
                  where table_schema = 'public' and table_name = 'users'
                    and column_name = 'proofs_purged_at') then

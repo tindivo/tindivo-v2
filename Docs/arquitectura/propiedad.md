@@ -8,7 +8,7 @@ Registro de DES-7: cada tabla, función, trigger y vista tiene un módulo dueño
 - Un objeto nuevo entra en el registro en el mismo PR que lo crea.
 - `sin asignar` es válido mientras no exista el módulo dueño; se decide al crearlo. Los módulos aún no existen en el código: el nombre del dueño es el previsto en el mapa de módulos propuesto (`Docs/trabajo/arquitectura/04-arquitectura-objetivo.md` §3), y solo se asignó donde ese mapa no deja duda. `geo`, `fleet`, `trust`, `billing` y `reviews` quedan `sin asignar` a propósito: el mapa dice que antes hay que aclarar quién es dueño de qué.
 - Los triggers heredan el dueño de su tabla. Las funciones solo tienen dueño cuando el nombre lo deja claro (Store y pedidos de Entregas); el resto, `sin asignar`.
-- Total al 2026-10-12: 53 tablas, 0 vistas, 141 funciones (por nombre; +3 de la 0269) y 53 triggers.
+- Total al 2026-10-12: 53 tablas, 0 vistas, 142 funciones (por nombre; +4 de la 0269) y 53 triggers.
 
 Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 
@@ -177,6 +177,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `point_in_coverage_polygon` | función | sin asignar |  |
 | `point_in_ring` | función | sin asignar |  |
 | `promo_settle_redemption` | función | sin asignar |  |
+| `proof_purge_precheck` | función | identity | 0269; comprueba antes de tocar Storage; solo `service_role` |
 | `prune_creation_idempotency` | función | sin asignar |  |
 | `push_token_hash` | función | notifications | 0268; hash SHA-256 del token para su unicidad; solo `service_role` |
 | `queue_lead_minutes` | función | sin asignar |  |

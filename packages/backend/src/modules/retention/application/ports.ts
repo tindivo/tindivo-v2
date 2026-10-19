@@ -46,6 +46,11 @@ export interface RetentionRepository {
    * `(deletedAt, userId)` y solo las que vienen DESPUÉS del cursor. Como mucho `limit` (1 a 100).
    */
   listDueAccounts(limit: number, after?: DueCursor): Promise<DueAccount[]>
+  /**
+   * Se llama ANTES de tocar Storage (`proof_purge_precheck`): `ok` o la razón por la que la
+   * cuenta no se puede cerrar (por ejemplo `non_canonical_refs`). Si no es `ok`, no se borra nada.
+   */
+  precheck(userId: string): Promise<'ok' | PurgeAbortReason>
   /** Objetos de la cuenta en `payment-proofs` y `receipts`. */
   listProofObjects(userId: string): Promise<ProofObject[]>
   /**

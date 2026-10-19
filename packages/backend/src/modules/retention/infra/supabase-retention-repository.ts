@@ -6,6 +6,7 @@ import {
   type ProofObject,
   PURGE_ABORT_REASONS,
   PurgeAbortedError,
+  type PurgeAbortReason,
   type PurgeOutcome,
   type RetentionRepository,
 } from '../application/ports'
@@ -27,6 +28,10 @@ interface RetentionRpcClient {
     data: { user_id: string; deleted_at: string }[] | null
     error: RpcError | null
   }>
+  rpc(
+    name: 'proof_purge_precheck',
+    args: { p_user_id: string },
+  ): PromiseLike<{ data: string | null; error: RpcError | null }>
   rpc(
     name: 'list_user_proof_objects',
     args: { p_user_id: string },
@@ -58,6 +63,15 @@ export class SupabaseRetentionRepository implements RetentionRepository {
     })
     if (error) throw new Error(`No se pudo listar las cuentas por purgar: ${error.message}`)
     return (data ?? []).map((row) => ({ userId: row.user_id, deletedAt: row.deleted_at }))
+  }
+
+  async precheck(userId: string): Promise<'ok' | PurgeAbortReason> {
+    const { data, error } = await this.client().rpc('proof_purge_precheck', { p_user_id: userId })
+    if (error) throw new Error(`No se pudo comprobar la cuenta: ${error.message}`)
+    if (data === 'ok') return 'ok'
+    const reason = PURGE_ABORT_REASONS.find((r) => r === data)
+    if (!reason) throw new Error('El precheck de la purga devolvió algo inesperado')
+    return reason
   }
 
   async listProofObjects(userId: string): Promise<ProofObject[]> {
