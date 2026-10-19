@@ -195,6 +195,9 @@ importers:
       '@supabase/supabase-js':
         specifier: 'catalog:'
         version: 2.106.2
+      '@tindivo/backend':
+        specifier: workspace:*
+        version: link:../../packages/backend
       '@tindivo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
