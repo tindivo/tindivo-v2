@@ -10,6 +10,7 @@
  *  · Permisos de las tres funciones. Ningún importe, estado ni cargo cambia.
  */
 import { execFileSync } from 'node:child_process'
+import { createClient } from '@supabase/supabase-js'
 import {
   purgeDeletedAccountProofs,
   SupabaseProofStorage,
@@ -556,4 +557,201 @@ describe('CAX-002 · las cuentas que siempre fallan no tapan a las de atrás', (
     expect(despues.failed).toBe(0)
     expect(despues.accounts).toBe(100)
   }, 120_000)
+})
+
+describe('CAX-004 · por PostgREST, nadie sin service_role alcanza la purga', () => {
+  const URL_LOCAL = 'http://127.0.0.1:54321'
+  const ANON_KEY =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+  const opts = { auth: { persistSession: false, autoRefreshToken: false } }
+  type Cli = ReturnType<typeof createClient>
+  const clientes: { nombre: string; cli: Cli }[] = []
+  // Intento de colar el bypass por una cabecera: PostgREST no la convierte en un GUC.
+  let conCabecera: Cli
+
+  async function entrar(email: string, headers?: Record<string, string>): Promise<Cli> {
+    const cli = createClient(URL_LOCAL, ANON_KEY, { ...opts, global: { headers: headers ?? {} } })
+    const { error } = await cli.auth.signInWithPassword({ email, password: CLAVE })
+    if (error) throw new Error(`entrar falló: ${error.message}`)
+    return cli
+  }
+
+  beforeAll(async () => {
+    const { data, error } = await db.auth.admin.createUser({
+      email: `purga-z-${runId}@integration.local`,
+      password: CLAVE,
+      email_confirm: true,
+    })
+    if (error) throw new Error(error.message)
+    creados.push(data.user.id)
+    clientes.push({ nombre: 'anon', cli: createClient(URL_LOCAL, ANON_KEY, opts) })
+    clientes.push({ nombre: 'propio', cli: await entrar(`purga-b-${runId}@integration.local`) })
+    clientes.push({ nombre: 'ajeno', cli: await entrar(`purga-z-${runId}@integration.local`) })
+    conCabecera = await entrar(`purga-b-${runId}@integration.local`, {
+      'x-tindivo-deleting-account': b.id,
+      'tindivo.deleting_account': b.id,
+      'x-deleting-account': b.id,
+    })
+    clientes.push({ nombre: 'propio con cabeceras', cli: conCabecera })
+  })
+
+  const estadoDeB = (): string =>
+    sql(
+      `select (proofs_purged_at is null and deleted_at is null)::text from public.users where id = '${b.id}';`,
+    )
+  const ajustes = (): string =>
+    sql(`select value::text from public.app_settings where key = 'account_deletion';`)
+
+  it('no pueden escribir users.proofs_purged_at ni users.deleted_at', async () => {
+    for (const { nombre, cli } of clientes) {
+      await cli
+        .from('users')
+        .update({ proofs_purged_at: new Date().toISOString() } as never)
+        .eq('id', b.id)
+      await cli
+        .from('users')
+        .update({ deleted_at: new Date().toISOString() } as never)
+        .eq('id', b.id)
+      expect(estadoDeB(), nombre).toBe('true')
+    }
+  })
+
+  it('no pueden leer ni escribir app_settings.account_deletion', async () => {
+    const original = ajustes()
+    for (const { nombre, cli } of clientes) {
+      const leer = await cli.from('app_settings').select('key,value').eq('key', 'account_deletion')
+      expect(leer.data ?? [], `${nombre} lee`).toEqual([])
+      await cli
+        .from('app_settings')
+        .update({ value: { proofRetentionDays: 1 } })
+        .eq('key', 'account_deletion')
+      await cli.from('app_settings').delete().eq('key', 'account_deletion')
+      await cli
+        .from('app_settings')
+        .upsert({ key: 'account_deletion', value: { proofRetentionDays: 1 } })
+      expect(ajustes(), `${nombre} escribe`).toBe(original)
+    }
+  })
+
+  it('no pueden ejecutar list_proof_purge_due, list_user_proof_objects ni finish_proof_purge', async () => {
+    for (const { nombre, cli } of clientes) {
+      const llamadas = [
+        cli.rpc('list_proof_purge_due', { p_limit: 100 } as never),
+        cli.rpc('list_user_proof_objects', { p_user_id: b.id } as never),
+        cli.rpc('finish_proof_purge', { p_user_id: b.id } as never),
+      ]
+      for (const r of await Promise.all(llamadas)) {
+        expect(r.error, nombre).not.toBeNull()
+        expect(r.data, nombre).toBeNull()
+        expect(r.error?.code, nombre).toBe('42501')
+      }
+    }
+  })
+
+  it('no pueden fijar tindivo.deleting_account por ninguna interfaz expuesta', async () => {
+    for (const { nombre, cli } of clientes) {
+      // `set_config` es de pg_catalog: PostgREST solo expone `public`.
+      const r = await cli.rpc('set_config', {
+        setting_name: 'tindivo.deleting_account',
+        new_value: b.id,
+        is_local: true,
+      } as never)
+      expect(r.error, nombre).not.toBeNull()
+      expect(r.data, nombre).toBeNull()
+    }
+    // Con las cabeceras puestas, el GUC no llega: el UPDATE directo sigue sin anular el comprobante.
+    await conCabecera
+      .from('orders')
+      .update({ comprobante_prepago_url: null })
+      .eq('customer_user_id', b.id)
+    expect(await referencia(b.orderId)).toBe(b.proof)
+  })
+
+  it('no pueden poner a NULL un comprobante propio con un UPDATE directo', async () => {
+    for (const { nombre, cli } of clientes) {
+      await cli.from('orders').update({ comprobante_prepago_url: null }).eq('id', b.orderId)
+      await cli
+        .from('orders')
+        .update({ comprobante_prepago_url: null })
+        .eq('customer_user_id', b.id)
+      expect(await referencia(b.orderId), nombre).toBe(b.proof)
+    }
+  })
+
+  it('catálogo: RLS activa y sin política de escritura para quien no es admin', () => {
+    const rls = sql(`
+      select string_agg(c.relname || '=' || c.relrowsecurity, ',' order by c.relname)
+        from pg_class c join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = 'public' and c.relname in ('users', 'app_settings', 'orders');`)
+    expect(rls).toBe('app_settings=true,orders=true,users=true')
+
+    const politicas = (tabla: string): string =>
+      sql(`
+        select coalesce(string_agg(policyname || ':' || cmd || ':' || roles::text || ':' ||
+                 (qual like '%admin%'), ',' order by policyname), '')
+          from pg_policies
+         where schemaname = 'public' and tablename = '${tabla}'
+           and cmd in ('INSERT', 'UPDATE', 'DELETE', 'ALL');`)
+    expect(politicas('users')).toBe('users_admin_all:ALL:{authenticated}:true')
+    expect(politicas('app_settings')).toBe('as_admin_all:ALL:{authenticated}:true')
+    expect(politicas('orders')).not.toContain('false')
+    // Ninguna política de lectura abre la clave de la purga.
+    expect(
+      sql(`select count(*) from pg_policies where tablename = 'app_settings'
+             and cmd in ('SELECT', 'ALL') and qual like '%account_deletion%';`),
+    ).toBe('0')
+  })
+
+  it('catálogo: grants efectivos de las funciones (solo service_role) y de la tabla users', () => {
+    const exec = sql(`
+      select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+       where s.nspname = 'public'
+         and p.proname in ('list_proof_purge_due', 'list_user_proof_objects', 'finish_proof_purge')
+         and (has_function_privilege('anon', p.oid, 'execute')
+           or has_function_privilege('authenticated', p.oid, 'execute'));`)
+    expect(exec).toBe('0')
+    // Los grants de TABLA de anon y authenticated vienen de los defaults de Supabase: la barrera
+    // de `users.proofs_purged_at`/`deleted_at` y de `app_settings` es la RLS de arriba.
+    const grants = sql(`
+      select coalesce(string_agg(grantee || ':' || privilege_type, ',' order by grantee), '')
+        from information_schema.role_table_grants
+       where table_schema = 'public' and table_name = 'users'
+         and grantee in ('anon', 'authenticated') and privilege_type = 'UPDATE';`)
+    expect(grants).toBe('anon:UPDATE,authenticated:UPDATE')
+  })
+})
+
+describe('Recuperación · reanudación tras un borrado parcial', () => {
+  it('el primer intento borra un archivo y falla antes de finish; la corrida siguiente completa y marca', async () => {
+    const g = await crearCliente('g', true)
+    await borrarCuenta(g)
+    envejecer(g, 91)
+    expect(g.files).toHaveLength(3)
+
+    // Storage borra el primer archivo y se cae con el segundo: `finish` no se llama.
+    const real = new SupabaseProofStorage(() => db)
+    const parcial = await purgeDeletedAccountProofs({
+      retention: new SupabaseRetentionRepository(() => db),
+      storage: {
+        remove: async (bucket, paths) => {
+          await real.remove(bucket, paths.slice(0, 1))
+          throw new Error('Storage se cayó a la mitad')
+        },
+      },
+      logger: createLogger({ module: 'test', sink: { write: () => undefined } }),
+    })
+    expect(parcial.failed).toBeGreaterThanOrEqual(1)
+    expect(purgada(g)).toBe('null')
+    expect(await referencia(g.orderId)).toBe(g.proof)
+    let quedan = 0
+    for (const f of g.files) if (await existe(f.bucket, f.path)) quedan += 1
+    expect(quedan).toBe(2)
+
+    // Reanudación: la cuenta sigue pendiente, se borra lo que faltaba y se marca.
+    const completa = await correr().summary
+    expect(completa.failed).toBe(0)
+    for (const f of g.files) expect(await existe(f.bucket, f.path)).toBe(false)
+    expect(await referencia(g.orderId)).toBeNull()
+    expect(purgada(g)).not.toBe('null')
+  })
 })

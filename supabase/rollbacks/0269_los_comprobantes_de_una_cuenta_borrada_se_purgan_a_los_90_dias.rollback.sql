@@ -2,28 +2,28 @@
 --
 -- OJO: BORRA la columna `users.proofs_purged_at` (se pierde qué cuentas ya se purgaron) y la
 -- clave `app_settings.account_deletion`. Los archivos y referencias ya purgados NO se
--- recuperan. Restaura `orders_proof_immutable` tal como estaba antes de la 0269.
+-- recuperan. Restaura `orders_proof_immutable` con el texto exacto de la 0249 (byte a byte).
 
 drop function if exists public.finish_proof_purge(uuid);
 drop function if exists public.list_user_proof_objects(uuid);
 drop function if exists public.list_proof_purge_due(integer, timestamptz, uuid);
 drop function if exists public.list_proof_purge_due(integer);
 
-create or replace function public.orders_proof_immutable()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if old.comprobante_prepago_url is not null
-     and new.comprobante_prepago_url is distinct from old.comprobante_prepago_url
-     and new.proof_attempt <= old.proof_attempt then
-    raise exception 'El comprobante registrado no se puede cambiar'
-      using errcode = 'P0001', hint = 'proof_immutable';
-  end if;
-  return new;
-end;
+CREATE OR REPLACE FUNCTION public.orders_proof_immutable()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = ''
+AS $$
+BEGIN
+  IF old.comprobante_prepago_url IS NOT NULL
+     AND new.comprobante_prepago_url IS DISTINCT FROM old.comprobante_prepago_url
+     AND new.proof_attempt <= old.proof_attempt THEN
+    RAISE EXCEPTION 'El comprobante registrado no se puede cambiar'
+      USING ERRCODE = 'P0001', HINT = 'proof_immutable';
+  END IF;
+  RETURN new;
+END;
 $$;
 
 delete from public.app_settings where key = 'account_deletion';
