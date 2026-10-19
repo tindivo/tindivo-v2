@@ -15,6 +15,8 @@ export interface Logger {
   info(event: string, fields?: LogFields): void
   warn(event: string, fields?: LogFields): void
   error(event: string, fields?: LogFields): void
+  /** Mismo destino y reloj, con otro `module` en cada línea. */
+  child(module: string): Logger
 }
 
 export const REDACTED = '[redactado]'
@@ -100,5 +102,6 @@ export function createLogger(options: LoggerOptions): Logger {
     info: (event, fields) => emit('info', event, fields),
     warn: (event, fields) => emit('warn', event, fields),
     error: (event, fields) => emit('error', event, fields),
+    child: (module) => createLogger({ ...options, module }),
   }
 }

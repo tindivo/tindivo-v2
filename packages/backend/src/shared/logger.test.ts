@@ -77,3 +77,11 @@ describe('logger', () => {
     expect(parsed.circular.self).toBe('[truncado]')
   })
 })
+
+describe('logger.child', () => {
+  it('conserva el destino y cambia el module', () => {
+    const { lines, logger } = capture()
+    logger.child('orders').info('hecho')
+    expect(JSON.parse(lines[0]?.line ?? '')).toMatchObject({ module: 'orders', event: 'hecho' })
+  })
+})
