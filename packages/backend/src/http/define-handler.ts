@@ -1,5 +1,6 @@
+import { CLIENT_APPS, CLIENT_HEADERS, CLIENT_PLATFORMS } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
-import { ZodError, type ZodType } from 'zod'
+import { ZodError, type ZodType, z } from 'zod'
 import { type Deps, getDeps } from '../composition'
 import type { Actor } from '../modules/identity'
 import { corsHeaders } from './cors'
@@ -57,12 +58,31 @@ export type DefinedHandler<P, Q, B, R> = Handler & {
 
 export const DEFAULT_MAX_BODY_BYTES = 64 * 1024
 
-const REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/
+const REQUEST_ID = z.uuid()
+const APP_VERSION = /^[0-9]{1,4}([.][0-9]{1,4}){0,3}$/
+const BUILD = /^[0-9]{1,10}$/
 
-/** Cabecera de cliente (CLI-3) acotada para el log: la escribe el cliente. */
-function clientHeader(request: Request, name: string): string | null {
-  const value = request.headers.get(name)
-  return value === null ? null : value.slice(0, 64)
+/** Valor de la cabecera solo si está en la lista del contrato; si no, `null`. */
+function oneOf(value: string | null, allowed: readonly string[]): string | null {
+  return value !== null && allowed.includes(value) ? value : null
+}
+
+function matching(value: string | null, pattern: RegExp): string | null {
+  return value !== null && pattern.test(value) ? value : null
+}
+
+/**
+ * Cabeceras de cliente (CLI-3) para el log. Las escribe el cliente: cada una se valida contra
+ * el contrato y, si no cumple, se registra `null`; el texto recibido nunca llega al log.
+ */
+function clientFields(request: Request) {
+  const get = (name: string) => request.headers.get(name)?.trim() ?? null
+  return {
+    clientPlatform: oneOf(get(CLIENT_HEADERS.platform)?.toLowerCase() ?? null, CLIENT_PLATFORMS),
+    clientApp: oneOf(get(CLIENT_HEADERS.app)?.toLowerCase() ?? null, CLIENT_APPS),
+    clientAppVersion: matching(get(CLIENT_HEADERS.appVersion), APP_VERSION),
+    clientBuild: matching(get(CLIENT_HEADERS.build), BUILD),
+  }
 }
 
 /** El cuerpo supera el límite: sin código propio en el contrato, es un 422 `validation_error`. */
@@ -156,8 +176,9 @@ export function defineHandler<
       const deps = resolveDeps()
       const startedAt = performance.now()
       const incomingId = request.headers.get('x-request-id')
-      // Lo manda el cliente: solo se acepta con forma de identificador corto, porque va al log y se devuelve.
-      const requestId = incomingId && REQUEST_ID.test(incomingId) ? incomingId : deps.ids.uuid()
+      // Lo manda el cliente y va al log y a la respuesta: solo se acepta si es un UUID.
+      const parsedId = REQUEST_ID.safeParse(incomingId)
+      const requestId = parsedId.success ? parsedId.data : deps.ids.uuid()
       const logger = deps.logger.child(spec.module)
 
       const finalize = (response: Response): Response => {
@@ -169,10 +190,7 @@ export function defineHandler<
           path: spec.path,
           status: response.status,
           durationMs: Math.round(performance.now() - startedAt),
-          clientPlatform: clientHeader(request, 'x-tindivo-platform'),
-          clientApp: clientHeader(request, 'x-tindivo-app'),
-          clientAppVersion: clientHeader(request, 'x-tindivo-app-version'),
-          clientBuild: clientHeader(request, 'x-tindivo-build'),
+          ...clientFields(request),
         })
         return response
       }
