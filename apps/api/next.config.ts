@@ -9,7 +9,12 @@ const MONOREPO_ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
 const config: NextConfig = {
   // Compila los paquetes del workspace (que exportan TS source).
-  transpilePackages: ['@tindivo/contracts', '@tindivo/core', '@tindivo/supabase'],
+  transpilePackages: [
+    '@tindivo/backend',
+    '@tindivo/contracts',
+    '@tindivo/core',
+    '@tindivo/supabase',
+  ],
   // API-only: sin optimización de imágenes ni assets de página.
   poweredByHeader: false,
   // `puppeteer-core` y `@sparticuz/chromium` (reporte PDF de rendimiento) traen

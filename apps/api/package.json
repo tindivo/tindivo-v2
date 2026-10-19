@@ -18,6 +18,7 @@
     "@sparticuz/chromium": "^149.0.0",
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",
+    "@tindivo/backend": "workspace:*",
     "@tindivo/contracts": "workspace:*",
     "@tindivo/core": "workspace:*",
     "@tindivo/supabase": "workspace:*",
