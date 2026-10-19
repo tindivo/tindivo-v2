@@ -253,6 +253,95 @@ describe('defineHandler: límite de cuerpo', () => {
   })
 })
 
+describe('defineHandler: límite de cuerpo sin esquema y orden con la autenticación', () => {
+  const base = {
+    ...noUser,
+    method: 'POST',
+    response: z.object({ ok: z.boolean() }),
+    maxBodyBytes: 32,
+  } as const
+
+  function streamed(headers: Record<string, string> = {}) {
+    const state = { pulls: 0 }
+    const stream = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          state.pulls++
+          controller.enqueue(new Uint8Array(20))
+          if (state.pulls > 100) controller.close()
+        },
+      },
+      // highWaterMark 0: el stream no se adelanta; cada pull es una lectura real del handler.
+      { highWaterMark: 0 },
+    )
+    const request = new Request('http://localhost/api/v1/test/ping', {
+      method: 'POST',
+      body: stream,
+      headers,
+      duplex: 'half',
+    } as RequestInit)
+    return { state, request }
+  }
+
+  const variants = [
+    ['sin esquema', base],
+    ['con esquema', { ...base, body: z.object({ a: z.string() }) }],
+  ] as const
+
+  describe.each(variants)('%s', (_name, spec) => {
+    it('responde 422 y no ejecuta run si el stream pasa del límite sin content-length', async () => {
+      let ran = false
+      const handler = defineHandler(spec, async () => {
+        ran = true
+        return { ok: true }
+      }).withDeps(makeDeps().deps)
+      const { state, request } = streamed()
+      const res = await handler(request, {})
+      expect(res.status).toBe(422)
+      expect((await problemOf(res)).detail).toContain('32 bytes')
+      expect(ran).toBe(false)
+      expect(state.pulls).toBeLessThan(10)
+    })
+
+    it('responde 422 y no ejecuta run si el content-length miente (menor que el real)', async () => {
+      let ran = false
+      const handler = defineHandler(spec, async () => {
+        ran = true
+        return { ok: true }
+      }).withDeps(makeDeps().deps)
+      const { request } = streamed({ 'content-length': '5' })
+      const res = await handler(request, {})
+      expect(res.status).toBe(422)
+      expect(await res.json()).toMatchObject({ code: 'validation_error' })
+      expect(ran).toBe(false)
+    })
+  })
+
+  it('sin esquema, un cuerpo dentro del límite se descarta y run no lo recibe', async () => {
+    let seen: unknown = 'sin-llamar'
+    const handler = defineHandler(base, async ({ body }) => {
+      seen = body
+      return { ok: true }
+    }).withDeps(makeDeps().deps)
+    expect((await handler(post('{"a":"x"}'), {})).status).toBe(200)
+    expect(seen).toBeUndefined()
+  })
+
+  it('una petición sin token a una ruta con auth responde 401 sin leer el cuerpo', async () => {
+    let ran = false
+    const handler = defineHandler({ ...base, auth: 'user' }, async () => {
+      ran = true
+      return { ok: true }
+    }).withDeps(makeDeps().deps)
+    const { state, request } = streamed()
+    const res = await handler(request, {})
+    expect(res.status).toBe(401)
+    expect(state.pulls).toBe(0)
+    expect(request.bodyUsed).toBe(false)
+    expect(ran).toBe(false)
+  })
+})
+
 describe('defineHandler: respuesta', () => {
   it('envuelve en { data } con CORS, request-id y cache-control privado si hay auth', async () => {
     const { deps } = makeDeps()
