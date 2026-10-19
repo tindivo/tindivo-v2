@@ -1,3 +1,4 @@
+import { ERROR_CODE_STATUS } from '@tindivo/contracts'
 import { type Clock, systemClock } from './clock'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -47,48 +48,103 @@ export function isSensitiveKey(key: string): boolean {
 
 const MAX_DEPTH = 8
 const MAX_FRAMES = 10
-const SAFE_ERROR_CODE = /^[A-Za-z0-9_]{1,40}$/
-const STACK_FRAME = '    at '
 
 /**
- * Un `Error` se registra sin su `message` ni la primera línea del `stack`: pueden llevar
- * teléfonos, correos o credenciales que un tercero (el SDK, la base) puso ahí. Solo queda el
- * `name`, un `code` con forma de código (`23505`, `forbidden`) y los frames del `stack`.
- * La `cause` se describe un nivel.
+ * Lo único que se registra de un fallo es lo que no puede llevar datos de nadie. Un fallo
+ * (lo que llega a un `catch`) puede ser un `Error`, un objeto plano o una cadena, y su
+ * mensaje, su nombre o su `code` los puede haber escrito un tercero (la base, un SDK) con
+ * un teléfono, un correo o una credencial dentro. Por eso nada se copia tal cual:
+ * - `name`: solo si es uno de los nombres conocidos; si no, `Error`.
+ * - `code`: solo con forma de SQLSTATE (`23505`), de PostgREST (`PGRST116`) o un `code` del
+ *   contrato (`forbidden`).
+ * - `frames`: de cada línea del stack posterior al mensaje, solo `archivo.ts:línea:columna`
+ *   (sin la carpeta ni el nombre de la función), y solo si la línea tiene forma de frame.
  */
-function describeError(error: Error, withCause: boolean): Record<string, unknown> {
-  const out: Record<string, unknown> = { name: error.name }
-  const code: unknown = (error as { code?: unknown }).code
-  if (typeof code === 'string' && SAFE_ERROR_CODE.test(code)) out.code = code
-  out.frames = framesOf(error)
-  if (withCause && error.cause instanceof Error) out.cause = describeError(error.cause, false)
-  return out
+const KNOWN_ERROR_NAMES = new Set([
+  'Error',
+  'TypeError',
+  'RangeError',
+  'SyntaxError',
+  'ReferenceError',
+  'URIError',
+  'EvalError',
+  'AggregateError',
+  'AbortError',
+  'TimeoutError',
+  'DomainError',
+  'ZodError',
+  'PostgrestError',
+  'AuthError',
+  'AuthApiError',
+  'AuthRetryableFetchError',
+  'StorageError',
+  'StorageApiError',
+  'FunctionsHttpError',
+  'FunctionsFetchError',
+  'FunctionsRelayError',
+])
+const SQLSTATE = /^[0-9A-Z]{5}$/
+const POSTGREST_CODE = /^PGRST[0-9]{3}$/
+const STACK_FRAME =
+  /^\s+at (?:.* \()?(?:[^\s()]*[\\/])?([A-Za-z0-9_.-]{1,100}\.(?:ts|tsx|mts|cts|js|mjs|cjs)):([0-9]{1,7}):([0-9]{1,7})\)?$/
+
+function safeCode(code: unknown): string | undefined {
+  if (typeof code !== 'string') return undefined
+  if (SQLSTATE.test(code) || POSTGREST_CODE.test(code)) return code
+  return Object.hasOwn(ERROR_CODE_STATUS, code) ? code : undefined
 }
 
-function framesOf(error: Error): string[] {
+function safeFrames(error: Error): string[] {
   const stack = error.stack
   if (typeof stack !== 'string') return []
-  // Un `message` con saltos de línea ocupa varias líneas del stack: se salta entero.
+  // El mensaje (con sus saltos de línea) va antes de los frames: se salta entero.
   const at = error.message === '' ? -1 : stack.indexOf(error.message)
   const rest = at >= 0 ? stack.slice(at + error.message.length) : stack
-  return rest
-    .split('\n')
-    .slice(1)
-    .filter((line) => line.startsWith(STACK_FRAME))
-    .slice(0, MAX_FRAMES)
+  const frames: string[] = []
+  for (const line of rest.split('\n').slice(1)) {
+    const match = STACK_FRAME.exec(line)
+    if (match) frames.push(`${match[1]}:${match[2]}:${match[3]}`)
+    if (frames.length === MAX_FRAMES) break
+  }
+  return frames
 }
+
+/** Describe cualquier valor lanzado sin copiar texto de él. */
+export function describeFailure(value: unknown, withCause = true): Record<string, unknown> {
+  if (value instanceof Error) {
+    const out: Record<string, unknown> = {
+      kind: 'error',
+      name: KNOWN_ERROR_NAMES.has(value.name) ? value.name : 'Error',
+    }
+    const code = safeCode((value as { code?: unknown }).code)
+    if (code !== undefined) out.code = code
+    out.frames = safeFrames(value)
+    if (withCause && value.cause !== undefined) out.cause = describeFailure(value.cause, false)
+    return out
+  }
+  if (value !== null && typeof value === 'object') {
+    const code = safeCode((value as { code?: unknown }).code)
+    return code === undefined ? { kind: 'object' } : { kind: 'object', code }
+  }
+  return { kind: value === null ? 'null' : typeof value }
+}
+
+/** Claves que, por convención, llevan un fallo: su valor se describe, nunca se copia. */
+const FAILURE_KEY = /^(err|error|errors|cause|exception|reason|failure)$/i
 
 /** Copia el valor reemplazando por `[redactado]` lo que cuelga de una clave sensible. */
 export function redact(value: unknown, depth = 0, seen = new WeakSet<object>()): unknown {
   if (value === null || typeof value !== 'object') return value
   if (depth >= MAX_DEPTH || seen.has(value)) return '[truncado]'
   seen.add(value)
-  if (value instanceof Error) return describeError(value, true)
+  if (value instanceof Error) return describeFailure(value)
   if (value instanceof Date) return value.toISOString()
   if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1, seen))
   const out: Record<string, unknown> = {}
   for (const [key, inner] of Object.entries(value)) {
-    out[key] = isSensitiveKey(key) ? REDACTED : redact(inner, depth + 1, seen)
+    if (isSensitiveKey(key)) out[key] = REDACTED
+    else if (FAILURE_KEY.test(key)) out[key] = describeFailure(inner)
+    else out[key] = redact(inner, depth + 1, seen)
   }
   return out
 }

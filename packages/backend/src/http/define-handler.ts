@@ -231,9 +231,10 @@ export function defineHandler<
             logger.error('invalid_response', {
               requestId,
               path: spec.path,
+              // Solo dónde y qué tipo de fallo: el mensaje puede citar el valor recibido.
               issues: check.error.issues.map((i) => ({
                 field: i.path.join('.') || '(root)',
-                message: i.message,
+                code: i.code,
               })),
             })
             return finalize(
@@ -250,7 +251,7 @@ export function defineHandler<
         if (err instanceof ZodError || err instanceof DomainError) {
           return finalize(handleError(err, requestId, request))
         }
-        logger.error('unhandled_error', { requestId, path: spec.path, err })
+        logger.error('unhandled_error', { requestId, path: spec.path, failure: err })
         return finalize(
           problem('internal_error', {
             detail: 'Ocurrió un error interno',

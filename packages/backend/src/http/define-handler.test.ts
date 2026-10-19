@@ -458,11 +458,30 @@ describe('defineHandler: errores sin datos personales en el log', () => {
       expect(everything).not.toContain(secret)
     }
     const logged = lines.find((l) => l.entry.event === 'unhandled_error')
-    expect(logged?.entry.err).toMatchObject({
+    expect(logged?.entry.failure).toMatchObject({
+      kind: 'error',
       name: 'PostgrestError',
       code: '23505',
-      frames: ['    at insertar (/app/repo.ts:10:5)'],
+      frames: ['repo.ts:10:5'],
     })
+  })
+
+  it('un objeto plano o una cadena lanzados en run tampoco dejan su contenido', async () => {
+    for (const thrown of [
+      { message: 'juana@example.pe sk_live_abc123', details: '+51 987 654 321' },
+      'falló +51 987 654 321 juana@example.pe sk_live_abc123',
+    ]) {
+      const { deps, lines } = makeDeps()
+      const handler = defineHandler({ ...noUser, response: z.object({}) }, async () => {
+        throw thrown
+      }).withDeps(deps)
+      const res = await handler(new Request('http://localhost/api/v1/test/ping'), {})
+      expect(res.status).toBe(500)
+      const everything = JSON.stringify(lines) + (await res.text())
+      for (const secret of ['987 654 321', 'juana@example.pe', 'sk_live_abc123']) {
+        expect(everything).not.toContain(secret)
+      }
+    }
   })
 })
 

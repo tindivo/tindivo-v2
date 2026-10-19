@@ -97,38 +97,92 @@ function expectNoLeak(text: string): void {
 }
 
 describe('logger: errores', () => {
-  it('registra solo name, code y frames; nunca el message ni la primera línea del stack', () => {
+  it('de un Error registra solo kind, un name conocido, un code seguro y archivo:línea:columna', () => {
     const { lines, logger } = capture()
     logger.error('x', { err: leakyError('23505') })
     const line = lines[0]?.line ?? ''
     expectNoLeak(line)
     expect(JSON.parse(line).err).toEqual({
+      kind: 'error',
       name: 'PostgrestError',
       code: '23505',
-      frames: ['    at insertar (/app/repo.ts:10:5)', '    at run (/app/run.ts:3:1)'],
+      frames: ['repo.ts:10:5', 'run.ts:3:1'],
     })
   })
 
-  it('omite un code que no tiene forma de código', () => {
-    const { lines, logger } = capture()
-    logger.error('x', { err: leakyError(`${PHONE} ${EMAIL}`) })
-    const line = lines[0]?.line ?? ''
-    expectNoLeak(line)
-    expect(JSON.parse(line).err).not.toHaveProperty('code')
+  it('acepta como code un SQLSTATE, un PGRST o un code del contrato, y nada más', () => {
+    for (const [code, kept] of [
+      ['23505', true],
+      ['PGRST116', true],
+      ['forbidden', true],
+      [SECRET, false],
+      [`${PHONE} ${EMAIL}`, false],
+      ['juanaquispe', false],
+    ] as const) {
+      const { lines, logger } = capture()
+      logger.error('x', { err: leakyError(code) })
+      const line = lines[0]?.line ?? ''
+      expectNoLeak(line)
+      if (kept) expect(JSON.parse(line).err.code).toBe(code)
+      else expect(JSON.parse(line).err).not.toHaveProperty('code')
+    }
   })
 
-  it('describe la cause un nivel y sin su message', () => {
+  it('un name desconocido (que puede llevar datos) se registra como Error', () => {
+    const { lines, logger } = capture()
+    const err = leakyError()
+    err.name = `Error de ${EMAIL} ${PHONE}`
+    logger.error('x', { err })
+    const line = lines[0]?.line ?? ''
+    expectNoLeak(line)
+    expect(JSON.parse(line).err.name).toBe('Error')
+  })
+
+  it('de un frame posterior al mensaje solo queda el archivo, sin carpeta ni función', () => {
+    const { lines, logger } = capture()
+    const err = new Error('m')
+    err.stack = [
+      'Error: m',
+      `    at ${EMAIL} (/home/${EMAIL}/${SECRET}/app.ts:4:2)`,
+      `    at ${PHONE}`,
+      `    at Object.<anonymous> (file:///C:/Users/juana/${SECRET}/b.mjs:1:9)`,
+    ].join('\n')
+    logger.error('x', { err })
+    const line = lines[0]?.line ?? ''
+    expectNoLeak(line)
+    expect(JSON.parse(line).err.frames).toEqual(['app.ts:4:2', 'b.mjs:1:9'])
+  })
+
+  it('un objeto plano o una cadena lanzados no dejan su contenido', () => {
+    const { lines, logger } = capture()
+    logger.error('a', { err: { message: `${EMAIL} ${SECRET}`, details: PHONE, code: '23505' } })
+    logger.error('b', { err: `falló ${PHONE} ${EMAIL} ${SECRET}` })
+    logger.error('c', { error: { hint: SECRET } })
+    const text = lines.map((l) => l.line).join('\n')
+    expectNoLeak(text)
+    expect(JSON.parse(lines[0]?.line ?? '').err).toEqual({ kind: 'object', code: '23505' })
+    expect(JSON.parse(lines[1]?.line ?? '').err).toEqual({ kind: 'string' })
+    expect(JSON.parse(lines[2]?.line ?? '').error).toEqual({ kind: 'object' })
+  })
+
+  it('describe la cause un nivel, sea o no un Error, y sin su contenido', () => {
     const { lines, logger } = capture()
     const err = new Error('externo', { cause: leakyError('forbidden') })
     err.stack = ['Error: externo', '    at a (/a.ts:1:1)'].join('\n')
     logger.error('x', { err })
-    const line = lines[0]?.line ?? ''
-    expectNoLeak(line)
-    const parsed = JSON.parse(line)
-    expect(parsed.err.frames).toEqual(['    at a (/a.ts:1:1)'])
-    expect(parsed.err.cause).toMatchObject({ name: 'PostgrestError', code: 'forbidden' })
+    logger.error('y', { err: new Error('externo', { cause: { message: SECRET } }) })
+    const text = lines.map((l) => l.line).join('\n')
+    expectNoLeak(text)
+    const parsed = JSON.parse(lines[0]?.line ?? '')
+    expect(parsed.err.frames).toEqual(['a.ts:1:1'])
+    expect(parsed.err.cause).toMatchObject({
+      kind: 'error',
+      name: 'PostgrestError',
+      code: 'forbidden',
+    })
     expect(parsed.err.cause.frames).toHaveLength(2)
     expect(parsed.err.cause).not.toHaveProperty('cause')
+    expect(JSON.parse(lines[1]?.line ?? '').err.cause).toEqual({ kind: 'object' })
   })
 
   it('limita los frames a 10', () => {
