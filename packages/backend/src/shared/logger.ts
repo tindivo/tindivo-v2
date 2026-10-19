@@ -46,15 +46,44 @@ export function isSensitiveKey(key: string): boolean {
 }
 
 const MAX_DEPTH = 8
+const MAX_FRAMES = 10
+const SAFE_ERROR_CODE = /^[A-Za-z0-9_]{1,40}$/
+const STACK_FRAME = '    at '
+
+/**
+ * Un `Error` se registra sin su `message` ni la primera línea del `stack`: pueden llevar
+ * teléfonos, correos o credenciales que un tercero (el SDK, la base) puso ahí. Solo queda el
+ * `name`, un `code` con forma de código (`23505`, `forbidden`) y los frames del `stack`.
+ * La `cause` se describe un nivel.
+ */
+function describeError(error: Error, withCause: boolean): Record<string, unknown> {
+  const out: Record<string, unknown> = { name: error.name }
+  const code: unknown = (error as { code?: unknown }).code
+  if (typeof code === 'string' && SAFE_ERROR_CODE.test(code)) out.code = code
+  out.frames = framesOf(error)
+  if (withCause && error.cause instanceof Error) out.cause = describeError(error.cause, false)
+  return out
+}
+
+function framesOf(error: Error): string[] {
+  const stack = error.stack
+  if (typeof stack !== 'string') return []
+  // Un `message` con saltos de línea ocupa varias líneas del stack: se salta entero.
+  const at = error.message === '' ? -1 : stack.indexOf(error.message)
+  const rest = at >= 0 ? stack.slice(at + error.message.length) : stack
+  return rest
+    .split('\n')
+    .slice(1)
+    .filter((line) => line.startsWith(STACK_FRAME))
+    .slice(0, MAX_FRAMES)
+}
 
 /** Copia el valor reemplazando por `[redactado]` lo que cuelga de una clave sensible. */
 export function redact(value: unknown, depth = 0, seen = new WeakSet<object>()): unknown {
   if (value === null || typeof value !== 'object') return value
   if (depth >= MAX_DEPTH || seen.has(value)) return '[truncado]'
   seen.add(value)
-  if (value instanceof Error) {
-    return { name: value.name, message: value.message, stack: value.stack }
-  }
+  if (value instanceof Error) return describeError(value, true)
   if (value instanceof Date) return value.toISOString()
   if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1, seen))
   const out: Record<string, unknown> = {}

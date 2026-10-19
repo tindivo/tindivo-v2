@@ -362,6 +362,34 @@ describe('defineHandler: errores', () => {
   })
 })
 
+describe('defineHandler: errores sin datos personales en el log', () => {
+  it('no registra el message ni el stack de un error desconocido, ni con cause', async () => {
+    const { deps, lines } = makeDeps()
+    const handler = defineHandler({ ...noUser, response: z.object({}) }, async () => {
+      const err = new Error('falló +51 987 654 321 juana@example.pe sk_live_abc123', {
+        cause: new Error('causa +51 987 654 321 sk_live_abc123'),
+      })
+      err.name = 'PostgrestError'
+      Object.assign(err, { code: '23505' })
+      err.stack = `PostgrestError: ${err.message}
+    at insertar (/app/repo.ts:10:5)`
+      throw err
+    }).withDeps(deps)
+    const res = await handler(new Request('http://localhost/api/v1/test/ping'), {})
+    expect(res.status).toBe(500)
+    const everything = JSON.stringify(lines) + (await res.text())
+    for (const secret of ['987 654 321', 'juana@example.pe', 'sk_live_abc123']) {
+      expect(everything).not.toContain(secret)
+    }
+    const logged = lines.find((l) => l.entry.event === 'unhandled_error')
+    expect(logged?.entry.err).toMatchObject({
+      name: 'PostgrestError',
+      code: '23505',
+      frames: ['    at insertar (/app/repo.ts:10:5)'],
+    })
+  })
+})
+
 describe('defineHandler: registro y definición', () => {
   it('registra una línea por petición con method, path, status, durationMs y cabeceras de cliente', async () => {
     const { deps, lines } = makeDeps()
