@@ -1,5 +1,6 @@
 import { createServiceRoleClient, type TypedSupabaseClient } from '@tindivo/supabase'
 import { type Authenticator, SupabaseAuthenticator } from '../modules/identity'
+import { type DeviceRepository, SupabaseDeviceRepository } from '../modules/notifications'
 import {
   type Clock,
   createLogger,
@@ -20,6 +21,7 @@ export interface BackendConfig {
 export interface Deps {
   auth: Authenticator
   clock: Clock
+  devices: DeviceRepository
   ids: IdGenerator
   logger: Logger
   /** Cliente service-role (salta RLS): se crea la primera vez que se pide. */
@@ -52,6 +54,7 @@ export function getDeps(): Deps {
   deps = {
     auth: new SupabaseAuthenticator(supabase),
     clock: systemClock,
+    devices: new SupabaseDeviceRepository(supabase),
     ids: randomIdGenerator,
     logger: createLogger({ module: 'backend' }),
     supabase,

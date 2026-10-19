@@ -18,7 +18,10 @@ function routeFiles(dir: string): string[] {
   })
 }
 
-/** `customer/orders/[id]/cancel/route.ts` + `export async function POST` → `post /customer/orders/{id}/cancel` */
+/**
+ * `customer/orders/[id]/cancel/route.ts` + `export async function POST` (o `export const POST = toNextRoute(…)`)
+ * → `post /customer/orders/{id}/cancel`
+ */
 function declaredOperations(): string[] {
   return CLIENT_AREAS.flatMap((area) =>
     routeFiles(join(API_V1, area)).flatMap((file) => {
@@ -28,7 +31,7 @@ function declaredOperations(): string[] {
       )
       const source = readFileSync(file, 'utf8')
       const methods = [
-        ...source.matchAll(/export (?:async )?function (GET|POST|PUT|PATCH|DELETE)\b/g),
+        ...source.matchAll(/export (?:(?:async )?function|const) (GET|POST|PUT|PATCH|DELETE)\b/g),
       ]
       return methods.map(([, method = '']) => `${method.toLowerCase()} ${path}`)
     }),

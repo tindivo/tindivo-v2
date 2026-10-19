@@ -24,6 +24,12 @@ function makeDeps(options: { roles?: Actor['roles']; ids?: string[] } = {}) {
       },
     },
     clock: { now: () => new Date('2026-10-19T12:00:00.000Z') },
+    devices: {
+      register: async () => {
+        throw new Error('no se usa en estas pruebas')
+      },
+      unregister: async () => false,
+    },
     ids: { uuid: () => ids.shift() ?? 'extra-id' },
     logger: createLogger({
       module: 'test',

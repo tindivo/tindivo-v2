@@ -2726,6 +2726,78 @@ export type Database = {
           },
         ]
       }
+      push_devices: {
+        Row: {
+          app: string
+          app_version: string
+          created_at: string
+          device_model: string | null
+          disabled_at: string | null
+          disabled_reason: string | null
+          environment: string
+          failure_count: number
+          id: string
+          install_id: string
+          last_failed_at: string | null
+          last_seen_at: string
+          last_successful_at: string | null
+          locale: string | null
+          notifications_enabled: boolean
+          os_version: string | null
+          platform: string
+          timezone: string | null
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app: string
+          app_version: string
+          created_at?: string
+          device_model?: string | null
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          environment?: string
+          failure_count?: number
+          id?: string
+          install_id: string
+          last_failed_at?: string | null
+          last_seen_at?: string
+          last_successful_at?: string | null
+          locale?: string | null
+          notifications_enabled: boolean
+          os_version?: string | null
+          platform: string
+          timezone?: string | null
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app?: string
+          app_version?: string
+          created_at?: string
+          device_model?: string | null
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          environment?: string
+          failure_count?: number
+          id?: string
+          install_id?: string
+          last_failed_at?: string | null
+          last_seen_at?: string
+          last_successful_at?: string | null
+          locale?: string | null
+          notifications_enabled?: boolean
+          os_version?: string | null
+          platform?: string
+          timezone?: string | null
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -3706,6 +3778,51 @@ export type Database = {
         Args: { p_customer_user_id: string; p_order_id: string; p_path: string }
         Returns: Json
       }
+      register_push_device: {
+        Args: {
+          p_actor_user_id: string
+          p_app: string
+          p_app_version: string
+          p_device_model: string
+          p_environment: string
+          p_install_id: string
+          p_locale: string
+          p_notifications_enabled: boolean
+          p_os_version: string
+          p_platform: string
+          p_timezone: string
+          p_token: string
+        }
+        Returns: {
+          app: string
+          app_version: string
+          created_at: string
+          device_model: string | null
+          disabled_at: string | null
+          disabled_reason: string | null
+          environment: string
+          failure_count: number
+          id: string
+          install_id: string
+          last_failed_at: string | null
+          last_seen_at: string
+          last_successful_at: string | null
+          locale: string | null
+          notifications_enabled: boolean
+          os_version: string | null
+          platform: string
+          timezone: string | null
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "push_devices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reorder_store_images: {
         Args: { p_ids: string[]; p_product_id: string }
         Returns: undefined
@@ -3958,6 +4075,10 @@ export type Database = {
       }
       store_metrics: { Args: never; Returns: Json }
       unblock_business: { Args: { p_by: string; p_id: string }; Returns: Json }
+      unregister_push_device: {
+        Args: { p_actor_user_id: string; p_install_id: string }
+        Returns: boolean
+      }
       update_business_manual_order: {
         Args: {
           p_business_user_id: string

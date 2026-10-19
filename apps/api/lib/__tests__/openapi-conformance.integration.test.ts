@@ -89,6 +89,10 @@ import { GET as searchCatalog } from '../../app/api/v1/public/search/route'
 import { GET as getStoreProduct } from '../../app/api/v1/public/store/[slug]/route'
 import { POST as trackStoreEvent } from '../../app/api/v1/public/store/events/route'
 import { GET as listStoreProducts } from '../../app/api/v1/public/store/route'
+import {
+  PUT as registerPushDevice,
+  DELETE as unregisterPushDevice,
+} from '../../app/api/v1/push/devices/[installId]/route'
 import { GET as getMyPushSubscription } from '../../app/api/v1/push/subscriptions/me/route'
 import {
   POST as createPushSubscription,
@@ -471,6 +475,28 @@ describe('el cliente con sesión', () => {
       body: { endpoint: PUSH_ENDPOINT },
     })
     expect(removed.removed).toBe(1)
+  })
+
+  it('MV7a: registra el dispositivo nativo y lo da de baja', async () => {
+    const installId = crypto.randomUUID()
+    const registered = await conforms('registerPushDevice', 200, registerPushDevice, {
+      method: 'PUT',
+      bearer: token,
+      params: { installId },
+      body: {
+        platform: 'ios',
+        app: 'customer',
+        token: `conformidad-${RUN}-${'t'.repeat(40)}`,
+        appVersion: '1.0.0',
+        notificationsEnabled: true,
+      },
+    })
+    expect(registered.installId).toBe(installId)
+    await conforms('unregisterPushDevice', 204, unregisterPushDevice, {
+      method: 'DELETE',
+      bearer: token,
+      params: { installId },
+    })
   })
 
   it('MV4b: cotiza, guarda direcciones, lee su historial y acepta los términos', async () => {

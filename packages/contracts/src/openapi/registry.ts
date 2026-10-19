@@ -13,6 +13,11 @@ import {
 } from '../client-requests'
 import { CreateCourierOrderRequestSchema } from '../courier'
 import type { ApiErrorCode } from '../errors'
+import {
+  PushDeviceParamsSchema,
+  PushDeviceRegistrationSchema,
+  PushDeviceSchema,
+} from '../push-devices'
 import { CreateOrderRequestSchema } from '../requests'
 import { storeEventSchema } from '../store'
 import {
@@ -635,6 +640,46 @@ export const OPERATIONS: OperationSpec[] = [
         schema: PushSubscriptionOwnershipSchema,
       },
     },
+    errors: ['validation_error', 'unauthorized'],
+    documented: true,
+  },
+
+  // ── MV7a: dispositivos nativos (APNs y FCM) ────────────────────────────────
+  {
+    method: 'put',
+    path: '/push/devices/{installId}',
+    operationId: 'registerPushDevice',
+    summary: 'Registrar o actualizar el dispositivo nativo de esta instalación (APNs o FCM)',
+    description:
+      'Idempotente por `installId`: la app lo llama al abrirse, al rotar el token y al cambiar de usuario. ' +
+      'Si el token ya estaba registrado en otra instalación, esa fila se borra. Si la instalación era de ' +
+      'otro usuario, pasa al de la sesión. `app` debe corresponder al rol de la sesión ' +
+      '(customer, negocios→business, motorizados→driver); si no, 403. La respuesta nunca incluye el token.',
+    tags: ['push'],
+    auth: 'user',
+    pathParams: { installId: PushDeviceParamsSchema.shape.installId },
+    body: PushDeviceRegistrationSchema,
+    success: {
+      200: {
+        description: 'Dispositivo registrado o actualizado',
+        envelope: 'data',
+        schema: PushDeviceSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'delete',
+    path: '/push/devices/{installId}',
+    operationId: 'unregisterPushDevice',
+    summary: 'Dar de baja el dispositivo nativo de esta instalación',
+    description:
+      'Responde 204 también si la instalación no existe o es de otro usuario: no revela nada.',
+    tags: ['push'],
+    auth: 'user',
+    pathParams: { installId: PushDeviceParamsSchema.shape.installId },
+    success: { 204: { description: 'Baja hecha; sin cuerpo', envelope: 'none' } },
     errors: ['validation_error', 'unauthorized'],
     documented: true,
   },

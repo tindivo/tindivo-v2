@@ -57,6 +57,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `outbox_events` | tabla | platform |  |
 | `promo_redemptions` | tabla | promotions |  |
 | `push_delivery_log` | tabla | notifications |  |
+| `push_devices` | tabla | notifications | Tokens de APNs/FCM de las apps nativas (MV7a, 0268); solo servidor, nunca se devuelven |
 | `push_subscriptions` | tabla | notifications |  |
 | `reports` | tabla | sin asignar |  |
 | `restaurant_payments` | tabla | sin asignar |  |
@@ -179,6 +180,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `refresh_customer_risk_from_strike` | función | sin asignar |  |
 | `register_appeal_refund` | función | sin asignar |  |
 | `register_prepay_proof` | función | sin asignar |  |
+| `register_push_device` | función | notifications | 0268; solo `service_role` |
 | `reject_deleted_account` | función | sin asignar |  |
 | `reorder_store_images` | función | store |  |
 | `request_order_transfer` | función | sin asignar |  |
@@ -201,6 +203,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `store_products_guard` | función | store |  |
 | `touch_updated_at` | función | sin asignar |  |
 | `unblock_business` | función | sin asignar |  |
+| `unregister_push_device` | función | notifications | 0268; solo `service_role` |
 | `update_assigned_at` | función | sin asignar |  |
 | `update_business_manual_order` | función | sin asignar |  |
 | `update_business_primary_capability` | función | sin asignar |  |
@@ -251,6 +254,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `orders.trg_promo_settle_redemption` | trigger | ordering | en `orders` |
 | `orders.trg_reject_deleted_account` | trigger | ordering | en `orders` |
 | `promo_redemptions.trg_reject_deleted_account` | trigger | promotions | en `promo_redemptions` |
+| `push_devices.touch_push_devices` | trigger | notifications | en `push_devices` |
 | `push_subscriptions.touch_push_subscriptions` | trigger | notifications | en `push_subscriptions` |
 | `push_subscriptions.trg_reject_deleted_account` | trigger | notifications | en `push_subscriptions` |
 | `reports.touch_reports` | trigger | sin asignar | en `reports` |
