@@ -122,3 +122,71 @@ describe('SupabaseAuthenticator', () => {
     ).rejects.not.toBeInstanceOf(DomainError)
   })
 })
+
+describe('SupabaseAuthenticator: dos identidades con la misma instancia', () => {
+  const users: Record<string, { id: string; roles: string[] }> = {
+    'tok-a': { id: 'user-a', roles: ['admin', 'customer'] },
+    'tok-b': { id: 'user-b', roles: ['driver'] },
+  }
+
+  /** Doble que responde según el token y según el user_id consultado, sin estado compartido. */
+  function clientByToken() {
+    const client = {
+      auth: {
+        getUser: async (token: string) => {
+          const user = users[token]
+          return {
+            data: { user: user ? { id: user.id } : null },
+            error: user ? null : { message: 'jwt malformed' },
+          }
+        },
+      },
+      from: () => ({
+        select: () => ({
+          eq: async (_column: string, userId: string) => {
+            const owner = Object.values(users).find((u) => u.id === userId)
+            return { data: (owner?.roles ?? []).map((role) => ({ role })), error: null }
+          },
+        }),
+      }),
+    }
+    // Doble de prueba: solo implementa lo que usa el adaptador, no todo el cliente del SDK.
+    return client as unknown as TypedSupabaseClient
+  }
+
+  it('el token de A da el usuario y los roles de A, y el de B los de B, alternando', async () => {
+    const typed = clientByToken()
+    const authenticator = new SupabaseAuthenticator(() => typed)
+    for (let i = 0; i < 4; i++) {
+      const a = await authenticator.authenticate(requestWith('Bearer tok-a'), 'user')
+      expect(a).toEqual({ userId: 'user-a', roles: ['admin', 'customer'], accessToken: 'tok-a' })
+      const b = await authenticator.authenticate(requestWith('Bearer tok-b'), 'user')
+      expect(b).toEqual({ userId: 'user-b', roles: ['driver'], accessToken: 'tok-b' })
+      expect(b.roles).not.toContain('admin')
+    }
+  })
+
+  it('un token de B nunca pasa por admin aunque antes se autenticó A', async () => {
+    const typed = clientByToken()
+    const authenticator = new SupabaseAuthenticator(() => typed)
+    await authenticator.authenticate(requestWith('Bearer tok-a'), 'admin')
+    const err = await rejection(authenticator.authenticate(requestWith('Bearer tok-b'), 'admin'))
+    expect(err.code).toBe('forbidden')
+  })
+
+  it('peticiones concurrentes de A y B no mezclan sus roles', async () => {
+    const typed = clientByToken()
+    const authenticator = new SupabaseAuthenticator(() => typed)
+    const results = await Promise.all(
+      ['tok-a', 'tok-b', 'tok-b', 'tok-a'].map((t) =>
+        authenticator.authenticate(requestWith(`Bearer ${t}`), 'user'),
+      ),
+    )
+    expect(results.map((r) => [r.userId, r.roles])).toEqual([
+      ['user-a', ['admin', 'customer']],
+      ['user-b', ['driver']],
+      ['user-b', ['driver']],
+      ['user-a', ['admin', 'customer']],
+    ])
+  })
+})

@@ -561,6 +561,77 @@ describe('defineHandler: cabeceras del cliente', () => {
   })
 })
 
+describe('defineHandler: dos identidades', () => {
+  const spec = {
+    ...noUser,
+    auth: 'user',
+    method: 'POST',
+    params: z.object({ userId: z.string() }),
+    query: z.object({ user_id: z.string(), actorUserId: z.string() }),
+    body: z.object({ userId: z.string(), user_id: z.string(), actorUserId: z.string() }),
+    response: z.object({ ok: z.boolean() }),
+  } as const
+
+  /** Autenticador doble que resuelve al actor por token, como el real. */
+  function depsByToken() {
+    const { deps, lines } = makeDeps()
+    const actors: Record<string, Actor> = {
+      'tok-a': { userId: 'user-a', roles: ['customer'], accessToken: 'tok-a' },
+      'tok-b': { userId: 'user-b', roles: ['driver'], accessToken: 'tok-b' },
+    }
+    deps.auth = {
+      authenticate: async (request) => {
+        const token = request.headers.get('authorization')?.slice(7) ?? ''
+        const actor = actors[token]
+        if (!actor) throw new DomainError('No autenticado', 'unauthorized')
+        return actor
+      },
+    }
+    return { deps, lines }
+  }
+
+  it('un userId, user_id o actorUserId ajeno en params, query o body no cambia input.actor', async () => {
+    const { deps } = depsByToken()
+    const seen: Array<Actor | null> = []
+    const handler = defineHandler(spec, async ({ actor }) => {
+      seen.push(actor)
+      return { ok: true }
+    }).withDeps(deps)
+    const res = await handler(
+      new Request('http://localhost/api/v1/test/ping?user_id=user-b&actorUserId=user-b', {
+        method: 'POST',
+        body: JSON.stringify({ userId: 'user-b', user_id: 'user-b', actorUserId: 'user-b' }),
+        headers: { authorization: 'Bearer tok-a' },
+      }),
+      { userId: 'user-b' },
+    )
+    expect(res.status).toBe(200)
+    expect(seen).toEqual([{ userId: 'user-a', roles: ['customer'], accessToken: 'tok-a' }])
+  })
+
+  it('dos peticiones seguidas con tokens distintos entregan actores distintos', async () => {
+    const { deps } = depsByToken()
+    const seen: Array<string | undefined> = []
+    const handler = defineHandler(spec, async ({ actor }) => {
+      seen.push(actor?.userId)
+      return { ok: true }
+    }).withDeps(deps)
+    const call = (token: string) =>
+      handler(
+        new Request('http://localhost/api/v1/test/ping?user_id=x&actorUserId=x', {
+          method: 'POST',
+          body: JSON.stringify({ userId: 'x', user_id: 'x', actorUserId: 'x' }),
+          headers: { authorization: `Bearer ${token}` },
+        }),
+        { userId: 'x' },
+      )
+    await call('tok-a')
+    await call('tok-b')
+    await call('tok-a')
+    expect(seen).toEqual(['user-a', 'user-b', 'user-a'])
+  })
+})
+
 describe('defineHandler: registro y definición', () => {
   it('registra una línea por petición con method, path, status, durationMs y cabeceras de cliente', async () => {
     const { deps, lines } = makeDeps()
