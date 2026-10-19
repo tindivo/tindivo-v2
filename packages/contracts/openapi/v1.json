@@ -7443,6 +7443,16 @@
               }
             }
           },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Problem Details (RFC 9457). `code`: validation_error",
             "content": {
@@ -7474,7 +7484,7 @@
             }
           }
         },
-        "description": "Idempotente por `installId`: la app lo llama al abrirse, al rotar el token y al cambiar de usuario. Si el token ya estaba registrado en otra instalación, esa fila se borra. Si la instalación era de otro usuario, pasa al de la sesión. `app` debe corresponder al rol de la sesión (customer, negocios→business, motorizados→driver); si no, 403. La respuesta nunca incluye el token.",
+        "description": "Idempotente por `installId`: la app lo llama al abrirse, al rotar el token y al cambiar de usuario. Si el token ya estaba registrado en otra instalación, esa fila se borra (así cambia de usuario un aparato). Un `installId` que ya es de otra cuenta responde 409 `conflict`: la app debe regenerarlo al cerrar sesión. `app` debe corresponder al rol de la sesión (customer, negocios→business, motorizados→driver); si no, 403. La respuesta nunca incluye el token.",
         "parameters": [
           {
             "name": "installId",
@@ -7484,7 +7494,7 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "description": "UUID de la instalación, generado por la app"
+              "description": "UUID que genera la app al instalarse y DEBE regenerarse al cerrar sesión; una instalación de otra cuenta responde 409 `conflict`"
             }
           },
           {
@@ -7682,7 +7692,7 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "description": "UUID de la instalación, generado por la app"
+              "description": "UUID que genera la app al instalarse y DEBE regenerarse al cerrar sesión; una instalación de otra cuenta responde 409 `conflict`"
             }
           },
           {

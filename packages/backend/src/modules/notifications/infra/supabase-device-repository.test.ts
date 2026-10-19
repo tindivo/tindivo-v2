@@ -81,6 +81,16 @@ describe('SupabaseDeviceRepository.register', () => {
     expect((err as DomainError).code).toBe('unauthorized')
   })
 
+  it('traduce install_id_taken a conflict', async () => {
+    const { repository } = repositoryWith({
+      data: null,
+      error: { code: 'P0001', message: 'install_id_taken' },
+    })
+    const err = await repository.register(INPUT).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(DomainError)
+    expect((err as DomainError).code).toBe('conflict')
+  })
+
   it('cualquier otro error de la base es un fallo interno, no un error de dominio', async () => {
     const { repository } = repositoryWith({
       data: null,

@@ -652,8 +652,9 @@ export const OPERATIONS: OperationSpec[] = [
     summary: 'Registrar o actualizar el dispositivo nativo de esta instalación (APNs o FCM)',
     description:
       'Idempotente por `installId`: la app lo llama al abrirse, al rotar el token y al cambiar de usuario. ' +
-      'Si el token ya estaba registrado en otra instalación, esa fila se borra. Si la instalación era de ' +
-      'otro usuario, pasa al de la sesión. `app` debe corresponder al rol de la sesión ' +
+      'Si el token ya estaba registrado en otra instalación, esa fila se borra (así cambia de usuario un aparato). ' +
+      'Un `installId` que ya es de otra cuenta responde 409 `conflict`: la app debe regenerarlo al cerrar sesión. ' +
+      '`app` debe corresponder al rol de la sesión ' +
       '(customer, negocios→business, motorizados→driver); si no, 403. La respuesta nunca incluye el token.',
     tags: ['push'],
     auth: 'user',
@@ -666,7 +667,7 @@ export const OPERATIONS: OperationSpec[] = [
         schema: PushDeviceSchema,
       },
     },
-    errors: ['validation_error', 'unauthorized', 'forbidden'],
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'conflict'],
     documented: true,
   },
   {

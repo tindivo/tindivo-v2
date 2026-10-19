@@ -4,7 +4,8 @@ import { CLIENT_APPS, NATIVE_PLATFORMS } from './client-compat'
 /**
  * Registro de dispositivos nativos de push (APNs y FCM), `PUT/DELETE /push/devices/{installId}`.
  *
- * Una fila por instalación: `installId` es un UUID que la app genera al instalarse y guarda.
+ * Una fila por instalación: `installId` es un UUID que la app genera al instalarse y DEBE
+ * regenerarse al cerrar sesión; una instalación de otra cuenta responde 409 `conflict`.
  * El token es una credencial: viaja en el cuerpo del registro y la API nunca lo devuelve.
  * Web Push (`/push/subscriptions`) es otro canal y no cambia.
  */
@@ -13,7 +14,10 @@ export const PUSH_ENVIRONMENTS = ['production', 'sandbox'] as const
 
 /** Parámetros de ruta de `PUT` y `DELETE /push/devices/{installId}`. */
 export const PushDeviceParamsSchema = z.object({
-  installId: z.uuid().meta({ description: 'UUID de la instalación, generado por la app' }),
+  installId: z.uuid().meta({
+    description:
+      'UUID que genera la app al instalarse y DEBE regenerarse al cerrar sesión; una instalación de otra cuenta responde 409 `conflict`',
+  }),
 })
 
 /** Cuerpo de `PUT /push/devices/{installId}`. La identidad sale del token de sesión. */

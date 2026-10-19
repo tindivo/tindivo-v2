@@ -20,9 +20,13 @@
 --   2. Rechaza la cuenta borrada (`users.deleted_at`), leída FOR SHARE como la 0266, para
 --      que un JWT todavía válido no re-registre un token tras el borrado.
 --   3. Borra la fila de OTRA instalación con el mismo token (el token cambió de manos).
---   4. Upsert por `install_id`: asigna `user_id` = actor (cambio de usuario en el mismo
---      aparato: la fila pasa al nuevo usuario y el anterior ya no la tiene). Si el token
---      cambió (rotación), reinicia los contadores de fallo y reactiva el dispositivo.
+--   4. Si el `install_id` ya es de OTRO usuario, aborta con `install_id_taken` sin tocar
+--      nada: conocer un installId no da su fila. El cambio de usuario en el mismo aparato
+--      va por el TOKEN: la app regenera su installId al cerrar sesión y el usuario nuevo
+--      registra el nuevo con el mismo token; la fila vieja de ese token se borra (paso 3).
+--   5. Upsert por `install_id` de la propia instalación. Si el token cambió (rotación),
+--      reinicia los contadores de fallo y reactiva el dispositivo. El `where` del upsert
+--      cubre la carrera de dos usuarios con el mismo installId nuevo.
 -- `unregister_push_device`: borra solo si la instalación es del actor; si es de otro o no
 -- existe, no hace nada y devuelve false (la API responde 204 igual: no revela nada).
 --
@@ -102,6 +106,16 @@ begin
     raise exception using errcode = 'P0001', message = 'account_deleted';
   end if;
 
+  -- El installId es del primero que lo registra: conocerlo no basta para quedarse la fila.
+  -- Se lee FOR UPDATE antes de tocar nada; si es de otro usuario, aborta sin cambios.
+  perform 1
+  from public.push_devices d
+  where d.install_id = p_install_id and d.user_id <> p_actor_user_id
+  for update;
+  if found then
+    raise exception using errcode = 'P0001', message = 'install_id_taken';
+  end if;
+
   delete from public.push_devices d
   where d.token = p_token and d.install_id <> p_install_id;
 
@@ -113,7 +127,6 @@ begin
     p_os_version, p_device_model, p_locale, p_timezone, p_notifications_enabled
   )
   on conflict (install_id) do update set
-    user_id               = excluded.user_id,
     platform              = excluded.platform,
     app                   = excluded.app,
     environment           = excluded.environment,
@@ -133,7 +146,14 @@ begin
     disabled_reason = case when d.token is distinct from excluded.token then null
                            else d.disabled_reason end,
     token                 = excluded.token
+  where d.user_id = excluded.user_id
   returning d.* into v_row;
+
+  -- Otro usuario insertó este installId entre la lectura y el insert (otro token, otro
+  -- candado): el `where` impide pisar su fila y aquí se rechaza, deshaciendo todo.
+  if not found then
+    raise exception using errcode = 'P0001', message = 'install_id_taken';
+  end if;
 
   return v_row;
 end;

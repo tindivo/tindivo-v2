@@ -37,6 +37,9 @@ export class SupabaseDeviceRepository implements DeviceRepository {
       if (error.code === 'P0001' && error.message === 'account_deleted') {
         throw new DomainError('Esta cuenta fue eliminada', 'unauthorized')
       }
+      if (error.code === 'P0001' && error.message === 'install_id_taken') {
+        throw new DomainError('Esta instalación pertenece a otra cuenta', 'conflict')
+      }
       throw new Error(`No se pudo registrar el dispositivo: ${error.message}`)
     }
     return PushDeviceSchema.parse({

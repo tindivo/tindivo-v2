@@ -243,17 +243,39 @@ describe('PUT /push/devices/{installId}: registro', () => {
     expect(await filasConToken(token)).toHaveLength(1)
   })
 
-  it('cambio de usuario en el mismo aparato: la fila pasa al usuario B y A ya no la tiene', async () => {
+  it('B no puede registrar la instalación de A: 409 conflict y la fila de A queda intacta', async () => {
     const a = await crearUsuario()
     const b = await crearUsuario()
     const installId = nuevoInstallId()
+    const tokenA = nuevoToken()
+    await registrar(a, installId, tokenA)
+    await db
+      .from('push_devices')
+      .update({ failure_count: 3, last_failed_at: new Date().toISOString() })
+      .eq('install_id', installId)
+    const antes = await fila(installId)
+
+    for (const token of [tokenA, nuevoToken()]) {
+      const res = await registrar(b, installId, token)
+      expect(res.status).toBe(409)
+      expect(res.body.code).toBe('conflict')
+    }
+    expect(await fila(installId)).toEqual(antes)
+    expect(antes).toMatchObject({ user_id: a.id, token: tokenA, failure_count: 3 })
+  })
+
+  it('cambio de usuario en el aparato: B registra un installId nuevo con el token de A y la fila de A desaparece', async () => {
+    const a = await crearUsuario()
+    const b = await crearUsuario()
+    const instalacionA = nuevoInstallId()
+    const instalacionB = nuevoInstallId()
     const token = nuevoToken()
-    await registrar(a, installId, token)
-    const res = await registrar(b, installId, token)
+    await registrar(a, instalacionA, token)
+    const res = await registrar(b, instalacionB, token)
     expect(res.status).toBe(200)
-    expect(await fila(installId)).toMatchObject({ user_id: b.id, token })
-    const { data: deA } = await db.from('push_devices').select('id').eq('user_id', a.id)
-    expect(deA).toHaveLength(0)
+    expect(await fila(instalacionA)).toBeNull()
+    expect(await fila(instalacionB)).toMatchObject({ user_id: b.id, token })
+    expect(await filasConToken(token)).toHaveLength(1)
   })
 
   it('un motorizado y un negocio registran la app que les corresponde', async () => {
@@ -286,10 +308,13 @@ describe('DELETE /push/devices/{installId}: baja', () => {
     const dueno = await crearUsuario()
     const otro = await crearUsuario()
     const installId = nuevoInstallId()
-    await registrar(dueno, installId, nuevoToken())
+    const token = nuevoToken()
+    await registrar(dueno, installId, token)
+    const antes = await fila(installId)
     const res = await llamar(DELETE, installId, { bearer: otro.token })
     expect(res.status).toBe(204)
-    expect(await fila(installId)).toMatchObject({ user_id: dueno.id })
+    expect(await fila(installId)).toEqual(antes)
+    expect(antes).toMatchObject({ user_id: dueno.id, token })
   })
 
   it('la baja de una instalación que no existe responde 204', async () => {
@@ -415,18 +440,21 @@ describe('concurrencia (TST-2)', () => {
     }
   })
 
-  it('el mismo installId registrado a la vez por dos usuarios termina con una fila y ningún 500', async () => {
+  it('el mismo installId nuevo registrado a la vez por dos usuarios deja una fila y nunca un 500', async () => {
     const a = await crearUsuario()
     const b = await crearUsuario()
-    for (let ronda = 0; ronda < 5; ronda++) {
+    for (let ronda = 0; ronda < 8; ronda++) {
       const installId = nuevoInstallId()
       const [ra, rb] = await Promise.all([
         registrar(a, installId, nuevoToken()),
         registrar(b, installId, nuevoToken()),
       ])
-      expect([ra.status, rb.status], `ronda ${ronda}`).toEqual([200, 200])
-      const { data } = await db.from('push_devices').select('id').eq('install_id', installId)
+      const estados = [ra.status, rb.status].sort()
+      expect(estados, `ronda ${ronda}`).toEqual([200, 409])
+      const { data } = await db.from('push_devices').select('user_id').eq('install_id', installId)
       expect(data, `ronda ${ronda}`).toHaveLength(1)
+      const ganador = ra.status === 200 ? a.id : b.id
+      expect(data?.[0]?.user_id, `ronda ${ronda}`).toBe(ganador)
     }
   })
 })
