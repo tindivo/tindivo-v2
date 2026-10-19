@@ -45,6 +45,8 @@ async function problemOf(res: Response): Promise<ProblemBody> {
   return (await res.json()) as ProblemBody
 }
 
+const REQUEST_UUID = '3f2b8c1e-5a4d-4e7f-9b6a-1c2d3e4f5a6b'
+
 const noUser = { module: 'test', method: 'GET', path: '/api/v1/test/ping', auth: 'none' } as const
 
 function post(body: string, headers: Record<string, string> = {}): Request {
@@ -263,7 +265,7 @@ describe('defineHandler: respuesta', () => {
         headers: {
           authorization: 'Bearer t',
           origin: 'https://negocios.tindivo.com',
-          'x-request-id': 'req-9',
+          'x-request-id': REQUEST_UUID,
         },
       }),
       {},
@@ -271,7 +273,7 @@ describe('defineHandler: respuesta', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ data: { ok: true } })
     expect(res.headers.get('access-control-allow-origin')).toBe('https://negocios.tindivo.com')
-    expect(res.headers.get('x-request-id')).toBe('req-9')
+    expect(res.headers.get('x-request-id')).toBe(REQUEST_UUID)
     expect(res.headers.get('cache-control')).toBe('private, no-store')
   })
 
@@ -284,21 +286,6 @@ describe('defineHandler: respuesta', () => {
     const res = await handler(new Request('http://localhost/api/v1/test/ping'), {})
     expect(res.headers.get('x-request-id')).toBe('id-77')
     expect(res.headers.get('cache-control')).toBeNull()
-  })
-
-  it('no acepta un x-request-id del cliente que no tenga forma de identificador corto', async () => {
-    const { deps } = makeDeps({ ids: ['id-88'] })
-    const handler = defineHandler(
-      { ...noUser, response: z.object({ ok: z.boolean() }) },
-      async () => ({ ok: true }),
-    ).withDeps(deps)
-    const res = await handler(
-      new Request('http://localhost/api/v1/test/ping', {
-        headers: { 'x-request-id': `x${'a'.repeat(200)}` },
-      }),
-      {},
-    )
-    expect(res.headers.get('x-request-id')).toBe('id-88')
   })
 
   it("responde 204 sin cuerpo con response 'empty'", async () => {
@@ -386,6 +373,101 @@ describe('defineHandler: errores sin datos personales en el log', () => {
       name: 'PostgrestError',
       code: '23505',
       frames: ['    at insertar (/app/repo.ts:10:5)'],
+    })
+  })
+})
+
+describe('defineHandler: cabeceras del cliente', () => {
+  const PAYLOAD = '+51 987 654 321 juana@example.pe sk_live_abc123'
+  const SECRETS = ['987 654 321', 'juana@example.pe', 'sk_live_abc123']
+  const CLIENT_FIELD = {
+    'x-tindivo-platform': 'clientPlatform',
+    'x-tindivo-app': 'clientApp',
+    'x-tindivo-app-version': 'clientAppVersion',
+    'x-tindivo-build': 'clientBuild',
+  } as const
+
+  async function everythingFrom(res: Response, lines: unknown): Promise<string> {
+    const headers = JSON.stringify([...res.headers.entries()])
+    return `${JSON.stringify(lines)}${headers}${await res.text()}`
+  }
+
+  it.each(
+    Object.keys(CLIENT_FIELD),
+  )('no deja pasar un texto libre en %s: se registra null y no sale en log, cabeceras ni cuerpo', async (header) => {
+    for (const failing of [false, true]) {
+      const { deps, lines } = makeDeps()
+      const handler = defineHandler({ ...noUser, response: z.object({}) }, async () => {
+        if (failing) throw new DomainError('No disponible', 'forbidden')
+        return {}
+      }).withDeps(deps)
+      const res = await handler(
+        new Request('http://localhost/api/v1/test/ping', { headers: { [header]: PAYLOAD } }),
+        {},
+      )
+      const text = await everythingFrom(res, lines)
+      for (const secret of SECRETS) expect(text).not.toContain(secret)
+      const entry = lines.find((l) => l.entry.event === 'request')?.entry
+      const field = CLIENT_FIELD[header as keyof typeof CLIENT_FIELD]
+      expect(entry?.[field]).toBeNull()
+    }
+  })
+
+  it('no deja pasar un texto libre en x-request-id: se genera uno y no sale en ningún sitio', async () => {
+    for (const failing of [false, true]) {
+      const { deps, lines } = makeDeps({ ids: ['id-gen'] })
+      const handler = defineHandler({ ...noUser, response: z.object({}) }, async () => {
+        if (failing) throw new Error(`fallo ${PAYLOAD}`)
+        return {}
+      }).withDeps(deps)
+      const res = await handler(
+        new Request('http://localhost/api/v1/test/ping', { headers: { 'x-request-id': PAYLOAD } }),
+        {},
+      )
+      expect(res.headers.get('x-request-id')).toBe('id-gen')
+      const text = await everythingFrom(res, lines)
+      for (const secret of SECRETS) expect(text).not.toContain(secret)
+    }
+  })
+
+  it.each([
+    '987654321',
+    'abc-123',
+    `x${'a'.repeat(200)}`,
+    '',
+  ])('rechaza como x-request-id el valor %j porque no es un UUID', async (value) => {
+    const { deps } = makeDeps({ ids: ['id-gen'] })
+    const handler = defineHandler({ ...noUser, response: z.object({}) }, async () => ({})).withDeps(
+      deps,
+    )
+    const res = await handler(
+      new Request('http://localhost/api/v1/test/ping', { headers: { 'x-request-id': value } }),
+      {},
+    )
+    expect(res.headers.get('x-request-id')).toBe('id-gen')
+  })
+
+  it('registra los valores válidos del contrato y solo ellos', async () => {
+    const { deps, lines } = makeDeps()
+    const handler = defineHandler({ ...noUser, response: z.object({}) }, async () => ({})).withDeps(
+      deps,
+    )
+    await handler(
+      new Request('http://localhost/api/v1/test/ping', {
+        headers: {
+          'x-tindivo-platform': 'iOS',
+          'x-tindivo-app': 'otra-app',
+          'x-tindivo-app-version': '1.2.3.4.5',
+          'x-tindivo-build': '12345678901',
+        },
+      }),
+      {},
+    )
+    expect(lines.find((l) => l.entry.event === 'request')?.entry).toMatchObject({
+      clientPlatform: 'ios',
+      clientApp: null,
+      clientAppVersion: null,
+      clientBuild: null,
     })
   })
 })
