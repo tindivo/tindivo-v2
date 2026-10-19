@@ -1,4 +1,7 @@
+import { getDeps } from '@tindivo/backend/composition'
+import { purgeDeletedAccountProofs } from '@tindivo/backend/retention'
 import type { InngestFunction } from 'inngest'
+import { ensureBackendConfigured } from '../../src/next-adapter'
 import { processPendingOutboxEvents } from '../outbox/processor'
 import { createServiceClient } from '../supabase/service'
 import {
@@ -312,6 +315,30 @@ export const processOutboxEventsCron: InngestFunction.Any = inngest.createFuncti
   },
 )
 
+/**
+ * D-44, comprobantes a los 90 días: cada madrugada (04:30 en Lima, fuera de horario) borra los
+ * archivos y las referencias de las cuentas borradas hace más del plazo. La lógica está en
+ * `packages/backend` (módulo `retention`); aquí solo se dispara.
+ */
+export const purgeDeletedAccountProofsCron: InngestFunction.Any = inngest.createFunction(
+  {
+    id: 'purge-deleted-account-proofs-cron',
+    name: 'Purga de comprobantes de cuentas borradas (90 días)',
+    triggers: [{ cron: 'TZ=America/Lima 30 4 * * *' }],
+  },
+  async ({ step }) => {
+    return await step.run('purge-deleted-account-proofs', async () => {
+      ensureBackendConfigured()
+      const { retention, proofStorage, logger } = getDeps()
+      return await purgeDeletedAccountProofs({
+        retention,
+        storage: proofStorage,
+        logger: logger.child('retention'),
+      })
+    })
+  },
+)
+
 /** Registro de funciones servidas por el endpoint /api/inngest. */
 export const functions: InngestFunction.Any[] = [
   orderAcceptanceTimeout,
@@ -321,4 +348,5 @@ export const functions: InngestFunction.Any[] = [
   orderProofRejectedFallback,
   courierAcceptanceTimeout,
   processOutboxEventsCron,
+  purgeDeletedAccountProofsCron,
 ]

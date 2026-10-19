@@ -8,7 +8,7 @@ Registro de DES-7: cada tabla, función, trigger y vista tiene un módulo dueño
 - Un objeto nuevo entra en el registro en el mismo PR que lo crea.
 - `sin asignar` es válido mientras no exista el módulo dueño; se decide al crearlo. Los módulos aún no existen en el código: el nombre del dueño es el previsto en el mapa de módulos propuesto (`Docs/trabajo/arquitectura/04-arquitectura-objetivo.md` §3), y solo se asignó donde ese mapa no deja duda. `geo`, `fleet`, `trust`, `billing` y `reviews` quedan `sin asignar` a propósito: el mapa dice que antes hay que aclarar quién es dueño de qué.
 - Los triggers heredan el dueño de su tabla. Las funciones solo tienen dueño cuando el nombre lo deja claro (Store y pedidos de Entregas); el resto, `sin asignar`.
-- Total al 2026-10-12: 53 tablas, 0 vistas, 138 funciones (por nombre) y 53 triggers.
+- Total al 2026-10-12: 53 tablas, 0 vistas, 141 funciones (por nombre; +3 de la 0269) y 53 triggers.
 
 Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 
@@ -68,6 +68,8 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `terms_acceptance` | tabla | identity |  |
 | `user_roles` | tabla | identity |  |
 | `users` | tabla | identity |  |
+| `users.proofs_purged_at` | columna | identity | 0269; marca la purga de comprobantes de una cuenta borrada |
+| `app_settings.account_deletion` | ajuste | identity | 0269; `{"proofRetentionDays": 90}` (D-44); fila de `app_settings` (dueño de la tabla: platform) |
 | `account_deletion_blockers` | función | sin asignar |  |
 | `admin_confirm_courier_remittance` | función | sin asignar |  |
 | `admin_conversion_opportunity_stats` | función | sin asignar |  |
@@ -136,6 +138,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `expire_order_transfers` | función | sin asignar |  |
 | `extend_order_prep` | función | sin asignar |  |
 | `f_unaccent` | función | sin asignar |  |
+| `finish_proof_purge` | función | identity | 0269; purga de comprobantes a los 90 días (D-44); solo `service_role` |
 | `generate_courier_short_id` | función | courier |  |
 | `generate_delivery_charges` | función | sin asignar |  |
 | `generate_short_id` | función | sin asignar |  |
@@ -153,8 +156,10 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `is_within_platform_schedule` | función | sin asignar |  |
 | `link_business_to_all_drivers` | función | sin asignar |  |
 | `link_driver_to_all_businesses` | función | sin asignar |  |
+| `list_proof_purge_due` | función | identity | 0269; solo `service_role` |
 | `list_store_products` | función | store |  |
 | `list_store_sold` | función | store |  |
+| `list_user_proof_objects` | función | identity | 0269; solo `service_role` |
 | `log_order_status_change` | función | sin asignar |  |
 | `manual_order_money` | función | sin asignar |  |
 | `mark_appeal_in_review` | función | sin asignar |  |

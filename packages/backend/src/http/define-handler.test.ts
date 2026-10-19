@@ -35,6 +35,18 @@ function makeDeps(options: { roles?: Actor['roles']; ids?: string[] } = {}) {
       module: 'test',
       sink: { write: (level, line) => lines.push({ level, entry: JSON.parse(line) }) },
     }),
+    proofStorage: {
+      remove: async () => {
+        throw new Error('no se usa en estas pruebas')
+      },
+    },
+    retention: {
+      listDueAccounts: async () => [],
+      listProofObjects: async () => [],
+      finishPurge: async () => {
+        throw new Error('no se usa en estas pruebas')
+      },
+    },
     supabase: () => {
       throw new Error('no se usa en estas pruebas')
     },

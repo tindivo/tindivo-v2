@@ -2,6 +2,12 @@ import { createServiceRoleClient, type TypedSupabaseClient } from '@tindivo/supa
 import { type Authenticator, SupabaseAuthenticator } from '../modules/identity'
 import { type DeviceRepository, SupabaseDeviceRepository } from '../modules/notifications'
 import {
+  type ProofStorage,
+  type RetentionRepository,
+  SupabaseProofStorage,
+  SupabaseRetentionRepository,
+} from '../modules/retention'
+import {
   type Clock,
   createLogger,
   type IdGenerator,
@@ -24,6 +30,8 @@ export interface Deps {
   devices: DeviceRepository
   ids: IdGenerator
   logger: Logger
+  proofStorage: ProofStorage
+  retention: RetentionRepository
   /** Cliente service-role (salta RLS): se crea la primera vez que se pide. */
   supabase: () => TypedSupabaseClient
 }
@@ -57,6 +65,8 @@ export function getDeps(): Deps {
     devices: new SupabaseDeviceRepository(supabase),
     ids: randomIdGenerator,
     logger: createLogger({ module: 'backend' }),
+    proofStorage: new SupabaseProofStorage(supabase),
+    retention: new SupabaseRetentionRepository(supabase),
     supabase,
   }
   return deps

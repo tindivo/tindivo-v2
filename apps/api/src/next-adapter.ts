@@ -13,7 +13,7 @@ export type NextRoute = ((
 let configured = false
 
 /** Configura el backend con el entorno ya validado, una sola vez (y no al importar: no rompe el build). */
-function ensureBackendConfigured(): void {
+export function ensureBackendConfigured(): void {
   if (configured) return
   const env = serverEnv()
   configureBackend({
