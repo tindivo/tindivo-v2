@@ -1356,6 +1356,7 @@ export type Database = {
           occurred_at: string
           payload: Json
           published_at: string | null
+          push_claimed_at: string | null
           retry_count: number
         }
         Insert: {
@@ -1368,6 +1369,7 @@ export type Database = {
           occurred_at?: string
           payload: Json
           published_at?: string | null
+          push_claimed_at?: string | null
           retry_count?: number
         }
         Update: {
@@ -1380,6 +1382,7 @@ export type Database = {
           occurred_at?: string
           payload?: Json
           published_at?: string | null
+          push_claimed_at?: string | null
           retry_count?: number
         }
         Relationships: []
@@ -1920,6 +1923,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ops_alert_throttle: {
+        Row: {
+          kind: string
+          last_sent_at: string
+        }
+        Insert: {
+          kind: string
+          last_sent_at?: string
+        }
+        Update: {
+          kind?: string
+          last_sent_at?: string
+        }
+        Relationships: []
       }
       order_assignment_rejections: {
         Row: {
@@ -3196,6 +3214,7 @@ export type Database = {
       users: {
         Row: {
           created_at: string
+          deleted_at: string | null
           email: string
           full_name: string | null
           id: string
@@ -3205,6 +3224,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           email: string
           full_name?: string | null
           id: string
@@ -3214,6 +3234,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           email?: string
           full_name?: string | null
           id?: string
@@ -3228,6 +3249,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      account_deletion_blockers: { Args: { p_user_id: string }; Returns: Json }
       admin_confirm_courier_remittance: {
         Args: { p_actor_user_id: string; p_courier_order_id: string }
         Returns: Json
@@ -3307,6 +3329,10 @@ export type Database = {
         Args: { p_business_id: string; p_item_ids: string[] }
         Returns: boolean
       }
+      claim_ops_alert: {
+        Args: { p_kind: string; p_window?: string }
+        Returns: boolean
+      }
       claim_outbox_events: {
         Args: { p_limit?: number }
         Returns: {
@@ -3315,6 +3341,14 @@ export type Database = {
           out_event_type: string
           out_id: string
           out_payload: Json
+        }[]
+      }
+      claim_push_event: {
+        Args: { p_event_id: string }
+        Returns: {
+          aggregate_id: string
+          event_type: string
+          payload: Json
         }[]
       }
       close_drivers_outside_schedule: { Args: never; Returns: number }
@@ -3506,6 +3540,21 @@ export type Database = {
         Returns: boolean
       }
       current_user_role: { Args: never; Returns: string }
+      customer_address_delete: { Args: { p_id: string }; Returns: boolean }
+      customer_address_save: {
+        Args: {
+          p_id: string
+          p_label: string
+          p_lat: number
+          p_line: string
+          p_lng: number
+          p_location_accuracy_m: number
+          p_location_confirmed_at: string
+          p_make_default?: boolean
+          p_reference: string
+        }
+        Returns: string
+      }
       customer_contraentrega_blocked: {
         Args: { p_phone: string; p_reference: string }
         Returns: boolean
@@ -3530,6 +3579,7 @@ export type Database = {
         Args: { p_customer_user_id: string }
         Returns: boolean
       }
+      delete_customer_account: { Args: { p_user_id: string }; Returns: Json }
       deliver_order_cash: {
         Args: { p_driver_user_id: string; p_order_id: string }
         Returns: Json
@@ -3679,6 +3729,14 @@ export type Database = {
         Args: { p_business_user_id: string; p_minutes?: number }
         Returns: Json
       }
+      personal_data_inventory: {
+        Args: never
+        Returns: {
+          column_name: string
+          data_type: string
+          table_name: string
+        }[]
+      }
       point_in_coverage_polygon: {
         Args: { p_lat: number; p_lng: number }
         Returns: boolean
@@ -3689,6 +3747,7 @@ export type Database = {
       }
       prune_creation_idempotency: { Args: never; Returns: number }
       queue_lead_minutes: { Args: never; Returns: number }
+      redact_personal_json: { Args: { j: Json }; Returns: Json }
       refresh_customer_profile_risk: {
         Args: { p_phone: string; p_user_id: string }
         Returns: undefined
