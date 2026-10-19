@@ -12,6 +12,7 @@
     "app/**/*.tsx",
     "lib/**/*.ts",
     "lib/**/*.tsx",
+    "src/**/*.ts",
     "types/**/*.ts",
     ".next/types/**/*.ts"
   ],
