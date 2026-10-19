@@ -400,3 +400,61 @@ describe('purga de comprobantes de cuentas borradas (0269)', () => {
     expect(await referencia(b.orderId)).toBe(b.proof)
   })
 })
+
+describe('CAX-001 · solo se anulan las referencias canónicas y propias', () => {
+  it('con una referencia ajena o una URL completa aborta sin tocar nada y la cuenta queda pendiente', async () => {
+    const f = await crearCliente('f')
+    // Otros dos pedidos del mismo cliente: uno apunta a la carpeta de otro y otro es una URL completa.
+    const ajena = `${b.id}/${b.orderId}/attempt-9-${runId}.png`
+    const url = `https://ejemplo.invalid/storage/v1/object/payment-proofs/${f.id}/x.png`
+    const refs: string[] = []
+    for (const ref of [ajena, url]) {
+      const orderId = await seedOrder(world)
+      const upd = await db
+        .from('orders')
+        .update({
+          customer_user_id: f.id,
+          status: 'cancelled',
+          cancel_reason: 'proof_rejected_final',
+          cancelled_at: new Date().toISOString(),
+          comprobante_prepago_url: ref,
+        })
+        .eq('id', orderId)
+      if (upd.error) throw new Error(upd.error.message)
+      refs.push(orderId)
+    }
+    await borrarCuenta(f)
+    envejecer(f, 91)
+
+    const r = await rpc('finish_proof_purge', { p_user_id: f.id })
+    expect(r.error?.code).toBe('P0001')
+    expect(r.error?.message).toBe('non_canonical_refs')
+    // Nada se anuló, ni siquiera la canónica propia; la marca no se puso.
+    expect(await referencia(f.orderId)).toBe(f.proof)
+    expect(await referencia(refs[0] as string)).toBe(ajena)
+    expect(await referencia(refs[1] as string)).toBe(url)
+    expect(purgada(f)).toBe('null')
+
+    // El caso de uso lo registra (solo el tipo) y la cuenta sigue pendiente.
+    const { summary, lines } = correr()
+    const result = await summary
+    expect(result.failed).toBeGreaterThanOrEqual(1)
+    expect(purgada(f)).toBe('null')
+    expect(lines.join('\n')).toContain('non_canonical_refs')
+    expect(lines.join('\n')).not.toContain(f.id)
+
+    // Una persona resuelve las referencias raras: la siguiente corrida cierra la cuenta.
+    sql(`begin;
+      select set_config('tindivo.deleting_account', '${f.id}', true);
+      update public.orders set comprobante_prepago_url = null
+       where customer_user_id = '${f.id}' and comprobante_prepago_url is not null;
+      commit;`)
+    expect((await correr().summary).failed).toBe(0)
+    expect(purgada(f)).not.toBe('null')
+  })
+
+  it('las referencias canónicas y propias de un cliente normal sí se anulan (caso normal)', async () => {
+    expect(await referencia(a.orderId)).toBeNull()
+    expect(purgada(a)).not.toBe('null')
+  })
+})

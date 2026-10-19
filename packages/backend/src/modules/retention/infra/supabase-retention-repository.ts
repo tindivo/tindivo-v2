@@ -56,7 +56,15 @@ export class SupabaseRetentionRepository implements RetentionRepository {
 
   async finishPurge(userId: string): Promise<PurgeOutcome> {
     const { data, error } = await this.client().rpc('finish_proof_purge', { p_user_id: userId })
-    if (error) throw new Error(`No se pudo cerrar la purga: ${error.message}`)
+    if (error) {
+      // Un aborto de negocio (`not_due`, `proof_objects_remain`, `non_canonical_refs`) viaja
+      // como `code`: el logger imprime el `code` de un error y nunca su mensaje.
+      const failure = new Error(`No se pudo cerrar la purga: ${error.message}`)
+      if (error.code === 'P0001' && /^[a-z_]{1,40}$/.test(error.message)) {
+        Object.assign(failure, { code: error.message })
+      }
+      throw failure
+    }
     return PurgeOutcomeSchema.parse(data)
   }
 }

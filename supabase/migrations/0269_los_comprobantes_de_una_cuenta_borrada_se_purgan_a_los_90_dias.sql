@@ -16,7 +16,10 @@
 --                                          las referencias y marca `users.proofs_purged_at`.
 --
 -- REFERENCIAS que se anulan (importe, estado y `business_charges` no se tocan):
---   · `orders.comprobante_prepago_url` de los pedidos del cliente.
+--   · `orders.comprobante_prepago_url` de los pedidos del cliente, SOLO si es una ruta
+--     canónica propia (`<id del cliente>/…`, medido en prod: las 57 lo son). Si el cliente
+--     tiene cualquier otra referencia no nula, `finish_proof_purge` aborta con
+--     `non_canonical_refs` y la cuenta queda pendiente.
 --   · `reports.evidence_url` cuando apunta a su carpeta: `create_appeal_report` lo copia de
 --     `comprobante_prepago_url` (0262/0266), así que es la misma ruta de `payment-proofs`.
 --     `reports.refund_proof_path` NO se toca: es el comprobante de devolución que sube el
@@ -165,6 +168,27 @@ begin
     raise exception using errcode = 'P0001', message = 'not_due';
   end if;
 
+  -- Solo se anula una referencia CANÓNICA y propia (`<id del cliente>/…`, sin `http`): su
+  -- archivo vive en la carpeta que se acaba de vaciar. Cualquier otra referencia no nula del
+  -- cliente (URL completa, carpeta ajena, otro formato) apunta a un archivo que esta purga
+  -- no borra: anularla lo dejaría en Storage sin que nada lo señale. Se aborta, sin tocar
+  -- nada, y la cuenta queda pendiente para que una persona la revise.
+  if exists (
+    select 1 from public.orders ord
+    where ord.customer_user_id = p_user_id
+      and ord.comprobante_prepago_url is not null
+      and not (split_part(ord.comprobante_prepago_url, '/', 1) = p_user_id::text
+               and ord.comprobante_prepago_url not like 'http%')
+  ) or exists (
+    select 1 from public.reports r
+    where r.customer_user_id = p_user_id
+      and r.evidence_url is not null
+      and not (split_part(r.evidence_url, '/', 1) = p_user_id::text
+               and r.evidence_url not like 'http%')
+  ) then
+    raise exception using errcode = 'P0001', message = 'non_canonical_refs';
+  end if;
+
   if exists (
     select 1 from storage.objects o
     where o.bucket_id in ('payment-proofs', 'receipts')
@@ -179,13 +203,17 @@ begin
 
   update public.orders
   set comprobante_prepago_url = null
-  where customer_user_id = p_user_id and comprobante_prepago_url is not null;
+  where customer_user_id = p_user_id
+    and comprobante_prepago_url is not null
+    and split_part(comprobante_prepago_url, '/', 1) = p_user_id::text
+    and comprobante_prepago_url not like 'http%';
   get diagnostics v_orders = row_count;
 
   update public.reports
   set evidence_url = null
   where evidence_url is not null
-    and starts_with(evidence_url, p_user_id::text || '/');
+    and split_part(evidence_url, '/', 1) = p_user_id::text
+    and evidence_url not like 'http%';
   get diagnostics v_reports = row_count;
 
   update public.users set proofs_purged_at = now() where id = p_user_id;
