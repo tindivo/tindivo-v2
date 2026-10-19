@@ -148,7 +148,7 @@ function queryToRecord(url: URL): Record<string, string> {
 
 /**
  * Crea un handler con el contrato de TS-17. Pasos, en orden: request-id, límite de cuerpo,
- * autenticación, validación (params, query, body), `run`, respuesta, errores y log.
+ * autenticación, lectura acotada del cuerpo, validación (params, query, body), `run`, respuesta, errores y log.
  */
 export function defineHandler<
   P = Record<string, string>,
@@ -200,14 +200,17 @@ export function defineHandler<
 
         const actor = spec.auth === 'none' ? null : await deps.auth.authenticate(request, spec.auth)
 
+        // Con o sin esquema, un cuerpo se lee SIEMPRE con el contador: un stream sin
+        // content-length (o con uno falso) no puede pasar del límite. Sin esquema se descarta.
+        const bodyText = request.body === null ? null : await readLimitedText(request, maxBodyBytes)
+
         const params = parseWith(spec.params, rawParams)
         const query = parseWith(spec.query, queryToRecord(new URL(request.url)))
         let body: B
         if (spec.body) {
-          const text = await readLimitedText(request, maxBodyBytes)
           let json: unknown
           try {
-            json = JSON.parse(text)
+            json = JSON.parse(bodyText ?? '')
           } catch {
             throw new InvalidJsonError()
           }
