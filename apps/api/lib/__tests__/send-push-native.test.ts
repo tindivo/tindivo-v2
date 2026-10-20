@@ -7,8 +7,10 @@ import {
   buildFcmMessage,
   classifyApns,
   classifyFcm,
+  deliverToDevices,
   fcmAccessToken,
   loadNativeConfig,
+  MAX_NATIVE_DEVICES_PER_NOTE,
   NativeAuthError,
   type NativeConfig,
   type NativeDevice,
@@ -743,6 +745,114 @@ describe('send-push native · resultados y secretos', () => {
   })
 })
 
+// ── Varios dispositivos: tope y paralelo ────────────────────────────────────
+
+describe('send-push native · varios dispositivos por aviso', () => {
+  const dispositivos = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `dev-${i}`,
+      token: `${String(i).padStart(2, '0')}${'b'.repeat(62)}`,
+      platform: 'ios' as const,
+      environment: 'production' as const,
+      failure_count: 0,
+    }))
+
+  it('con 7 dispositivos solo se envía a los 5 primeros, en el orden de entrada', async () => {
+    const { env } = await fullEnv()
+    const cfg = await load(env)
+    const f = fakeFetch(() => ({ status: 200 }))
+    const vistos: string[] = []
+    const r = await deliverToDevices(
+      dispositivos(7),
+      'customer',
+      note,
+      'OrderCreated',
+      await deps(cfg, f),
+      async (d) => {
+        vistos.push(d.id)
+      },
+    )
+    expect(MAX_NATIVE_DEVICES_PER_NOTE).toBe(5)
+    expect(f.calls).toHaveLength(5)
+    expect(f.calls.map((c) => c.url.split('/').pop()?.slice(0, 2)).sort()).toEqual([
+      '00',
+      '01',
+      '02',
+      '03',
+      '04',
+    ])
+    expect([...vistos].sort()).toEqual(['dev-0', 'dev-1', 'dev-2', 'dev-3', 'dev-4'])
+    expect(r).toEqual({ sent: 5, failed: 0, recordFailed: 0 })
+  })
+
+  it('los envíos van en paralelo: hay 5 peticiones en vuelo a la vez', async () => {
+    const { env } = await fullEnv()
+    const cfg = await load(env)
+    let enVuelo = 0
+    let pico = 0
+    const liberar: Array<() => void> = []
+    const fn: NativeFetch = async () => {
+      enVuelo++
+      pico = Math.max(pico, enVuelo)
+      await new Promise<void>((resolve) => liberar.push(resolve))
+      enVuelo--
+      return { status: 200, text: async () => '' }
+    }
+    const pendiente = deliverToDevices(
+      dispositivos(7),
+      'customer',
+      note,
+      'OrderCreated',
+      { config: cfg, fetch: fn, now: () => Date.UTC(2026, 9, 19, 12, 0, 0) },
+      async () => {},
+    )
+    await vi.waitFor(() => expect(enVuelo).toBe(5))
+    expect(pico).toBe(5)
+    for (const l of liberar) l()
+    expect(await pendiente).toEqual({ sent: 5, failed: 0, recordFailed: 0 })
+  })
+
+  it('si record lanza en uno, los demás se registran igual y no lanza hacia fuera', async () => {
+    const { env } = await fullEnv()
+    const cfg = await load(env)
+    const f = fakeFetch(() => ({ status: 200 }))
+    const registrados: string[] = []
+    const r = await deliverToDevices(
+      dispositivos(3),
+      'customer',
+      note,
+      'OrderCreated',
+      await deps(cfg, f),
+      async (d) => {
+        if (d.id === 'dev-1') throw new Error(`falla ${d.token}`)
+        registrados.push(d.id)
+      },
+    )
+    expect([...registrados].sort()).toEqual(['dev-0', 'dev-2'])
+    expect(r).toEqual({ sent: 3, failed: 0, recordFailed: 1 })
+    expect(JSON.stringify(r)).not.toContain('bbbb')
+  })
+
+  it('los null (iOS sin APNs) no cuentan ni se registran', async () => {
+    const { env } = await fullEnv()
+    env.APNS_KEY_ID = ''
+    const cfg = await load(env)
+    const f = fakeFetch(() => ({ status: 200 }))
+    const registrar = vi.fn(async () => {})
+    const r = await deliverToDevices(
+      dispositivos(3),
+      'customer',
+      note,
+      'OrderCreated',
+      await deps(cfg, f),
+      registrar,
+    )
+    expect(r).toEqual({ sent: 0, failed: 0, recordFailed: 0 })
+    expect(registrar).not.toHaveBeenCalled()
+    expect(f.calls).toHaveLength(0)
+  })
+})
+
 // ── Guardarraíl sobre index.ts (no se puede ejecutar en vitest: imports jsr/npm) ──
 
 describe('send-push index.ts · cada aviso lleva su app', () => {
@@ -764,11 +874,15 @@ describe('send-push index.ts · cada aviso lleva su app', () => {
     expect(bloque).toContain("app: 'admin'")
   })
 
-  it('el envío nativo va después del bucle de Web Push y se suma a sent/failed', () => {
+  it('el envío nativo arranca tras el Web Push de cada aviso, sin esperarlo, y se suma al final', () => {
     const iWeb = src.indexOf('webpush.sendNotification(')
-    const iNative = src.indexOf('await deliverNative(note, event_type)')
+    const iNative = src.indexOf('nativePending.push(deliverNative(note, event_type))')
+    const iWait = src.indexOf('await Promise.all(nativePending)')
     expect(iWeb).toBeGreaterThan(0)
     expect(iNative).toBeGreaterThan(iWeb)
+    expect(iWait).toBeGreaterThan(iNative)
+    // Ningún aviso espera a su envío nativo dentro del bucle.
+    expect(src).not.toContain('await deliverNative(')
     expect(src).toContain('sent += native.sent')
     expect(src).toContain('failed += native.failed')
   })

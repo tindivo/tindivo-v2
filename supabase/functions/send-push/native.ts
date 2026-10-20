@@ -547,6 +547,42 @@ async function sendFcm(
   }
 }
 
+/** Tope de dispositivos por aviso: los vistos más recientemente (la consulta los ordena). */
+export const MAX_NATIVE_DEVICES_PER_NOTE = 5
+
+/**
+ * Manda un aviso a los dispositivos recibidos, como máximo `MAX_NATIVE_DEVICES_PER_NOTE` (los
+ * primeros: quien llama los trae ya ordenados por `last_seen_at` descendente; el recorte es
+ * defensivo), EN PARALELO, para que un proveedor caído no retrase los avisos de los demás.
+ * Por cada envío que no sea `null` llama a `record` (el registro en la base). Un fallo de
+ * `record` en un dispositivo no frena a los demás ni se propaga: solo se cuenta en
+ * `recordFailed`, sin datos del dispositivo. Nunca lanza.
+ */
+export async function deliverToDevices<D extends NativeDevice>(
+  devices: readonly D[],
+  app: NativeApp,
+  note: NativeNote,
+  eventType: string,
+  deps: NativeSendDeps,
+  record: (device: D, result: NativeSendResult) => Promise<void>,
+): Promise<{ sent: number; failed: number; recordFailed: number }> {
+  const tally = { sent: 0, failed: 0, recordFailed: 0 }
+  await Promise.all(
+    devices.slice(0, MAX_NATIVE_DEVICES_PER_NOTE).map(async (device) => {
+      const result = await sendNative(device, app, note, eventType, deps)
+      if (!result) return
+      if (result.outcome === 'ok') tally.sent++
+      else tally.failed++
+      try {
+        await record(device, result)
+      } catch {
+        tally.recordFailed++
+      }
+    }),
+  )
+  return tally
+}
+
 /**
  * Qué dispositivos leer para un aviso: los del destinatario, de la app del aviso y de una
  * plataforma configurada (además, activos y con avisos permitidos, que lo añade la consulta).

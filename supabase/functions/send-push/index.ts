@@ -4,7 +4,13 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { loadNativeConfig, type NativeApp, nativeDeviceFilter, sendNative } from './native.ts'
+import {
+  deliverToDevices,
+  loadNativeConfig,
+  MAX_NATIVE_DEVICES_PER_NOTE,
+  type NativeApp,
+  nativeDeviceFilter,
+} from './native.ts'
 import { classifyRequest } from './request-kind.ts'
 import {
   isOpsCaller,
@@ -68,7 +74,8 @@ const nativeConfig = await loadNativeConfig(
 )
 
 /**
- * Entrega un aviso a los dispositivos nativos del destinatario, UNO A UNO, y lo registra.
+ * Entrega un aviso a los dispositivos nativos del destinatario y lo registra: como máximo
+ * `MAX_NATIVE_DEVICES_PER_NOTE` (los vistos más recientemente), EN PARALELO.
  *
  * Solo los dispositivos activos, con avisos permitidos, de la app del aviso y de una plataforma
  * configurada. Un fallo se registra y punto (los reintentos son otro lote). Nunca se escribe un
@@ -90,49 +97,51 @@ async function deliverNative(
     .is('disabled_at', null)
     .eq('notifications_enabled', true)
     .in('platform', filter.platforms)
+    .order('last_seen_at', { ascending: false })
+    .limit(MAX_NATIVE_DEVICES_PER_NOTE)
   if (error) {
     console.error('[send-push] push_devices query falló:', error.code ?? 'sin_codigo')
     return tally
   }
 
-  for (const device of devices ?? []) {
-    const result = await sendNative(
-      {
-        token: device.token as string,
-        platform: device.platform as 'ios' | 'android',
-        environment: device.environment as 'production' | 'sandbox',
-      },
-      note.app,
-      note,
-      eventType,
-      { config: nativeConfig, fetch, now: () => Date.now() },
-    )
-    if (!result) continue
-    const ok = result.outcome === 'ok'
-    if (ok) tally.sent++
-    else tally.failed++
+  const rows = (devices ?? []).map((d) => ({
+    id: d.id as string,
+    token: d.token as string,
+    platform: d.platform as 'ios' | 'android',
+    environment: d.environment as 'production' | 'sandbox',
+    failure_count: (d.failure_count as number | null) ?? 0,
+  }))
+  const res = await deliverToDevices(
+    rows,
+    note.app,
+    note,
+    eventType,
+    { config: nativeConfig, fetch, now: () => Date.now() },
+    async (device, result) => {
+      const ok = result.outcome === 'ok'
+      const { error: logErr } = await db.from('push_delivery_log').insert({
+        device_id: device.id,
+        channel: result.channel,
+        event_type: eventType,
+        status: ok ? 'ok' : 'error',
+        error_code: result.status,
+        error_message: result.reason,
+      })
+      if (logErr) console.error('[send-push] push_delivery_log falló:', logErr.code ?? 'sin_codigo')
 
-    const { error: logErr } = await db.from('push_delivery_log').insert({
-      device_id: device.id,
-      channel: result.channel,
-      event_type: eventType,
-      status: ok ? 'ok' : 'error',
-      error_code: result.status,
-      error_message: result.reason,
-    })
-    if (logErr) console.error('[send-push] push_delivery_log falló:', logErr.code ?? 'sin_codigo')
-
-    const nowIso = new Date().toISOString()
-    const patch =
-      result.outcome === 'ok'
-        ? { last_successful_at: nowIso, failure_count: 0 }
-        : result.outcome === 'invalid_token'
-          ? { disabled_at: nowIso, disabled_reason: result.reason }
-          : { last_failed_at: nowIso, failure_count: ((device.failure_count as number) ?? 0) + 1 }
-    const { error: updErr } = await db.from('push_devices').update(patch).eq('id', device.id)
-    if (updErr) console.error('[send-push] push_devices update falló:', updErr.code ?? 'sin_codigo')
-  }
-  return tally
+      const nowIso = new Date().toISOString()
+      const patch =
+        result.outcome === 'ok'
+          ? { last_successful_at: nowIso, failure_count: 0 }
+          : result.outcome === 'invalid_token'
+            ? { disabled_at: nowIso, disabled_reason: result.reason }
+            : { last_failed_at: nowIso, failure_count: device.failure_count + 1 }
+      const { error: updErr } = await db.from('push_devices').update(patch).eq('id', device.id)
+      if (updErr) console.error('[send-push] push_devices update falló:', updErr.code ?? 'sin_codigo')
+    },
+  )
+  if (res.recordFailed > 0) console.error('[send-push] registro nativo falló en dispositivos:', res.recordFailed)
+  return { sent: res.sent, failed: res.failed }
 }
 
 type Note = {
@@ -1410,6 +1419,7 @@ Deno.serve(async (req: Request) => {
     const notes = await buildNotes(event_type, aggregate_id, payload ?? {})
     let sent = 0
     let failed = 0
+    const nativePending: Promise<{ sent: number; failed: number }>[] = []
 
     for (const note of notes) {
       const { data: subs } = await db
@@ -1464,8 +1474,11 @@ Deno.serve(async (req: Request) => {
           }
         }
       }
-      // Dispositivos nativos del destinatario, después de su Web Push (que no cambia).
-      const native = await deliverNative(note, event_type)
+      // Dispositivos nativos del destinatario: arrancan aquí y se esperan todos juntos al final,
+      // para que un proveedor lento no retrase el Web Push ni el aviso nativo de los siguientes.
+      nativePending.push(deliverNative(note, event_type))
+    }
+    for (const native of await Promise.all(nativePending)) {
       sent += native.sent
       failed += native.failed
     }
