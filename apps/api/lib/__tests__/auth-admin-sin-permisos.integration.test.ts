@@ -60,7 +60,7 @@ const ROLLBACK = repoFile(
 /** La ACL de `supabase_auth_admin` medida en prod (2026-10-20): la referencia independiente. */
 const ACL_PROD = new Set(
   repoFile('supabase/rollbacks/0271_supabase_auth_admin_pierde_los_permisos_heredados.acl-prod.txt')
-    .split('\n')
+    .split(/\r?\n/)
     .filter((l) => l !== '' && !l.startsWith('#')),
 )
 
