@@ -52,8 +52,13 @@ begin
     raise exception '0271: supabase_auth_admin conserva EXECUTE en % funciones de public', n;
   end if;
 
-  if has_schema_privilege('supabase_auth_admin', 'public', 'usage') then
-    raise exception '0271: supabase_auth_admin conserva USAGE sobre public';
+  -- La concesión PROPIA del rol, no el privilegio efectivo: `public` da USAGE a PUBLIC (todos los
+  -- roles), así que `has_schema_privilege` es siempre true y no dice nada de lo que se revocó.
+  if exists (
+    select 1 from pg_namespace s, aclexplode(s.nspacl) a
+    where s.nspname = 'public' and a.grantee = 'supabase_auth_admin'::regrole
+  ) then
+    raise exception '0271: supabase_auth_admin conserva su USAGE propio sobre public';
   end if;
 
   -- El alta de usuarios no depende de estos permisos, pero su trigger tiene que seguir ahí.

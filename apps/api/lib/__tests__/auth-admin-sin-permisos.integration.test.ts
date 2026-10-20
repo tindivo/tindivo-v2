@@ -57,7 +57,8 @@ const ROLLBACK = repoFile(
 
 /** Cuenta lo que tiene `supabase_auth_admin` en `public`: esquema|relaciones|funciones. */
 const COUNT_GRANTS = `
-select has_schema_privilege('supabase_auth_admin', 'public', 'usage')::text
+select exists (select 1 from pg_namespace s, aclexplode(s.nspacl) a
+                where s.nspname = 'public' and a.grantee = 'supabase_auth_admin'::regrole)::text
   || '|' || (select count(*) from pg_class c where c.relnamespace = 'public'::regnamespace
              and exists (select 1 from aclexplode(c.relacl) a where a.grantee = 'supabase_auth_admin'::regrole))
   || '|' || (select count(*) from pg_proc p where p.pronamespace = 'public'::regnamespace
