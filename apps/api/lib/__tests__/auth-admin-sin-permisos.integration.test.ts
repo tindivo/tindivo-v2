@@ -22,7 +22,7 @@ import { localClient } from './helpers/local-db'
 const CONTAINER = 'supabase_db_zpnipajgwfthxhdtzhly'
 
 /** SQL por stdin (los acentos no se corrompen); corta al primer error. */
-function psql(sql: string): string {
+function psql(sql: string, user = 'postgres'): string {
   return execFileSync(
     'docker',
     [
@@ -33,6 +33,8 @@ function psql(sql: string): string {
       CONTAINER,
       'psql',
       '-U',
+      user,
+      '-d',
       'postgres',
       '-At',
       '-v',
@@ -54,6 +56,46 @@ const MIGRATION = repoFile(
 const ROLLBACK = repoFile(
   'supabase/rollbacks/0271_supabase_auth_admin_pierde_los_permisos_heredados.rollback.sql',
 )
+
+/** La ACL de `supabase_auth_admin` medida en prod (2026-10-20): la referencia independiente. */
+const ACL_PROD = new Set(
+  repoFile('supabase/rollbacks/0271_supabase_auth_admin_pierde_los_permisos_heredados.acl-prod.txt')
+    .split('\n')
+    .filter((l) => l !== '' && !l.startsWith('#')),
+)
+
+/** Cada concesión a `supabase_auth_admin` en `public`: tipo|objeto|privilegio|otorgante|opción. */
+const ACL_DETALLE = `
+select l from (
+  select 'schema|public|' || a.privilege_type || '|' || a.grantor::regrole::text || '|' || a.is_grantable as l
+    from pg_namespace s, aclexplode(s.nspacl) a
+   where s.nspname = 'public' and a.grantee = 'supabase_auth_admin'::regrole
+  union all
+  select case c.relkind when 'S' then 'sequence' else 'table' end || '|' || c.relname::text || '|'
+         || a.privilege_type || '|' || a.grantor::regrole::text || '|' || a.is_grantable
+    from pg_class c, aclexplode(c.relacl) a
+   where c.relnamespace = 'public'::regnamespace and a.grantee = 'supabase_auth_admin'::regrole
+  union all
+  select 'function|' || p.oid::regprocedure::text || '|' || a.privilege_type || '|'
+         || a.grantor::regrole::text || '|' || a.is_grantable
+    from pg_proc p, aclexplode(p.proacl) a
+   where p.pronamespace = 'public'::regnamespace and a.grantee = 'supabase_auth_admin'::regrole
+) x order by l collate "C";
+`
+
+/** Las filas de ACL de una salida de psql, y su diferencia con prod en los dos sentidos. */
+function contraProd(salida: string): { faltan: string[]; sobran: string[] } {
+  const local = new Set(
+    salida
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => /^(schema|sequence|table|function)\|/.test(l)),
+  )
+  return {
+    faltan: [...ACL_PROD].filter((l) => !local.has(l)).sort(),
+    sobran: [...local].filter((l) => !ACL_PROD.has(l)).sort(),
+  }
+}
 
 /** Cuenta lo que tiene `supabase_auth_admin` en `public`: esquema|relaciones|funciones. */
 const COUNT_GRANTS = `
@@ -119,5 +161,53 @@ describe('0271 · supabase_auth_admin sin permisos en public', () => {
     expect(cuentas[2]).toBe('false|0|0')
     // Todo se revirtió: la base local sigue sin esos permisos.
     expect(psql(COUNT_GRANTS).trim()).toBe('false|0|0')
+  })
+
+  it('el rollback reproduce EXACTA la ACL medida en prod: mismo conjunto, en los dos sentidos', () => {
+    expect(ACL_PROD.size).toBe(359)
+    const salida = psql(`begin;
+${ROLLBACK}
+${ACL_DETALLE}
+rollback;`)
+    expect(contraProd(salida)).toEqual({ faltan: [], sobran: [] })
+  })
+
+  it('una sustitución deliberada de objeto o privilegio hace fallar la comparación', () => {
+    const salida = psql(`begin;
+      ${ROLLBACK}
+      revoke truncate on public.users from supabase_auth_admin;
+      grant select on public.push_devices to supabase_auth_admin;
+      ${ACL_DETALLE}
+      rollback;`)
+    expect(contraProd(salida)).toEqual({
+      faltan: ['table|users|TRUNCATE|postgres|false'],
+      sobran: ['table|push_devices|SELECT|postgres|false'],
+    })
+  })
+
+  it('con el trigger de alta en REPLICA la 0271 falla; en ALWAYS, pasa', () => {
+    // `auth.users` es de supabase_auth_admin: cambiar el modo del trigger exige ser su dueño.
+    // Las dos pruebas corren en transacciones que se revierten.
+    expect(() =>
+      psql(
+        `begin;
+         alter table auth.users enable replica trigger on_auth_user_created;
+         ${MIGRATION}
+         rollback;`,
+        'supabase_admin',
+      ),
+    ).toThrow(/no dispara en sesiones normales/)
+    const ok = psql(
+      `begin;
+       alter table auth.users enable always trigger on_auth_user_created;
+       ${MIGRATION}
+       select 'always-ok';
+       rollback;`,
+      'supabase_admin',
+    )
+    expect(ok).toContain('always-ok')
+    expect(
+      psql(`select tgenabled from pg_trigger where tgname = 'on_auth_user_created';`).trim(),
+    ).toBe('O')
   })
 })

@@ -61,15 +61,17 @@ begin
     raise exception '0271: supabase_auth_admin conserva su USAGE propio sobre public';
   end if;
 
-  -- El alta de usuarios no depende de estos permisos, pero su trigger tiene que seguir ahí.
+  -- El alta de usuarios no depende de estos permisos, pero su trigger tiene que seguir ahí y
+  -- disparar en las sesiones normales de GoTrue: `O` (origen) o `A` (siempre). `R` solo dispara
+  -- en modo réplica y `D` nunca: con cualquiera de los dos el alta no crearía `public.users`.
   if not exists (
     select 1 from pg_trigger t
     where t.tgrelid = 'auth.users'::regclass
       and t.tgname = 'on_auth_user_created'
       and t.tgfoid = 'public.handle_new_user()'::regprocedure
-      and t.tgenabled <> 'D'
+      and t.tgenabled in ('O', 'A')
   ) then
-    raise exception '0271: falta el trigger on_auth_user_created → handle_new_user';
+    raise exception '0271: falta el trigger on_auth_user_created → handle_new_user, o no dispara en sesiones normales';
   end if;
 end
 $check$;
