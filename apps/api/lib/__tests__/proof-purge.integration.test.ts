@@ -404,7 +404,7 @@ describe('purga de comprobantes de cuentas borradas (0269)', () => {
     expect(fotoDelDinero()).toBe(dineroAntes)
   })
 
-  it('las tres funciones son SECURITY DEFINER, con search_path vacío y solo service_role', () => {
+  it('las cuatro funciones son SECURITY DEFINER, con search_path vacío y solo service_role', () => {
     const filas = sql(`
       select p.proname || '|' || p.prosecdef || '|' || (p.proconfig = array['search_path=""']) || '|' ||
              has_function_privilege('anon', p.oid, 'execute') || '|' ||
@@ -478,6 +478,8 @@ describe('CAX-001 · solo se anulan las referencias canónicas y propias', () =>
     expect(purgada(f)).toBe('null')
     expect(lines.join('\n')).toContain('non_canonical_refs')
     expect(lines.join('\n')).not.toContain(f.id)
+    // El precheck abortó antes de tocar Storage: los archivos canónicos siguen ahí.
+    for (const x of f.files) expect(await existe(x.bucket, x.path), x.path).toBe(true)
 
     // Una persona resuelve las referencias raras: la siguiente corrida cierra la cuenta.
     sql(`begin;
@@ -642,7 +644,7 @@ describe('CAX-004 · por PostgREST, nadie sin service_role alcanza la purga', ()
     }
   })
 
-  it('no pueden ejecutar list_proof_purge_due, list_user_proof_objects ni finish_proof_purge', async () => {
+  it('no pueden ejecutar list_proof_purge_due, list_user_proof_objects, proof_purge_precheck ni finish_proof_purge', async () => {
     for (const { nombre, cli } of clientes) {
       const llamadas = [
         cli.rpc('list_proof_purge_due', { p_limit: 100 } as never),
