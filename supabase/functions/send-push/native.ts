@@ -156,8 +156,10 @@ export function classifyApns(status: number, reason: string | null | undefined):
 
 export function classifyFcm(status: number, errorStatus: string | null | undefined): NativeOutcome {
   if (status >= 200 && status < 300) return 'ok'
+  // Solo `UNREGISTERED` desactiva (decisión de Jesús, 2026-10-20). Un 400 `INVALID_ARGUMENT` cuenta
+  // como fallo: si fuera falso, el aparato se quedaría sin avisos hasta la purga, porque registrarse
+  // de nuevo con el mismo token no lo reactiva.
   if (status === 404 && errorStatus === 'UNREGISTERED') return 'invalid_token'
-  if (status === 400 && errorStatus === 'INVALID_ARGUMENT') return 'invalid_token'
   return 'failed'
 }
 
@@ -183,8 +185,8 @@ function apnsReasonOf(text: string): string | null {
 /**
  * De la respuesta de FCM solo un código. Prefiere `FcmError.errorCode` (donde Google pone
  * `UNREGISTERED` aunque el estado HTTP diga `NOT_FOUND`) y, si no, `error.status`.
- * Un 400 `INVALID_ARGUMENT` solo cuenta como token inválido si el error habla del token; si
- * habla de otra cosa se devuelve `INVALID_ARGUMENT_OTHER` y el dispositivo NO se desactiva.
+ * Un 400 `INVALID_ARGUMENT` nunca desactiva el dispositivo; la razón solo distingue, para el
+ * registro, si el error habla del token (`INVALID_ARGUMENT`) o de otra cosa (`INVALID_ARGUMENT_OTHER`).
  */
 function fcmErrorStatusOf(text: string): string | null {
   const err = asRecord(asRecord(parseJson(text))?.error)

@@ -258,7 +258,7 @@ describe('send-push native · clasificación', () => {
   it.each([
     [200, null, 'ok'],
     [404, 'UNREGISTERED', 'invalid_token'],
-    [400, 'INVALID_ARGUMENT', 'invalid_token'],
+    [400, 'INVALID_ARGUMENT', 'failed'],
     [404, 'NOT_FOUND', 'failed'],
     [400, 'INVALID_ARGUMENT_OTHER', 'failed'],
     [401, 'UNAUTHENTICATED', 'failed'],
@@ -644,7 +644,7 @@ describe('send-push native · resultados y secretos', () => {
         'INVALID_ARGUMENT',
         'The registration token is not a valid FCM registration token',
       ),
-      'invalid_token',
+      'failed',
       'INVALID_ARGUMENT',
     ],
     [
