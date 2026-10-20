@@ -8,7 +8,7 @@ Registro de DES-7: cada tabla, función, trigger y vista tiene un módulo dueño
 - Un objeto nuevo entra en el registro en el mismo PR que lo crea.
 - `sin asignar` es válido mientras no exista el módulo dueño; se decide al crearlo. Los módulos aún no existen en el código: el nombre del dueño es el previsto en el mapa de módulos propuesto (`Docs/trabajo/arquitectura/04-arquitectura-objetivo.md` §3), y solo se asignó donde ese mapa no deja duda. `geo`, `fleet`, `trust`, `billing` y `reviews` quedan `sin asignar` a propósito: el mapa dice que antes hay que aclarar quién es dueño de qué.
 - Los triggers heredan el dueño de su tabla. Las funciones solo tienen dueño cuando el nombre lo deja claro (Store y pedidos de Entregas); el resto, `sin asignar`.
-- Total al 2026-10-12: 53 tablas, 0 vistas, 142 funciones (por nombre; +4 de la 0269) y 53 triggers.
+- Total al 2026-10-12: 53 tablas, 0 vistas, 143 funciones (por nombre; +4 de la 0269 y +1 de la 0270) y 53 triggers.
 
 Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 
@@ -56,7 +56,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `orders` | tabla | ordering |  |
 | `outbox_events` | tabla | platform |  |
 | `promo_redemptions` | tabla | promotions |  |
-| `push_delivery_log` | tabla | notifications |  |
+| `push_delivery_log` | tabla | notifications | 0270 añade `device_id` (FK a `push_devices`) y `channel` (`web`, `apns`, `fcm`) |
 | `push_devices` | tabla | notifications | Tokens de APNs/FCM de las apps nativas (MV7a, 0268); solo servidor, nunca se devuelven |
 | `push_subscriptions` | tabla | notifications |  |
 | `reports` | tabla | sin asignar |  |
@@ -70,6 +70,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `users` | tabla | identity |  |
 | `users.proofs_purged_at` | columna | identity | 0269; marca la purga de comprobantes de una cuenta borrada |
 | `app_settings.account_deletion` | ajuste | identity | 0269; `{"proofRetentionDays": 90}` (D-44); fila de `app_settings` (dueño de la tabla: platform) |
+| `app_settings.push_devices_retention` | ajuste | notifications | 0270; `{"disabledDays": 30, "staleDays": 180}` (decisión de Jesús, 2026-10-20); fila de `app_settings` (dueño de la tabla: platform) |
 | `account_deletion_blockers` | función | sin asignar |  |
 | `admin_confirm_courier_remittance` | función | sin asignar |  |
 | `admin_conversion_opportunity_stats` | función | sin asignar |  |
@@ -179,6 +180,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `promo_settle_redemption` | función | sin asignar |  |
 | `proof_purge_precheck` | función | identity | 0269; comprueba antes de tocar Storage; solo `service_role` |
 | `prune_creation_idempotency` | función | sin asignar |  |
+| `prune_push_devices` | función | notifications | 0270; solo `service_role`; la llama el cron `prune-push-devices` (09:00 UTC) |
 | `push_token_hash` | función | notifications | 0268; hash SHA-256 del token para su unicidad; solo `service_role` |
 | `queue_lead_minutes` | función | sin asignar |  |
 | `recalc_business_balance` | función | sin asignar |  |

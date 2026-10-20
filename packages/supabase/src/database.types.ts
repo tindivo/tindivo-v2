@@ -2691,6 +2691,8 @@ export type Database = {
       push_delivery_log: {
         Row: {
           at: string
+          channel: string
+          device_id: string | null
           error_code: number | null
           error_message: string | null
           event_type: string
@@ -2700,6 +2702,8 @@ export type Database = {
         }
         Insert: {
           at?: string
+          channel?: string
+          device_id?: string | null
           error_code?: number | null
           error_message?: string | null
           event_type: string
@@ -2709,6 +2713,8 @@ export type Database = {
         }
         Update: {
           at?: string
+          channel?: string
+          device_id?: string | null
           error_code?: number | null
           error_message?: string | null
           event_type?: string
@@ -2717,6 +2723,13 @@ export type Database = {
           subscription_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "push_delivery_log_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "push_devices"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "push_delivery_log_subscription_id_fkey"
             columns: ["subscription_id"]
@@ -3763,6 +3776,7 @@ export type Database = {
         Returns: boolean
       }
       prune_creation_idempotency: { Args: never; Returns: number }
+      prune_push_devices: { Args: never; Returns: number }
       push_token_hash: { Args: { p_token: string }; Returns: string }
       queue_lead_minutes: { Args: never; Returns: number }
       refresh_customer_profile_risk: {

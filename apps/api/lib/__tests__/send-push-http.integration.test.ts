@@ -380,6 +380,57 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
     expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1) // y no hubo segundo envío
   })
 
+  // MV7b: el env-file de esta prueba NO trae FCM_SERVICE_ACCOUNT_JSON ni APNS_*: el push nativo queda apagado.
+  it('sin configuración nativa, el Web Push no cambia y los dispositivos no se tocan', async () => {
+    await setCut(iso(-5 * MIN))
+    const token = `mv7b-${crypto.randomUUID()}-${'x'.repeat(16)}`
+    const { data: dev, error: devErr } = await localClient
+      .from('push_devices')
+      .insert({
+        user_id: seed.userId,
+        install_id: `mv7b-${crypto.randomUUID()}`.slice(0, 40),
+        platform: 'android',
+        app: 'negocios',
+        token,
+        app_version: '1.0.0',
+        notifications_enabled: true,
+      })
+      .select('id')
+      .single()
+    if (devErr) throw new Error(`push_devices: ${devErr.message}`)
+    try {
+      const id = await track(
+        await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+      )
+      const antes = await deliveryLogCount(subscriptionId)
+      const r = await post({ event_id: id })
+      expect(r.status).toBe(200)
+      expect(r.json.recipients).toBe(1)
+      expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1) // el Web Push intentó, como siempre
+      expect(r.json.sent).toBe(0)
+      expect(r.json.failed).toBe(1) // solo el Web Push (endpoint inexistente); el dispositivo no suma
+
+      const { data: row } = await localClient
+        .from('push_devices')
+        .select('failure_count,last_failed_at,last_successful_at,disabled_at')
+        .eq('id', dev.id)
+        .single()
+      expect(row).toEqual({
+        failure_count: 0,
+        last_failed_at: null,
+        last_successful_at: null,
+        disabled_at: null,
+      })
+      const { count } = await localClient
+        .from('push_delivery_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('device_id', dev.id)
+      expect(count).toBe(0)
+    } finally {
+      await localClient.from('push_devices').delete().eq('id', dev.id)
+    }
+  })
+
   it('dos POST concurrentes del mismo id fresco: exactamente un éxito', async () => {
     await setCut(iso(-5 * MIN))
     const id = await track(

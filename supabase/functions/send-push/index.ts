@@ -4,6 +4,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { loadNativeConfig, type NativeApp, nativeDeviceFilter, sendNative } from './native.ts'
 import { classifyRequest } from './request-kind.ts'
 import {
   isOpsCaller,
@@ -58,8 +59,90 @@ try {
 // `db` solo se toca cuando la construcción sí funcionó.
 const db = dbOrNull as ReturnType<typeof createClient>
 
+// Push nativo (FCM y APNs), opcional por plataforma: sin su secreto o con uno inválido, solo esa
+// plataforma queda apagada y deja UNA línea `native_push_disabled` (nunca un valor). No toca
+// `bootError`: el Web Push sigue igual.
+const nativeConfig = await loadNativeConfig(
+  (name) => Deno.env.get(name),
+  (line) => console.warn(line),
+)
+
+/**
+ * Entrega un aviso a los dispositivos nativos del destinatario, UNO A UNO, y lo registra.
+ *
+ * Solo los dispositivos activos, con avisos permitidos, de la app del aviso y de una plataforma
+ * configurada. Un fallo se registra y punto (los reintentos son otro lote). Nunca se escribe un
+ * token ni el cuerpo de una respuesta: `error_message` es solo el código de razón.
+ */
+async function deliverNative(
+  note: Note,
+  eventType: string,
+): Promise<{ sent: number; failed: number }> {
+  const tally = { sent: 0, failed: 0 }
+  const filter = nativeDeviceFilter(note, nativeConfig)
+  if (!filter) return tally
+
+  const { data: devices, error } = await db
+    .from('push_devices')
+    .select('id,platform,token,environment,failure_count')
+    .eq('user_id', filter.userId)
+    .eq('app', filter.app)
+    .is('disabled_at', null)
+    .eq('notifications_enabled', true)
+    .in('platform', filter.platforms)
+  if (error) {
+    console.error('[send-push] push_devices query falló:', error.code ?? 'sin_codigo')
+    return tally
+  }
+
+  for (const device of devices ?? []) {
+    const result = await sendNative(
+      {
+        token: device.token as string,
+        platform: device.platform as 'ios' | 'android',
+        environment: device.environment as 'production' | 'sandbox',
+      },
+      note.app,
+      note,
+      eventType,
+      { config: nativeConfig, fetch, now: () => Date.now() },
+    )
+    if (!result) continue
+    const ok = result.outcome === 'ok'
+    if (ok) tally.sent++
+    else tally.failed++
+
+    const { error: logErr } = await db.from('push_delivery_log').insert({
+      device_id: device.id,
+      channel: result.channel,
+      event_type: eventType,
+      status: ok ? 'ok' : 'error',
+      error_code: result.status,
+      error_message: result.reason,
+    })
+    if (logErr) console.error('[send-push] push_delivery_log falló:', logErr.code ?? 'sin_codigo')
+
+    const nowIso = new Date().toISOString()
+    const patch =
+      result.outcome === 'ok'
+        ? { last_successful_at: nowIso, failure_count: 0 }
+        : result.outcome === 'invalid_token'
+          ? { disabled_at: nowIso, disabled_reason: result.reason }
+          : { last_failed_at: nowIso, failure_count: ((device.failure_count as number) ?? 0) + 1 }
+    const { error: updErr } = await db.from('push_devices').update(patch).eq('id', device.id)
+    if (updErr) console.error('[send-push] push_devices update falló:', updErr.code ?? 'sin_codigo')
+  }
+  return tally
+}
+
 type Note = {
   userId: string
+  /**
+   * A qué app va el aviso, según el rol del destinatario. Decide en qué dispositivo nativo
+   * se entrega (`push_devices.app`); Web Push no mira este campo. `admin` no tiene app
+   * nativa: solo va por Web Push.
+   */
+  app: NativeApp
   title: string
   body: string
   tag: string
@@ -356,6 +439,7 @@ async function headsUpNotes(orderId: string, eventType: string): Promise<Note[]>
   const dest = o.destText ? `${o.destText} · ` : ''
   return userIds.map((userId) => ({
     userId,
+    app: 'motorizados',
     title: `🍳 ${o.bizName} · En cocina (${o.prepMinutes} min)`,
     body: `${dest}Te avisaremos cuando esté por salir · #${o.sid}`,
     tag: `${eventType}-headsup-${o.sid}`,
@@ -399,6 +483,7 @@ async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
   return [
     {
       userId: bizUser,
+      app: 'negocios',
       title: `Nuevo pedido #${sid} · S/ ${Number(o.order_amount ?? 0).toFixed(2)}`,
       // Sin el número de minutos: el plazo vive en `app_settings.timers` y
       // escribirlo aquí lo dejaría mintiendo en cuanto alguien lo cambie.
@@ -439,6 +524,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     for (const a of admins ?? []) {
       out.push({
         userId: a.user_id as string,
+        app: 'admin',
         title: text.title,
         body: text.body,
         tag: `${eventType}-${kind}`,
@@ -470,6 +556,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const cust = o.customer_user_id as string | null
     const custUrl = `/pedido/${sid}`
     const push = (
+      app: NativeApp,
       userId: string | null,
       title: string,
       body: string,
@@ -478,6 +565,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       if (!userId) return
       out.push({
         userId,
+        app,
         title,
         body,
         tag: tagOf(sid),
@@ -489,7 +577,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     }
 
     if (eventType === 'OrderExpired') {
-      push(cust, 'Tu pedido se canceló', 'No llegó el pago a tiempo · puedes volver a pedirlo')
+      push('customer', cust, 'Tu pedido se canceló', 'No llegó el pago a tiempo · puedes volver a pedirlo')
     } else if (action === 'accept') {
       /**
        * ACEPTAR NO SIGNIFICA LO MISMO EN LOS DOS FLUJOS, y el aviso tampoco.
@@ -508,6 +596,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       if (o.payment_intent === 'prepaid') {
         const minutos = await timerMinutes('paymentMinutes', 15)
         push(
+          'customer',
           cust,
           'Ya puedes pagar tu pedido',
           `${orderTotal(o)} por Yape a ${bizName} · tienes ${minutos} min o se cancela solo`,
@@ -533,7 +622,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
             : prep
               ? `Ya está en cocina · ${prep}`
               : 'Ya está en cocina'
-        push(cust, `${bizName} aceptó tu pedido`, enCocina)
+        push('customer', cust, `${bizName} aceptó tu pedido`, enCocina)
       }
       // El negocio acaba de meterlo en cocina: si va a tardar, los motorizados
       // lo saben desde ya en vez de enterarse cuando la comida ya está fría.
@@ -555,8 +644,8 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
        * mientras tanto, y a partir de `noShowWaitMinutes` la cajera ya puede
        * declarar el planton, que deja strike.
        */
-      push(cust, 'Tu pedido está listo', `Pásalo a recoger en ${bizName}`, { req: true })
-      push(bizUser, 'Pedido listo en el mostrador', `#${sid} · esperando al cliente`, { url: '/' })
+      push('customer', cust, 'Tu pedido está listo', `Pásalo a recoger en ${bizName}`, { req: true })
+      push('negocios', bizUser, 'Pedido listo en el mostrador', `#${sid} · esperando al cliente`, { url: '/' })
     } else if (action === 'ready') {
       /**
        * NOTIFICAR NO ES ASIGNAR.
@@ -593,6 +682,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       for (const d of drivers ?? []) {
         if (d.user_id) {
           push(
+            'motorizados',
             d.user_id as string,
             `⚡ ${bName} · ¡Listo para llevar!`,
             `${dest}${pay}#${sid}`,
@@ -607,9 +697,9 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         }
       }
     } else if (action === 'take') {
-      push(bizUser, 'Motorizado en camino', `Un motorizado va por #${sid}`, { url: '/' })
+      push('negocios', bizUser, 'Motorizado en camino', `Un motorizado va por #${sid}`, { url: '/' })
     } else if (action === 'arrived') {
-      push(bizUser, 'Motorizado en tu local', `Está esperando #${sid}`, { url: '/', req: true })
+      push('negocios', bizUser, 'Motorizado en tu local', `Está esperando #${sid}`, { url: '/', req: true })
     } else if (action === 'pickup') {
       /**
        * SIN ETA, A PROPÓSITO, aunque el dato exista.
@@ -623,8 +713,8 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
        * el reloj lo sigue llevando la pantalla, que es donde está entero.
        */
       const quien = await driverFirstName(o.driver_id)
-      push(cust, 'Tu pedido salió', quien ? `${quien} va en camino` : 'El motorizado va en camino')
-      push(bizUser, 'Pedido recogido', `#${sid} salió a entrega`, { url: '/' })
+      push('customer', cust, 'Tu pedido salió', quien ? `${quien} va en camino` : 'El motorizado va en camino')
+      push('negocios', bizUser, 'Pedido recogido', `#${sid} salió a entrega`, { url: '/' })
     } else if (action === 'arrived_customer') {
       /**
        * El aviso que más le cuesta al cliente no recibir.
@@ -640,6 +730,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       const wait = await timerMinutes('noShowWaitMinutes', 5)
       const quien = await driverFirstName(o.driver_id)
       push(
+        'customer',
         cust,
         quien ? `${quien} está en tu puerta` : 'El motorizado está en tu puerta',
         // "puede cancelar", no "se cancela": el no-show lo declara la persona
@@ -651,12 +742,13 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       const wait = await timerMinutes('noShowWaitMinutes', 5)
       const quien = await driverFirstName(o.driver_id)
       push(
+        'customer',
         cust,
         'Tu pedido se canceló',
         `${quien || 'El motorizado'} esperó ${wait} min en tu puerta y nadie salió`,
         { req: true },
       )
-      push(bizUser, 'Pedido cancelado', `#${sid} · el cliente no apareció`, { url: '/' })
+      push('negocios', bizUser, 'Pedido cancelado', `#${sid} · el cliente no apareció`, { url: '/' })
     } else if (action === 'validate_fail_retry') {
       // La cajera rechazó el comprobante y el pedido volvió a `awaiting_payment`.
       // El cliente tiene que subir otro, con tope de dos intentos y el cron de
@@ -664,11 +756,11 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       // «1 intento» es exacto, no un redondeo amable: esta rama solo se dispara
       // con `proof_attempt < 2` (ver 0189), o sea tras rechazar el primero de
       // dos. Al segundo rechazo se cae por `validate_fail` y no hay tercero.
-      push(cust, 'Tu comprobante no se pudo verificar', 'Te queda 1 intento · sube otra captura', {
+      push('customer', cust, 'Tu comprobante no se pudo verificar', 'Te queda 1 intento · sube otra captura', {
         req: true,
       })
     } else if (action === 'validate_fail') {
-      push(cust, 'Tu pedido se canceló', 'No se pudo verificar el comprobante de pago', {
+      push('customer', cust, 'Tu pedido se canceló', 'No se pudo verificar el comprobante de pago', {
         req: true,
       })
     } else if (action === 'handover') {
@@ -686,36 +778,39 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
        * interrumpe se guarda para lo que cuesta dinero perderse.
        */
       push(
+        'customer',
         cust,
         '¡Gracias por tu recojo!',
         'La próxima te lo llevamos a casa · pagas al recibir',
         { url: '/' },
       )
-      push(bizUser, 'Recojo entregado', `#${sid} se lo llevó el cliente`, { url: '/' })
+      push('negocios', bizUser, 'Recojo entregado', `#${sid} se lo llevó el cliente`, { url: '/' })
     } else if (action === 'pickup_no_show') {
       const espera = await timerMinutes('noShowWaitMinutes', 5)
       push(
+        'customer',
         cust,
         'Tu pedido se canceló',
         `Tu pedido estuvo listo en el local más de ${espera} min y nadie pasó a recogerlo`,
         { req: true },
       )
-      push(bizUser, 'Pedido cancelado', `#${sid} · el cliente no vino a recoger`, { url: '/' })
+      push('negocios', bizUser, 'Pedido cancelado', `#${sid} · el cliente no vino a recoger`, { url: '/' })
     } else if (action === 'deliver') {
-      push(cust, 'Pedido entregado', `${orderTotal(o)} · gracias por pedir en Tindivo`)
-      push(bizUser, 'Pedido entregado', `#${sid} fue entregado`, { url: '/' })
+      push('customer', cust, 'Pedido entregado', `${orderTotal(o)} · gracias por pedir en Tindivo`)
+      push('negocios', bizUser, 'Pedido entregado', `#${sid} fue entregado`, { url: '/' })
     } else if (action === 'cancel') {
       const reason = (o.cancel_reason as string) ?? ''
       // El motivo NO viaja al cliente: `cancel_reason` es un enum de la base
       // (`business_rejected`, `out_of_stock`…) y enseñárselo crudo es peor que
       // callarlo. Al negocio sí, que es quien lo escribió.
-      push(cust, 'Tu pedido se canceló', 'Puedes volver a pedirlo cuando quieras')
-      push(bizUser, 'Pedido cancelado', `#${sid} cancelado · ${reason}`, { url: '/' })
+      push('customer', cust, 'Tu pedido se canceló', 'Puedes volver a pedirlo cuando quieras')
+      push('negocios', bizUser, 'Pedido cancelado', `#${sid} cancelado · ${reason}`, { url: '/' })
       // Si ya tenía motorizado, es quien más necesita saberlo: puede estar
       // yendo al local o esperando la comida en el mostrador.
       const oBrief = await orderBrief(aggregateId)
       const who = oBrief?.customerName ? ` de ${oBrief.customerName}` : ''
       push(
+        'motorizados',
         await driverUserId(o.driver_id),
         `❌ CANCELADO · ${bizName}`,
         `Pedido${who} (#${sid}) se canceló · no vayas al local`,
@@ -754,6 +849,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       const bizName = (biz?.name as string) ?? 'el restaurante'
       const base = {
         userId: cust,
+        app: 'customer' as const,
         // Invariante 5: la etiqueta lleva el tipo de evento, no solo el shortId.
         tag: `${eventType}-${sid}`,
         url: `/pedido/${sid}`,
@@ -807,6 +903,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       for (const userId of await allDriverUserIds()) {
         out.push({
           userId,
+          app: 'motorizados',
           title: `🥡 ${o.bizName} · Por salir`,
           body: `${dest}${when} · ${pay}#${o.sid}`,
           tag: `OrderQueued-${o.sid}`,
@@ -827,6 +924,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       for (const userId of await allDriverUserIds(payload?.driverId)) {
         out.push({
           userId,
+          app: 'motorizados',
           title: `🔓 ${o.bizName} · Pedido libre`,
           body: `${dest}Se liberó carrera · ${pay}#${o.sid}`,
           tag: `OrderReleased-${o.sid}`,
@@ -845,6 +943,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       for (const userId of await allDriverUserIds()) {
         out.push({
           userId,
+          app: 'motorizados',
           title: `⏰ ${o.bizName} · Espera motorizado`,
           body: `Lleva ${mins} min esperando · ${dest}#${o.sid}`,
           tag: `OrderOverdue-${o.sid}`,
@@ -870,6 +969,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       const who = o.customerName ? ` de ${o.customerName}` : ''
       out.push({
         userId: owner,
+        app: 'motorizados',
         title: `🔄 Te piden tu pedido · ${o.bizName}`,
         body: `Un compañero pide el pedido${who} (#${o.sid}). Responde en ${seconds || 30}s.`,
         tag: `TransferRequested-${payload?.requestId ?? aggregateId}`,
@@ -907,6 +1007,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     if (o && resolution === 'accepted' && requester) {
       out.push({
         userId: requester,
+        app: 'motorizados',
         title: `✅ Pedido recibido · ${o.bizName}`,
         body: `${dest}Ya está en tu mochila · #${o.sid}`,
         tag: `TransferResolved-accepted-${reqId}`,
@@ -918,6 +1019,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     } else if (o && resolution === 'rejected' && requester) {
       out.push({
         userId: requester,
+        app: 'motorizados',
         title: `Rechazado · ${o.bizName}`,
         body: `Tu compañero se queda con el pedido #${o.sid}.`,
         tag: `TransferResolved-rejected-${reqId}`,
@@ -931,6 +1033,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       if (owner) {
         out.push({
           userId: owner,
+          app: 'motorizados',
           title: `🔄 Pedido transferido · ${o.bizName}`,
           body: `El pedido${who} (#${o.sid}) pasó a tu compañero por tiempo agotado`,
           tag: `TransferResolved-expired-from-${reqId}`,
@@ -943,6 +1046,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       if (requester) {
         out.push({
           userId: requester,
+          app: 'motorizados',
           title: `✅ Pedido recibido · ${o.bizName}`,
           body: `${dest}Nadie respondió, te lo quedas · #${o.sid}`,
           tag: `TransferResolved-expired-to-${reqId}`,
@@ -959,6 +1063,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       const reason = (payload?.reason as string) ?? ''
       out.push({
         userId: requester,
+        app: 'motorizados',
         title: `Vencido · ${o.bizName}`,
         body:
           reason === 'requester_no_capacity'
@@ -993,7 +1098,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
        * Alinear las dos cifras vale más que ahorrar dos ceros.
        */
       const money = (n: unknown) => `S/ ${Number(n ?? 0).toFixed(2)}`
-      const base = { userId: driverUser, url: '/efectivo', vibrate: false }
+      const base = { userId: driverUser, app: 'motorizados' as const, url: '/efectivo', vibrate: false }
       if (eventType === 'CashConfirmed') {
         // COLAPSADA POR (motorizado, negocio). Desde 0157 la cajera confirma
         // cliente por cliente, así que cuatro confirmaciones seguidas son cuatro
@@ -1057,6 +1162,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       const monto = `S/ ${Number(cs?.delivered_amount ?? 0).toFixed(2)}`
       out.push({
         userId: bizUser,
+        app: 'negocios',
         title: 'Efectivo por confirmar',
         body:
           abierto.count > 1
@@ -1125,6 +1231,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
     if (!customer) return
     out.push({
       userId: customer,
+      app: 'customer',
       title,
       body,
       tag,
@@ -1154,6 +1261,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
       if (!userId || userId === except) continue
       out.push({
         userId,
+        app: 'motorizados',
         title: action === 'release' ? '🔓 Entrega libre otra vez' : '📦 Entrega nueva',
         body: `${ruta} · ${cobro}`,
         tag,
@@ -1192,6 +1300,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
     if (userId) {
       out.push({
         userId,
+        app: 'motorizados',
         title: 'Entrega cuadrada',
         body: `Tindivo confirmó el ${fee} de la entrega #${sid}`,
         tag,
@@ -1355,6 +1464,10 @@ Deno.serve(async (req: Request) => {
           }
         }
       }
+      // Dispositivos nativos del destinatario, después de su Web Push (que no cambia).
+      const native = await deliverNative(note, event_type)
+      sent += native.sent
+      failed += native.failed
     }
     return new Response(JSON.stringify({ ok: true, recipients: notes.length, sent, failed }), {
       headers: { 'content-type': 'application/json' },

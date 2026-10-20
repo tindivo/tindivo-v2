@@ -127,6 +127,28 @@ supabase secrets set --project-ref zpnipajgwfthxhdtzhly \
 
 > **Rota** la llave privada VAPID y la signing key de Inngest si se compartieron en texto plano.
 
+### Secretos del push nativo (MV7b; opcionales hasta que existan las apps)
+
+`send-push` manda además a los dispositivos nativos (Android por FCM HTTP v1, iOS por APNs). Cada plataforma se
+configura por separado y, sin su secreto (o con uno inválido), **solo esa plataforma queda apagada**: el Web Push y la
+otra plataforma siguen, y la función deja una línea `native_push_disabled` con la plataforma en sus logs. No hace falta
+tocar nada mientras no haya apps publicadas. Nunca se escribe un valor en el repo ni en un chat; se ponen así
+(los valores salen de la consola de Firebase y de la cuenta de desarrollador de Apple, con respaldo fuera del repo, OPS-3):
+
+```bash
+# Android: la cuenta de servicio de Firebase con permiso de FCM (JSON completo en una sola variable)
+supabase secrets set --project-ref zpnipajgwfthxhdtzhly FCM_SERVICE_ACCOUNT_JSON="$(cat <ruta-fuera-del-repo>/cuenta-de-servicio.json)"
+
+# iOS: la clave .p8 de APNs, su Key ID, el Team ID y el mapa app -> bundle id
+supabase secrets set --project-ref zpnipajgwfthxhdtzhly   APNS_KEY_P8="$(cat <ruta-fuera-del-repo>/AuthKey_XXXXXXXXXX.p8)"   APNS_KEY_ID="<10 caracteres>"   APNS_TEAM_ID="<10 caracteres>"   APNS_TOPICS_JSON='{"customer":"<bundle id>","negocios":"<bundle id>","motorizados":"<bundle id>"}'
+```
+
+`APNS_TOPICS_JSON` solo admite las apps `customer`, `negocios` y `motorizados`; una app sin entrada no recibe por APNs.
+Tras cambiar un secreto hay que volver a desplegar la función (`supabase functions deploy send-push`).
+Comprobación (sin enviar nada): en los logs de la función no debe aparecer `native_push_disabled` para la plataforma
+que acabas de configurar. La migración 0270 añade la bitácora por canal y la purga diaria de tokens
+(`app_settings.push_devices_retention`, plazos: decisión de Jesús, 2026-10-20); va antes que la función (`db push` primero).
+
 ## 2.2 send-push reclama el evento en la base **[tú]**
 
 Hasta la migración 0264, `send-push` aceptaba a cualquiera con la clave anónima (pública en los bundles web):
