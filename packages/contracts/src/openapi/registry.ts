@@ -654,6 +654,8 @@ export const OPERATIONS: OperationSpec[] = [
       'Idempotente por `installId`: la app lo llama al abrirse, al rotar el token y al cambiar de usuario. ' +
       'Si el token ya estaba registrado en otra instalación, esa fila se borra (así cambia de usuario un aparato). ' +
       'Un `installId` que ya es de otra cuenta responde 409 `conflict`: la app debe regenerarlo al cerrar sesión. ' +
+      'Si el registro choca con otro simultáneo del mismo aparato y no se resuelve tras reintentar, ' +
+      'también responde 409 `conflict` sin haber cambiado nada: la app reintenta. ' +
       '`app` debe corresponder al rol de la sesión ' +
       '(customer, negocios→business, motorizados→driver); si no, 403. La respuesta nunca incluye el token.',
     tags: ['push'],
@@ -676,12 +678,14 @@ export const OPERATIONS: OperationSpec[] = [
     operationId: 'unregisterPushDevice',
     summary: 'Dar de baja el dispositivo nativo de esta instalación',
     description:
-      'Responde 204 también si la instalación no existe o es de otro usuario: no revela nada.',
+      'Responde 204 también si la instalación no existe o es de otro usuario: no revela nada. ' +
+      'Si la baja choca con otro registro simultáneo del mismo aparato y no se resuelve tras reintentar, ' +
+      'responde 409 `conflict` sin haber dado de baja nada: la app reintenta.',
     tags: ['push'],
     auth: 'user',
     pathParams: { installId: PushDeviceParamsSchema.shape.installId },
     success: { 204: { description: 'Baja hecha; sin cuerpo', envelope: 'none' } },
-    errors: ['validation_error', 'unauthorized'],
+    errors: ['validation_error', 'unauthorized', 'conflict'],
     documented: true,
   },
 

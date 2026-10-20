@@ -7484,7 +7484,7 @@
             }
           }
         },
-        "description": "Idempotente por `installId`: la app lo llama al abrirse, al rotar el token y al cambiar de usuario. Si el token ya estaba registrado en otra instalación, esa fila se borra (así cambia de usuario un aparato). Un `installId` que ya es de otra cuenta responde 409 `conflict`: la app debe regenerarlo al cerrar sesión. `app` debe corresponder al rol de la sesión (customer, negocios→business, motorizados→driver); si no, 403. La respuesta nunca incluye el token.",
+        "description": "Idempotente por `installId`: la app lo llama al abrirse, al rotar el token y al cambiar de usuario. Si el token ya estaba registrado en otra instalación, esa fila se borra (así cambia de usuario un aparato). Un `installId` que ya es de otra cuenta responde 409 `conflict`: la app debe regenerarlo al cerrar sesión. Si el registro choca con otro simultáneo del mismo aparato y no se resuelve tras reintentar, también responde 409 `conflict` sin haber cambiado nada: la app reintenta. `app` debe corresponder al rol de la sesión (customer, negocios→business, motorizados→driver); si no, 403. La respuesta nunca incluye el token.",
         "parameters": [
           {
             "name": "installId",
@@ -7651,6 +7651,16 @@
               }
             }
           },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Problem Details (RFC 9457). `code`: validation_error",
             "content": {
@@ -7682,7 +7692,7 @@
             }
           }
         },
-        "description": "Responde 204 también si la instalación no existe o es de otro usuario: no revela nada.",
+        "description": "Responde 204 también si la instalación no existe o es de otro usuario: no revela nada. Si la baja choca con otro registro simultáneo del mismo aparato y no se resuelve tras reintentar, responde 409 `conflict` sin haber dado de baja nada: la app reintenta.",
         "parameters": [
           {
             "name": "installId",

@@ -12,7 +12,9 @@ function toUtcIso(value: string): string {
  * SQLSTATE con que PostgreSQL aborta una transacción por una carrera sin corromper nada:
  * `40P01` (deadlock detectado) y `40001` (fallo de serialización). Dos registros que se
  * cruzan los tokens se borran la fila el uno al otro y la base aborta uno; reintentar la
- * MISMA transacción es lo correcto.
+ * MISMA transacción es lo correcto. PostgREST ya reintenta por su cuenta una RPC que aborta con
+ * estos códigos (observado el 2026-10-20 con un 40P01 forzado: la petición no vuelve), así que este
+ * reintento es una defensa por si ese comportamiento cambia; el 409 por agotamiento se prueba en el handler.
  */
 const RETRYABLE_SQLSTATE = new Set(['40P01', '40001'])
 
