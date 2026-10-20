@@ -2,7 +2,7 @@
 
 > Estado: **en ejecución** · Aprobado por Jesús el 2026-10-09 (lote P0.1, commit `ef31131`); alcance ampliado el
 > 2026-10-13 con los lotes MV3b y MV7 (Jesús, conversación con Claude Code) · Commit de referencia:
-> `develop@c5712d74` (producción: `main@70eaa62d`, base en `0266`, 2026-10-19) · Alcance: el avance: qué lote va ahora · Bitácora y debates: `Docs/trabajo/migraciones/`
+> `develop@34891de3` (producción: `main@70eaa62d`, base en `0267`; de la `0268` a la `0271`, integradas y sin desplegar, 2026-10-20) · Alcance: el avance: qué lote va ahora · Bitácora y debates: `Docs/trabajo/migraciones/`
 
 > La sesión de trabajo toma de aquí **el primer lote A desbloqueado**, de arriba abajo. Al cerrar un lote se marca
 > `[x]` con el commit o PR y se anota en la bitácora del día (`Docs/trabajo/migraciones/bitacora/AAAA-MM-DD.md`). Las reglas son las de
@@ -52,10 +52,13 @@ mientras se construye el resto.
 - [~] **MV5** · Lo que exige la revisión. **El borrado de cuenta está desplegado (2026-10-19, C6):** migración `0259` (más la `0266`: una cuenta borrada no apela), `DELETE /customer/account`, página `/borrar-cuenta`; la API pasa con 52 ficheros y 581 tests en `db:cycle`), sembrado local de la cuenta y el negocio de demostración (`pnpm db:seed:review`). **Falta:** Sign in with Apple (es de Jesús: pasos exactos en el documento) y el aislamiento del negocio demo (ocultarlo, sacarlo de la contabilidad, sin avisos reales, horario global), que toca dinero. Preguntas abiertas y pasos: [`08-mv5-requisitos-revision.md`](../../trabajo/movil/08-mv5-requisitos-revision.md)
 - [x] **SEC-03b** · Dos cierres tras el límite por IP: PR #43, integrado el 2026-10-12, y desplegado el 2026-10-19 (C6), con la puerta `check-sms-config` del build en verde: (1) `send-code` limita también por número de destino (clave HMAC con secreto propio `OTP_PHONE_HMAC_SECRET`, Upstash, falla abierto, ventana móvil de 24 h que cuenta solo envíos aceptados por Twilio; **umbral 5 en 24 h, decisión de Jesús del 2026-10-12**, configurable en `app_settings.rate_limits.otp_phone`; inactivo hasta que Jesús defina `UPSTASH_REDIS_REST_URL/TOKEN` y `OTP_PHONE_HMAC_SECRET`, como el límite por IP); (2) migración `0260`: `get_tracking` solo la ejecuta `service_role`, y el único consumidor ya era la API. Pruebas de integración en verde en `db:cycle` (`get-tracking-grants`, `otp-phone-limit`, `otp-dev-simulation`)
 - [!] **MV6** · Staging en el proyecto de Supabase vacío de Jesús (H7) — crearlo y aplicarle migraciones es nivel B
-- [~] **0267** · `handle_new_user` y `create_business_manual_order` pasan a `search_path` vacío (invariante 3). Firmado por Codex; PR #65, en la pila de la otra sesión, se integra por fast-forward
-- [~] **BE-1** · Nace `packages/backend` (`defineHandler`, autenticador, logger que no filtra datos; DES-3). Codex firmó en la Ronda 3/3; PR #67, en la misma pila
-- [~] **D-44 · purga** · Purga a los 90 días de los comprobantes de las cuentas borradas (0259, opción A de Jesús del 2026-10-16): cron de Inngest y migración `0269`. En construcción, en la misma pila
-- [~] **MV7** · *(servicios, el siguiente tras MV3b)* **D-25 decidido por Jesús el 2026-10-19: APNs y FCM directos, y solo avisos de pedidos.** Se parte en **MV7a** (registro de dispositivos, migración `0268`; en curso, en la misma pila, sin auditar), **MV7b** (envío nativo; espera el proyecto de Firebase) y **MV7c** (reintentos). Enunciado original: push nativo, paso 5 de `../movil/contrato-rest.md` §3: registro de dispositivos APNs/FCM (token, plataforma, versión de la app, estado del permiso, rotación, baja y cambio de usuario en el mismo aparato) y envío desde el outbox con reintentos, **manteniendo Web Push**; el contrato formal del payload (tipo, id de pedido, estado, `deep_link`, título y cuerpo; `CLI-8`) se escribe aquí. Invariantes 4 y 5 de `AGENTS.md` (outbox transaccional; tag `${event_type}-${shortId}`). Toca datos personales y seguridad: **pasa por Codex**, y no se despliega a producción sin Jesús. Decidido por Jesús el 2026-10-13: es el próximo lote de servicios
+- [x] **0267** · `handle_new_user` y `create_business_manual_order` pasan a `search_path` vacío (invariante 3). Firmado por Codex, integrado en `develop` y aplicado en producción por Jesús (expediente `tindivo-auditorias/2026-10-17-search-path-0267/`)
+- [x] **BE-1** · Nace `packages/backend` (`defineHandler`, autenticador, logger que no filtra datos; DES-3). Codex firmó en la Ronda 3/3; integrado en `develop` el 2026-10-20 (`2850ee4d`, por decisión de Jesús sobre el rebase). Solo código: no necesita despliegue de base
+- [~] **D-44 · purga** · Purga a los 90 días de los comprobantes de las cuentas borradas (0259, opción A de Jesús del 2026-10-16): cron de Inngest y migración `0269`. Firmado por Codex (Ronda 3/3) e integrado en `develop` (`f79e8608`); **sin desplegar**: entra en la ventana de la `0268` a la `0271`
+- [~] **MV7** · *(servicios, el siguiente tras MV3b)* **D-25 decidido por Jesús el 2026-10-19: APNs y FCM directos, y solo avisos de pedidos.** Se parte en **MV7a** (registro de dispositivos, migración `0268`; firmado por Codex en la Ronda 3/3 e integrado, `5ec1c1fc`), **MV7b** (envío nativo por FCM y APNs, migración `0270` y `send-push`; firmado en la Ronda 2 e integrado, `d20bd738`; sin el secreto de una plataforma, solo esa plataforma queda apagada: `Docs/operacion/deploy.md`) y **MV7c** (reintentos, pendiente). MV7a y MV7b están **sin desplegar**: entran en la ventana de la `0268` a la `0271`. Enunciado original: push nativo, paso 5 de `../movil/contrato-rest.md` §3: registro de dispositivos APNs/FCM (token, plataforma, versión de la app, estado del permiso, rotación, baja y cambio de usuario en el mismo aparato) y envío desde el outbox con reintentos, **manteniendo Web Push**; el contrato formal del payload (tipo, id de pedido, estado, `deep_link`, título y cuerpo; `CLI-8`) se escribe aquí. Invariantes 4 y 5 de `AGENTS.md` (outbox transaccional; tag `${event_type}-${shortId}`). Toca datos personales y seguridad: **pasa por Codex**, y no se despliega a producción sin Jesús. Decidido por Jesús el 2026-10-13: es el próximo lote de servicios
+
+- [~] **0271** · `supabase_auth_admin` pierde los permisos heredados sobre `public` (cierra el punto 10 de «Lo que espera a Jesús», decisión suya del 2026-10-20). Firmado por Codex en la Ronda 2 e integrado (`34891de3`); **sin desplegar**
+- [!] **Despliegue de la `0268` a la `0271`** · Plan firmado por Codex (Ronda 3/3) sobre `develop@34891de3`: `tindivo-auditorias/2026-10-20-prod-0268-0271/GUIA-DESPLIEGUE-FIRMADA.md`. Bloqueado por **B6** (el *preview* de Vercel de `tindivo-v2-api` falla en los PR; Jesús lo revisa antes de la ventana). Lo ejecuta solo Jesús, fuera del horario de pedidos. Cualquier commit nuevo en `develop` antes de la ventana invalida la firma del plan. Después: `pnpm db:types` contra prod y marcar aquí lo desplegado
 
 ## Lo que espera a Jesús
 
@@ -66,15 +69,16 @@ mientras se construye el resto.
 5. ~~**Contacto**~~ · Resuelto: el correo de soporte, de la política de privacidad y de los términos es `tindivodelivery@gmail.com`.
 6. **MV6** · El ref del proyecto vacío, para montar staging contigo.
 7. **Auth** · Activar la protección de contraseñas filtradas (aviso de los advisors de seguridad de producción).
-8. **Firebase** · Crear el proyecto de Firebase para MV7b (envío por FCM).
+8. **Firebase** · Crear el proyecto de Firebase y poner su secreto para que MV7b envíe por FCM (el código ya está; sin el secreto, Android queda apagado y el resto sigue).
 9. **H8** · Presupuesto del VPS de ensayo — pospuesto: la mudanza va después del móvil.
-10. **Deriva de prod** · Decidir si se revocan en producción los grants históricos de `supabase_auth_admin`: es la única diferencia medida entre prod y las migraciones (expediente `2026-10-19-deriva-esquema`).
+10. ~~**Deriva de prod**~~ · Decidido por Jesús el 2026-10-20: se revocan. Es la migración `0271` (arriba), que sale en la próxima ventana.
+11. **B6 y la ventana** · Revisar por qué falla el *preview* de Vercel de `tindivo-v2-api` y ejecutar la guía firmada de la `0268` a la `0271`.
 
 ## Despliegue del paso 0 (C6) — hecho el 2026-10-19
 
 - Se aplicaron juntas de la `0248` a la `0266`, con un solo `supabase db push`. La `0257` no existe: es un número saltado, no una migración perdida.
 - Base primero, `send-push` con su corte, y después las apps; lunes, fuera del horario de pedidos.
-- `db:types` contra prod destapó que `database.types.ts` estaba atrasado (le faltaban 59 líneas de 0256, 0259, 0263 y 0264): PR #68, que se integra después de la pila de la otra sesión. Los advisors no muestran avisos nuevos inesperados.
+- `db:types` contra prod destapó que `database.types.ts` estaba atrasado (le faltaban 59 líneas de 0256, 0259, 0263 y 0264). El PR #68 que lo corregía chocó con la pila que entró después; se cierra y los tipos se regeneran contra prod cuando esté en la `0271`. Los advisors no muestran avisos nuevos inesperados.
 - Lo que no se comprobó en el smoke: un pedido real con comprobante, la subida de un PDF o de más de 15 MB (el bucket quedó así configurado), la apertura del día con sesión y el push real (C7).
 
 ## Para retomar (sesión nueva) — 2026-10-11 (los puntos 2 y 3 están superados: el estado vigente es el de las casillas de arriba)
