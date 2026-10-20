@@ -70,14 +70,14 @@ function decodeJwt(jwt: string) {
   }
 }
 
-type Call = { url: string; headers: Record<string, string>; body: string }
+type Call = { url: string; headers: Record<string, string>; body: string; redirect: string }
 type Reply = { status: number; body?: string } | Error
 
 /** `fetch` doble: devuelve la respuesta de `reply(url)` y apunta cada llamada. */
 function fakeFetch(reply: (url: string) => Reply) {
   const calls: Call[] = []
   const fn: NativeFetch = async (url, init) => {
-    calls.push({ url, headers: init.headers, body: init.body })
+    calls.push({ url, headers: init.headers, body: init.body, redirect: init.redirect })
     const r = reply(url)
     if (r instanceof Error) throw r
     return { status: r.status, text: async () => r.body ?? '' }
@@ -85,7 +85,7 @@ function fakeFetch(reply: (url: string) => Reply) {
   return { fn, calls }
 }
 
-const TOKEN_URI = 'https://oauth2.example.test/token'
+const TOKEN_URI = 'https://oauth2.googleapis.com/token'
 const SECRET_TOKEN_IOS = 'a'.repeat(64)
 const SECRET_TOKEN_ANDROID = 'fcm-device-token-SUPER-SECRETO-1234567890:APA91b'
 
@@ -455,6 +455,41 @@ describe('send-push native · configuración (TS-9, OPS-3)', () => {
     }
   })
 
+  it('token_uri: solo el endpoint de Google (o ausente) deja FCM activo', async () => {
+    const { env } = await fullEnv()
+    const rsa = await rsaKeys()
+    const base = {
+      project_id: 'tindivo-test',
+      client_email: 'push@tindivo-test.iam.gserviceaccount.com',
+      private_key: rsa.pem,
+    }
+    const GOOGLE = 'https://oauth2.googleapis.com/token'
+    const invalidos = [
+      'https://oauth2.example.test/token',
+      'https://',
+      'https://user:pw@oauth2.googleapis.com/token',
+      'http://oauth2.googleapis.com/token',
+      'https://oauth2.googleapis.com/token/',
+      '',
+    ]
+    for (const token_uri of invalidos) {
+      const lines: string[] = []
+      const cfg = await load(
+        { ...env, FCM_SERVICE_ACCOUNT_JSON: JSON.stringify({ ...base, token_uri }) },
+        (l) => lines.push(l),
+      )
+      expect(cfg.fcm, token_uri).toBeNull()
+      expect(lines).toEqual([JSON.stringify({ event: 'native_push_disabled', platform: 'fcm' })])
+    }
+    const conUri = await load({
+      ...env,
+      FCM_SERVICE_ACCOUNT_JSON: JSON.stringify({ ...base, token_uri: GOOGLE }),
+    })
+    expect(conUri.fcm?.tokenUri).toBe(GOOGLE)
+    const sinUri = await load({ ...env, FCM_SERVICE_ACCOUNT_JSON: JSON.stringify(base) })
+    expect(sinUri.fcm?.tokenUri).toBe(GOOGLE)
+  })
+
   it('acepta la .p8 con el texto literal \\n (secreto de una sola línea)', async () => {
     const { env } = await fullEnv()
     env.APNS_KEY_P8 = (env.APNS_KEY_P8 ?? '').trim().replace(/\n/g, '\\n')
@@ -544,6 +579,24 @@ describe('send-push native · envío', () => {
     const f = fakeFetch(() => ({ status: 200 }))
     expect(await sendNative(ios(), 'negocios', note, 'OrderCreated', await deps(cfg, f))).toBeNull()
     expect(f.calls).toHaveLength(0)
+  })
+
+  it('iOS sin bundle id de esa app no entra en el filtro (no ocupa el tope)', async () => {
+    const { env } = await fullEnv() // topics: solo customer y motorizados
+    const conAmbas = await load(env)
+    expect(nativeDeviceFilter({ userId: 'u', app: 'negocios' }, conAmbas)?.platforms).toEqual([
+      'android',
+    ])
+    expect(nativeDeviceFilter({ userId: 'u', app: 'customer' }, conAmbas)?.platforms).toEqual([
+      'ios',
+      'android',
+    ])
+    env.FCM_SERVICE_ACCOUNT_JSON = ''
+    const soloApns = await load(env)
+    expect(nativeDeviceFilter({ userId: 'u', app: 'negocios' }, soloApns)).toBeNull()
+    expect(nativeDeviceFilter({ userId: 'u', app: 'customer' }, soloApns)?.platforms).toEqual([
+      'ios',
+    ])
   })
 
   it('los avisos de admin no van a dispositivos', async () => {
@@ -696,6 +749,57 @@ describe('send-push native · resultados y secretos', () => {
     })
   })
 
+  it('todas las llamadas a fetch llevan redirect: error', async () => {
+    const { env } = await fullEnv()
+    const cfg = await load(env)
+    const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : FCM_OK))
+    await sendNative(android, 'customer', note, 'OrderCreated', await deps(cfg, f))
+    await sendNative(ios(), 'customer', note, 'OrderCreated', await deps(cfg, f))
+    expect(f.calls).toHaveLength(3) // token de Google, FCM y APNs
+    for (const c of f.calls) expect(c.redirect).toBe('error')
+  })
+
+  it('un valor fuera de las listas cerradas sale como unknown_reason, sin filtrarse', async () => {
+    const { env } = await fullEnv()
+    const logs: string[] = []
+    const consola = [
+      vi.spyOn(console, 'log').mockImplementation((...a) => void logs.push(a.join(' '))),
+      vi.spyOn(console, 'warn').mockImplementation((...a) => void logs.push(a.join(' '))),
+      vi.spyOn(console, 'error').mockImplementation((...a) => void logs.push(a.join(' '))),
+    ]
+    const cfg = await load(env, (l) => logs.push(l))
+    const SINTETICO = 'c0ffee'.repeat(10).concat('abcd') // 64 hex
+    const apnsF = fakeFetch(() => ({ status: 400, body: JSON.stringify({ reason: SINTETICO }) }))
+    const rApns = await sendNative(ios(), 'customer', note, 'OrderCreated', await deps(cfg, apnsF))
+    expect(rApns).toEqual({
+      channel: 'apns',
+      outcome: 'failed',
+      status: 400,
+      reason: 'unknown_reason',
+    })
+
+    const cuerpos = [
+      JSON.stringify({ error: { status: SINTETICO, message: 'x' } }),
+      JSON.stringify({
+        error: {
+          status: 'NOT_FOUND',
+          message: 'x',
+          details: [{ errorCode: SINTETICO }],
+        },
+      }),
+    ]
+    const resultados: unknown[] = [rApns]
+    for (const body of cuerpos) {
+      const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : { status: 400, body }))
+      const r = await sendNative(android, 'customer', note, 'OrderCreated', await deps(cfg, f))
+      expect(r?.reason).toBe('unknown_reason')
+      expect(r?.outcome).toBe('failed')
+      resultados.push(r)
+    }
+    expect(JSON.stringify(resultados) + logs.join('\n')).not.toContain(SINTETICO)
+    for (const c of consola) c.mockRestore()
+  })
+
   it('cada llamada lleva su timeout de 10 s', async () => {
     const { env } = await fullEnv()
     const cfg = await load(env)
@@ -754,7 +858,6 @@ describe('send-push native · varios dispositivos por aviso', () => {
       token: `${String(i).padStart(2, '0')}${'b'.repeat(62)}`,
       platform: 'ios' as const,
       environment: 'production' as const,
-      failure_count: 0,
     }))
 
   it('con 7 dispositivos solo se envía a los 5 primeros, en el orden de entrada', async () => {
@@ -833,6 +936,29 @@ describe('send-push native · varios dispositivos por aviso', () => {
     expect(JSON.stringify(r)).not.toContain('bbbb')
   })
 
+  it('record recibe el dispositivo con el token que se envió', async () => {
+    const { env } = await fullEnv()
+    const cfg = await load(env)
+    const f = fakeFetch(() => ({ status: 200 }))
+    const pares: Array<[string, string]> = []
+    await deliverToDevices(
+      dispositivos(3),
+      'customer',
+      note,
+      'OrderCreated',
+      await deps(cfg, f),
+      async (d) => {
+        pares.push([d.id, d.token])
+      },
+    )
+    const enviados = f.calls.map((c) => decodeURIComponent(c.url.split('/').pop() ?? ''))
+    expect(pares).toHaveLength(3)
+    for (const [id, token] of pares) {
+      expect(token).toBe(dispositivos(3).find((d) => d.id === id)?.token)
+      expect(enviados).toContain(token)
+    }
+  })
+
   it('los null (iOS sin APNs) no cuentan ni se registran', async () => {
     const { env } = await fullEnv()
     env.APNS_KEY_ID = ''
@@ -866,6 +992,13 @@ describe('send-push index.ts · cada aviso lleva su app', () => {
     const apps = src.match(/^\s+app[:,]/gm) ?? []
     expect(userIds.length).toBeGreaterThan(10)
     expect(apps.length).toBe(userIds.length)
+  })
+
+  it('el resultado nativo se registra por RPC atómica y con el token enviado', () => {
+    expect(src).toContain("db.rpc('record_native_push_result'")
+    expect(src).toContain('p_token: device.token')
+    expect(src).not.toContain("db.from('push_devices').update(")
+    expect(src).not.toContain('failure_count: device.failure_count')
   })
 
   it('las alertas de OpsAlert van a `admin`', () => {

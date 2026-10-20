@@ -8,7 +8,7 @@ Registro de DES-7: cada tabla, función, trigger y vista tiene un módulo dueño
 - Un objeto nuevo entra en el registro en el mismo PR que lo crea.
 - `sin asignar` es válido mientras no exista el módulo dueño; se decide al crearlo. Los módulos aún no existen en el código: el nombre del dueño es el previsto en el mapa de módulos propuesto (`Docs/trabajo/arquitectura/04-arquitectura-objetivo.md` §3), y solo se asignó donde ese mapa no deja duda. `geo`, `fleet`, `trust`, `billing` y `reviews` quedan `sin asignar` a propósito: el mapa dice que antes hay que aclarar quién es dueño de qué.
 - Los triggers heredan el dueño de su tabla. Las funciones solo tienen dueño cuando el nombre lo deja claro (Store y pedidos de Entregas); el resto, `sin asignar`.
-- Total al 2026-10-20, medido en una base local con las migraciones hasta la 0270: 55 tablas, 0 vistas, 148 funciones (por nombre, sin las que pertenecen a extensiones) y 54 triggers. Las filas de la tabla dan las mismas cifras.
+- Total al 2026-10-20, medido en una base local con las migraciones hasta la 0270: 55 tablas, 0 vistas, 149 funciones (por nombre, sin las que pertenecen a extensiones) y 54 triggers. Las filas de la tabla dan las mismas cifras.
 
 Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 
@@ -187,6 +187,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `push_token_hash` | función | notifications | 0268; hash SHA-256 del token para su unicidad; solo `service_role` |
 | `queue_lead_minutes` | función | sin asignar |  |
 | `recalc_business_balance` | función | sin asignar |  |
+| `record_native_push_result` | función | notifications | 0270; registra el resultado de un envío solo para el token enviado; solo `service_role` |
 | `redact_personal_json` | función | sin asignar |  |
 | `refresh_customer_profile_risk` | función | sin asignar |  |
 | `refresh_customer_risk_from_strike` | función | sin asignar |  |

@@ -10,6 +10,7 @@ select cron.unschedule('prune-push-devices')
  where exists (select 1 from cron.job where jobname = 'prune-push-devices');
 
 drop function if exists public.prune_push_devices();
+drop function if exists public.record_native_push_result(uuid, text, text, text);
 drop index if exists public.pdl_device_idx;
 alter table public.push_delivery_log drop column if exists channel;
 alter table public.push_delivery_log drop column if exists device_id;
@@ -18,7 +19,8 @@ delete from public.app_settings where key = 'push_devices_retention';
 do $check$
 begin
   if exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
-              where s.nspname = 'public' and p.proname = 'prune_push_devices')
+              where s.nspname = 'public'
+                and p.proname in ('prune_push_devices', 'record_native_push_result'))
      or exists (select 1 from information_schema.columns
                  where table_schema = 'public' and table_name = 'push_delivery_log'
                    and column_name in ('device_id', 'channel'))

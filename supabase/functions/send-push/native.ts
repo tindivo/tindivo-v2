@@ -6,7 +6,8 @@
 //
 // Qué NUNCA sale de aquí hacia un log o hacia la base: un secreto, un token de dispositivo,
 // un token de acceso o el cuerpo de una respuesta. De la respuesta de Apple o de Google solo
-// se conserva un CÓDIGO de razón (`BadDeviceToken`, `UNREGISTERED`…) que pasa por `safeCode`.
+// se conserva un CÓDIGO de razón (`BadDeviceToken`, `UNREGISTERED`…) que pasa por `safeCode`:
+// solo deja pasar códigos de listas cerradas.
 //
 // Los reintentos son otro lote (MV7c): aquí un fallo se devuelve y quien llama lo registra.
 
@@ -31,7 +32,13 @@ export type NativePayload = {
 /** Lo mínimo que se usa de `Response`; `fetch` real y los dobles de los tests lo cumplen. */
 export type NativeFetch = (
   url: string,
-  init: { method: 'POST'; headers: Record<string, string>; body: string; signal: AbortSignal },
+  init: {
+    method: 'POST'
+    headers: Record<string, string>
+    body: string
+    signal: AbortSignal
+    redirect: 'error'
+  },
 ) => Promise<{ status: number; text(): Promise<string> }>
 
 export type NativeDevice = {
@@ -46,6 +53,8 @@ export const APNS_JWT_TTL_MS = 50 * 60_000
 /** El token de acceso de Google se renueva 5 minutos antes de vencer. */
 export const FCM_TOKEN_MARGIN_MS = 5 * 60_000
 export const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging'
+/** Único endpoint OAuth aceptado: una cuenta de servicio con otro `token_uri` es inválida. */
+export const FCM_TOKEN_URI = 'https://oauth2.googleapis.com/token'
 export const FCM_CHANNEL_ID = 'order_updates'
 
 const APPS_WITH_NATIVE: readonly NativeApp[] = ['customer', 'negocios', 'motorizados']
@@ -140,9 +149,63 @@ export function buildApnsRequest(
 
 // ── Clasificación de respuestas ─────────────────────────────────────────────
 
-/** Solo un código corto de razón (`BadDeviceToken`) llega a los logs y a `error_message`. */
-export function safeCode(value: unknown): string | null {
-  return typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value) ? value : null
+const APNS_REASONS: ReadonlySet<string> = new Set([
+  'BadCollapseId',
+  'BadDeviceToken',
+  'BadExpirationDate',
+  'BadMessageId',
+  'BadPriority',
+  'BadTopic',
+  'DeviceTokenNotForTopic',
+  'DuplicateHeaders',
+  'IdleTimeout',
+  'InvalidPushType',
+  'MissingDeviceToken',
+  'MissingTopic',
+  'PayloadEmpty',
+  'TopicDisallowed',
+  'BadCertificate',
+  'BadCertificateEnvironment',
+  'ExpiredProviderToken',
+  'Forbidden',
+  'InvalidProviderToken',
+  'MissingProviderToken',
+  'UnrelatedKeyIdInToken',
+  'BadPath',
+  'MethodNotAllowed',
+  'ExpiredToken',
+  'Unregistered',
+  'PayloadTooLarge',
+  'TooManyProviderTokenUpdates',
+  'TooManyRequests',
+  'InternalServerError',
+  'ServiceUnavailable',
+  'Shutdown',
+])
+
+const FCM_CODES: ReadonlySet<string> = new Set([
+  'UNSPECIFIED_ERROR',
+  'INVALID_ARGUMENT',
+  'UNREGISTERED',
+  'SENDER_ID_MISMATCH',
+  'QUOTA_EXCEEDED',
+  'UNAVAILABLE',
+  'INTERNAL',
+  'THIRD_PARTY_AUTH_ERROR',
+  'NOT_FOUND',
+  'PERMISSION_DENIED',
+  'UNAUTHENTICATED',
+  'RESOURCE_EXHAUSTED',
+])
+
+/**
+ * Solo un código de una lista cerrada llega a los logs y a `error_message`. Un valor ausente da
+ * `null`; uno presente pero fuera de la lista (podría ser un token o texto libre) da
+ * `'unknown_reason'`.
+ */
+export function safeCode(value: unknown, allowed: ReadonlySet<string>): string | null {
+  if (value === undefined || value === null) return null
+  return typeof value === 'string' && allowed.has(value) ? value : 'unknown_reason'
 }
 
 export function classifyApns(status: number, reason: string | null | undefined): NativeOutcome {
@@ -179,7 +242,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 /** De la respuesta de APNs solo el campo `reason`. */
 function apnsReasonOf(text: string): string | null {
-  return safeCode(asRecord(parseJson(text))?.reason)
+  return safeCode(asRecord(parseJson(text))?.reason, APNS_REASONS)
 }
 
 /**
@@ -197,14 +260,14 @@ function fcmErrorStatusOf(text: string): string | null {
   for (const d of details) {
     const rec = asRecord(d)
     if (!rec) continue
-    const fromFcm = safeCode(rec.errorCode)
+    const fromFcm = safeCode(rec.errorCode, FCM_CODES)
     if (fromFcm) code = fromFcm
     const violations = Array.isArray(rec.fieldViolations) ? rec.fieldViolations : []
     for (const v of violations) {
       if (/token/i.test(String(asRecord(v)?.field ?? ''))) aboutToken = true
     }
   }
-  const status = code ?? safeCode(err.status)
+  const status = code ?? safeCode(err.status, FCM_CODES)
   if (status === 'INVALID_ARGUMENT' && !aboutToken) return 'INVALID_ARGUMENT_OTHER'
   return status
 }
@@ -273,15 +336,13 @@ async function loadFcm(raw: string | undefined): Promise<FcmConfig | null> {
   const json = asRecord(parseJson(raw))
   if (!json) return null
   const { client_email, private_key, project_id } = json
-  const tokenUri = json.token_uri ?? 'https://oauth2.googleapis.com/token'
   if (
     typeof client_email !== 'string' ||
     !client_email.includes('@') ||
     typeof private_key !== 'string' ||
     typeof project_id !== 'string' ||
     !/^[a-z0-9][a-z0-9:.-]{2,62}$/.test(project_id) ||
-    typeof tokenUri !== 'string' ||
-    !tokenUri.startsWith('https://')
+    (json.token_uri !== undefined && json.token_uri !== FCM_TOKEN_URI)
   ) {
     return null
   }
@@ -292,7 +353,7 @@ async function loadFcm(raw: string | undefined): Promise<FcmConfig | null> {
     false,
     ['sign'],
   )
-  return { signingKey, clientEmail: client_email, tokenUri, projectId: project_id }
+  return { signingKey, clientEmail: client_email, tokenUri: FCM_TOKEN_URI, projectId: project_id }
 }
 
 async function loadApns(
@@ -415,6 +476,7 @@ export async function fcmAccessToken(
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: `grant_type=${encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer')}&assertion=${assertion}`,
       signal: AbortSignal.timeout(NATIVE_TIMEOUT_MS),
+      redirect: 'error',
     })
   } catch (e) {
     throw new NativeAuthError(isTimeout(e) ? 'timeout' : 'auth_network_error')
@@ -490,6 +552,7 @@ async function sendApns(
       headers: { ...req.headers, authorization: `bearer ${jwt}` },
       body: req.body,
       signal: AbortSignal.timeout(NATIVE_TIMEOUT_MS),
+      redirect: 'error',
     })
   } catch (e) {
     return fail(null, isTimeout(e) ? 'timeout' : 'network_error')
@@ -533,6 +596,7 @@ async function sendFcm(
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
       body: JSON.stringify(buildFcmMessage(device.token, payload)),
       signal: AbortSignal.timeout(NATIVE_TIMEOUT_MS),
+      redirect: 'error',
     })
   } catch (e) {
     return fail(null, isTimeout(e) ? 'timeout' : 'network_error')
@@ -597,7 +661,9 @@ export function nativeDeviceFilter(
 ): { userId: string; app: Exclude<NativeApp, 'admin'>; platforms: NativePlatform[] } | null {
   if (note.app === 'admin') return null
   const platforms: NativePlatform[] = []
-  if (config.apns) platforms.push('ios')
+  // iOS solo cuenta si APNs tiene el bundle id de ESTA app: sin él `sendApns` no envía, y el
+  // dispositivo ocuparía uno de los cupos del tope sin servir a nadie.
+  if (config.apns?.topics[note.app]) platforms.push('ios')
   if (config.fcm) platforms.push('android')
   if (platforms.length === 0) return null
   return { userId: note.userId, app: note.app, platforms }

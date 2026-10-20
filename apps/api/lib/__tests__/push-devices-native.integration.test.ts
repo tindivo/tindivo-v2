@@ -7,10 +7,14 @@
  *  · selección de envío   la consulta de send-push (misma cadena y filtro `nativeDeviceFilter`) devuelve solo los
  *                         dispositivos de la app del aviso, activos y con avisos permitidos.
  *
+ *  · record_native_push_result  anota el resultado de UN envío solo si el dispositivo conserva el token enviado
+ *                         (rotación), suma atómicamente los fallos simultáneos y no la ejecutan anon/authenticated.
+ *
  * La poda corre en una transacción que se revierte (nada persiste); la selección usa un usuario propio que
  * `afterAll` borra.
  */
 import { execFileSync } from 'node:child_process'
+import { createClient } from '@supabase/supabase-js'
 import { afterAll, describe, expect, it } from 'vitest'
 import { nativeDeviceFilter } from '../../../../supabase/functions/send-push/native.ts'
 import { localClient as db } from './helpers/local-db'
@@ -158,7 +162,12 @@ rollback;`)
 })
 
 // Solo importa la forma del filtro (qué plataformas hay), no las claves: el cast queda confinado aquí (TS-2).
-const BOTH = { fcm: {} as never, apns: {} as never }
+const BOTH = {
+  fcm: {} as never,
+  apns: {
+    topics: { customer: 'com.tindivo.customer', motorizados: 'com.tindivo.driver' },
+  } as never,
+}
 
 describe('send-push · qué dispositivos se leen para un aviso', () => {
   const userIds: string[] = []
@@ -246,5 +255,178 @@ describe('send-push · qué dispositivos se leen para un aviso', () => {
       .eq('notifications_enabled', true)
       .in('platform', moto?.platforms ?? [])
     expect(d2).toEqual([{ platform: 'android', app: 'motorizados' }])
+  })
+})
+
+// ── record_native_push_result (0270, CAX-001 y CAX-003) ─────────────────────
+
+const LOCAL_URL = 'http://127.0.0.1:54321'
+const LOCAL_ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+const CLAVE = 'test-password-12345'
+
+describe('record_native_push_result (0270)', () => {
+  const userIds: string[] = []
+  afterAll(async () => {
+    for (const id of userIds.splice(0)) {
+      await db.from('push_devices').delete().eq('user_id', id)
+      await db.auth.admin.deleteUser(id)
+    }
+  })
+
+  const unico = (p: string) => `${p}-${crypto.randomUUID()}`
+
+  async function crearUsuario(): Promise<{ id: string; email: string }> {
+    const email = `native-rec-${Math.random().toString(36).slice(2, 10)}@integration.local`
+    const { data, error } = await db.auth.admin.createUser({
+      email,
+      password: CLAVE,
+      email_confirm: true,
+    })
+    if (error) throw new Error(error.message)
+    userIds.push(data.user.id)
+    return { id: data.user.id, email }
+  }
+
+  async function registrar(userId: string, installId: string, token: string): Promise<string> {
+    const { error } = await db.rpc('register_push_device', {
+      p_actor_user_id: userId,
+      p_install_id: installId,
+      p_platform: 'android',
+      p_app: 'customer',
+      p_token: token,
+      p_environment: 'production',
+      p_app_version: '1.0.0',
+      p_os_version: null,
+      p_device_model: null,
+      p_locale: null,
+      p_timezone: null,
+      p_notifications_enabled: true,
+    })
+    if (error) throw new Error(`register_push_device: ${error.message}`)
+    const { data, error: qErr } = await db
+      .from('push_devices')
+      .select('id')
+      .eq('install_id', installId)
+      .single()
+    if (qErr) throw new Error(qErr.message)
+    return data.id
+  }
+
+  async function estado(id: string) {
+    const { data, error } = await db
+      .from('push_devices')
+      .select('failure_count,last_successful_at,last_failed_at,disabled_at,disabled_reason')
+      .eq('id', id)
+      .single()
+    if (error) throw new Error(error.message)
+    return data
+  }
+
+  const registro = (id: string, token: string, outcome: string, reason = '') =>
+    db.rpc('record_native_push_result', {
+      p_device_id: id,
+      p_token: token,
+      p_outcome: outcome,
+      p_reason: reason,
+    })
+
+  it('tras una rotación, la respuesta del token viejo no toca al dispositivo con el token nuevo', async () => {
+    const { id: uid } = await crearUsuario()
+    const install = unico('inst')
+    const tokenA = unico('tokA')
+    const tokenB = unico('tokB')
+    const devId = await registrar(uid, install, tokenA)
+    const idB = await registrar(uid, install, tokenB)
+    expect(idB).toBe(devId) // misma instalación: misma fila, token nuevo
+
+    const antes = await estado(devId)
+    const viejo = await registro(devId, tokenA, 'invalid_token', 'UNREGISTERED')
+    expect(viejo.error).toBeNull()
+    expect(viejo.data).toBe(false)
+    expect(await estado(devId)).toEqual(antes)
+    expect(antes.disabled_at).toBeNull()
+
+    const nuevo = await registro(devId, tokenB, 'failed', 'http_500')
+    expect(nuevo.data).toBe(true)
+    expect((await estado(devId)).failure_count).toBe((antes.failure_count ?? 0) + 1)
+  })
+
+  it('dos fallos simultáneos suman dos (el incremento es de la base)', async () => {
+    const { id: uid } = await crearUsuario()
+    const token = unico('tokC')
+    const devId = await registrar(uid, unico('inst'), token)
+    const { error: uErr } = await db
+      .from('push_devices')
+      .update({ failure_count: 3 })
+      .eq('id', devId)
+    expect(uErr).toBeNull()
+
+    const [r1, r2] = await Promise.all([
+      registro(devId, token, 'failed', 'http_503'),
+      registro(devId, token, 'failed', 'timeout'),
+    ])
+    expect(r1.data).toBe(true)
+    expect(r2.data).toBe(true)
+    const e = await estado(devId)
+    expect(e.failure_count).toBe(5)
+    expect(e.last_failed_at).not.toBeNull()
+  })
+
+  it('ok pone failure_count en 0 y last_successful_at', async () => {
+    const { id: uid } = await crearUsuario()
+    const token = unico('tokD')
+    const devId = await registrar(uid, unico('inst'), token)
+    await db.from('push_devices').update({ failure_count: 4 }).eq('id', devId)
+    const r = await registro(devId, token, 'ok')
+    expect(r.data).toBe(true)
+    const e = await estado(devId)
+    expect(e.failure_count).toBe(0)
+    expect(e.last_successful_at).not.toBeNull()
+    expect(e.disabled_at).toBeNull()
+  })
+
+  it('invalid_token desactiva y una segunda llamada no cambia disabled_at', async () => {
+    const { id: uid } = await crearUsuario()
+    const token = unico('tokE')
+    const devId = await registrar(uid, unico('inst'), token)
+    expect((await registro(devId, token, 'invalid_token', 'UNREGISTERED')).data).toBe(true)
+    const primero = await estado(devId)
+    expect(primero.disabled_at).not.toBeNull()
+    expect(primero.disabled_reason).toBe('UNREGISTERED')
+    expect((await registro(devId, token, 'invalid_token', 'BadDeviceToken')).data).toBe(true)
+    const segundo = await estado(devId)
+    expect(segundo.disabled_at).toBe(primero.disabled_at)
+    expect(segundo.disabled_reason).toBe('UNREGISTERED')
+  })
+
+  it('un resultado desconocido se rechaza y no toca nada', async () => {
+    const { id: uid } = await crearUsuario()
+    const token = unico('tokF')
+    const devId = await registrar(uid, unico('inst'), token)
+    const antes = await estado(devId)
+    const r = await registro(devId, token, 'otro')
+    expect(r.error?.code).toBe('22023')
+    expect(await estado(devId)).toEqual(antes)
+  })
+
+  it('anon y authenticated reciben 42501', async () => {
+    const { id: uid, email } = await crearUsuario()
+    const token = unico('tokG')
+    const devId = await registrar(uid, unico('inst'), token)
+    const args = { p_device_id: devId, p_token: token, p_outcome: 'invalid_token', p_reason: 'X' }
+
+    const anon = createClient(LOCAL_URL, LOCAL_ANON_KEY, { auth: { persistSession: false } })
+    expect((await anon.rpc('record_native_push_result', args)).error?.code).toBe('42501')
+
+    const autenticado = createClient(LOCAL_URL, LOCAL_ANON_KEY, {
+      auth: { persistSession: false },
+    })
+    const { error: sErr } = await autenticado.auth.signInWithPassword({ email, password: CLAVE })
+    if (sErr) throw new Error(sErr.message)
+    expect((await autenticado.rpc('record_native_push_result', args)).error?.code).toBe('42501')
+
+    expect((await estado(devId)).disabled_at).toBeNull()
   })
 })

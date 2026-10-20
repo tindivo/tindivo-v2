@@ -91,7 +91,7 @@ async function deliverNative(
 
   const { data: devices, error } = await db
     .from('push_devices')
-    .select('id,platform,token,environment,failure_count')
+    .select('id,platform,token,environment')
     .eq('user_id', filter.userId)
     .eq('app', filter.app)
     .is('disabled_at', null)
@@ -109,7 +109,6 @@ async function deliverNative(
     token: d.token as string,
     platform: d.platform as 'ios' | 'android',
     environment: d.environment as 'production' | 'sandbox',
-    failure_count: (d.failure_count as number | null) ?? 0,
   }))
   const res = await deliverToDevices(
     rows,
@@ -129,15 +128,15 @@ async function deliverNative(
       })
       if (logErr) console.error('[send-push] push_delivery_log falló:', logErr.code ?? 'sin_codigo')
 
-      const nowIso = new Date().toISOString()
-      const patch =
-        result.outcome === 'ok'
-          ? { last_successful_at: nowIso, failure_count: 0 }
-          : result.outcome === 'invalid_token'
-            ? { disabled_at: nowIso, disabled_reason: result.reason }
-            : { last_failed_at: nowIso, failure_count: device.failure_count + 1 }
-      const { error: updErr } = await db.from('push_devices').update(patch).eq('id', device.id)
-      if (updErr) console.error('[send-push] push_devices update falló:', updErr.code ?? 'sin_codigo')
+      // El resultado se anota en la base de forma atómica y solo si el dispositivo sigue con el
+      // MISMO token que se envió (una respuesta del token viejo no toca al nuevo tras una rotación).
+      const { error: recErr } = await db.rpc('record_native_push_result', {
+        p_device_id: device.id,
+        p_token: device.token,
+        p_outcome: result.outcome,
+        p_reason: result.reason ?? '',
+      })
+      if (recErr) console.error('[send-push] record_native_push_result falló:', recErr.code ?? 'sin_codigo')
     },
   )
   if (res.recordFailed > 0) console.error('[send-push] registro nativo falló en dispositivos:', res.recordFailed)

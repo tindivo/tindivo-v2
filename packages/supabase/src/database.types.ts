@@ -3779,6 +3779,10 @@ export type Database = {
       prune_push_devices: { Args: never; Returns: number }
       push_token_hash: { Args: { p_token: string }; Returns: string }
       queue_lead_minutes: { Args: never; Returns: number }
+      record_native_push_result: {
+        Args: { p_device_id: string; p_outcome: string; p_reason: string; p_token: string }
+        Returns: boolean
+      }
       refresh_customer_profile_risk: {
         Args: { p_phone: string; p_user_id: string }
         Returns: undefined

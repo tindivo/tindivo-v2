@@ -27,6 +27,9 @@
 --    Lima, con pedidos en curso; este no repite esa hora). `cron.schedule` reemplaza por nombre:
 --    es idempotente.
 --
+-- 4. `record_native_push_result(dispositivo, token, resultado, razón)`: anota el resultado de UN envío
+--    en su dispositivo, atómico y solo si conserva el token enviado. Solo `service_role`.
+--
 -- Idempotente. Rollback: supabase/rollbacks/0270_el_aviso_llega_tambien_a_la_app_nativa.rollback.sql
 -- ============================================================================
 
@@ -96,6 +99,43 @@ comment on function public.prune_push_devices() is
 revoke execute on function public.prune_push_devices() from public, anon, authenticated;
 grant execute on function public.prune_push_devices() to service_role;
 
+-- ── record_native_push_result ───────────────────────────────────────────────
+-- Registra el resultado de UN envío nativo en su dispositivo, solo si el dispositivo sigue
+-- teniendo el MISMO token que se envió (CAX-001: una respuesta del token viejo no toca al
+-- nuevo tras una rotación) y con el incremento en la base (CAX-003: dos fallos simultáneos
+-- suman dos). Devuelve true si actualizó la fila. DEFINER, search_path vacío, solo service_role.
+create or replace function public.record_native_push_result(
+  p_device_id uuid, p_token text, p_outcome text, p_reason text
+) returns boolean
+  language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_rows integer;
+begin
+  if p_outcome not in ('ok', 'invalid_token', 'failed') then
+    raise exception using errcode = '22023', message = 'outcome_invalid';
+  end if;
+  update public.push_devices d
+     set last_successful_at = case when p_outcome = 'ok' then now() else d.last_successful_at end,
+         failure_count      = case when p_outcome = 'ok' then 0
+                                   when p_outcome = 'failed' then d.failure_count + 1
+                                   else d.failure_count end,
+         last_failed_at     = case when p_outcome = 'failed' then now() else d.last_failed_at end,
+         disabled_at        = case when p_outcome = 'invalid_token' then coalesce(d.disabled_at, now()) else d.disabled_at end,
+         disabled_reason    = case when p_outcome = 'invalid_token' then coalesce(d.disabled_reason, left(p_reason, 128)) else d.disabled_reason end
+   where d.id = p_device_id
+     and d.token_sha256 = public.push_token_hash(p_token);
+  get diagnostics v_rows = row_count;
+  return v_rows = 1;
+end;
+$$;
+
+comment on function public.record_native_push_result(uuid, text, text, text) is
+  'Registra el resultado de un envio nativo solo para el token enviado (ok, invalid_token, failed). Devuelve true si actualizo la fila. Solo service_role.';
+
+revoke execute on function public.record_native_push_result(uuid, text, text, text) from public, anon, authenticated;
+grant execute on function public.record_native_push_result(uuid, text, text, text) to service_role;
+
 select cron.schedule('prune-push-devices', '0 9 * * *', $cron$
   select public.prune_push_devices();
 $cron$);
@@ -129,6 +169,29 @@ begin
          or not has_function_privilege('service_role', p.oid, 'execute'))
   ) then
     raise exception '0270: permisos de prune_push_devices incorrectos (solo service_role)';
+  end if;
+  select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+   where s.nspname = 'public' and p.proname = 'record_native_push_result';
+  if n <> 1 then
+    raise exception '0270: se esperaba UNA sola record_native_push_result y hay %', n;
+  end if;
+  select p.prosecdef, p.proconfig into v_secdef, v_cfg from pg_proc p
+    join pg_namespace s on s.oid = p.pronamespace
+   where s.nspname = 'public' and p.proname = 'record_native_push_result';
+  if not v_secdef then
+    raise exception '0270: record_native_push_result no es SECURITY DEFINER';
+  end if;
+  if v_cfg is distinct from array['search_path=""'] then
+    raise exception '0270: record_native_push_result no quedó con search_path vacío (%)', v_cfg;
+  end if;
+  if exists (
+    select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+     where s.nspname = 'public' and p.proname = 'record_native_push_result'
+       and (has_function_privilege('anon', p.oid, 'execute')
+         or has_function_privilege('authenticated', p.oid, 'execute')
+         or not has_function_privilege('service_role', p.oid, 'execute'))
+  ) then
+    raise exception '0270: permisos de record_native_push_result incorrectos (solo service_role)';
   end if;
   select count(*) into n from information_schema.columns
    where table_schema = 'public' and table_name = 'push_delivery_log'
