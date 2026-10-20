@@ -498,6 +498,91 @@ describe('CAX-001 · solo se anulan las referencias canónicas y propias', () =>
   })
 })
 
+describe('CAX-001 · el id solo, sin barra, no es una referencia canónica', () => {
+  // Una referencia igual al id del cliente nombraría un archivo en la RAÍZ del bucket, que el
+  // selector por carpeta no ve: anularla dejaría ese archivo en Storage sin que nada lo señale.
+  const casos = [
+    { donde: 'pedido', clave: 'g' },
+    { donde: 'reporte', clave: 'h' },
+  ] as const
+
+  for (const { donde, clave } of casos) {
+    it(`con un ${donde} que apunta al id sin barra y un archivo en la raíz, nada se toca`, async () => {
+      const c = await crearCliente(clave)
+      const raiz = c.id
+      await subir('payment-proofs', raiz)
+      try {
+        let orderId: string | null = null
+        let reportId: string | null = null
+        if (donde === 'pedido') {
+          orderId = await seedOrder(world)
+          const upd = await db
+            .from('orders')
+            .update({
+              customer_user_id: c.id,
+              status: 'cancelled',
+              cancel_reason: 'proof_rejected_final',
+              cancelled_at: new Date().toISOString(),
+              comprobante_prepago_url: raiz,
+            })
+            .eq('id', orderId)
+          if (upd.error) throw new Error(upd.error.message)
+        } else {
+          const { data, error } = await db
+            .from('reports')
+            .insert({
+              type: 'rejected_proof_disputed',
+              status: 'resolved',
+              appeal_status: 'rejected',
+              order_id: c.orderId,
+              customer_user_id: c.id,
+              evidence_url: raiz,
+            })
+            .select('id')
+            .single()
+          if (error) throw new Error(error.message)
+          reportId = data.id
+        }
+        await borrarCuenta(c)
+        envejecer(c, 91)
+
+        expect((await rpc('proof_purge_precheck', { p_user_id: c.id })).data).toBe(
+          'non_canonical_refs',
+        )
+        const fin = await rpc('finish_proof_purge', { p_user_id: c.id })
+        expect(fin.error?.code).toBe('P0001')
+        expect(fin.error?.message).toBe('non_canonical_refs')
+
+        const { summary, lines } = correr()
+        expect((await summary).failed).toBeGreaterThanOrEqual(1)
+        expect(lines.join('\n')).toContain('non_canonical_refs')
+        expect(lines.join('\n')).not.toContain(c.id)
+
+        // Archivos (el de la raíz y los canónicos), referencias y marca, intactos.
+        expect(await existe('payment-proofs', raiz)).toBe(true)
+        for (const x of c.files) expect(await existe(x.bucket, x.path), x.path).toBe(true)
+        expect(await referencia(c.orderId)).toBe(c.proof)
+        if (orderId) expect(await referencia(orderId)).toBe(raiz)
+        if (reportId) expect(evidencia(reportId)).toBe(raiz)
+        expect(purgada(c)).toBe('null')
+
+        // Una persona resuelve la referencia rara: la corrida siguiente cierra la cuenta.
+        sql(`begin;
+          select set_config('tindivo.deleting_account', '${c.id}', true);
+          update public.orders set comprobante_prepago_url = null
+           where customer_user_id = '${c.id}' and comprobante_prepago_url = '${raiz}';
+          update public.reports set evidence_url = null
+           where customer_user_id = '${c.id}' and evidence_url = '${raiz}';
+          commit;`)
+        expect((await correr().summary).failed).toBe(0)
+        expect(purgada(c)).not.toBe('null')
+      } finally {
+        await db.storage.from('payment-proofs').remove([raiz])
+      }
+    })
+  }
+})
+
 describe('CAX-002 · las cuentas que siempre fallan no tapan a las de atrás', () => {
   it('con 101 cuentas vencidas y las 100 primeras fallando, la 101 se purga en la misma corrida', async () => {
     const N = 101

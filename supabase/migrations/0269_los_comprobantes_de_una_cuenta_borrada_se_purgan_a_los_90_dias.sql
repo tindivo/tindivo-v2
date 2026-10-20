@@ -183,23 +183,26 @@ begin
     return 'not_due';
   end if;
 
-  -- Solo se anula una referencia CANÓNICA y propia (`<id del cliente>/…`, sin `http`): su
-  -- archivo vive en la carpeta que se va a vaciar. Cualquier otra referencia no nula del
-  -- cliente (URL completa, carpeta ajena, otro formato) apunta a un archivo que esta purga
-  -- no borra: anularla lo dejaría en Storage sin que nada lo señale. La cuenta queda
+  -- Solo se anula una referencia CANÓNICA y propia: empieza exactamente por `<id del cliente>/`
+  -- y le sigue al menos un carácter, la misma condición con que se eligen los archivos (primera
+  -- carpeta = el id). Su archivo vive en la carpeta que se va a vaciar. El id solo, sin barra,
+  -- NO es canónico: nombraría un archivo en la raíz del bucket, que esta purga no borra.
+  -- Cualquier otra referencia no nula del cliente (el id solo, URL completa, carpeta ajena,
+  -- otro formato) apunta a un archivo que esta purga no borra: anularla lo dejaría en Storage
+  -- sin que nada lo señale. La cuenta queda
   -- pendiente para que una persona la revise, y antes de eso no se borra nada.
   if exists (
     select 1 from public.orders ord
     where ord.customer_user_id = p_user_id
       and ord.comprobante_prepago_url is not null
-      and not (split_part(ord.comprobante_prepago_url, '/', 1) = p_user_id::text
-               and ord.comprobante_prepago_url not like 'http%')
+      and not (left(ord.comprobante_prepago_url, 37) = p_user_id::text || '/'
+               and length(ord.comprobante_prepago_url) > 37)
   ) or exists (
     select 1 from public.reports r
     where r.customer_user_id = p_user_id
       and r.evidence_url is not null
-      and not (split_part(r.evidence_url, '/', 1) = p_user_id::text
-               and r.evidence_url not like 'http%')
+      and not (left(r.evidence_url, 37) = p_user_id::text || '/'
+               and length(r.evidence_url) > 37)
   ) then
     return 'non_canonical_refs';
   end if;
@@ -255,15 +258,15 @@ begin
   set comprobante_prepago_url = null
   where customer_user_id = p_user_id
     and comprobante_prepago_url is not null
-    and split_part(comprobante_prepago_url, '/', 1) = p_user_id::text
-    and comprobante_prepago_url not like 'http%';
+    and left(comprobante_prepago_url, 37) = p_user_id::text || '/'
+    and length(comprobante_prepago_url) > 37;
   get diagnostics v_orders = row_count;
 
   update public.reports
   set evidence_url = null
   where evidence_url is not null
-    and split_part(evidence_url, '/', 1) = p_user_id::text
-    and evidence_url not like 'http%';
+    and left(evidence_url, 37) = p_user_id::text || '/'
+    and length(evidence_url) > 37;
   get diagnostics v_reports = row_count;
 
   update public.users set proofs_purged_at = now() where id = p_user_id;
