@@ -8,7 +8,7 @@ Registro de DES-7: cada tabla, función, trigger y vista tiene un módulo dueño
 - Un objeto nuevo entra en el registro en el mismo PR que lo crea.
 - `sin asignar` es válido mientras no exista el módulo dueño; se decide al crearlo. Los módulos aún no existen en el código: el nombre del dueño es el previsto en el mapa de módulos propuesto (`Docs/trabajo/arquitectura/04-arquitectura-objetivo.md` §3), y solo se asignó donde ese mapa no deja duda. `geo`, `fleet`, `trust`, `billing` y `reviews` quedan `sin asignar` a propósito: el mapa dice que antes hay que aclarar quién es dueño de qué.
 - Los triggers heredan el dueño de su tabla. Las funciones solo tienen dueño cuando el nombre lo deja claro (Store y pedidos de Entregas); el resto, `sin asignar`.
-- Total al 2026-10-12: 53 tablas, 0 vistas, 143 funciones (por nombre; +4 de la 0269 y +1 de la 0270) y 53 triggers.
+- Total al 2026-10-20, medido en una base local con las migraciones hasta la 0270: 55 tablas, 0 vistas, 148 funciones (por nombre, sin las que pertenecen a extensiones) y 54 triggers. Las filas de la tabla dan las mismas cifras.
 
 Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 
@@ -47,6 +47,7 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `menu_items` | tabla | catalog |  |
 | `menu_modifier_groups` | tabla | catalog |  |
 | `menu_modifier_options` | tabla | catalog |  |
+| `ops_alert_throttle` | tabla | sin asignar | 0263; faltaba en el registro (errata del 2026-10-20) |
 | `order_assignment_rejections` | tabla | sin asignar |  |
 | `order_event_log` | tabla | ordering |  |
 | `order_review_dismissals` | tabla | sin asignar |  |
@@ -90,7 +91,9 @@ Discusión: `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 | `cancel_expired_prepay_orders` | función | sin asignar |  |
 | `capture_delivery_address` | función | sin asignar |  |
 | `cart_item_free_delivery` | función | sin asignar |  |
+| `claim_ops_alert` | función | sin asignar | 0263; faltaba en el registro (errata del 2026-10-20) |
 | `claim_outbox_events` | función | sin asignar |  |
+| `claim_push_event` | función | sin asignar | 0264; faltaba en el registro (errata del 2026-10-20) |
 | `close_drivers_outside_schedule` | función | sin asignar |  |
 | `confirm_order_cash` | función | sin asignar |  |
 | `courier_event_to_outbox` | función | courier |  |
