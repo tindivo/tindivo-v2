@@ -36,6 +36,19 @@ function handlerWith(result: RpcResult) {
     devices: new SupabaseDeviceRepository(() => typed, { sleep: async () => {} }),
     ids: { uuid: () => 'generated-id' },
     logger: createLogger({ module: 'test', sink: { write: () => {} } }),
+    proofStorage: {
+      remove: async () => {
+        throw new Error('no se usa en estas pruebas')
+      },
+    },
+    retention: {
+      listDueAccounts: async () => [],
+      precheck: async () => 'ok',
+      listProofObjects: async () => [],
+      finishPurge: async () => {
+        throw new Error('no se usa en estas pruebas')
+      },
+    },
     supabase: () => typed,
   }
   return { handler: unregisterDeviceHandler.withDeps(deps), calls }
