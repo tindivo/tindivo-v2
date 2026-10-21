@@ -72,6 +72,10 @@ insert into public.app_settings (key, value)
   on conflict (key) do update set value = excluded.value;
 insert into public.app_settings (key, value) values ('push_claim_since', to_jsonb('2020-01-01T00:00:00Z'::text))
   on conflict (key) do update set value = excluded.value;
+-- Los eventos pendientes de otras pruebas (la suite entera genera muchos) se dan por terminados
+-- DENTRO de la transacción, para que el cron solo vea los de esta prueba. Se revierte al final.
+update public.domain_events set push_done_at = now()
+  where push_done_at is null and push_dead_at is null and id::text not like '00000000-0000-4000-8000-0000000072%';
 delete from net.http_request_queue;`
 }
 
