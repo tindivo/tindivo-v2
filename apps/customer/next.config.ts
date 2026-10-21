@@ -1,4 +1,8 @@
+import { fileURLToPath } from 'node:url'
 import type { NextConfig } from 'next'
+
+// Raíz del monorepo: el build standalone tiene que trazar los paquetes de `packages/*`.
+const MONOREPO_ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
 const config: NextConfig = {
   // `@tindivo/supabase` entró aquí cuando el logout pasó a usar `signOutLocal`:
@@ -13,6 +17,9 @@ const config: NextConfig = {
     '@tindivo/supabase',
   ],
   poweredByHeader: false,
+  // Servidor Node autocontenido para la imagen Docker de Coolify (infra/coolify).
+  output: 'standalone',
+  outputFileTracingRoot: MONOREPO_ROOT,
   /**
    * Rescate de las URLs del v1, que usaba `/restaurantes/<slug>`. Google las
    * tiene indexadas y hoy salen como 404 en Search Console; un 301 traslada al

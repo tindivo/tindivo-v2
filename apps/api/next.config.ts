@@ -17,6 +17,8 @@ const config: NextConfig = {
   ],
   // API-only: sin optimización de imágenes ni assets de página.
   poweredByHeader: false,
+  // Servidor Node autocontenido para la imagen Docker de Coolify (infra/coolify).
+  output: 'standalone',
   // `puppeteer-core` y `@sparticuz/chromium` (reporte PDF de rendimiento) traen
   // binarios nativos: si Next intenta empaquetarlos como cualquier import, el
   // bundle de la función serverless revienta de tamaño. `serverExternalPackages`
@@ -63,6 +65,8 @@ const config: NextConfig = {
     '/api/v1/business/reports/rendimiento/pdf': [
       './node_modules/@sparticuz/chromium/bin/**/*',
       '../../node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**/*',
+      // Imagen Docker (infra/coolify): instala con node-linker=hoisted, sin `.pnpm`.
+      '../../node_modules/@sparticuz/chromium/bin/**/*',
     ],
   },
   //
