@@ -14,6 +14,7 @@
 | Un test busca `ah√≠` en vez de `ahí` | [Un heredoc de Bash corrompe los acentos](#un-heredoc-de-bash-corrompe-los-acentos) |
 | «invalid response from upstream», «Pedido no existe» o «Motorizado no encontrado» a mitad de una suite de integración; datos de siembra que desaparecen | [Un vitest de integración sin candado borra los datos de otra sesión](#un-vitest-de-integración-sin-candado-borra-los-datos-de-otra-sesión) |
 | `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "vitest" not found` justo después de un resumen de vitest | [«vitest not found» es un vitest que falló](#vitest-not-found-es-un-vitest-que-falló) |
+| `pnpm db:lock run -- bash -c "a && b"` no hace nada o solo hace `a`; `supabase` imprime su ayuda en JSON | [El candado parte los argumentos](#el-candado-parte-los-argumentos) |
 | Tras parar `supabase functions serve`, las pruebas de `send-push` no conectan y `supabase_edge_runtime_*` ya no está en `docker ps` | [El contenedor de Edge Functions desaparece](#el-contenedor-de-edge-functions-desaparece) |
 | Negocios, usuarios o ciclos de caja sobrantes en la base local tras correr suites | [Las suites de integración dejan basura en la base local](#las-suites-de-integración-dejan-basura-en-la-base-local) |
 | `cash-summary-scope.integration.test.ts` falla con `expected 204 to be 104` | [Los seeders de demo envenenan los tests de caja](#los-seeders-de-demo-envenenan-los-tests-de-caja) |
@@ -112,8 +113,13 @@ Es el mismo cuadro de "el problema está en el servidor, no en tu código" que [
 
 ### El contenedor de Edge Functions desaparece
 **Síntoma:** después de cortar `supabase functions serve` (Ctrl+C o matar el proceso), las pruebas que llaman a `send-push` por HTTP fallan al conectar y `docker ps` ya no lista `supabase_edge_runtime_zpnipajgwfthxhdtzhly`; el resto del stack sigue arriba.
-**Causa:** (nota de sesión del 2026-10-20, sin log guardado) `functions serve` usa ese contenedor y, al terminar, se lo lleva: no vuelve solo.
-**Qué hacer:** con el candado tomado (`pnpm db:lock`), `supabase stop` y `supabase start` lo recrean. No basta con `docker start`: el contenedor ya no existe.
+**Causa:** (notas de sesión del 2026-10-20, sin log guardado) `functions serve` usa ese contenedor y, al terminar, a veces se lo lleva: pasó dos veces ese día y una tercera el contenedor siguió en pie. No vuelve solo.
+**Qué hacer:** tras parar `functions serve`, mira `docker ps -a | grep edge_runtime`. Si falta, con el candado: `pnpm db:lock run -- supabase stop` y luego `pnpm db:lock run -- supabase start`, en dos llamadas (ver [El candado parte los argumentos](#el-candado-parte-los-argumentos)). No basta con `docker start`: el contenedor ya no existe.
+
+### El candado parte los argumentos
+**Síntoma:** `node scripts/db-lock.mjs run -- bash -c "supabase stop && supabase start"` termina sin parar ni arrancar nada (`supabase` imprime su ayuda en JSON), o de `bash -c "cmd1 && cmd2"` solo corre una parte, sin error.
+**Causa:** (2026-10-20, `scripts/db-lock.mjs`) `run` junta los argumentos con espacios, sin comillas, y los pasa a la shell del sistema con `shell: true` (en Windows, `cmd.exe`). Las comillas que separaban el `-c` de `bash` ya no llegan: `bash` recibe solo la primera palabra y el resto lo interpreta `cmd.exe`.
+**Qué hacer:** un comando por llamada al candado, o un script: `node scripts/db-lock.mjs run -- bash ruta/al/script.sh`. Si necesitas saber qué pasó dentro, que el script escriba a un archivo y léelo después.
 
 ### Las suites de integración dejan basura en la base local
 **Síntoma:** la DB local acumula negocios, usuarios, pedidos, eventos y ciclos de caja de fixtures. Medido el 2026-08-11: 71 negocios, 110 usuarios, 159 pedidos, 11 ciclos vacíos. Medido el 2026-08-19: 27 pedidos manuales, 116 usuarios muertos, 1 evento. Un ciclo vacío la pantalla lo pinta como «Por confirmar ahora».
