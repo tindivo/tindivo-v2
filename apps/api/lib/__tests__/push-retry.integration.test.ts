@@ -315,7 +315,7 @@ rollback;
     expect(w.startsWith('1|')).toBe(true)
     const payload = JSON.parse(w.slice(2))
     expect(payload.count).toBe(2)
-    expect([...payload.eventTypes].sort()).toEqual(['CashDelivered', 'OrderCreated'])
+    expect(payload.eventTypes).toBe('CashDelivered,OrderCreated')
   })
 
   it('un evento más viejo que ttl se da por perdido', () => {

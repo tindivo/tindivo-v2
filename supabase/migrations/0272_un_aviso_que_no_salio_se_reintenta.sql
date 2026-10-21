@@ -12,7 +12,8 @@
 --    por los eventos que nadie reclamó o que no terminaron: hasta `maxAttempts` veces, con
 --    las esperas de `backoffMinutes`, y nunca pasados `ttlMinutes` desde el evento.
 -- 3. Un evento que agota los intentos (o el plazo) queda marcado (`push_dead_at`) y el cron
---    escribe UN evento `PushDeliveryFailed` por corrida, que viaja como cualquier otro
+--    escribe UN evento `PushDeliveryFailed` por corrida (`record_push_undelivered`;
+--    payload: `count` y `eventTypes`, tipos separados por comas), que viaja como cualquier otro
 --    aviso: `send-push` lo manda al admin con texto fijo y el freno de la 0263. Así la base
 --    no necesita el secreto de `OpsAlert`.
 --
@@ -287,6 +288,25 @@ $$;
 revoke all on function public.complete_push_event(uuid) from public, anon, authenticated;
 grant execute on function public.complete_push_event(uuid) to service_role;
 
+-- ── El aviso de fallo, en una función aparte ────────────────────────────────
+-- Sin bucles y con parámetros escalares, para que el inventario de productores del borrado
+-- de cuenta (account-deletion-coverage) pueda leer qué guarda: solo cuántos y de qué tipos.
+create or replace function public.record_push_undelivered(
+  p_first_event_id uuid, p_count int, p_event_types text
+)
+  returns void
+  language plpgsql security definer set search_path = ''
+as $$
+begin
+  insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload)
+  values (
+    'push_outbox', p_first_event_id, 'PushDeliveryFailed',
+    jsonb_build_object('count', p_count, 'eventTypes', p_event_types)
+  );
+end;
+$$;
+revoke all on function public.record_push_undelivered(uuid, int, text) from public, anon, authenticated, service_role;
+
 -- ── El cron: reintenta lo pendiente y da por perdido lo que no salió ─────────
 -- Devuelve cuántos eventos reintentó. Sin `since` válido o sin push configurado, 0.
 create or replace function public.retry_push_dispatch()
@@ -300,7 +320,7 @@ declare
   v_retried int := 0;
   v_dead_n int;
   v_dead_first uuid;
-  v_dead_types text[];
+  v_dead_types text;
 begin
   select * into v_cfg from public.push_retry_settings(true);
   if not v_cfg.ok then
@@ -331,17 +351,13 @@ begin
   )
   select count(*)::int,
          (array_agg(d.id order by d.occurred_at))[1],
-         array_agg(distinct d.event_type)
+         string_agg(distinct d.event_type, ',' order by d.event_type)
     into v_dead_n, v_dead_first, v_dead_types
     from dead as d
    where d.event_type <> 'PushDeliveryFailed'; -- un aviso de fallo perdido no genera otro
 
   if v_dead_n > 0 then
-    insert into public.domain_events (aggregate_type, aggregate_id, event_type, payload)
-    values (
-      'push_outbox', v_dead_first, 'PushDeliveryFailed',
-      jsonb_build_object('count', v_dead_n, 'eventTypes', to_jsonb(v_dead_types))
-    );
+    perform public.record_push_undelivered(v_dead_first, v_dead_n, v_dead_types);
   end if;
 
   -- 2. Reintentos: nadie lo reclamó, o lo reclamó y no terminó en el plazo; y ya pasó la
@@ -390,7 +406,7 @@ declare
 begin
   foreach v_fn in array array[
     'push_event_types', 'post_push_dispatch', 'dispatch_event', 'push_retry_settings',
-    'claim_push_event', 'complete_push_event', 'retry_push_dispatch'
+    'claim_push_event', 'complete_push_event', 'record_push_undelivered', 'retry_push_dispatch'
   ] loop
     select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
      where s.nspname = 'public' and p.proname = v_fn;

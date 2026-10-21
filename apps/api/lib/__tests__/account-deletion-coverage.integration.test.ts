@@ -950,6 +950,13 @@ type ClaseProductor =
   | { clase: 'sin_datos_del_cliente'; n: number; claves: string[] }
 const PA = (n = 1): ClaseProductor => ({ clase: 'por_aggregate', n })
 const INVENTARIO_PRODUCTORES: Record<string, ClaseProductor> = {
+  // 0272: el cron de reintentos avisa al admin de los avisos perdidos. Solo cuántos y de qué
+  // tipos (nombres de evento separados por comas); el agregado es el id de un evento.
+  'record_push_undelivered|push_outbox|PushDeliveryFailed': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['count', 'eventTypes'],
+  },
   'admin_correct_delivery_band|order|AdminCorrectedDeliveryBand': PA(),
   'advance_order|order|CustomerNoShow': PA(2),
   'advance_order|order|OrderReleased': PA(),
@@ -1446,6 +1453,15 @@ const NO_INSERCIONES: Record<string, { n: number; motivo: string }> = {
     n: 1,
     motivo:
       'el UPDATE que sella push_claimed_at y devuelve el evento a send-push (0264); no crea eventos',
+  },
+  complete_push_event: {
+    n: 1,
+    motivo: 'el UPDATE que sella push_done_at cuando send-push termina (0272); no crea eventos',
+  },
+  retry_push_dispatch: {
+    n: 3,
+    motivo:
+      'el UPDATE que marca push_dead_at, el SELECT de pendientes y el UPDATE de push_attempts (0272); el aviso de fallo lo inserta record_push_undelivered',
   },
   personal_data_inventory: {
     n: 1,

@@ -2,7 +2,7 @@
 --
 -- Qué hace: apaga el cron `retry-push-dispatch`, restaura `claim_push_event` y `dispatch_event`
 -- EXACTAMENTE como estaban en la 0264 (copiadas tal cual, con sus revokes y grants) y borra lo que
--- creó la 0272: `retry_push_dispatch`, `complete_push_event`, `push_retry_settings`,
+-- creó la 0272: `retry_push_dispatch`, `record_push_undelivered`, `complete_push_event`, `push_retry_settings`,
 -- `post_push_dispatch`, `push_event_types`, el índice `de_push_pending_idx` y la fila
 -- `app_settings.push_retry`.
 --
@@ -114,6 +114,7 @@ $$;
 revoke all on function public.dispatch_event() from public, anon, authenticated;
 
 drop function if exists public.retry_push_dispatch();
+drop function if exists public.record_push_undelivered(uuid, int, text);
 drop function if exists public.complete_push_event(uuid);
 drop function if exists public.push_retry_settings(boolean);
 drop function if exists public.post_push_dispatch(uuid, text, uuid, jsonb);
@@ -127,7 +128,7 @@ declare
 begin
   if exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
               where s.nspname = 'public'
-                and p.proname in ('retry_push_dispatch', 'complete_push_event', 'push_retry_settings',
+                and p.proname in ('retry_push_dispatch', 'record_push_undelivered', 'complete_push_event', 'push_retry_settings',
                                   'post_push_dispatch', 'push_event_types'))
      or exists (select 1 from cron.job where jobname = 'retry-push-dispatch')
      or exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'de_push_pending_idx')
