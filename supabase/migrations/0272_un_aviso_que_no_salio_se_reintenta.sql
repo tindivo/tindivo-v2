@@ -14,12 +14,15 @@
 -- 3. Un evento que agota los intentos (o el plazo) queda marcado (`push_dead_at`) y el cron
 --    escribe UN evento `PushDeliveryFailed` por corrida (`record_push_undelivered`;
 --    payload: `count` y `eventTypes`, tipos separados por comas), que viaja como cualquier otro
---    aviso: `send-push` lo manda al admin con texto fijo y el freno de la 0263. Así la base
---    no necesita el secreto de `OpsAlert`.
+--    aviso: `send-push` lo manda al admin con texto fijo. El freno está aquí, en quien lo
+--    produce: como mucho uno cada `alertWindowMinutes` (30). Así la base no necesita el
+--    secreto de `OpsAlert`, y un `send-push` que cae no gasta un turno que nadie usa.
+--    Dos corridas del cron no se solapan (candado consultivo de transacción).
 --
 -- Decisiones de Jesús (2026-10-20): solo el aviso entero en este lote (el reintento por
 -- destinatario, después y si la bitácora lo justifica); 3 reintentos y 15 minutos; alerta
--- al admin con freno.
+-- al admin con freno; y, ante un fallo al marcar el final, mejor un aviso duplicado que
+-- uno perdido («al menos una vez»: `send-push` reintenta la marca antes de rendirse).
 --
 -- Por qué columnas nuevas y no `published_at`/`retry_count`: el cron de la 0007 borra los
 -- `domain_events` de más de 90 días con `published_at` escrito. Hoy nadie lo escribe, así
@@ -34,6 +37,11 @@
 -- Sin datos personales nuevos: las columnas son horas y contadores; `PushDeliveryFailed`
 -- lleva solo cuántos eventos y de qué tipos. Idempotente.
 -- ============================================================================
+
+-- `domain_events` es el outbox en caliente: si no se consigue el bloqueo en 5 s, la migración
+-- falla en vez de dejar en cola las escrituras de los pedidos. Sin transacción no tiene efecto.
+set local lock_timeout = '5s';
+set local statement_timeout = '120s';
 
 alter table public.domain_events
   add column if not exists push_attempts int not null default 0,
@@ -57,7 +65,7 @@ create index if not exists de_push_pending_idx on public.domain_events (occurred
 insert into public.app_settings (key, value)
 values (
   'push_retry',
-  '{"maxAttempts": 3, "ttlMinutes": 15, "leaseSeconds": 180, "backoffMinutes": [1, 2, 4]}'::jsonb
+  '{"maxAttempts": 3, "ttlMinutes": 15, "leaseSeconds": 180, "backoffMinutes": [1, 2, 4], "alertWindowMinutes": 30}'::jsonb
 )
 on conflict (key) do nothing;
 
@@ -152,7 +160,8 @@ create or replace function public.push_retry_settings(
   out max_attempts int,
   out ttl interval,
   out lease interval,
-  out backoff int[]
+  out backoff int[],
+  out alert_window interval
 )
   language plpgsql stable security definer set search_path = ''
 as $$
@@ -164,6 +173,7 @@ begin
   ttl := interval '15 minutes';
   lease := interval '180 seconds';
   backoff := array[1, 2, 4];
+  alert_window := interval '30 minutes';
 
   select s.value into v_raw from public.app_settings as s where s.key = 'push_retry';
   if v_raw is null or jsonb_typeof(v_raw) <> 'object' then
@@ -171,19 +181,21 @@ begin
   end if;
 
   -- Cada valor se toma solo si tiene la forma y el rango esperados; si no, se queda el
-  -- valor por defecto. Rangos: 0-10 intentos, 1-60 min de vida, 30-900 s de plazo.
+  -- valor por defecto. Rangos: 0-10 intentos, 1-60 min de vida, 30-900 s de plazo, esperas
+  -- de 1-60 min, 1-1440 min entre alertas. La forma (1 a 4 dígitos) se comprueba ANTES de
+  -- convertir a int: un número enorme no desborda, se ignora.
   if jsonb_typeof(v_raw -> 'maxAttempts') = 'number'
-     and (v_raw ->> 'maxAttempts') ~ '^[0-9]+$'
+     and (v_raw ->> 'maxAttempts') ~ '^[0-9]{1,4}$'
      and (v_raw ->> 'maxAttempts')::int between 0 and 10 then
     max_attempts := (v_raw ->> 'maxAttempts')::int;
   end if;
   if jsonb_typeof(v_raw -> 'ttlMinutes') = 'number'
-     and (v_raw ->> 'ttlMinutes') ~ '^[0-9]+$'
+     and (v_raw ->> 'ttlMinutes') ~ '^[0-9]{1,4}$'
      and (v_raw ->> 'ttlMinutes')::int between 1 and 60 then
     ttl := make_interval(mins => (v_raw ->> 'ttlMinutes')::int);
   end if;
   if jsonb_typeof(v_raw -> 'leaseSeconds') = 'number'
-     and (v_raw ->> 'leaseSeconds') ~ '^[0-9]+$'
+     and (v_raw ->> 'leaseSeconds') ~ '^[0-9]{1,4}$'
      and (v_raw ->> 'leaseSeconds')::int between 30 and 900 then
     lease := make_interval(secs => (v_raw ->> 'leaseSeconds')::int);
   end if;
@@ -191,11 +203,16 @@ begin
      and jsonb_array_length(v_raw -> 'backoffMinutes') between 1 and 10
      and not exists (
        select 1 from jsonb_array_elements(v_raw -> 'backoffMinutes') as b(v)
-        where jsonb_typeof(b.v) <> 'number' or (b.v #>> '{}') !~ '^[0-9]+$'
+        where jsonb_typeof(b.v) <> 'number' or (b.v #>> '{}') !~ '^[0-9]{1,4}$'
            or (b.v #>> '{}')::int not between 1 and 60
      ) then
     select array_agg((b.v #>> '{}')::int order by b.n) into backoff
       from jsonb_array_elements(v_raw -> 'backoffMinutes') with ordinality as b(v, n);
+  end if;
+  if jsonb_typeof(v_raw -> 'alertWindowMinutes') = 'number'
+     and (v_raw ->> 'alertWindowMinutes') ~ '^[0-9]{1,4}$'
+     and (v_raw ->> 'alertWindowMinutes')::int between 1 and 1440 then
+    alert_window := make_interval(mins => (v_raw ->> 'alertWindowMinutes')::int);
   end if;
 
   if not p_require_since then
@@ -326,6 +343,10 @@ begin
   if not v_cfg.ok then
     return 0;
   end if;
+  -- Una corrida a la vez: si otra tiene el candado (hasta su commit), esta no hace nada.
+  if not pg_try_advisory_xact_lock(hashtext('tindivo.retry_push_dispatch')) then
+    return 0;
+  end if;
   if not exists (
     select 1 from public.app_settings
      where key = 'push_dispatch' and value ->> 'url' is not null
@@ -356,7 +377,12 @@ begin
     from dead as d
    where d.event_type <> 'PushDeliveryFailed'; -- un aviso de fallo perdido no genera otro
 
-  if v_dead_n > 0 then
+  -- Freno: como mucho un aviso de fallo por ventana. Los perdidos quedan marcados igual.
+  if v_dead_n > 0 and not exists (
+    select 1 from public.domain_events as f
+     where f.event_type = 'PushDeliveryFailed'
+       and f.occurred_at > now() - v_cfg.alert_window
+  ) then
     perform public.record_push_undelivered(v_dead_first, v_dead_n, v_dead_types);
   end if;
 

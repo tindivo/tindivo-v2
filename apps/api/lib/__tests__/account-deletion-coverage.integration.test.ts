@@ -1459,9 +1459,9 @@ const NO_INSERCIONES: Record<string, { n: number; motivo: string }> = {
     motivo: 'el UPDATE que sella push_done_at cuando send-push termina (0272); no crea eventos',
   },
   retry_push_dispatch: {
-    n: 3,
+    n: 4,
     motivo:
-      'el UPDATE que marca push_dead_at, el SELECT de pendientes y el UPDATE de push_attempts (0272); el aviso de fallo lo inserta record_push_undelivered',
+      'el UPDATE que marca push_dead_at, el SELECT del freno de alertas, el SELECT de pendientes y el UPDATE de push_attempts (0272); el aviso de fallo lo inserta record_push_undelivered',
   },
   personal_data_inventory: {
     n: 1,
