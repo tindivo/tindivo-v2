@@ -16,6 +16,7 @@ import {
   isOpsCaller,
   OPS_ALERT_SECRET_HEADER,
   OPS_ALERT_WINDOW,
+  pushUndeliveredText,
   opsAlertText,
 } from './ops-alert.ts'
 
@@ -516,6 +517,12 @@ async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
   ]
 }
 
+/** Marca el evento del outbox como terminado (0272). Nunca registra datos del evento. */
+async function markDone(eventId: string): Promise<void> {
+  const { error } = await db.rpc('complete_push_event', { p_event_id: eventId })
+  if (error) console.error('[send-push] complete_push_event falló:', error.code ?? 'sin_codigo')
+}
+
 async function buildNotes(eventType: string, aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
   const out: Note[] = []
   const action = (payload?.action as string) ?? ''
@@ -536,6 +543,31 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         title: text.title,
         body: text.body,
         tag: `${eventType}-${kind}`,
+        url: '/',
+        requireInteraction: true,
+        vibrate: false,
+      })
+    }
+    return out
+  }
+
+  // Avisos que la base dio por perdidos (0272, `retry_push_dispatch`): al admin, con texto
+  // FIJO (solo el número). Freno de la 0263: a lo sumo uno cada OPS_ALERT_WINDOW.
+  if (eventType === 'PushDeliveryFailed') {
+    const { data: turno, error: turnoErr } = await db.rpc('claim_ops_alert', {
+      p_kind: 'push_undelivered',
+      p_window: OPS_ALERT_WINDOW,
+    })
+    if (turnoErr || !turno) return out
+    const text = pushUndeliveredText(payload?.count)
+    const { data: admins } = await db.from('user_roles').select('user_id').eq('role', 'admin')
+    for (const a of admins ?? []) {
+      out.push({
+        userId: a.user_id as string,
+        app: 'admin',
+        title: text.title,
+        body: text.body,
+        tag: `${eventType}-${String(aggregateId).slice(0, 8)}`,
         url: '/',
         requireInteraction: true,
         vibrate: false,
@@ -1407,6 +1439,7 @@ Deno.serve(async (req: Request) => {
       }
       // `OpsAlert` solo entra por su rama (con secreto): un evento de la base con ese tipo no hace nada.
       if (row.event_type === 'OpsAlert') {
+        await markDone(req_kind.eventId)
         return new Response(JSON.stringify({ ok: true, recipients: 0, sent: 0, failed: 0 }), {
           headers: { 'content-type': 'application/json' },
         })
@@ -1481,6 +1514,9 @@ Deno.serve(async (req: Request) => {
       sent += native.sent
       failed += native.failed
     }
+    // Solo el aviso del outbox (no el `OpsAlert` de la API) se marca terminado. Si falla, el
+    // aviso ya salió: no se cambia la respuesta y el plazo del reclamo hará el resto.
+    if (req_kind.kind !== 'ops') await markDone(req_kind.eventId)
     return new Response(JSON.stringify({ ok: true, recipients: notes.length, sent, failed }), {
       headers: { 'content-type': 'application/json' },
     })
