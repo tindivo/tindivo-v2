@@ -114,6 +114,24 @@ async function claimedAt(eventId: string): Promise<string | null> {
   return (data as { push_claimed_at: string | null }).push_claimed_at
 }
 
+async function eventTimes(eventId: string): Promise<{
+  push_claimed_at: string | null
+  push_done_at: string | null
+  push_dead_at: string | null
+}> {
+  const { data, error } = await localClient
+    .from('domain_events')
+    .select('push_claimed_at,push_done_at,push_dead_at')
+    .eq('id', eventId)
+    .single()
+  if (error) throw new Error(error.message)
+  return data as {
+    push_claimed_at: string | null
+    push_done_at: string | null
+    push_dead_at: string | null
+  }
+}
+
 async function setCut(value: string): Promise<void> {
   const { error } = await localClient
     .from('app_settings')
@@ -136,6 +154,8 @@ const THROTTLE_KIND = 'otp_phone_limit_misconfigured'
 const ID_DISPATCH = 'app_settings:push_dispatch'
 const ID_CUT = 'app_settings:push_claim_since'
 const ID_THROTTLE = `ops_alert_throttle:${THROTTLE_KIND}`
+// 0272: el aviso `PushDeliveryFailed` pasa por su propio freno (`claim_ops_alert`, kind `push_undelivered`).
+const ID_UNDELIVERED = 'ops_alert_throttle:push_undelivered'
 
 function target(id: string): {
   table: 'app_settings' | 'ops_alert_throttle'
@@ -176,7 +196,12 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
   let seed: SeededOrder
   let subscriptionId = ''
   const eventIds: string[] = []
-  const snapshot = new SettingsSnapshot(settingsStore, [ID_DISPATCH, ID_CUT, ID_THROTTLE])
+  const snapshot = new SettingsSnapshot(settingsStore, [
+    ID_DISPATCH,
+    ID_CUT,
+    ID_THROTTLE,
+    ID_UNDELIVERED,
+  ])
 
   async function track(id: string): Promise<string> {
     eventIds.push(id)
@@ -475,6 +500,114 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
     })
     expect(r.status).toBe(409)
     expect(await deliveryLogCount(subscriptionId)).toBe(antes)
+  })
+
+  // ── 0272: el reclamo con plazo y el marcado del final ──────────────────────
+  it('0272: tras el éxito de un evento fresco quedan push_claimed_at y push_done_at', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const antes = await eventTimes(id)
+    expect(antes.push_done_at).toBeNull()
+    const r = await post({ event_id: id })
+    expect(r.status).toBe(200)
+    expect(r.json.ok).toBe(true)
+    const despues = await eventTimes(id)
+    expect(despues.push_claimed_at).not.toBeNull()
+    expect(despues.push_done_at).not.toBeNull()
+    expect(despues.push_dead_at).toBeNull()
+  })
+
+  it('0272: un evento reclamado hace más de 180 s y sin terminar se reclama otra vez y queda terminado', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const viejo = iso(-200_000)
+    const { error } = await localClient
+      .from('domain_events')
+      .update({ push_claimed_at: viejo })
+      .eq('id', id)
+    expect(error).toBeNull()
+    const antes = await deliveryLogCount(subscriptionId)
+    const r = await post({ event_id: id })
+    expect(r.status).toBe(200)
+    expect(r.json.ok).toBe(true)
+    const t = await eventTimes(id)
+    expect(t.push_done_at).not.toBeNull()
+    expect(new Date(t.push_claimed_at as string).getTime()).toBeGreaterThan(
+      new Date(viejo).getTime(),
+    )
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1)
+  })
+
+  it('0272: un evento terminado (push_done_at) o perdido (push_dead_at) da 409', async () => {
+    await setCut(iso(-5 * MIN))
+    const hecho = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const perdido = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const u1 = await localClient
+      .from('domain_events')
+      .update({ push_done_at: iso(0) })
+      .eq('id', hecho)
+    expect(u1.error).toBeNull()
+    const u2 = await localClient
+      .from('domain_events')
+      .update({ push_dead_at: iso(0) })
+      .eq('id', perdido)
+    expect(u2.error).toBeNull()
+    const antes = await deliveryLogCount(subscriptionId)
+    expect((await post({ event_id: hecho })).status).toBe(409)
+    expect((await post({ event_id: perdido })).status).toBe(409)
+    expect(await claimedAt(hecho)).toBeNull()
+    expect(await claimedAt(perdido)).toBeNull()
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes)
+  })
+
+  it('0272: PushDeliveryFailed se acepta, queda terminado y escribe el freno push_undelivered; el 2º dentro de la ventana, sin destinatarios', async () => {
+    await setCut(iso(-5 * MIN))
+    const { error: delErr } = await localClient
+      .from('ops_alert_throttle')
+      .delete()
+      .eq('kind', 'push_undelivered')
+    expect(delErr).toBeNull()
+
+    const nuevo = async (): Promise<string> => {
+      const id = crypto.randomUUID()
+      const { error } = await localClient.from('domain_events').insert({
+        id,
+        aggregate_type: 'push_outbox',
+        aggregate_id: crypto.randomUUID(),
+        event_type: 'PushDeliveryFailed',
+        payload: { count: 2, eventTypes: 'OrderCreated' } as never,
+      })
+      if (error) throw new Error(`insert PushDeliveryFailed: ${error.message}`)
+      return track(id)
+    }
+
+    const a = await nuevo()
+    const r1 = await post({ event_id: a })
+    expect(r1.status).toBe(200)
+    expect(r1.json.ok).toBe(true)
+    expect((await eventTimes(a)).push_done_at).not.toBeNull()
+    const { data: fila, error: filaErr } = await localClient
+      .from('ops_alert_throttle')
+      .select('*')
+      .eq('kind', 'push_undelivered')
+      .maybeSingle()
+    expect(filaErr).toBeNull()
+    expect(fila).not.toBeNull()
+
+    const b = await nuevo()
+    const r2 = await post({ event_id: b })
+    expect(r2.status).toBe(200)
+    expect(r2.json.ok).toBe(true)
+    expect(r2.json.recipients).toBe(0) // frenado por la ventana
+    expect((await eventTimes(b)).push_done_at).not.toBeNull()
   })
 
   // ── OpsAlert ───────────────────────────────────────────────────────────────
