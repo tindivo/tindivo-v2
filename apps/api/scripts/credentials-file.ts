@@ -11,9 +11,11 @@ import { execFileSync } from 'node:child_process'
 import {
   chmodSync,
   closeSync,
+  fstatSync,
   fsyncSync,
   lstatSync,
   openSync,
+  realpathSync,
   statSync,
   unlinkSync,
   writeSync,
@@ -24,6 +26,8 @@ export function openPrivateCredentialsFile(
   dir: string,
   nowIso: string,
   secure: (path: string) => void,
+  /** Solo para pruebas: `beforeOpen` corre entre el `lstat` y el `open` y simula una carrera. */
+  hooks?: { beforeOpen?: (path: string) => void },
 ): { path: string; fd: number } {
   const path = join(dir, `staging-credenciales-${nowIso.replace(/[:.]/g, '-')}.md`)
   // En Windows `wx` NO falla ante un enlace colgado (crea su destino): se comprueba antes con
@@ -34,7 +38,50 @@ export function openPrivateCredentialsFile(
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
   }
+  hooks?.beforeOpen?.(path)
   const fd = openSync(path, 'wx', 0o600)
+  // Cierra la ventana entre `lstat` y `open`: lo abierto debe ser, por ino/dev, el archivo vacío
+  // que hay ahora en `path` (ni enlace ni reemplazo). Si no, no se escribe ningún secreto.
+  const opened = fstatSync(fd, { bigint: true })
+  const now = lstatSync(path, { bigint: true })
+  if (
+    now.isSymbolicLink() ||
+    !now.isFile() ||
+    now.ino !== opened.ino ||
+    now.dev !== opened.dev ||
+    opened.size !== 0n
+  ) {
+    let real: string | undefined
+    try {
+      real = realpathSync(path)
+    } catch {
+      // sin destino resoluble
+    }
+    try {
+      closeSync(fd)
+    } catch {
+      // ya cerrado
+    }
+    if (now.isSymbolicLink()) {
+      try {
+        unlinkSync(path)
+      } catch {
+        // ya borrado
+      }
+    }
+    // Lo que abrimos lo creamos nosotros (tamaño 0): se borra solo si es exactamente ese inodo.
+    if (real && opened.size === 0n) {
+      try {
+        const t = lstatSync(real, { bigint: true })
+        if (t.isFile() && t.ino === opened.ino && t.dev === opened.dev) unlinkSync(real)
+      } catch {
+        // ya borrado
+      }
+    }
+    throw new Error(
+      'ABORTADO: la ruta del archivo de credenciales cambió entre la comprobación y la apertura',
+    )
+  }
   try {
     secure(path)
     writeSync(

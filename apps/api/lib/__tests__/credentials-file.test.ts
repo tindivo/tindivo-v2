@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import {
   closeSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -31,6 +32,14 @@ const freshDir = () => {
   return d
 }
 const noop = () => {}
+const lstatExists = (p: string) => {
+  try {
+    lstatSync(p)
+    return true
+  } catch {
+    return false
+  }
+}
 
 beforeAll(() => {
   root = mkdtempSync(join(tmpdir(), 'cred-test-'))
@@ -84,6 +93,50 @@ describe('openPrivateCredentialsFile', () => {
       if (!tryLink(target, join(dir, FILE))) return ctx.skip()
       expect(() => openPrivateCredentialsFile(dir, NOW, noop)).toThrow()
       expect(existsSync(target)).toBe(false)
+    })
+  })
+
+  describe('(h, i) carrera entre la comprobación y la apertura', () => {
+    const canLink = (dir: string): boolean => {
+      try {
+        symlinkSync(join(dir, 'sonda-destino'), join(dir, 'sonda'))
+        return true
+      } catch (e) {
+        console.warn(`SALTADO: este SO no deja crear enlaces simbólicos (${(e as Error).message})`)
+        return false
+      }
+    }
+
+    it('(h) enlace colgado creado en medio: lanza, no queda destino ni ruta', (ctx) => {
+      const dir = freshDir()
+      if (!canLink(dir)) return ctx.skip()
+      const destino = join(dir, 'destino-en-repo.md')
+      let secured = false
+      expect(() =>
+        openPrivateCredentialsFile(
+          dir,
+          NOW,
+          () => {
+            secured = true
+          },
+          { beforeOpen: (p) => symlinkSync(destino, p) },
+        ),
+      ).toThrow(/cambió entre la comprobación y la apertura/)
+      expect(secured).toBe(false)
+      expect(existsSync(destino)).toBe(false)
+      expect(lstatExists(join(dir, FILE))).toBe(false)
+    })
+
+    it('(i) enlace a un archivo con contenido creado en medio: lanza y conserva su contenido', (ctx) => {
+      const dir = freshDir()
+      if (!canLink(dir)) return ctx.skip()
+      const target = join(dir, 'existente.md')
+      writeFileSync(target, 'ORIGINAL')
+      expect(() =>
+        openPrivateCredentialsFile(dir, NOW, noop, { beforeOpen: (p) => symlinkSync(target, p) }),
+      ).toThrow()
+      expect(readFileSync(target, 'utf8')).toBe('ORIGINAL')
+      expect(lstatExists(join(dir, FILE))).toBe(true) // el enlace lo dejó el "atacante"; no se sigue
     })
   })
 
