@@ -139,6 +139,7 @@ describe('openPrivateAccountsFile', () => {
       if (!canLink(dir)) return ctx.skip()
       const destino = join(dir, 'destino-en-repo')
       let secured = false
+      // `mkdir` falla ante el enlace ajeno: no llegamos a crear nada, y el mensaje lo dice.
       expect(() =>
         openPrivateAccountsFile(
           dir,
@@ -148,7 +149,6 @@ describe('openPrivateAccountsFile', () => {
           },
           { beforeMkdir: (sub) => symlinkSync(destino, sub, 'dir') },
         ),
-        // `mkdir` falla ante el enlace ajeno: no llegamos a crear nada, y el mensaje lo dice.
       ).toThrow(/No se creó nada\.$/)
       expect(secured).toBe(false)
       expect(exists(join(destino, 'cuentas.md'))).toBe(false)
