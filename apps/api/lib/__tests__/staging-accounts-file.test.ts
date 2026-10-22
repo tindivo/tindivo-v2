@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import {
   chmodSync,
   closeSync,
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -25,6 +26,7 @@ import {
   recordThenActivate,
   redactSecrets,
   securePrivateDir,
+  TRUSTED_INSTALLER_SID,
   type WriteFn,
 } from '../../scripts/staging-accounts-file.ts'
 
@@ -384,7 +386,7 @@ describe('boundaryViolations', () => {
     inheritOnly: false,
     ...extra,
   })
-  const at = (aces: Ace[], path = 'C:/a') => [{ path, aces }]
+  const at = (aces: Ace[], path = 'C:/a', owner = ME) => [{ path, owner, aces }]
 
   it('otro SID con Modify es violación', () => {
     expect(boundaryViolations(at([ace(OTHER, 1245631)]), ALLOWED)).toEqual([
@@ -405,10 +407,19 @@ describe('boundaryViolations', () => {
   it('los SID permitidos con FullControl no cuentan', () => {
     expect(boundaryViolations(at(ALLOWED.map((s) => ace(s, 2032127))), ALLOWED)).toEqual([])
   })
+  it('un dueño que no es de confianza es violación', () => {
+    expect(boundaryViolations(at([], 'C:/a', OTHER), ALLOWED)).toEqual([`C:/a: dueño ${OTHER}`])
+  })
+  it('TrustedInstaller, SYSTEM y Administradores como dueño no lo son', () => {
+    const allowed = [...ALLOWED, TRUSTED_INSTALLER_SID]
+    for (const o of [TRUSTED_INSTALLER_SID, 'S-1-5-18', 'S-1-5-32-544', ME]) {
+      expect(boundaryViolations(at([], 'C:/', o), allowed)).toEqual([])
+    }
+  })
   it('con varios niveles devuelve todas las líneas', () => {
     const levels = [
-      { path: 'C:/a', aces: [ace(OTHER, 2032127)] },
-      { path: 'C:/', aces: [ace('S-1-1-0', 0x10000000), ace(ME, 2032127)] },
+      { path: 'C:/a', owner: ME, aces: [ace(OTHER, 2032127)] },
+      { path: 'C:/', owner: ME, aces: [ace('S-1-1-0', 0x10000000), ace(ME, 2032127)] },
     ]
     expect(boundaryViolations(levels, ALLOWED)).toHaveLength(2)
   })
@@ -419,6 +430,8 @@ describe('assertStorageBoundary (real)', () => {
     'Windows: el temporal del perfil es privado desde la raíz; una carpeta con Authenticated Users:M no',
     () => {
       expect(() => assertStorageBoundary(tmpdir())).not.toThrow()
+      const mine = join(process.env.USERPROFILE ?? '', 'tindivo-secretos')
+      if (existsSync(mine)) expect(() => assertStorageBoundary(mine)).not.toThrow()
       const d = freshDir()
       execFileSync('icacls', [d, '/grant', '*S-1-5-11:(OI)(CI)M'], { stdio: 'pipe' })
       expect(() => assertStorageBoundary(d)).toThrow(/S-1-5-11/)

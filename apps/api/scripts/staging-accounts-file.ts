@@ -112,13 +112,24 @@ export const DANGEROUS = 0x40 | 0x10000 | 0x40000 | 0x80000 | 0x10000000
 
 export type Ace = { sid: string; rights: number; allow: boolean; inheritOnly: boolean }
 
-/** Función PURA: una línea por cada ACE de permiso, efectiva en el nivel, peligrosa y de un SID no permitido. */
+/**
+ * SID de TrustedInstaller: dueño de `C:\` en Windows (el sistema, no un usuario). Se admite como
+ * dueño de confianza; sin él, ninguna ruta bajo `C:\` pasaría la frontera.
+ */
+export const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
+
+/**
+ * Función PURA: una línea por cada ACE de permiso, efectiva en el nivel, peligrosa y de un SID no
+ * permitido, y una por cada nivel cuyo DUEÑO no es de confianza (el dueño puede cambiar la ACL sin
+ * tener ninguna ACE: WRITE_DAC implícito).
+ */
 export function boundaryViolations(
-  levels: { path: string; aces: Ace[] }[],
+  levels: { path: string; owner: string; aces: Ace[] }[],
   allowedSids: readonly string[],
 ): string[] {
   const out: string[] = []
-  for (const { path, aces } of levels) {
+  for (const { path, owner, aces } of levels) {
+    if (!allowedSids.includes(owner)) out.push(`${path}: dueño ${owner}`)
     for (const a of aces) {
       if (a.allow && !a.inheritOnly && (a.rights & DANGEROUS) !== 0 && !allowedSids.includes(a.sid)) {
         out.push(`${path}: ${a.sid} tiene 0x${(a.rights >>> 0).toString(16)}`)
@@ -132,6 +143,7 @@ const ACL_SCRIPT = [
   '$p = $env:TINDIVO_ACL_PATH',
   "Write-Output ('ME|' + [Security.Principal.WindowsIdentity]::GetCurrent().User.Value)",
   '$acl = Get-Acl -LiteralPath $p',
+  "Write-Output ('OWNER|' + $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value)",
   'foreach ($r in $acl.Access) {',
   "  $sid = 'ERR'",
   '  try { $sid = $r.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch {}',
@@ -152,13 +164,14 @@ function levelsOf(dir: string): string[] {
   return out
 }
 
-function readWindowsAces(path: string): { me: string; aces: Ace[] } {
+function readWindowsAces(path: string): { me: string; owner: string; aces: Ace[] } {
   const out = execFileSync(
     'powershell',
     ['-NoProfile', '-NonInteractive', '-Command', ACL_SCRIPT],
     { env: { ...process.env, TINDIVO_ACL_PATH: path }, encoding: 'utf8' },
   )
   let me = ''
+  let owner = ''
   const aces: Ace[] = []
   for (const raw of out.split(/\r?\n/)) {
     const line = raw.trim()
@@ -166,6 +179,10 @@ function readWindowsAces(path: string): { me: string; aces: Ace[] } {
     const parts = line.split('|')
     if (parts[0] === 'ME' && parts.length === 2 && parts[1]) {
       me = parts[1]
+      continue
+    }
+    if (parts[0] === 'OWNER' && parts.length === 2 && /^S-1-\d+(-\d+)+$/.test(parts[1] ?? '')) {
+      owner = parts[1] ?? ''
       continue
     }
     const [sid, rights, type, flags] = parts
@@ -184,7 +201,8 @@ function readWindowsAces(path: string): { me: string; aces: Ace[] } {
     aces.push({ sid, rights: r, allow: type === 'Allow', inheritOnly: (f & 2) !== 0 })
   }
   if (!me) throw new Error(`no se pudo determinar el usuario actual al leer la ACL de ${path}`)
-  return { me, aces }
+  if (!owner) throw new Error(`no se pudo determinar el dueño de ${path}`)
+  return { me, owner, aces }
 }
 
 /**
@@ -197,7 +215,7 @@ export function assertStorageBoundary(dir: string): void {
   if (process.platform === 'win32') {
     const read = levels.map((path) => ({ path, ...readWindowsAces(path) }))
     const me = read[0]?.me ?? ''
-    const bad = boundaryViolations(read, [me, 'S-1-5-18', 'S-1-5-32-544'])
+    const bad = boundaryViolations(read, [me, 'S-1-5-18', 'S-1-5-32-544', TRUSTED_INSTALLER_SID])
     if (bad.length > 0) {
       throw new Error(
         `--out-dir no es una frontera privada; otras cuentas pueden renombrar o borrar en:\n  ${bad.join('\n  ')}\n` +
