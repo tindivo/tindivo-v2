@@ -290,6 +290,7 @@ export function openPrivateAccountsFile(
   const sub = join(dir, `staging-credenciales-${nowIso.replace(/[:.]/g, '-')}`)
   const file = join(sub, 'cuentas.md')
   let fd: number | undefined
+  let created = false
   try {
     // Primer paso: sin frontera de almacenamiento no se crea nada.
     ;(hooks?.boundary ?? assertStorageBoundary)(dir)
@@ -303,6 +304,7 @@ export function openPrivateAccountsFile(
     }
     hooks?.beforeMkdir?.(sub)
     mkdirSync(sub)
+    created = true
     const id = dirIdentity(sub)
     secureDir(sub)
     assertSameDir(sub, id)
@@ -338,8 +340,10 @@ export function openPrivateAccountsFile(
         // ya cerrado
       }
     }
-    const msg = err instanceof Error ? err.message : String(err)
-    throw new Error(`ABORTADO: ${msg}. No se borró nada; revisa ${sub} (sin secretos).`)
+    const msg = (err instanceof Error ? err.message : String(err)).replace(/\.+$/, '')
+    // Solo se nombra la carpeta si llegó a crearse; si no, no hay nada que revisar.
+    const left = created ? `No se borró nada; revisa ${sub} (sin secretos).` : 'No se creó nada.'
+    throw new Error(`ABORTADO: ${msg}. ${left}`)
   }
 }
 

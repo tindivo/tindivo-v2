@@ -456,7 +456,7 @@ describe('assertStorageBoundary (real)', () => {
           throw new Error('ABORTADO: frontera')
         },
       }),
-    ).toThrow(/frontera/)
+    ).toThrow(/frontera\. No se creó nada\.$/)
     expect(exists(join(dir, SUB))).toBe(false)
   })
 })
