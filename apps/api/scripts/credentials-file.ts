@@ -22,6 +22,68 @@ import {
 } from 'node:fs'
 import { join } from 'node:path'
 
+/** Cierra `fd` y borra `path` (el archivo que creamos). Nunca lanza. */
+function removeOwn(fd: number, path: string): void {
+  try {
+    closeSync(fd)
+  } catch {
+    // ya cerrado
+  }
+  try {
+    unlinkSync(path)
+  } catch {
+    // ya borrado
+  }
+}
+
+/**
+ * Exige que `path` sea, por ino/dev, el archivo vacío abierto en `fd` (ni enlace ni reemplazo).
+ * Si no, limpia sin escribir nada y lanza: borra solo un enlace en `path` y, si el destino real es
+ * exactamente el inodo que abrimos (lo creamos nosotros, tamaño 0), también ese destino.
+ */
+function assertSameFile(fd: number, path: string): void {
+  const opened = fstatSync(fd, { bigint: true })
+  const now = lstatSync(path, { bigint: true })
+  if (
+    !now.isSymbolicLink() &&
+    now.isFile() &&
+    now.ino === opened.ino &&
+    now.dev === opened.dev &&
+    opened.size === 0n
+  ) {
+    return
+  }
+  let real: string | undefined
+  try {
+    real = realpathSync(path)
+  } catch {
+    // sin destino resoluble
+  }
+  try {
+    closeSync(fd)
+  } catch {
+    // ya cerrado
+  }
+  if (now.isSymbolicLink()) {
+    try {
+      unlinkSync(path)
+    } catch {
+      // ya borrado
+    }
+  }
+  if (real && opened.size === 0n) {
+    try {
+      const t = lstatSync(real, { bigint: true })
+      if (t.isFile() && t.ino === opened.ino && t.dev === opened.dev) unlinkSync(real)
+    } catch {
+      // ya borrado
+    }
+  }
+  throw new Error(
+    'ABORTADO: la ruta del archivo de credenciales cambió entre la comprobación y la apertura',
+  )
+}
+
 export function openPrivateCredentialsFile(
   dir: string,
   nowIso: string,
@@ -42,48 +104,16 @@ export function openPrivateCredentialsFile(
   const fd = openSync(path, 'wx', 0o600)
   // Cierra la ventana entre `lstat` y `open`: lo abierto debe ser, por ino/dev, el archivo vacío
   // que hay ahora en `path` (ni enlace ni reemplazo). Si no, no se escribe ningún secreto.
-  const opened = fstatSync(fd, { bigint: true })
-  const now = lstatSync(path, { bigint: true })
-  if (
-    now.isSymbolicLink() ||
-    !now.isFile() ||
-    now.ino !== opened.ino ||
-    now.dev !== opened.dev ||
-    opened.size !== 0n
-  ) {
-    let real: string | undefined
-    try {
-      real = realpathSync(path)
-    } catch {
-      // sin destino resoluble
-    }
-    try {
-      closeSync(fd)
-    } catch {
-      // ya cerrado
-    }
-    if (now.isSymbolicLink()) {
-      try {
-        unlinkSync(path)
-      } catch {
-        // ya borrado
-      }
-    }
-    // Lo que abrimos lo creamos nosotros (tamaño 0): se borra solo si es exactamente ese inodo.
-    if (real && opened.size === 0n) {
-      try {
-        const t = lstatSync(real, { bigint: true })
-        if (t.isFile() && t.ino === opened.ino && t.dev === opened.dev) unlinkSync(real)
-      } catch {
-        // ya borrado
-      }
-    }
-    throw new Error(
-      'ABORTADO: la ruta del archivo de credenciales cambió entre la comprobación y la apertura',
-    )
-  }
+  assertSameFile(fd, path)
   try {
     secure(path)
+  } catch (err) {
+    removeOwn(fd, path)
+    throw err
+  }
+  // `secure` actúa por ruta: se vuelve a comprobar que sigue siendo el mismo archivo antes de escribir.
+  assertSameFile(fd, path)
+  try {
     writeSync(
       fd,
       [

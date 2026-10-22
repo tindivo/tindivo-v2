@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -138,6 +139,19 @@ describe('openPrivateCredentialsFile', () => {
       expect(readFileSync(target, 'utf8')).toBe('ORIGINAL')
       expect(lstatExists(join(dir, FILE))).toBe(true) // el enlace lo dejó el "atacante"; no se sigue
     })
+  })
+
+  it('(j) si secure deja otro archivo en la ruta: lanza y no escribe en ninguno', () => {
+    const dir = freshDir()
+    const path = join(dir, FILE)
+    expect(() =>
+      openPrivateCredentialsFile(dir, NOW, (p) => {
+        renameSync(p, `${p}.movido`)
+        writeFileSync(p, '')
+      }),
+    ).toThrow(/cambió entre la comprobación y la apertura/)
+    expect(readFileSync(`${path}.movido`, 'utf8')).toBe('')
+    expect(existsSync(path) ? readFileSync(path, 'utf8') : '').toBe('')
   })
 
   it('(d) si secure lanza, el archivo no queda en disco', () => {
