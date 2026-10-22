@@ -39,9 +39,10 @@
 -- ============================================================================
 
 -- `domain_events` es el outbox en caliente: si no se consigue el bloqueo en 5 s, la migración
--- falla en vez de dejar en cola las escrituras de los pedidos. Sin transacción no tiene efecto.
-set local lock_timeout = '5s';
-set local statement_timeout = '120s';
+-- falla en vez de dejar en cola las escrituras de los pedidos. Van de sesión (no `set local`) porque
+-- el CLI aplica la migración sin abrir transacción; se restauran al final del archivo.
+set lock_timeout = '5s';
+set statement_timeout = '120s';
 
 alter table public.domain_events
   add column if not exists push_attempts int not null default 0,
@@ -488,3 +489,6 @@ begin
   end if;
 end
 $check$;
+
+reset lock_timeout;
+reset statement_timeout;

@@ -12,7 +12,8 @@ import {
   nativeDeviceFilter,
 } from './native.ts'
 import { must } from './db-result.ts'
-import { classifyRequest } from './request-kind.ts'
+import { asRecord, classifyRequest } from './request-kind.ts'
+import { withStartedTasks } from './task-group.ts'
 import {
   isOpsCaller,
   OPS_ALERT_SECRET_HEADER,
@@ -1442,8 +1443,8 @@ Deno.serve(async (req: Request) => {
     //    event_type / aggregate_id / payload DE LA BASE, ignorando los del cuerpo.
     if (req_kind.kind === 'ops') {
       event_type = 'OpsAlert'
-      aggregate_id = body.aggregate_id
-      payload = body.payload
+      aggregate_id = typeof body.aggregate_id === 'string' ? body.aggregate_id : ''
+      payload = asRecord(body.payload)
       if (!isOpsCaller(req.headers.get(OPS_ALERT_SECRET_HEADER), Deno.env.get('OPS_ALERT_SECRET'))) {
         return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
           status: 403,
@@ -1506,70 +1507,72 @@ Deno.serve(async (req: Request) => {
     const notes = await buildNotes(event_type, aggregate_id, payload ?? {})
     let sent = 0
     let failed = 0
-    const nativePending: Promise<{ sent: number; failed: number }>[] = []
-
-    for (const note of notes) {
-      // Un fallo de lectura lanza (500, sin marcar el final): no es «sin suscripciones».
-      const subs = must(
-        await db
-          .from('push_subscriptions')
-          .select('id,endpoint,p256dh,auth,failure_count')
-          .eq('user_id', note.userId),
-        'push_subscriptions',
-      )
-      for (const sub of subs ?? []) {
-        const body = JSON.stringify({
-          title: note.title,
-          body: note.body,
-          tag: note.tag,
-          url: note.url,
-          requireInteraction: note.requireInteraction,
-          ...(note.renotify ? { renotify: true } : {}),
-          ...(note.vibrate ? { vibrate: [300, 100, 300, 100, 500] } : {}),
-        })
-        try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            body,
-          )
-          sent++
-          await db.from('push_delivery_log').insert({
-            subscription_id: sub.id,
-            event_type,
-            status: 'ok',
-          })
-          await db
-            .from('push_subscriptions')
-            .update({ last_successful_at: new Date().toISOString(), failure_count: 0 })
-            .eq('id', sub.id)
-        } catch (e) {
-          failed++
-          const code = (e as { statusCode?: number })?.statusCode ?? null
-          await db.from('push_delivery_log').insert({
-            subscription_id: sub.id,
-            event_type,
-            status: 'error',
-            error_code: code,
-            error_message: String((e as { body?: string })?.body ?? (e as Error)?.message ?? e).slice(0, 500),
-          })
-          if (code === 404 || code === 410) {
-            await db.from('push_subscriptions').delete().eq('id', sub.id)
-          } else {
+    const { values: nativeResults } = await withStartedTasks<{ sent: number; failed: number }, void>(
+      async (start) => {
+        for (const note of notes) {
+          // Un fallo de lectura lanza (500, sin marcar el final): no es «sin suscripciones».
+          const subs = must(
             await db
               .from('push_subscriptions')
-              .update({
-                last_failed_at: new Date().toISOString(),
-                failure_count: (sub.failure_count ?? 0) + 1,
+              .select('id,endpoint,p256dh,auth,failure_count')
+              .eq('user_id', note.userId),
+            'push_subscriptions',
+          )
+          for (const sub of subs ?? []) {
+            const body = JSON.stringify({
+              title: note.title,
+              body: note.body,
+              tag: note.tag,
+              url: note.url,
+              requireInteraction: note.requireInteraction,
+              ...(note.renotify ? { renotify: true } : {}),
+              ...(note.vibrate ? { vibrate: [300, 100, 300, 100, 500] } : {}),
+            })
+            try {
+              await webpush.sendNotification(
+                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                body,
+              )
+              sent++
+              await db.from('push_delivery_log').insert({
+                subscription_id: sub.id,
+                event_type,
+                status: 'ok',
               })
-              .eq('id', sub.id)
+              await db
+                .from('push_subscriptions')
+                .update({ last_successful_at: new Date().toISOString(), failure_count: 0 })
+                .eq('id', sub.id)
+            } catch (e) {
+              failed++
+              const code = (e as { statusCode?: number })?.statusCode ?? null
+              await db.from('push_delivery_log').insert({
+                subscription_id: sub.id,
+                event_type,
+                status: 'error',
+                error_code: code,
+                error_message: String((e as { body?: string })?.body ?? (e as Error)?.message ?? e).slice(0, 500),
+              })
+              if (code === 404 || code === 410) {
+                await db.from('push_subscriptions').delete().eq('id', sub.id)
+              } else {
+                await db
+                  .from('push_subscriptions')
+                  .update({
+                    last_failed_at: new Date().toISOString(),
+                    failure_count: (sub.failure_count ?? 0) + 1,
+                  })
+                  .eq('id', sub.id)
+              }
+            }
           }
+          // Dispositivos nativos del destinatario: arrancan aquí y se esperan todos juntos al final,
+          // para que un proveedor lento no retrase el Web Push ni el aviso nativo de los siguientes.
+          start(deliverNative(note, event_type))
         }
-      }
-      // Dispositivos nativos del destinatario: arrancan aquí y se esperan todos juntos al final,
-      // para que un proveedor lento no retrase el Web Push ni el aviso nativo de los siguientes.
-      nativePending.push(deliverNative(note, event_type))
-    }
-    for (const native of await Promise.all(nativePending)) {
+      },
+    )
+    for (const native of nativeResults) {
       sent += native.sent
       failed += native.failed
     }

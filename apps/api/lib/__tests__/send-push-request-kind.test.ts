@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isOpsCaller } from '../../../../supabase/functions/send-push/ops-alert.ts'
-import { classifyRequest } from '../../../../supabase/functions/send-push/request-kind.ts'
+import { asRecord, classifyRequest } from '../../../../supabase/functions/send-push/request-kind.ts'
 
 const ID = '3f2b8c1e-5a4d-4e6f-8a9b-0c1d2e3f4a5b'
 
@@ -51,5 +51,16 @@ describe('send-push · classifyRequest (selección excluyente del origen)', () =
     expect(isOpsCaller('s', 's')).toBe(true)
     expect(isOpsCaller('s', 't')).toBe(false)
     expect(isOpsCaller('s', undefined)).toBe(false)
+  })
+})
+
+describe('send-push · asRecord', () => {
+  it('devuelve el objeto tal cual', () => {
+    const o = { kind: 'x' }
+    expect(asRecord(o)).toBe(o)
+  })
+
+  it.each([null, [], [1], 'texto', 7, undefined, true])('%j da {}', (v) => {
+    expect(asRecord(v)).toEqual({})
   })
 })

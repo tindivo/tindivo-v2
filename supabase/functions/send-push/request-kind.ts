@@ -26,3 +26,10 @@ export function classifyRequest(body: unknown): RequestKind {
   if (typeof id === 'string' && UUID.test(id)) return { kind: 'event', eventId: id.toLowerCase() }
   return { kind: 'invalid' }
 }
+
+/** `v` si es un objeto no nulo y no array; `{}` en otro caso. */
+export function asRecord(v: unknown): Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : {}
+}

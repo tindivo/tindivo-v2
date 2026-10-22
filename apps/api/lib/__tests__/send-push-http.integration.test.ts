@@ -731,6 +731,38 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
     expect((await eventTimes(id)).push_done_at).not.toBeNull()
   })
 
+  it('CAX-007: si falla la lectura de suscripciones, 500 y el evento queda reclamado SIN terminar; restaurado el permiso y vencido el plazo, se procesa', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const privsAntes = tablePrivs('push_subscriptions')
+    expect(privsAntes).toContain('SELECT') // si no, el caso no probaría nada
+    let r: Reply
+    try {
+      psql('revoke select on public.push_subscriptions from service_role;')
+      r = await post({ event_id: id })
+    } finally {
+      psql('grant select on public.push_subscriptions to service_role;')
+    }
+    expect(tablePrivs('push_subscriptions')).toBe(privsAntes)
+    expect(r.status).toBe(500)
+    expect(r.json.ok).toBe(false)
+    const t = await eventTimes(id)
+    expect(t.push_claimed_at).not.toBeNull()
+    expect(t.push_done_at).toBeNull()
+
+    const { error } = await localClient
+      .from('domain_events')
+      .update({ push_claimed_at: iso(-200_000) })
+      .eq('id', id)
+    expect(error).toBeNull()
+    const r2 = await post({ event_id: id })
+    expect(r2.status).toBe(200)
+    expect(r2.json.ok).toBe(true)
+    expect((await eventTimes(id)).push_done_at).not.toBeNull()
+  })
+
   // ── OpsAlert ───────────────────────────────────────────────────────────────
   const ops = {
     event_type: 'OpsAlert',
