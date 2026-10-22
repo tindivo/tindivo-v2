@@ -5,63 +5,50 @@
  * (`zpnipajgwfthxhdtzhly`). Este módulo existe para que un env-file equivocado aborte
  * ANTES de la primera petición.
  */
-import { dirname, isAbsolute, relative, resolve } from 'node:path'
+import { createHash } from 'node:crypto'
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 
 export const STAGING_REF = 'jgziumvrtogguljhpdos'
 export const STAGING_HOST = `${STAGING_REF}.supabase.co`
 export const PROD_REF = 'zpnipajgwfthxhdtzhly'
 
-/** Decodifica el payload de un JWT SIN verificar la firma. Lanza si no es un JSON válido. */
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  const parts = token.split('.')
-  const payload = parts[1]
-  if (parts.length !== 3 || !payload) throw new Error('JWT mal formado')
-  const parsed: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error('payload de JWT no es un objeto')
-  }
-  return parsed as Record<string, unknown>
-}
+/** Único origen aceptado (sin barra final). `seed-staging.ts` usa ESTA constante, no el env-file. */
+export const STAGING_ORIGIN = `https://${STAGING_HOST}`
 
 /**
- * Aborta (lanza) salvo que `url` sea exactamente el staging por https y `serviceKey` sea la
- * service role de ESE proyecto. Nunca incluye la clave en el mensaje de error.
+ * SHA-256 (hex) del texto UTF-8 de la service role de staging. La clave es de alta entropía, así
+ * que publicar su huella es aceptable. SI SE ROTA la service role de staging: calcula la huella
+ * nueva (`printf %s "$CLAVE" | sha256sum`) y actualiza esta constante en un commit revisado.
  */
-export function assertStagingTarget(url: string, serviceKey: string): void {
+export const STAGING_SERVICE_KEY_SHA256 =
+  '2a9eff0be293dc03ee01da8d4e8cfc135526df01e3341bdec9dbdfaeace581b1'
+
+/**
+ * Aborta (lanza) salvo que `url` sea EXACTAMENTE el origen de staging (tras quitar una barra
+ * final) y que la huella SHA-256 de `serviceKey` sea la registrada. Nunca incluye la clave en el
+ * mensaje de error (como mucho, 8 caracteres de la huella calculada).
+ */
+export function assertStagingTarget(
+  url: string,
+  serviceKey: string,
+  expectedKeySha256: string = STAGING_SERVICE_KEY_SHA256,
+): void {
   if (url.includes(PROD_REF) || serviceKey.includes(PROD_REF)) {
     throw new Error(
       `ABORTADO: la URL o la clave apuntan a PRODUCCIÓN (${PROD_REF}). Este script solo siembra staging.`,
     )
   }
-  let parsed: URL
-  try {
-    parsed = new URL(url)
-  } catch {
-    throw new Error('ABORTADO: SUPABASE_URL no es una URL válida.')
-  }
-  if (parsed.protocol !== 'https:' || parsed.hostname !== STAGING_HOST) {
+  const normalized = url.endsWith('/') ? url.slice(0, -1) : url
+  if (normalized !== STAGING_ORIGIN) {
     throw new Error(
-      `ABORTADO: SUPABASE_URL debe ser exactamente https://${STAGING_HOST} (recibido host "${parsed.hostname}", protocolo "${parsed.protocol}").`,
+      `ABORTADO: SUPABASE_URL debe ser exactamente ${STAGING_ORIGIN} (sin puerto, credenciales, ruta, consulta ni fragmento).`,
     )
   }
-  if (serviceKey.startsWith('sb_secret_')) return // sin ref dentro: vale la comprobación de URL
-  if (serviceKey.split('.').length !== 3) {
-    throw new Error('ABORTADO: SUPABASE_SERVICE_ROLE_KEY no tiene una forma reconocida.')
-  }
-  let payload: Record<string, unknown>
-  try {
-    payload = decodeJwtPayload(serviceKey)
-  } catch {
-    throw new Error('ABORTADO: no se pudo decodificar SUPABASE_SERVICE_ROLE_KEY.')
-  }
-  if (payload.ref === PROD_REF) {
-    throw new Error(`ABORTADO: la clave es de PRODUCCIÓN (${PROD_REF}). Este script solo siembra staging.`)
-  }
-  if (payload.ref !== STAGING_REF) {
-    throw new Error(`ABORTADO: la clave no es del proyecto de staging (${STAGING_REF}).`)
-  }
-  if (payload.role !== 'service_role') {
-    throw new Error('ABORTADO: la clave no tiene el rol service_role.')
+  const sha = createHash('sha256').update(serviceKey, 'utf8').digest('hex')
+  if (sha !== expectedKeySha256) {
+    throw new Error(
+      `ABORTADO: SUPABASE_SERVICE_ROLE_KEY no es la service role registrada de staging (huella ${sha.slice(0, 8)}…). Si se rotó, actualiza STAGING_SERVICE_KEY_SHA256 en staging-target.ts.`,
+    )
   }
 }
 
@@ -77,13 +64,14 @@ export function assertOutsideRepo(
   const norm = (p: string) => (process.platform === 'win32' ? p.toLowerCase() : p)
   const out = resolve(outPath)
   const rel = relative(norm(resolve(repoRoot)), norm(out))
-  if (rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))) {
-    throw new Error(`ABORTADO: --out (${out}) está dentro del repo (${resolve(repoRoot)}).`)
+  const outside = isAbsolute(rel) || rel === '..' || rel.startsWith(`..${sep}`)
+  if (!outside) {
+    throw new Error(`ABORTADO: --out-dir (${out}) está dentro del repo (${resolve(repoRoot)}).`)
   }
-  let dir = dirname(out)
+  let dir = out
   for (;;) {
     if (hasGit(dir)) {
-      throw new Error(`ABORTADO: --out (${out}) está dentro de un repo git (${dir}).`)
+      throw new Error(`ABORTADO: --out-dir (${out}) está dentro de un repo git (${dir}).`)
     }
     const parent = dirname(dir)
     if (parent === dir) break

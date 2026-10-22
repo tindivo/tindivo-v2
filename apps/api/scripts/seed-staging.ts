@@ -6,30 +6,45 @@
  * `seed-world.ts`. Idempotente: ids fijos + upsert.
  *
  * Uso:
- *   node apps/api/scripts/seed-staging.ts --env-file <ruta> --out <ruta>
- *   pnpm db:seed:staging -- --env-file <ruta> --out <ruta>
+ *   node apps/api/scripts/seed-staging.ts --env-file <ruta> --out-dir <carpeta>
+ *   pnpm db:seed:staging -- --env-file <ruta> --out-dir <carpeta>
  *
  * - `--env-file`: archivo `CLAVE=valor` con `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de
  *   staging. Vive FUERA del repo, p. ej. `D:\Tinkuy Creativo\Proyectos\Tindivo\secretos\staging.env`.
  *   Nunca se imprime ni se registra.
- * - `--out`: dónde se escriben las credenciales (email, rol, contraseña) en una tabla Markdown.
- *   También FUERA del repo: aborta si la ruta cae dentro del worktree o de cualquier carpeta con `.git`.
+ * - `--out-dir`: carpeta YA existente donde se crea `staging-credenciales-<fecha>.md` (email, rol,
+ *   contraseña). FUERA del repo: aborta si cae dentro del worktree o de cualquier carpeta con `.git`.
+ *   El archivo se crea exclusivo (nunca sobrescribe ni sigue enlaces), solo para el usuario actual
+ *   (ACL en Windows, 0600 en otro SO), y cada contraseña se guarda en disco ANTES de activarse.
  *
- * GUARDIA (`staging-target.ts`, antes de cualquier petición): el host tiene que ser exactamente
- * `jgziumvrtogguljhpdos.supabase.co` por https; si la URL o la clave mencionan producción
- * (`zpnipajgwfthxhdtzhly`), aborta; una clave JWT debe decir `ref` de staging y `role=service_role`.
+ * GUARDIA (`staging-target.ts`, antes de cualquier petición): `SUPABASE_URL` debe ser exactamente
+ * `https://jgziumvrtogguljhpdos.supabase.co` y la SHA-256 de la service role debe ser la registrada
+ * (`STAGING_SERVICE_KEY_SHA256`; si se rota la clave, actualiza esa constante). Si la URL o la clave
+ * mencionan producción (`zpnipajgwfthxhdtzhly`), aborta. El cliente se crea con `STAGING_ORIGIN`,
+ * nunca con el valor del env-file.
  *
  * Contraseñas: aleatorias y NUEVAS en cada corrida (también para usuarios que ya existen). Por
  * consola solo salen emails y conteos. `push_dispatch` NO se toca (en staging está anulado).
  */
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { E2E } from './e2e-fixtures.ts'
 import { seedWorld } from './seed-world.ts'
-import { assertOutsideRepo, assertStagingTarget, stagingSettings } from './staging-target.ts'
+import {
+  openPrivateCredentialsFile,
+  recordThenActivate,
+  redactSecrets,
+  securePlatform,
+} from './credentials-file.ts'
+import {
+  assertOutsideRepo,
+  assertStagingTarget,
+  STAGING_ORIGIN,
+  stagingSettings,
+} from './staging-target.ts'
 
 function arg(name: string): string {
   const i = process.argv.indexOf(name)
@@ -64,31 +79,38 @@ const ROLE_BY_ID = new Map<string, string>([
   ...E2E.CUSTOMERS.map((c) => [c.userId, 'customer'] as [string, string]),
 ])
 
+/** Secretos de esta corrida: se enmascaran en cualquier mensaje de error. */
+const secretsInRun: string[] = []
+
 async function main(): Promise<void> {
-  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
   const envFile = arg('--env-file')
-  const outPath = resolve(arg('--out'))
+  const outDirArg = arg('--out-dir')
 
   const env = readEnvFile(envFile)
   const url = env.SUPABASE_URL ?? ''
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+  secretsInRun.push(serviceKey)
   if (!url || !serviceKey) {
     throw new Error('El env-file debe traer SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY')
   }
   assertStagingTarget(url, serviceKey)
 
-  // Se comprueba la ruta tal cual y con enlaces simbólicos resueltos (tramo existente).
-  const hasGit = (d: string) => existsSync(join(d, '.git'))
-  assertOutsideRepo(outPath, repoRoot, hasGit)
-  let existing = dirname(outPath)
-  while (!existsSync(existing) && dirname(existing) !== existing) existing = dirname(existing)
-  assertOutsideRepo(
-    join(realpathSync(existing), outPath.slice(existing.length)),
-    realpathSync(repoRoot),
-    hasGit,
-  )
+  // La carpeta debe existir; se comprueba con enlaces simbólicos resueltos (raíz del repo incluida).
+  const outDir = realpathSync(resolve(outDirArg))
+  const repoRoot = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..'))
+  assertOutsideRepo(outDir, repoRoot, (d) => existsSync(join(d, '.git')))
 
-  const db = createClient(url, serviceKey, {
+  // Sin archivo privado no hay siembra: aborta antes de la primera petición.
+  const credFile = openPrivateCredentialsFile(outDir, new Date().toISOString(), securePlatform)
+  try {
+    await seed(serviceKey, credFile)
+  } finally {
+    closeSync(credFile.fd)
+  }
+}
+
+async function seed(serviceKey: string, credFile: { path: string; fd: number }): Promise<void> {
+  const db = createClient(STAGING_ORIGIN, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
   // biome-ignore lint/suspicious/noExplicitAny: database.types.ts está desactualizado
@@ -117,50 +139,43 @@ async function main(): Promise<void> {
   console.log('  ✓ courier.ignoreSchedule      true')
 
   // ── usuarios con contraseña al azar ────────────────────────────────────────
-  const credentials: { email: string; role: string; password: string }[] = []
+  let count = 0
 
   async function ensureAuthUser(id: string, email: string, fullName: string): Promise<void> {
     const password = randomBytes(18).toString('base64url')
+    secretsInRun.push(password)
+    const role = ROLE_BY_ID.get(id) ?? 'desconocido'
     const { data } = await db.auth.admin.getUserById(id)
-    if (data?.user) {
-      const { error } = await db.auth.admin.updateUserById(id, { password })
-      if (error) throw new Error(`actualizar contraseña de ${email} falló: ${error.message}`)
-      console.log(`  ✓ auth.users                  ${email} (ya existía, contraseña nueva)`)
-    } else {
-      const { error } = await db.auth.admin.createUser({
-        id,
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name: fullName },
-      })
-      if (error) throw new Error(`crear auth user ${email} falló: ${error.message}`)
-      console.log(`  ✓ auth.users                  ${email} (creado)`)
-    }
-    credentials.push({ email, role: ROLE_BY_ID.get(id) ?? 'desconocido', password })
+    await recordThenActivate(credFile.fd, { email, role, password }, async () => {
+      if (data?.user) {
+        const { error } = await db.auth.admin.updateUserById(id, { password })
+        if (error) throw new Error(`actualizar contraseña de ${email} falló: ${error.message}`)
+        console.log(`  ✓ auth.users                  ${email} (ya existía, contraseña nueva)`)
+      } else {
+        const { error } = await db.auth.admin.createUser({
+          id,
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: fullName },
+        })
+        if (error) throw new Error(`crear auth user ${email} falló: ${error.message}`)
+        console.log(`  ✓ auth.users                  ${email} (creado)`)
+      }
+    })
+    count++
   }
 
   console.log('\nusuarios')
   await seedWorld(db, ensureAuthUser, { includeAdmin: false })
 
-  // ── credenciales (solo al archivo --out) ───────────────────────────────────
-  const lines = [
-    '# Credenciales de staging (tindivo-dev)',
-    '',
-    `Generadas: ${new Date().toISOString()}. Cambian en cada corrida. No versionar.`,
-    '',
-    '| Email | Rol | Contraseña |',
-    '|---|---|---|',
-    ...credentials.map((c) => `| ${c.email} | ${c.role} | ${c.password} |`),
-    '',
-  ]
-  mkdirSync(dirname(outPath), { recursive: true })
-  writeFileSync(outPath, lines.join('\n'), { encoding: 'utf8', mode: 0o600 })
-
-  console.log(`\nMundo de staging listo: ${credentials.length} usuarios. Credenciales en --out.\n`)
+  console.log(`\nMundo de staging listo: ${count} usuarios. Credenciales en ${credFile.path}\n`)
 }
 
 main().catch((err) => {
-  console.error('\nSeed staging FALLÓ:', err instanceof Error ? err.message : err)
+  console.error(
+    '\nSeed staging FALLÓ:',
+    redactSecrets(err instanceof Error ? err.message : String(err), secretsInRun),
+  )
   process.exit(1)
 })
