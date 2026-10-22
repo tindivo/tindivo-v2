@@ -106,11 +106,29 @@ export function securePrivateDir(path: string): void {
  * Derechos que permiten RENOMBRAR, BORRAR o reapropiarse de una entrada de la carpeta: borrar
  * subcarpetas y archivos (0x40), Delete (0x10000), cambiar permisos (0x40000), tomar posesión
  * (0x80000) y GENERIC_ALL (0x10000000). Crear entradas nuevas (AppendData, CreateFiles) no basta
- * para sustituir las nuestras, así que no se consideran.
+ * para sustituir las nuestras, así que no se consideran en los ancestros.
+ *
+ * En el nivel 0 (`--out-dir`, donde se crea la subcarpeta) también importa la HERENCIA: una ACE
+ * heredable de otro SID (aunque sea inherit-only) hace que la carpeta nueva nazca ya con ese acceso,
+ * antes de `securePrivateDir`, y un handle abierto en ese instante conserva WRITE_DAC. Y quien
+ * pueda crear entradas ahí podría adelantarse a crear la subcarpeta. Por eso en ese nivel se mira
+ * además CreateFiles (0x2), AppendData/CreateDirectories (0x4) y GENERIC_WRITE (0x40000000).
  */
 export const DANGEROUS = 0x40 | 0x10000 | 0x40000 | 0x80000 | 0x10000000
 
-export type Ace = { sid: string; rights: number; allow: boolean; inheritOnly: boolean }
+export type Ace = {
+  sid: string
+  rights: number
+  allow: boolean
+  inheritOnly: boolean
+  containerInherit: boolean
+  objectInherit: boolean
+}
+
+/** CreateFiles | AppendData/CreateDirectories | GENERIC_WRITE: crear entradas en el nivel 0. */
+const CREATE_MASK = 0x2 | 0x4 | 0x40000000
+/** CREATOR OWNER: en el hijo se convierte en quien lo crea (nosotros). */
+const CREATOR_OWNER_SID = 'S-1-3-0'
 
 /**
  * SID de TrustedInstaller: dueño de `C:\` en Windows (el sistema, no un usuario). Se admite como
@@ -121,18 +139,31 @@ export const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-1
 /**
  * Función PURA: una línea por cada ACE de permiso, efectiva en el nivel, peligrosa y de un SID no
  * permitido, y una por cada nivel cuyo DUEÑO no es de confianza (el dueño puede cambiar la ACL sin
- * tener ninguna ACE: WRITE_DAC implícito).
+ * tener ninguna ACE: WRITE_DAC implícito). El nivel 0 es `--out-dir` y tiene reglas añadidas (ver
+ * `DANGEROUS`): herencia hacia las carpetas nuevas y creación de entradas.
  */
 export function boundaryViolations(
   levels: { path: string; owner: string; aces: Ace[] }[],
   allowedSids: readonly string[],
 ): string[] {
   const out: string[] = []
-  for (const { path, owner, aces } of levels) {
+  for (const [i, { path, owner, aces }] of levels.entries()) {
     if (!allowedSids.includes(owner)) out.push(`${path}: dueño ${owner}`)
     for (const a of aces) {
       if (a.allow && !a.inheritOnly && (a.rights & DANGEROUS) !== 0 && !allowedSids.includes(a.sid)) {
         out.push(`${path}: ${a.sid} tiene 0x${(a.rights >>> 0).toString(16)}`)
+      }
+      if (i !== 0 || !a.allow || allowedSids.includes(a.sid)) continue
+      const hex = `0x${(a.rights >>> 0).toString(16)}`
+      if (
+        (a.containerInherit || a.objectInherit) &&
+        a.sid !== CREATOR_OWNER_SID &&
+        (a.rights & (DANGEROUS | CREATE_MASK)) !== 0
+      ) {
+        out.push(`${path}: ${a.sid} lo hereda a las carpetas nuevas (${hex})`)
+      }
+      if (!a.inheritOnly && (a.rights & CREATE_MASK) !== 0) {
+        out.push(`${path}: ${a.sid} puede crear entradas (${hex})`)
       }
     }
   }
@@ -147,7 +178,7 @@ const ACL_SCRIPT = [
   'foreach ($r in $acl.Access) {',
   "  $sid = 'ERR'",
   '  try { $sid = $r.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch {}',
-  "  Write-Output ($sid + '|' + [int64]$r.FileSystemRights + '|' + $r.AccessControlType + '|' + [int]$r.PropagationFlags)",
+  "  Write-Output ($sid + '|' + [int64]$r.FileSystemRights + '|' + $r.AccessControlType + '|' + [int]$r.PropagationFlags + '|' + [int]$r.InheritanceFlags)",
   '}',
 ].join('\n')
 
@@ -185,20 +216,28 @@ function readWindowsAces(path: string): { me: string; owner: string; aces: Ace[]
       owner = parts[1] ?? ''
       continue
     }
-    const [sid, rights, type, flags] = parts
+    const [sid, rights, type, flags, inh] = parts
     const r = Number(rights)
     const f = Number(flags)
+    const h = Number(inh)
     if (
-      parts.length !== 4 ||
+      parts.length !== 5 ||
       !sid ||
       !/^S-1-\d+(-\d+)+$/.test(sid) ||
       !Number.isFinite(r) ||
       !Number.isFinite(f) ||
+      !Number.isFinite(h) ||
       (type !== 'Allow' && type !== 'Deny')
     ) {
       throw new Error(`no se pudo interpretar la ACL de ${path}`)
     }
-    aces.push({ sid, rights: r, allow: type === 'Allow', inheritOnly: (f & 2) !== 0 })
+    aces.push({
+      sid,
+      rights: r,
+      allow: type === 'Allow', inheritOnly: (f & 2) !== 0,
+      containerInherit: (h & 1) !== 0,
+      objectInherit: (h & 2) !== 0,
+    })
   }
   if (!me) throw new Error(`no se pudo determinar el usuario actual al leer la ACL de ${path}`)
   if (!owner) throw new Error(`no se pudo determinar el dueño de ${path}`)

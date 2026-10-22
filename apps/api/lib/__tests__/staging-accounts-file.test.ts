@@ -385,9 +385,13 @@ describe('boundaryViolations', () => {
     rights,
     allow: true,
     inheritOnly: false,
+    containerInherit: false,
+    objectInherit: false,
     ...extra,
   })
-  const at = (aces: Ace[], path = 'C:/a', owner = ME) => [{ path, owner, aces }]
+  // Nivel 0 limpio (`--out-dir`) + un nivel superior con las ACE a probar, salvo `only0`.
+  const clean0 = { path: 'C:/out', owner: ME, aces: [] as Ace[] }
+  const at = (aces: Ace[], path = 'C:/a', owner = ME) => [clean0, { path, owner, aces }]
 
   it('otro SID con Modify es violación', () => {
     expect(boundaryViolations(at([ace(OTHER, 1245631)]), ALLOWED)).toEqual([
@@ -417,8 +421,34 @@ describe('boundaryViolations', () => {
       expect(boundaryViolations(at([], 'C:/', o), allowed)).toEqual([])
     }
   })
+  const lvl = (path: string, aces: Ace[]) => ({ path, owner: ME, aces })
+  const IO_INHERIT = { inheritOnly: true, containerInherit: true, objectInherit: true }
+
+  it('nivel 0: FullControl heredable inherit-only de otro SID es violación; en el nivel 1 no', () => {
+    const a = ace(OTHER, 2032127, IO_INHERIT)
+    const out = boundaryViolations([lvl('C:/a', [a]), lvl('C:/', [a])], ALLOWED)
+    expect(out).toHaveLength(1)
+    expect(out[0]).toMatch(/^C:\/a: S-1-5-11 lo hereda a las carpetas nuevas/)
+  })
+  it('nivel 0: CREATOR OWNER inherit-only con FullControl no es violación', () => {
+    expect(
+      boundaryViolations([lvl('C:/a', [ace('S-1-3-0', 2032127, IO_INHERIT)])], ALLOWED),
+    ).toEqual([])
+  })
+  it('nivel 0: AppendData efectivo de otro SID es violación; en el nivel 1 no', () => {
+    const out = boundaryViolations(
+      [lvl('C:/a', [ace(OTHER, 4)]), lvl('C:/', [ace(OTHER, 4)])],
+      ALLOWED,
+    )
+    expect(out).toEqual([`C:/a: ${OTHER} puede crear entradas (0x4)`])
+  })
+  it('nivel 0: ReadAndExecute heredable de otro SID no es violación', () => {
+    const a = ace(OTHER, 1179817, { containerInherit: true, objectInherit: true })
+    expect(boundaryViolations([lvl('C:/a', [a])], ALLOWED)).toEqual([])
+  })
   it('con varios niveles devuelve todas las líneas', () => {
     const levels = [
+      clean0,
       { path: 'C:/a', owner: ME, aces: [ace(OTHER, 2032127)] },
       { path: 'C:/', owner: ME, aces: [ace('S-1-1-0', 0x10000000), ace(ME, 2032127)] },
     ]
@@ -436,6 +466,24 @@ describe('assertStorageBoundary (real)', () => {
       const d = freshDir()
       execFileSync('icacls', [d, '/grant', '*S-1-5-11:(OI)(CI)M'], { stdio: 'pipe' })
       expect(() => assertStorageBoundary(d)).toThrow(/S-1-5-11/)
+    },
+    60_000,
+  )
+
+  it.skipIf(process.platform !== 'win32')(
+    'Windows: un (OI)(CI)(IO)F de otro SID en --out-dir se hereda a la carpeta nueva y se rechaza',
+    () => {
+      const p = freshDir()
+      execFileSync('icacls', [p, '/grant', '*S-1-5-11:(OI)(CI)(IO)F'], { stdio: 'pipe' })
+      const control = join(p, 'control')
+      mkdirSync(control)
+      // Control: la carpeta hija SÍ nace con el FullControl heredado de Authenticated Users.
+      const inherited = aclEntries(control).filter((l) =>
+        /Authenticated Users|Usuarios autenticados|S-1-5-11/i.test(l),
+      )
+      expect(inherited.some((l) => l.includes('(I)') && l.includes('(F)'))).toBe(true)
+      expect(() => openReal(p, NOW, securePrivateDir)).toThrow(/S-1-5-11 lo hereda/)
+      expect(exists(join(p, SUB))).toBe(false)
     },
     60_000,
   )
