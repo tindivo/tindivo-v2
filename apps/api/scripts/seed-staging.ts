@@ -12,10 +12,10 @@
  * - `--env-file`: archivo `CLAVE=valor` con `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de
  *   staging. Vive FUERA del repo, p. ej. `D:\Tinkuy Creativo\Proyectos\Tindivo\secretos\staging.env`.
  *   Nunca se imprime ni se registra.
- * - `--out-dir`: carpeta YA existente donde se crea `staging-credenciales-<fecha>.md` (email, rol,
+ * - `--out-dir`: carpeta YA existente donde se crea `staging-credenciales-<fecha>/cuentas.md` (email, rol,
  *   contraseña). FUERA del repo: aborta si cae dentro del worktree o de cualquier carpeta con `.git`.
- *   El archivo se crea exclusivo (nunca sobrescribe ni sigue enlaces), solo para el usuario actual
- *   (ACL en Windows, 0600 en otro SO), y cada contraseña se guarda en disco ANTES de activarse.
+ *   La carpeta nace privada (ACL en Windows, 700 en otro SO) y el archivo se crea exclusivo
+ *   dentro de ella; nada se borra por ruta. Cada contraseña se guarda en disco ANTES de activarse.
  *
  * GUARDIA (`staging-target.ts`, antes de cualquier petición): `SUPABASE_URL` debe ser exactamente
  * `https://jgziumvrtogguljhpdos.supabase.co` y la SHA-256 de la service role debe ser la registrada
@@ -34,11 +34,11 @@ import { createClient } from '@supabase/supabase-js'
 import { E2E } from './e2e-fixtures.ts'
 import { seedWorld } from './seed-world.ts'
 import {
-  openPrivateCredentialsFile,
+  openPrivateAccountsFile,
   recordThenActivate,
   redactSecrets,
-  securePlatform,
-} from './credentials-file.ts'
+  securePrivateDir,
+} from './staging-accounts-file.ts'
 import {
   assertOutsideRepo,
   assertStagingTarget,
@@ -101,15 +101,15 @@ async function main(): Promise<void> {
   assertOutsideRepo(outDir, repoRoot, (d) => existsSync(join(d, '.git')))
 
   // Sin archivo privado no hay siembra: aborta antes de la primera petición.
-  const credFile = openPrivateCredentialsFile(outDir, new Date().toISOString(), securePlatform)
+  const accountsFile = openPrivateAccountsFile(outDir, new Date().toISOString(), securePrivateDir)
   try {
-    await seed(serviceKey, credFile)
+    await seed(serviceKey, accountsFile)
   } finally {
-    closeSync(credFile.fd)
+    closeSync(accountsFile.fd)
   }
 }
 
-async function seed(serviceKey: string, credFile: { path: string; fd: number }): Promise<void> {
+async function seed(serviceKey: string, accountsFile: { path: string; fd: number }): Promise<void> {
   const db = createClient(STAGING_ORIGIN, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
@@ -146,7 +146,7 @@ async function seed(serviceKey: string, credFile: { path: string; fd: number }):
     secretsInRun.push(password)
     const role = ROLE_BY_ID.get(id) ?? 'desconocido'
     const { data } = await db.auth.admin.getUserById(id)
-    await recordThenActivate(credFile.fd, { email, role, password }, async () => {
+    await recordThenActivate(accountsFile.fd, { email, role, password }, async () => {
       if (data?.user) {
         const { error } = await db.auth.admin.updateUserById(id, { password })
         if (error) throw new Error(`actualizar contraseña de ${email} falló: ${error.message}`)
@@ -169,7 +169,7 @@ async function seed(serviceKey: string, credFile: { path: string; fd: number }):
   console.log('\nusuarios')
   await seedWorld(db, ensureAuthUser, { includeAdmin: false })
 
-  console.log(`\nMundo de staging listo: ${count} usuarios. Credenciales en ${credFile.path}\n`)
+  console.log(`\nMundo de staging listo: ${count} usuarios. Contraseñas en ${accountsFile.path}\n`)
 }
 
 main().catch((err) => {
