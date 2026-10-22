@@ -11,6 +11,7 @@ import {
   type NativeApp,
   nativeDeviceFilter,
 } from './native.ts'
+import { must } from './db-result.ts'
 import { classifyRequest } from './request-kind.ts'
 import {
   isOpsCaller,
@@ -90,7 +91,9 @@ async function deliverNative(
   const filter = nativeDeviceFilter(note, nativeConfig)
   if (!filter) return tally
 
-  const { data: devices, error } = await db
+  // Un fallo de lectura lanza (500, sin marcar el final): no es «este usuario no tiene dispositivos».
+  const devices = must(
+    await db
     .from('push_devices')
     .select('id,platform,token,environment')
     .eq('user_id', filter.userId)
@@ -99,11 +102,9 @@ async function deliverNative(
     .eq('notifications_enabled', true)
     .in('platform', filter.platforms)
     .order('last_seen_at', { ascending: false })
-    .limit(MAX_NATIVE_DEVICES_PER_NOTE)
-  if (error) {
-    console.error('[send-push] push_devices query falló:', error.code ?? 'sin_codigo')
-    return tally
-  }
+    .limit(MAX_NATIVE_DEVICES_PER_NOTE),
+    'push_devices',
+  )
 
   const rows = (devices ?? []).map((d) => ({
     id: d.id as string,
@@ -170,7 +171,10 @@ type Note = {
  * hardcodeado aquí empezaría a mentir sin que nadie se entere.
  */
 async function timerMinutes(name: string, fallback: number): Promise<number> {
-  const { data } = await db.from('app_settings').select('value').eq('key', 'timers').maybeSingle()
+  const data = must(
+    await db.from('app_settings').select('value').eq('key', 'timers').maybeSingle(),
+    'app_settings',
+  )
   const raw = (data?.value as Record<string, unknown> | null)?.[name]
   const n = Number(raw)
   return Number.isFinite(n) && n > 0 ? n : fallback
@@ -188,7 +192,10 @@ async function timerMinutes(name: string, fallback: number): Promise<number> {
  */
 async function driverFirstName(driverId: unknown): Promise<string> {
   if (typeof driverId !== 'string' || !driverId) return ''
-  const { data } = await db.from('drivers').select('full_name').eq('id', driverId).maybeSingle()
+  const data = must(
+    await db.from('drivers').select('full_name').eq('id', driverId).maybeSingle(),
+    'drivers',
+  )
   const full = ((data?.full_name as string | null) ?? '').trim()
   return full ? full.split(/\s+/)[0] : ''
 }
@@ -221,7 +228,10 @@ function orderTotal(o: { order_amount?: unknown; delivery_fee?: unknown }): stri
 /** `user_id` del motorizado a partir de su `drivers.id`. Null si no existe. */
 async function driverUserId(driverId: unknown): Promise<string | null> {
   if (typeof driverId !== 'string' || !driverId) return null
-  const { data } = await db.from('drivers').select('user_id').eq('id', driverId).maybeSingle()
+  const data = must(
+    await db.from('drivers').select('user_id').eq('id', driverId).maybeSingle(),
+    'drivers',
+  )
   return (data?.user_id as string | null) ?? null
 }
 
@@ -243,12 +253,15 @@ async function openCashTotal(
   if (typeof driverId !== 'string' || typeof businessId !== 'string') {
     return { total: 0, count: 0 }
   }
-  const { data } = await db
-    .from('cash_settlements')
-    .select('delivered_amount')
-    .eq('driver_id', driverId)
-    .eq('business_id', businessId)
-    .in('status', ['pending_confirmation', 'disputed'])
+  const data = must(
+    await db
+      .from('cash_settlements')
+      .select('delivered_amount')
+      .eq('driver_id', driverId)
+      .eq('business_id', businessId)
+      .in('status', ['pending_confirmation', 'disputed']),
+    'cash_settlements',
+  )
   const rows = data ?? []
   return {
     total: rows.reduce((s: number, r) => s + Number(r.delivered_amount ?? 0), 0),
@@ -374,7 +387,8 @@ function formatDestBrief(o: {
 
 /** Datos del pedido que aparecen en el cuerpo de cualquier aviso al motorizado. */
 async function orderBrief(orderId: string) {
-  const { data: o } = await db
+  const o = must(
+    await db
     .from('orders')
     /*
      * SOLO LO QUE ALGUIEN LEE. Se cayeron cinco columnas que se pedían y no se
@@ -398,13 +412,14 @@ async function orderBrief(orderId: string) {
       delivery_method
     `)
     .eq('id', orderId)
-    .maybeSingle()
+    .maybeSingle(),
+    'orders',
+  )
   if (!o) return null
-  const { data: biz } = await db
-    .from('businesses')
-    .select('name')
-    .eq('id', o.business_id)
-    .maybeSingle()
+  const biz = must(
+    await db.from('businesses').select('name').eq('id', o.business_id).maybeSingle(),
+    'businesses',
+  )
 
   const { destText, customerName } = formatDestBrief(o)
   const payText = formatPaymentBrief(o)
@@ -472,19 +487,21 @@ async function headsUpNotes(orderId: string, eventType: string): Promise<Note[]>
  * nace en `preparing` —lo acaba de teclear ella— y no se avisa a sí misma.
  */
 async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
-  const { data: o } = await db
-    .from('orders')
-    .select('short_id,business_id,status,customer_name,order_amount,delivery_method,pickup_timing')
-    .eq('id', orderId)
-    .maybeSingle()
+  const o = must(
+    await db
+      .from('orders')
+      .select('short_id,business_id,status,customer_name,order_amount,delivery_method,pickup_timing')
+      .eq('id', orderId)
+      .maybeSingle(),
+    'orders',
+  )
   if (!o) return []
   const status = o.status as string
   if (status !== 'pending_acceptance' && status !== 'validando') return []
-  const { data: biz } = await db
-    .from('businesses')
-    .select('user_id')
-    .eq('id', o.business_id)
-    .maybeSingle()
+  const biz = must(
+    await db.from('businesses').select('user_id').eq('id', o.business_id).maybeSingle(),
+    'businesses',
+  )
   const bizUser = (biz?.user_id as string | null) ?? null
   if (!bizUser) return []
   const sid = (o.short_id as string) ?? ''
@@ -519,8 +536,20 @@ async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
 
 /** Marca el evento del outbox como terminado (0272). Nunca registra datos del evento. */
 async function markDone(eventId: string): Promise<void> {
-  const { error } = await db.rpc('complete_push_event', { p_event_id: eventId })
-  if (error) console.error('[send-push] complete_push_event falló:', error.code ?? 'sin_codigo')
+  // «Al menos una vez», decisión de Jesús (2026-10-21): mejor un aviso duplicado que uno perdido.
+  // Si no se consigue marcar el final, el aviso ya salió pero el evento queda sin terminar y,
+  // vencido el plazo del reclamo, la base lo reintentará. Antes de rendirse se reintenta la marca
+  // 3 veces (esperas de 200 ms y 1 s). No cambia la respuesta.
+  const waits = [200, 1000]
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { error } = await db.rpc('complete_push_event', { p_event_id: eventId })
+    if (!error) return
+    if (attempt === 2) {
+      console.error('[send-push] complete_push_event falló:', error.code ?? 'sin_codigo')
+      return
+    }
+    await new Promise((resolve) => setTimeout(resolve, waits[attempt]))
+  }
 }
 
 async function buildNotes(eventType: string, aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
@@ -535,7 +564,10 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const kind = String(payload?.kind ?? aggregateId)
     const text = opsAlertText(kind)
     if (!text) return out
-    const { data: admins } = await db.from('user_roles').select('user_id').eq('role', 'admin')
+    const admins = must(
+      await db.from('user_roles').select('user_id').eq('role', 'admin'),
+      'user_roles',
+    )
     for (const a of admins ?? []) {
       out.push({
         userId: a.user_id as string,
@@ -552,15 +584,14 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   }
 
   // Avisos que la base dio por perdidos (0272, `retry_push_dispatch`): al admin, con texto
-  // FIJO (solo el número). Freno de la 0263: a lo sumo uno cada OPS_ALERT_WINDOW.
+  // FIJO (solo el número). El freno (uno por ventana) está en la base, en quien lo produce
+  // (`retry_push_dispatch`), no aquí.
   if (eventType === 'PushDeliveryFailed') {
-    const { data: turno, error: turnoErr } = await db.rpc('claim_ops_alert', {
-      p_kind: 'push_undelivered',
-      p_window: OPS_ALERT_WINDOW,
-    })
-    if (turnoErr || !turno) return out
     const text = pushUndeliveredText(payload?.count)
-    const { data: admins } = await db.from('user_roles').select('user_id').eq('role', 'admin')
+    const admins = must(
+      await db.from('user_roles').select('user_id').eq('role', 'admin'),
+      'user_roles',
+    )
     for (const a of admins ?? []) {
       out.push({
         userId: a.user_id as string,
@@ -577,20 +608,22 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
   }
 
   if (eventType === 'OrderStatusChanged' || eventType === 'OrderExpired') {
-    const { data: o } = await db
-      .from('orders')
-      .select(
-        'short_id,business_id,customer_user_id,driver_id,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing',
-      )
-      .eq('id', aggregateId)
-      .maybeSingle()
+    const o = must(
+      await db
+        .from('orders')
+        .select(
+          'short_id,business_id,customer_user_id,driver_id,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing',
+        )
+        .eq('id', aggregateId)
+        .maybeSingle(),
+      'orders',
+    )
     if (!o) return out
     const sid = o.short_id as string
-    const { data: biz } = await db
-      .from('businesses')
-      .select('name,user_id')
-      .eq('id', o.business_id)
-      .maybeSingle()
+    const biz = must(
+      await db.from('businesses').select('name,user_id').eq('id', o.business_id).maybeSingle(),
+      'businesses',
+    )
     const bizName = (biz?.name as string) ?? 'el restaurante'
     const bizUser = biz?.user_id as string | null
     const cust = o.customer_user_id as string | null
@@ -707,14 +740,13 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
        * participar sin entrar primero a la PWA por azar"). v2 reintrodujo el
        * filtro al reescribir la función.
        */
-      const { data: drivers, error: driversErr } = await db
-        .from('drivers')
-        .select('user_id')
-        .eq('is_active', true)
       // Este error SÍ se mira: si la consulta falla, el resultado es
       // indistinguible de "no hay motorizados" — un 200 con recipients 0 que
       // parece normal. Es justo el silencio que costó tres días de diagnóstico.
-      if (driversErr) throw new Error(`drivers query: ${driversErr.message}`)
+      const drivers = must(
+        await db.from('drivers').select('user_id').eq('is_active', true),
+        'drivers',
+      )
       const oBrief = await orderBrief(aggregateId)
       const bName = oBrief?.bizName ?? bizName
       const dest = oBrief?.destText ? `${oBrief.destText} · ` : ''
@@ -873,19 +905,21 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
      * llegó a alguna parte. La 0212 los mete en la lista blanca; esta rama es
      * la que decide qué se les dice.
      */
-    const { data: o } = await db
-      .from('orders')
-      .select('short_id,business_id,customer_user_id,prep_time_minutes')
-      .eq('id', aggregateId)
-      .maybeSingle()
+    const o = must(
+      await db
+        .from('orders')
+        .select('short_id,business_id,customer_user_id,prep_time_minutes')
+        .eq('id', aggregateId)
+        .maybeSingle(),
+      'orders',
+    )
     const cust = (o?.customer_user_id as string | null) ?? null
     if (o && cust) {
       const sid = o.short_id as string
-      const { data: biz } = await db
-        .from('businesses')
-        .select('name')
-        .eq('id', o.business_id)
-        .maybeSingle()
+      const biz = must(
+        await db.from('businesses').select('name').eq('id', o.business_id).maybeSingle(),
+        'businesses',
+      )
       const bizName = (biz?.name as string) ?? 'el restaurante'
       const base = {
         userId: cust,
@@ -1031,11 +1065,14 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     let fromId = payload?.fromDriverId
     let toId = payload?.toDriverId
     if ((!fromId || !toId) && typeof reqId === 'string') {
-      const { data: req } = await db
-        .from('order_transfer_requests')
-        .select('from_driver_id,to_driver_id')
-        .eq('id', reqId)
-        .maybeSingle()
+      const req = must(
+        await db
+          .from('order_transfer_requests')
+          .select('from_driver_id,to_driver_id')
+          .eq('id', reqId)
+          .maybeSingle(),
+        'order_transfer_requests',
+      )
       fromId = fromId ?? req?.from_driver_id
       toId = toId ?? req?.to_driver_id
     }
@@ -1120,13 +1157,16 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     eventType === 'CashDisputed' ||
     eventType === 'CashResolved'
   ) {
-    const { data: cs } = await db
-      .from('cash_settlements')
-      .select(
-        'driver_id,business_id,delivered_amount,reported_amount,resolved_amount,confirmed_amount',
-      )
-      .eq('id', aggregateId)
-      .maybeSingle()
+    const cs = must(
+      await db
+        .from('cash_settlements')
+        .select(
+          'driver_id,business_id,delivered_amount,reported_amount,resolved_amount,confirmed_amount',
+        )
+        .eq('id', aggregateId)
+        .maybeSingle(),
+      'cash_settlements',
+    )
     const driverUser = await driverUserId(cs?.driver_id)
     if (driverUser) {
       /*
@@ -1146,11 +1186,10 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         // notificaciones apiladas diciendo casi lo mismo; con este tag la
         // notificación se REEMPLAZA y el cuerpo describe el estado actual —
         // cuánto le queda abierto— en vez del último delta.
-        const { data: biz } = await db
-          .from('businesses')
-          .select('name')
-          .eq('id', cs?.business_id)
-          .maybeSingle()
+        const biz = must(
+          await db.from('businesses').select('name').eq('id', cs?.business_id).maybeSingle(),
+          'businesses',
+        )
         const bName = (biz?.name as string) ?? 'El restaurante'
         const abierto = await openCashTotal(cs?.driver_id, cs?.business_id)
         out.push({
@@ -1183,11 +1222,14 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       }
     }
   } else if (eventType === 'CashDelivered') {
-    const { data: cs } = await db
-      .from('cash_settlements')
-      .select('driver_id,business_id,delivered_amount,businesses(user_id),drivers(full_name)')
-      .eq('id', aggregateId)
-      .maybeSingle()
+    const cs = must(
+      await db
+        .from('cash_settlements')
+        .select('driver_id,business_id,delivered_amount,businesses(user_id),drivers(full_name)')
+        .eq('id', aggregateId)
+        .maybeSingle(),
+      'cash_settlements',
+    )
     const bizUser = (cs?.businesses as { user_id?: string } | null)?.user_id ?? null
     if (bizUser) {
       // COLAPSADA POR (motorizado, negocio) — ver el comentario de CashConfirmed.
@@ -1251,13 +1293,16 @@ const COURIER_CANCEL_BODY: Record<string, string> = {
  */
 async function courierNotes(aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
   const action = String(payload?.action ?? '')
-  const { data: c } = await db
-    .from('courier_orders')
-    .select(
-      'id,short_id,customer_user_id,driver_id,status,payer,fee_amount,origin_name,origin_reference_text,destination_reference_text,item_description,cancel_reason',
-    )
-    .eq('id', aggregateId)
-    .maybeSingle()
+  const c = must(
+    await db
+      .from('courier_orders')
+      .select(
+        'id,short_id,customer_user_id,driver_id,status,payer,fee_amount,origin_name,origin_reference_text,destination_reference_text,item_description,cancel_reason',
+      )
+      .eq('id', aggregateId)
+      .maybeSingle(),
+    'courier_orders',
+  )
   if (!c) return []
 
   const sid = c.short_id as string
@@ -1365,8 +1410,18 @@ Deno.serve(async (req: Request) => {
     })
   }
 
+  // Un cuerpo que no es JSON es del llamante (400); cualquier otro fallo es nuestro (500).
+  let body: Record<string, unknown>
   try {
-    const body = await req.json()
+    body = await req.json()
+  } catch {
+    return new Response(JSON.stringify({ ok: false, error: 'event_id invalido' }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  try {
     const req_kind = classifyRequest(body)
     if (req_kind.kind === 'invalid') {
       return new Response(JSON.stringify({ ok: false, error: 'event_id invalido' }), {
@@ -1454,10 +1509,14 @@ Deno.serve(async (req: Request) => {
     const nativePending: Promise<{ sent: number; failed: number }>[] = []
 
     for (const note of notes) {
-      const { data: subs } = await db
-        .from('push_subscriptions')
-        .select('id,endpoint,p256dh,auth,failure_count')
-        .eq('user_id', note.userId)
+      // Un fallo de lectura lanza (500, sin marcar el final): no es «sin suscripciones».
+      const subs = must(
+        await db
+          .from('push_subscriptions')
+          .select('id,endpoint,p256dh,auth,failure_count')
+          .eq('user_id', note.userId),
+        'push_subscriptions',
+      )
       for (const sub of subs ?? []) {
         const body = JSON.stringify({
           title: note.title,
@@ -1521,8 +1580,10 @@ Deno.serve(async (req: Request) => {
       headers: { 'content-type': 'application/json' },
     })
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), {
-      status: 400,
+    // Error interno: 500 y SIN marcar el final del evento, para que la base lo reintente.
+    console.error('[send-push] fallo interno:', (e as Error)?.message ?? String(e))
+    return new Response(JSON.stringify({ ok: false, error: 'internal' }), {
+      status: 500,
       headers: { 'content-type': 'application/json' },
     })
   }
