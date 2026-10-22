@@ -15,7 +15,8 @@
  */
 import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { type Row, type RowStore, SettingsSnapshot } from './helpers/settings-snapshot'
 
 const CONTAINER = 'supabase_db_zpnipajgwfthxhdtzhly'
 const run = promisify(execFile)
@@ -76,6 +77,10 @@ insert into public.app_settings (key, value) values ('push_claim_since', to_json
 -- DENTRO de la transacción, para que el cron solo vea los de esta prueba. Se revierte al final.
 update public.domain_events set push_done_at = now()
   where push_done_at is null and push_dead_at is null and id::text not like '00000000-0000-4000-8000-0000000072%';
+-- Un aviso de fallo REAL de las últimas horas haría callar al freno (alertWindowMinutes) y
+-- falsearía las pruebas de «nace uno»; se quitan dentro de la transacción, que se revierte.
+delete from public.domain_events where event_type = 'PushDeliveryFailed'
+  and id::text not like '00000000-0000-4000-8000-0000000072%';
 delete from net.http_request_queue;`
 }
 
@@ -136,50 +141,6 @@ rollback;
     expect(marca(out, 'D')).toBe('0') // perdido
     expect(marca(out, 'E')).toBe('0') // más viejo que ttl
     expect(marca(out, 'F')).toBe('0') // reclamado hace 60 s: plazo vigente
-  })
-
-  it('5 reclamos simultáneos sobre un evento con plazo vencido: exactamente 1 gana', async () => {
-    const evId = id(50)
-    const clave = (k: string) =>
-      `select row_to_json(s)::text from (select value::text as v, updated_at::text as u from public.app_settings where key = '${k}') s;`
-    const guardar = (k: string) =>
-      execFileSync('docker', [...PSQL_ARGS, '-c', clave(k)], { encoding: 'utf8' }).trim()
-    const restaurar = (k: string, previo: string) => {
-      if (previo === '') {
-        psql(`delete from public.app_settings where key = '${k}';`)
-        return
-      }
-      const p = JSON.parse(previo) as { v: string; u: string }
-      psql(
-        `update public.app_settings set value = $v$${p.v}$v$::jsonb, updated_at = '${p.u}' where key = '${k}';`,
-      )
-    }
-    const prevClaim = guardar('push_claim_since')
-    const prevDispatch = guardar('push_dispatch')
-    try {
-      psql(`
-delete from public.app_settings where key = 'push_dispatch';
-insert into public.app_settings (key, value) values ('push_claim_since', to_jsonb('2020-01-01T00:00:00Z'::text))
-  on conflict (key) do update set value = excluded.value;
-delete from public.domain_events where id = '${evId}';
-insert into public.domain_events (id, aggregate_type, aggregate_id, event_type, payload, push_claimed_at)
-  values ('${evId}', 'order', '${evId}', 'OrderCreated', '{}', now() - interval '200 seconds');`)
-      const resultados = await Promise.all(
-        Array.from({ length: 5 }, () =>
-          run('docker', [
-            ...PSQL_ARGS,
-            '-c',
-            `select count(*) from public.claim_push_event('${evId}');`,
-          ]).then((r) => Number(r.stdout.trim())),
-        ),
-      )
-      expect(resultados.reduce((a, b) => a + b, 0)).toBe(1)
-      expect(resultados.filter((n) => n === 1)).toHaveLength(1)
-    } finally {
-      psql(`delete from public.domain_events where id = '${evId}';`)
-      restaurar('push_claim_since', prevClaim)
-      restaurar('push_dispatch', prevDispatch)
-    }
   })
 })
 
@@ -350,6 +311,67 @@ rollback;
   })
 })
 
+describe('retry_push_dispatch · freno del aviso de fallo, en la base (0272)', () => {
+  const ENCENDIDO = config({
+    since: `to_jsonb((now() - interval '1 hour')::text)`,
+    url: 'http://127.0.0.1:9/',
+  })
+  const FALLOS = `select 'W|' || count(*) from public.domain_events
+    where event_type = 'PushDeliveryFailed' and aggregate_type = 'push_outbox' and occurred_at >= now();`
+
+  it('con un PushDeliveryFailed de hace 5 min, los perdidos se marcan pero NO nace otro aviso', () => {
+    const out = psql(`
+begin;
+${ENCENDIDO}
+${ev({ n: 8, ago: 300, type: 'PushDeliveryFailed', done: true })}
+${ev({ n: 1, ago: 600, attempts: 3, lastAgo: 200 })}
+${ev({ n: 2, ago: 600, attempts: 3, lastAgo: 200 })}
+delete from net.http_request_queue;
+select 'N|' || public.retry_push_dispatch();
+select 'D|' || count(*) from public.domain_events
+  where id in ('${id(1)}', '${id(2)}') and push_dead_at is not null;
+${FALLOS}
+rollback;
+`)
+    expect(marca(out, 'D')).toBe('2')
+    expect(marca(out, 'W')).toBe('0')
+  })
+
+  it('con uno de hace 31 min (fuera de la ventana de 30) sí nace uno nuevo', () => {
+    const out = psql(`
+begin;
+${ENCENDIDO}
+${ev({ n: 8, ago: 31 * 60, type: 'PushDeliveryFailed', done: true })}
+${ev({ n: 1, ago: 600, attempts: 3, lastAgo: 200 })}
+delete from net.http_request_queue;
+select 'N|' || public.retry_push_dispatch();
+select 'D|' || count(*) from public.domain_events where id = '${id(1)}' and push_dead_at is not null;
+${FALLOS}
+rollback;
+`)
+    expect(marca(out, 'D')).toBe('1')
+    expect(marca(out, 'W')).toBe('1')
+  })
+
+  it('alertWindowMinutes manda: con 60 min, uno de hace 31 min aún frena', () => {
+    const out = psql(`
+begin;
+${config({
+  since: `to_jsonb((now() - interval '1 hour')::text)`,
+  url: 'http://127.0.0.1:9/',
+  retry: `jsonb_build_object('alertWindowMinutes', 60, 'since', to_jsonb((now() - interval '1 hour')::text))`,
+})}
+${ev({ n: 8, ago: 31 * 60, type: 'PushDeliveryFailed', done: true })}
+${ev({ n: 1, ago: 600, attempts: 3, lastAgo: 200 })}
+delete from net.http_request_queue;
+select 'N|' || public.retry_push_dispatch();
+${FALLOS}
+rollback;
+`)
+    expect(marca(out, 'W')).toBe('0')
+  })
+})
+
 describe('permisos (0272)', () => {
   const llamadas = [
     `select public.complete_push_event('${id(1)}')`,
@@ -366,7 +388,7 @@ describe('permisos (0272)', () => {
 })
 
 describe('push_retry_settings · configuración inválida usa los valores por defecto (0272)', () => {
-  const lee = `select 'S|' || max_attempts || '|' || ttl || '|' || lease || '|' || backoff::text from public.push_retry_settings(false);`
+  const lee = `select 'S|' || max_attempts || '|' || ttl || '|' || lease || '|' || backoff::text || '|' || alert_window from public.push_retry_settings(false);`
 
   it('valores con forma o rango inválidos caen a los defectos', () => {
     const out = psql(`
@@ -377,21 +399,339 @@ update public.app_settings set value =
 ${lee}
 rollback;
 `)
-    expect(marca(out, 'S')).toBe('3|00:15:00|00:03:00|{1,2,4}')
+    expect(marca(out, 'S')).toBe('3|00:15:00|00:03:00|{1,2,4}|00:30:00')
   })
 
   it('valores válidos se respetan, y un backoff con un elemento malo se descarta entero', () => {
     const out = psql(`
 begin;
 update public.app_settings set value =
-  '{"maxAttempts": 5, "ttlMinutes": 20, "leaseSeconds": 60, "backoffMinutes": [1, 3]}'::jsonb
+  '{"maxAttempts": 5, "ttlMinutes": 20, "leaseSeconds": 60, "backoffMinutes": [1, 3], "alertWindowMinutes": 10}'::jsonb
   where key = 'push_retry';
 ${lee}
 update public.app_settings set value = '{"backoffMinutes": [1, "x", 3]}'::jsonb where key = 'push_retry';
 ${lee.replace("'S|'", "'T|'")}
 rollback;
 `)
-    expect(marca(out, 'S')).toBe('5|00:20:00|00:01:00|{1,3}')
-    expect(marca(out, 'T')).toBe('3|00:15:00|00:03:00|{1,2,4}')
+    expect(marca(out, 'S')).toBe('5|00:20:00|00:01:00|{1,3}|00:10:00')
+    expect(marca(out, 'T')).toBe('3|00:15:00|00:03:00|{1,2,4}|00:30:00')
   })
+
+  // CAX-001: un número enorme no desborda el int: se ignora y queda el valor por defecto.
+  const ENORMES = `'{"maxAttempts": 2147483648, "ttlMinutes": 99999999999, "leaseSeconds": 1e30, "backoffMinutes": [2147483648], "alertWindowMinutes": 999999}'::jsonb`
+
+  it('valores enormes (2147483648, 99999999999, 1e30, 999999) devuelven los defectos sin error', () => {
+    const out = psql(`
+begin;
+update public.app_settings set value = ${ENORMES} where key = 'push_retry';
+${lee}
+select 'U|' || ok from public.push_retry_settings(false);
+rollback;
+`)
+    expect(marca(out, 'S')).toBe('3|00:15:00|00:03:00|{1,2,4}|00:30:00')
+    expect(marca(out, 'U')).toBe('true')
+  })
+
+  it('con valores enormes claim_push_event no falla y el cron sin since devuelve 0', () => {
+    const out = psql(`
+begin;
+${config({ since: null, url: 'http://127.0.0.1:9/', retry: ENORMES })}
+${ev({ n: 1, ago: 10 })}
+${ev({ n: 2, ago: 70 })}
+delete from net.http_request_queue; -- los INSERT de arriba ya encolaron por el trigger
+${claim('C', 1)}
+select 'N|' || public.retry_push_dispatch();
+select 'T|' || push_attempts from public.domain_events where id = '${id(2)}';
+select 'Q|' || count(*) from net.http_request_queue;
+rollback;
+`)
+    expect(marca(out, 'C')).toBe('1')
+    expect(marca(out, 'N')).toBe('0')
+    expect(marca(out, 'T')).toBe('0')
+    expect(marca(out, 'Q')).toBe('0')
+  })
+})
+
+// ── Carreras reales: varias sesiones psql a la vez, sobre estado CONFIRMADO ───────────────────────
+// Aquí no hay transacción que revertir (las sesiones tienen que verse entre sí), así que se respalda
+// con `SettingsSnapshot` lo que se toca de `app_settings` y el trabajo del cron real se pausa. Todo
+// se devuelve en `afterAll`, también si una prueba falla, y se comprueba que `push_dispatch.url`
+// quedó igual (CAX-005).
+describe('carreras reales (0272)', () => {
+  const KEYS = ['push_dispatch', 'push_claim_since', 'push_retry'] as const
+  const sqlLit = (v: string) => `$v$${v}$v$`
+
+  const store: RowStore = {
+    async read(key) {
+      try {
+        const out = execFileSync(
+          'docker',
+          [
+            ...PSQL_ARGS,
+            '-c',
+            `select row_to_json(t)::text from public.app_settings t where key = ${sqlLit(key)};`,
+          ],
+          { encoding: 'utf8' },
+        ).trim()
+        return { data: out === '' ? null : (JSON.parse(out) as Row), error: null }
+      } catch (e) {
+        return { data: null, error: String(e) }
+      }
+    },
+    async remove(key) {
+      try {
+        psql(`delete from public.app_settings where key = ${sqlLit(key)};`)
+        return { error: null }
+      } catch (e) {
+        return { error: String(e) }
+      }
+    },
+    async write(_key, row) {
+      try {
+        psql(
+          `insert into public.app_settings select * from json_populate_record(null::public.app_settings, ${sqlLit(JSON.stringify(row))}::json);`,
+        )
+        return { error: null }
+      } catch (e) {
+        return { error: String(e) }
+      }
+    },
+  }
+  const snapshot = new SettingsSnapshot(store, KEYS)
+  const urlDeDispatch = () =>
+    execFileSync(
+      'docker',
+      [
+        ...PSQL_ARGS,
+        '-c',
+        `select value->>'url' from public.app_settings where key = 'push_dispatch';`,
+      ],
+      { encoding: 'utf8' },
+    ).trim()
+  let urlOriginal: string | null = null
+  let cronEstabaActivo: boolean | null = null
+
+  const limpiarEventos = () =>
+    psql(`
+delete from public.domain_events where id::text like '00000000-0000-4000-8000-0000000072%';
+delete from public.domain_events where event_type = 'PushDeliveryFailed'
+  and aggregate_id::text like '00000000-0000-4000-8000-0000000072%';`)
+
+  beforeAll(async () => {
+    await snapshot.capture()
+    urlOriginal = urlDeDispatch()
+    // Sin esto el cron real (cada minuto) también tocaría los eventos de la prueba.
+    cronEstabaActivo =
+      psql(`select active from cron.job where jobname = 'retry-push-dispatch';`).trim() === 't'
+    if (cronEstabaActivo) {
+      psql(
+        `select cron.alter_job((select jobid from cron.job where jobname = 'retry-push-dispatch'), active := false);`,
+      )
+    }
+    psql(`
+insert into public.app_settings (key, value) values ('push_claim_since', to_jsonb('2020-01-01T00:00:00Z'::text))
+  on conflict (key) do update set value = excluded.value;`)
+  })
+
+  afterAll(async () => {
+    const problemas: string[] = []
+    try {
+      limpiarEventos()
+    } catch (e) {
+      problemas.push(`eventos: ${String(e)}`)
+    }
+    try {
+      if (cronEstabaActivo) {
+        psql(
+          `select cron.alter_job((select jobid from cron.job where jobname = 'retry-push-dispatch'), active := true);`,
+        )
+      }
+    } catch (e) {
+      problemas.push(`cron: ${String(e)}`)
+    }
+    try {
+      await snapshot.restoreAll()
+    } catch (e) {
+      problemas.push(String(e))
+    }
+    if (urlOriginal !== null && urlDeDispatch() !== urlOriginal) {
+      problemas.push(
+        `push_dispatch.url no quedó igual: «${urlDeDispatch()}» en vez de «${urlOriginal}»`,
+      )
+    }
+    if (problemas.length > 0) throw new Error(problemas.join('\n'))
+  })
+
+  beforeEach(() => {
+    limpiarEventos()
+    // Sin URL el trigger no llama a nadie al insertar eventos de la prueba.
+    psql(`delete from public.app_settings where key = 'push_dispatch';`)
+  })
+
+  /** Enciende el cron con una `since` cercana (solo ve eventos de los últimos `desdeSeg` s) y una URL muerta. */
+  function armarCron(desdeSeg = 280) {
+    psql(`
+insert into public.app_settings (key, value) values ('push_retry',
+  jsonb_build_object('maxAttempts', 3, 'ttlMinutes', 15, 'leaseSeconds', 180,
+    'backoffMinutes', jsonb_build_array(1, 2, 4), 'alertWindowMinutes', 30,
+    'since', to_jsonb((now() - interval '${desdeSeg} seconds')::text)))
+  on conflict (key) do update set value = excluded.value;
+insert into public.app_settings (key, value)
+  values ('push_dispatch', jsonb_build_object('url', 'http://127.0.0.1:9/', 'anonKey', 'anon-de-prueba'))
+  on conflict (key) do update set value = excluded.value;`)
+  }
+
+  const cron = () =>
+    run('docker', [...PSQL_ARGS, '-c', 'select public.retry_push_dispatch();']).then((r) => ({
+      n: Number(r.stdout.trim()),
+      fin: Date.now(),
+    }))
+
+  /** Una sesión que ejecuta `sql` y se queda `marca` segundos con la transacción abierta. */
+  function sesionQueRetiene(sql: string, marca: string) {
+    return run('docker', [...PSQL_ARGS, '-c', `${sql}\nselect pg_sleep(${marca});`]).then(() => ({
+      fin: Date.now(),
+    }))
+  }
+
+  async function esperarDormida(marca: string) {
+    for (let i = 0; i < 40; i++) {
+      const n = Number(
+        psql(
+          `select count(*) from pg_stat_activity where state = 'active' and pid <> pg_backend_pid() and query like '%pg_sleep(${marca})%';`,
+        ).trim(),
+      )
+      if (n > 0) return
+      await new Promise((r) => setTimeout(r, 150))
+    }
+    throw new Error(`la sesión que retiene (${marca}) no llegó a dormir`)
+  }
+
+  function fila(n: number): { a: number; done: boolean; dead: boolean } {
+    const out = psql(
+      `select row_to_json(s)::text from (select push_attempts as a, push_done_at is not null as done, push_dead_at is not null as dead from public.domain_events where id = '${id(n)}') s;`,
+    ).trim()
+    return JSON.parse(out)
+  }
+
+  const avisosDeFallo = () =>
+    Number(
+      psql(
+        `select count(*) from public.domain_events where event_type = 'PushDeliveryFailed' and aggregate_id::text like '00000000-0000-4000-8000-0000000072%';`,
+      ).trim(),
+    )
+
+  it('5 reclamos simultáneos sobre un evento con plazo vencido: exactamente 1 gana', async () => {
+    psql(`insert into public.domain_events (id, aggregate_type, aggregate_id, event_type, payload, push_claimed_at)
+  values ('${id(50)}', 'order', '${id(50)}', 'OrderCreated', '{}', now() - interval '200 seconds');`)
+    const resultados = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        run('docker', [
+          ...PSQL_ARGS,
+          '-c',
+          `select count(*) from public.claim_push_event('${id(50)}');`,
+        ]).then((r) => Number(r.stdout.trim())),
+      ),
+    )
+    expect(resultados.reduce((a, b) => a + b, 0)).toBe(1)
+    expect(resultados.filter((n) => n === 1)).toHaveLength(1)
+  })
+
+  it('cron/cron con el candado tomado: la otra corrida devuelve 0 y no toca nada', async () => {
+    for (const n of [1, 2, 3]) psql(ev({ n, ago: 70 }))
+    armarCron()
+    const marca = '6.101'
+    const retiene = sesionQueRetiene(
+      `select pg_advisory_xact_lock(hashtext('tindivo.retry_push_dispatch'));`,
+      marca,
+    )
+    await esperarDormida(marca)
+    const durante = await cron()
+    expect(durante.n).toBe(0)
+    for (const n of [1, 2, 3]) expect(fila(n).a).toBe(0)
+    const libre = await retiene
+    expect(durante.fin).toBeLessThan(libre.fin) // no esperó al que retenía: salió con 0 de inmediato
+    // Soltado el candado, la siguiente corrida sí trabaja.
+    const despues = await cron()
+    expect(despues.n).toBeGreaterThanOrEqual(3)
+    for (const n of [1, 2, 3]) expect(fila(n).a).toBe(1)
+  }, 30_000)
+
+  it('cron/cron a la vez (3 rondas): cada evento sube exactamente 1 y a lo sumo una corrida trabaja', async () => {
+    for (let ronda = 0; ronda < 3; ronda++) {
+      limpiarEventos()
+      psql(`delete from public.app_settings where key = 'push_dispatch';`)
+      for (const n of [1, 2, 3, 4]) psql(ev({ n, ago: 70 }))
+      armarCron()
+      const [a, b] = await Promise.all([cron(), cron()])
+      expect([a.n, b.n].filter((x) => x > 0).length).toBeLessThanOrEqual(1)
+      expect([a.n, b.n].reduce((x, y) => x + y, 0)).toBeGreaterThanOrEqual(4)
+      for (const n of [1, 2, 3, 4]) expect(fila(n).a).toBe(1)
+    }
+  }, 60_000)
+
+  it('cron/reclamo: el evento que se reclama mientras corre el cron no se reintenta', async () => {
+    // 61: pendiente de reintento (plazo vencido, 0 intentos). Se reclama dentro de la transacción abierta.
+    psql(ev({ n: 61, ago: 250, claimedAgo: 200 }))
+    armarCron()
+    const marca = '6.102'
+    const retiene = sesionQueRetiene(
+      `select count(*) from public.claim_push_event('${id(61)}');`,
+      marca,
+    )
+    await esperarDormida(marca)
+    const durante = await cron()
+    expect(durante.n).toBe(0) // lo saltó (skip locked): nadie más tiene pendientes
+    const libre = await retiene
+    expect(durante.fin).toBeLessThan(libre.fin) // y no esperó a que el reclamo terminara
+    expect(fila(61)).toEqual({ a: 0, done: false, dead: false })
+    // Con el reclamo recién hecho (plazo vigente) la siguiente corrida tampoco lo toca.
+    expect((await cron()).n).toBe(0)
+    expect(fila(61).a).toBe(0)
+  }, 30_000)
+
+  it('cron/reclamo: un evento a punto de darse por perdido y reclamado a tiempo NO se pierde', async () => {
+    // 62: intentos agotados y último reintento vencido => el cron lo daría por perdido, salvo que se reclame.
+    psql(ev({ n: 62, ago: 250, attempts: 3, lastAgo: 200, claimedAgo: 200 }))
+    armarCron()
+    const marca = '6.103'
+    const retiene = sesionQueRetiene(
+      `select count(*) from public.claim_push_event('${id(62)}');`,
+      marca,
+    )
+    await esperarDormida(marca)
+    const durante = await cron() // espera el candado de fila de la otra sesión y reevalúa con el reclamo nuevo
+    await retiene
+    expect(durante.n).toBe(0)
+    expect(fila(62)).toEqual({ a: 3, done: false, dead: false })
+    expect(avisosDeFallo()).toBe(0)
+  }, 30_000)
+
+  it('cron/final: el evento que se termina mientras corre el cron no se reintenta', async () => {
+    psql(ev({ n: 71, ago: 250, claimedAgo: 200 }))
+    armarCron()
+    const marca = '6.104'
+    const retiene = sesionQueRetiene(`select public.complete_push_event('${id(71)}');`, marca)
+    await esperarDormida(marca)
+    const durante = await cron()
+    const libre = await retiene
+    expect(durante.n).toBe(0)
+    expect(durante.fin).toBeLessThan(libre.fin)
+    expect(fila(71)).toEqual({ a: 0, done: true, dead: false })
+    expect((await cron()).n).toBe(0)
+    expect(fila(71).a).toBe(0)
+  }, 30_000)
+
+  it('cron/final: el evento que se termina mientras el cron iba a darlo por perdido NO se pierde', async () => {
+    psql(ev({ n: 72, ago: 250, attempts: 3, lastAgo: 200, claimedAgo: 200 }))
+    armarCron()
+    const marca = '6.105'
+    const retiene = sesionQueRetiene(`select public.complete_push_event('${id(72)}');`, marca)
+    await esperarDormida(marca)
+    const durante = await cron() // espera la fila, y al reevaluarla ya está terminada
+    await retiene
+    expect(durante.n).toBe(0)
+    expect(fila(72)).toEqual({ a: 3, done: true, dead: false })
+    expect(avisosDeFallo()).toBe(0)
+  }, 30_000)
 })
