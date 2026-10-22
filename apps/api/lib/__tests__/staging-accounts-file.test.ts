@@ -148,7 +148,8 @@ describe('openPrivateAccountsFile', () => {
           },
           { beforeMkdir: (sub) => symlinkSync(destino, sub, 'dir') },
         ),
-      ).toThrow(/No se borró nada/)
+        // `mkdir` falla ante el enlace ajeno: no llegamos a crear nada, y el mensaje lo dice.
+      ).toThrow(/No se creó nada\.$/)
       expect(secured).toBe(false)
       expect(exists(join(destino, 'cuentas.md'))).toBe(false)
     })
