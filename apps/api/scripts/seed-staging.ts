@@ -14,6 +14,9 @@
  *   Nunca se imprime ni se registra.
  * - `--out-dir`: carpeta YA existente donde se crea `staging-credenciales-<fecha>/cuentas.md` (email, rol,
  *   contraseña). FUERA del repo: aborta si cae dentro del worktree o de cualquier carpeta con `.git`.
+ *   Debe ser una FRONTERA PRIVADA: ni ella ni ninguna carpeta superior puede dejar a otras cuentas
+ *   renombrar o borrar entradas (si no, aborta antes de crear nada). Usa una carpeta dentro de tu
+ *   perfil, p. ej. `C:/Users/<usuario>/tindivo-secretos`.
  *   La carpeta nace privada (ACL en Windows, 700 en otro SO) y el archivo se crea exclusivo
  *   dentro de ella; nada se borra por ruta. Cada contraseña se guarda en disco ANTES de activarse.
  *

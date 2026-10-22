@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import {
+  chmodSync,
   closeSync,
   lstatSync,
   mkdirSync,
@@ -16,13 +17,24 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
+  type Ace,
   assertPrivateAcl,
-  openPrivateAccountsFile,
+  assertStorageBoundary,
+  boundaryViolations,
+  openPrivateAccountsFile as openReal,
   recordThenActivate,
   redactSecrets,
   securePrivateDir,
   type WriteFn,
 } from '../../scripts/staging-accounts-file.ts'
+
+/** Las pruebas usan carpetas temporales: la frontera real se prueba aparte (más abajo). */
+const openPrivateAccountsFile = (
+  dir: string,
+  nowIso: string,
+  secure: (p: string) => void,
+  hooks?: Parameters<typeof openReal>[3],
+) => openReal(dir, nowIso, secure, { boundary: () => {}, ...hooks })
 
 const NOW = '2026-10-22T10:00:00.000Z'
 const SUB = 'staging-credenciales-2026-10-22T10-00-00-000Z'
@@ -358,5 +370,80 @@ describe('redactSecrets', () => {
     expect(redactSecrets('clave K1 y pw P2 y K1', ['K1', 'P2', ''])).toBe(
       'clave [redactado] y pw [redactado] y [redactado]',
     )
+  })
+})
+
+describe('boundaryViolations', () => {
+  const ME = 'S-1-5-21-1-2-3-1001'
+  const ALLOWED = [ME, 'S-1-5-18', 'S-1-5-32-544']
+  const OTHER = 'S-1-5-11'
+  const ace = (sid: string, rights: number, extra: Partial<Ace> = {}): Ace => ({
+    sid,
+    rights,
+    allow: true,
+    inheritOnly: false,
+    ...extra,
+  })
+  const at = (aces: Ace[], path = 'C:/a') => [{ path, aces }]
+
+  it('otro SID con Modify es violación', () => {
+    expect(boundaryViolations(at([ace(OTHER, 1245631)]), ALLOWED)).toEqual([
+      `C:/a: ${OTHER} tiene 0x1301bf`,
+    ])
+  })
+  it('ReadAndExecute y AppendData no son violación', () => {
+    expect(boundaryViolations(at([ace(OTHER, 1179817), ace(OTHER, 4)]), ALLOWED)).toEqual([])
+  })
+  it('FullControl solo heredable (inherit-only) no cuenta', () => {
+    expect(boundaryViolations(at([ace(OTHER, 2032127, { inheritOnly: true })]), ALLOWED)).toEqual(
+      [],
+    )
+  })
+  it('una ACE de denegación no cuenta', () => {
+    expect(boundaryViolations(at([ace(OTHER, 2032127, { allow: false })]), ALLOWED)).toEqual([])
+  })
+  it('los SID permitidos con FullControl no cuentan', () => {
+    expect(boundaryViolations(at(ALLOWED.map((s) => ace(s, 2032127))), ALLOWED)).toEqual([])
+  })
+  it('con varios niveles devuelve todas las líneas', () => {
+    const levels = [
+      { path: 'C:/a', aces: [ace(OTHER, 2032127)] },
+      { path: 'C:/', aces: [ace('S-1-1-0', 0x10000000), ace(ME, 2032127)] },
+    ]
+    expect(boundaryViolations(levels, ALLOWED)).toHaveLength(2)
+  })
+})
+
+describe('assertStorageBoundary (real)', () => {
+  it.skipIf(process.platform !== 'win32')(
+    'Windows: el temporal del perfil es privado desde la raíz; una carpeta con Authenticated Users:M no',
+    () => {
+      expect(() => assertStorageBoundary(tmpdir())).not.toThrow()
+      const d = freshDir()
+      execFileSync('icacls', [d, '/grant', '*S-1-5-11:(OI)(CI)M'], { stdio: 'pipe' })
+      expect(() => assertStorageBoundary(d)).toThrow(/S-1-5-11/)
+    },
+    60_000,
+  )
+
+  it.skipIf(process.platform === 'win32')(
+    'POSIX: una carpeta escribible por todos sin sticky no vale',
+    () => {
+      const d = freshDir()
+      chmodSync(d, 0o777)
+      expect(() => assertStorageBoundary(d)).toThrow(/frontera privada/)
+    },
+  )
+
+  it('openPrivateAccountsFile no crea nada si la frontera falla', () => {
+    const dir = freshDir()
+    expect(() =>
+      openReal(dir, NOW, securePrivateDir, {
+        boundary: () => {
+          throw new Error('ABORTADO: frontera')
+        },
+      }),
+    ).toThrow(/frontera/)
+    expect(exists(join(dir, SUB))).toBe(false)
   })
 })

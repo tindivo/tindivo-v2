@@ -22,7 +22,7 @@ import {
   statSync,
   writeSync,
 } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 
 export type WriteFn = (fd: number, buf: Buffer, offset: number, length: number) => number
 
@@ -102,6 +102,125 @@ export function securePrivateDir(path: string): void {
   assertPrivateAcl(path, 'dir')
 }
 
+/**
+ * Derechos que permiten RENOMBRAR, BORRAR o reapropiarse de una entrada de la carpeta: borrar
+ * subcarpetas y archivos (0x40), Delete (0x10000), cambiar permisos (0x40000), tomar posesión
+ * (0x80000) y GENERIC_ALL (0x10000000). Crear entradas nuevas (AppendData, CreateFiles) no basta
+ * para sustituir las nuestras, así que no se consideran.
+ */
+export const DANGEROUS = 0x40 | 0x10000 | 0x40000 | 0x80000 | 0x10000000
+
+export type Ace = { sid: string; rights: number; allow: boolean; inheritOnly: boolean }
+
+/** Función PURA: una línea por cada ACE de permiso, efectiva en el nivel, peligrosa y de un SID no permitido. */
+export function boundaryViolations(
+  levels: { path: string; aces: Ace[] }[],
+  allowedSids: readonly string[],
+): string[] {
+  const out: string[] = []
+  for (const { path, aces } of levels) {
+    for (const a of aces) {
+      if (a.allow && !a.inheritOnly && (a.rights & DANGEROUS) !== 0 && !allowedSids.includes(a.sid)) {
+        out.push(`${path}: ${a.sid} tiene 0x${(a.rights >>> 0).toString(16)}`)
+      }
+    }
+  }
+  return out
+}
+
+const ACL_SCRIPT = [
+  '$p = $env:TINDIVO_ACL_PATH',
+  "Write-Output ('ME|' + [Security.Principal.WindowsIdentity]::GetCurrent().User.Value)",
+  '$acl = Get-Acl -LiteralPath $p',
+  'foreach ($r in $acl.Access) {',
+  "  $sid = 'ERR'",
+  '  try { $sid = $r.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch {}',
+  "  Write-Output ($sid + '|' + [int64]$r.FileSystemRights + '|' + $r.AccessControlType + '|' + [int]$r.PropagationFlags)",
+  '}',
+].join('\n')
+
+/** La carpeta y todos sus ancestros hasta la raíz. */
+function levelsOf(dir: string): string[] {
+  const out: string[] = []
+  let cur = resolve(dir)
+  for (;;) {
+    out.push(cur)
+    const parent = dirname(cur)
+    if (parent === cur) break
+    cur = parent
+  }
+  return out
+}
+
+function readWindowsAces(path: string): { me: string; aces: Ace[] } {
+  const out = execFileSync(
+    'powershell',
+    ['-NoProfile', '-NonInteractive', '-Command', ACL_SCRIPT],
+    { env: { ...process.env, TINDIVO_ACL_PATH: path }, encoding: 'utf8' },
+  )
+  let me = ''
+  const aces: Ace[] = []
+  for (const raw of out.split(/\r?\n/)) {
+    const line = raw.trim()
+    if (!line) continue
+    const parts = line.split('|')
+    if (parts[0] === 'ME' && parts.length === 2 && parts[1]) {
+      me = parts[1]
+      continue
+    }
+    const [sid, rights, type, flags] = parts
+    const r = Number(rights)
+    const f = Number(flags)
+    if (
+      parts.length !== 4 ||
+      !sid ||
+      !/^S-1-\d+(-\d+)+$/.test(sid) ||
+      !Number.isFinite(r) ||
+      !Number.isFinite(f) ||
+      (type !== 'Allow' && type !== 'Deny')
+    ) {
+      throw new Error(`no se pudo interpretar la ACL de ${path}`)
+    }
+    aces.push({ sid, rights: r, allow: type === 'Allow', inheritOnly: (f & 2) !== 0 })
+  }
+  if (!me) throw new Error(`no se pudo determinar el usuario actual al leer la ACL de ${path}`)
+  return { me, aces }
+}
+
+/**
+ * Exige una FRONTERA DE ALMACENAMIENTO: que nadie más pueda renombrar, borrar ni reapropiarse de
+ * entradas en `dir` ni en ninguno de sus ancestros (si no, podrían intercambiar y restaurar
+ * carpetas entre nuestras comprobaciones por ruta). Falla cerrado ante cualquier duda.
+ */
+export function assertStorageBoundary(dir: string): void {
+  const levels = levelsOf(dir)
+  if (process.platform === 'win32') {
+    const read = levels.map((path) => ({ path, ...readWindowsAces(path) }))
+    const me = read[0]?.me ?? ''
+    const bad = boundaryViolations(read, [me, 'S-1-5-18', 'S-1-5-32-544'])
+    if (bad.length > 0) {
+      throw new Error(
+        `--out-dir no es una frontera privada; otras cuentas pueden renombrar o borrar en:\n  ${bad.join('\n  ')}\n` +
+          'Usa una carpeta dentro de tu perfil (p. ej. C:\\Users\\<usuario>\\tindivo-secretos).',
+      )
+    }
+    return
+  }
+  const uid = process.getuid?.()
+  const bad: string[] = []
+  for (const path of levels) {
+    const st = lstatSync(path)
+    const mine = st.uid === uid || st.uid === 0
+    const open = (st.mode & 0o022) !== 0 && (st.mode & 0o1000) === 0
+    if (!mine || open) bad.push(`${path}: uid ${st.uid}, modo ${(st.mode & 0o7777).toString(8)}`)
+  }
+  if (bad.length > 0) {
+    throw new Error(
+      `--out-dir no es una frontera privada; otras cuentas pueden renombrar o borrar en:\n  ${bad.join('\n  ')}`,
+    )
+  }
+}
+
 /** Exige que `path` sea, por ino/dev, el archivo vacío abierto en `fd` (ni enlace ni reemplazo). */
 function assertSameFile(fd: number, path: string): void {
   const opened = fstatSync(fd, { bigint: true })
@@ -136,18 +255,26 @@ function assertSameDir(path: string, id: { ino: bigint; dev: bigint }): void {
  * Crea `<dir>/staging-credenciales-<fecha>/cuentas.md` privado y vacío. Ante CUALQUIER fallo cierra
  * el descriptor y NO borra nada; el error indica la ruta que quedó (vacía, sin secretos).
  *
- * `hooks` es solo para pruebas: simula una carrera justo antes de crear la carpeta o el archivo.
+ * `hooks` es solo para pruebas: `beforeMkdir`/`beforeOpen` simulan una carrera justo antes de crear
+ * la carpeta o el archivo, y `boundary` sustituye a `assertStorageBoundary` (que exige una carpeta
+ * temporal privada desde la raíz).
  */
 export function openPrivateAccountsFile(
   dir: string,
   nowIso: string,
   secureDir: (path: string) => void,
-  hooks?: { beforeMkdir?: (sub: string) => void; beforeOpen?: (file: string) => void },
+  hooks?: {
+    beforeMkdir?: (sub: string) => void
+    beforeOpen?: (file: string) => void
+    boundary?: (dir: string) => void
+  },
 ): { path: string; dir: string; fd: number } {
   const sub = join(dir, `staging-credenciales-${nowIso.replace(/[:.]/g, '-')}`)
   const file = join(sub, 'cuentas.md')
   let fd: number | undefined
   try {
+    // Primer paso: sin frontera de almacenamiento no se crea nada.
+    ;(hooks?.boundary ?? assertStorageBoundary)(dir)
     // `mkdir` no recursivo falla si existe (también un enlace); en Windows se comprueba antes con
     // `lstat` porque un enlace colgado no siempre hace fallar la creación.
     try {
