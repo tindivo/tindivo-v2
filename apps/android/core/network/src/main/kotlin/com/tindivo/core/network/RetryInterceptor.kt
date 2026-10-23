@@ -69,7 +69,12 @@ class RetryInterceptor(
 
     // null: sin cabecera o ilegible (se usa la espera exponencial). TOO_LONG: pide más de lo que se espera.
     private fun retryAfterMillis(response: Response): Long? {
-        val value = response.header("Retry-After")?.trim() ?: return null
+        // En los 503, RetryAfterShieldInterceptor la aparta para que OkHttp no la use (CAX-002).
+        val value =
+            (
+                response.header(RetryAfterShieldInterceptor.RETRY_AFTER)
+                    ?: response.header(RetryAfterShieldInterceptor.INTERNAL_HEADER)
+            )?.trim() ?: return null
         if (value.isNotEmpty() && value.all { it in '0'..'9' }) {
             // Un número que no cabe en Long sigue siendo un número: demasiado largo. Se compara antes de multiplicar.
             val seconds = value.toLongOrNull() ?: return TOO_LONG
