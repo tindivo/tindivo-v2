@@ -1,0 +1,23 @@
+# Umbrales de KT-14, alineados con TS-3. Es mínima sobre la configuración por defecto (buildUponDefaultConfig).
+build:
+  maxIssues: 0
+
+complexity:
+  LargeClass:
+    active: true
+    threshold: 300
+  LongMethod:
+    active: true
+    threshold: 80
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+
+potential-bugs:
+  UnsafeCallOnNullableType:
+    active: true
