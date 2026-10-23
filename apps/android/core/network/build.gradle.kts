@@ -62,9 +62,9 @@ tasks.matching { it.name.startsWith("runKtlint") }.configureEach {
 }
 
 dependencies {
-    implementation(libs.okhttp)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.kotlinx.coroutines.core)
+    api(libs.okhttp)
+    api(libs.kotlinx.serialization.json)
+    api(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)

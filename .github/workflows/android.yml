@@ -1,0 +1,128 @@
+name: Android
+
+on:
+  pull_request:
+    paths:
+      - 'apps/android/**'
+      - 'packages/contracts/openapi/v1.json'
+      - 'scripts/sync-openapi.sh'
+      - '.github/workflows/android.yml'
+  push:
+    branches: [develop]
+    paths:
+      - 'apps/android/**'
+      - 'packages/contracts/openapi/v1.json'
+      - 'scripts/sync-openapi.sh'
+      - '.github/workflows/android.yml'
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+# Sin secretos y con permisos de solo lectura: este job compila y prueba, no firma ni publica (KT-15: la firma llega
+# con Play App Signing y la CI solo construye `devDebug`).
+permissions:
+  contents: read
+
+# El runner va fijado a `ubuntu-24.04` por la misma razón que en ci.yml: una imagen nueva no puede cambiar el resultado
+# sin un commit que lo diga. Las versiones de AGP, Kotlin y Gradle viven en apps/android/gradle/libs.versions.toml y en
+# el wrapper; aquí solo se fijan JDK, acciones y la CLI de detekt.
+env:
+  DETEKT_VERSION: 1.23.8
+  # Hash del `detekt-cli-1.23.8-all.jar` de Maven Central (repo1.maven.org/maven2/io/gitlab/arturbosch/detekt/
+  # detekt-cli/1.23.8/), calculado con sha256sum al descargarlo; su .sha1 publicado coincide. Subir de versión es
+  # un cambio aparte: se recalcula este valor.
+  DETEKT_SHA256: 3afe89a11120303c73c9bdda3d8fe558dd9070a6937d27819ddc04b275381245
+
+jobs:
+  android:
+    name: Ktlint · detekt · Pruebas · Lint · APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v7
+
+      # CLI-1: el contrato que el generador lee en :core:network tiene que ser copia exacta del canónico.
+      - name: Comprobar que el contrato OpenAPI está sincronizado
+        run: bash scripts/sync-openapi.sh --check
+
+      - name: Preparar JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Además de la caché de Gradle, esta acción valida el checksum del wrapper contra los publicados por Gradle.
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      # La imagen del runner trae un SDK de Android, pero no hay garantía de que incluya la plataforma 36 ni las
+      # build-tools que pida AGP 9.4. Se instalan aquí y se aceptan las licencias para que AGP pueda bajar sola
+      # cualquier otra pieza que le falte.
+      - name: Instalar plataforma y build-tools de Android
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${SDKMANAGER}" --licenses > /dev/null
+          "${SDKMANAGER}" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Comprobar el estilo con ktlint
+        working-directory: apps/android
+        run: ./gradlew ktlintCheck
+
+      # detekt 1.23.8 está compilado con Kotlin 2.0 y chocaría con el Kotlin del proyecto como plugin de Gradle: va
+      # por su CLI, con el jar verificado por hash. Sin `--classpath` no hay resolución de tipos (KT-14: ver el
+      # comentario de detekt.yml). La complejidad sale como alerta (peso 0) y no tumba el job.
+      - name: Analizar con detekt
+        run: |
+          JAR="${RUNNER_TEMP}/detekt-cli-${DETEKT_VERSION}-all.jar"
+          curl --fail --silent --show-error --location --output "${JAR}" \
+            "https://repo1.maven.org/maven2/io/gitlab/arturbosch/detekt/detekt-cli/${DETEKT_VERSION}/detekt-cli-${DETEKT_VERSION}-all.jar"
+          echo "${DETEKT_SHA256}  ${JAR}" | sha256sum --check -
+          java -jar "${JAR}" \
+            --config apps/android/config/detekt/detekt.yml \
+            --build-upon-default-config \
+            --input apps/android \
+            --excludes '**/build/**'
+
+      # KT-6 pide `!!` como error. La regla de detekt que lo detecta necesita resolución de tipos (ver detekt.yml),
+      # así que se comprueba aquí con grep sobre las fuentes propias (lo generado vive en build/ y no entra).
+      - name: Prohibir el operador !!
+        run: |
+          if grep -rn --include='*.kt' --exclude-dir=build '!!' apps/android; then
+            echo "::error::Hay usos de !! (KT-6). Usa un manejo explícito del null."
+            exit 1
+          fi
+
+      - name: Pruebas unitarias
+        working-directory: apps/android
+        run: ./gradlew :core:network:test :customer:testDevDebugUnitTest
+
+      - name: Android Lint
+        working-directory: apps/android
+        run: ./gradlew :customer:lintDevDebug :core:designsystem:lintDebug
+
+      - name: Construir el APK dev debug
+        working-directory: apps/android
+        run: ./gradlew :customer:assembleDevDebug -PversionCode=${{ github.run_number }}
+
+      - name: Subir el APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: tindivo-customer-dev-debug-${{ github.run_number }}
+          path: apps/android/customer/build/outputs/apk/dev/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Subir los informes si algo falló
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-informes-${{ github.run_number }}
+          path: |
+            apps/android/**/build/reports/tests/
+            apps/android/**/build/reports/lint-results-*.html
+            apps/android/**/build/reports/lint-results-*.xml
+            apps/android/**/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14

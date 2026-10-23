@@ -4,3 +4,5 @@ root = true
 ktlint_code_style = ktlint_official
 indent_size = 4
 max_line_length = 120
+# Los @Composable se nombran en PascalCase, como pide Compose.
+ktlint_function_naming_ignore_when_annotated_with = Composable

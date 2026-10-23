@@ -1,6 +1,19 @@
-# Umbrales de KT-14, alineados con TS-3. Es mínima sobre la configuración por defecto (buildUponDefaultConfig).
+# Configuración de detekt 1.23.8 para apps/android (KT-14). Se usa sobre la de fábrica (--build-upon-default-config).
+#
+# KT-14 pide los umbrales de complejidad (archivo 300, función 80, complejidad 15, alineados con TS-3) como ALERTA
+# y `!!` como ERROR. detekt no tiene severidad por regla en el job: cuenta incidencias contra `maxIssues`. Con
+# `weights` cada incidencia pesa lo que diga su regla o su conjunto (por defecto 1): peso 0 = se reporta pero no
+# suma, así que no tumba el job; lo demás (incluido `UnsafeCallOnNullableType`, que es el `!!`) pesa 1 y, con
+# `maxIssues: 0`, sí lo tumba.
+#
+# Ojo: `UnsafeCallOnNullableType` necesita resolución de tipos, y la CLI sin el classpath compilado de Android no la
+# tiene (medido: sin ella no reporta ni un `!!`; con solo el stdlib como classpath reporta falsos positivos de
+# `UnreachableCode`). Por eso android.yml añade un paso con grep que hace fallar el job ante cualquier `!!`; la regla
+# queda activa aquí por si algún día se corre con classpath completo.
 build:
   maxIssues: 0
+  weights:
+    complexity: 0
 
 complexity:
   LargeClass:
@@ -12,11 +25,42 @@ complexity:
   CyclomaticComplexMethod:
     active: true
     threshold: 15
+  # Un composable con estado y callbacks pasa de seis parámetros sin ser complejo; el resto de `complexity` es alerta.
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    ignoreDefaultParameters: true
 
 style:
+  # ktlint ya impone 120 en el código (.editorconfig) y exime cadenas crudas y comentarios largos; detekt con 120 los
+  # rechazaría. 140 es el tope de ktlint_official y deja a ktlint como autoridad del formato.
+  # Tres `return` por función: el patrón `when` con salida temprana en el error es legible y no es complejidad.
+  ReturnCount:
+    active: true
+    max: 3
+    excludeGuardClauses: true
   MaxLineLength:
     active: true
-    maxLineLength: 120
+    maxLineLength: 140
+  # `16.dp`, `48.dp`: los valores de diseño dentro de un composable son la forma normal de Compose.
+  MagicNumber:
+    active: true
+    ignoreAnnotated:
+      - 'Composable'
+      - 'Preview'
+
+  # Los `@Preview` son privados y los llama Android Studio, no el código.
+  UnusedPrivateMember:
+    active: true
+    ignoreAnnotated:
+      - 'Preview'
+
+naming:
+  # Los composables se escriben en PascalCase por convención de Compose.
+  FunctionNaming:
+    active: true
+    ignoreAnnotated:
+      - 'Composable'
 
 potential-bugs:
   UnsafeCallOnNullableType:
