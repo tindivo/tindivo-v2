@@ -11,6 +11,7 @@
       "**",
       "!**/database.types.ts",
       "!packages/contracts/openapi",
+      "!apps/android",
       "!**/brand-assets.ts",
       "!**/next-env.d.ts",
       "!**/*.css",
