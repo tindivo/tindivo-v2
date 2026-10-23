@@ -62,7 +62,7 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 ### DA-12 · Identificadores de las apps
 
 - 2026-10-12 · Bloquea: antes de crear los proyectos nativos · Irreversible · Detectó: Claude
-- **Contexto**: el bundle ID de iOS y el `applicationId` de Android no se pueden cambiar después de publicar.
+- **Contexto**: el bundle ID de iOS y el `applicationId` de Android no se pueden cambiar después de publicar. **Android ya está decidido** (Jesús, 2026-10-22: `com.tindivo.customer`, con `.dev` en el sabor de staging; `Docs/arquitectura/estandares/kotlin.md`); queda el bundle ID de iOS.
 - **Recomendación**: el dominio de la marca invertido + `.customer`: `com.tindivo.customer`, porque el dominio es `tindivo.com`.
 
 ### DA-14 · Procedimiento de incidentes (OPS-9)

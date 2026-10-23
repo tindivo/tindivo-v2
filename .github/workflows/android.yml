@@ -1,0 +1,162 @@
+name: Android
+
+on:
+  pull_request:
+    paths:
+      - 'apps/android/**'
+      - 'packages/contracts/openapi/v1.json'
+      - 'scripts/sync-openapi.sh'
+      - 'scripts/android-check-manifest.py'
+      - '.github/workflows/android.yml'
+  push:
+    branches: [develop]
+    paths:
+      - 'apps/android/**'
+      - 'packages/contracts/openapi/v1.json'
+      - 'scripts/sync-openapi.sh'
+      - 'scripts/android-check-manifest.py'
+      - '.github/workflows/android.yml'
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+# Sin secretos y con permisos de solo lectura: este job compila y prueba, no firma ni publica (KT-15: la firma llega
+# con Play App Signing y la CI solo construye `devDebug`).
+permissions:
+  contents: read
+
+# El runner va fijado a `ubuntu-24.04` por la misma razón que en ci.yml: una imagen nueva no puede cambiar el resultado
+# sin un commit que lo diga. Las versiones de AGP, Kotlin y Gradle viven en apps/android/gradle/libs.versions.toml y en
+# el wrapper; aquí solo se fijan JDK, acciones y las CLI de ktlint y detekt.
+#
+# Qué se verifica y en qué se confía (CAX-005): las acciones van fijadas por SHA completo (una etiqueta se puede mover;
+# subir una es un cambio aparte); el wrapper de Gradle lo valida setup-gradle contra los checksums de Gradle y la
+# distribución, el `distributionSha256Sum`; los jars de ktlint y detekt, su sha256 de aquí. Las dependencias de Gradle
+# (AGP, Kotlin, AndroidX, OkHttp…) llegan por HTTPS desde Google Maven, Maven Central y el portal de plugins de Gradle,
+# con la versión exacta del catálogo, pero SIN verificación de dependencias de Gradle (verification-metadata.xml): ahí
+# se confía en esos repositorios. Es el límite aceptado para un APK de depuración que no sale de la CI.
+env:
+  DETEKT_VERSION: 1.23.8
+  # Hash del `detekt-cli-1.23.8-all.jar` de Maven Central (repo1.maven.org/maven2/io/gitlab/arturbosch/detekt/
+  # detekt-cli/1.23.8/), calculado con sha256sum al descargarlo; su .sha1 publicado coincide. Subir de versión es
+  # un cambio aparte: se recalcula este valor.
+  DETEKT_SHA256: 3afe89a11120303c73c9bdda3d8fe558dd9070a6937d27819ddc04b275381245
+  # El mismo ktlint que fija libs.versions.toml. Hash del `ktlint-cli-1.8.0-all.jar` de Maven Central
+  # (repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/1.8.0/), calculado al descargarlo; su .sha1 publicado
+  # coincide.
+  KTLINT_VERSION: 1.8.0
+  KTLINT_SHA256: 369ad2b789f95a011f807e1fcb690ccef80bd7cd014fd139e73ae82dcc0baeab
+
+jobs:
+  android:
+    name: Ktlint · detekt · Pruebas · Lint · APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # CLI-1: el contrato que el generador lee en :core:network tiene que ser copia exacta del canónico.
+      - name: Comprobar que el contrato OpenAPI está sincronizado
+        run: bash scripts/sync-openapi.sh --check
+
+      - name: Preparar JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Además de la caché de Gradle, esta acción valida el checksum del wrapper contra los publicados por Gradle.
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
+      # La imagen del runner trae un SDK de Android, pero no hay garantía de que incluya la plataforma 37 (compileSdk)
+      # ni las build-tools que pida AGP 9.4. Se aceptan las licencias para que AGP baje sola lo que le falte, y se
+      # deja en el log qué plataformas quedaron instaladas.
+      - name: Preparar el SDK de Android
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${SDKMANAGER}" --licenses > /dev/null
+          "${SDKMANAGER}" --list_installed | grep -E 'platforms;|build-tools;' || true
+
+      # ktlint va por su CLI, con el jar verificado por hash: el plugin de Gradle (14.2.0) no ve las fuentes del Kotlin
+      # integrado de AGP 9, y en :customer y :core:designsystem su ktlintCheck pasaba sin revisar nada (medido en la
+      # CI del PR #78). El plugin se queda para `ktlintFormat` en local.
+      - name: Comprobar el estilo con ktlint
+        working-directory: apps/android
+        run: |
+          JAR="${RUNNER_TEMP}/ktlint-cli-${KTLINT_VERSION}-all.jar"
+          curl --fail --silent --show-error --location --output "${JAR}" \
+            "https://repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/${KTLINT_VERSION}/ktlint-cli-${KTLINT_VERSION}-all.jar"
+          echo "${KTLINT_SHA256}  ${JAR}" | sha256sum --check -
+          java -jar "${JAR}" --relative '**/src/**/*.kt' '**/*.kts' '!**/build/**'
+
+      # detekt 1.23.8 está compilado con Kotlin 2.0 y chocaría con el Kotlin del proyecto como plugin de Gradle: va
+      # por su CLI, con el jar verificado por hash. Sin `--classpath` no hay resolución de tipos (KT-14: ver el
+      # comentario de detekt.yml). La complejidad sale como alerta (peso 0) y no tumba el job.
+      - name: Analizar con detekt
+        run: |
+          JAR="${RUNNER_TEMP}/detekt-cli-${DETEKT_VERSION}-all.jar"
+          curl --fail --silent --show-error --location --output "${JAR}" \
+            "https://repo1.maven.org/maven2/io/gitlab/arturbosch/detekt/detekt-cli/${DETEKT_VERSION}/detekt-cli-${DETEKT_VERSION}-all.jar"
+          echo "${DETEKT_SHA256}  ${JAR}" | sha256sum --check -
+          java -jar "${JAR}" \
+            --config apps/android/config/detekt/detekt.yml \
+            --build-upon-default-config \
+            --input apps/android \
+            --excludes '**/build/**'
+
+      # KT-6 pide `!!` como error. La regla de detekt que lo detecta necesita resolución de tipos (ver detekt.yml),
+      # así que se comprueba aquí con grep sobre las fuentes propias (lo generado vive en build/ y no entra).
+      - name: Prohibir el operador !!
+        run: |
+          if grep -rn --include='*.kt' --exclude-dir=build '!!' apps/android; then
+            echo "::error::Hay usos de !! (KT-6). Usa un manejo explícito del null."
+            exit 1
+          fi
+
+      - name: Pruebas unitarias
+        working-directory: apps/android
+        run: ./gradlew :core:network:test :customer:testDevDebugUnitTest
+
+      - name: Android Lint
+        working-directory: apps/android
+        run: ./gradlew :customer:lintDevDebug :core:designsystem:lintDebug
+
+      - name: Construir el APK dev debug
+        working-directory: apps/android
+        run: ./gradlew :customer:assembleDevDebug -PversionCode=${{ github.run_number }}
+
+      # CAX-006: el manifiesto que cuenta es el del APK (fusionado con el de las librerías), no el fuente. Se vuelca del
+      # propio APK, se compara con la lista permitida y queda junto al APK, con los hashes de los dos en el log.
+      - name: Comprobar el manifiesto final del APK
+        run: |
+          APK=$(ls apps/android/customer/build/outputs/apk/dev/debug/*.apk)
+          OUT=apps/android/customer/build/outputs/apk/dev/debug/AndroidManifest-final.xml
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/apkanalyzer" manifest print "${APK}" > "${OUT}"
+          sha256sum "${APK}" "${OUT}"
+          python3 scripts/android-check-manifest.py "${OUT}" com.tindivo.customer.dev
+
+      - name: Subir el APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tindivo-customer-dev-debug-${{ github.run_number }}
+          path: |
+            apps/android/customer/build/outputs/apk/dev/debug/*.apk
+            apps/android/customer/build/outputs/apk/dev/debug/AndroidManifest-final.xml
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Subir los informes si algo falló
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-informes-${{ github.run_number }}
+          path: |
+            apps/android/**/build/reports/tests/
+            apps/android/**/build/reports/lint-results-*.html
+            apps/android/**/build/reports/lint-results-*.xml
+            apps/android/**/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
