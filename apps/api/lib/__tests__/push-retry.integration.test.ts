@@ -15,7 +15,7 @@
  */
 import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { type Row, type RowStore, SettingsSnapshot } from './helpers/settings-snapshot'
 
 const CONTAINER = 'supabase_db_zpnipajgwfthxhdtzhly'
@@ -562,10 +562,38 @@ insert into public.app_settings (key, value) values ('push_claim_since', to_json
     if (problemas.length > 0) throw new Error(problemas.join('\n'))
   })
 
+  // Las pruebas de este bloque usan sesiones reales (sin transacción que revertir), así que no pueden dar por
+  // terminados los eventos de OTRAS pruebas como hace `config()`. En la CI, los archivos que corren justo antes
+  // dejan eventos pendientes dentro de la ventana del cron, y `retry_push_dispatch` los cuenta. Se aíslan igual
+  // que en `config()`, pero a mano: se marcan como terminados antes de cada prueba y se restauran después.
+  let ajenos: string[] = []
+  const aislarAjenos = () => {
+    const out = psql(`
+with t as (
+  update public.domain_events set push_done_at = now()
+   where push_done_at is null and push_dead_at is null
+     and id::text not like '00000000-0000-4000-8000-0000000072%'
+  returning id
+) select coalesce(string_agg(id::text, ','), '') from t;`).trim()
+    ajenos = out === '' ? [] : out.split(',')
+  }
+  const restaurarAjenos = () => {
+    if (ajenos.length === 0) return
+    psql(
+      `update public.domain_events set push_done_at = null where id in (${ajenos.map((a) => `'${a}'`).join(',')});`,
+    )
+    ajenos = []
+  }
+
   beforeEach(() => {
     limpiarEventos()
+    aislarAjenos()
     // Sin URL el trigger no llama a nadie al insertar eventos de la prueba.
     psql(`delete from public.app_settings where key = 'push_dispatch';`)
+  })
+
+  afterEach(() => {
+    restaurarAjenos()
   })
 
   /** Enciende el cron con una `since` cercana (solo ve eventos de los últimos `desdeSeg` s) y una URL muerta. */
