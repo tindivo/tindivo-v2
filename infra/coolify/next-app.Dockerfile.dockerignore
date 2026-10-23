@@ -1,19 +1,37 @@
+# Lista PERMITIDA: el contexto de build solo lleva lo que el build necesita. Todo lo demás queda fuera, también lo que
+# aparezca mañana en la raíz del checkout (carpetas de agentes, credenciales, volcados, `supabase/`, `scripts/`…).
+*
+!apps/
+!packages/
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!turbo.json
+!.npmrc
+!tsconfig.base.json
+
+# Y dentro de lo permitido, nada que pueda ser un secreto o un resto local. Ningún archivo versionado de apps/ o
+# packages/ casa con estos patrones (comprobado con `git ls-files`): si alguno llegara a hacerlo, el build lo diría.
 **/node_modules
 **/.next
 **/.turbo
 **/.vercel
 **/.env
 **/.env.*
-!**/.env.example
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.keystore
+**/*.jks
+**/secret*
+**/secrets*
+**/credential*
+**/.claude
+**/.agents
+**/.codex
 **/*.log
-.git
-.github
-.claude
-Docs
-e2e
-scratch
-trabajo
-supabase/.temp
-coverage
-playwright-report
-test-results
+**/coverage
+**/test-results
+**/playwright-report
+apps/android

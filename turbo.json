@@ -35,7 +35,11 @@
         "TWILIO_VERIFY_SERVICE_SID",
         "OTP_PHONE_HMAC_SECRET",
         "UPSTASH_REDIS_REST_URL",
-        "UPSTASH_REDIS_REST_TOKEN"
+        "UPSTASH_REDIS_REST_TOKEN",
+        "TINDIVO_NEXT_STANDALONE",
+        "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+        "NEXT_PUBLIC_CARTO_API_KEY",
+        "NEXT_PUBLIC_SENTRY_DSN"
       ],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
