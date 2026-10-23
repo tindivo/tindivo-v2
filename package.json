@@ -29,6 +29,7 @@
     "db:cycle": "node scripts/db-lock.mjs cycle",
     "db:lock": "node scripts/db-lock.mjs",
     "db:seed:e2e": "node apps/api/scripts/seed-e2e.ts",
+    "db:seed:staging": "node apps/api/scripts/seed-staging.ts",
     "db:seed:e2e:clean": "node apps/api/scripts/seed-e2e-clean.ts",
     "db:seed:review": "node apps/api/scripts/seed-review-account.ts",
     "db:seed:review:clean": "node apps/api/scripts/seed-review-account.ts --clean",
