@@ -36,6 +36,8 @@
 | `pnpm test` verde en ~200 ms con `Cached: 9 cached, 9 total` y `>>> FULL TURBO` | [Turbo cachea los tests de integración](#turbo-cachea-los-tests-de-integración) |
 | El job `db-types-drift` rojo, o `database.types.ts` con +4/−28 líneas sin cambio de esquema | [db-types-drift es de versión del CLI](#db-types-drift-es-de-versión-del-cli) |
 | Rutas del v2 dan 404 en `api.tindivo.com` | [El dominio real de la API v2](#el-dominio-real-de-la-api-v2) |
+| Vercel no deja fijar una rama como de producción: «Cannot set Git branch "develop" as Production Branch, because it's used for Preview Environment Variables» | [Una variable de Preview con rama bloquea esa rama en producción](#una-variable-de-preview-con-rama-bloquea-esa-rama-en-producción) |
+| La API de staging da 500/422 o rompe tras un push a `develop` | [Deploy, §10: cada push a develop redespliega staging](deploy.md#10-staging-tindivo-dev-tú) |
 | El PDF de producción pierde la tipografía y los emoji salen como cuadrados | [El Chromium serverless solo trae Open Sans](#el-chromium-serverless-solo-trae-open-sans) |
 | En Windows `spawn ... ENOENT` al renderizar el PDF; el dev server del 3001 no responde tras tocar `next.config.ts` | [La rama de producción del PDF no se puede probar en Windows](#la-rama-de-producción-del-pdf-no-se-puede-probar-en-windows) |
 | Una pantalla tarda ~500 ms más de lo esperado por llamar a la API | [El salto a la API cuesta medio segundo](#el-salto-a-la-api-cuesta-medio-segundo) |
@@ -289,6 +291,20 @@ for c in $(grep -oE '/_next/static/chunks/[a-zA-Z0-9_.-]+\.js' /tmp/n.html | sor
 done | sort -u
 ```
 Calibra antes de concluir: `/api/v1/health` da 200 sin auth y `/api/v1/business/profile` da 401. Si una ruta que existe te da 404, no es que falte: estás llamando al host equivocado.
+
+### Una variable de Preview con rama bloquea esa rama en producción
+**Síntoma:** en un proyecto de Vercel recién creado (la rama de producción nace como `main`), al cambiarla a `develop`
+sale «Cannot set Git branch "develop" as Production Branch, because it's used for Preview Environment Variables …».
+Antes de eso, `Create Deployment` de `develop` sale como *Preview* y el dominio de producción sigue sirviendo el
+despliegue de `main`, que no ve las variables (la API respondía 422 nombrando las que faltaban).
+**Causa:** (medido el 2026-10-22, proyecto `tindivo-api-staging`) las variables se habían creado en *Preview*
+restringidas a la rama `develop`. Vercel no deja que una rama sea a la vez la de producción y la de variables de
+Preview, y al editar una variable con rama no deja pasarla a *Production* («Environment Variables with `gitBranch` can
+only be used with `target=preview`»).
+**Qué hacer:** borra esas variables y créalas de nuevo **solo en Production**; luego *Branch Tracking* → `develop` →
+*Save*, y `Create Deployment` de `develop` (debe salir con la etiqueta *Production*). Cambiar la rama no despliega nada
+por sí solo, y las variables solo llegan a despliegues nuevos. Detalle de staging en
+[deploy.md §10](deploy.md#10-staging-tindivo-dev-tú).
 
 ### El Chromium serverless solo trae Open Sans
 **Síntoma:** cualquier PDF renderizado en producción pierde su tipografía, las columnas de dinero pierden la alineación tabular, y los emoji y glifos de símbolos (`▲` U+25B2, `→` U+2192) salen como cuadrados. En local no se ve.
