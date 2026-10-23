@@ -2,7 +2,9 @@
 
 > Verificado: 2026-10-12 · entorno: `develop@591ec569` · Parte de `Docs/arquitectura/estandares/` (niveles y excepciones: `README.md`)
 
-Aplica a `apps/customer-android/`. Las reglas comunes a iOS y Android (CLI) y las transversales están en `README.md`. Plan del producto: `Docs/planes/movil/`.
+Aplica a `apps/android/`, un solo proyecto Gradle para las apps Android (D-14, decidida por Jesús el 2026-10-21). Las reglas comunes a iOS y Android (CLI) y las transversales están en `README.md`. Plan del producto: `Docs/planes/movil/`.
+
+**Reconciliación con D-14** (Jesús, 2026-10-22): el `core` de D-14 se parte como pide KT-2 (`:core:network`, `:core:designsystem`, y los que vengan: sesión, push), y el `:app` de KT-2 se llama como la app: `:customer` ahora; `:negocios` y `:motorizados` serán módulos de aplicación hermanos. Donde este archivo dice `:app`, léase el módulo de la app. `:core:network` es un módulo Kotlin/JVM sin Android (se prueba con el JDK solo); los *bindings* de Hilt viven en el módulo de la app.
 
 ## Reglas
 
@@ -28,11 +30,11 @@ Aplica a `apps/customer-android/`. Las reglas comunes a iOS y Android (CLI) y la
 ## Estructura
 
 ```
-apps/customer-android/
-├── AGENTS.md
+apps/android/
+├── AGENTS.md                  # por crear
 ├── settings.gradle.kts
 ├── gradle/libs.versions.toml
-├── app/src/main/kotlin/<paquete raíz>/
+├── customer/src/main/kotlin/com/tindivo/customer/
 │   ├── TindivoApp.kt          # @HiltAndroidApp; crea los canales de notificación (KT-10)
 │   ├── MainActivity.kt        # una actividad, NavHost
 │   ├── navigation/            # rutas tipadas, DeepLinkRouter
@@ -50,6 +52,13 @@ apps/customer-android/
 ├── core/network/              # contrato copiado, generador, interceptores
 └── core/designsystem/
 ```
+
+## Decisiones aplicadas (Jesús, 2026-10-22)
+
+- **KT-15:** sabor `dev` → API de staging (`https://tindivo-api-staging.vercel.app/api/v1`); sabor `prod` → `https://apiv2.tindivo.com/api/v1` (DA-02 sigue abierta: la URL vive en `BuildConfig` y se cambia sin tocar código). La variante `prodDebug` no existe: nunca producción en debug. La CI construye `devDebug`.
+- **DA-12 (Android):** `applicationId` `com.tindivo.customer`, con sufijo `.dev` en el sabor `dev` para que las dos convivan en un mismo teléfono. Es irreversible al publicar.
+- **CLI-10 manda** sobre cualquier otro valor de *timeout*: 10 s para conectar y 30 s por petición, con sus reintentos.
+- **KT-16, lista aprobada.** Versiones exactas en `apps/android/gradle/libs.versions.toml`: AGP 9.4.1, Kotlin 2.4.20, KSP 2.3.12, Compose BOM 2026.09.00 (Material 3), activity-compose 1.13.0, lifecycle 2.11.0, core-ktx 1.19.1, Navigation Compose 2.10.2, Hilt 2.60.1, hilt-navigation-compose 1.4.0, OkHttp y mockwebserver3 5.5.0, kotlinx.serialization 1.11.0, kotlinx.coroutines 1.11.0, el plugin de OpenAPI Generator 7.25.0, ktlint 1.8.0 (plugin de Gradle 14.2.0), detekt 1.23.8 (por CLI en la CI) y JUnit 4.13.2; JDK 21 y Gradle 9.8.1. Tink, DataStore, Firebase y la herramienta de *crashes* se piden cuando entren.
 
 ## Ejemplo: ViewModel (KT-3, KT-5, KT-6)
 
