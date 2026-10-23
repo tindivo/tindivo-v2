@@ -5,7 +5,8 @@ plugins {
 
 android {
     namespace = "com.tindivo.core.designsystem"
-    compileSdk = 36
+    // KT-1: compileSdk ≥ targetSdk. Compose 1.12, core 1.19 y lifecycle 2.11 exigen compilar contra la API 37.
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26

@@ -8,7 +8,9 @@ plugins {
 
 android {
     namespace = "com.tindivo.customer"
-    compileSdk = 36
+    // KT-1: compileSdk ≥ targetSdk. Compose 1.12, core 1.19 y lifecycle 2.11 exigen compilar contra la API 37; el
+    // targetSdk sigue en 36, el que exige Google Play.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.tindivo.customer"

@@ -57,6 +57,7 @@ apps/android/
 
 - **KT-15:** sabor `dev` → API de staging (`https://tindivo-api-staging.vercel.app/api/v1`); sabor `prod` → `https://apiv2.tindivo.com/api/v1` (DA-02 sigue abierta: la URL vive en `BuildConfig` y se cambia sin tocar código). La variante `prodDebug` no existe: nunca producción en debug. La CI construye `devDebug`.
 - **DA-12 (Android):** `applicationId` `com.tindivo.customer`, con sufijo `.dev` en el sabor `dev` para que las dos convivan en un mismo teléfono. Es irreversible al publicar.
+- **KT-1:** `targetSdk` 36 y `compileSdk` 37, porque Compose 1.12, core 1.19 y lifecycle 2.11 exigen compilar contra la API 37 (medido en la CI del PR #78).
 - **CLI-10 manda** sobre cualquier otro valor de *timeout*: 10 s para conectar y 30 s por petición, con sus reintentos.
 - **KT-16, lista aprobada.** Versiones exactas en `apps/android/gradle/libs.versions.toml`: AGP 9.4.1, Kotlin 2.4.20, KSP 2.3.12, Compose BOM 2026.09.00 (Material 3), activity-compose 1.13.0, lifecycle 2.11.0, core-ktx 1.19.1, Navigation Compose 2.10.2, Hilt 2.60.1, hilt-navigation-compose 1.4.0, OkHttp y mockwebserver3 5.5.0, kotlinx.serialization 1.11.0, kotlinx.coroutines 1.11.0, el plugin de OpenAPI Generator 7.25.0, ktlint 1.8.0 (plugin de Gradle 14.2.0), detekt 1.23.8 (por CLI en la CI) y JUnit 4.13.2; JDK 21 y Gradle 9.8.1. Tink, DataStore, Firebase y la herramienta de *crashes* se piden cuando entren.
 

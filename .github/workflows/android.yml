@@ -57,14 +57,14 @@ jobs:
       - name: Preparar Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      # La imagen del runner trae un SDK de Android, pero no hay garantía de que incluya la plataforma 36 ni las
-      # build-tools que pida AGP 9.4. Se instalan aquí y se aceptan las licencias para que AGP pueda bajar sola
-      # cualquier otra pieza que le falte.
-      - name: Instalar plataforma y build-tools de Android
+      # La imagen del runner trae un SDK de Android, pero no hay garantía de que incluya la plataforma 37 (compileSdk)
+      # ni las build-tools que pida AGP 9.4. Se aceptan las licencias para que AGP baje sola lo que le falte, y se
+      # deja en el log qué plataformas quedaron instaladas.
+      - name: Preparar el SDK de Android
         run: |
           SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           yes | "${SDKMANAGER}" --licenses > /dev/null
-          "${SDKMANAGER}" "platforms;android-36" "build-tools;36.0.0"
+          "${SDKMANAGER}" --list_installed | grep -E 'platforms;|build-tools;' || true
 
       - name: Comprobar el estilo con ktlint
         working-directory: apps/android
