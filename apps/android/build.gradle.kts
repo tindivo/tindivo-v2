@@ -14,7 +14,10 @@ subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
     extensions.configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
-        version.set(rootProject.libs.versions.ktlint.get())
+        version.set(
+            rootProject.libs.versions.ktlint
+                .get(),
+        )
         filter {
             // El código que genera OpenAPI Generator no se versiona ni se formatea.
             exclude { it.file.path.contains("generated") }

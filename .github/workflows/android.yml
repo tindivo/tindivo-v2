@@ -33,6 +33,11 @@ env:
   # detekt-cli/1.23.8/), calculado con sha256sum al descargarlo; su .sha1 publicado coincide. Subir de versión es
   # un cambio aparte: se recalcula este valor.
   DETEKT_SHA256: 3afe89a11120303c73c9bdda3d8fe558dd9070a6937d27819ddc04b275381245
+  # El mismo ktlint que fija libs.versions.toml. Hash del `ktlint-cli-1.8.0-all.jar` de Maven Central
+  # (repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/1.8.0/), calculado al descargarlo; su .sha1 publicado
+  # coincide.
+  KTLINT_VERSION: 1.8.0
+  KTLINT_SHA256: 369ad2b789f95a011f807e1fcb690ccef80bd7cd014fd139e73ae82dcc0baeab
 
 jobs:
   android:
@@ -66,9 +71,17 @@ jobs:
           yes | "${SDKMANAGER}" --licenses > /dev/null
           "${SDKMANAGER}" --list_installed | grep -E 'platforms;|build-tools;' || true
 
+      # ktlint va por su CLI, con el jar verificado por hash: el plugin de Gradle (14.2.0) no ve las fuentes del Kotlin
+      # integrado de AGP 9, y en :customer y :core:designsystem su ktlintCheck pasaba sin revisar nada (medido en la
+      # CI del PR #78). El plugin se queda para `ktlintFormat` en local.
       - name: Comprobar el estilo con ktlint
         working-directory: apps/android
-        run: ./gradlew ktlintCheck
+        run: |
+          JAR="${RUNNER_TEMP}/ktlint-cli-${KTLINT_VERSION}-all.jar"
+          curl --fail --silent --show-error --location --output "${JAR}" \
+            "https://repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/${KTLINT_VERSION}/ktlint-cli-${KTLINT_VERSION}-all.jar"
+          echo "${KTLINT_SHA256}  ${JAR}" | sha256sum --check -
+          java -jar "${JAR}" --relative '**/src/**/*.kt' '**/*.kts' '!**/build/**'
 
       # detekt 1.23.8 está compilado con Kotlin 2.0 y chocaría con el Kotlin del proyecto como plugin de Gradle: va
       # por su CLI, con el jar verificado por hash. Sin `--classpath` no hay resolución de tipos (KT-14: ver el
