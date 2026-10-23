@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Solo cubre el arranque: la UI real la pinta TindivoTheme de :core:designsystem. -->
+    <style name="Theme.Tindivo" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
