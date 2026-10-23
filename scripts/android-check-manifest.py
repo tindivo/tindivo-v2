@@ -50,15 +50,25 @@ for kind in ("activity", "activity-alias", "service", "receiver", "provider"):
         if (name, c.get(f"{A}permission")) in system_guarded:
             continue
         errors.append(f"componente exportado no permitido: {kind} {name} (permission={c.get(f'{A}permission')})")
+
+# Filtros, aparte de la exportación y en TODOS los componentes, permitidos o no (CAX-007): la app no admite enlaces
+# entrantes, así que ningún filtro puede tener VIEW, BROWSABLE ni <data>. Y el lanzador solo tiene MAIN + LAUNCHER.
+for kind in ("activity", "activity-alias", "service", "receiver", "provider"):
+    for c in app.iter(kind):
+        name = c.get(f"{A}name")
         for f in c.iter("intent-filter"):
             actions = {a.get(f"{A}name") for a in f.iter("action")}
+            cats = {x.get(f"{A}name") for x in f.iter("category")}
             if "android.intent.action.VIEW" in actions:
-                errors.append(f"enlace entrante declarado en {name}")
-
-for f in app.iter("intent-filter"):
-    cats = {c.get(f"{A}name") for c in f.iter("category")}
-    if "android.intent.category.BROWSABLE" in cats:
-        errors.append("intent-filter BROWSABLE: la app no admite enlaces entrantes en este PR")
+                errors.append(f"filtro con VIEW (enlace entrante) en {kind} {name}")
+            if "android.intent.category.BROWSABLE" in cats:
+                errors.append(f"filtro BROWSABLE en {kind} {name}")
+            if f.find("data") is not None:
+                errors.append(f"filtro con <data> en {kind} {name}")
+            if kind == "activity" and name == launcher and (
+                actions != {"android.intent.action.MAIN"} or cats != {"android.intent.category.LAUNCHER"}
+            ):
+                errors.append(f"el lanzador tiene un filtro distinto de MAIN + LAUNCHER: {sorted(actions | cats)}")
 
 if app.get(f"{A}usesCleartextTraffic") not in ("false", "0x0"):
     errors.append(f"usesCleartextTraffic={app.get(f'{A}usesCleartextTraffic')} (debe ser false)")
