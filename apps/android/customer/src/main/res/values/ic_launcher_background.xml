@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Marcador mínimo: el logo de marca (vectorial) llega en otro PR. -->
+    <color name="ic_launcher_background">#FF6B00</color>
+</resources>

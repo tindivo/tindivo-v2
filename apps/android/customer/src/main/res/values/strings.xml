@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tindivo</string>
+
+    <string name="diagnostics_title">Diagnóstico</string>
+    <string name="diagnostics_loading">Cargando</string>
+    <string name="diagnostics_retry">Reintentar</string>
+    <string name="diagnostics_health_status">Estado</string>
+    <string name="diagnostics_health_service">Servicio</string>
+    <string name="diagnostics_health_version">Versión de la API</string>
+    <string name="diagnostics_health_time">Hora (salud)</string>
+    <string name="diagnostics_config_min_app_version">Versión mínima de la app</string>
+    <string name="diagnostics_config_min_os">Android mínimo (API)</string>
+    <string name="diagnostics_config_api_version">Versión del contrato</string>
+    <string name="diagnostics_config_server_time">Hora del servidor</string>
+
+    <string name="error_network">Sin conexión. Revisa tu internet e inténtalo de nuevo.</string>
+    <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
+    <string name="error_code">Código: %1$s</string>
+
+    <string name="update_title">Actualiza la app</string>
+    <string name="update_message">Hay una versión nueva de Tindivo y necesitas instalarla para seguir usando la app.</string>
+    <string name="update_min_version">Versión mínima: %1$s</string>
+    <string name="update_open_store">Ir a la tienda</string>
+    <string name="update_store_unavailable">No se pudo abrir la tienda.</string>
+</resources>

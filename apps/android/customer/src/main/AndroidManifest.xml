@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- usesCleartextTraffic en false de forma explícita: en API 26-27 el valor por defecto permitiría HTTP. -->
+    <application
+        android:name=".TindivoApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Tindivo"
+        android:usesCleartextTraffic="false">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ui-tooling (debugImplementation) añade esta actividad EXPORTADA y sin permiso: cualquier app del teléfono
+             podría lanzarla y pedirle que dibuje un composable por reflexión. Se quita del manifiesto fusionado; las
+             vistas previas del editor siguen funcionando (lo detectó la comprobación del manifiesto final del APK). -->
+        <activity
+            android:name="androidx.compose.ui.tooling.PreviewActivity"
+            tools:node="remove" />
+    </application>
+
+</manifest>
