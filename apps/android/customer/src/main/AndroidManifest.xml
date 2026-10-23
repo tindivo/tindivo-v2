@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -20,6 +21,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ui-tooling (debugImplementation) añade esta actividad EXPORTADA y sin permiso: cualquier app del teléfono
+             podría lanzarla y pedirle que dibuje un composable por reflexión. Se quita del manifiesto fusionado; las
+             vistas previas del editor siguen funcionando (lo detectó la comprobación del manifiesto final del APK). -->
+        <activity
+            android:name="androidx.compose.ui.tooling.PreviewActivity"
+            tools:node="remove" />
     </application>
 
 </manifest>
