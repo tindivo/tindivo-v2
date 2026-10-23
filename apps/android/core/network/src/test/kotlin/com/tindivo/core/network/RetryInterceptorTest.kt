@@ -13,6 +13,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 
 class RetryInterceptorTest {
@@ -32,8 +35,9 @@ class RetryInterceptorTest {
     private fun client(random: Random = Random(7)) =
         OkHttpClient
             .Builder()
-            .addInterceptor(RetryInterceptor(sleeper = { waits += it }, random = random))
-            .build()
+            .addInterceptor(
+                RetryInterceptor(sleeper = { millis, _ -> waits += millis }, random = random, clock = { NOW }),
+            ).build()
 
     private fun get() = client().newCall(Request.Builder().url(server.url("/x")).build()).execute()
 
@@ -131,15 +135,83 @@ class RetryInterceptorTest {
         assertTrue(waits.isEmpty())
     }
 
-    @Test
-    fun `un Retry-After en formato fecha se ignora y se usa la espera exponencial`() {
+    private fun httpDate(offsetMillis: Long) =
+        DateTimeFormatter.RFC_1123_DATE_TIME.format(Instant.ofEpochMilli(NOW + offsetMillis).atOffset(ZoneOffset.UTC))
+
+    private fun enqueueRetryAfter(value: String) {
         server.enqueue(
             MockResponse
                 .Builder()
-                .code(503)
-                .addHeader("Retry-After", "Wed, 21 Oct 2026 07:28:00 GMT")
+                .code(429)
+                .addHeader("Retry-After", value)
                 .build(),
         )
+    }
+
+    @Test
+    fun `un Retry-After en fecha 2 s en el futuro espera 2000 ms`() {
+        enqueueRetryAfter(httpDate(2_000))
+        server.enqueue(MockResponse(code = 200))
+
+        get().use { assertEquals(200, it.code) }
+
+        assertEquals(listOf(2000L), waits)
+    }
+
+    @Test
+    fun `un Retry-After en fecha 11 s en el futuro no se espera y devuelve el 429`() {
+        enqueueRetryAfter(httpDate(11_000))
+
+        get().use { assertEquals(429, it.code) }
+
+        assertEquals(1, server.requestCount)
+        assertTrue(waits.isEmpty())
+    }
+
+    @Test
+    fun `un Retry-After en fecha pasada espera 0 y reintenta`() {
+        enqueueRetryAfter(httpDate(-60_000))
+        server.enqueue(MockResponse(code = 200))
+
+        get().use { assertEquals(200, it.code) }
+
+        assertEquals(listOf(0L), waits)
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `un Retry-After de 10 espera 10000 ms y reintenta`() {
+        enqueueRetryAfter("10")
+        server.enqueue(MockResponse(code = 200))
+
+        get().use { assertEquals(200, it.code) }
+
+        assertEquals(listOf(10_000L), waits)
+    }
+
+    @Test
+    fun `un Retry-After de Long maximo no reintenta ni lanza`() {
+        enqueueRetryAfter("9223372036854775807")
+
+        get().use { assertEquals(429, it.code) }
+
+        assertEquals(1, server.requestCount)
+        assertTrue(waits.isEmpty())
+    }
+
+    @Test
+    fun `un Retry-After que no cabe en Long no reintenta ni lanza`() {
+        enqueueRetryAfter("99999999999999999999999")
+
+        get().use { assertEquals(429, it.code) }
+
+        assertEquals(1, server.requestCount)
+        assertTrue(waits.isEmpty())
+    }
+
+    @Test
+    fun `un Retry-After que es basura usa la espera exponencial`() {
+        enqueueRetryAfter("abc")
         server.enqueue(MockResponse(code = 200))
 
         get().use { assertEquals(200, it.code) }
@@ -193,5 +265,9 @@ class RetryInterceptorTest {
         assertThrows(IOException::class.java) { get() }
 
         assertEquals(3, server.requestCount)
+    }
+
+    private companion object {
+        val NOW: Long = Instant.parse("2026-10-21T07:27:50Z").toEpochMilli()
     }
 }

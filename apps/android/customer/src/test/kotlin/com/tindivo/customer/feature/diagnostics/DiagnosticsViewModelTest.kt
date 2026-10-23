@@ -26,7 +26,7 @@ import org.junit.Test
 class DiagnosticsViewModelTest {
     private val server = MockWebServer()
     private val dispatcher = UnconfinedTestDispatcher()
-    private val noSleep = RetryInterceptor(sleeper = {})
+    private val noSleep = RetryInterceptor(sleeper = { _, _ -> })
     private lateinit var repository: SystemRepository
 
     @Before

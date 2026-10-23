@@ -18,7 +18,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SystemRepositoryTest {
     private val server = MockWebServer()
-    private val noSleep = RetryInterceptor(sleeper = {})
+    private val noSleep = RetryInterceptor(sleeper = { _, _ -> })
     private lateinit var repository: SystemRepository
 
     @Before
