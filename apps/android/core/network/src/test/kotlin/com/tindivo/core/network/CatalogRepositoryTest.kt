@@ -96,6 +96,18 @@ class CatalogRepositoryTest {
             assertTrue((repository.businesses() as ApiResult.Failure).error is AppError.Unknown)
         }
 
+    @Test
+    fun `un base_price ilegible tumba la carta como Unknown y nunca llega como precio`() =
+        runTest {
+            for (bad in listOf("\"doce\"", "\"\"", "null", "true", "{}")) {
+                server.enqueue(json(200, BUSINESS_DETAIL.replace("\"base_price\":12.50", "\"base_price\":$bad")))
+
+                val result = repository.business("don-lucho")
+
+                assertTrue("base_price=$bad", result is ApiResult.Failure && result.error is AppError.Unknown)
+            }
+        }
+
     private companion object {
         const val THUMB_URL = "https://x.supabase.co/storage/v1/object/public/menu-items/b/items/i.1-t"
 
