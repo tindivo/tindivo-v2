@@ -283,6 +283,7 @@ console.log(a.join("\n"))' > "$WORK/diffids.txt" \
     rm -f "$plain"
   done
   fix_owner "$WORK/layers"
+  chmod -R u+rwX "$WORK/layers"
   rep "capas declaradas: $N · diffID verificados: $verified · extraídas: $extracted"
   if [ "$verified" -ne "$N" ] || [ "$extracted" -ne "$N" ]; then fail "no todas las capas declaradas se verificaron y extrajeron"; fi
   scan "$WORK/save" "docker save (metadatos y blobs sin extraer)"
