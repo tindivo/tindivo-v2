@@ -64,8 +64,7 @@ class BusinessViewModelTest {
         .body(body)
         .build()
 
-    private fun newViewModel() =
-        BusinessViewModel(SavedStateHandle(mapOf("id" to "don-lucho")), catalog, configService)
+    private fun newViewModel() = BusinessViewModel(SavedStateHandle(mapOf("id" to "don-lucho")), catalog, configService)
 
     private suspend fun BusinessViewModel.settled(): BusinessUiState = state.first { it !is BusinessUiState.Loading }
 

@@ -163,7 +163,11 @@ private fun BusinessLogo(business: BusinessDetailUi) {
         val accent = business.accent?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
         Box(modifier = logoModifier.background(accent), contentAlignment = Alignment.Center) {
             Text(
-                text = business.name.trim().firstOrNull()?.uppercase() ?: "T",
+                text =
+                    business.name
+                        .trim()
+                        .firstOrNull()
+                        ?.uppercase() ?: "T",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,

@@ -22,14 +22,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @param api crea la clase generada (`SystemApi`, `PublicApi`…) sobre la fábrica de llamadas que se le pasa.
  * @param ioDispatcher el de las llamadas bloqueantes; se inyecta (KT-4), nunca va fijo aquí.
  */
-// Una llamada bloqueante no responde a la cancelación de la corrutina: al cancelar se cancela la `Call` de OkHttp, el
-// hilo sale con IOException y `coroutineScope` termina. CancellationException (KT-5) siempre se relanza.
 internal suspend fun <A, T : Any> apiCall(
     client: OkHttpClient,
     ioDispatcher: CoroutineDispatcher,
     api: (Call.Factory) -> A,
     request: (A) -> ApiResponse<T?>,
 ): ApiResult<T> {
+    // Una llamada bloqueante no responde a la cancelación de la corrutina: al cancelar se cancela la `Call` de OkHttp,
+    // el hilo sale con IOException y `coroutineScope` termina. CancellationException (KT-5) siempre se relanza.
     val tracker = CallTracker(client)
     val generated = api(tracker)
     return coroutineScope {

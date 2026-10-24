@@ -76,7 +76,10 @@ class CatalogHomeViewModel
                     _state.value = previous?.copy(refreshing = true, refreshFailed = null) ?: CatalogHomeUiState.Loading
                     _state.value =
                         when (val result = catalog.businesses()) {
-                            is ApiResult.Success -> result.data.toLoaded()
+                            is ApiResult.Success -> {
+                                result.data.toLoaded()
+                            }
+
                             is ApiResult.Failure -> {
                                 reportIfUpgrade(result.error)
                                 previous?.copy(refreshing = false, refreshFailed = result.error)
