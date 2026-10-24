@@ -14,10 +14,13 @@ import com.tindivo.customer.feature.catalog.home.parseAccent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -81,35 +84,39 @@ class BusinessViewModel
         // La ruta tipada `BusinessRoute(id)` guarda el argumento bajo la clave "id".
         private val id: String = checkNotNull(savedStateHandle.get<String>("id"))
 
+        // Con `Loaded`, la carta completa y ya validada; lo que se ve se deriva de ella en [state].
         private val _state = MutableStateFlow<BusinessUiState>(BusinessUiState.Loading)
-        val state: StateFlow<BusinessUiState> = _state.asStateFlow()
 
-        private var loadJob: Job? = null
-
-        // La carta completa (ya validada): lo visible se recalcula de ella cada minuto, sin volver a pedirla.
-        private var complete: BusinessDetailUi? = null
-
-        init {
-            refresh()
-            viewModelScope.launch {
-                while (true) {
-                    delay(RECHECK_MILLIS)
-                    republish()
-                }
-            }
-        }
-
-        /** Re-evalúa las franjas contra el reloj: a las 15:00 desaparece el plato de mediodía sin recargar. */
-        private fun republish() {
-            val full = complete ?: return
-            _state.update { current ->
+        /**
+         * Lo que pinta la pantalla: la carta de la carga vigente, filtrada por franja contra el reloj de cada minuto
+         * (a las 15:00 desaparece el plato de mediodía sin recargar). El reloj solo corre mientras alguien mira.
+         */
+        val state: StateFlow<BusinessUiState> =
+            combine(_state, minutes()) { current, now ->
                 if (current is BusinessUiState.Loaded) {
-                    BusinessUiState.Loaded(full.visibleAt(clock.instant()))
+                    BusinessUiState.Loaded(current.business.visibleAt(now))
                 } else {
                     current
                 }
-            }
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+                initialValue = BusinessUiState.Loading,
+            )
+
+        private var loadJob: Job? = null
+
+        init {
+            refresh()
         }
+
+        private fun minutes(): Flow<Instant> =
+            flow {
+                while (true) {
+                    emit(clock.instant())
+                    delay(RECHECK_MILLIS)
+                }
+            }
 
         /** Vuelve a pedir la carta. Si ya hay una carga en curso, no lanza otra. */
         fun refresh() {
@@ -120,13 +127,8 @@ class BusinessViewModel
                     _state.value =
                         when (val result = catalog.business(id)) {
                             is ApiResult.Success -> {
-                                val full = result.data.toDetail()
-                                complete = full
-                                if (full != null) {
-                                    BusinessUiState.Loaded(full.visibleAt(clock.instant()))
-                                } else {
-                                    BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
-                                }
+                                result.data.toDetail()?.let { BusinessUiState.Loaded(it) }
+                                    ?: BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
                             }
 
                             is ApiResult.Failure -> {
@@ -144,6 +146,9 @@ class BusinessViewModel
     }
 
 private const val RECHECK_MILLIS = 60_000L
+
+// Lo que sobrevive la suscripción al girar la pantalla, sin dejar el reloj corriendo con la app en segundo plano.
+private const val STOP_TIMEOUT_MILLIS = 5_000L
 
 internal const val INVALID_PRICE = "base_price fuera de numeric(10,2)"
 

@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -279,6 +280,8 @@ class BusinessViewModelTest {
             // 14:59:30 en Lima (UTC-5): el plato aún se sirve.
             val clock = MutableClock(Instant.parse("2026-10-26T19:59:30Z"))
             val viewModel = newViewModel(clock)
+            // La pantalla abierta: sin nadie suscrito, el reloj no corre.
+            backgroundScope.launch { viewModel.state.collect {} }
             assertEquals(listOf("Ceviche"), viewModel.names())
 
             clock.now = Instant.parse("2026-10-26T20:00:30Z")
@@ -287,6 +290,24 @@ class BusinessViewModelTest {
             val state = viewModel.state.value as BusinessUiState.Loaded
             assertTrue(state.business.categories.isEmpty())
             assertEquals(1, server.requestCount)
+        }
+
+    @Test
+    fun `una recarga que falla no deja ver la carta anterior, ni al pasar el minuto`() =
+        runTest {
+            server.enqueue(response(200, menu(dish(1, "Ceviche"))))
+            server.enqueue(response(200, menu(dish(1, "Ceviche", price = "12.345"))))
+            val viewModel = newViewModel()
+            backgroundScope.launch { viewModel.state.collect {} }
+            assertEquals(listOf("Ceviche"), viewModel.names())
+
+            viewModel.refresh()
+            dispatcher.scheduler.advanceTimeBy(61_000L)
+
+            assertEquals(
+                BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE)),
+                viewModel.state.value,
+            )
         }
 
     @Test
