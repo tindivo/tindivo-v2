@@ -42,8 +42,10 @@ android {
 
     buildTypes {
         release {
-            // KT-15: R8 activo en release. Sin firma: Play App Signing llega después y la CI no construye release.
+            // KT-15: R8 y reducción de recursos activos en release. Sin firma: Play App Signing llega después. La CI
+            // construye el AAB prodRelease sin firmar solo para medir su peso (D-57); no se publica.
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

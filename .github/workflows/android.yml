@@ -7,6 +7,7 @@ on:
       - 'packages/contracts/openapi/v1.json'
       - 'scripts/sync-openapi.sh'
       - 'scripts/android-check-manifest.py'
+      - 'scripts/android-size-report.py'
       - '.github/workflows/android.yml'
   push:
     branches: [develop]
@@ -15,6 +16,7 @@ on:
       - 'packages/contracts/openapi/v1.json'
       - 'scripts/sync-openapi.sh'
       - 'scripts/android-check-manifest.py'
+      - 'scripts/android-size-report.py'
       - '.github/workflows/android.yml'
 
 concurrency:
@@ -22,20 +24,22 @@ concurrency:
   cancel-in-progress: true
 
 # Sin secretos y con permisos de solo lectura: este job compila y prueba, no firma ni publica (KT-15: la firma llega
-# con Play App Signing y la CI solo construye `devDebug`).
+# con Play App Signing). Construye `devDebug` y, solo para medir su peso de descarga (D-57), el AAB `prodRelease` sin
+# firmar con R8 y reducción de recursos; ese AAB no se sube ni se publica.
 permissions:
   contents: read
 
 # El runner va fijado a `ubuntu-24.04` por la misma razón que en ci.yml: una imagen nueva no puede cambiar el resultado
 # sin un commit que lo diga. Las versiones de AGP, Kotlin y Gradle viven en apps/android/gradle/libs.versions.toml y en
-# el wrapper; aquí solo se fijan JDK, acciones y las CLI de ktlint y detekt.
+# el wrapper; aquí solo se fijan JDK, acciones y las CLI de ktlint, detekt y bundletool.
 #
 # Qué se verifica y en qué se confía (CAX-005): las acciones van fijadas por SHA completo (una etiqueta se puede mover;
 # subir una es un cambio aparte); el wrapper de Gradle lo valida setup-gradle contra los checksums de Gradle y la
-# distribución, el `distributionSha256Sum`; los jars de ktlint y detekt, su sha256 de aquí. Las dependencias de Gradle
+# distribución, el `distributionSha256Sum`; los jars de ktlint, detekt y bundletool, su sha256 de aquí. Las dependencias de Gradle
 # (AGP, Kotlin, AndroidX, OkHttp…) llegan por HTTPS desde Google Maven, Maven Central y el portal de plugins de Gradle,
 # con la versión exacta del catálogo, pero SIN verificación de dependencias de Gradle (verification-metadata.xml): ahí
-# se confía en esos repositorios. Es el límite aceptado para un APK de depuración que no sale de la CI.
+# se confía en esos repositorios. Es el límite aceptado: ni el APK de depuración ni el AAB release salen de la CI
+# (el AAB solo se mide y se descarta; al informe de tamaño se suben únicamente cifras).
 env:
   DETEKT_VERSION: 1.23.8
   # Hash del `detekt-cli-1.23.8-all.jar` de Maven Central (repo1.maven.org/maven2/io/gitlab/arturbosch/detekt/
@@ -47,6 +51,12 @@ env:
   # coincide.
   KTLINT_VERSION: 1.8.0
   KTLINT_SHA256: 369ad2b789f95a011f807e1fcb690ccef80bd7cd014fd139e73ae82dcc0baeab
+  # bundletool, para medir el peso de descarga del AAB (D-57). Hash del `bundletool-all-1.18.3.jar` de la release
+  # oficial de GitHub (github.com/google/bundletool/releases/tag/1.18.3), calculado con sha256sum al descargarlo; coincide
+  # con el digest que GitHub publica para ese asset (`gh api repos/google/bundletool/releases/latest`). Subir de
+  # versión es un cambio aparte: se recalcula este valor.
+  BUNDLETOOL_VERSION: 1.18.3
+  BUNDLETOOL_SHA256: a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29
 
 jobs:
   android:
@@ -165,6 +175,47 @@ jobs:
           path: |
             apps/android/customer/build/outputs/apk/dev/debug/*.apk
             apps/android/customer/build/outputs/apk/dev/debug/AndroidManifest-final.xml
+          if-no-files-found: error
+          retention-days: 14
+
+      # D-57: el AAB prodRelease (R8 y reducción de recursos) se construye sin firmar y solo para medir su peso.
+      - name: Construir el AAB prod release (sin firmar, solo para medir)
+        working-directory: apps/android
+        run: ./gradlew :customer:bundleProdRelease -PversionCode=${{ github.run_number }}
+
+      # D-57: tamaño de descarga que vería el usuario. `build-apks` genera el conjunto de APK del AAB (lo firma con la
+      # clave de depuración que AGP ya creó, o lo deja sin firmar: el tamaño es el mismo; no hay claves ni secretos) y
+      # `get-size total` calcula el mínimo y el máximo. Se mide (1) sobre todas las configuraciones de dispositivo y
+      # (2) para un perfil de gama baja, versionado en apps/android/config/size/gama-baja.json: Android 8 (API 26, el
+      # minSdk de D-47), ABIs arm64-v8a y armeabi-v7a, 320 dpi e idioma es, que representa a los usuarios de gama
+      # baja y media de un pueblo de Áncash. El techo (config/size/budget.json) está en null: de momento solo se
+      # informa, y se fija tras ver la medición real.
+      - name: Medir el tamaño de descarga (D-57)
+        run: |
+          JAR="${RUNNER_TEMP}/bundletool-all-${BUNDLETOOL_VERSION}.jar"
+          curl --fail --silent --show-error --location --output "${JAR}" \
+            "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar"
+          echo "${BUNDLETOOL_SHA256}  ${JAR}" | sha256sum --check -
+          AAB=$(ls apps/android/customer/build/outputs/bundle/prodRelease/*.aab)
+          SIZE_DIR="${RUNNER_TEMP}/size"
+          mkdir -p "${SIZE_DIR}"
+          java -jar "${JAR}" build-apks --bundle="${AAB}" --output="${SIZE_DIR}/app.apks"
+          java -jar "${JAR}" get-size total --apks="${SIZE_DIR}/app.apks" --dimensions=ALL \
+            --human-readable-sizes=false > "${SIZE_DIR}/todas.csv"
+          java -jar "${JAR}" get-size total --apks="${SIZE_DIR}/app.apks" \
+            --device-spec=apps/android/config/size/gama-baja.json \
+            --human-readable-sizes=false > "${SIZE_DIR}/gama-baja.csv"
+          python3 scripts/android-size-report.py apps/android/config/size/budget.json \
+            "${SIZE_DIR}/informe-tamano.md" "${SIZE_DIR}/todas.csv" "${SIZE_DIR}/gama-baja.csv"
+
+      - name: Subir el informe de tamaño
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tindivo-customer-tamano-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/size/informe-tamano.md
+            ${{ runner.temp }}/size/todas.csv
+            ${{ runner.temp }}/size/gama-baja.csv
           if-no-files-found: error
           retention-days: 14
 
