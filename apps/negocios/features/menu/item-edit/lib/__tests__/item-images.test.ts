@@ -59,10 +59,18 @@ function fakeStorage(
   }
 }
 
-function rowUpdater(world: World, fail = false) {
+/**
+ * `true`: la base rechaza el UPDATE. `'confirma-y-error'` / `'confirma-y-lanza'`: la
+ * base lo confirma y la respuesta se pierde (CAX-002).
+ */
+type RowFailure = boolean | 'confirma-y-error' | 'confirma-y-lanza'
+
+function rowUpdater(world: World, fail: RowFailure = false) {
   return async (urls: ItemImageUrls) => {
-    if (fail) return { error: { message: 'falló el UPDATE' } }
+    if (fail === true) return { error: { message: 'falló el UPDATE' } }
     world.row = urls
+    if (fail === 'confirma-y-error') return { error: { message: 'respuesta perdida' } }
+    if (fail === 'confirma-y-lanza') throw new Error('conexión cortada')
     return { error: null }
   }
 }
@@ -133,12 +141,30 @@ describe('publishItemImages', () => {
     expect([...w.objects.keys()]).toEqual([B.full])
   })
 
-  it('(c) falla el UPDATE: la fila sigue A/A, A intacto, B y su miniatura se borran', async () => {
+  it('(c) falla el UPDATE: la fila sigue A/A, A intacto, y B queda sin borrar (resultado incierto)', async () => {
     const w = worldWithA()
     const r = await publishItemImages(fakeStorage(w), rowUpdater(w, true), params(w))
     expect(r).toEqual({ ok: false, message: 'falló el UPDATE' })
     expect(referenced(w)).toEqual(['A', 'A-t'])
-    expect([...w.objects.keys()].sort()).toEqual([A.full, A.thumb].sort())
+    expect([...w.objects.keys()].sort()).toEqual([A.full, A.thumb, B.full, B.thumb].sort())
+  })
+
+  it('(c3) CAX-002: la base confirma B/B y la respuesta llega como error: B sigue existiendo', async () => {
+    const w = worldWithA()
+    const r = await publishItemImages(fakeStorage(w), rowUpdater(w, 'confirma-y-error'), params(w))
+    expect(r.ok).toBe(false)
+    expect(referenced(w)).toEqual(['B', 'B-t'])
+    expect(w.objects.get(A.full)).toBe('A')
+    expect(w.objects.get(A.thumb)).toBe('A-t')
+  })
+
+  it('(c4) CAX-002: la base confirma B/B y la llamada lanza: B sigue existiendo', async () => {
+    const w = worldWithA()
+    const r = await publishItemImages(fakeStorage(w), rowUpdater(w, 'confirma-y-lanza'), params(w))
+    expect(r.ok).toBe(false)
+    expect(referenced(w)).toEqual(['B', 'B-t'])
+    expect(w.objects.get(A.full)).toBe('A')
+    expect(w.objects.get(A.thumb)).toBe('A-t')
   })
 
   it('(c2) falla el UPDATE y también el borrado: la fila sigue A/A y A intacto', async () => {
@@ -235,7 +261,7 @@ describe('publishItemImages', () => {
       { failRemove: true },
     ]
     for (const opts of combos) {
-      for (const failRow of [false, true]) {
+      for (const failRow of [false, true, 'confirma-y-error', 'confirma-y-lanza'] as const) {
         const w = worldWithA()
         await publishItemImages(fakeStorage(w, opts), rowUpdater(w, failRow), params(w))
         const [img, th] = referenced(w)

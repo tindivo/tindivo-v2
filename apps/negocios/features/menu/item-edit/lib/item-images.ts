@@ -110,8 +110,12 @@ export type ItemImagePublish =
  *
  * - Falla la grande: no sube nada más; la fila no cambia.
  * - Falla solo la miniatura: se publica grande/null.
- * - Falla `updateRow` (o algo lanza): se borran los objetos nuevos y la fila
- *   sigue como estaba; los objetos anteriores nunca se tocaron.
+ * - Falla algo ANTES de intentar `updateRow` (una subida lanza): se borran los
+ *   objetos nuevos; la fila y los objetos anteriores nunca se tocaron.
+ * - `updateRow` devuelve error o lanza: el resultado es incierto (la base pudo
+ *   confirmar y perderse la respuesta), así que NO se borra nada (CAX-002): ni
+ *   lo nuevo, que la fila quizá ya publica, ni lo anterior, que quizá sigue
+ *   publicado. Pueden quedar objetos huérfanos; nunca una URL sin objeto.
  */
 export async function publishItemImages(
   storage: ItemImageStorage,
@@ -134,6 +138,8 @@ export async function publishItemImages(
     cacheControl: params.cacheControl,
   })
   const uploaded: string[] = []
+  // Desde que se intenta publicar, lo nuevo puede estar referenciado: ya no se limpia.
+  let publishAttempted = false
 
   try {
     const { error: fullErr } = await bucket.upload(paths.full, params.full, options(params.full))
@@ -159,11 +165,9 @@ export async function publishItemImages(
       }
     }
 
+    publishAttempted = true
     const { error: rowErr } = await updateRow({ imageUrl, thumbnailUrl })
-    if (rowErr) {
-      await removeItemImageObjects(storage, uploaded)
-      return { ok: false, message: rowErr.message }
-    }
+    if (rowErr) return { ok: false, message: rowErr.message }
 
     // Confirmado: ahora sí se va lo anterior (sin tocar lo recién publicado).
     const stale = itemImageRemovalPaths(params.bizId, params.previous).filter(
@@ -172,7 +176,7 @@ export async function publishItemImages(
     await removeItemImageObjects(storage, stale)
     return { ok: true, imageUrl, thumbnailUrl, thumbnailError }
   } catch (e) {
-    await removeItemImageObjects(storage, uploaded)
+    if (!publishAttempted) await removeItemImageObjects(storage, uploaded)
     return {
       ok: false,
       message: `No se pudo guardar la imagen: ${e instanceof Error ? e.message : String(e)}`,
