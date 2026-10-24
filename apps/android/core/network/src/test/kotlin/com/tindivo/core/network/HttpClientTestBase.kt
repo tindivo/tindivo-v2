@@ -9,7 +9,9 @@ import org.junit.After
 import org.junit.Before
 import kotlin.time.Duration.Companion.seconds
 
-/** Lo común de las pruebas del cliente REAL de [createOkHttpClient]: el servidor y las fábricas de cliente y petición. */
+/**
+ * Lo común de las pruebas del cliente REAL de [createOkHttpClient]: el servidor y las fábricas de cliente y petición.
+ */
 abstract class HttpClientTestBase {
     protected val server = MockWebServer()
     protected val info = ClientInfo("customer", "0.1.0", "1")

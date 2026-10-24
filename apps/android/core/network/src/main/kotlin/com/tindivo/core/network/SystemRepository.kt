@@ -47,8 +47,9 @@ class SystemRepository(
                     } catch (e: IOException) {
                         ApiResult.Failure(AppError.Network(e))
                     } catch (e: IllegalArgumentException) {
-                        // Un 2xx con un cuerpo que el modelo no entiende: SerializationException (por ejemplo, un enum de
-                        // un solo valor con otro) o un adaptador de tipo (BigDecimal("x") lanza NumberFormatException).
+                        // Un 2xx con un cuerpo que el modelo no entiende: SerializationException (por ejemplo, un enum
+                        // de un solo valor con otro) o un adaptador de tipo (BigDecimal("x") lanza
+                        // NumberFormatException).
                         ApiResult.Failure(AppError.Unknown(code = null, detail = e.message))
                     } catch (e: UnsupportedOperationException) {
                         // Un 2xx cuyo Content-Type no es JSON ni texto (un proxy que devuelve text/html): el cliente

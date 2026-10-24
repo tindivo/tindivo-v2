@@ -11,8 +11,9 @@ import java.time.format.DateTimeParseException
 import kotlin.random.Random
 
 /**
- * Reintentos de CLI-10: solo `GET` y `POST` con `Idempotency-Key` no vacía (repetirlo no duplica nada), solo ante error de red,
- * `5xx` o `429`, y como mucho [MAX_RETRIES] veces. Ningún otro `4xx` se reintenta: el servidor ya contestó que no.
+ * Reintentos de CLI-10: solo `GET` y `POST` con `Idempotency-Key` no vacía (repetirlo no duplica nada), solo ante
+ * error de red, `5xx` o `429`, y como mucho [MAX_RETRIES] veces. Ningún otro `4xx` se reintenta: el servidor ya
+ * contestó que no.
  *
  * La espera es exponencial con aleatorio completo (el intento `n` espera entre 0 y 0,5 s por 2^n) para que muchas
  * apps que fallan a la vez no vuelvan juntas. Si la respuesta trae `Retry-After` (segundos o fecha HTTP), manda ese
