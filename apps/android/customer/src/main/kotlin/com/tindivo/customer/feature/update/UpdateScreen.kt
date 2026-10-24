@@ -21,13 +21,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.customer.R
 
 private const val STORE_URL = "https://play.google.com/store/apps/details?id=com.tindivo.customer"
 
 /** Actualización obligatoria (CLI-4): sin salida hacia atrás; lo único que se puede hacer es ir a la tienda. */
 @Composable
-fun UpdateScreen(minVersion: String?) {
+fun UpdateScreen(viewModel: UpdateViewModel = hiltViewModel()) {
+    val minVersion = viewModel.state.collectAsStateWithLifecycle().value.minVersion
     val context = LocalContext.current
     Scaffold { innerPadding ->
         Column(

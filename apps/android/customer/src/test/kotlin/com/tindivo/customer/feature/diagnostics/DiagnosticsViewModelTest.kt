@@ -5,6 +5,9 @@ import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
+import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.config.ConfigState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -28,6 +31,7 @@ class DiagnosticsViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val noSleep = RetryInterceptor(sleeper = { _, _ -> })
     private lateinit var repository: SystemRepository
+    private lateinit var configService: ConfigService
 
     @Before
     fun setUp() {
@@ -39,6 +43,7 @@ class DiagnosticsViewModelTest {
                 client = createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = noSleep),
                 ioDispatcher = dispatcher,
             )
+        configService = ConfigService(repository, "0.1.0", CoroutineScope(dispatcher))
     }
 
     @After
@@ -76,7 +81,7 @@ class DiagnosticsViewModelTest {
             server.enqueue(ok(HEALTH))
             server.enqueue(ok(CONFIG))
 
-            val state = DiagnosticsViewModel(repository).settled()
+            val state = DiagnosticsViewModel(repository, configService).settled()
 
             val expected =
                 DiagnosticsUiState.Loaded(
@@ -97,7 +102,7 @@ class DiagnosticsViewModelTest {
         runTest {
             repeat(3) { server.enqueue(MockResponse.Builder().onRequestStart(SocketEffect.CloseSocket()).build()) }
 
-            val state = DiagnosticsViewModel(repository).settled()
+            val state = DiagnosticsViewModel(repository, configService).settled()
 
             assertTrue(state is DiagnosticsUiState.Failed)
             assertTrue((state as DiagnosticsUiState.Failed).error is AppError.Network)
@@ -108,7 +113,7 @@ class DiagnosticsViewModelTest {
         runTest {
             server.enqueue(problem(409, UNKNOWN_CODE))
 
-            val state = DiagnosticsViewModel(repository).settled()
+            val state = DiagnosticsViewModel(repository, configService).settled()
 
             assertEquals(DiagnosticsUiState.Failed(AppError.Unknown(code = "codigo_nuevo", detail = null)), state)
         }
@@ -119,13 +124,13 @@ class DiagnosticsViewModelTest {
             server.enqueue(ok(HEALTH))
             server.enqueue(problem(409, UNKNOWN_CODE))
 
-            val state = DiagnosticsViewModel(repository).settled()
+            val state = DiagnosticsViewModel(repository, configService).settled()
 
             assertTrue(state is DiagnosticsUiState.Failed)
         }
 
     @Test
-    fun `un 426 termina en UpgradeRequired con la version minima`() =
+    fun `un 426 avisa al ConfigService y termina en Failed con UpgradeRequired`() =
         runTest {
             server.enqueue(
                 problem(
@@ -135,16 +140,17 @@ class DiagnosticsViewModelTest {
                 ),
             )
 
-            val state = DiagnosticsViewModel(repository).settled()
+            val state = DiagnosticsViewModel(repository, configService).settled()
 
-            assertEquals(DiagnosticsUiState.UpgradeRequired("1.2.0"), state)
+            assertEquals(DiagnosticsUiState.Failed(AppError.UpgradeRequired("1.2.0")), state)
+            assertEquals(ConfigState.UpgradeRequired("1.2.0"), configService.state.value)
         }
 
     @Test
     fun `refresh vuelve a cargar despues de un fallo`() =
         runTest {
             server.enqueue(problem(409, UNKNOWN_CODE))
-            val viewModel = DiagnosticsViewModel(repository)
+            val viewModel = DiagnosticsViewModel(repository, configService)
             assertTrue(viewModel.settled() is DiagnosticsUiState.Failed)
 
             server.enqueue(ok(HEALTH))

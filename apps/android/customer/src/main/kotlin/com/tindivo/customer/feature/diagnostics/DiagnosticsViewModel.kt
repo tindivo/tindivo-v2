@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.SystemRepository
+import com.tindivo.customer.config.ConfigService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,10 +31,6 @@ sealed interface DiagnosticsUiState {
     data class Failed(
         val error: AppError,
     ) : DiagnosticsUiState
-
-    data class UpgradeRequired(
-        val minVersion: String?,
-    ) : DiagnosticsUiState
 }
 
 @HiltViewModel
@@ -41,6 +38,7 @@ class DiagnosticsViewModel
     @Inject
     constructor(
         private val system: SystemRepository,
+        private val configService: ConfigService,
     ) : ViewModel() {
         private val _state = MutableStateFlow<DiagnosticsUiState>(DiagnosticsUiState.Loading)
         val state: StateFlow<DiagnosticsUiState> = _state.asStateFlow()
@@ -86,7 +84,11 @@ class DiagnosticsViewModel
 
         private fun AppError.toState(): DiagnosticsUiState =
             when (this) {
-                is AppError.UpgradeRequired -> DiagnosticsUiState.UpgradeRequired(minVersion)
+                is AppError.UpgradeRequired -> {
+                    // La navegación raíz lleva a la pantalla de actualización; aquí solo se avisa.
+                    configService.reportUpgradeRequired(minVersion)
+                    DiagnosticsUiState.Failed(this)
+                }
                 else -> DiagnosticsUiState.Failed(this)
             }
     }

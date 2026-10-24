@@ -1,10 +1,12 @@
 package com.tindivo.customer.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import com.tindivo.customer.feature.diagnostics.DiagnosticsDestination
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
@@ -13,26 +15,23 @@ import kotlinx.serialization.Serializable
 data object DiagnosticsRoute
 
 @Serializable
-data class UpdateRoute(
-    val minVersion: String? = null,
-)
+data object UpdateRoute
 
 @Composable
-fun AppNavHost() {
+fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
     val navController = rememberNavController()
+    val upgradeRequired = appViewModel.upgradeRequired.collectAsStateWithLifecycle().value
+    // Un 426 llegue de donde llegue: se vacía la pila y se muestra la actualización, sin vuelta atrás (CLI-4).
+    LaunchedEffect(upgradeRequired) {
+        if (upgradeRequired) {
+            navController.navigate(UpdateRoute) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
     NavHost(navController = navController, startDestination = DiagnosticsRoute) {
-        composable<DiagnosticsRoute> {
-            DiagnosticsDestination(
-                onUpgradeRequired = { minVersion ->
-                    // La pantalla de diagnóstico sale de la pila: desde la de actualización no se puede volver atrás.
-                    navController.navigate(UpdateRoute(minVersion)) {
-                        popUpTo<DiagnosticsRoute> { inclusive = true }
-                    }
-                },
-            )
-        }
-        composable<UpdateRoute> { entry ->
-            UpdateScreen(minVersion = entry.toRoute<UpdateRoute>().minVersion)
-        }
+        composable<DiagnosticsRoute> { DiagnosticsDestination() }
+        composable<UpdateRoute> { UpdateScreen() }
     }
 }
