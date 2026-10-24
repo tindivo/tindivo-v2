@@ -61,6 +61,11 @@ apps/android/
 - **CLI-10 manda** sobre cualquier otro valor de *timeout*: 10 s para conectar y 30 s por petición, con sus reintentos.
 - **KT-16, lista aprobada.** Versiones exactas en `apps/android/gradle/libs.versions.toml`: AGP 9.4.1, Kotlin 2.4.20, KSP 2.3.12, Compose BOM 2026.09.00 (Material 3), activity-compose 1.13.0, lifecycle 2.11.0, core-ktx 1.19.1, Navigation Compose 2.10.2, Hilt 2.60.1, hilt-navigation-compose 1.4.0, OkHttp y mockwebserver3 5.5.0, kotlinx.serialization 1.11.0, kotlinx.coroutines 1.11.0, el plugin de OpenAPI Generator 7.25.0, ktlint 1.8.0 (plugin de Gradle 14.2.0), detekt 1.23.8 (por CLI en la CI) y JUnit 4.13.2; JDK 21 y Gradle 9.8.1. Tink, DataStore, Firebase y la herramienta de *crashes* se piden cuando entren.
 
+## Decisiones aplicadas (Jesús, 2026-10-24)
+
+- **KT-16, ampliada** (`Docs/planes/movil/decisiones.md` D-54): Coil, supabase-kt solo Auth con el motor OkHttp de Ktor, Credential Manager, DataStore, Tink y Google Maps SDK. Cada una entra con el PR que la usa, con su versión exacta en `libs.versions.toml`; supabase-kt, solo si su peso cabe en el presupuesto (D-57).
+- **KT-15, CI:** además de `devDebug`, la CI construye el AAB `prodRelease` sin firmar, con R8 y `isShrinkResources`, solo para medir su tamaño de descarga (D-57); no se publica ni se sube.
+
 ## Ejemplo: ViewModel (KT-3, KT-5, KT-6)
 
 Ilustrativo.

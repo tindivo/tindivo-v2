@@ -51,7 +51,21 @@
 **Reglas aplicables que no son decisiones del plan** (ya están en los estándares de código v2, ADR 0038, y se citan sin
 número D propio): `DES-6` (el contrato es compatible hacia atrás; `oasdiff` contra la rama base en la CI) y `CLI-14`
 (toda publicación pasa por pruebas internas y sale con liberación gradual o escalonada). Los números `D-54` y `D-55`
-quedan **libres**: la siguiente decisión del plan toma `D-54`.
+quedan **libres**: la siguiente decisión del plan tomaba `D-54`; desde el 2026-10-24 la siguiente es `D-59`.
+
+### Decididas el 2026-10-24
+
+Recomendaciones de la consulta de arquitectura a Codex (expediente `tindivo-auditorias/2026-10-24-consulta-movil-base`,
+fuera del repo), aceptadas por Jesús en la conversación con Claude Code: «sí, apruebo el orden y las librerías, minOs
+opción a».
+
+| # | Decisión | Quién / cuándo |
+|---|---|---|
+| D-54 | **Librerías de la app Android aprobadas (KT-16)**, cada una entra con el PR que la usa: **Coil** (imágenes), **supabase-kt solo Auth** con el motor **OkHttp** de Ktor y detrás de `SessionStore` (CLI-7), **Credential Manager**, **DataStore**, **Tink** y **Google Maps SDK**. **Condición** para supabase-kt: el PR que lo añade mide cuánto suma al release (D-57); si rompe el presupuesto, se estudia GoTrue por REST con cambio de canon | Jesús, 2026-10-24 (recomendación aceptada) |
+| D-55 | **Imágenes para las apps nativas: miniatura generada al subir** (WebP de ~384 px, la carta la pinta a 92 dp) y un campo **opcional** `thumbnail_url` en la API, aditivo (API-3). Las imágenes ya subidas se completan con un proceso por lotes idempotente que **no borra originales**; los nombres van versionados. La app cae a `image_url` si falta la miniatura. Sin transformaciones de pago, sin proxy de imágenes y sin redimensionar en el teléfono | Jesús, 2026-10-24 (recomendación aceptada) |
+| D-56 | **El VPS de Jesús** (centro de datos; 12 GB de RAM y 8 núcleos, según Jesús) **solo aloja staging y previews** con Coolify (`infra/coolify/`), aislados. **No** aloja producción, la base, el envío de push, un proxy de imágenes, mosaicos de mapa ni un runner de CI (el repositorio es público: un PR externo ejecutaría código ahí) | Jesús, 2026-10-24 (recomendación aceptada) |
+| D-57 | **Peso de la app como regla:** la CI construye el AAB `prodRelease` (R8 y reducción de recursos, sin firmar), mide su tamaño de descarga con bundletool y lo publica en cada PR; el **techo se fija después de medir** y desde entonces falla la CI. Baseline Profiles cuando haya flujos reales | Jesús, 2026-10-24 (recomendación aceptada) |
+| D-58 | **`minOs` de `/config`: solo aviso.** Si el Android del teléfono está por debajo del mínimo que publica el servidor, la app lo avisa y deja seguir; la única que bloquea es la versión mínima de la app (426, `minVersion`) | Jesús, 2026-10-24 |
 
 ## 2. Decisiones abiertas — organización y plazos externos
 
@@ -73,7 +87,7 @@ quedan **libres**: la siguiente decisión del plan toma `D-54`.
 | D-23 | **Política de borrado de cuenta** (`SEC-09`). | Anonimización con retención mínima del vínculo antifraude (hash del teléfono) · borrado total. | Anonimización; los plazos de retención los decides tú (`D-04`); una revisión profesional puntual sería lo ideal (Ley 29733). | Bloquea la publicación |
 | D-24 | **Consentimiento y marketing** (`NAT-CON`). | Texto, categorías, edad mínima, horas de silencio, frecuencia máxima. | Empezar por `order_updates` (no comercial) y añadir `promotions` tras M1; texto estándar y revisión más adelante (`D-04`). | `NAT-MKT-001` |
 | D-25 | **Motor de notificaciones** (`NOT-01/05/07`). | FCM + APNs **directos** desde un *worker* propio · servicio gestionado para campañas (OneSignal, etc.). | **Directo para lo transaccional** (control de fiabilidad y prioridad); evaluar un servicio gestionado **solo para campañas** si construir segmentos y programación cuesta más de lo que vale. | `NAT-PSH`, `NAT-MKT` |
-| D-26 | **Proveedor de mapas nativo** (`NAT-LOC-002`). | iOS: MapKit. Android: Google Maps SDK · MapLibre con teselas propias. | MapKit + Google Maps SDK; **comprobar la calidad del satélite en San Jacinto** antes de fijar. Las teselas de OSM/CARTO de la web **no** deben usarse en una app publicada. | `CUS-ADR-008` |
+| D-26 | **Proveedor de mapas nativo** (`NAT-LOC-002`). | iOS: MapKit. Android: Google Maps SDK · MapLibre con teselas propias. | MapKit + Google Maps SDK; **comprobar la calidad del satélite en San Jacinto** antes de fijar. Las teselas de OSM/CARTO de la web **no** deben usarse en una app publicada. **Android: Google Maps SDK aprobado por Jesús el 2026-10-24 (D-54)**, con carga diferida al abrir el selector; la calidad del satélite en San Jacinto se comprueba antes de publicar | `CUS-ADR-008` |
 | D-27 | **Alcance de la web cuando exista la app** (`MOB-15`). | Apagar la PWA · dejarla como respaldo de enlaces, tienda y borrado de cuenta. | **Respaldo** (no apagar). Para Negocios, además, la web sigue siendo la vía de los usuarios de escritorio y de iPhone. | `CUS-WEB-007` |
 | D-28 | **Sistema de diseño en nativo** (`MOB-21`). | Iconos: Material Symbols en ambas · SF Symbols en iOS + Material en Android. Modo oscuro sí/no. | Exportar los **tokens** (color, radio, tipografía Geist/JetBrains Mono) como JSON; SF Symbols en iOS; modo oscuro **fuera de M1**. | Diseño de M1 |
 | D-29 | **Versiones mínimas de SO** y presupuesto de dispositivo. | iOS 16.1+ (Live Activities) o 17+ · Android 8 (API 26) o superior. | Decidir con **datos reales de dispositivos** de la PWA (`@vercel/analytics` en el Customer) y con el móvil gama baja que se quiera soportar. `targetSdk` = 36 (obligatorio en Play desde el 2026-08-31). | Alcance de `NAT-LIV` |
