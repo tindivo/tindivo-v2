@@ -29,7 +29,8 @@ def read_range(path: str) -> tuple[int, int]:
     """Devuelve (mínimo de MIN, máximo de MAX) de un CSV de bundletool, en bytes."""
     try:
         with open(path, newline="", encoding="utf-8-sig") as handle:
-            rows = [row for row in csv.reader(handle) if any(cell.strip() for cell in row)]
+            # strict: una comilla sin cerrar o un campo mal citado es un error, no un valor (CAX-001).
+            rows = [row for row in csv.reader(handle, strict=True) if any(cell.strip() for cell in row)]
     except (OSError, UnicodeDecodeError, csv.Error) as exc:
         raise ReportError("no se pudo leer un CSV de bundletool") from exc
     if len(rows) < 2:
@@ -53,10 +54,18 @@ def read_range(path: str) -> tuple[int, int]:
     return min(mins), max(maxs)
 
 
+def _no_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    keys = [key for key, _ in pairs]
+    if len(keys) != len(set(keys)):
+        raise ValueError("clave JSON repetida")
+    return dict(pairs)
+
+
 def read_budget(path: str) -> int | None:
     try:
         with open(path, encoding="utf-8") as handle:
-            data = json.load(handle)
+            # Una clave repetida haría que gane la última en silencio (p. ej. un null tras el techo): se rechaza (CAX-002).
+            data = json.load(handle, object_pairs_hook=_no_duplicates)
     except (OSError, UnicodeDecodeError, ValueError) as exc:
         raise ReportError("no se pudo leer budget.json como JSON") from exc
     if not isinstance(data, dict) or set(data) != {BUDGET_KEY}:
