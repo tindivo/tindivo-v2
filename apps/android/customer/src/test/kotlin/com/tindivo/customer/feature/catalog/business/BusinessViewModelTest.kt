@@ -87,8 +87,8 @@ class BusinessViewModelTest {
             assertEquals(THUMB_URL, pollos.items[0].imageUrl)
             assertEquals(PHOTO_URL, pollos.items[1].imageUrl)
             assertNull(pollos.items[2].imageUrl)
-            assertEquals("S/ 12.50", pollos.items[0].price)
-            assertEquals("S/ 3.00", pollos.items[1].price)
+            assertEquals("S/ 12.50", pollos.items[0].price.plain())
+            assertEquals("S/ 3.00", pollos.items[1].price.plain())
             assertEquals(listOf(true, false, true), pollos.items.map { it.available })
         }
 
@@ -124,11 +124,17 @@ class BusinessViewModelTest {
         }
 
     @Test
-    fun `formatPrice siempre muestra dos decimales`() {
-        assertEquals("S/ 12.50", formatPrice(BigDecimal("12.5")))
-        assertEquals("S/ 0.00", formatPrice(BigDecimal("0")))
-        assertEquals("S/ 1250.00", formatPrice(BigDecimal("1250.00")))
+    fun `formatPrice muestra soles con dos decimales y sin pasar por Double`() {
+        assertEquals("S/ 12.50", formatPrice(BigDecimal("12.5")).plain())
+        assertEquals("S/ 0.00", formatPrice(BigDecimal("0")).plain())
+        assertEquals("S/ 1,250.00", formatPrice(BigDecimal("1250.00")).plain())
+        assertEquals("S/ 99,999,999.99", formatPrice(BigDecimal("99999999.99")).plain())
+        // Como Double, 2.675 es 2.67499…: si el formato pasara por Double, saldría «2.67».
+        assertEquals("S/ 2.68", formatPrice(BigDecimal("2.675")).plain())
     }
+
+    /** El formato es-PE separa el símbolo con un espacio duro (U+00A0); las aserciones lo comparan como espacio. */
+    private fun String.plain() = replace(' ', ' ')
 
     private companion object {
         const val THUMB_URL = "https://x.supabase.co/storage/v1/object/public/menu-items/b/items/i.1-t"

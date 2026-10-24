@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.NumberFormat
+import java.util.Locale
 import javax.inject.Inject
 
 /** Un plato de la carta, ya decidido: la pantalla no conoce los modelos generados. */
@@ -140,11 +142,12 @@ private fun GetBusiness200ResponseDataCategoriesInnerItemsInner.toItem() =
         available = isAvailable,
     )
 
-private const val PRICE_SCALE = 2
-
 /**
- * Solo para mostrar, igual que la web (`S/ ${n.toFixed(2)}`): nunca se usa para calcular. Parte de un [BigDecimal],
- * sin pasar por `Double` ni `Float`.
+ * Solo para mostrar (KT-8): `S/ 12.50` en soles de Perú; nunca se usa para calcular. `DecimalFormat` formatea el
+ * [BigDecimal] sin pasar por `Double` ni `Float`. Una instancia por llamada: `NumberFormat` no es seguro entre hilos.
  */
 internal fun formatPrice(amount: BigDecimal): String =
-    "S/ " + amount.setScale(PRICE_SCALE, RoundingMode.HALF_UP).toPlainString()
+    NumberFormat
+        .getCurrencyInstance(Locale.forLanguageTag("es-PE"))
+        .apply { roundingMode = RoundingMode.HALF_UP }
+        .format(amount)
