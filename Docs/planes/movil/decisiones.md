@@ -51,7 +51,7 @@
 **Reglas aplicables que no son decisiones del plan** (ya están en los estándares de código v2, ADR 0038, y se citan sin
 número D propio): `DES-6` (el contrato es compatible hacia atrás; `oasdiff` contra la rama base en la CI) y `CLI-14`
 (toda publicación pasa por pruebas internas y sale con liberación gradual o escalonada). Los números `D-54` y `D-55`
-quedan **libres**: la siguiente decisión del plan tomaba `D-54`; desde el 2026-10-24 la siguiente es `D-59`.
+quedan **libres**: la siguiente decisión del plan tomaba `D-54`; desde el 2026-10-24 la siguiente es `D-62`.
 
 ### Decididas el 2026-10-24
 
@@ -66,6 +66,17 @@ opción a».
 | D-56 | **El VPS de Jesús** (centro de datos; 12 GB de RAM y 8 núcleos, según Jesús) **solo aloja staging y previews** con Coolify (`infra/coolify/`), aislados. **No** aloja producción, la base, el envío de push, un proxy de imágenes, mosaicos de mapa ni un runner de CI (el repositorio es público: un PR externo ejecutaría código ahí) | Jesús, 2026-10-24 (recomendación aceptada) |
 | D-57 | **Peso de la app como regla:** la CI construye el AAB `prodRelease` (R8 y reducción de recursos, sin firmar), mide su tamaño de descarga con bundletool y lo publica en cada PR; el **techo se fija después de medir** y desde entonces falla la CI. **Techo inicial: 1 500 000 bytes** para el perfil de gama baja (`apps/android/config/size/budget.json`), sobre 1 230 557 medidos en la CI del PR #85 (2026-10-24). Funciona como trinquete: el PR que añade peso (una librería, recursos) sube el techo en ese mismo PR y declara la cifra antes y después; nadie lo sube a ciegas. Baseline Profiles cuando haya flujos reales | Jesús, 2026-10-24 (recomendación aceptada) |
 | D-58 | **`minOs` de `/config`: solo aviso.** Si el Android del teléfono está por debajo del mínimo que publica el servidor, la app lo avisa y deja seguir; la única que bloquea es la versión mínima de la app (426, `minVersion`) | Jesús, 2026-10-24 |
+
+### La carta de la app, decididas el 2026-10-24
+
+Decisiones de Jesús en la conversación con Claude Code; para la D-60 se apoyó en el lienzo «Plato sin foto» (cuatro
+opciones dibujadas sobre la misma carta).
+
+| # | Decisión | Quién / cuándo |
+|---|---|---|
+| D-59 | **Un plato fuera de su franja horaria no sale en la carta de la app**, ni su categoría si se queda vacía; no se muestra «disponible desde…». La franja se resuelve en hora de Lima con la misma regla que `isWithinWindow` (`packages/contracts/src/menu-availability.ts`) y se reevalúa cada minuto. La web del cliente la atenúa con la franja y no se iguala, porque Jesús la va a apagar; el panel de negocios ya lo dice así (PR #90) | Jesús, 2026-10-24 |
+| D-60 | **Plato sin foto: el isotipo de Tindivo en gris** dentro del recuadro de la foto (92 dp; isotipo a 40 dp, `#2E3236` al 35 % sobre `#F4F4F2`). El recuadro está siempre, para que las filas queden alineadas, y el isotipo se ve también mientras la foto carga o si falla. En prod faltaban fotos en 63 de 138 platos (2026-10-24) | Jesús, 2026-10-24 (opción A) |
+| D-61 | **Barra fija de la carta en la app**: volver, el nombre del negocio (aparece al dejar atrás la portada) y una lupa para buscar en la carta; debajo, los chips de categorías, que siguen la sección visible, y desde 5 categorías el botón del índice. La barra fija de la web no muestra el nombre del negocio | Jesús, 2026-10-24 (recomendación aceptada) |
 
 ## 2. Decisiones abiertas — organización y plazos externos
 
