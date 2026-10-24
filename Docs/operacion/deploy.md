@@ -231,6 +231,47 @@ con su comprobación (`select count(*) … where key = 'push_claim_since'` = 0).
 **Regla fija:** si alguna vez se redespliega la función nueva con una fila de corte vieja presente, primero se
 borra la fila.
 
+
+### 2.2.1 Reintento del aviso entero (migración 0272) **[tú]**
+
+Hasta la 0271 un aviso se perdía sin que nadie se enterara si la llamada del trigger fallaba o si `send-push`
+caía tras reclamar el evento. La 0272 da al reclamo un plazo (`push_retry.leaseSeconds`, 180 s) y añade el cron
+`retry-push-dispatch` (cada minuto), que vuelve a llamar a `send-push` por los avisos que no terminaron: hasta
+`maxAttempts` (3) reintentos, con espera de 1, 2 y 4 minutos, y nunca pasados `ttlMinutes` (15). Lo que agota
+intentos o plazo queda con `push_dead_at` y el cron escribe **un** `PushDeliveryFailed` por corrida, que `send-push`
+manda a los admins (con freno de 30 minutos). `send-push` marca el final con `complete_push_event`.
+
+Nace **apagado**: sin `push_retry.since` el cron no hace nada. Orden (no lo cambies; fuera de 18:00-23:00 de Lima):
+
+1. `supabase db push` (la 0272 es aditiva; la función desplegada sigue funcionando, pero aún no marca el final).
+2. `supabase functions deploy send-push` (la que llama a `complete_push_event`).
+3. Enciende (SQL de escritura contra `tindivo-prod`, ejecutado por ti; `<hora UTC ISO del deploy>` = la del paso 2):
+
+   ```sql
+   update public.app_settings
+      set value = jsonb_set(value, '{since}', to_jsonb('<hora UTC ISO del deploy>'::text)), updated_at = now()
+    where key = 'push_retry';
+   ```
+
+   Si encendieras antes del deploy, la función vieja reclamaría sin marcar el final y el cron repetiría avisos ya
+   entregados.
+
+**Cómo comprobar que está encendido** (solo lectura; `select public.retry_push_dispatch()` **no** se ejecuta a mano en
+producción: escribiría): mira las últimas corridas del job (`select status, return_message, start_time from
+cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'retry-push-dispatch') order by
+start_time desc limit 5;`) y el estado de los avisos (`select count(*) filter (where push_done_at is not null) as
+terminados, count(*) filter (where push_attempts > 0) as reintentados, count(*) filter (where push_dead_at is not
+null) as perdidos from public.domain_events where occurred_at >= now() - interval '1 day';`).
+
+**Cómo apagarlo:** quita la clave `since` (el cron vuelve a no hacer nada, el reclamo conserva su plazo):
+
+```sql
+update public.app_settings set value = value - 'since', updated_at = now() where key = 'push_retry';
+```
+
+**Rollback:** `supabase/rollbacks/0272_un_aviso_que_no_salio_se_reintenta.rollback.sql` (apaga el cron, restaura el
+reclamo definitivo de la 0264 y conserva las columnas para auditar). Antes, apaga con el SQL de arriba.
+
 ## 2.1 Supabase Auth — onboarding del cliente **[tú]**
 
 El onboarding del customer (bottom-sheet con Google + correo sin verificación) requiere
@@ -304,6 +345,40 @@ asesoría legal antes de operar (cláusula de adelanto del fondo para restaurant
 
 - Sentry (`SENTRY_DSN`) + UptimeRobot sobre `/health` de las 5 URLs.
 - Cron `close-driver-shifts` (pg_cron, cada 15 min) ya activo: cierra disponibilidad fuera de horario.
+
+## 10. Staging (`tindivo-dev`) **[tú]**
+
+Para las apps nativas en desarrollo (D-14: nunca hablan con producción). Montado el 2026-10-22.
+
+| Pieza | Dónde |
+|---|---|
+| Base | Supabase `tindivo-dev` (`jgziumvrtogguljhpdos`), con las migraciones de `develop` |
+| API | Proyecto Vercel **aparte** `tindivo-api-staging` → `https://tindivo-api-staging.vercel.app` |
+| Datos de prueba | `pnpm db:seed:staging -- --env-file <secretos>/staging.env --out-dir <secretos>` (PR #77): el mundo e2e (2 negocios con menú y horario, 2 motorizados, 3 clientes; sin admin) |
+| Secretos | `C:\Users\<usuario>\tindivo-secretos` (`staging.env` y las carpetas `staging-credenciales-<fecha>\cuentas.md`; vale la más reciente) |
+
+**Vercel.** La rama de producción del proyecto es **`develop`** (*Settings › Environments › Production › Branch
+Tracking*). Las tres variables (`NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` como *Config*;
+`SUPABASE_SERVICE_ROLE_KEY` como *Secret*) van **solo en Production**. Sin Twilio (verificar teléfonos nuevos responde
+«no disponible»: se prueba con las cuentas sembradas) y sin Inngest (los pedidos se crean, las automatizaciones no
+corren). Ver [la trampa de las variables de Preview con rama](trampas.md#una-variable-de-preview-con-rama-bloquea-esa-rama-en-producción).
+
+**El cuidado que no se puede olvidar: cada push a `develop` redespliega la API de staging.** Si ese push trae una
+migración nueva y `tindivo-dev` no la tiene, la API de staging corre código que espera un esquema que no existe y se
+rompe (la app Android deja de funcionar sin que nadie haya tocado la app). Por eso:
+
+1. Toda migración que entre en `develop` se aplica **también a `tindivo-dev`**, en el mismo paso en que se integra (o
+   antes): `supabase db push --db-url "<URI de tindivo-dev>"` desde `develop` actualizado (en remoto, solo con
+   `db push`: `supabase/AGENTS.md`). La URI vive en los secretos, nunca en el chat ni en el repo.
+2. Comprobar: `supabase migration list --db-url "<URI de tindivo-dev>"` termina en la misma versión que
+   `supabase/migrations/` de `develop`; y `GET https://tindivo-api-staging.vercel.app/api/v1/config` → 200.
+3. Las migraciones que traen datos (como la 0088, que fijaba `push_dispatch` a la `send-push` de producción) se revisan
+   antes: en staging `push_dispatch` está **anulado a propósito** y debe seguir así.
+4. Una migración que necesite datos de prueba nuevos → volver a correr el seed (es idempotente; rota las contraseñas).
+
+**Rotar la service role de staging.** El seed solo acepta la clave cuya SHA-256 está fijada en
+`apps/api/scripts/staging-target.ts` (`STAGING_SERVICE_KEY_SHA256`): si se rota, hay que actualizar esa constante (y
+en Vercel y en `staging.env`).
 
 ---
 

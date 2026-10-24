@@ -1356,6 +1356,7 @@ export type Database = {
           occurred_at: string
           payload: Json
           published_at: string | null
+          push_claimed_at: string | null
           retry_count: number
         }
         Insert: {
@@ -1368,6 +1369,7 @@ export type Database = {
           occurred_at?: string
           payload: Json
           published_at?: string | null
+          push_claimed_at?: string | null
           retry_count?: number
         }
         Update: {
@@ -1380,6 +1382,7 @@ export type Database = {
           occurred_at?: string
           payload?: Json
           published_at?: string | null
+          push_claimed_at?: string | null
           retry_count?: number
         }
         Relationships: []
@@ -1920,6 +1923,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ops_alert_throttle: {
+        Row: {
+          kind: string
+          last_sent_at: string
+        }
+        Insert: {
+          kind: string
+          last_sent_at?: string
+        }
+        Update: {
+          kind?: string
+          last_sent_at?: string
+        }
+        Relationships: []
       }
       order_assignment_rejections: {
         Row: {
@@ -3284,29 +3302,35 @@ export type Database = {
       users: {
         Row: {
           created_at: string
+          deleted_at: string | null
           email: string
           full_name: string | null
           id: string
           is_active: boolean
           primary_role: Database["public"]["Enums"]["user_role"]
+          proofs_purged_at: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           email: string
           full_name?: string | null
           id: string
           is_active?: boolean
           primary_role?: Database["public"]["Enums"]["user_role"]
+          proofs_purged_at?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           email?: string
           full_name?: string | null
           id?: string
           is_active?: boolean
           primary_role?: Database["public"]["Enums"]["user_role"]
+          proofs_purged_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3316,6 +3340,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      account_deletion_blockers: { Args: { p_user_id: string }; Returns: Json }
       admin_confirm_courier_remittance: {
         Args: { p_actor_user_id: string; p_courier_order_id: string }
         Returns: Json
@@ -3395,6 +3420,10 @@ export type Database = {
         Args: { p_business_id: string; p_item_ids: string[] }
         Returns: boolean
       }
+      claim_ops_alert: {
+        Args: { p_kind: string; p_window?: string }
+        Returns: boolean
+      }
       claim_outbox_events: {
         Args: { p_limit?: number }
         Returns: {
@@ -3403,6 +3432,14 @@ export type Database = {
           out_event_type: string
           out_id: string
           out_payload: Json
+        }[]
+      }
+      claim_push_event: {
+        Args: { p_event_id: string }
+        Returns: {
+          aggregate_id: string
+          event_type: string
+          payload: Json
         }[]
       }
       close_drivers_outside_schedule: { Args: never; Returns: number }
@@ -3594,6 +3631,21 @@ export type Database = {
         Returns: boolean
       }
       current_user_role: { Args: never; Returns: string }
+      customer_address_delete: { Args: { p_id: string }; Returns: boolean }
+      customer_address_save: {
+        Args: {
+          p_id: string
+          p_label: string
+          p_lat: number
+          p_line: string
+          p_lng: number
+          p_location_accuracy_m: number
+          p_location_confirmed_at: string
+          p_make_default?: boolean
+          p_reference: string
+        }
+        Returns: string
+      }
       customer_contraentrega_blocked: {
         Args: { p_phone: string; p_reference: string }
         Returns: boolean
@@ -3618,6 +3670,7 @@ export type Database = {
         Args: { p_customer_user_id: string }
         Returns: boolean
       }
+      delete_customer_account: { Args: { p_user_id: string }; Returns: Json }
       deliver_order_cash: {
         Args: { p_driver_user_id: string; p_order_id: string }
         Returns: Json
@@ -3688,6 +3741,7 @@ export type Database = {
         Returns: Json
       }
       f_unaccent: { Args: { p_text: string }; Returns: string }
+      finish_proof_purge: { Args: { p_user_id: string }; Returns: Json }
       generate_courier_short_id: { Args: never; Returns: string }
       generate_short_id: { Args: never; Returns: string }
       geo_distance_km: {
@@ -3711,6 +3765,17 @@ export type Database = {
         Returns: boolean
       }
       is_within_platform_schedule: { Args: never; Returns: boolean }
+      list_proof_purge_due: {
+        Args: {
+          p_after_deleted_at?: string
+          p_after_user_id?: string
+          p_limit: number
+        }
+        Returns: {
+          deleted_at: string
+          user_id: string
+        }[]
+      }
       list_store_products: {
         Args: {
           p_category?: string
@@ -3721,6 +3786,13 @@ export type Database = {
         Returns: Json
       }
       list_store_sold: { Args: { p_limit?: number }; Returns: Json }
+      list_user_proof_objects: {
+        Args: { p_user_id: string }
+        Returns: {
+          bucket_id: string
+          name: string
+        }[]
+      }
       manual_order_money: {
         Args: {
           p_cash_amount: number
@@ -3767,6 +3839,14 @@ export type Database = {
         Args: { p_business_user_id: string; p_minutes?: number }
         Returns: Json
       }
+      personal_data_inventory: {
+        Args: never
+        Returns: {
+          column_name: string
+          data_type: string
+          table_name: string
+        }[]
+      }
       point_in_coverage_polygon: {
         Args: { p_lat: number; p_lng: number }
         Returns: boolean
@@ -3775,14 +3855,21 @@ export type Database = {
         Args: { p_lat: number; p_lng: number; p_ring: Json }
         Returns: boolean
       }
+      proof_purge_precheck: { Args: { p_user_id: string }; Returns: string }
       prune_creation_idempotency: { Args: never; Returns: number }
       prune_push_devices: { Args: never; Returns: number }
       push_token_hash: { Args: { p_token: string }; Returns: string }
       queue_lead_minutes: { Args: never; Returns: number }
       record_native_push_result: {
-        Args: { p_device_id: string; p_outcome: string; p_reason: string; p_token: string }
+        Args: {
+          p_device_id: string
+          p_outcome: string
+          p_reason: string
+          p_token: string
+        }
         Returns: boolean
       }
+      redact_personal_json: { Args: { j: Json }; Returns: Json }
       refresh_customer_profile_risk: {
         Args: { p_phone: string; p_user_id: string }
         Returns: undefined

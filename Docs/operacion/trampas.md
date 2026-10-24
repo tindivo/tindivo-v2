@@ -13,6 +13,9 @@
 | «Mi arreglo no hace efecto» y `curl` responde 200; el servidor nuevo murió con `EADDRINUSE` | [pkill no mata Next en Windows](#pkill-no-mata-next-en-windows) |
 | Un test busca `ah√≠` en vez de `ahí` | [Un heredoc de Bash corrompe los acentos](#un-heredoc-de-bash-corrompe-los-acentos) |
 | «invalid response from upstream», «Pedido no existe» o «Motorizado no encontrado» a mitad de una suite de integración; datos de siembra que desaparecen | [Un vitest de integración sin candado borra los datos de otra sesión](#un-vitest-de-integración-sin-candado-borra-los-datos-de-otra-sesión) |
+| `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "vitest" not found` justo después de un resumen de vitest | [«vitest not found» es un vitest que falló](#vitest-not-found-es-un-vitest-que-falló) |
+| `pnpm db:lock run -- bash -c "a && b"` no hace nada o solo hace `a`; `supabase` imprime su ayuda en JSON | [El candado parte los argumentos](#el-candado-parte-los-argumentos) |
+| Tras parar `supabase functions serve`, las pruebas de `send-push` no conectan y `supabase_edge_runtime_*` ya no está en `docker ps` | [El contenedor de Edge Functions desaparece](#el-contenedor-de-edge-functions-desaparece) |
 | Negocios, usuarios o ciclos de caja sobrantes en la base local tras correr suites | [Las suites de integración dejan basura en la base local](#las-suites-de-integración-dejan-basura-en-la-base-local) |
 | `cash-summary-scope.integration.test.ts` falla con `expected 204 to be 104` | [Los seeders de demo envenenan los tests de caja](#los-seeders-de-demo-envenenan-los-tests-de-caja) |
 | Un pedido creado a mano en la base local desaparece a mitad de sesión | [Los pedidos demo desaparecen solos](#los-pedidos-demo-desaparecen-solos) |
@@ -33,11 +36,18 @@
 | `pnpm test` verde en ~200 ms con `Cached: 9 cached, 9 total` y `>>> FULL TURBO` | [Turbo cachea los tests de integración](#turbo-cachea-los-tests-de-integración) |
 | El job `db-types-drift` rojo, o `database.types.ts` con +4/−28 líneas sin cambio de esquema | [db-types-drift es de versión del CLI](#db-types-drift-es-de-versión-del-cli) |
 | Rutas del v2 dan 404 en `api.tindivo.com` | [El dominio real de la API v2](#el-dominio-real-de-la-api-v2) |
+| Vercel no deja fijar una rama como de producción: «Cannot set Git branch "develop" as Production Branch, because it's used for Preview Environment Variables» | [Una variable de Preview con rama bloquea esa rama en producción](#una-variable-de-preview-con-rama-bloquea-esa-rama-en-producción) |
+| La API de staging da 500/422 o rompe tras un push a `develop` | [Deploy, §10: cada push a develop redespliega staging](deploy.md#10-staging-tindivo-dev-tú) |
 | El PDF de producción pierde la tipografía y los emoji salen como cuadrados | [El Chromium serverless solo trae Open Sans](#el-chromium-serverless-solo-trae-open-sans) |
 | En Windows `spawn ... ENOENT` al renderizar el PDF; el dev server del 3001 no responde tras tocar `next.config.ts` | [La rama de producción del PDF no se puede probar en Windows](#la-rama-de-producción-del-pdf-no-se-puede-probar-en-windows) |
 | Una pantalla tarda ~500 ms más de lo esperado por llamar a la API | [El salto a la API cuesta medio segundo](#el-salto-a-la-api-cuesta-medio-segundo) |
 | `LegacyMigrationApplyError ... INSERT INTO supabase_migrations.schema_migrations(version, name, statements)` | [Colisión de número de migración](#colisión-de-número-de-migración) |
 | Un DELETE por PostgREST responde 204 y la fila sigue ahí | [Un DELETE sin policy devuelve 204](#un-delete-sin-policy-devuelve-204) |
+| `has_schema_privilege(rol, 'public', 'USAGE')` da `true` después de revocar el USAGE a ese rol | [has_schema_privilege cuenta lo que tiene PUBLIC](#has_schema_privilege-cuenta-lo-que-tiene-public) |
+| Un nombre largo sale cortado a 63 caracteres en una consulta con `union` | [Un union con relname corta a 63](#un-union-con-relname-corta-a-63) |
+| `FATAL: database "supabase_admin" does not exist` al entrar con `psql -U supabase_admin` | [psql con supabase_admin necesita -d postgres](#psql-con-supabase_admin-necesita--d-postgres) |
+| `psql: error: invalid URI query parameter: "lock_timeout"` | [psql no acepta límites de espera sueltos en la URL](#psql-no-acepta-límites-de-espera-sueltos-en-la-url) |
+| Claude Code rechaza cualquier `supabase db push`, incluso con `--help` | [db push está bloqueado para Claude](#db-push-está-bloqueado-para-claude) |
 | Una lectura del Supabase legacy trae exactamente 1000 filas | [Leer el Supabase legacy](#leer-el-supabase-legacy) |
 | Un negocio dice «sonó y no me apareció» | [Diagnosticar pedidos perdidos](#diagnosticar-pedidos-perdidos) |
 | `push_delivery_log` dice `ok` y aun así el pedido no sonó | [El push se entregó y aun así no sonó](#el-push-se-entregó-y-aun-así-no-sonó) |
@@ -95,7 +105,23 @@ Es el mismo cuadro de "el problema está en el servidor, no en tu código" que [
 - El log de PostgREST no tiene ninguna línea en esos segundos, pero con su nivel de log actual solo registra errores y arranques: **no prueba** que la petición no le llegara.
 **Hipótesis (no demostrada):** una carrera de keep-alive entre kong y PostgREST (kong reutiliza una conexión que el otro extremo está cerrando). No está descartado un fallo de PostgREST bajo carga ni que pase fuera del stack local.
 **Cómo distinguirlo de la trampa anterior:** `pnpm db:lock status` dice que el candado es tuyo y `docker logs supabase_kong_zpnipajgwfthxhdtzhly 2>&1 | grep "Connection reset by peer"` tiene una línea en el segundo del fallo.
-**Qué hacer:** repetir solo ese archivo bajo el candado y adjuntar las dos salidas y la línea de kong como evidencia. Es un workaround, con la causa pendiente. Para cerrarla: subir el log de PostgREST a `info` durante una corrida y ver si la petición llega.
+- Se repitió el 2026-10-20 con el CLI 2.121.0 (kong 2.8.1, PostgREST v14.5): un `db:cycle` con 4 tests rojos en 2 archivos (`creation-idempotency`, `order-reviews`) y 6 líneas de `Connection reset by peer` en kong en esos segundos; los dos archivos, repetidos solos bajo el candado, dejaron un rojo en tres corridas seguidas y pasaron en la cuarta (expediente `../tindivo-auditorias/2026-10-19-mv7a-dispositivos/`, evidencia `E06x`). Actualizar el CLI no lo quitó.
+**Qué hacer:** repetir solo ese archivo bajo el candado y adjuntar las dos salidas y la línea de kong como evidencia. Es un workaround, con la causa pendiente. Para cerrarla: subir el log de PostgREST a `info` durante una corrida y ver si la petición llega. Al repetir, ojo con [«vitest not found»](#vitest-not-found-es-un-vitest-que-falló): es el mismo rojo con otro mensaje.
+
+### «vitest not found» es un vitest que falló
+**Síntoma:** al repetir un archivo con `pnpm --filter @tindivo/api exec vitest run …`, la salida termina en `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "vitest" not found` con `exit=1`, y parece que falta la dependencia. Reinstalar no cambia nada.
+**Causa:** (medido el 2026-10-20, pnpm en Windows) vitest **sí corrió**: justo encima está su resumen (`Test Files  1 failed | 1 passed (2)`). Cuando el comando sale con código distinto de cero, pnpm lo informa como «not found». En el expediente `2026-10-19-mv7a-dispositivos` (evidencia `E06`) un script de reintento lo tomó por un fallo de instalación y reintentó tres veces lo que era un test rojo.
+**Qué hacer:** lee el resumen de vitest que va antes del mensaje de pnpm: él dice qué falló. Un script que reintente no debe decidir con ese texto; decide con el resumen de vitest o con el código de salida.
+
+### El contenedor de Edge Functions desaparece
+**Síntoma:** después de cortar `supabase functions serve` (Ctrl+C o matar el proceso), las pruebas que llaman a `send-push` por HTTP fallan al conectar y `docker ps` ya no lista `supabase_edge_runtime_zpnipajgwfthxhdtzhly`; el resto del stack sigue arriba.
+**Causa:** (notas de sesión del 2026-10-20, sin log guardado) `functions serve` usa ese contenedor y, al terminar, a veces se lo lleva: pasó dos veces ese día y una tercera el contenedor siguió en pie. No vuelve solo.
+**Qué hacer:** tras parar `functions serve`, mira `docker ps -a | grep edge_runtime`. Si falta, con el candado: `pnpm db:lock run -- supabase stop` y luego `pnpm db:lock run -- supabase start`, en dos llamadas (ver [El candado parte los argumentos](#el-candado-parte-los-argumentos)). No basta con `docker start`: el contenedor ya no existe.
+
+### El candado parte los argumentos
+**Síntoma:** `node scripts/db-lock.mjs run -- bash -c "supabase stop && supabase start"` termina sin parar ni arrancar nada (`supabase` imprime su ayuda en JSON), o de `bash -c "cmd1 && cmd2"` solo corre una parte, sin error.
+**Causa:** (2026-10-20, `scripts/db-lock.mjs`) `run` junta los argumentos con espacios, sin comillas, y los pasa a la shell del sistema con `shell: true` (en Windows, `cmd.exe`). Las comillas que separaban el `-c` de `bash` ya no llegan: `bash` recibe solo la primera palabra y el resto lo interpreta `cmd.exe`.
+**Qué hacer:** un comando por llamada al candado, o un script: `node scripts/db-lock.mjs run -- bash ruta/al/script.sh`. Si necesitas saber qué pasó dentro, que el script escriba a un archivo y léelo después.
 
 ### Las suites de integración dejan basura en la base local
 **Síntoma:** la DB local acumula negocios, usuarios, pedidos, eventos y ciclos de caja de fixtures. Medido el 2026-08-11: 71 negocios, 110 usuarios, 159 pedidos, 11 ciclos vacíos. Medido el 2026-08-19: 27 pedidos manuales, 116 usuarios muertos, 1 evento. Un ciclo vacío la pantalla lo pinta como «Por confirmar ahora».
@@ -266,6 +292,20 @@ done | sort -u
 ```
 Calibra antes de concluir: `/api/v1/health` da 200 sin auth y `/api/v1/business/profile` da 401. Si una ruta que existe te da 404, no es que falte: estás llamando al host equivocado.
 
+### Una variable de Preview con rama bloquea esa rama en producción
+**Síntoma:** en un proyecto de Vercel recién creado (la rama de producción nace como `main`), al cambiarla a `develop`
+sale «Cannot set Git branch "develop" as Production Branch, because it's used for Preview Environment Variables …».
+Antes de eso, `Create Deployment` de `develop` sale como *Preview* y el dominio de producción sigue sirviendo el
+despliegue de `main`, que no ve las variables (la API respondía 422 nombrando las que faltaban).
+**Causa:** (medido el 2026-10-22, proyecto `tindivo-api-staging`) las variables se habían creado en *Preview*
+restringidas a la rama `develop`. Vercel no deja que una rama sea a la vez la de producción y la de variables de
+Preview, y al editar una variable con rama no deja pasarla a *Production* («Environment Variables with `gitBranch` can
+only be used with `target=preview`»).
+**Qué hacer:** borra esas variables y créalas de nuevo **solo en Production**; luego *Branch Tracking* → `develop` →
+*Save*, y `Create Deployment` de `develop` (debe salir con la etiqueta *Production*). Cambiar la rama no despliega nada
+por sí solo, y las variables solo llegan a despliegues nuevos. Detalle de staging en
+[deploy.md §10](deploy.md#10-staging-tindivo-dev-tú).
+
 ### El Chromium serverless solo trae Open Sans
 **Síntoma:** cualquier PDF renderizado en producción pierde su tipografía, las columnas de dinero pierden la alineación tabular, y los emoji y glifos de símbolos (`▲` U+25B2, `→` U+2192) salen como cuadrados. En local no se ve.
 **Causa:** (nota del 2026-09-08) el `@sparticuz/chromium` con el que producción genera PDFs trae tres fuentes y ni una más, dentro de `bin/fonts.tar.br`: `fonts/Open_Sans/OpenSans-Bold.ttf`, `OpenSans-Italic.ttf` y `OpenSans-Regular.ttf`. En local el PDF lo dibuja el Chrome de la máquina, que tiene de todo (incluida una fuente de emoji y una monoespaciada). Ninguna pila tipográfica (`-apple-system`, `Segoe UI`, `Roboto`, `monospace`) resuelve a nada en el contenedor: cae toda a Open Sans.
@@ -311,6 +351,39 @@ El error apunta a la tabla de bookkeeping, no al SQL (que está bien), y la tran
 **Síntoma:** un DELETE por PostgREST responde **HTTP 204** y la fila sigue ahí. Una segunda variante: con `service_role` y policy de sobra, `.delete().like('id', 'tmp%')` sobre `menu_items` devolvió 204 y no borró nada; el síntoma aparece en el INSERT siguiente, que choca con la clave primaria y hace pensar que el script de seed está roto.
 **Causa:** (1) (nota del 2026-08-28) con el JWT del cliente sobre `reports`: con `rep_participant_read` el cliente VE la fila pero no hay ninguna policy de DELETE para su rol, así que el DELETE afecta 0 filas, y 0 filas borradas es un 204 perfectamente válido; hizo falta el `service_role`. Aplica a casi toda la app: el esquema da a `customer` lecturas y algún insert, y las escrituras de verdad van por la API; muy pocas tablas tienen DELETE para un rol que no sea admin. (2) (medido el 2026-09-01) `id` es `uuid` y PostgREST no aplica `like` sobre uuid: la petición sale bien y casa con cero filas.
 **Qué hacer:** tras un DELETE por PostgREST, **verifica con un SELECT**, no con el código de estado. Para limpiar datos de prueba en local, usa desde el principio la `SUPABASE_SERVICE_ROLE_KEY` de `apps/api/.env.local`. Para borrar por patrón sobre uuid, arma la lista de ids en el script y usa `.in('id', ids)`. Si algún día se pone un botón de "eliminar" en el cliente, comprueba que existe la policy: sin ella la UI dirá que funcionó y no habrá pasado nada. Misma familia que [Los fixtures e2e acumulan historial permanente](#los-fixtures-e2e-acumulan-historial-permanente) (un éxito aparente que no limpió nada).
+
+### has_schema_privilege cuenta lo que tiene PUBLIC
+**Síntoma:** una comprobación de que un rol perdió el USAGE de `public` sigue dando `true`, aunque el `revoke` se aplicó; si la comprobación está dentro de una migración, la migración aborta en una base nueva.
+**Causa:** `has_schema_privilege` responde por el privilegio **efectivo**, y en `public` PUBLIC tiene USAGE: cualquier rol lo hereda. Así abortaba la `0271` en un `db reset` local antes de corregirla (`818d72f4`). Medido de nuevo el 2026-10-20 en la base local: para `supabase_auth_admin`, `has_schema_privilege` da `t` y su concesión propia en la ACL, `f`.
+**Qué hacer:** para saber qué se le dio **a ese rol**, mira la ACL con `aclexplode`:
+```sql
+select exists (
+  select 1 from pg_namespace n, aclexplode(n.nspacl) a
+  where n.nspname = 'public'
+    and a.grantee = 'supabase_auth_admin'::regrole
+    and a.privilege_type = 'USAGE');
+```
+Vale igual para tablas y funciones (`relacl`, `proacl`): `has_*_privilege` contesta «¿puede?», no «¿se le concedió?».
+
+### Un union con relname corta a 63
+**Síntoma:** en una consulta que junta nombres del catálogo con texto propio (`select relname … union all select 'un texto largo'`), el texto largo sale cortado a 63 caracteres. Una comparación fila a fila contra una referencia da diferencias falsas.
+**Causa:** `relname` (y `proname`, `nspname`…) es del tipo `name`, de 63 bytes como máximo. El `union` resuelve la columna a `name` y corta todo lo demás a esa longitud. Medido el 2026-10-20 en la base local: la misma cadena de 70 caracteres da `63` sin cast y `70` con `relname::text`.
+**Qué hacer:** castea a `::text` las columnas del catálogo en cualquier `union`, `values` o comparación con texto.
+
+### psql con supabase_admin necesita -d postgres
+**Síntoma:** `docker exec supabase_db_zpnipajgwfthxhdtzhly psql -U supabase_admin -c '…'` falla con `FATAL: database "supabase_admin" does not exist`.
+**Causa:** sin `-d`, psql se conecta a una base con el mismo nombre que el usuario, y esa base no existe. Con `-U postgres` no pasa porque la base `postgres` sí existe. Medido el 2026-10-20.
+**Qué hacer:** `psql -U supabase_admin -d postgres …`.
+
+### psql no acepta límites de espera sueltos en la URL
+**Síntoma:** `psql "<url>?lock_timeout=5s&statement_timeout=120s"` falla con `psql: error: invalid URI query parameter: "lock_timeout"` (exit 2).
+**Causa:** libpq solo acepta en la URL sus propios parámetros de conexión; los ajustes de sesión van dentro de `options`. Medido el 2026-10-20 con psql 17.11 (expediente `2026-10-20-prod-0268-0271`, evidencia `E09`).
+**Qué hacer:** `psql "<url>?options=-c%20lock_timeout%3D5s%20-c%20statement_timeout%3D120s"`, o la URL limpia más `PGOPTIONS='-c lock_timeout=5s -c statement_timeout=120s'`. Comprueba antes de seguir: `show lock_timeout` debe decir `5s`.
+
+### db push está bloqueado para Claude
+**Síntoma:** en Claude Code, cualquier comando que contenga `supabase db push` se rechaza antes de ejecutarse, incluso `supabase db push --help` o uno dirigido a la base local.
+**Causa:** (2026-10-20) es a propósito: el permiso de la sesión bloquea el comando entero para que ningún agente aplique migraciones en producción; no mira los argumentos.
+**Qué hacer:** en local, aplica las migraciones pendientes con `supabase migration up --db-url <url-local>` o `pnpm db:cycle` (bajo candado). En producción no hay alternativa para el agente: lo ejecuta Jesús con la guía firmada.
 
 ### Leer el Supabase legacy
 **Síntoma:** una lectura del legacy (`nwcdxmebsozswnjlblip`, tindivo-delivery) devuelve exactamente 1000 filas sin error aunque se pidió más (`limit=5000`), y los agregados calculados encima parecen válidos y no lo son (ya produjo un `_stg_first_order` incorrecto en la primera pasada del ETL de direcciones; `orders` tiene 1606 filas con `client_phone`, no 1000).
