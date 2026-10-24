@@ -1,5 +1,6 @@
 'use client'
 
+import { checkModifierSelection } from '@tindivo/contracts'
 import { useMemo, useState } from 'react'
 import type { ModGroupData, ModOption, ProductItem } from '@/features/catalog/types'
 import type { CartModifier } from '@/lib/cart'
@@ -38,13 +39,15 @@ export function useProductOptions(item: ProductItem) {
     return out
   }, [groups, single, multi])
 
-  const missing = groups.filter((g) => {
-    if (!g.is_required) return false
-    return g.selection_type === 'single'
-      ? !single[g.id]
-      : (multi[g.id] ?? []).length < Math.max(1, g.min_selections)
-  })
-  const valid = missing.length === 0
+  const issues = checkModifierSelection(
+    groups,
+    selectedOptions.map((o) => o.id),
+    new Map(groups.flatMap((g) => g.options.map((o) => [o.id, g.id] as const))),
+  )
+  const missing = groups.filter((g) =>
+    issues.some((issue) => issue.kind === 'missing' && issue.groupId === g.id),
+  )
+  const valid = issues.length === 0
   const unitPrice =
     item.base_price + selectedOptions.reduce((s, o) => s + Number(o.additional_price), 0)
   const total = unitPrice * qty

@@ -1,7 +1,13 @@
+import { checkModifierSelection, modifierSelectionMessage } from '@tindivo/contracts'
 import { itemWindowState } from '@/features/catalog/lib/availability'
 import type { BusinessDetail, MenuItem, ModOption } from '@/features/catalog/types'
 
-export type CartIssueKind = 'removed' | 'unavailable' | 'out_of_window' | 'price_changed'
+export type CartIssueKind =
+  | 'removed'
+  | 'unavailable'
+  | 'out_of_window'
+  | 'price_changed'
+  | 'invalid_selection'
 
 export interface CartLineIssue {
   kind: CartIssueKind
@@ -108,6 +114,19 @@ export function validateCartAgainstCatalog(
         issues.push({
           kind: 'price_changed',
           message: `Precio actualizado (${diff >= 0 ? '+' : ''}S/ ${diff.toFixed(2)})`,
+        })
+      }
+
+      const groups = catalogItem.modifier_groups ?? []
+      const selectionIssues = checkModifierSelection(
+        groups,
+        line.modifiers.map((m) => m.optionId),
+        new Map(groups.flatMap((g) => g.options.map((o) => [o.id, g.id] as const))),
+      )
+      for (const issue of selectionIssues) {
+        issues.push({
+          kind: 'invalid_selection',
+          message: modifierSelectionMessage(issue, catalogItem.name),
         })
       }
 
