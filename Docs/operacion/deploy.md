@@ -231,6 +231,47 @@ con su comprobación (`select count(*) … where key = 'push_claim_since'` = 0).
 **Regla fija:** si alguna vez se redespliega la función nueva con una fila de corte vieja presente, primero se
 borra la fila.
 
+
+### 2.2.1 Reintento del aviso entero (migración 0272) **[tú]**
+
+Hasta la 0271 un aviso se perdía sin que nadie se enterara si la llamada del trigger fallaba o si `send-push`
+caía tras reclamar el evento. La 0272 da al reclamo un plazo (`push_retry.leaseSeconds`, 180 s) y añade el cron
+`retry-push-dispatch` (cada minuto), que vuelve a llamar a `send-push` por los avisos que no terminaron: hasta
+`maxAttempts` (3) reintentos, con espera de 1, 2 y 4 minutos, y nunca pasados `ttlMinutes` (15). Lo que agota
+intentos o plazo queda con `push_dead_at` y el cron escribe **un** `PushDeliveryFailed` por corrida, que `send-push`
+manda a los admins (con freno de 30 minutos). `send-push` marca el final con `complete_push_event`.
+
+Nace **apagado**: sin `push_retry.since` el cron no hace nada. Orden (no lo cambies; fuera de 18:00-23:00 de Lima):
+
+1. `supabase db push` (la 0272 es aditiva; la función desplegada sigue funcionando, pero aún no marca el final).
+2. `supabase functions deploy send-push` (la que llama a `complete_push_event`).
+3. Enciende (SQL de escritura contra `tindivo-prod`, ejecutado por ti; `<hora UTC ISO del deploy>` = la del paso 2):
+
+   ```sql
+   update public.app_settings
+      set value = jsonb_set(value, '{since}', to_jsonb('<hora UTC ISO del deploy>'::text)), updated_at = now()
+    where key = 'push_retry';
+   ```
+
+   Si encendieras antes del deploy, la función vieja reclamaría sin marcar el final y el cron repetiría avisos ya
+   entregados.
+
+**Cómo comprobar que está encendido** (solo lectura; `select public.retry_push_dispatch()` **no** se ejecuta a mano en
+producción: escribiría): mira las últimas corridas del job (`select status, return_message, start_time from
+cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'retry-push-dispatch') order by
+start_time desc limit 5;`) y el estado de los avisos (`select count(*) filter (where push_done_at is not null) as
+terminados, count(*) filter (where push_attempts > 0) as reintentados, count(*) filter (where push_dead_at is not
+null) as perdidos from public.domain_events where occurred_at >= now() - interval '1 day';`).
+
+**Cómo apagarlo:** quita la clave `since` (el cron vuelve a no hacer nada, el reclamo conserva su plazo):
+
+```sql
+update public.app_settings set value = value - 'since', updated_at = now() where key = 'push_retry';
+```
+
+**Rollback:** `supabase/rollbacks/0272_un_aviso_que_no_salio_se_reintenta.rollback.sql` (apaga el cron, restaura el
+reclamo definitivo de la 0264 y conserva las columnas para auditar). Antes, apaga con el SQL de arriba.
+
 ## 2.1 Supabase Auth — onboarding del cliente **[tú]**
 
 El onboarding del customer (bottom-sheet con Google + correo sin verificación) requiere

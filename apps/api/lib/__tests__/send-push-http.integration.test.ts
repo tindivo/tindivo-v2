@@ -29,6 +29,7 @@
  * intacta (valor y `updated_at`) al terminar, también si algo falla. Lo mismo con `push_claim_since` y con la
  * fila de `ops_alert_throttle`.
  */
+import { execFileSync } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { cleanup, localClient, type SeededOrder, seedPrepaidOrder } from './helpers/local-db'
@@ -114,6 +115,24 @@ async function claimedAt(eventId: string): Promise<string | null> {
   return (data as { push_claimed_at: string | null }).push_claimed_at
 }
 
+async function eventTimes(eventId: string): Promise<{
+  push_claimed_at: string | null
+  push_done_at: string | null
+  push_dead_at: string | null
+}> {
+  const { data, error } = await localClient
+    .from('domain_events')
+    .select('push_claimed_at,push_done_at,push_dead_at')
+    .eq('id', eventId)
+    .single()
+  if (error) throw new Error(error.message)
+  return data as {
+    push_claimed_at: string | null
+    push_done_at: string | null
+    push_dead_at: string | null
+  }
+}
+
 async function setCut(value: string): Promise<void> {
   const { error } = await localClient
     .from('app_settings')
@@ -136,6 +155,38 @@ const THROTTLE_KIND = 'otp_phone_limit_misconfigured'
 const ID_DISPATCH = 'app_settings:push_dispatch'
 const ID_CUT = 'app_settings:push_claim_since'
 const ID_THROTTLE = `ops_alert_throttle:${THROTTLE_KIND}`
+// 0272: el freno de `PushDeliveryFailed` vive en la base (`retry_push_dispatch`), ya no en `send-push`: esta fila
+// NO debe aparecer por el paso de un aviso de fallo (se respalda para comprobarlo y para dejarla como estaba).
+const ID_UNDELIVERED = 'ops_alert_throttle:push_undelivered'
+
+// Contra la base local, como postgres (para quitar y devolver permisos). Los acentos viajan por stdin.
+const DB_CONTAINER = 'supabase_db_zpnipajgwfthxhdtzhly'
+function psql(sql: string): string {
+  return execFileSync(
+    'docker',
+    [
+      'exec',
+      '-i',
+      DB_CONTAINER,
+      'psql',
+      '-U',
+      'postgres',
+      '-At',
+      '-v',
+      'ON_ERROR_STOP=1',
+      '-f',
+      '-',
+    ],
+    { input: sql, encoding: 'utf8' },
+  ).trim()
+}
+/** Privilegios que `service_role` tiene sobre una tabla / una función, para comprobar que se devolvieron. */
+const tablePrivs = (table: string) =>
+  psql(
+    `select coalesce(string_agg(privilege_type, ',' order by privilege_type), '') from information_schema.role_table_grants where grantee = 'service_role' and table_schema = 'public' and table_name = '${table}';`,
+  )
+const canExecute = (fn: string) =>
+  psql(`select has_function_privilege('service_role', '${fn}', 'execute');`)
 
 function target(id: string): {
   table: 'app_settings' | 'ops_alert_throttle'
@@ -176,7 +227,12 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
   let seed: SeededOrder
   let subscriptionId = ''
   const eventIds: string[] = []
-  const snapshot = new SettingsSnapshot(settingsStore, [ID_DISPATCH, ID_CUT, ID_THROTTLE])
+  const snapshot = new SettingsSnapshot(settingsStore, [
+    ID_DISPATCH,
+    ID_CUT,
+    ID_THROTTLE,
+    ID_UNDELIVERED,
+  ])
 
   async function track(id: string): Promise<string> {
     eventIds.push(id)
@@ -463,6 +519,7 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
     expect(r.json.recipients).toBe(0)
     expect(await deliveryLogCount(subscriptionId)).toBe(antes)
     expect(await claimedAt(id)).not.toBeNull()
+    expect((await eventTimes(id)).push_done_at).not.toBeNull() // cero destinatarios SIN error sí termina
   })
 
   it('sin event_id real, un cuerpo falso solo NO notifica (el ataque original)', async () => {
@@ -475,6 +532,235 @@ describe.skipIf(!ENABLED)('send-push · HTTP real contra la Edge Function servid
     })
     expect(r.status).toBe(409)
     expect(await deliveryLogCount(subscriptionId)).toBe(antes)
+  })
+
+  // ── 0272: el reclamo con plazo y el marcado del final ──────────────────────
+  it('0272: tras el éxito de un evento fresco quedan push_claimed_at y push_done_at', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const antes = await eventTimes(id)
+    expect(antes.push_done_at).toBeNull()
+    const r = await post({ event_id: id })
+    expect(r.status).toBe(200)
+    expect(r.json.ok).toBe(true)
+    const despues = await eventTimes(id)
+    expect(despues.push_claimed_at).not.toBeNull()
+    expect(despues.push_done_at).not.toBeNull()
+    expect(despues.push_dead_at).toBeNull()
+  })
+
+  it('0272: un evento reclamado hace más de 180 s y sin terminar se reclama otra vez y queda terminado', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const viejo = iso(-200_000)
+    const { error } = await localClient
+      .from('domain_events')
+      .update({ push_claimed_at: viejo })
+      .eq('id', id)
+    expect(error).toBeNull()
+    const antes = await deliveryLogCount(subscriptionId)
+    const r = await post({ event_id: id })
+    expect(r.status).toBe(200)
+    expect(r.json.ok).toBe(true)
+    const t = await eventTimes(id)
+    expect(t.push_done_at).not.toBeNull()
+    expect(new Date(t.push_claimed_at as string).getTime()).toBeGreaterThan(
+      new Date(viejo).getTime(),
+    )
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1)
+  })
+
+  it('0272: un evento terminado (push_done_at) o perdido (push_dead_at) da 409', async () => {
+    await setCut(iso(-5 * MIN))
+    const hecho = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const perdido = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const u1 = await localClient
+      .from('domain_events')
+      .update({ push_done_at: iso(0) })
+      .eq('id', hecho)
+    expect(u1.error).toBeNull()
+    const u2 = await localClient
+      .from('domain_events')
+      .update({ push_dead_at: iso(0) })
+      .eq('id', perdido)
+    expect(u2.error).toBeNull()
+    const antes = await deliveryLogCount(subscriptionId)
+    expect((await post({ event_id: hecho })).status).toBe(409)
+    expect((await post({ event_id: perdido })).status).toBe(409)
+    expect(await claimedAt(hecho)).toBeNull()
+    expect(await claimedAt(perdido)).toBeNull()
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes)
+  })
+
+  it('0272: PushDeliveryFailed se acepta y queda terminado; send-push ya no frena (el freno está en la base): dos seguidos se entregan los dos', async () => {
+    await setCut(iso(-5 * MIN))
+    const { error: delErr } = await localClient
+      .from('ops_alert_throttle')
+      .delete()
+      .eq('kind', 'push_undelivered')
+    expect(delErr).toBeNull()
+    // Cuántos admins hay en esta base: cada aviso de fallo va a cada uno (puede ser 0 en una base limpia).
+    const admins = Number(psql(`select count(*) from public.user_roles where role = 'admin';`))
+
+    const nuevo = async (): Promise<string> => {
+      const id = crypto.randomUUID()
+      const { error } = await localClient.from('domain_events').insert({
+        id,
+        aggregate_type: 'push_outbox',
+        aggregate_id: crypto.randomUUID(),
+        event_type: 'PushDeliveryFailed',
+        payload: { count: 2, eventTypes: 'OrderCreated' } as never,
+      })
+      if (error) throw new Error(`insert PushDeliveryFailed: ${error.message}`)
+      return track(id)
+    }
+
+    const a = await nuevo()
+    const r1 = await post({ event_id: a })
+    expect(r1.status).toBe(200)
+    expect(r1.json.ok).toBe(true)
+    expect(r1.json.recipients).toBe(admins)
+    expect((await eventTimes(a)).push_done_at).not.toBeNull()
+
+    const b = await nuevo()
+    const r2 = await post({ event_id: b })
+    expect(r2.status).toBe(200)
+    expect(r2.json.ok).toBe(true)
+    expect(r2.json.recipients).toBe(admins) // sin freno en send-push: se entrega igual
+    expect((await eventTimes(b)).push_done_at).not.toBeNull()
+
+    // Y send-push no escribe ya el freno `push_undelivered` (ahora vive en la base).
+    const { data: fila, error: filaErr } = await localClient
+      .from('ops_alert_throttle')
+      .select('*')
+      .eq('kind', 'push_undelivered')
+      .maybeSingle()
+    expect(filaErr).toBeNull()
+    expect(fila).toBeNull()
+  })
+
+  // ── 0272 · CAX-003 / CAX-004: un error interno no da el aviso por entregado ─────────────────
+  it('CAX-003: si falla la lectura de admins, 500 y el evento queda reclamado SIN terminar; restaurado el permiso y vencido el plazo, se procesa', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({
+        eventType: 'PushDeliveryFailed',
+        aggregateId: crypto.randomUUID(),
+        payload: { count: 2, eventTypes: 'OrderCreated' },
+      }),
+    )
+    const privsAntes = tablePrivs('user_roles')
+    expect(privsAntes).toContain('SELECT') // si no, el caso no probaría nada
+    let r: Reply
+    try {
+      psql('revoke select on public.user_roles from service_role;')
+      r = await post({ event_id: id })
+    } finally {
+      psql('grant select on public.user_roles to service_role;')
+    }
+    expect(tablePrivs('user_roles')).toBe(privsAntes)
+    expect(r.status).toBe(500)
+    expect(r.json.ok).toBe(false)
+    const t = await eventTimes(id)
+    expect(t.push_claimed_at).not.toBeNull()
+    expect(t.push_done_at).toBeNull()
+
+    // Vencido el plazo del reclamo (180 s) la base lo puede reclamar de nuevo; con el permiso, termina.
+    const { error } = await localClient
+      .from('domain_events')
+      .update({ push_claimed_at: iso(-200_000) })
+      .eq('id', id)
+    expect(error).toBeNull()
+    const r2 = await post({ event_id: id })
+    expect(r2.status).toBe(200)
+    expect(r2.json.ok).toBe(true)
+    expect((await eventTimes(id)).push_done_at).not.toBeNull()
+  })
+
+  it('CAX-003: cero destinatarios legítimos (pedido que no existe) es 200 y SÍ termina', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderStatusChanged', aggregateId: crypto.randomUUID() }),
+    )
+    const r = await post({ event_id: id })
+    expect(r.status).toBe(200)
+    expect(r.json.ok).toBe(true)
+    expect(r.json.recipients).toBe(0)
+    expect((await eventTimes(id)).push_done_at).not.toBeNull()
+  })
+
+  it('CAX-004: si no se puede marcar el final, el aviso sale (200) y el evento queda sin terminar; vencido el plazo se reclama otra vez (al menos una vez)', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const antes = await deliveryLogCount(subscriptionId)
+    expect(canExecute('public.complete_push_event(uuid)')).toBe('t')
+    let r: Reply
+    try {
+      psql('revoke execute on function public.complete_push_event(uuid) from service_role;')
+      r = await post({ event_id: id })
+    } finally {
+      psql('grant execute on function public.complete_push_event(uuid) to service_role;')
+    }
+    expect(canExecute('public.complete_push_event(uuid)')).toBe('t')
+    expect(r.status).toBe(200) // el aviso salió: la respuesta no cambia
+    expect(r.json.ok).toBe(true)
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes + 1)
+    const t = await eventTimes(id)
+    expect(t.push_claimed_at).not.toBeNull()
+    expect(t.push_done_at).toBeNull()
+
+    // Documenta el duplicado aceptado: vencido el plazo se reclama otra vez y el aviso sale OTRA vez.
+    const { error } = await localClient
+      .from('domain_events')
+      .update({ push_claimed_at: iso(-200_000) })
+      .eq('id', id)
+    expect(error).toBeNull()
+    const r2 = await post({ event_id: id })
+    expect(r2.status).toBe(200)
+    expect(await deliveryLogCount(subscriptionId)).toBe(antes + 2)
+    expect((await eventTimes(id)).push_done_at).not.toBeNull()
+  })
+
+  it('CAX-007: si falla la lectura de suscripciones, 500 y el evento queda reclamado SIN terminar; restaurado el permiso y vencido el plazo, se procesa', async () => {
+    await setCut(iso(-5 * MIN))
+    const id = await track(
+      await insertEvent({ eventType: 'OrderCreated', aggregateId: seed.orderId }),
+    )
+    const privsAntes = tablePrivs('push_subscriptions')
+    expect(privsAntes).toContain('SELECT') // si no, el caso no probaría nada
+    let r: Reply
+    try {
+      psql('revoke select on public.push_subscriptions from service_role;')
+      r = await post({ event_id: id })
+    } finally {
+      psql('grant select on public.push_subscriptions to service_role;')
+    }
+    expect(tablePrivs('push_subscriptions')).toBe(privsAntes)
+    expect(r.status).toBe(500)
+    expect(r.json.ok).toBe(false)
+    const t = await eventTimes(id)
+    expect(t.push_claimed_at).not.toBeNull()
+    expect(t.push_done_at).toBeNull()
+
+    const { error } = await localClient
+      .from('domain_events')
+      .update({ push_claimed_at: iso(-200_000) })
+      .eq('id', id)
+    expect(error).toBeNull()
+    const r2 = await post({ event_id: id })
+    expect(r2.status).toBe(200)
+    expect(r2.json.ok).toBe(true)
+    expect((await eventTimes(id)).push_done_at).not.toBeNull()
   })
 
   // ── OpsAlert ───────────────────────────────────────────────────────────────

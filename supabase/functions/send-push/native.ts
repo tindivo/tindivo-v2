@@ -9,7 +9,8 @@
 // se conserva un CÓDIGO de razón (`BadDeviceToken`, `UNREGISTERED`…) que pasa por `safeCode`:
 // solo deja pasar códigos de listas cerradas.
 //
-// Los reintentos son otro lote (MV7c): aquí un fallo se devuelve y quien llama lo registra.
+// El reintento del aviso entero lo hace la base (0272, `retry_push_dispatch`); el reintento por
+// destinatario sigue pendiente: aquí un fallo se devuelve y quien llama lo registra.
 
 export type NativeApp = 'customer' | 'negocios' | 'motorizados' | 'admin'
 export type NativePlatform = 'ios' | 'android'

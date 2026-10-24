@@ -1008,12 +1008,16 @@ describe('send-push index.ts · cada aviso lleva su app', () => {
   })
 
   it('el envío nativo arranca tras el Web Push de cada aviso, sin esperarlo, y se suma al final', () => {
+    // CAX-007: las tareas nativas van por `withStartedTasks`, que les pone manejador al arrancar.
+    const iGroup = src.indexOf('await withStartedTasks<')
     const iWeb = src.indexOf('webpush.sendNotification(')
-    const iNative = src.indexOf('nativePending.push(deliverNative(note, event_type))')
-    const iWait = src.indexOf('await Promise.all(nativePending)')
-    expect(iWeb).toBeGreaterThan(0)
+    const iNative = src.indexOf('start(deliverNative(note, event_type))')
+    const iWait = src.indexOf('for (const native of nativeResults)')
+    expect(iGroup).toBeGreaterThan(0)
+    expect(iWeb).toBeGreaterThan(iGroup)
     expect(iNative).toBeGreaterThan(iWeb)
     expect(iWait).toBeGreaterThan(iNative)
+    expect(src).not.toContain('nativePending')
     // Ningún aviso espera a su envío nativo dentro del bucle.
     expect(src).not.toContain('await deliverNative(')
     expect(src).toContain('sent += native.sent')

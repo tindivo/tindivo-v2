@@ -42,3 +42,21 @@ export function isOpsCaller(headerValue: string | null, secret: string | undefin
   for (let i = 0; i < b.length; i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0)
   return diff === 0
 }
+
+/**
+ * Texto FIJO del aviso `PushDeliveryFailed` (0272): solo lleva el número de avisos perdidos,
+ * y solo si es un entero >= 1. Nada más del payload llega al texto.
+ */
+export function pushUndeliveredText(count: unknown): { title: string; body: string } {
+  const title = 'Tindivo: avisos sin entregar'
+  if (typeof count === 'number' && Number.isInteger(count) && count >= 1) {
+    return {
+      title,
+      body: `No se pudieron entregar ${count} avisos en los últimos minutos. Revisa la bitácora de push.`,
+    }
+  }
+  return {
+    title,
+    body: 'No se pudieron entregar algunos avisos en los últimos minutos. Revisa la bitácora de push.',
+  }
+}
