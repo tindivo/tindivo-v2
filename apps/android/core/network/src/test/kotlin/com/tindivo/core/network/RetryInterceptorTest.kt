@@ -91,6 +91,16 @@ class RetryInterceptorTest {
     }
 
     @Test
+    fun `POST con Idempotency-Key en blanco con 503 no se reintenta`() {
+        server.enqueue(MockResponse(code = 503))
+        server.enqueue(MockResponse(code = 200))
+
+        post(key = " ").use { assertEquals(503, it.code) }
+
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
     fun `POST con Idempotency-Key 503 y luego 200 son dos peticiones`() {
         server.enqueue(MockResponse(code = 503))
         server.enqueue(MockResponse(code = 200))

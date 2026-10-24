@@ -11,7 +11,7 @@ import java.time.format.DateTimeParseException
 import kotlin.random.Random
 
 /**
- * Reintentos de CLI-10: solo `GET` y `POST` con `Idempotency-Key` (repetirlo no duplica nada), solo ante error de red,
+ * Reintentos de CLI-10: solo `GET` y `POST` con `Idempotency-Key` no vacía (repetirlo no duplica nada), solo ante error de red,
  * `5xx` o `429`, y como mucho [MAX_RETRIES] veces. Ningún otro `4xx` se reintenta: el servidor ya contestó que no.
  *
  * La espera es exponencial con aleatorio completo (el intento `n` espera entre 0 y 0,5 s por 2^n) para que muchas
@@ -61,7 +61,7 @@ class RetryInterceptor(
 
     private fun isRetryable(request: Request): Boolean =
         request.method == "GET" ||
-            (request.method == "POST" && request.header(IDEMPOTENCY_KEY) != null)
+            (request.method == "POST" && !request.header(IDEMPOTENCY_KEY).isNullOrBlank())
 
     private fun isRetryableStatus(code: Int): Boolean = code == TOO_MANY_REQUESTS || code in SERVER_ERRORS
 
