@@ -165,6 +165,17 @@ class SystemRepositoryTest {
         }
 
     @Test
+    fun `un 200 con Content-Type html es Unknown y no lanza`() =
+        runTest {
+            server.enqueue(json(200, "<html>Portal cautivo</html>", "text/html"))
+
+            val error = (repository.health() as ApiResult.Failure).error
+
+            assertTrue(error is AppError.Unknown)
+            assertNull((error as AppError.Unknown).code)
+        }
+
+    @Test
     fun `426 client_upgrade_required trae la version minima de la cabecera`() =
         runTest {
             server.enqueue(
