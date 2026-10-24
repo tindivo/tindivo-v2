@@ -315,7 +315,10 @@ console.log(a.join("\n"))' > "$WORK/diffids.txt" \
   chmod -R u+rwX "$WORK/fs"
   # Los hardlinks (tipo h) se extraen como archivos regulares: se cuentan junto con los archivos regulares.
   local TAR_FILES FS_FILES
-  TAR_FILES="$(tar -tvf "$WORK/export.tar" | grep -c '^[-h]' || true)"
+  if ! tar -tvf "$WORK/export.tar" > "$WORK/export-lista.txt" 2>> "$OUT/export-tar.err"; then fail "no se pudo listar el export"; fi
+  rc=0
+  TAR_FILES="$(grep -c '^[-h]' "$WORK/export-lista.txt")" || rc=$?
+  if [ "$rc" -ge 2 ]; then fail "error al contar el export (grep rc=$rc)"; TAR_FILES=-1; fi
   FS_FILES="$(find "$WORK/fs" -type f | wc -l)"
   rep "export: archivos (regulares y enlaces duros) en el tar: $TAR_FILES · archivos regulares extraídos: $FS_FILES"
   if [ "$TAR_FILES" -ne "$FS_FILES" ]; then fail "el export tiene $TAR_FILES archivos y se extrajeron $FS_FILES"; fi
