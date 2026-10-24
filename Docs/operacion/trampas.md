@@ -12,6 +12,8 @@
 | Con el candado tomado, un test falla una vez con «invalid response from the upstream server» y al repetir pasa | [Un 502 suelto de PostgREST con el candado tomado](#un-502-suelto-de-postgrest-con-el-candado-tomado) |
 | «Mi arreglo no hace efecto» y `curl` responde 200; el servidor nuevo murió con `EADDRINUSE` | [pkill no mata Next en Windows](#pkill-no-mata-next-en-windows) |
 | Un test busca `ah√≠` en vez de `ahí` | [Un heredoc de Bash corrompe los acentos](#un-heredoc-de-bash-corrompe-los-acentos) |
+| El SHA-256 de un archivo sacado con `git archive` no coincide con el de `git show <commit>:<ruta>` | [git archive escribe CRLF con autocrlf](#git-archive-escribe-crlf-con-autocrlf) |
+| Un script lanzado con `python -I` rompe los acentos al escribir en un archivo aunque `PYTHONIOENCODING=utf-8` esté puesto | [Python aislado ignora PYTHONIOENCODING](#python-aislado-ignora-pythonioencoding) |
 | «invalid response from upstream», «Pedido no existe» o «Motorizado no encontrado» a mitad de una suite de integración; datos de siembra que desaparecen | [Un vitest de integración sin candado borra los datos de otra sesión](#un-vitest-de-integración-sin-candado-borra-los-datos-de-otra-sesión) |
 | `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "vitest" not found` justo después de un resumen de vitest | [«vitest not found» es un vitest que falló](#vitest-not-found-es-un-vitest-que-falló) |
 | `pnpm db:lock run -- bash -c "a && b"` no hace nada o solo hace `a`; `supabase` imprime su ayuda en JSON | [El candado parte los argumentos](#el-candado-parte-los-argumentos) |
@@ -48,6 +50,8 @@
 | `FATAL: database "supabase_admin" does not exist` al entrar con `psql -U supabase_admin` | [psql con supabase_admin necesita -d postgres](#psql-con-supabase_admin-necesita--d-postgres) |
 | `psql: error: invalid URI query parameter: "lock_timeout"` | [psql no acepta límites de espera sueltos en la URL](#psql-no-acepta-límites-de-espera-sueltos-en-la-url) |
 | Claude Code rechaza cualquier `supabase db push`, incluso con `--help` | [db push está bloqueado para Claude](#db-push-está-bloqueado-para-claude) |
+| El MCP `supabase` devuelve las migraciones de prod cuando querías ver tindivo-dev | [El MCP de Supabase apunta a producción](#el-mcp-de-supabase-apunta-a-producción) |
+| `db push --db-url` a tindivo-dev falla con `28P01` (contraseña) o con «Cannot find project ref» | [db push a tindivo-dev sin la contraseña](#db-push-a-tindivo-dev-sin-la-contraseña) |
 | Una lectura del Supabase legacy trae exactamente 1000 filas | [Leer el Supabase legacy](#leer-el-supabase-legacy) |
 | Un negocio dice «sonó y no me apareció» | [Diagnosticar pedidos perdidos](#diagnosticar-pedidos-perdidos) |
 | `push_delivery_log` dice `ok` y aun así el pedido no sonó | [El push se entregó y aun así no sonó](#el-push-se-entregó-y-aun-así-no-sonó) |
@@ -95,6 +99,24 @@ Es el mismo cuadro de "el problema está en el servidor, no en tu código" que [
 **Síntoma:** un e2e busca `/Pagas en la caja y preparan tu pedido ah√≠ mismo/` y no encuentra nada; el texto corrupto (`ahí` sale como `ah√≠`) acaba dentro del código o del test, y el fallo se disfraza de aserción rota.
 **Causa:** pasar un script de Python por un heredoc de Bash (`cat > x.py <<'PY'`) en esta máquina corrompe los caracteres no ASCII. El script se ejecuta sin error. Como el repo es íntegramente en español (copy, comentarios, mensajes de test), casi cualquier reemplazo de texto lleva acentos.
 **Qué hacer:** para scripts de parcheo con texto en español, escribe el `.py` con la herramienta Write (al scratchpad) y ejecútalo con `python ruta.py`; no lo pases por heredoc. Si ya ocurrió, corrige el string con Edit, no con otro heredoc. Cuidado con `/tmp`: Git Bash y el Python de Windows **no** resuelven la misma ruta; usa el scratchpad absoluto para los ficheros que compartan. La misma regla vale para los mensajes de commit: escríbelos a un fichero UTF-8 y usa `git commit -F`.
+
+### git archive escribe CRLF con autocrlf
+**Síntoma:** el SHA-256 de un archivo de una copia hecha con `git archive <commit> | tar -x` no coincide con el de
+`git show <commit>:<ruta>`. Codex lo detecta como evidencia que no corresponde al candidato y no firma (ronda 2 del
+expediente `2026-10-24-android-peso`).
+**Causa:** (2026-10-24) esta máquina tiene `core.autocrlf=true`, y `git archive` aplica la misma conversión de fin de
+línea que un checkout: los archivos de texto salen con CRLF.
+**Qué hacer:** `git -c core.autocrlf=false archive <commit>`. Las herramientas de expedientes
+(`../tindivo-auditorias/_herramientas/nuevo_expediente.sh` y `preparar_delta.sh`) ya lo hacen. Antes de citar un
+hash en una evidencia, compáralo con `git rev-parse <commit>:<ruta>` o con el hash de `git show`.
+
+### Python aislado ignora PYTHONIOENCODING
+**Síntoma:** un script lanzado con `python -I` (el modo aislado que se usa con datos no confiables) escribe los
+acentos rotos, o falla con `UnicodeEncodeError`, al redirigir la salida a un archivo, aunque
+`PYTHONIOENCODING=utf-8` esté puesto.
+**Causa:** (2026-10-24) `-I` implica `-E`, que ignora todas las variables `PYTHON*`; la salida redirigida usa entonces
+la página de códigos de Windows.
+**Qué hacer:** `python -I -X utf8 …`. La opción `-X` sí se respeta en modo aislado.
 
 ## Base local y tests de integración
 
@@ -450,6 +472,39 @@ Vale igual para tablas y funciones (`relacl`, `proacl`): `has_*_privilege` conte
 **Síntoma:** en Claude Code, cualquier comando que contenga `supabase db push` se rechaza antes de ejecutarse, incluso `supabase db push --help` o uno dirigido a la base local.
 **Causa:** (2026-10-20) es a propósito: el permiso de la sesión bloquea el comando entero para que ningún agente aplique migraciones en producción; no mira los argumentos.
 **Qué hacer:** en local, aplica las migraciones pendientes con `supabase migration up --db-url <url-local>` o `pnpm db:cycle` (bajo candado). En producción no hay alternativa para el agente: lo ejecuta Jesús con la guía firmada.
+
+### El MCP de Supabase apunta a producción
+**Síntoma:** `list_migrations` o `get_project_url` del MCP `supabase` devuelven datos de un proyecto distinto del que
+querías revisar.
+**Causa:** (2026-10-24) en esta máquina el MCP `supabase` está conectado a **tindivo-prod** (`zpnipajgwfthxhdtzhly`),
+no a tindivo-dev (`jgziumvrtogguljhpdos`).
+**Qué hacer:** antes de sacar conclusiones, comprueba el proyecto con `get_project_url`. Para comprobar staging no hay
+MCP: lo hace Jesús con el CLI (siguiente trampa). Una lectura de metadatos de prod (`list_migrations`) sirve para
+confirmar que una migración **no** llegó ahí.
+
+### db push a tindivo-dev sin la contraseña
+**Síntoma:** `supabase db push --db-url "postgresql://postgres.jgziumvrtogguljhpdos:<pw>@aws-1-us-east-2.pooler.supabase.com:5432/postgres"`
+falla con `failed SASL auth (FATAL: password authentication failed … (SQLSTATE 28P01))`, incluso después de
+resetear la contraseña en el panel. Si `--db-url` no llega al CLI (en cmd, o con la línea partida al pegar), el
+error es otro: «Cannot find project ref. Have you run supabase link?».
+**Causa:** (2026-10-24, CLI 2.109.1) el 28P01 siguió saliendo después del reseteo, con la contraseña codificada con
+`[uri]::EscapeDataString`; la causa no quedó determinada. El usuario `postgres.<ref>` sí se reconoce: un host de
+pooler equivocado daría «Tenant or user not found».
+**Qué hacer:** lo ejecuta Jesús (Claude lo tiene bloqueado: [db push está bloqueado para
+Claude](#db-push-está-bloqueado-para-claude)). En el worktree del PR, nunca en el principal:
+
+```powershell
+supabase link --project-ref jgziumvrtogguljhpdos   # si pide la contraseña, Enter en blanco
+Get-Content supabase\.temp\project-ref           # debe decir jgziumvrtogguljhpdos; con zpni… (prod), parar
+supabase db push --dry-run                        # «Initialising login role…» y solo las migraciones esperadas
+supabase db push
+supabase db push --dry-run                        # «Remote database is up to date.»: es la evidencia
+supabase unlink
+```
+
+Sin contraseña, el CLI entra con un usuario temporal creado con la sesión de `supabase login`. El enlace queda solo
+en ese worktree (`supabase/.temp/`), pero hay que quitarlo con `supabase unlink` para que un `db push` posterior no
+vaya a staging por error.
 
 ### Leer el Supabase legacy
 **Síntoma:** una lectura del legacy (`nwcdxmebsozswnjlblip`, tindivo-delivery) devuelve exactamente 1000 filas sin error aunque se pidió más (`limit=5000`), y los agregados calculados encima parecen válidos y no lo son (ya produjo un `_stg_first_order` incorrecto en la primera pasada del ETL de direcciones; `orders` tiene 1606 filas con `client_phone`, no 1000).
