@@ -1,4 +1,9 @@
-import { CheckoutQuoteRequestSchema, type DISTANCE_BANDS } from '@tindivo/contracts'
+import {
+  CheckoutQuoteRequestSchema,
+  checkModifierSelection,
+  type DISTANCE_BANDS,
+  modifierSelectionMessage,
+} from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { requireRole } from '@/lib/http/auth'
 import { handleOptions } from '@/lib/http/cors'
@@ -77,12 +82,15 @@ export async function POST(req: Request): Promise<Response> {
     if (dishErr) throw new Error(dishErr.message)
     if (optErr) throw new Error(optErr.message)
 
-    // Los grupos de modificadores vinculados a cada plato: la creación del pedido
-    // rechaza una opción cuyo grupo no esté vinculado al plato (0230).
+    // Incluye los grupos sin opciones elegidas para detectar los obligatorios.
     const { data: links, error: linkErr } = await service
       .from('menu_item_modifier_groups')
-      .select('item_id,group_id')
+      .select(
+        'item_id,group_id,group:menu_modifier_groups!inner(id,name,selection_type,is_required,min_selections,max_selections)',
+      )
       .in('item_id', itemIds)
+      .order('display_order')
+      .order('group_id')
     if (linkErr) throw new Error(linkErr.message)
     const linked = new Set((links ?? []).map((l) => `${l.item_id}:${l.group_id}`))
 
@@ -103,6 +111,7 @@ export async function POST(req: Request): Promise<Response> {
 
     const dishById = new Map((dishes ?? []).map((d) => [d.id, d]))
     const optionById = new Map((options ?? []).map((o) => [o.id, o]))
+    const optionGroupOf = new Map((options ?? []).map((o) => [o.id, o.group_id]))
 
     let subtotalCents = 0
     const lines = body.items.map((line) => {
@@ -126,6 +135,11 @@ export async function POST(req: Request): Promise<Response> {
           )
         }
         unitCents += cents(Number(option.additional_price))
+      }
+      const groups = (links ?? []).filter((l) => l.item_id === dish.id).map((l) => l.group)
+      const issue = checkModifierSelection(groups, line.modifiers ?? [], optionGroupOf)[0]
+      if (issue) {
+        throw new DomainError(modifierSelectionMessage(issue, dish.name), 'validation_error')
       }
       const lineCents = unitCents * line.quantity
       subtotalCents += lineCents
