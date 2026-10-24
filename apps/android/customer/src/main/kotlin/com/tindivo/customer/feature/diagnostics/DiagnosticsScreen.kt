@@ -13,7 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,16 +25,10 @@ import com.tindivo.core.designsystem.StatusRow
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
 
-/** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt y la navegación. */
+/** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
-fun DiagnosticsDestination(
-    onUpgradeRequired: (minVersion: String?) -> Unit,
-    viewModel: DiagnosticsViewModel = hiltViewModel(),
-) {
+fun DiagnosticsDestination(viewModel: DiagnosticsViewModel = hiltViewModel()) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
-    LaunchedEffect(state) {
-        if (state is DiagnosticsUiState.UpgradeRequired) onUpgradeRequired(state.minVersion)
-    }
     DiagnosticsScreen(state = state, onRefresh = viewModel::refresh)
 }
 
@@ -50,12 +43,10 @@ fun DiagnosticsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(text = stringResource(R.string.diagnostics_title), style = MaterialTheme.typography.headlineMedium)
-            // En UpgradeRequired no hay nada que dibujar: la navegación ya lleva a la pantalla de actualización.
             when (state) {
                 DiagnosticsUiState.Loading -> LoadingIndicator()
                 is DiagnosticsUiState.Loaded -> LoadedContent(state)
                 is DiagnosticsUiState.Failed -> ErrorContent(error = state.error, onRetry = onRefresh)
-                is DiagnosticsUiState.UpgradeRequired -> Unit
             }
         }
     }
