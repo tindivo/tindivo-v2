@@ -13,13 +13,17 @@ import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.catalog.home.parseAccent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.NumberFormat
+import java.time.Clock
+import java.time.Instant
 import java.util.Locale
 import javax.inject.Inject
 
@@ -32,6 +36,8 @@ data class MenuItemUi(
     val price: String,
     val imageUrl: String?,
     val available: Boolean,
+    /** Franja horaria: fuera de ella el plato no se muestra (ver [visibleAt]). */
+    val window: DishWindow,
 )
 
 data class MenuCategoryUi(
@@ -70,6 +76,7 @@ class BusinessViewModel
         savedStateHandle: SavedStateHandle,
         private val catalog: CatalogRepository,
         private val configService: ConfigService,
+        private val clock: Clock,
     ) : ViewModel() {
         // La ruta tipada `BusinessRoute(id)` guarda el argumento bajo la clave "id".
         private val id: String = checkNotNull(savedStateHandle.get<String>("id"))
@@ -79,8 +86,29 @@ class BusinessViewModel
 
         private var loadJob: Job? = null
 
+        // La carta completa (ya validada): lo visible se recalcula de ella cada minuto, sin volver a pedirla.
+        private var complete: BusinessDetailUi? = null
+
         init {
             refresh()
+            viewModelScope.launch {
+                while (true) {
+                    delay(RECHECK_MILLIS)
+                    republish()
+                }
+            }
+        }
+
+        /** Re-evalúa las franjas contra el reloj: a las 15:00 desaparece el plato de mediodía sin recargar. */
+        private fun republish() {
+            val full = complete ?: return
+            _state.update { current ->
+                if (current is BusinessUiState.Loaded) {
+                    BusinessUiState.Loaded(full.visibleAt(clock.instant()))
+                } else {
+                    current
+                }
+            }
         }
 
         /** Vuelve a pedir la carta. Si ya hay una carga en curso, no lanza otra. */
@@ -92,8 +120,13 @@ class BusinessViewModel
                     _state.value =
                         when (val result = catalog.business(id)) {
                             is ApiResult.Success -> {
-                                result.data.toDetail()?.let { BusinessUiState.Loaded(it) }
-                                    ?: BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
+                                val full = result.data.toDetail()
+                                complete = full
+                                if (full != null) {
+                                    BusinessUiState.Loaded(full.visibleAt(clock.instant()))
+                                } else {
+                                    BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
+                                }
                             }
 
                             is ApiResult.Failure -> {
@@ -109,6 +142,8 @@ class BusinessViewModel
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
         }
     }
+
+private const val RECHECK_MILLIS = 60_000L
 
 internal const val INVALID_PRICE = "base_price fuera de numeric(10,2)"
 
@@ -149,8 +184,21 @@ private fun GetBusiness200ResponseDataCategoriesInnerItemsInner.toItem(): MenuIt
         // D-55: la miniatura si existe; si no, la foto grande.
         imageUrl = thumbnailUrl?.takeIf { it.isNotBlank() } ?: imageUrl?.takeIf { it.isNotBlank() },
         available = isAvailable,
+        window = DishWindow(days = availableDays, from = availableFrom, to = availableTo),
     )
 }
+
+/**
+ * Quita los platos fuera de su franja en el instante [now] y las categorías que se quedan sin platos. Los agotados
+ * (`available = false`) no se tocan: esos se siguen mostrando atenuados. Se aplica a la carta ya validada.
+ */
+internal fun BusinessDetailUi.visibleAt(now: Instant): BusinessDetailUi =
+    copy(
+        categories =
+            categories
+                .map { category -> category.copy(items = category.items.filter { it.window.isOpenAt(now) }) }
+                .filter { it.items.isNotEmpty() },
+    )
 
 /** `decimal(10,2)`: dos decimales y diez cifras en total, como `menu_items.base_price` en la base. */
 private const val PRICE_SCALE = 2

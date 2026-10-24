@@ -22,11 +22,16 @@ import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BusinessViewModelTest {
@@ -64,7 +69,43 @@ class BusinessViewModelTest {
         .body(body)
         .build()
 
-    private fun newViewModel() = BusinessViewModel(SavedStateHandle(mapOf("id" to "don-lucho")), catalog, configService)
+    private fun newViewModel(clock: Clock = Clock.fixed(LUNES_MEDIODIA, ZoneOffset.UTC)) =
+        BusinessViewModel(SavedStateHandle(mapOf("id" to "don-lucho")), catalog, configService, clock)
+
+    /** Un reloj que el test mueve a mano. */
+    private class MutableClock(
+        var now: Instant,
+    ) : Clock() {
+        override fun getZone(): ZoneId = ZoneOffset.UTC
+
+        override fun withZone(zone: ZoneId): Clock = this
+
+        override fun instant(): Instant = now
+    }
+
+    private fun quoted(value: String?) = value?.let { "\"$it\"" } ?: "null"
+
+    private fun dish(
+        id: Int,
+        name: String,
+        price: String = "10",
+        available: Boolean = true,
+        from: String? = null,
+        to: String? = null,
+    ) = """{"id":"00000000-0000-4000-8000-00000000000$id","category_id":"11111111-1111-4111-8111-111111111111",
+        "name":"$name","description":null,"base_price":$price,"image_url":null,"image_hue":null,
+        "is_available":$available,"is_compact":true,"badges":[],"display_order":$id,
+        "available_days":null,"available_from":${quoted(from)},"available_to":${quoted(to)},
+        "modifier_groups":[]}"""
+
+    /** Una carta con una sola categoría («Almuerzos») y los platos dados. */
+    private fun menu(vararg dishes: String) =
+        DETAIL.substringBefore("\"categories\":[") +
+            "\"categories\":[{\"id\":\"11111111-1111-4111-8111-111111111111\",\"name\":\"Almuerzos\",\"blurb\":null," +
+            "\"display_order\":1,\"items\":[${dishes.joinToString(",")}]}],\"schedule\":[],\"opening_confirmed\":null}}"
+
+    private suspend fun BusinessViewModel.names(): List<String> =
+        (settled() as BusinessUiState.Loaded).business.categories.flatMap { c -> c.items.map { it.name } }
 
     private suspend fun BusinessViewModel.settled(): BusinessUiState = state.first { it !is BusinessUiState.Loading }
 
@@ -172,10 +213,132 @@ class BusinessViewModelTest {
             )
         }
 
+    @Test
+    fun `un plato fuera de su franja no aparece`() =
+        runTest {
+            server.enqueue(response(200, menu(dish(1, "Ceviche", from = "13:00", to = "15:00"), dish(2, "Chicha"))))
+
+            assertEquals(listOf("Chicha"), newViewModel().names())
+        }
+
+    @Test
+    fun `un plato dentro de su franja aparece`() =
+        runTest {
+            server.enqueue(response(200, menu(dish(1, "Ceviche", from = "11:00", to = "15:00"))))
+
+            assertEquals(listOf("Ceviche"), newViewModel().names())
+        }
+
+    @Test
+    fun `una categoria cuyo unico plato esta fuera de franja no aparece`() =
+        runTest {
+            server.enqueue(response(200, menu(dish(1, "Ceviche", from = "13:00", to = "15:00"))))
+
+            val state = newViewModel().settled() as BusinessUiState.Loaded
+
+            assertTrue(state.business.categories.isEmpty())
+        }
+
+    @Test
+    fun `un plato agotado pero en franja se sigue mostrando como no disponible`() =
+        runTest {
+            server.enqueue(response(200, menu(dish(1, "Ceviche", available = false, from = "11:00", to = "15:00"))))
+
+            val state = newViewModel().settled() as BusinessUiState.Loaded
+
+            val items =
+                state.business.categories
+                    .single()
+                    .items
+            assertEquals(listOf("Ceviche"), items.map { it.name })
+            assertEquals(listOf(false), items.map { it.available })
+        }
+
+    @Test
+    fun `una franja con hora ilegible deja ver el plato`() =
+        runTest {
+            server.enqueue(response(200, menu(dish(1, "Ceviche", from = "mediodia", to = "15:00"))))
+
+            assertEquals(listOf("Ceviche"), newViewModel().names())
+        }
+
+    @Test
+    fun `un precio invalido en un plato oculto sigue haciendo fallar la carta`() =
+        runTest {
+            server.enqueue(response(200, menu(dish(1, "Ceviche", price = "12.345", from = "13:00", to = "15:00"))))
+
+            val state = newViewModel().settled()
+
+            assertEquals(BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE)), state)
+        }
+
+    @Test
+    fun `al pasar el minuto el plato fuera de franja desaparece sin recargar`() =
+        runTest {
+            server.enqueue(response(200, menu(dish(1, "Ceviche", from = "11:00", to = "15:00"))))
+            // 14:59:30 en Lima (UTC-5): el plato aún se sirve.
+            val clock = MutableClock(Instant.parse("2026-10-26T19:59:30Z"))
+            val viewModel = newViewModel(clock)
+            assertEquals(listOf("Ceviche"), viewModel.names())
+
+            clock.now = Instant.parse("2026-10-26T20:00:30Z")
+            dispatcher.scheduler.advanceTimeBy(61_000L)
+
+            val state = viewModel.state.value as BusinessUiState.Loaded
+            assertTrue(state.business.categories.isEmpty())
+            assertEquals(1, server.requestCount)
+        }
+
+    @Test
+    fun `visibleAt quita platos fuera de franja y categorias vacias, y deja los agotados`() {
+        fun item(
+            id: String,
+            window: DishWindow,
+            available: Boolean = true,
+        ) = MenuItemUi(id, id, null, "S/ 1.00", null, available, window)
+
+        val open = DishWindow(null, "11:00", "15:00")
+        val closed = DishWindow(null, "13:00", "15:00")
+        val detail =
+            BusinessDetailUi(
+                name = "x",
+                tagline = null,
+                logoUrl = null,
+                bannerUrl = null,
+                accent = null,
+                categories =
+                    listOf(
+                        MenuCategoryUi("c1", "c1", null, listOf(item("a", open, available = false), item("b", closed))),
+                        MenuCategoryUi("c2", "c2", null, listOf(item("c", closed))),
+                    ),
+            )
+
+        val visible = detail.visibleAt(LUNES_MEDIODIA)
+
+        assertEquals(listOf("c1"), visible.categories.map { it.id })
+        assertEquals(
+            listOf("a"),
+            visible.categories
+                .single()
+                .items
+                .map { it.id },
+        )
+        assertFalse(
+            visible.categories
+                .single()
+                .items
+                .single()
+                .available,
+        )
+    }
+
     /** El formato es-PE separa el símbolo con un espacio duro (U+00A0); las aserciones lo comparan como espacio. */
     private fun String?.plain() = this?.replace('\u00A0', ' ')
 
     private companion object {
+        // Lunes 26-oct-2026, 12:00 en Lima (UTC-5).
+        val LUNES_MEDIODIA: Instant = Instant.parse("2026-10-26T17:00:00Z")
+
         const val THUMB_URL = "https://x.supabase.co/storage/v1/object/public/menu-items/b/items/i.1-t"
         const val PHOTO_URL = "https://x.supabase.co/storage/v1/object/public/menu-items/b/items/i.2"
         const val NOT_FOUND = """{"type":"about:blank","title":"x","status":404,"code":"not_found"}"""
