@@ -124,17 +124,51 @@ class BusinessViewModelTest {
         }
 
     @Test
-    fun `formatPrice muestra soles con dos decimales y sin pasar por Double`() {
+    fun `formatPrice muestra exactamente un importe de numeric(10,2) en soles`() {
         assertEquals("S/ 12.50", formatPrice(BigDecimal("12.5")).plain())
         assertEquals("S/ 0.00", formatPrice(BigDecimal("0")).plain())
         assertEquals("S/ 1,250.00", formatPrice(BigDecimal("1250.00")).plain())
         assertEquals("S/ 99,999,999.99", formatPrice(BigDecimal("99999999.99")).plain())
-        // Como Double, 2.675 es 2.67499…: si el formato pasara por Double, saldría «2.67».
-        assertEquals("S/ 2.68", formatPrice(BigDecimal("2.675")).plain())
+        assertEquals("S/ 1,000.00", formatPrice(BigDecimal("1E+3")).plain())
     }
 
+    @Test
+    fun `formatPrice no redondea ni acepta importes fuera de numeric(10,2)`() {
+        for (amount in listOf("2.675", "0.001", "-1", "-0.01", "100000000", "1E+8")) {
+            assertNull(amount, formatPrice(BigDecimal(amount)))
+        }
+    }
+
+    @Test
+    fun `un precio fuera de numeric(10,2) deja la carta entera en Failed`() =
+        runTest {
+            for (bad in listOf("12.345", "-1", "100000000")) {
+                server.enqueue(response(200, DETAIL.replace("\"base_price\":12.5,", "\"base_price\":$bad,")))
+
+                val state = newViewModel().settled()
+
+                assertEquals(bad, BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE)), state)
+            }
+        }
+
+    @Test
+    fun `un precio con exponente se muestra con su valor exacto`() =
+        runTest {
+            server.enqueue(response(200, DETAIL.replace("\"base_price\":12.5,", "\"base_price\":1.25e1,")))
+
+            val state = newViewModel().settled() as BusinessUiState.Loaded
+
+            assertEquals(
+                "S/ 12.50",
+                state.business.categories[0]
+                    .items[0]
+                    .price
+                    .plain(),
+            )
+        }
+
     /** El formato es-PE separa el símbolo con un espacio duro (U+00A0); las aserciones lo comparan como espacio. */
-    private fun String.plain() = replace(' ', ' ')
+    private fun String?.plain() = this?.replace('\u00A0', ' ')
 
     private companion object {
         const val THUMB_URL = "https://x.supabase.co/storage/v1/object/public/menu-items/b/items/i.1-t"

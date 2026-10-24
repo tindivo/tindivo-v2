@@ -108,6 +108,27 @@ class CatalogRepositoryTest {
             }
         }
 
+    @Test
+    fun `un base_price con exponente o entre comillas llega con el mismo valor exacto`() =
+        runTest {
+            // Un exponente es un número JSON válido (RFC 8259 §6); el adaptador lee el literal sin pasar por Double.
+            for (literal in listOf("1.25e1", "1.25E+1", "\"12.50\"")) {
+                server.enqueue(json(200, BUSINESS_DETAIL.replace("\"base_price\":12.50", "\"base_price\":$literal")))
+
+                val data = (repository.business("don-lucho") as ApiResult.Success).data
+
+                assertEquals(
+                    literal,
+                    0,
+                    data.categories
+                        .single()
+                        .items[0]
+                        .basePrice
+                        .compareTo(BigDecimal("12.50")),
+                )
+            }
+        }
+
     private companion object {
         const val THUMB_URL = "https://x.supabase.co/storage/v1/object/public/menu-items/b/items/i.1-t"
 

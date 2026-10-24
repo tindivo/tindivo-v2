@@ -92,7 +92,8 @@ class BusinessViewModel
                     _state.value =
                         when (val result = catalog.business(id)) {
                             is ApiResult.Success -> {
-                                BusinessUiState.Loaded(result.data.toDetail())
+                                result.data.toDetail()?.let { BusinessUiState.Loaded(it) }
+                                    ?: BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
                             }
 
                             is ApiResult.Failure -> {
@@ -109,45 +110,69 @@ class BusinessViewModel
         }
     }
 
-internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi =
-    BusinessDetailUi(
+internal const val INVALID_PRICE = "base_price fuera de numeric(10,2)"
+
+/** `null` si algún plato trae un precio que no se puede mostrar tal cual: la carta falla entera (ver [formatPrice]). */
+internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi? {
+    val menu =
+        categories
+            .sortedBy { it.displayOrder }
+            .map { it.toCategory() ?: return null }
+            .filter { it.items.isNotEmpty() }
+    return BusinessDetailUi(
         name = business.name,
         tagline = business.tagline?.takeIf { it.isNotBlank() },
         logoUrl = business.logoUrl?.takeIf { it.isNotBlank() },
         bannerUrl = business.bannerUrl?.takeIf { it.isNotBlank() },
         accent = parseAccent(business.accentColor),
-        categories =
-            categories
-                .sortedBy { it.displayOrder }
-                .map { it.toCategory() }
-                .filter { it.items.isNotEmpty() },
+        categories = menu,
     )
+}
 
-private fun GetBusiness200ResponseDataCategoriesInner.toCategory() =
-    MenuCategoryUi(
+private fun GetBusiness200ResponseDataCategoriesInner.toCategory(): MenuCategoryUi? {
+    val menu = items.sortedBy { it.displayOrder }.map { it.toItem() ?: return null }
+    return MenuCategoryUi(
         id = id.toString(),
         name = name,
         blurb = blurb?.takeIf { it.isNotBlank() },
-        items = items.sortedBy { it.displayOrder }.map { it.toItem() },
+        items = menu,
     )
+}
 
-private fun GetBusiness200ResponseDataCategoriesInnerItemsInner.toItem() =
-    MenuItemUi(
+private fun GetBusiness200ResponseDataCategoriesInnerItemsInner.toItem(): MenuItemUi? {
+    val price = formatPrice(basePrice) ?: return null
+    return MenuItemUi(
         id = id.toString(),
         name = name,
         description = description?.takeIf { it.isNotBlank() },
-        price = formatPrice(basePrice),
+        price = price,
         // D-55: la miniatura si existe; si no, la foto grande.
         imageUrl = thumbnailUrl?.takeIf { it.isNotBlank() } ?: imageUrl?.takeIf { it.isNotBlank() },
         available = isAvailable,
     )
+}
+
+/** `decimal(10,2)`: dos decimales y diez cifras en total, como `menu_items.base_price` en la base. */
+private const val PRICE_SCALE = 2
+private const val PRICE_PRECISION = 10
 
 /**
  * Solo para mostrar (KT-8): `S/ 12.50` en soles de Perú; nunca se usa para calcular. `DecimalFormat` formatea el
  * [BigDecimal] sin pasar por `Double` ni `Float`. Una instancia por llamada: `NumberFormat` no es seguro entre hilos.
+ *
+ * Devuelve `null` si el importe no cabe en `numeric(10,2)` (más de dos decimales o más de ocho cifras enteras) o es
+ * negativo, que no es un precio de carta aunque la columna no lo impida: antes que redondear o enseñar un precio así,
+ * la carta falla. Dentro de ese dominio nunca hay redondeo (`UNNECESSARY`): se muestra exactamente el importe recibido.
  */
-internal fun formatPrice(amount: BigDecimal): String =
-    NumberFormat
+internal fun formatPrice(amount: BigDecimal): String? {
+    val exact =
+        amount
+            .takeIf { it.signum() >= 0 && it.stripTrailingZeros().scale() <= PRICE_SCALE }
+            ?.setScale(PRICE_SCALE, RoundingMode.UNNECESSARY)
+            ?.takeIf { it.precision() <= PRICE_PRECISION }
+            ?: return null
+    return NumberFormat
         .getCurrencyInstance(Locale.forLanguageTag("es-PE"))
-        .apply { roundingMode = RoundingMode.HALF_UP }
-        .format(amount)
+        .apply { roundingMode = RoundingMode.UNNECESSARY }
+        .format(exact)
+}
