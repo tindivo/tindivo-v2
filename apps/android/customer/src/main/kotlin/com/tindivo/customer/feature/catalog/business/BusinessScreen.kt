@@ -32,8 +32,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -255,7 +256,8 @@ private fun DishImage(imageUrl: String?) {
         contentAlignment = Alignment.Center,
     ) {
         Image(
-            painter = painterResource(R.drawable.ic_tindivo_mark),
+            // imageResource y no painterResource: este solo decodifica el webp; aquel arrastra el lector de vectores XML.
+            bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_mark),
             contentDescription = null,
             modifier = Modifier.size(40.dp),
             colorFilter = ColorFilter.tint(tint),
