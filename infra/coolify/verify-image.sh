@@ -163,7 +163,7 @@ rep "archivos en la imagen final: $(wc -l < "$OUT/imagen-archivos.txt")"
 # 4d. Valores públicos (CAX-003)
 rep "valores NEXT_PUBLIC_* sintéticos: archivos de la imagen donde aparece cada uno"
 for n in "${PUB[@]}"; do
-  c="$(grep -rlaF -- "${PUBVAL[$n]}" "$WORK/fs" 2>/dev/null | wc -l)"
+  c="$( { grep -rlaF -- "${PUBVAL[$n]}" "$WORK/fs" 2>/dev/null || true; } | wc -l)"
   rep "  NEXT_PUBLIC_${n}: ${c} archivo(s)"
   if [ "$n" = SUPABASE_URL ] && [ "$APP" != api ] && [ "$c" -eq 0 ]; then
     fail "NEXT_PUBLIC_SUPABASE_URL no llegó al bundle de $APP"
