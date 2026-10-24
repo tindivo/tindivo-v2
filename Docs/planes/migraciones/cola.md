@@ -71,7 +71,7 @@ mientras se construye el resto.
 7. **Auth** · Activar la protección de contraseñas filtradas (aviso de los advisors de seguridad de producción).
 8. **Firebase** · Crear el proyecto de Firebase y poner su secreto para que MV7b envíe por FCM (el código ya está; sin el secreto, Android queda apagado y el resto sigue).
 9. **H8** · Presupuesto del VPS de ensayo — pospuesto: la mudanza va después del móvil.
-10. ~~**Deriva de prod**~~ · Decidido por Jesús el 2026-10-20: se revocan. Es la migración `0271` (arriba), que sale en la próxima ventana.
+10. ~~**Deriva de prod**~~ · Decidido por Jesús el 2026-10-20: se revocan. Es la migración `0271` (arriba), desplegada el 2026-10-23.
 11. ~~**B6 y la ventana**~~ · Resuelto: Jesús ejecutó la ventana de la `0268` a la `0271` el 2026-10-23 con la guía v2 firmada.
 12. **`0272` en `tindivo-dev`** · Aplicarla ([deploy.md §10](../../operacion/deploy.md#10-staging-tindivo-dev-tú): `supabase db push --db-url` desde `develop`; la URI no está en `staging.env`).
 13. **Ventana de producción de MV7c** · La `0272` y `send-push`, con una guía nueva firmada por Codex.
