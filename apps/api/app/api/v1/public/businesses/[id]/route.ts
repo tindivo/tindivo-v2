@@ -99,7 +99,7 @@ export async function GET(
           // cliente la resuelve contra su propio reloj. Si aquí se mandara ya
           // calculado, esta página —que es ISR con `revalidate: 15`— ofrecería
           // ceviche a las 15:30 a quien la abrió a las 14:55 y no ha recargado.
-          'id,category_id,name,description,base_price,image_url,image_hue,is_available,is_compact,badges,display_order,available_days,available_from,available_to',
+          'id,category_id,name,description,base_price,image_url,thumbnail_url,image_hue,is_available,is_compact,badges,display_order,available_days,available_from,available_to',
         )
         .eq('business_id', businessId)
         .is('deleted_at', null)

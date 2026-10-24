@@ -284,6 +284,36 @@ describe('rutas públicas', () => {
     expect(items.some((i) => i.modifier_groups.length > 0)).toBe(true)
   })
 
+  it('D-55: el plato con miniatura la devuelve y el que no la tiene la deja en null, y ambos cumplen el esquema', async () => {
+    const THUMB = `${LOCAL_URL}/storage/v1/object/public/menu-items/${E2E.BUSINESS_ID}/items/zz-t?v=1`
+    type Item = { id: string; thumbnail_url?: string | null }
+    const itemsDe = (detail: Record<string, unknown>) =>
+      (detail.categories as { items: Item[] }[]).flatMap((c) => c.items)
+    // Los platos que de verdad salen en la carta pública (categoría activa).
+    const visibles = itemsDe(
+      await conforms('getBusiness', 200, getBusiness, { params: { id: E2E.BUSINESS_ID } }),
+    ).map((i) => i.id)
+    expect(visibles.length).toBeGreaterThanOrEqual(2)
+    const [conMiniatura, sinMiniatura] = visibles as [string, string]
+    try {
+      await sdb
+        .from('menu_items')
+        .update({ thumbnail_url: null })
+        .eq('business_id', E2E.BUSINESS_ID)
+      await sdb.from('menu_items').update({ thumbnail_url: THUMB }).eq('id', conMiniatura)
+      const items = itemsDe(
+        await conforms('getBusiness', 200, getBusiness, { params: { id: E2E.BUSINESS_ID } }),
+      )
+      expect(items.find((i) => i.id === conMiniatura)?.thumbnail_url).toBe(THUMB)
+      // Sin miniatura: la API la manda null (el esquema también admite que falte).
+      const sin = items.find((i) => i.id === sinMiniatura)
+      expect(sin).toBeDefined()
+      expect(sin?.thumbnail_url ?? null).toBeNull()
+    } finally {
+      await sdb.from('menu_items').update({ thumbnail_url: null }).eq('id', conMiniatura)
+    }
+  })
+
   it('Tindivo Store: la grilla, el detalle y un evento', async () => {
     const draft = await call(adminStoreCreate, { method: 'POST', bearer: adminToken })
     expect(draft.status).toBe(201)

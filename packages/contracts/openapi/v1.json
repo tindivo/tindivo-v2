@@ -1072,6 +1072,11 @@
                                       "nullable": true,
                                       "type": "string"
                                     },
+                                    "thumbnail_url": {
+                                      "description": "Miniatura WebP (~384 px) del plato (D-55). Opcional: puede faltar o ser null, y entonces el cliente usa `image_url`",
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "image_hue": {
                                       "nullable": true,
                                       "type": "integer"
