@@ -33,7 +33,15 @@ describe('PROFILES', () => {
   })
 
   it('comprime con pérdida el resto de imágenes', () => {
-    for (const profile of ['logo', 'banner', 'product', 'proof', 'store', 'store-thumb'] as const) {
+    for (const profile of [
+      'logo',
+      'banner',
+      'product',
+      'proof',
+      'store',
+      'store-thumb',
+      'menu-thumb',
+    ] as const) {
       expect(PROFILES[profile].lossless).toBe(false)
       expect(PROFILES[profile].quality).toBeLessThan(1)
     }
@@ -54,5 +62,18 @@ describe('perfiles de Tindivo Store', () => {
   })
   it('la miniatura aguanta una tarjeta de ~180 px CSS en un celular 3x', () => {
     expect(PROFILES['store-thumb'].maxEdge).toBeGreaterThanOrEqual(540)
+  })
+})
+
+describe('miniatura del plato (D-55)', () => {
+  it('mide 384 px: la carta la pinta a 92 dp y 4x cabe', () => {
+    expect(PROFILES['menu-thumb'].maxEdge).toBe(384)
+    expect(PROFILES['menu-thumb'].maxEdge).toBeGreaterThanOrEqual(92 * 4)
+  })
+  it('es bastante menor que la foto grande del plato', () => {
+    expect(PROFILES['menu-thumb'].maxEdge).toBeLessThan(PROFILES.product.maxEdge)
+  })
+  it('se comprime con la misma calidad que la miniatura de Store', () => {
+    expect(PROFILES['menu-thumb'].quality).toBe(PROFILES['store-thumb'].quality)
   })
 })

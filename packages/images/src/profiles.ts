@@ -9,7 +9,15 @@ import { MAX_INPUT_BYTES, MAX_UPLOAD_BYTES } from './upload'
  * producto. Ajustar cuando tengamos el inventario completo de anchos.
  */
 
-export type ImageProfile = 'logo' | 'banner' | 'product' | 'qr' | 'proof' | 'store' | 'store-thumb'
+export type ImageProfile =
+  | 'logo'
+  | 'banner'
+  | 'product'
+  | 'qr'
+  | 'proof'
+  | 'store'
+  | 'store-thumb'
+  | 'menu-thumb'
 
 export interface ProfileSpec {
   /** Lado mayor máximo en px. Nunca se amplía una imagen que ya sea menor. */
@@ -58,6 +66,10 @@ export const PROFILES: Record<ImageProfile, ProfileSpec> = {
   // ~180 px CSS y en un celular de 3x necesita ~540 px para no verse borrosa.
   store: { maxEdge: 1080, quality: 0.82, lossless: false, fallbackLimit: MAX_UPLOAD_BYTES },
   'store-thumb': { maxEdge: 600, quality: 0.8, lossless: false, fallbackLimit: MAX_UPLOAD_BYTES },
+  // Miniatura del plato para las apps nativas (D-55). La carta la pinta a 92 dp;
+  // 384 px cubre 4x sin pasarse. Se genera de la misma foto original que el
+  // perfil `product` y se sube junto a ella.
+  'menu-thumb': { maxEdge: 384, quality: 0.8, lossless: false, fallbackLimit: MAX_UPLOAD_BYTES },
 }
 
 /**
