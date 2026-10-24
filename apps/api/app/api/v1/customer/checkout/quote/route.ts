@@ -48,6 +48,12 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const { token } = await requireRole(req, 'customer')
     const body = CheckoutQuoteRequestSchema.parse(await req.json())
+    // Postgres compara UUID sin distinguir mayúsculas; normalizamos para las consultas y mapas.
+    body.items = body.items.map((item) => ({
+      ...item,
+      menuItemId: item.menuItemId.toLowerCase(),
+      modifiers: item.modifiers?.map((id) => id.toLowerCase()),
+    }))
     const service = createServiceClient()
     const asUser = createUserClient(token)
 
@@ -125,6 +131,12 @@ export async function POST(req: Request): Promise<Response> {
       if (orderable.get(dish.id) !== true) {
         throw new DomainError(`"${dish.name}" no se sirve en este turno.`, 'validation_error')
       }
+      const groups = (links ?? []).filter((l) => l.item_id === dish.id).map((l) => l.group)
+      const issue = checkModifierSelection(groups, line.modifiers ?? [], optionGroupOf)[0]
+      // Mismo orden que la RPC: repetidas, opciones disponibles y vinculadas, reglas del grupo.
+      if (issue?.kind === 'duplicate') {
+        throw new DomainError(modifierSelectionMessage(issue, dish.name), 'validation_error')
+      }
       let unitCents = cents(Number(dish.base_price))
       for (const optionId of line.modifiers ?? []) {
         const option = optionById.get(optionId)
@@ -136,8 +148,6 @@ export async function POST(req: Request): Promise<Response> {
         }
         unitCents += cents(Number(option.additional_price))
       }
-      const groups = (links ?? []).filter((l) => l.item_id === dish.id).map((l) => l.group)
-      const issue = checkModifierSelection(groups, line.modifiers ?? [], optionGroupOf)[0]
       if (issue) {
         throw new DomainError(modifierSelectionMessage(issue, dish.name), 'validation_error')
       }

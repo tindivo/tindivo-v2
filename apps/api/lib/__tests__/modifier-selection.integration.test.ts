@@ -163,6 +163,11 @@ beforeEach(async () => {
     .update({ is_required: false, min_selections: 0, max_selections: 2 })
     .eq('id', extrasGroupId)
     .throwOnError()
+  await db
+    .from('menu_modifier_options')
+    .update({ is_available: true })
+    .in('group_id', [sizeGroupId, extrasGroupId])
+    .throwOnError()
 })
 
 afterEach(async () => {
@@ -211,10 +216,15 @@ afterAll(async () => {
 })
 
 type GroupPatch = Database['public']['Tables']['menu_modifier_groups']['Update']
+type RequestItem = { menuItemId: string; quantity: number; modifiers?: string[] }
 
 for (const endpoint of ['orders', 'checkout/quote'] as const) {
   describe(`POST /customer/${endpoint}`, () => {
-    function request(modifiers: string[] | undefined, menuItemId = dishId) {
+    function request(
+      modifiers: string[] | undefined,
+      menuItemId = dishId,
+      additionalItems: RequestItem[] = [],
+    ) {
       const item = { menuItemId, quantity: 2, ...(modifiers === undefined ? {} : { modifiers }) }
       return (endpoint === 'orders' ? postOrder : postQuote)(
         new Request(`http://localhost:3001/api/v1/customer/${endpoint}`, {
@@ -235,7 +245,7 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
                   customerPhone: phone,
                 }
               : {}),
-            items: [item],
+            items: [item, ...additionalItems],
           }),
         }),
       )
@@ -268,6 +278,23 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
         message: 'Hay una opción repetida en «Pizza».',
       },
       {
+        name: 'opción repetida y agotada: prevalece la repetida',
+        modifiers: [smallId, cheeseId, cheeseId],
+        unavailableOptionId: cheeseId,
+        message: 'Hay una opción repetida en «Pizza».',
+      },
+      {
+        name: 'el mismo UUID en minúsculas y mayúsculas',
+        modifiers: [smallId, cheeseId, cheeseId.toUpperCase()],
+        message: 'Hay una opción repetida en «Pizza».',
+      },
+      {
+        name: 'la segunda línea incumple una regla: también se revierte la primera',
+        modifiers: [smallId],
+        additionalItems: [{ menuItemId: dishId, quantity: 1, modifiers: [] }],
+        message: 'Elige una opción de «Tamaño» en «Pizza».',
+      },
+      {
         name: 'multi obligatorio sin elegir',
         modifiers: [smallId],
         patch: { is_required: true, min_selections: 2 },
@@ -284,6 +311,8 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
       modifiers: string[] | undefined
       message: string
       patch?: GroupPatch
+      unavailableOptionId?: string
+      additionalItems?: RequestItem[]
     }[])('422: $name', async (test) => {
       if ('patch' in test)
         await db
@@ -291,9 +320,21 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
           .update(test.patch)
           .eq('id', extrasGroupId)
           .throwOnError()
-      const response = await request(test.modifiers)
-      expect(response.status).toBe(422)
-      expect(await response.json()).toMatchObject({
+      if ('unavailableOptionId' in test) {
+        await db
+          .from('menu_modifier_options')
+          .update({ is_available: false })
+          .eq('id', test.unavailableOptionId)
+          .throwOnError()
+      }
+      const response = await request(
+        test.modifiers,
+        dishId,
+        'additionalItems' in test ? test.additionalItems : [],
+      )
+      const problem: { code: string; detail: string } = await response.json()
+      expect({ status: response.status, code: problem.code, detail: problem.detail }).toEqual({
+        status: 422,
         code: 'validation_error',
         detail: test.message,
       })
@@ -303,6 +344,25 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
         .eq('business_id', businessId)
         .throwOnError()
       expect(count).toBe(0)
+      const { count: lines } = await db
+        .from('customer_order_items')
+        .select('id', { count: 'exact', head: true })
+        .in('menu_item_id', [dishId, plainDishId])
+        .throwOnError()
+      expect(lines).toBe(0)
+      const { count: events } = await db
+        .from('domain_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('aggregate_type', 'order')
+        .contains('payload', { businessId })
+        .throwOnError()
+      expect(events).toBe(0)
+      const { count: logs } = await db
+        .from('order_event_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('actor_user_id', customerId)
+        .throwOnError()
+      expect(logs).toBe(0)
       const { count: keys } = await db
         .from('creation_idempotency')
         .select('key', { count: 'exact', head: true })
@@ -311,13 +371,20 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
       expect(keys).toBe(0)
     })
 
-    it('selección válida en el máximo y mínimo: conserva el precio y las opciones', async () => {
+    it.each([
+      'minúsculas',
+      'mayúsculas',
+    ])('selección válida en %s: conserva el precio y las opciones en el máximo y mínimo', async (casing) => {
       await db
         .from('menu_modifier_groups')
         .update({ is_required: true, min_selections: 2 })
         .eq('id', extrasGroupId)
         .throwOnError()
-      const response = await request([smallId, cheeseId, sauceId])
+      const optionIds = [smallId, cheeseId, sauceId]
+      const response = await request(
+        casing === 'mayúsculas' ? optionIds.map((id) => id.toUpperCase()) : optionIds,
+        casing === 'mayúsculas' ? dishId.toUpperCase() : dishId,
+      )
       expect(response.status).toBe(endpoint === 'orders' ? 201 : 200)
       // (0 + 10 + 1 + 2) × 2 = 26, sin envío al recoger.
       if (endpoint === 'checkout/quote') {
@@ -330,6 +397,9 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
           },
         })
       } else {
+        expect(await response.json()).toMatchObject({
+          data: { orderAmount: 26, deliveryFee: 0, total: 26 },
+        })
         const { data: order } = await db
           .from('orders')
           .select('id,order_amount,delivery_fee')

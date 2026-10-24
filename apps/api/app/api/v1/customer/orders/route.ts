@@ -60,6 +60,12 @@ export async function POST(req: Request): Promise<Response> {
 
     const { user } = await requireRole(req, 'customer')
     const body = CreateOrderRequestSchema.parse(await req.json())
+    // Postgres compara UUID sin distinguir mayúsculas; consultas, subtotal y RPC usan la misma identidad.
+    body.items = body.items.map((item) => ({
+      ...item,
+      menuItemId: item.menuItemId.toLowerCase(),
+      modifiers: item.modifiers?.map((id) => id.toLowerCase()),
+    }))
     const requestHash = await sha256Hex(JSON.stringify(body))
     const service = createServiceClient()
 

@@ -24,17 +24,25 @@ export function checkModifierSelection(
   selectedOptionIds: readonly string[],
   optionGroupOf: ReadonlyMap<string, string>,
 ): ModifierSelectionIssue[] {
+  // Postgres compara UUID sin distinguir mayúsculas; las cadenas deben hacer lo mismo.
+  const normalizedGroups = groups.map((group) => ({ ...group, id: group.id.toLowerCase() }))
+  const normalizedOptionGroupOf = new Map(
+    [...optionGroupOf].map(([optionId, groupId]) => [
+      optionId.toLowerCase(),
+      groupId.toLowerCase(),
+    ]),
+  )
   const issues: ModifierSelectionIssue[] = []
   const seen = new Set<string>()
   const duplicates = new Set<string>()
   const counts = new Map<string, number>()
-  for (const optionId of selectedOptionIds) {
-    const groupId = optionGroupOf.get(optionId) ?? null
+  for (const optionId of selectedOptionIds.map((id) => id.toLowerCase())) {
+    const groupId = normalizedOptionGroupOf.get(optionId) ?? null
     if (seen.has(optionId) && !duplicates.has(optionId)) {
       issues.push({
         kind: 'duplicate',
         groupId,
-        groupName: groups.find((g) => g.id === groupId)?.name ?? null,
+        groupName: normalizedGroups.find((g) => g.id === groupId)?.name ?? null,
         optionId,
       })
       duplicates.add(optionId)
@@ -43,7 +51,7 @@ export function checkModifierSelection(
     if (groupId !== null) counts.set(groupId, (counts.get(groupId) ?? 0) + 1)
   }
 
-  for (const group of groups) {
+  for (const group of normalizedGroups) {
     const n = counts.get(group.id) ?? 0
     const isSingle = group.selection_type === 'single'
     const min = isSingle ? 1 : Math.max(1, group.min_selections)

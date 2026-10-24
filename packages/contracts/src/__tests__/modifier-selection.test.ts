@@ -78,6 +78,47 @@ describe('las opciones elegidas respetan las reglas del grupo', () => {
     expect(check(['small', 'small'])[0]?.kind).toBe('duplicate')
   })
 
+  it('detecta el mismo UUID en minúsculas y mayúsculas como una opción repetida', () => {
+    const optionId = 'abcdefab-1234-4000-8000-abcdef123456'
+    const issues = checkModifierSelection(
+      [group],
+      [optionId, optionId.toUpperCase()],
+      new Map([[optionId, group.id]]),
+    )
+    expect(issues[0]).toEqual({
+      kind: 'duplicate',
+      groupId: group.id,
+      groupName: group.name,
+      optionId,
+    })
+  })
+
+  it('acepta un UUID de opción en mayúsculas con el mapa en minúsculas', () => {
+    const optionId = 'abcdefab-1234-4000-8000-abcdef123456'
+    expect(
+      checkModifierSelection([group], [optionId.toUpperCase()], new Map([[optionId, group.id]])),
+    ).toEqual([])
+  })
+
+  it('compara también las claves del mapa y los UUID de grupo sin distinguir mayúsculas', () => {
+    const optionId = 'abcdefab-1234-4000-8000-abcdef123456'
+    const groupId = 'fedcbafe-1234-4000-8000-fedcba654321'
+    expect(
+      checkModifierSelection(
+        [{ ...group, id: groupId.toUpperCase() }],
+        [optionId],
+        new Map([[optionId.toUpperCase(), groupId]]),
+      ),
+    ).toEqual([])
+    expect(
+      checkModifierSelection(
+        [{ ...group, id: groupId }],
+        [optionId],
+        new Map([[optionId, groupId.toUpperCase()]]),
+      ),
+    ).toEqual([])
+  })
+
   it('un plato sin grupos admite una selección vacía y detecta ids repetidos', () => {
     expect(checkModifierSelection([], [], new Map())).toEqual([])
     expect(checkModifierSelection([], ['x', 'x'], new Map())).toMatchObject([
