@@ -13,6 +13,7 @@ import com.tindivo.customer.config.ConfigState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -106,7 +107,19 @@ class BusinessViewModelTest {
             "\"display_order\":1,\"items\":[${dishes.joinToString(",")}]}],\"schedule\":[],\"opening_confirmed\":null}}"
 
     private suspend fun BusinessViewModel.names(): List<String> =
-        (settled() as BusinessUiState.Loaded).business.categories.flatMap { c -> c.items.map { it.name } }
+        (settled().visibleAt(now.value) as BusinessUiState.Loaded).business.categories.flatMap { c ->
+            c.items.map { it.name }
+        }
+
+    /** Lo que pinta `BusinessDestination`, emisión por emisión. */
+    private fun BusinessViewModel.screen() = combine(state, now) { state, now -> state.visibleAt(now) }
+
+    private fun BusinessUiState.dishes(): List<MenuItemUi> =
+        (this as? BusinessUiState.Loaded)
+            ?.business
+            ?.categories
+            ?.flatMap { it.items }
+            .orEmpty()
 
     private suspend fun BusinessViewModel.settled(): BusinessUiState = state.first { it !is BusinessUiState.Loading }
 
@@ -281,33 +294,62 @@ class BusinessViewModelTest {
             val clock = MutableClock(Instant.parse("2026-10-26T19:59:30Z"))
             val viewModel = newViewModel(clock)
             // La pantalla abierta: sin nadie suscrito, el reloj no corre.
-            backgroundScope.launch { viewModel.state.collect {} }
-            assertEquals(listOf("Ceviche"), viewModel.names())
+            val seen = mutableListOf<BusinessUiState>()
+            backgroundScope.launch { viewModel.screen().collect { seen += it } }
+            assertEquals(listOf("Ceviche"), seen.last().dishes().map { it.name })
 
             clock.now = Instant.parse("2026-10-26T20:00:30Z")
             dispatcher.scheduler.advanceTimeBy(61_000L)
 
-            val state = viewModel.state.value as BusinessUiState.Loaded
-            assertTrue(state.business.categories.isEmpty())
+            assertTrue(seen.last() is BusinessUiState.Loaded)
+            assertTrue(seen.last().dishes().isEmpty())
             assertEquals(1, server.requestCount)
         }
 
     @Test
-    fun `una recarga que falla no deja ver la carta anterior, ni al pasar el minuto`() =
+    fun `una recarga hecha sin nadie mirando es lo primero que se ve al volver, con su propio precio`() =
         runTest {
-            server.enqueue(response(200, menu(dish(1, "Ceviche"))))
-            server.enqueue(response(200, menu(dish(1, "Ceviche", price = "12.345"))))
+            server.enqueue(response(200, menu(dish(1, "Ceviche", price = "10"))))
+            server.enqueue(response(200, menu(dish(2, "Ceviche grande", price = "12"))))
             val viewModel = newViewModel()
-            backgroundScope.launch { viewModel.state.collect {} }
+            val first = backgroundScope.launch { viewModel.screen().collect {} }
             assertEquals(listOf("Ceviche"), viewModel.names())
-
+            // La pantalla se va (más que el margen de 5 s) y la carta se recarga sin nadie mirando.
+            first.cancel()
+            dispatcher.scheduler.advanceTimeBy(6_000L)
             viewModel.refresh()
+
+            val seen = mutableListOf<BusinessUiState>()
+            backgroundScope.launch { viewModel.screen().collect { seen += it } }
+
+            assertTrue(seen.isNotEmpty())
+            assertTrue(seen.none { state -> state.dishes().any { it.id.endsWith("1") } })
+            val dish = seen.last().dishes().single()
+            assertEquals("00000000-0000-4000-8000-000000000002", dish.id)
+            assertEquals("S/ 12.00", dish.price.plain())
+        }
+
+    @Test
+    fun `una recarga rechazada sin nadie mirando no deja ver la carta anterior, ni al pasar el minuto`() =
+        runTest {
+            server.enqueue(response(200, menu(dish(1, "Ceviche", price = "10"))))
+            // El plato con el precio ilegible está, además, fuera de su franja (mediodía del lunes en Lima).
+            server.enqueue(response(200, menu(dish(1, "Ceviche", price = "12.345", from = "18:00", to = "22:00"))))
+            val viewModel = newViewModel()
+            val first = backgroundScope.launch { viewModel.screen().collect {} }
+            assertEquals(listOf("Ceviche"), viewModel.names())
+            first.cancel()
+            dispatcher.scheduler.advanceTimeBy(6_000L)
+            viewModel.refresh()
+
+            val seen = mutableListOf<BusinessUiState>()
+            backgroundScope.launch { viewModel.screen().collect { seen += it } }
             dispatcher.scheduler.advanceTimeBy(61_000L)
 
-            assertEquals(
-                BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE)),
-                viewModel.state.value,
-            )
+            val failed = BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
+            assertTrue(seen.isNotEmpty())
+            assertTrue(seen.all { it == failed })
+            assertEquals(failed, viewModel.state.value)
         }
 
     @Test

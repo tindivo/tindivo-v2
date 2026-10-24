@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -57,7 +58,9 @@ fun BusinessDestination(
     viewModel: BusinessViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
-    BusinessScreen(state = state, onRefresh = viewModel::refresh, onBack = onBack)
+    val now = viewModel.now.collectAsStateWithLifecycle().value
+    val visible = remember(state, now) { state.visibleAt(now) }
+    BusinessScreen(state = visible, onRefresh = viewModel::refresh, onBack = onBack)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

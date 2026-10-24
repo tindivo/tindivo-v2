@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -84,24 +84,24 @@ class BusinessViewModel
         // La ruta tipada `BusinessRoute(id)` guarda el argumento bajo la clave "id".
         private val id: String = checkNotNull(savedStateHandle.get<String>("id"))
 
-        // Con `Loaded`, la carta completa y ya validada; lo que se ve se deriva de ella en [state].
         private val _state = MutableStateFlow<BusinessUiState>(BusinessUiState.Loading)
 
         /**
-         * Lo que pinta la pantalla: la carta de la carga vigente, filtrada por franja contra el reloj de cada minuto
-         * (a las 15:00 desaparece el plato de mediodía sin recargar). El reloj solo corre mientras alguien mira.
+         * La carga vigente; con `Loaded`, la carta completa y ya validada, sin filtrar por franja. Nunca guarda una copia
+         * aparte: quien se suscribe recibe siempre la última carga, también si se hizo sin nadie mirando.
          */
-        val state: StateFlow<BusinessUiState> =
-            combine(_state, minutes()) { current, now ->
-                if (current is BusinessUiState.Loaded) {
-                    BusinessUiState.Loaded(current.business.visibleAt(now))
-                } else {
-                    current
-                }
-            }.stateIn(
+        val state: StateFlow<BusinessUiState> = _state.asStateFlow()
+
+        /**
+         * El instante, cada minuto, para filtrar con [visibleAt]: a las 15:00 desaparece el plato de mediodía sin
+         * recargar. Solo corre mientras alguien mira; al volver puede llegar primero el último minuto visto, que solo
+         * decide qué platos se ven, nunca qué carta ni qué precio.
+         */
+        val now: StateFlow<Instant> =
+            minutes().stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                initialValue = BusinessUiState.Loading,
+                initialValue = clock.instant(),
             )
 
         private var loadJob: Job? = null
@@ -197,6 +197,9 @@ private fun GetBusiness200ResponseDataCategoriesInnerItemsInner.toItem(): MenuIt
  * Quita los platos fuera de su franja en el instante [now] y las categorías que se quedan sin platos. Los agotados
  * (`available = false`) no se tocan: esos se siguen mostrando atenuados. Se aplica a la carta ya validada.
  */
+internal fun BusinessUiState.visibleAt(now: Instant): BusinessUiState =
+    if (this is BusinessUiState.Loaded) BusinessUiState.Loaded(business.visibleAt(now)) else this
+
 internal fun BusinessDetailUi.visibleAt(now: Instant): BusinessDetailUi =
     copy(
         categories =
