@@ -112,9 +112,13 @@ jobs:
       - name: Avisar de archivos largos (KT-14)
         run: |
           # Separado por NUL y con el nombre filtrado: un nombre de archivo no puede partir la lista ni colar otro
-          # comando de workflow (`::`) en el aviso.
-          find apps/android -name '*.kt' -not -path '*/build/*' -print0 | sort -z | while IFS= read -r -d '' file; do
-            lines=$(wc -l < "${file}")
+          # comando de workflow (`::`) en el aviso. Solo archivos regulares, y un fallo de lectura es otro aviso: este
+          # paso nunca tumba el job.
+          find apps/android -type f -name '*.kt' -not -path '*/build/*' -print0 | sort -z | while IFS= read -r -d '' file; do
+            if ! lines=$(wc -l < "${file}" 2> /dev/null); then
+              echo "::warning::KT-14: no se pudo leer un .kt para contar sus líneas"
+              continue
+            fi
             if [ "${lines}" -gt 300 ]; then
               case "${file}" in
                 *[!A-Za-z0-9._/-]*) echo "::warning::KT-14: un .kt de ${lines} líneas con un nombre fuera de [A-Za-z0-9._/-]" ;;
