@@ -111,10 +111,15 @@ jobs:
       # (su `LargeClass` cuenta líneas de una clase), así que se mide aquí. Es solo una alerta: no falla el job.
       - name: Avisar de archivos largos (KT-14)
         run: |
-          find apps/android -name '*.kt' -not -path '*/build/*' | sort | while read -r file; do
+          # Separado por NUL y con el nombre filtrado: un nombre de archivo no puede partir la lista ni colar otro
+          # comando de workflow (`::`) en el aviso.
+          find apps/android -name '*.kt' -not -path '*/build/*' -print0 | sort -z | while IFS= read -r -d '' file; do
             lines=$(wc -l < "${file}")
             if [ "${lines}" -gt 300 ]; then
-              echo "::warning file=${file}::KT-14: ${lines} líneas (umbral de archivo 300, alerta)"
+              case "${file}" in
+                *[!A-Za-z0-9._/-]*) echo "::warning::KT-14: un .kt de ${lines} líneas con un nombre fuera de [A-Za-z0-9._/-]" ;;
+                *) echo "::warning file=${file}::KT-14: ${lines} líneas (umbral de archivo 300, alerta)" ;;
+              esac
             fi
           done
 
