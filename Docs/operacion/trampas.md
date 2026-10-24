@@ -53,6 +53,13 @@
 | `push_delivery_log` dice `ok` y aun así el pedido no sonó | [El push se entregó y aun así no sonó](#el-push-se-entregó-y-aun-así-no-sonó) |
 | Textos que sobresalen de botones o tarjetas en un diseño `.dc.html` | [Medir desbordes con Playwright antes de publicar](#medir-desbordes-con-playwright-antes-de-publicar) |
 | Un rótulo del mapa se pisa con la chapa de otro punto en producción | [Los rótulos del mapa se pisan con la densidad real](#los-rótulos-del-mapa-se-pisan-con-la-densidad-real) |
+| Un enum desconocido tumba la decodificación en Kotlin aunque `enumUnknownDefaultCase` esté en `true` | [enumUnknownDefaultCase va en additionalProperties](#enumunknowndefaultcase-va-en-additionalproperties) |
+| Un `POST` sin `Idempotency-Key` llega dos veces tras un `503`; `NumberFormatException` dentro de OkHttp con un `Retry-After` enorme | [OkHttp reenvía el 503 con Retry-After: 0](#okhttp-reenvía-el-503-con-retry-after-0) |
+| ktlint en verde por Gradle con errores evidentes en el Kotlin de Android | [El plugin de ktlint no ve el Kotlin de AGP 9](#el-plugin-de-ktlint-no-ve-el-kotlin-de-agp-9) |
+| La CI de Android falla al compilar con `compileSdk 36` tras subir Compose, core o lifecycle | [Compose 1.12 exige compileSdk 37](#compose-112-exige-compilesdk-37) |
+| El manifiesto final del APK trae una actividad exportada que nadie declaró (`androidx.compose.ui.tooling.PreviewActivity`) | [ui-tooling exporta PreviewActivity](#ui-tooling-exporta-previewactivity) |
+| Un `2xx` con `text/html` hace que el cliente Kotlin generado lance `UnsupportedOperationException` | [El cliente generado lanza ante un 2xx que no es JSON](#el-cliente-generado-lanza-ante-un-2xx-que-no-es-json) |
+| Un archivo Kotlin de 400 líneas pasa detekt sin aviso | [detekt 1.23.8 no mide archivos](#detekt-1238-no-mide-archivos) |
 
 ## Entorno Windows
 
@@ -260,6 +267,65 @@ El primer test que abre una ficha de negocio pagaba las tres: ~11 s contra un `a
 **Síntoma:** en Playwright, `getByText(/…/).first()` a 360 px coge la copia del sidebar, que está oculta, e `isVisible()` devuelve `false` sobre un elemento que sí se ve en pantalla. El test dice que el componente no se pinta cuando se pinta perfectamente (una captura enseñaba el aviso pintado mientras el aserto decía que no existía).
 **Causa:** en `apps/customer` la bolsa se monta **dos veces a la vez**: `cart-sidebar.tsx` (escritorio) y `cart-sheet-content.tsx` (hoja móvil). Las dos están siempre en el DOM; cuál se ve lo decide el CSS por ancho de viewport. Lo mismo aplica a cualquier componente que se monte en las dos vistas; `CartCtas` y `CartPickupNotice` ya están en ese caso.
 **Qué hacer:** recoger todas las coincidencias con `.all()` y filtrar por `isVisible()`, o anclar el localizador dentro de la hoja concreta. Nunca `.first()` a secas para nada de la bolsa. Verifica con una captura antes de creerte un `false`. Relacionado: [Los rojos intermitentes de e2e son Next compilando](#los-rojos-intermitentes-de-e2e-son-next-compilando), [Un dev server viejo finge bugs de código](#un-dev-server-viejo-finge-bugs-de-código).
+
+## Android
+
+Medidas en el PR #78 (2026-10-22/23) y en la revisión de cumplimiento del 2026-10-24. En esta máquina no hay Android
+SDK: en local solo corre `:core:network` (Kotlin/JVM); lo demás se mide en la CI (`.github/workflows/android.yml`).
+
+### enumUnknownDefaultCase va en additionalProperties
+**Síntoma:** un valor de enum que la app no conoce tumba la decodificación, aunque el plugin de OpenAPI Generator tenga
+`enumUnknownDefaultCase = "true"`.
+**Causa:** (2026-10-22, plugin 7.25.0) en `configOptions` el generador `kotlin` ignora la opción sin avisar: 0 de 16
+enums con el caso de reserva. En `additionalProperties`, todos.
+**Qué hacer:** `additionalProperties.set(mapOf("enumUnknownDefaultCase" to "true"))`
+(`apps/android/core/network/build.gradle.kts`). El test de CLI-2 es el que lo demuestra, no la configuración.
+
+### OkHttp reenvía el 503 con Retry-After: 0
+**Síntoma:** un `POST` sin `Idempotency-Key` llega dos veces al servidor tras un `503`; o OkHttp revienta con
+`NumberFormatException` al recibir un `Retry-After` que no cabe en un `Int`.
+**Causa:** (2026-10-23, leído en la fuente de OkHttp 5.5.0, `RetryAndFollowUpInterceptor`) ante un `503` con
+`Retry-After: 0` OkHttp repite la petición con cualquier método, y no hay opción para evitarlo; y lee la cabecera con
+`Integer.valueOf`. `retryOnConnectionFailure(false)` no lo cubre.
+**Qué hacer:** `RetryAfterShieldInterceptor` (interceptor de red) aparta la cabecera de los `503` antes de que OkHttp
+la vea, y `RetryInterceptor` la lee de la copia. Las pruebas de control de `HttpHardeningTest` demuestran el fallo sin
+el escudo: si se quitan, se pierde la prueba de que hace falta.
+
+### El plugin de ktlint no ve el Kotlin de AGP 9
+**Síntoma:** `ktlintCheck` en verde con errores de estilo evidentes en los módulos Android.
+**Causa:** (2026-10-23) el plugin de Gradle ktlint-gradle 14.2.0 no ve las fuentes del Kotlin integrado de AGP 9.
+**Qué hacer:** ktlint va por su CLI en la CI, con el jar fijado por versión y sha256 (`android.yml`). No vuelvas al
+plugin sin medir que ve las fuentes (un error sembrado tiene que salir rojo).
+
+### Compose 1.12 exige compileSdk 37
+**Síntoma:** la CI de Android no compila con `compileSdk = 36` tras subir Compose, core-ktx o lifecycle.
+**Causa:** (2026-10-23) Compose 1.12, core 1.19 y lifecycle 2.11 exigen compilar contra la API 37.
+**Qué hacer:** `compileSdk = 37` y `targetSdk = 36` (el que exige Google Play): KT-1 pide `compileSdk` igual o
+superior al `targetSdk`, no igual. Está en las «Decisiones aplicadas» de `kotlin.md`.
+
+### ui-tooling exporta PreviewActivity
+**Síntoma:** el manifiesto final del APK tiene `androidx.compose.ui.tooling.PreviewActivity` exportada, aunque el
+manifiesto de la app no la declara.
+**Causa:** (2026-10-23) la trae la dependencia `ui-tooling` por fusión de manifiestos.
+**Qué hacer:** `tools:node="remove"` sobre esa actividad en el manifiesto de la app (las vistas previas del editor
+siguen funcionando). Revisa siempre el manifiesto **fusionado** del APK, no solo el del código.
+
+### El cliente generado lanza ante un 2xx que no es JSON
+**Síntoma:** un `200` con `Content-Type: text/html` (un proxy, una página de error servida como éxito) hace que la
+llamada lance `UnsupportedOperationException` desde el cliente generado.
+**Causa:** (2026-10-24, generador 7.25.0, `ApiClient.responseBody`) solo lee JSON, texto plano y octet-stream; con
+cualquier otro tipo lanza. Tampoco convierte en `SerializationException` lo que lanza un adaptador de tipo (por
+ejemplo, `NumberFormatException` al leer un `BigDecimal`).
+**Qué hacer:** los repositorios capturan esos casos y devuelven `AppError.Unknown` (CLI-2: decodificar nunca tumba la
+app); hay prueba en `SystemRepositoryTest`. Un repositorio nuevo copia el mismo `call`.
+
+### detekt 1.23.8 no mide archivos
+**Síntoma:** un archivo Kotlin de más de 300 líneas pasa detekt sin ningún aviso.
+**Causa:** (2026-10-24) detekt 1.23.8 no tiene regla de longitud de archivo: `LargeClass` cuenta las líneas de una
+clase, y un archivo de funciones sueltas (los composables) no es una clase. No existe `LongFile` (comprobado listando
+las clases de `detekt-rules-complexity-1.23.8.jar`); ponerla en `detekt.yml` sería una clave inválida.
+**Qué hacer:** el umbral de archivo de KT-14 lo avisa un paso de `android.yml` que cuenta líneas y emite un
+`::warning` por archivo, sin fallar el job.
 
 ## Turbo y CI
 
