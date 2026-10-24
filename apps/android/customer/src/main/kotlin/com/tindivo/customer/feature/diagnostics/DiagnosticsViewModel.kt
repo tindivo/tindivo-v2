@@ -89,6 +89,9 @@ class DiagnosticsViewModel
                     configService.reportUpgradeRequired(minVersion)
                     DiagnosticsUiState.Failed(this)
                 }
-                else -> DiagnosticsUiState.Failed(this)
+
+                else -> {
+                    DiagnosticsUiState.Failed(this)
+                }
             }
     }

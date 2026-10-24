@@ -30,7 +30,10 @@ private const val STORE_URL = "https://play.google.com/store/apps/details?id=com
 /** Actualización obligatoria (CLI-4): sin salida hacia atrás; lo único que se puede hacer es ir a la tienda. */
 @Composable
 fun UpdateScreen(viewModel: UpdateViewModel = hiltViewModel()) {
-    val minVersion = viewModel.state.collectAsStateWithLifecycle().value.minVersion
+    val minVersion =
+        viewModel.state
+            .collectAsStateWithLifecycle()
+            .value.minVersion
     val context = LocalContext.current
     Scaffold { innerPadding ->
         Column(
