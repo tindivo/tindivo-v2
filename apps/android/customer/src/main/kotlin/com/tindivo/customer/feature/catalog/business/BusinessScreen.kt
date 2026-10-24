@@ -1,8 +1,7 @@
 package com.tindivo.customer.feature.catalog.business
 
-import androidx.compose.foundation.Image
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,33 +14,33 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -63,28 +62,37 @@ fun BusinessDestination(
     BusinessScreen(state = visible, onRefresh = viewModel::refresh, onBack = onBack)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BusinessScreen(
     state: BusinessUiState,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
 ) {
+    // La posición de la carta vive aquí y no en MenuList: al buscar, la lista se reemplaza por los resultados y, al
+    // salir, tiene que reaparecer donde estaba.
+    val listState = rememberLazyListState()
+    // `null` = no se busca; un texto, aunque vacío, es el modo búsqueda. Es estado de UI: el ViewModel no lo conoce.
+    var query by rememberSaveable { mutableStateOf<String?>(null) }
+    val business = (state as? BusinessUiState.Loaded)?.business
+    val rows = remember(business) { business?.let(::menuRows).orEmpty() }
+    val headerIndices = remember(rows) { categoryHeaderIndices(rows) }
+    val spy = remember(listState, headerIndices) { SectionSpy(listState, headerIndices) }
+    LaunchedEffect(spy) { spy.follow() }
+    val showTitle by remember(rows) {
+        derivedStateOf { listState.firstVisibleItemIndex > businessHeaderIndex(rows) }
+    }
+    val searching = query != null && business != null
+    BackHandler(enabled = searching) { query = null }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = (state as? BusinessUiState.Loaded)?.business?.name.orEmpty(),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(text = stringResource(R.string.business_back))
-                    }
-                },
+            MenuTopBar(
+                business = business,
+                showTitle = showTitle,
+                query = query,
+                spy = spy,
+                onQueryChange = { query = it },
+                onBack = onBack,
             )
         },
     ) { innerPadding ->
@@ -99,7 +107,12 @@ fun BusinessScreen(
                 }
 
                 is BusinessUiState.Loaded -> {
-                    MenuList(business = state.business)
+                    val text = query.orEmpty()
+                    if (parseTerms(text).isNotEmpty()) {
+                        MenuSearchResults(business = state.business, query = text)
+                    } else {
+                        MenuList(rows = rows, listState = listState)
+                    }
                 }
             }
         }
@@ -107,26 +120,39 @@ fun BusinessScreen(
 }
 
 @Composable
-private fun MenuList(business: BusinessDetailUi) {
+private fun MenuList(
+    rows: List<MenuRow>,
+    listState: LazyListState,
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
+        state = listState,
         contentPadding = PaddingValues(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        business.bannerUrl?.let { banner ->
-            item(key = "banner") {
-                AsyncImage(
-                    model = banner,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(160.dp),
-                )
+        items(rows, key = { it.key }) { row ->
+            when (row) {
+                is MenuRow.Banner -> {
+                    AsyncImage(
+                        model = row.url,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().height(160.dp),
+                    )
+                }
+
+                is MenuRow.Header -> {
+                    BusinessHeader(row.business)
+                }
+
+                is MenuRow.Category -> {
+                    CategoryHeader(row.category)
+                }
+
+                is MenuRow.Dish -> {
+                    MenuItemRow(row.item)
+                }
             }
-        }
-        item(key = "header") { BusinessHeader(business) }
-        business.categories.forEach { category ->
-            item(key = "category-${category.id}") { CategoryHeader(category) }
-            items(category.items, key = { it.id }) { menuItem -> MenuItemRow(menuItem) }
         }
     }
 }
@@ -200,78 +226,6 @@ private fun CategoryHeader(category: MenuCategoryUi) {
                 text = it,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun MenuItemRow(menuItem: MenuItemUi) {
-    val dim = if (menuItem.available) Modifier else Modifier.alpha(0.5f)
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).then(dim),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = menuItem.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            menuItem.description?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Text(
-                text = menuItem.price,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-            )
-            if (!menuItem.available) {
-                Text(
-                    text = stringResource(R.string.business_item_unavailable),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        DishImage(menuItem.imageUrl)
-    }
-}
-
-/**
- * El recuadro de 92 dp está siempre, con o sin foto, para que las filas queden alineadas. El isotipo va debajo:
- * mientras la foto carga, o si falla, es lo que se ve.
- */
-@Composable
-private fun DishImage(imageUrl: String?) {
-    val dark = isSystemInDarkTheme()
-    val background = if (dark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF4F4F2)
-    val tint = if (dark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF2E3236)
-    Box(
-        modifier = Modifier.size(92.dp).clip(RoundedCornerShape(12.dp)).background(background),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            // imageResource y no painterResource: este solo decodifica el webp; aquel arrastra el lector de vectores XML.
-            bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_mark),
-            contentDescription = null,
-            modifier = Modifier.size(40.dp),
-            colorFilter = ColorFilter.tint(tint),
-            alpha = 0.35f,
-        )
-        if (imageUrl != null) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
             )
         }
     }

@@ -27,6 +27,17 @@
     <string name="business_item_unavailable">No disponible</string>
     <string name="business_loading">Cargando</string>
     <string name="business_retry">Reintentar</string>
+    <string name="business_search_open">Buscar en la carta</string>
+    <string name="business_search_placeholder">Buscar en %1$s</string>
+    <string name="business_search_clear">Limpiar búsqueda</string>
+    <string name="business_search_empty_title">No encontramos “%1$s” en %2$s</string>
+    <string name="business_search_empty_hint">Prueba con otro nombre, o con un ingrediente: también buscamos dentro de la descripción de cada plato.</string>
+    <string name="business_sections_open">Ver las %1$d secciones de la carta</string>
+    <string name="business_sections_title">Todas las secciones</string>
+    <plurals name="business_dishes_count">
+        <item quantity="one">%1$d plato</item>
+        <item quantity="other">%1$d platos</item>
+    </plurals>
 
     <string name="error_network">Sin conexión. Revisa tu internet e inténtalo de nuevo.</string>
     <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
