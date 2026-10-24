@@ -107,6 +107,17 @@ jobs:
             --input apps/android \
             --excludes '**/build/**'
 
+      # KT-14 pide avisar a partir de 300 líneas por archivo. detekt 1.23.8 no trae una regla de longitud de archivo
+      # (su `LargeClass` cuenta líneas de una clase), así que se mide aquí. Es solo una alerta: no falla el job.
+      - name: Avisar de archivos largos (KT-14)
+        run: |
+          find apps/android -name '*.kt' -not -path '*/build/*' | sort | while read -r file; do
+            lines=$(wc -l < "${file}")
+            if [ "${lines}" -gt 300 ]; then
+              echo "::warning file=${file}::KT-14: ${lines} líneas (umbral de archivo 300, alerta)"
+            fi
+          done
+
       # KT-6 pide `!!` como error. La regla de detekt que lo detecta necesita resolución de tipos (ver detekt.yml),
       # así que se comprueba aquí con grep sobre las fuentes propias (lo generado vive en build/ y no entra).
       - name: Prohibir el operador !!
