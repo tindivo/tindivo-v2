@@ -1,13 +1,18 @@
 /**
  * Fotos del plato: la grande y su miniatura (D-55).
  *
- * El panel sube dos objetos al bucket `menu-items`: la foto de siempre
- * (`<biz>/items/<id>`) y la miniatura WebP de ~384 px que pintan las apps nativas
- * (`<biz>/items/<id>-t`). Aquí vive el «qué se sube y qué se escribe», separado
- * del hook para poder probarlo con un almacenamiento falso.
+ * El panel sube dos objetos al bucket `menu-items`: la foto de siempre y la
+ * miniatura WebP de ~384 px que pintan las apps nativas. Cada guardado con foto
+ * nueva usa rutas NUEVAS por versión (`<biz>/items/<id>.<v>` y `<id>.<v>-t`) y nunca
+ * sobrescribe: lo que la fila publica no cambia de contenido hasta que una sola
+ * actualización de la fila cambia las dos URL a la vez. Los objetos anteriores
+ * se borran solo después de esa confirmación (CAX-001: nunca foto B con
+ * miniatura A). Aquí vive el «qué se sube, qué se escribe y qué se borra»,
+ * separado del hook para probarlo con un almacenamiento falso.
  */
 
 const BUCKET = 'menu-items'
+const PUBLIC_MARKER = `/storage/v1/object/public/${BUCKET}/`
 
 /** Lo mínimo que se usa del cliente de Storage de Supabase. */
 export interface ItemImageStorage {
@@ -17,22 +22,77 @@ export interface ItemImageStorage {
       file: File,
       options: { upsert: boolean; contentType: string; cacheControl: string },
     ): PromiseLike<{ error: { message: string } | null }>
+    remove(paths: string[]): PromiseLike<{ error: { message: string } | null }>
     getPublicUrl(path: string): { data: { publicUrl: string } }
   }
 }
 
-export function itemImagePaths(bizId: string, itemId: string) {
-  const full = `${bizId}/items/${itemId}`
+/** Las URL de foto que una fila de `menu_items` publica. */
+export interface ItemImageUrls {
+  imageUrl: string | null
+  thumbnailUrl: string | null
+}
+
+/**
+ * Rutas de una versión nueva. La carpeta `<biz>` se conserva: las policies de Storage la miran. El nombre es
+ * plano (`<id>.<v>`, no `<id>/<v>`): la foto histórica vive en `<biz>/items/<id>` y no se usa ese nombre como
+ * carpeta a la vez.
+ */
+export function itemImagePaths(bizId: string, itemId: string, version: number | string) {
+  const full = `${bizId}/items/${itemId}.${version}`
   return { full, thumb: `${full}-t` }
 }
 
-/** Los dos objetos que hay que borrar al quitar la foto del plato. */
-export function itemImageRemovalPaths(bizId: string, itemId: string): string[] {
-  const { full, thumb } = itemImagePaths(bizId, itemId)
-  return [full, thumb]
+/**
+ * Ruta del objeto a partir de su URL pública, o null si no es nuestra: otro
+ * bucket, otra carpeta de negocio o basura. Ignora `?v=`. Así no se intenta
+ * borrar nada ajeno, y sirve igual para las fotos antiguas (`<biz>/items/<id>`)
+ * que para las versionadas.
+ */
+export function objectPathFromPublicUrl(
+  url: string | null | undefined,
+  bizId: string,
+): string | null {
+  if (!url) return null
+  const at = url.indexOf(PUBLIC_MARKER)
+  if (at < 0) return null
+  const rest = url.slice(at + PUBLIC_MARKER.length).split(/[?#]/)[0] ?? ''
+  let path: string
+  try {
+    path = decodeURIComponent(rest)
+  } catch {
+    return null
+  }
+  if (!path.startsWith(`${bizId}/`) || path.length === bizId.length + 1) return null
+  if (path.split('/').some((s) => s === '..' || s === '')) return null
+  return path
 }
 
-export type ItemImageUpload =
+/** Los objetos que una fila referenciaba y hay que borrar (sin repetidos ni ajenos). */
+export function itemImageRemovalPaths(bizId: string, urls: ItemImageUrls): string[] {
+  const out: string[] = []
+  for (const u of [urls.imageUrl, urls.thumbnailUrl]) {
+    const p = objectPathFromPublicUrl(u, bizId)
+    if (p && !out.includes(p)) out.push(p)
+  }
+  return out
+}
+
+/** Borrado de mejor esfuerzo: un objeto que sobra molesta menos que un error. */
+export async function removeItemImageObjects(
+  storage: ItemImageStorage,
+  paths: string[],
+): Promise<void> {
+  if (paths.length === 0) return
+  try {
+    const { error } = await storage.from(BUCKET).remove(paths)
+    if (error) console.error('[item-images] no se pudieron borrar objetos:', error.message)
+  } catch (e) {
+    console.error('[item-images] no se pudieron borrar objetos:', e)
+  }
+}
+
+export type ItemImagePublish =
   | { ok: false; message: string }
   | {
       ok: true
@@ -44,13 +104,18 @@ export type ItemImageUpload =
     }
 
 /**
- * Sube la foto grande y, si hay, su miniatura. Si falla la grande, no sube nada
- * más y devuelve el error (el guardado se comporta como antes). Si falla solo la
- * miniatura, `thumbnailUrl` queda en null: nunca se deja apuntando a la foto
- * anterior. Las dos URL llevan el MISMO `?v=`.
+ * Sube la foto grande y su miniatura a rutas nuevas, publica las dos URL con UNA
+ * actualización de la fila (`updateRow`) y, solo si salió bien, borra lo que la
+ * fila referenciaba antes (`previous`).
+ *
+ * - Falla la grande: no sube nada más; la fila no cambia.
+ * - Falla solo la miniatura: se publica grande/null.
+ * - Falla `updateRow` (o algo lanza): se borran los objetos nuevos y la fila
+ *   sigue como estaba; los objetos anteriores nunca se tocaron.
  */
-export async function uploadItemImages(
+export async function publishItemImages(
   storage: ItemImageStorage,
+  updateRow: (urls: ItemImageUrls) => PromiseLike<{ error: { message: string } | null }>,
   params: {
     bizId: string
     itemId: string
@@ -58,27 +123,59 @@ export async function uploadItemImages(
     thumb: File | null
     cacheControl: string
     version: number
+    previous: ItemImageUrls
   },
-): Promise<ItemImageUpload> {
+): Promise<ItemImagePublish> {
   const bucket = storage.from(BUCKET)
-  const paths = itemImagePaths(params.bizId, params.itemId)
+  const paths = itemImagePaths(params.bizId, params.itemId, params.version)
   const options = (file: File) => ({
-    upsert: true,
+    upsert: false,
     contentType: file.type,
     cacheControl: params.cacheControl,
   })
+  const uploaded: string[] = []
 
-  const { error: fullErr } = await bucket.upload(paths.full, params.full, options(params.full))
-  if (fullErr) return { ok: false, message: `No se pudo subir la imagen: ${fullErr.message}` }
-  const imageUrl = `${bucket.getPublicUrl(paths.full).data.publicUrl}?v=${params.version}`
+  try {
+    const { error: fullErr } = await bucket.upload(paths.full, params.full, options(params.full))
+    if (fullErr) return { ok: false, message: `No se pudo subir la imagen: ${fullErr.message}` }
+    uploaded.push(paths.full)
+    const imageUrl = bucket.getPublicUrl(paths.full).data.publicUrl
 
-  if (!params.thumb) {
-    return { ok: true, imageUrl, thumbnailUrl: null, thumbnailError: 'no se generó la miniatura' }
+    let thumbnailUrl: string | null = null
+    let thumbnailError: string | null = null
+    if (!params.thumb) {
+      thumbnailError = 'no se generó la miniatura'
+    } else {
+      const { error: thumbErr } = await bucket.upload(
+        paths.thumb,
+        params.thumb,
+        options(params.thumb),
+      )
+      if (thumbErr) {
+        thumbnailError = thumbErr.message
+      } else {
+        uploaded.push(paths.thumb)
+        thumbnailUrl = bucket.getPublicUrl(paths.thumb).data.publicUrl
+      }
+    }
+
+    const { error: rowErr } = await updateRow({ imageUrl, thumbnailUrl })
+    if (rowErr) {
+      await removeItemImageObjects(storage, uploaded)
+      return { ok: false, message: rowErr.message }
+    }
+
+    // Confirmado: ahora sí se va lo anterior (sin tocar lo recién publicado).
+    const stale = itemImageRemovalPaths(params.bizId, params.previous).filter(
+      (p) => !uploaded.includes(p),
+    )
+    await removeItemImageObjects(storage, stale)
+    return { ok: true, imageUrl, thumbnailUrl, thumbnailError }
+  } catch (e) {
+    await removeItemImageObjects(storage, uploaded)
+    return {
+      ok: false,
+      message: `No se pudo guardar la imagen: ${e instanceof Error ? e.message : String(e)}`,
+    }
   }
-  const { error: thumbErr } = await bucket.upload(paths.thumb, params.thumb, options(params.thumb))
-  if (thumbErr) {
-    return { ok: true, imageUrl, thumbnailUrl: null, thumbnailError: thumbErr.message }
-  }
-  const thumbnailUrl = `${bucket.getPublicUrl(paths.thumb).data.publicUrl}?v=${params.version}`
-  return { ok: true, imageUrl, thumbnailUrl, thumbnailError: null }
 }
