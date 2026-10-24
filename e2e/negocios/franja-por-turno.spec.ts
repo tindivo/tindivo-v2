@@ -110,13 +110,13 @@ test('la cajera pone la franja a mano y el plato la guarda', async ({ page }) =>
   // con `describeWindow`, la MISMA función que pinta la card del cliente: ni el
   // editor ni el espejo pueden prometer un texto que la app luego no diga.
   //
-  //   1. la línea de resumen del editor («El cliente leerá …»)
+  //   1. la línea de resumen del editor («Se ve en la carta: …»)
   //   2. el badge del panel «Vista del cliente», que simula la card
   //
   // Afirmarlas por separado y no con un `.first()`: con dos copias visibles,
   // `.first()` elige una en silencio y la otra podría romperse sin que nadie
   // se entere.
-  await expect(page.getByText(/El cliente leerá/).locator('visible=true')).toContainText(
+  await expect(page.getByText(/Se ve en la carta/).locator('visible=true')).toContainText(
     'Solo sáb y dom, de 11:00 a 15:00',
   )
   await expect(

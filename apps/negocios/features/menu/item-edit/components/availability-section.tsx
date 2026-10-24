@@ -271,14 +271,15 @@ export function AvailabilitySection({
         </div>
       </div>
 
-      {/* Lo que el cliente va a leer, literal: es la misma función que pinta la
-          card del catálogo, así que aquí no se puede prometer otra cosa. */}
+      {/* La franja en las mismas palabras que la card del catálogo (describeWindow).
+          Fuera de ella la app del cliente oculta el plato (decisión de Jesús,
+          2026-10-24), así que aquí no se puede prometer otra cosa. */}
       {resumen && (
         <div className="mt-3 flex items-start gap-2 rounded-xl bg-info/[0.08] p-2.5">
           <Icon name="schedule" size={16} className="mt-0.5 shrink-0 text-info" />
           <div className="text-[12px] text-ink">
-            El cliente leerá <span className="font-semibold">«{resumen}»</span> y no podrá pedirlo
-            fuera de esa franja.
+            Se ve en la carta: <span className="font-semibold">«{resumen}»</span>. Fuera de esa
+            franja, el cliente no lo verá.
           </div>
         </div>
       )}
