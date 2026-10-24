@@ -36,6 +36,13 @@ después de cada ronda `node scripts/codex-audit-scope-check.mjs <eventos.jsonl>
 - **Carga de instrucciones:** los `AGENTS.md` desde la raíz hasta el directorio de lanzamiento. Con `-C <repo>`, solo
   el raíz.
 - Acierta al auditar, pero puede «corregir» una cifra que no vio en crudo: verifícala antes de aceptarla.
+- **El verificador de alcance marca por NOMBRE** (`SENSITIVE` en `scripts/codex-audit-scope-check.mjs`): si un
+  archivo auditado se llama, p. ej., `credentials-file.ts`, cada lectura de Codex sale como «nombre sensible» y la ronda
+  no vale (pasó el 2026-10-22, expediente `2026-10-22-seed-staging`, ronda 2). No nombres así lo que vaya a auditar y,
+  en el encargo, prohíbele a Codex escribir esa palabra en sus comandos.
+- **Sin memoria, Claude Code mata el proceso de Codex** a mitad de ronda, y §9 la cuenta igual. Antes de una ronda
+  larga: para el stack de Supabase (`docker stop` bajo candado) y `wsl --shutdown` (de ~1,8 a ~5–6 GB libres medidos
+  el 2026-10-22); después, Docker Desktop y `docker start` como tras un reinicio.
 
 ## Antigravity (`agy`): ejecutor rápido
 

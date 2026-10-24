@@ -42,6 +42,12 @@
 | D-52 | **Inicio administrable, acotado:** solo **bloques tipados** que sirve la API (esquema en `@tindivo/contracts`; sin agregador `GET /home`, sin segmentos y sin campañas), para que un cambio comercial no exija actualizar la app. **El admin para editarlos va con la iniciativa de campañas, no en este plan** | Jesús, 2026-10-13 (aprobada acotada) |
 | D-53 | **Métricas de la app desde la base propia, sin SDK de analítica de producto:** pedidos por `client_platform`, recompra a 30 días app frente a PWA, aceptación del permiso de push por plataforma (guardar el estado del permiso por dispositivo es parte del registro de dispositivos del paso 5). Los fallos, con el rastreador de errores de `OPS-4`, que no es analítica de producto. Revisión semanal el primer mes | Jesús, 2026-10-13 |
 
+### Decididas el 2026-10-21
+
+| # | Decisión | Quién / cuándo |
+|---|---|---|
+| D-14 | **Un solo repositorio (este monorepo)** y Android como **un proyecto Gradle con módulos** en `apps/android/`: `core` (red, sesión, modelos generados del OpenAPI, diseño, push) y uno por app (`customer` ahora; `negocios` y `motorizados` después). iOS irá en `apps/ios/`. El APK lo compila la CI y se prueba en un Android real (sin emulador local); la app en desarrollo habla con **staging** (MV6), nunca con producción | Jesús, 2026-10-21 (recomendación aceptada) |
+
 **Reglas aplicables que no son decisiones del plan** (ya están en los estándares de código v2, ADR 0038, y se citan sin
 número D propio): `DES-6` (el contrato es compatible hacia atrás; `oasdiff` contra la rama base en la CI) y `CLI-14`
 (toda publicación pasa por pruebas internas y sale con liberación gradual o escalonada). Los números `D-54` y `D-55`
@@ -52,7 +58,7 @@ quedan **libres**: la siguiente decisión del plan toma `D-54`.
 | # | Decisión | Opciones | Recomendación | Bloquea |
 |---|---|---|---|---|
 | D-11 | **Cuentas de tienda**: Apple Developer Program y Google Play Console. | Crear ambas hoy · esperar. | **Hoy.** Apple: la creas ahora (guía paso a paso en `05-arranque/01-cuentas-y-firmas.md`). **Google Play: por crear** y con el **camino crítico** de 12 testers × 14 días por app para Customer. | Fecha del primer lanzamiento |
-| D-14 | **Estructura del repositorio** (`MOB-16`). | Proyectos `apps/ios` y `apps/android` en el monorepo · repos separados con la especificación como submódulo. | Monorepo: el spec OpenAPI, los vectores de conformidad y los tokens de diseño viven junto al backend y el CI los valida. | Ritmo de trabajo |
+| D-14 | **Estructura del repositorio** (`MOB-16`). | Proyectos `apps/ios` y `apps/android` en el monorepo · repos separados con la especificación como submódulo. | Monorepo: el spec OpenAPI, los vectores de conformidad y los tokens de diseño viven junto al backend y el CI los valida. **Decidido por Jesús el 2026-10-21: monorepo, con `apps/android/` en módulos (sección 1)** | Ritmo de trabajo |
 | D-35 | **Orden de construcción.** | Negocios Android primero y Customer después · en paralelo · Customer primero. | **Negocios Android primero** (lo más urgente, 4 usuarios que conoces, pista interna sin la prueba de 12 × 14). El backend (B1-B3) y la organización (O) corren **en paralelo**; Customer arranca al terminar N1, con la pista cerrada abierta cuanto antes. Ver `05-arranque/03`. **Decidido por Jesús el 2026-10-09: Customer primero, Negocios Android después y la mudanza al VPS al final** (`../../planes/migraciones/cola.md`) | Plan de fases |
 | D-36 | **Quién figura como publicador** en las tiendas. | Persona natural (hoy; tu nombre legal) · organización (empresa + D-U-N-S; semanas; exime de la prueba de 12 testers de Google). | **Persona natural ahora**; ambas tiendas permiten transferir la app a otra cuenta más adelante (con condiciones). | Fecha del primer lanzamiento |
 | D-37 | **Subir a planes de pago** (`PRO-06`). | Supabase Pro (US$ 25/mes) y Vercel Pro (US$ 20/mes) · quedarse en gratuito con el mínimo de la Ola A. | **Subir ambos antes del lanzamiento público** (copias de seguridad y términos de uso comercial). Hoy, el mínimo gratis: funciones a `pdx1`, poda de `pg_cron` y un volcado nocturno cifrado. | Fiabilidad y cumplimiento |

@@ -346,6 +346,40 @@ asesoría legal antes de operar (cláusula de adelanto del fondo para restaurant
 - Sentry (`SENTRY_DSN`) + UptimeRobot sobre `/health` de las 5 URLs.
 - Cron `close-driver-shifts` (pg_cron, cada 15 min) ya activo: cierra disponibilidad fuera de horario.
 
+## 10. Staging (`tindivo-dev`) **[tú]**
+
+Para las apps nativas en desarrollo (D-14: nunca hablan con producción). Montado el 2026-10-22.
+
+| Pieza | Dónde |
+|---|---|
+| Base | Supabase `tindivo-dev` (`jgziumvrtogguljhpdos`), con las migraciones de `develop` |
+| API | Proyecto Vercel **aparte** `tindivo-api-staging` → `https://tindivo-api-staging.vercel.app` |
+| Datos de prueba | `pnpm db:seed:staging -- --env-file <secretos>/staging.env --out-dir <secretos>` (PR #77): el mundo e2e (2 negocios con menú y horario, 2 motorizados, 3 clientes; sin admin) |
+| Secretos | `C:\Users\<usuario>\tindivo-secretos` (`staging.env` y las carpetas `staging-credenciales-<fecha>\cuentas.md`; vale la más reciente) |
+
+**Vercel.** La rama de producción del proyecto es **`develop`** (*Settings › Environments › Production › Branch
+Tracking*). Las tres variables (`NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` como *Config*;
+`SUPABASE_SERVICE_ROLE_KEY` como *Secret*) van **solo en Production**. Sin Twilio (verificar teléfonos nuevos responde
+«no disponible»: se prueba con las cuentas sembradas) y sin Inngest (los pedidos se crean, las automatizaciones no
+corren). Ver [la trampa de las variables de Preview con rama](trampas.md#una-variable-de-preview-con-rama-bloquea-esa-rama-en-producción).
+
+**El cuidado que no se puede olvidar: cada push a `develop` redespliega la API de staging.** Si ese push trae una
+migración nueva y `tindivo-dev` no la tiene, la API de staging corre código que espera un esquema que no existe y se
+rompe (la app Android deja de funcionar sin que nadie haya tocado la app). Por eso:
+
+1. Toda migración que entre en `develop` se aplica **también a `tindivo-dev`**, en el mismo paso en que se integra (o
+   antes): `supabase db push --db-url "<URI de tindivo-dev>"` desde `develop` actualizado (en remoto, solo con
+   `db push`: `supabase/AGENTS.md`). La URI vive en los secretos, nunca en el chat ni en el repo.
+2. Comprobar: `supabase migration list --db-url "<URI de tindivo-dev>"` termina en la misma versión que
+   `supabase/migrations/` de `develop`; y `GET https://tindivo-api-staging.vercel.app/api/v1/config` → 200.
+3. Las migraciones que traen datos (como la 0088, que fijaba `push_dispatch` a la `send-push` de producción) se revisan
+   antes: en staging `push_dispatch` está **anulado a propósito** y debe seguir así.
+4. Una migración que necesite datos de prueba nuevos → volver a correr el seed (es idempotente; rota las contraseñas).
+
+**Rotar la service role de staging.** El seed solo acepta la clave cuya SHA-256 está fijada en
+`apps/api/scripts/staging-target.ts` (`STAGING_SERVICE_KEY_SHA256`): si se rota, hay que actualizar esa constante (y
+en Vercel y en `staging.env`).
+
 ---
 
 **Estado del repo:** todas las fases funcionales (A–I) implementadas y verificadas e2e. Migraciones
