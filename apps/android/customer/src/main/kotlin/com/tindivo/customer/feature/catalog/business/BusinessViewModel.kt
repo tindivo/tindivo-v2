@@ -154,7 +154,7 @@ private fun GetBusiness200ResponseDataCategoriesInnerItemsInner.toItem(): MenuIt
 
 /** `decimal(10,2)`: dos decimales y diez cifras en total, como `menu_items.base_price` en la base. */
 private const val PRICE_SCALE = 2
-private const val PRICE_PRECISION = 10
+private val MAX_PRICE = BigDecimal("99999999.99")
 
 /**
  * Solo para mostrar (KT-8): `S/ 12.50` en soles de Perú; nunca se usa para calcular. `DecimalFormat` formatea el
@@ -165,11 +165,14 @@ private const val PRICE_PRECISION = 10
  * la carta falla. Dentro de ese dominio nunca hay redondeo (`UNNECESSARY`): se muestra exactamente el importe recibido.
  */
 internal fun formatPrice(amount: BigDecimal): String? {
+    // La magnitud va primero y con `compareTo`, que no cambia la escala: con un exponente extremo (`1e2147483647`)
+    // `setScale` lanzaría ArithmeticException. Ya acotado, el cambio de escala es pequeño y exacto.
+    if (amount.signum() < 0 || amount > MAX_PRICE) return null
     val exact =
         amount
-            .takeIf { it.signum() >= 0 && it.stripTrailingZeros().scale() <= PRICE_SCALE }
+            .stripTrailingZeros()
+            .takeIf { it.scale() <= PRICE_SCALE }
             ?.setScale(PRICE_SCALE, RoundingMode.UNNECESSARY)
-            ?.takeIf { it.precision() <= PRICE_PRECISION }
             ?: return null
     return NumberFormat
         .getCurrencyInstance(Locale.forLanguageTag("es-PE"))

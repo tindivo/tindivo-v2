@@ -130,11 +130,16 @@ class BusinessViewModelTest {
         assertEquals("S/ 1,250.00", formatPrice(BigDecimal("1250.00")).plain())
         assertEquals("S/ 99,999,999.99", formatPrice(BigDecimal("99999999.99")).plain())
         assertEquals("S/ 1,000.00", formatPrice(BigDecimal("1E+3")).plain())
+        assertEquals("S/ 0.00", formatPrice(BigDecimal("0E-2147483647")).plain())
     }
 
     @Test
     fun `formatPrice no redondea ni acepta importes fuera de numeric(10,2)`() {
-        for (amount in listOf("2.675", "0.001", "-1", "-0.01", "100000000", "1E+8")) {
+        val outside =
+            listOf("2.675", "0.001", "-1", "-0.01", "100000000", "1E+8", "99999999.991")
+        // Exponentes extremos: devuelven null sin lanzar (con setScale primero, el primero lanzaba ArithmeticException).
+        val extreme = listOf("1e2147483647", "-1e2147483647", "1e-2147483647")
+        for (amount in outside + extreme) {
             assertNull(amount, formatPrice(BigDecimal(amount)))
         }
     }
@@ -142,7 +147,7 @@ class BusinessViewModelTest {
     @Test
     fun `un precio fuera de numeric(10,2) deja la carta entera en Failed`() =
         runTest {
-            for (bad in listOf("12.345", "-1", "100000000")) {
+            for (bad in listOf("12.345", "-1", "100000000", "1e2147483647", "1e-2147483647")) {
                 server.enqueue(response(200, DETAIL.replace("\"base_price\":12.5,", "\"base_price\":$bad,")))
 
                 val state = newViewModel().settled()
