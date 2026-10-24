@@ -107,9 +107,10 @@ class BusinessViewModelTest {
             "\"display_order\":1,\"items\":[${dishes.joinToString(",")}]}],\"schedule\":[],\"opening_confirmed\":null}}"
 
     private suspend fun BusinessViewModel.names(): List<String> =
-        (settled().visibleAt(now.value) as BusinessUiState.Loaded).business.categories.flatMap { c ->
-            c.items.map { it.name }
-        }
+        (visible() as BusinessUiState.Loaded).business.categories.flatMap { c -> c.items.map { it.name } }
+
+    /** La carga vigente filtrada por franja en el minuto actual, como la pinta la pantalla. */
+    private suspend fun BusinessViewModel.visible(): BusinessUiState = settled().visibleAt(now.value)
 
     /** Lo que pinta `BusinessDestination`, emisión por emisión. */
     private fun BusinessViewModel.screen() = combine(state, now) { state, now -> state.visibleAt(now) }
@@ -248,7 +249,7 @@ class BusinessViewModelTest {
         runTest {
             server.enqueue(response(200, menu(dish(1, "Ceviche", from = "13:00", to = "15:00"))))
 
-            val state = newViewModel().settled() as BusinessUiState.Loaded
+            val state = newViewModel().visible() as BusinessUiState.Loaded
 
             assertTrue(state.business.categories.isEmpty())
         }
@@ -258,7 +259,7 @@ class BusinessViewModelTest {
         runTest {
             server.enqueue(response(200, menu(dish(1, "Ceviche", available = false, from = "11:00", to = "15:00"))))
 
-            val state = newViewModel().settled() as BusinessUiState.Loaded
+            val state = newViewModel().visible() as BusinessUiState.Loaded
 
             val items =
                 state.business.categories
@@ -295,7 +296,7 @@ class BusinessViewModelTest {
             val viewModel = newViewModel(clock)
             // La pantalla abierta: sin nadie suscrito, el reloj no corre.
             val seen = mutableListOf<BusinessUiState>()
-            backgroundScope.launch { viewModel.screen().collect { seen += it } }
+            backgroundScope.launch(dispatcher) { viewModel.screen().collect { seen += it } }
             assertEquals(listOf("Ceviche"), seen.last().dishes().map { it.name })
 
             clock.now = Instant.parse("2026-10-26T20:00:30Z")
@@ -312,15 +313,16 @@ class BusinessViewModelTest {
             server.enqueue(response(200, menu(dish(1, "Ceviche", price = "10"))))
             server.enqueue(response(200, menu(dish(2, "Ceviche grande", price = "12"))))
             val viewModel = newViewModel()
-            val first = backgroundScope.launch { viewModel.screen().collect {} }
+            val first = backgroundScope.launch(dispatcher) { viewModel.screen().collect {} }
             assertEquals(listOf("Ceviche"), viewModel.names())
             // La pantalla se va (más que el margen de 5 s) y la carta se recarga sin nadie mirando.
             first.cancel()
             dispatcher.scheduler.advanceTimeBy(6_000L)
             viewModel.refresh()
+            dispatcher.scheduler.advanceUntilIdle()
 
             val seen = mutableListOf<BusinessUiState>()
-            backgroundScope.launch { viewModel.screen().collect { seen += it } }
+            backgroundScope.launch(dispatcher) { viewModel.screen().collect { seen += it } }
 
             assertTrue(seen.isNotEmpty())
             assertTrue(seen.none { state -> state.dishes().any { it.id.endsWith("1") } })
@@ -336,14 +338,15 @@ class BusinessViewModelTest {
             // El plato con el precio ilegible está, además, fuera de su franja (mediodía del lunes en Lima).
             server.enqueue(response(200, menu(dish(1, "Ceviche", price = "12.345", from = "18:00", to = "22:00"))))
             val viewModel = newViewModel()
-            val first = backgroundScope.launch { viewModel.screen().collect {} }
+            val first = backgroundScope.launch(dispatcher) { viewModel.screen().collect {} }
             assertEquals(listOf("Ceviche"), viewModel.names())
             first.cancel()
             dispatcher.scheduler.advanceTimeBy(6_000L)
             viewModel.refresh()
+            dispatcher.scheduler.advanceUntilIdle()
 
             val seen = mutableListOf<BusinessUiState>()
-            backgroundScope.launch { viewModel.screen().collect { seen += it } }
+            backgroundScope.launch(dispatcher) { viewModel.screen().collect { seen += it } }
             dispatcher.scheduler.advanceTimeBy(61_000L)
 
             val failed = BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
