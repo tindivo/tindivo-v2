@@ -28,10 +28,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.catalog.business.BusinessDestination
+import com.tindivo.customer.feature.catalog.business.BusinessRoute
+import com.tindivo.customer.feature.catalog.home.CatalogHomeDestination
 import com.tindivo.customer.feature.diagnostics.DiagnosticsDestination
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
+
+@Serializable
+data object CatalogHomeRoute
 
 @Serializable
 data object DiagnosticsRoute
@@ -63,10 +70,23 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             if (osNoticeVisible) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier
         NavHost(
             navController = navController,
-            startDestination = DiagnosticsRoute,
+            startDestination = CatalogHomeRoute,
             modifier = contentModifier,
         ) {
-            composable<DiagnosticsRoute> { DiagnosticsDestination() }
+            composable<CatalogHomeRoute> {
+                CatalogHomeDestination(
+                    onOpenBusiness = { id -> navController.navigate(BusinessRoute(id)) },
+                    // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
+                    onOpenDiagnostics =
+                        if (BuildConfig.DEBUG) {
+                            { navController.navigate(DiagnosticsRoute) }
+                        } else {
+                            null
+                        },
+                )
+            }
+            composable<BusinessRoute> { BusinessDestination(onBack = { navController.popBackStack() }) }
+            if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
             composable<UpdateRoute> { UpdateScreen() }
         }
     }

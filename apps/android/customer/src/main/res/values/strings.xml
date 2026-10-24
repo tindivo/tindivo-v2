@@ -14,6 +14,20 @@
     <string name="diagnostics_config_api_version">Versión del contrato</string>
     <string name="diagnostics_config_server_time">Hora del servidor</string>
 
+    <string name="catalog_home_title">Restaurantes</string>
+    <string name="catalog_home_empty">Aún no hay restaurantes disponibles.</string>
+    <string name="catalog_home_whatsapp_title">Próximamente pedidos por la plataforma</string>
+    <string name="catalog_home_whatsapp_subtitle">Pide directo por WhatsApp mientras preparamos su integración completa a la plataforma.</string>
+    <string name="catalog_closed_now">Cerrado ahora</string>
+    <string name="catalog_whatsapp_orders">Pedidos por WhatsApp</string>
+    <string name="catalog_eta">%1$d–%2$d min</string>
+    <string name="catalog_loading">Cargando</string>
+    <string name="catalog_retry">Reintentar</string>
+    <string name="business_back">Volver</string>
+    <string name="business_item_unavailable">No disponible</string>
+    <string name="business_loading">Cargando</string>
+    <string name="business_retry">Reintentar</string>
+
     <string name="error_network">Sin conexión. Revisa tu internet e inténtalo de nuevo.</string>
     <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
     <string name="error_code">Código: %1$s</string>

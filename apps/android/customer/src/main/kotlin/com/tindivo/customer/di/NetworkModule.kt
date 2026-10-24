@@ -1,5 +1,6 @@
 package com.tindivo.customer.di
 
+import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
@@ -34,4 +35,11 @@ object NetworkModule {
         client: OkHttpClient,
         @IoDispatcher io: CoroutineDispatcher,
     ): SystemRepository = SystemRepository(BuildConfig.API_BASE_URL, client, io)
+
+    @Provides
+    @Singleton
+    fun provideCatalogRepository(
+        client: OkHttpClient,
+        @IoDispatcher io: CoroutineDispatcher,
+    ): CatalogRepository = CatalogRepository(BuildConfig.API_BASE_URL, client, io)
 }
