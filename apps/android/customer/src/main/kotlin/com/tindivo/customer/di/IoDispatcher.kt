@@ -13,10 +13,19 @@ import javax.inject.Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class IoDispatcher
 
+/** El dispatcher del trabajo que no bloquea (KT-4): también se inyecta. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class DefaultDispatcher
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DispatchersModule {
     @Provides
     @IoDispatcher
     fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
+
+    @Provides
+    @DefaultDispatcher
+    fun provideDefaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
 }
