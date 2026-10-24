@@ -85,7 +85,7 @@ por SMS como inicio de sesión.
 
 | # | Decisión | Quién / cuándo |
 |---|---|---|
-| D-22 | **En la app nativa, el cliente entra solo con Google**: Credential Manager y supabase-kt Auth (D-54). La app no ofrece correo y contraseña, ni el teléfono como inicio de sesión. El teléfono se sigue verificando por SMS para poder pedir (`/customer/phone/*`). En **iOS** serán Google **y Apple**, porque Apple exige su inicio de sesión cuando se ofrece otro de terceros (guía 4.8). La web no cambia. **Por resolver en el PR de sesión, con prueba:** qué pasa con las cuentas de correo y contraseña (22 de 86 el 2026-10-10) cuando su dueño entra con Google en la app, y qué pasa si el teléfono ya está verificado en otra cuenta | Jesús, 2026-10-24 (opción «solo Google») |
+| D-22 | **En la app nativa, el cliente entra solo con Google**: Credential Manager y supabase-kt Auth (D-54). La app no ofrece correo y contraseña, ni el teléfono como inicio de sesión. El teléfono se sigue verificando por SMS para poder pedir (`/customer/phone/*`). En **iOS** serán Google **y Apple**, conforme al requisito documentado para Tindivo en la fila R2 de `Docs/trabajo/movil/07-publicacion-tiendas.md` (guía 4.8). La web no cambia. **Por resolver en el PR de sesión, con prueba:** qué pasa con las cuentas de correo y contraseña (22 de 86 el 2026-10-10) cuando su dueño entra con Google en la app, y qué pasa si el teléfono ya está verificado en otra cuenta | Jesús, 2026-10-24 (opción «solo Google») |
 
 ## 2. Decisiones abiertas — organización y plazos externos
 
