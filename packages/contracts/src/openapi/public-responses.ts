@@ -116,6 +116,10 @@ export const SearchCatalogResponseSchema = z.object({
       description: z.string().nullable(),
       base_price: legacyMoney,
       image_url: z.string().nullable(),
+      thumbnail_url: z.string().nullable().optional().meta({
+        description:
+          'Miniatura WebP (~384 px) del plato (D-55). Opcional: puede faltar o ser null, y entonces el cliente usa `image_url`',
+      }),
       image_hue: z.number().int().nullable(),
     }),
   ),

@@ -314,6 +314,58 @@ describe('rutas públicas', () => {
     }
   })
 
+  it('D-55: la búsqueda devuelve la miniatura del plato y null si no la tiene, y cumple el esquema', async () => {
+    const THUMB = `${LOCAL_URL}/storage/v1/object/public/menu-items/${E2E.BUSINESS_ID}/items/zz-s?v=1`
+    type Item = {
+      id: string
+      name: string
+      is_available: boolean
+      available_days?: unknown
+      available_from?: string | null
+      available_to?: string | null
+    }
+    // La búsqueda solo trae platos disponibles y dentro de su franja: se eligen
+    // platos sin franja para que la hora a la que corre la CI no cuente.
+    const platos = (
+      (await conforms('getBusiness', 200, getBusiness, { params: { id: E2E.BUSINESS_ID } }))
+        .categories as { items: Item[] }[]
+    )
+      .flatMap((c) => c.items)
+      .filter(
+        (i) =>
+          i.is_available &&
+          i.name.trim().length >= 2 &&
+          i.available_days == null &&
+          i.available_from == null &&
+          i.available_to == null,
+      )
+    expect(platos.length).toBeGreaterThanOrEqual(2)
+    const [conMiniatura, sinMiniatura] = platos as [Item, Item]
+    const buscar = async (nombre: string) =>
+      (
+        (await conforms('searchCatalog', 200, searchCatalog, {
+          qs: `?q=${encodeURIComponent(nombre)}`,
+        })) as unknown as { items: { id: string; thumbnail_url?: string | null }[] }
+      ).items
+    try {
+      await sdb
+        .from('menu_items')
+        .update({ thumbnail_url: null })
+        .eq('business_id', E2E.BUSINESS_ID)
+      await sdb.from('menu_items').update({ thumbnail_url: THUMB }).eq('id', conMiniatura.id)
+      const con = (await buscar(conMiniatura.name)).find((i) => i.id === conMiniatura.id)
+      expect(con?.thumbnail_url).toBe(THUMB)
+      const sin = (await buscar(sinMiniatura.name)).find((i) => i.id === sinMiniatura.id)
+      expect(sin).toBeDefined()
+      expect(sin?.thumbnail_url ?? null).toBeNull()
+    } finally {
+      await sdb
+        .from('menu_items')
+        .update({ thumbnail_url: null })
+        .eq('business_id', E2E.BUSINESS_ID)
+    }
+  })
+
   it('Tindivo Store: la grilla, el detalle y un evento', async () => {
     const draft = await call(adminStoreCreate, { method: 'POST', bearer: adminToken })
     expect(draft.status).toBe(201)
