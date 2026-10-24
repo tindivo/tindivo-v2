@@ -28,8 +28,8 @@ sealed interface ConfigState {
     data object Unknown : ConfigState
 
     /**
-     * La versión de la app sirve. [minOsAndroid] se conserva por si hiciera falta; no se bloquea por él (sin decisión
-     * de producto sobre qué mostrar).
+     * La versión de la app sirve. [minOsAndroid] es solo un aviso (D-58): si el Android del dispositivo está por
+     * debajo, la app lo avisa y deja seguir; la única que bloquea es la versión mínima de la app.
      */
     data class Ready(
         val features: Map<String, ClientFeature>,

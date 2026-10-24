@@ -23,4 +23,8 @@
     <string name="update_min_version">Versión mínima: %1$s</string>
     <string name="update_open_store">Ir a la tienda</string>
     <string name="update_store_unavailable">No se pudo abrir la tienda.</string>
+
+    <string name="os_notice_title">Tu Android es antiguo</string>
+    <string name="os_notice_message">Puedes seguir usando Tindivo, pero algunas funciones podrían no ir bien en esta versión de Android.</string>
+    <string name="os_notice_dismiss">Entendido</string>
 </resources>
