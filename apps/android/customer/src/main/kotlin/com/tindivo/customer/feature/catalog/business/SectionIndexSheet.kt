@@ -2,13 +2,13 @@ package com.tindivo.customer.feature.catalog.business
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -46,14 +46,26 @@ internal fun SectionIndexSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        Column(
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            itemsIndexed(categories, key = { _, category -> category.id }) { index, category ->
-                SectionCard(category = category, onClick = { onSelect(index) })
+            categories.chunked(2).forEachIndexed { filaIndex, rowCategories ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    rowCategories.forEachIndexed { columna, category ->
+                        SectionCard(
+                            category = category,
+                            onClick = { onSelect(filaIndex * 2 + columna) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    if (rowCategories.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
@@ -63,13 +75,14 @@ internal fun SectionIndexSheet(
 private fun SectionCard(
     category: MenuCategoryUi,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val count = category.items.size
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 72.dp),
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
