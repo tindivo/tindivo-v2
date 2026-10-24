@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { notifySuccess } from '@/components/dashboard/toast'
 import { signOutDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { itemImageRemovalPaths, uploadItemImages } from '../lib/item-images'
 import {
   acceptsTotalPricing,
   applyTotalPrices,
@@ -57,6 +58,8 @@ export function useItemEditor() {
   const [catItemCounts, setCatItemCounts] = useState<Record<string, number>>({})
   const [applyingToCategory, setApplyingToCategory] = useState(false)
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
+  // Miniatura de la misma foto (D-55). Null con foto pendiente = no se pudo generar.
+  const [pendingThumbFile, setPendingThumbFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
   const [imageBusy, setImageBusy] = useState(false)
@@ -604,11 +607,20 @@ export function useItemEditor() {
     try {
       // Se comprime al elegir, no al guardar: el preview enseña exactamente la
       // imagen que verá el cliente, y el botón "Guardar" no se queda colgado.
-      const optimized = await compressImage(file, 'product')
+      // La grande y la miniatura salen de la MISMA foto original. Si falla la
+      // miniatura, la grande sigue su camino y el plato se guarda sin ella.
+      const [optimized, thumb] = await Promise.all([
+        compressImage(file, 'product'),
+        compressImage(file, 'menu-thumb').catch((thumbErr: unknown) => {
+          console.error('[item-editor] no se pudo generar la miniatura:', thumbErr)
+          return null
+        }),
+      ])
       // Si quitó la foto y acto seguido eligió otra, no hay nada que borrar:
       // la nueva sobrescribe el mismo objeto.
       imageRemovedRef.current = false
       setPendingImageFile(optimized)
+      setPendingThumbFile(thumb)
       replacePreview(URL.createObjectURL(optimized))
       setHasUnsaved(true)
     } catch (err) {
@@ -621,6 +633,7 @@ export function useItemEditor() {
   function onClearImage() {
     if (formData.image_url) imageRemovedRef.current = true
     setPendingImageFile(null)
+    setPendingThumbFile(null)
     replacePreview(null)
     setImageError(null)
     setFormData((f) => ({ ...f, image_url: null }))
@@ -688,6 +701,9 @@ export function useItemEditor() {
             is_compact: formData.is_compact,
             badges: formData.badges,
             image_url: formData.image_url,
+            // Sin foto no puede quedar una miniatura apuntando a la anterior. Con
+            // foto, undefined: la columna no se toca.
+            thumbnail_url: formData.image_url === null ? null : undefined,
             // Los tres a la vez: las tres columnas son UNA sola franja, y
             // guardar media dejaria un estado que la regla trata como «sin
             // hora» sin que nadie lo haya pedido. El array vacio se guarda
@@ -706,24 +722,27 @@ export function useItemEditor() {
       }
 
       if (pendingImageFile) {
-        const path = `${bizId}/items/${savedItemId}`
-        const { error: upErr } = await supabase.storage
-          .from('menu-items')
-          .upload(path, pendingImageFile, {
-            upsert: true,
-            contentType: pendingImageFile.type,
-            cacheControl: UPLOAD_CACHE_CONTROL,
-          })
-        if (upErr) {
-          setSaveError(`No se pudo subir la imagen: ${upErr.message}`)
+        const uploaded = await uploadItemImages(supabase.storage, {
+          bizId,
+          itemId: savedItemId,
+          full: pendingImageFile,
+          thumb: pendingThumbFile,
+          cacheControl: UPLOAD_CACHE_CONTROL,
+          version: Date.now(),
+        })
+        if (!uploaded.ok) {
+          setSaveError(uploaded.message)
           setSaving(false)
           return false
         }
-        const { data: pub } = supabase.storage.from('menu-items').getPublicUrl(path)
-        const versionedUrl = `${pub.publicUrl}?v=${Date.now()}`
+        if (uploaded.thumbnailError) {
+          console.error('[item-editor] el plato se guarda sin miniatura:', uploaded.thumbnailError)
+        }
+        // Una sola escritura con las dos URL: nunca queda la miniatura de una
+        // foto junto a la grande de otra.
         const { error: imgErr } = await supabase
           .from('menu_items')
-          .update({ image_url: versionedUrl })
+          .update({ image_url: uploaded.imageUrl, thumbnail_url: uploaded.thumbnailUrl })
           .eq('id', savedItemId)
           .eq('business_id', bizId)
         if (imgErr) {
@@ -731,13 +750,14 @@ export function useItemEditor() {
           setSaving(false)
           return false
         }
-        setFormData((f) => ({ ...f, image_url: versionedUrl }))
+        setFormData((f) => ({ ...f, image_url: uploaded.imageUrl }))
         setPendingImageFile(null)
+        setPendingThumbFile(null)
         replacePreview(null)
       } else if (imageRemovedRef.current) {
         // La fila ya guardó `image_url: null` más arriba, así que el objeto se
         // quedó sin quien lo referencie. Se va ahora.
-        await supabase.storage.from('menu-items').remove([`${bizId}/items/${savedItemId}`])
+        await supabase.storage.from('menu-items').remove(itemImageRemovalPaths(bizId, savedItemId))
         imageRemovedRef.current = false
       }
 
@@ -934,7 +954,7 @@ export function useItemEditor() {
 
     const { error: delErr } = await supabase
       .from('menu_items')
-      .update({ deleted_at: new Date().toISOString(), image_url: null })
+      .update({ deleted_at: new Date().toISOString(), image_url: null, thumbnail_url: null })
       .eq('id', itemId)
       .eq('business_id', bizId)
 
@@ -948,7 +968,7 @@ export function useItemEditor() {
     // y un archivo que sobra molesta menos que un error en la cara de la
     // cajera por algo que, para ella, ya salió bien.
     if (formData.image_url) {
-      await supabase.storage.from('menu-items').remove([`${bizId}/items/${itemId}`])
+      await supabase.storage.from('menu-items').remove(itemImageRemovalPaths(bizId, itemId))
     }
 
     router.replace('/menu')
