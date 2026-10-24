@@ -6,6 +6,9 @@ import type { NextConfig } from 'next'
 // una barra delante de la letra de unidad, así que ninguna ruta que salga de él
 // existe. Mismo motivo que documenta `scripts/check-deploy-order.mjs`.
 const MONOREPO_ROOT = fileURLToPath(new URL('../../', import.meta.url))
+// Solo el build de la imagen Docker de Coolify (infra/coolify) pone TINDIVO_NEXT_STANDALONE=1. En Vercel la
+// configuración queda exactamente como antes de existir la imagen.
+const STANDALONE = process.env.TINDIVO_NEXT_STANDALONE === '1'
 
 const config: NextConfig = {
   // Compila los paquetes del workspace (que exportan TS source).
@@ -17,6 +20,8 @@ const config: NextConfig = {
   ],
   // API-only: sin optimización de imágenes ni assets de página.
   poweredByHeader: false,
+  // Servidor Node autocontenido, solo para la imagen Docker de Coolify (infra/coolify).
+  ...(STANDALONE ? { output: 'standalone' as const } : {}),
   // `puppeteer-core` y `@sparticuz/chromium` (reporte PDF de rendimiento) traen
   // binarios nativos: si Next intenta empaquetarlos como cualquier import, el
   // bundle de la función serverless revienta de tamaño. `serverExternalPackages`
@@ -63,6 +68,8 @@ const config: NextConfig = {
     '/api/v1/business/reports/rendimiento/pdf': [
       './node_modules/@sparticuz/chromium/bin/**/*',
       '../../node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**/*',
+      // Imagen Docker (infra/coolify): instala con node-linker=hoisted, sin `.pnpm`.
+      ...(STANDALONE ? ['../../node_modules/@sparticuz/chromium/bin/**/*'] : []),
     ],
   },
   //

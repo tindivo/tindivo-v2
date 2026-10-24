@@ -1,0 +1,51 @@
+name: Coolify images
+
+# Construye las cinco imágenes de Coolify con centinelas sintéticos plantados en el checkout y demuestra que ninguno
+# llega al contexto de build, a la etapa `pruner` ni a la imagen final. No usa secretos ni sube imágenes a ningún registro.
+on:
+  pull_request:
+    paths:
+      - 'infra/coolify/**'
+      - 'apps/*/next.config.ts'
+      - 'turbo.json'
+      - '.github/workflows/coolify-images.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coolify-images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  imagen:
+    name: Imagen · ${{ matrix.app }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [admin, customer, motorizados, negocios, api]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Construir y verificar (centinelas, inventario)
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash infra/coolify/verify-image.sh "${{ matrix.app }}" "$RUNNER_TEMP/coolify-${{ matrix.app }}"
+
+      - name: Reporte en el resumen del job
+        if: always()
+        run: |
+          f="$RUNNER_TEMP/coolify-${{ matrix.app }}/reporte.txt"
+          if [ -f "$f" ]; then { echo '```text'; cat "$f"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coolify-${{ matrix.app }}
+          path: ${{ runner.temp }}/coolify-${{ matrix.app }}
+          retention-days: 14
