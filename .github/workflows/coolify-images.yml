@@ -29,8 +29,12 @@ jobs:
         app: [admin, customer, motorizados, negocios, api]
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Construir y verificar (centinelas, inventario)
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: bash infra/coolify/verify-image.sh "${{ matrix.app }}" "$RUNNER_TEMP/coolify-${{ matrix.app }}"
 
       - name: Reporte en el resumen del job
