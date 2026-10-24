@@ -12,8 +12,8 @@
 
 ## Observaciones de Claude ya aplicadas
 
-1. **Cláusula 7.1, antifraude.** Codex enumeraba las señales que deciden si alguien puede pagar al recibir (historial,
-   directorio, teléfono verificado y ubicación). Publicarlas le enseña a un estafador qué imitar. Ahora la cláusula
+1. **Cláusula 7.1, antifraude.** Codex enumeraba las señales internas que deciden si alguien puede pagar al recibir.
+   Publicarlas le enseña a un estafador qué imitar. Ahora la cláusula
    solo dice que puede pedirse prepago o validación. Las consecuencias de los strikes (7.3) siguen escritas, porque el
    cliente tiene que conocerlas.
 2. **Plazos que viven en configuración**: la aceptación de Entregas (`timers.courierAcceptMinutes`) y las esperas del
