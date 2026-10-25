@@ -13,7 +13,14 @@ import { api } from '@/lib/api'
 import { useCart } from '@/lib/cart'
 import { isCartUnchanged, refreshCartValidation } from '@/lib/cart-refresh'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
+import { runExclusive } from '@/lib/run-exclusive'
 import { createAudioTrigger } from '@/lib/sound'
+
+interface PlaceOrderOptions {
+  paymentIntent?: PaymentIntent
+  skipGps?: boolean
+  verifiedPhone?: string
+}
 
 export interface CheckoutActions {
   getIdempotencyKey: () => string
@@ -189,11 +196,15 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
         : Number(cashChoice)
   }
 
-  async function placeOrder(options?: {
-    paymentIntent?: PaymentIntent
-    skipGps?: boolean
-    verifiedPhone?: string
-  }) {
+  // Un solo intento de pedido a la vez: entre el toque y `setLoading(true)` hay
+  // esperas (el techo del efectivo) y un segundo toque no debe abrir otro flujo.
+  const placingRef = useRef(false)
+
+  async function placeOrder(options?: PlaceOrderOptions) {
+    await runExclusive(placingRef, () => placeOrderOnce(options))
+  }
+
+  async function placeOrderOnce(options?: PlaceOrderOptions) {
     const triggerSubmittedSound = createAudioTrigger('orderSubmitted')
     const selectedPayment = options?.paymentIntent ?? payment
     setError(null)
