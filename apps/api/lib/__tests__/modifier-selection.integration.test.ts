@@ -224,6 +224,7 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
       modifiers: string[] | undefined,
       menuItemId = dishId,
       additionalItems: RequestItem[] = [],
+      idempotencyKey: string = crypto.randomUUID(),
     ) {
       const item = { menuItemId, quantity: 2, ...(modifiers === undefined ? {} : { modifiers }) }
       return (endpoint === 'orders' ? postOrder : postQuote)(
@@ -232,7 +233,7 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
           headers: {
             'content-type': 'application/json',
             authorization: `Bearer ${token}`,
-            'idempotency-key': crypto.randomUUID(),
+            'idempotency-key': idempotencyKey,
           },
           body: JSON.stringify({
             businessId,
@@ -370,6 +371,33 @@ for (const endpoint of ['orders', 'checkout/quote'] as const) {
         .throwOnError()
       expect(keys).toBe(0)
     })
+
+    it.runIf(endpoint === 'orders')(
+      'un reintento con la misma clave y UUID en mayúsculas devuelve el pedido original sin crear otro',
+      async () => {
+        const key = crypto.randomUUID()
+        const upper = [smallId, cheeseId].map((id) => id.toUpperCase())
+        const first = await request(upper, dishId.toUpperCase(), [], key)
+        expect(first.status).toBe(201)
+        const firstBody = await first.json()
+
+        const replay = await request(upper, dishId.toUpperCase(), [], key)
+        expect(replay.status).toBe(201)
+        expect(replay.headers.get('idempotency-replayed')).toBe('true')
+        expect(await replay.json()).toEqual(firstBody)
+
+        // Misma clave con otro contenido: conflicto, no un pedido nuevo.
+        const changed = await request([smallId], dishId, [], key)
+        expect(changed.status).toBe(409)
+
+        const { count } = await db
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('business_id', businessId)
+          .throwOnError()
+        expect(count).toBe(1)
+      },
+    )
 
     it.each([
       'minúsculas',

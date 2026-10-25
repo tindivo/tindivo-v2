@@ -60,13 +60,15 @@ export async function POST(req: Request): Promise<Response> {
 
     const { user } = await requireRole(req, 'customer')
     const body = CreateOrderRequestSchema.parse(await req.json())
+    // El hash va sobre el cuerpo tal como llegó, igual que antes de normalizar: así un
+    // reintento de un pedido ya guardado sigue encontrando su respuesta original.
+    const requestHash = await sha256Hex(JSON.stringify(body))
     // Postgres compara UUID sin distinguir mayúsculas; consultas, subtotal y RPC usan la misma identidad.
     body.items = body.items.map((item) => ({
       ...item,
       menuItemId: item.menuItemId.toLowerCase(),
       modifiers: item.modifiers?.map((id) => id.toLowerCase()),
     }))
-    const requestHash = await sha256Hex(JSON.stringify(body))
     const service = createServiceClient()
 
     // Replay temprano, ANTES de TODOS los guards que dependen del estado actual
