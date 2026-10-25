@@ -11,7 +11,7 @@ import type { GeoBlockKind, GpsValidationPayload, OrderResult } from '@/features
 import { deliveryPointQuality } from '@/lib/address-record'
 import { api } from '@/lib/api'
 import { useCart } from '@/lib/cart'
-import { refreshCartValidation } from '@/lib/cart-refresh'
+import { isCartUnchanged, refreshCartValidation } from '@/lib/cart-refresh'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
 import { createAudioTrigger } from '@/lib/sound'
 
@@ -235,9 +235,15 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
     const cartValidation = await refreshCartValidation(
       (businessId) => api.get<ApiEnvelope<BusinessDetail>>(`/public/businesses/${businessId}`),
       useCart.getState,
+      { businessId: cart.businessId, lines: cart.lines },
     )
     if (cartValidation === 'invalid') {
       setError('Algunos productos de tu bolsa cambiaron. Revísalos antes de pagar.')
+      setLoading(false)
+      return
+    }
+    if (cartValidation === 'changed') {
+      setError('Tu bolsa cambió mientras confirmábamos. Revísala y vuelve a tocar el botón.')
       setLoading(false)
       return
     }
@@ -349,6 +355,12 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       })),
     }
 
+    if (!isCartUnchanged({ businessId: cart.businessId, lines: cart.lines }, useCart.getState())) {
+      setError('Tu bolsa cambió mientras confirmábamos. Revísala y vuelve a tocar el botón.')
+      setLoading(false)
+      return
+    }
+
     const currentKey = getIdempotencyKey()
 
     try {
@@ -385,6 +397,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
               regenerateIdempotencyKey()
             }
             if (retryErr instanceof ApiError && /bloquead/i.test(retryErr.problem.detail ?? '')) {
+              setLoading(false)
               setBlocked(true)
               return
             }
@@ -402,6 +415,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
                 (businessId) =>
                   api.get<ApiEnvelope<BusinessDetail>>(`/public/businesses/${businessId}`),
                 useCart.getState,
+                { businessId: cart.businessId, lines: cart.lines },
               )
             }
             setLoading(false)
@@ -413,6 +427,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
           regenerateIdempotencyKey()
         }
         if (/bloquead/i.test(err.problem.detail ?? '')) {
+          setLoading(false)
           setBlocked(true)
           return
         }
@@ -427,6 +442,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
         await refreshCartValidation(
           (businessId) => api.get<ApiEnvelope<BusinessDetail>>(`/public/businesses/${businessId}`),
           useCart.getState,
+          { businessId: cart.businessId, lines: cart.lines },
         )
       }
       setLoading(false)

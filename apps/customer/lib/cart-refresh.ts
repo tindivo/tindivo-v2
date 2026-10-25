@@ -6,12 +6,24 @@ type RefreshableCart = Pick<
   'businessId' | 'lines' | 'validateAgainst' | 'hasInvalidLines'
 >
 
-/** Descarga el menú sin caché local y valida solo si la bolsa sigue siendo de ese negocio. */
+interface CartSnapshot {
+  businessId: string | null
+  lines: readonly unknown[]
+}
+
+/** El store reemplaza el arreglo de líneas cada vez que cambia la bolsa. */
+export function isCartUnchanged(expected: CartSnapshot, current: CartSnapshot): boolean {
+  return expected.businessId === current.businessId && expected.lines === current.lines
+}
+
+/** Descarga el menú sin caché local y valida solo la bolsa que se va a enviar. */
 export async function refreshCartValidation(
   fetchCatalog: (businessId: string) => Promise<{ data: BusinessDetail }>,
   getCart: () => RefreshableCart,
-): Promise<'ok' | 'invalid' | 'unknown'> {
-  const { businessId, lines } = getCart()
+  expected: CartSnapshot,
+): Promise<'ok' | 'invalid' | 'unknown' | 'changed'> {
+  if (!isCartUnchanged(expected, getCart())) return 'changed'
+  const { businessId, lines } = expected
   if (!businessId || lines.length === 0) return 'ok'
 
   let catalog: BusinessDetail
@@ -19,12 +31,12 @@ export async function refreshCartValidation(
     const response = await fetchCatalog(businessId)
     catalog = response.data
   } catch {
-    return 'unknown'
+    return isCartUnchanged(expected, getCart()) ? 'unknown' : 'changed'
   }
 
   const cart = getCart()
-  if (cart.lines.length === 0) return 'ok'
-  if (cart.businessId !== businessId || catalog.business.id !== businessId) return 'unknown'
+  if (!isCartUnchanged(expected, cart)) return 'changed'
+  if (catalog.business.id !== businessId) return 'unknown'
 
   cart.validateAgainst(catalog)
   return cart.hasInvalidLines() ? 'invalid' : 'ok'

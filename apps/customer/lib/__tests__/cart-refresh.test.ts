@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { BusinessDetail } from '../../features/catalog/types'
 import type { CartLine } from '../cart'
-import { refreshCartValidation } from '../cart-refresh'
+import { isCartUnchanged, refreshCartValidation } from '../cart-refresh'
 import { type CartValidationResult, validateCartAgainstCatalog } from '../cart-validation'
 
 const line: CartLine = {
@@ -79,13 +79,33 @@ function createCart() {
   return cart
 }
 
+function deferredCatalog() {
+  let resolve: ((response: { data: BusinessDetail }) => void) | undefined
+  let reject: ((error: Error) => void) | undefined
+  const request = new Promise<{ data: BusinessDetail }>((resolveRequest, rejectRequest) => {
+    resolve = resolveRequest
+    reject = rejectRequest
+  })
+  return {
+    fetchCatalog: vi.fn(() => request),
+    resolve(menu: BusinessDetail) {
+      if (!resolve) throw new Error('La descarga no tiene una función para resolverla')
+      resolve({ data: menu })
+    },
+    reject(error: Error) {
+      if (!reject) throw new Error('La descarga no tiene una función para rechazarla')
+      reject(error)
+    },
+  }
+}
+
 describe('refrescar la validación de la bolsa antes de pagar', () => {
   it('devuelve ok y valida la bolsa contra el menú recién descargado', async () => {
     const cart = createCart()
     const menu = catalog()
     const fetchCatalog = vi.fn(async () => ({ data: menu }))
 
-    expect(await refreshCartValidation(fetchCatalog, () => cart)).toBe('ok')
+    expect(await refreshCartValidation(fetchCatalog, () => cart, { ...cart })).toBe('ok')
     expect(fetchCatalog).toHaveBeenCalledExactlyOnceWith('restaurant')
     expect(cart.validateAgainst).toHaveBeenCalledExactlyOnceWith(menu)
     expect(cart.hasInvalidLines()).toBe(false)
@@ -101,6 +121,7 @@ describe('refrescar la validación de la bolsa antes de pagar', () => {
       await refreshCartValidation(
         async () => ({ data: menu }),
         () => cart,
+        { ...cart },
       ),
     ).toBe('invalid')
     expect(cart.validateAgainst).toHaveBeenLastCalledWith(menu)
@@ -109,11 +130,12 @@ describe('refrescar la validación de la bolsa antes de pagar', () => {
 
   it('devuelve unknown si falla la descarga y no valida la bolsa', async () => {
     const cart = createCart()
-    const fetchCatalog = vi.fn(async (): Promise<{ data: BusinessDetail }> => {
-      throw new Error('No se pudo descargar el menú')
-    })
+    const download = deferredCatalog()
+    const result = refreshCartValidation(download.fetchCatalog, () => cart, { ...cart })
 
-    expect(await refreshCartValidation(fetchCatalog, () => cart)).toBe('unknown')
+    download.reject(new Error('No se pudo descargar el menú'))
+    expect(await result).toBe('unknown')
+    expect(download.fetchCatalog).toHaveBeenCalledExactlyOnceWith('restaurant')
     expect(cart.validateAgainst).not.toHaveBeenCalled()
   })
 
@@ -122,7 +144,7 @@ describe('refrescar la validación de la bolsa antes de pagar', () => {
     cart.lines = []
     const fetchCatalog = vi.fn(async () => ({ data: catalog() }))
 
-    expect(await refreshCartValidation(fetchCatalog, () => cart)).toBe('ok')
+    expect(await refreshCartValidation(fetchCatalog, () => cart, { ...cart })).toBe('ok')
     expect(fetchCatalog).not.toHaveBeenCalled()
     expect(cart.validateAgainst).not.toHaveBeenCalled()
   })
@@ -132,7 +154,7 @@ describe('refrescar la validación de la bolsa antes de pagar', () => {
     cart.businessId = null
     const fetchCatalog = vi.fn(async () => ({ data: catalog() }))
 
-    expect(await refreshCartValidation(fetchCatalog, () => cart)).toBe('ok')
+    expect(await refreshCartValidation(fetchCatalog, () => cart, { ...cart })).toBe('ok')
     expect(fetchCatalog).not.toHaveBeenCalled()
     expect(cart.validateAgainst).not.toHaveBeenCalled()
   })
@@ -146,30 +168,89 @@ describe('refrescar la validación de la bolsa antes de pagar', () => {
       await refreshCartValidation(
         async () => ({ data: menu }),
         () => cart,
+        { ...cart },
       ),
     ).toBe('unknown')
     expect(cart.validateAgainst).not.toHaveBeenCalled()
   })
 
-  it('no valida si la bolsa cambia de negocio durante la descarga', async () => {
+  it.each([
+    {
+      change: 'cambian las líneas del mismo negocio',
+      update: (cart: ReturnType<typeof createCart>) => {
+        cart.lines = [{ ...line, quantity: 2 }]
+      },
+    },
+    {
+      change: 'la bolsa se vacía',
+      update: (cart: ReturnType<typeof createCart>) => {
+        cart.lines = []
+        cart.businessId = null
+      },
+    },
+    {
+      change: 'la bolsa cambia de negocio',
+      update: (cart: ReturnType<typeof createCart>) => {
+        cart.businessId = 'other-restaurant'
+      },
+    },
+  ])('devuelve changed si $change durante la descarga', async ({ update }) => {
     const cart = createCart()
-    const fetchCatalog = vi.fn(async () => {
-      cart.businessId = 'other-restaurant'
-      return { data: catalog() }
-    })
+    const download = deferredCatalog()
+    const result = refreshCartValidation(download.fetchCatalog, () => cart, { ...cart })
 
-    expect(await refreshCartValidation(fetchCatalog, () => cart)).toBe('unknown')
+    expect(download.fetchCatalog).toHaveBeenCalledExactlyOnceWith('restaurant')
+    update(cart)
+    download.resolve(catalog())
+
+    expect(await result).toBe('changed')
     expect(cart.validateAgainst).not.toHaveBeenCalled()
   })
 
-  it('no valida si la bolsa se vacía durante la descarga', async () => {
+  it.each([
+    'lines',
+    'businessId',
+  ] as const)('devuelve changed sin descargar si %s ya difería de la captura', async (changedField) => {
     const cart = createCart()
-    const fetchCatalog = vi.fn(async () => {
-      cart.lines = []
-      return { data: catalog() }
-    })
+    const expected = { ...cart }
+    if (changedField === 'lines') cart.lines = [...cart.lines]
+    else cart.businessId = 'other-restaurant'
+    const fetchCatalog = vi.fn(async () => ({ data: catalog() }))
 
-    expect(await refreshCartValidation(fetchCatalog, () => cart)).toBe('ok')
+    expect(await refreshCartValidation(fetchCatalog, () => cart, expected)).toBe('changed')
+    expect(fetchCatalog).not.toHaveBeenCalled()
     expect(cart.validateAgainst).not.toHaveBeenCalled()
+  })
+
+  it('devuelve changed si falla la descarga después de cambiar las líneas', async () => {
+    const cart = createCart()
+    const download = deferredCatalog()
+    const result = refreshCartValidation(download.fetchCatalog, () => cart, { ...cart })
+
+    cart.lines = [...cart.lines]
+    download.reject(new Error('No se pudo descargar el menú'))
+
+    expect(await result).toBe('changed')
+    expect(cart.validateAgainst).not.toHaveBeenCalled()
+  })
+})
+
+describe('comprobar que la bolsa sigue siendo la captura esperada', () => {
+  it('acepta el mismo negocio y el mismo arreglo de líneas', () => {
+    const expected = { businessId: 'restaurant', lines: [line] }
+
+    expect(isCartUnchanged(expected, { ...expected })).toBe(true)
+  })
+
+  it('rechaza un arreglo nuevo aunque tenga el mismo contenido', () => {
+    const expected = { businessId: 'restaurant', lines: [line] }
+
+    expect(isCartUnchanged(expected, { ...expected, lines: [...expected.lines] })).toBe(false)
+  })
+
+  it('rechaza otro negocio aunque conserve el mismo arreglo', () => {
+    const expected = { businessId: 'restaurant', lines: [line] }
+
+    expect(isCartUnchanged(expected, { ...expected, businessId: 'other-restaurant' })).toBe(false)
   })
 })
