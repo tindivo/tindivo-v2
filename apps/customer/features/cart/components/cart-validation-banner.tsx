@@ -1,11 +1,16 @@
 'use client'
 
 import { Icon } from '@tindivo/ui'
+import { useRouter } from 'next/navigation'
 import { useCart } from '@/lib/cart'
 
 export function CartValidationBanner() {
   const cart = useCart()
+  const router = useRouter()
   const invalid = cart.validation?.invalidLines ?? []
+  const hasInvalidSelection = invalid.some((line) =>
+    line.issues.some((issue) => issue.kind === 'invalid_selection'),
+  )
   if (invalid.length === 0) return null
 
   return (
@@ -27,11 +32,17 @@ export function CartValidationBanner() {
           </ul>
           <button
             type="button"
-            onClick={() => cart.removeInvalidLines()}
+            onClick={() => {
+              const businessId = cart.businessId
+              cart.removeInvalidLines()
+              if (hasInvalidSelection && businessId) router.push(`/negocio/${businessId}`)
+            }}
             className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-danger px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-danger/90"
           >
             <Icon name="delete" size={14} />
-            Eliminar {invalid.length === 1 ? 'producto' : 'productos'} afectados
+            {hasInvalidSelection
+              ? 'Quitar y volver a elegir'
+              : `Eliminar ${invalid.length === 1 ? 'producto' : 'productos'} afectados`}
           </button>
         </div>
       </div>

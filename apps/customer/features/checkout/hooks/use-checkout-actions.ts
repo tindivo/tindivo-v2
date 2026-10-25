@@ -1,14 +1,17 @@
 'use client'
 
-import { ApiError } from '@tindivo/api-client'
+import { type ApiEnvelope, ApiError } from '@tindivo/api-client'
 import type { PaymentIntent } from '@tindivo/contracts'
 import { useRef } from 'react'
 import { saveAddress } from '@/components/auth-onboarding/persistence'
+import type { BusinessDetail } from '@/features/catalog/types'
 import type { CheckoutState } from '@/features/checkout/hooks/use-checkout-state'
 import { cashError } from '@/features/checkout/lib/cash'
 import type { GeoBlockKind, GpsValidationPayload, OrderResult } from '@/features/checkout/types'
 import { deliveryPointQuality } from '@/lib/address-record'
 import { api } from '@/lib/api'
+import { useCart } from '@/lib/cart'
+import { refreshCartValidation } from '@/lib/cart-refresh'
 import { getLocationValidation, haversineKm } from '@/lib/coverage'
 import { createAudioTrigger } from '@/lib/sound'
 
@@ -226,7 +229,19 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
       }
     }
 
+    // El botón queda ocupado desde aquí: la bolsa se revisa contra el menú de
+    // este momento (el negocio pudo cambiar un plato desde que se validó).
     setLoading(true)
+    const cartValidation = await refreshCartValidation(
+      (businessId) => api.get<ApiEnvelope<BusinessDetail>>(`/public/businesses/${businessId}`),
+      useCart.getState,
+    )
+    if (cartValidation === 'invalid') {
+      setError('Algunos productos de tu bolsa cambiaron. Revísalos antes de pagar.')
+      setLoading(false)
+      return
+    }
+
     let gpsPayload: GpsValidationPayload | undefined
 
     // GPS antifraude: ubicación normal continúa, zona de advertencia va a
@@ -378,6 +393,17 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
                 ? (retryErr.problem.detail ?? retryErr.message)
                 : 'No se pudo crear el pedido',
             )
+            if (
+              retryErr instanceof ApiError &&
+              retryErr.status === 422 &&
+              retryErr.code === 'validation_error'
+            ) {
+              await refreshCartValidation(
+                (businessId) =>
+                  api.get<ApiEnvelope<BusinessDetail>>(`/public/businesses/${businessId}`),
+                useCart.getState,
+              )
+            }
             setLoading(false)
             return
           }
@@ -397,6 +423,12 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
           ? (err.problem.detail ?? err.message)
           : 'No se pudo crear el pedido',
       )
+      if (err instanceof ApiError && err.status === 422 && err.code === 'validation_error') {
+        await refreshCartValidation(
+          (businessId) => api.get<ApiEnvelope<BusinessDetail>>(`/public/businesses/${businessId}`),
+          useCart.getState,
+        )
+      }
       setLoading(false)
     }
   }

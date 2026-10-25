@@ -1,4 +1,4 @@
-import { checkModifierSelection, modifierSelectionMessage } from '@tindivo/contracts'
+import { checkModifierSelection } from '@tindivo/contracts'
 import { itemWindowState } from '@/features/catalog/lib/availability'
 import type { BusinessDetail, MenuItem, ModOption } from '@/features/catalog/types'
 
@@ -123,10 +123,10 @@ export function validateCartAgainstCatalog(
         line.modifiers.map((m) => m.optionId),
         new Map(groups.flatMap((g) => g.options.map((o) => [o.id, g.id] as const))),
       )
-      for (const issue of selectionIssues) {
+      if (selectionIssues.length > 0) {
         issues.push({
           kind: 'invalid_selection',
-          message: modifierSelectionMessage(issue, catalogItem.name),
+          message: 'El negocio cambió las opciones de este plato. Vuelve a elegirlas.',
         })
       }
 

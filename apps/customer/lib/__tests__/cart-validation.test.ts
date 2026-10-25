@@ -71,7 +71,7 @@ const withOptions = (...ids: string[]): ValidatableCartLine => ({
 })
 
 describe('el carrito avisa si cambiaron las reglas de las opciones guardadas', () => {
-  it('un grupo que pasa a obligatorio invalida la línea con el mensaje del servidor', () => {
+  it('un grupo que pasa a obligatorio pide volver a elegir las opciones', () => {
     expect(validateCartAgainstCatalog([line], catalog([group])).validLines).toEqual([line])
     const result = validateCartAgainstCatalog([line], catalog([{ ...group, is_required: true }]))
     expect(result.validLines).toEqual([])
@@ -81,7 +81,10 @@ describe('el carrito avisa si cambiaron las reglas de las opciones guardadas', (
         name: 'Pizza',
         quantity: 1,
         issues: [
-          { kind: 'invalid_selection', message: 'Elige una opción de «Tamaño» en «Pizza».' },
+          {
+            kind: 'invalid_selection',
+            message: 'El negocio cambió las opciones de este plato. Vuelve a elegirlas.',
+          },
         ],
       },
     ])
@@ -95,7 +98,7 @@ describe('el carrito avisa si cambiaron las reglas de las opciones guardadas', (
     expect(result.invalidLines[0]?.issues).toEqual([
       {
         kind: 'invalid_selection',
-        message: 'En «Tamaño» de «Pizza» puedes elegir hasta 1 opción.',
+        message: 'El negocio cambió las opciones de este plato. Vuelve a elegirlas.',
       },
     ])
   })
@@ -108,7 +111,10 @@ describe('el carrito avisa si cambiaron las reglas de las opciones guardadas', (
     )
     expect(result.validLines).toEqual([])
     expect(result.invalidLines[0]?.issues).toEqual([
-      { kind: 'invalid_selection', message: 'Elige al menos 2 opciones de «Tamaño» en «Pizza».' },
+      {
+        kind: 'invalid_selection',
+        message: 'El negocio cambió las opciones de este plato. Vuelve a elegirlas.',
+      },
     ])
   })
 
@@ -119,7 +125,34 @@ describe('el carrito avisa si cambiaron las reglas de las opciones guardadas', (
     )
     expect(result.validLines).toEqual([])
     expect(result.invalidLines[0]?.issues).toEqual([
-      { kind: 'invalid_selection', message: 'Hay una opción repetida en «Pizza».' },
+      {
+        kind: 'invalid_selection',
+        message: 'El negocio cambió las opciones de este plato. Vuelve a elegirlas.',
+      },
+    ])
+  })
+
+  it('dos reglas incumplidas en una línea producen una sola incidencia', () => {
+    const result = validateCartAgainstCatalog(
+      [line],
+      catalog([
+        { ...group, is_required: true },
+        {
+          ...group,
+          id: 'crust',
+          name: 'Masa',
+          is_required: true,
+          options: [{ id: 'thin', name: 'Delgada', description: null, additional_price: 0 }],
+        },
+      ]),
+    )
+    expect(result.validLines).toEqual([])
+    expect(result.invalidLines).toHaveLength(1)
+    expect(result.invalidLines[0]?.issues).toEqual([
+      {
+        kind: 'invalid_selection',
+        message: 'El negocio cambió las opciones de este plato. Vuelve a elegirlas.',
+      },
     ])
   })
 

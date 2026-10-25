@@ -75,8 +75,7 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
     if (cart.hasInvalidLines()) {
       return {
         field: 'cart',
-        message:
-          'Tu bolsa tiene productos que ya no están disponibles o cambiaron de precio. Revísala antes de continuar.',
+        message: 'Algunos productos de tu bolsa cambiaron. Revísalos antes de pagar.',
         cta: 'Revisa tu bolsa',
       }
     }
