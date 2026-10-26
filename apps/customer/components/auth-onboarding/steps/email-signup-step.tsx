@@ -1,5 +1,6 @@
 'use client'
 
+import { UpdateCustomerProfileRequestSchema } from '@tindivo/contracts'
 import { Button } from '@tindivo/ui'
 import { type FormEvent, useState } from 'react'
 import { signUpWithEmail } from '../persistence'
@@ -24,7 +25,10 @@ export function EmailSignupStep({
   // El correo ya existe: ofrecemos saltar a "Iniciar sesión" con el correo precargado.
   const [duplicate, setDuplicate] = useState(false)
 
-  const valid = fullName.trim().length >= 2 && EMAIL_RE.test(email.trim()) && password.length >= 6
+  const valid =
+    UpdateCustomerProfileRequestSchema.shape.fullName.safeParse(fullName).success &&
+    EMAIL_RE.test(email.trim()) &&
+    password.length >= 6
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -66,10 +70,12 @@ export function EmailSignupStep({
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             autoComplete="name"
-            maxLength={120}
+            maxLength={40}
             tabIndex={active ? 0 : -1}
           />
         </label>
+
+        <p className="mt-1.5 text-[12px] text-ink-muted">Mínimo 2 caracteres, solo letras.</p>
 
         <label className="mt-3.5 block">
           <span className="mb-2 block font-mono text-[12px] font-semibold uppercase tracking-wide text-ink-muted">

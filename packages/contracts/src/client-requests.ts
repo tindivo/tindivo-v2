@@ -15,6 +15,16 @@ import {
  * menos.
  */
 
+/** PUT /customer/profile. Misma regla de nombre que el onboarding de Google. */
+export const UpdateCustomerProfileRequestSchema = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .min(2)
+    .max(40)
+    .regex(/^[\p{L}\s'.-]+$/u),
+})
+
 /** POST /customer/phone/send-code */
 export const SendPhoneCodeRequestSchema = z.object({
   phone: PhonePeSchema,

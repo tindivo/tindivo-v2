@@ -89,13 +89,14 @@ export async function POST(req: Request): Promise<Response> {
     // Guardamos en formato internacional (+519XXXXXXXX) para
     // compatibilidad futura con pasarelas de pago y WhatsApp Business API.
     const service = createServiceClient()
-    const { error } = await service
+    const { data: updated, error } = await service
       .from('customer_profiles')
       .update({
         phone: fullPhone,
         phone_verified_at: new Date().toISOString(),
       })
       .eq('user_id', user.id)
+      .select('user_id')
 
     if (error) {
       if (error.code === '23505') {
@@ -106,6 +107,14 @@ export async function POST(req: Request): Promise<Response> {
         })
       }
       throw new Error(error.message)
+    }
+
+    if (updated?.length !== 1) {
+      return problem('conflict', {
+        detail: 'Completa tu nombre antes de verificar tu número.',
+        requestId,
+        headers: corsHeaders(req),
+      })
     }
 
     return ok({ verified: true, phone: fullPhone }, { status: 200, headers: corsHeaders(req) })

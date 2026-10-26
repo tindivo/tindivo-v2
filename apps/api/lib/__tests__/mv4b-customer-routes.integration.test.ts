@@ -704,15 +704,20 @@ describe('GET /customer/courier-orders', () => {
   it('pagina, trae sus contactos frecuentes (solo en la primera página) y no mezcla clientes', async () => {
     const c = await crearCliente()
     const otro = await crearCliente()
-    // Tres solicitudes con teléfonos distintos del solicitante (el tope de activas es por teléfono).
+    // Tres solicitudes. El tope de activas es por el teléfono verificado (0276), que es el
+    // mismo en las tres: las dos primeras se dan por entregadas antes de pedir la siguiente.
     for (let i = 0; i < 3; i++) {
-      const { error } = await callCreateCourierOrder({
+      const { data, error } = await callCreateCourierOrder({
         customerUserId: c.id,
         requesterPhone: telefonoNuevo(),
         origin: COURIER_POINT_A,
         destination: COURIER_POINT_B,
       })
       if (error) throw new Error(`create_courier_order: ${error.message}`)
+      if (i < 2) {
+        const id = (data as { id: string }).id
+        await db.from('courier_orders').update({ status: 'delivered' }).eq('id', id).throwOnError()
+      }
     }
     const ajena = await callCreateCourierOrder({
       customerUserId: otro.id,

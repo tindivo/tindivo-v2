@@ -86,6 +86,10 @@ export function PhoneStep({
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
+          if (err.message.startsWith('Completa tu nombre')) {
+            setError(err.message)
+            return
+          }
           setError(
             'Este número ya está registrado en otra cuenta. Si es tuyo, cierra sesión e inicia con esa cuenta.',
           )
@@ -119,6 +123,11 @@ export function PhoneStep({
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
+          if (err.message.startsWith('Completa tu nombre')) {
+            setError(err.message)
+            setCode('')
+            return
+          }
           setError(
             'Este número ya está registrado en otra cuenta. Si es tuyo, cierra sesión e inicia con esa cuenta.',
           )

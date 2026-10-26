@@ -9,6 +9,7 @@ import {
   SendPhoneCodeRequestSchema,
   TermsAcceptanceRequestSchema,
   UpdateCustomerAddressRequestSchema,
+  UpdateCustomerProfileRequestSchema,
   VerifyPhoneCodeRequestSchema,
 } from '../client-requests'
 import { CreateCourierOrderRequestSchema } from '../courier'
@@ -689,6 +690,20 @@ export const OPERATIONS: OperationSpec[] = [
     documented: true,
   },
 
+  {
+    method: 'put',
+    path: '/customer/profile',
+    operationId: 'updateCustomerProfile',
+    summary: 'Crea el perfil del cliente o actualiza solo su nombre',
+    tags: ['customer'],
+    auth: 'customer',
+    body: UpdateCustomerProfileRequestSchema,
+    success: {
+      200: { description: 'Su perfil guardado', envelope: 'data', schema: CustomerProfileSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
+    documented: true,
+  },
   // ── MV4a: lo que la web leía directo de Supabase ───────────────────────────
   {
     method: 'get',

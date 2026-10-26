@@ -57,6 +57,13 @@ async function crearCliente(): Promise<Cliente> {
   })
   if (error) throw new Error(`crear el cliente falló: ${error.message}`)
   creados.push(data.user.id)
+  const { error: profileError } = await db.from('customer_profiles').insert({
+    user_id: data.user.id,
+    full_name: 'Vecino SEC2',
+    phone: `+51${tel()}`,
+    phone_verified_at: new Date().toISOString(),
+  })
+  if (profileError) throw new Error(profileError.message)
   const client = createClient(URL, ANON_KEY, opts)
   const { data: s, error: serr } = await client.auth.signInWithPassword({ email, password: CLAVE })
   if (serr || !s.session) throw new Error(`entrar falló: ${serr?.message}`)

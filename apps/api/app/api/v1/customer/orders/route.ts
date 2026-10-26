@@ -106,7 +106,8 @@ export async function POST(req: Request): Promise<Response> {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (!profile?.phone_verified_at) {
+    const customerPhone = profile?.phone?.replace(/^[+]51/, '')
+    if (!profile?.phone_verified_at || !customerPhone || !/^9[0-9]{8}$/.test(customerPhone)) {
       return problem('forbidden', {
         detail: 'Verifica tu número de WhatsApp antes de hacer un pedido.',
         requestId,
@@ -323,7 +324,7 @@ export async function POST(req: Request): Promise<Response> {
           p_delivery_method: body.deliveryMethod,
           p_payment_intent: body.paymentIntent,
           p_customer_name: body.customerName,
-          p_customer_phone: body.customerPhone,
+          p_customer_phone: customerPhone,
           /*
             EN UN RECOJO ESTOS DOS LLEGAN VACÍOS, y hay que saberlo aguas abajo.
 
