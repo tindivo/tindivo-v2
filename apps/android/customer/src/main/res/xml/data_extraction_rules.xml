@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 o superior. La sesión (archivo cifrado) y el keyset de Tink que la abre nunca viajan en una copia de
+     seguridad ni a otro aparato: la clave maestra vive en el Keystore de ESTE aparato y no se copia, así que lo
+     copiado no serviría, y una sesión no se clona. Va aunque allowBackup sea false, por si algún día se activa. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="tindivo_session_keyset.xml" />
+        <exclude domain="root" path="no_backup/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="tindivo_session_keyset.xml" />
+        <exclude domain="root" path="no_backup/" />
+    </device-transfer>
+</data-extraction-rules>

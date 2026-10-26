@@ -26,6 +26,13 @@ ktlint = "1.8.0"
 # con el Kotlin del proyecto. La versión vive aquí para que haya una sola fuente.
 detekt = "1.23.8"
 junit = "4.13.2"
+# Sesión (D-54): supabase-kt solo Auth, con el motor OkHttp de Ktor (la versión que pide el BOM), Credential Manager y
+# Tink. Todas con más de dos semanas de publicadas. tink-android 1.24.0 no: tiene diez días.
+supabase = "3.8.0"
+ktor = "3.5.1"
+credentials = "1.6.0"
+googleid = "1.2.1"
+tink = "1.23.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -51,6 +58,13 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
+supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
+supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

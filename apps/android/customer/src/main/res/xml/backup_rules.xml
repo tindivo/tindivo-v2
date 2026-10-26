@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 o inferior: lo mismo que data_extraction_rules.xml. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="tindivo_session_keyset.xml" />
+    <exclude domain="root" path="no_backup/" />
+</full-backup-content>
