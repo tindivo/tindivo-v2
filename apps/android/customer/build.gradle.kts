@@ -33,10 +33,18 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
             buildConfigField("String", "API_BASE_URL", "\"https://tindivo-api-staging.vercel.app/api/v1\"")
+            // Claves PUBLICABLES de Supabase (hechas para ir en el cliente); no son secretas. El ID web de Google lo
+            // pone Jesús; vacío, la app no ofrece el inicio de sesión.
+            buildConfigField("String", "SUPABASE_URL", "\"https://jgziumvrtogguljhpdos.supabase.co\"")
+            buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_PXkU-RVUbJmzcg2uJRoHXA_nl02PVBd\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"\"")
         }
         create("prod") {
             dimension = "environment"
             buildConfigField("String", "API_BASE_URL", "\"https://apiv2.tindivo.com/api/v1\"")
+            buildConfigField("String", "SUPABASE_URL", "\"https://zpnipajgwfthxhdtzhly.supabase.co\"")
+            buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_J8M8nH_cb2eYjAt2E5L27w_EhMnwS0W\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"\"")
         }
     }
 
@@ -89,6 +97,14 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.auth)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.tink.android)
 
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
