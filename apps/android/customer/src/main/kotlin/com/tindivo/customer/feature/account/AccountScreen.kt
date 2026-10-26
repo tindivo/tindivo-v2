@@ -34,19 +34,27 @@ import com.tindivo.customer.R
 @Composable
 fun AccountDestination(
     onLeave: () -> Unit,
+    onOpenOrders: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     LaunchedEffect(state) {
         if (state is AccountUiState.LoggedOut) onLeave()
     }
-    AccountScreen(state = state, onRetry = viewModel::load, onSignOut = viewModel::signOut, onBack = onLeave)
+    AccountScreen(
+        state = state,
+        onRetry = viewModel::load,
+        onOpenOrders = onOpenOrders,
+        onSignOut = viewModel::signOut,
+        onBack = onLeave,
+    )
 }
 
 @Composable
 fun AccountScreen(
     state: AccountUiState,
     onRetry: () -> Unit,
+    onOpenOrders: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -64,9 +72,17 @@ fun AccountScreen(
                 modifier = Modifier.semantics { heading() },
             )
             when (state) {
-                AccountUiState.Loading, AccountUiState.LoggedOut -> Loading()
-                is AccountUiState.Failed -> Failure(error = state.error, onRetry = onRetry)
-                is AccountUiState.Loaded -> Profile(profile = state.profile, onSignOut = onSignOut)
+                AccountUiState.Loading, AccountUiState.LoggedOut -> {
+                    Loading()
+                }
+
+                is AccountUiState.Failed -> {
+                    Failure(error = state.error, onRetry = onRetry)
+                }
+
+                is AccountUiState.Loaded -> {
+                    Profile(profile = state.profile, onOpenOrders = onOpenOrders, onSignOut = onSignOut)
+                }
             }
         }
     }
@@ -108,6 +124,7 @@ private fun Failure(
 @Composable
 private fun Profile(
     profile: AccountProfileUi,
+    onOpenOrders: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -119,6 +136,13 @@ private fun Profile(
                 ),
             style = MaterialTheme.typography.bodyLarge,
         )
+        Button(
+            onClick = onOpenOrders,
+            modifier = Modifier.heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        ) {
+            Text(text = stringResource(R.string.account_orders))
+        }
         OutlinedButton(
             onClick = onSignOut,
             modifier = Modifier.heightIn(min = 48.dp),
@@ -136,6 +160,7 @@ private fun AccountPreview() {
         AccountScreen(
             state = AccountUiState.Loaded(AccountProfileUi("Rosa Quispe", phoneVerified = false)),
             onRetry = {},
+            onOpenOrders = {},
             onSignOut = {},
             onBack = {},
         )
