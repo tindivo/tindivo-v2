@@ -60,7 +60,11 @@ private fun buildAead(context: Context): Aead {
             .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
             .withMasterKeyUri(MASTER_KEY_URI)
             .build()
-    // Si Tink descartó el Keystore por poco fiable, el keyset quedaría en claro: se rechaza (KT-9).
-    if (!manager.isUsingKeystore) throw GeneralSecurityException("El Android Keystore no está disponible")
+    // Si Tink descartó el Keystore por poco fiable, el keyset ya quedó en claro en las preferencias: se borra y se
+    // rechaza (KT-9). Nada llega a cifrarse con él.
+    if (!manager.isUsingKeystore) {
+        context.deleteSharedPreferences(KEYSET_PREFS)
+        throw GeneralSecurityException("El Android Keystore no está disponible")
+    }
     return manager.keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
 }

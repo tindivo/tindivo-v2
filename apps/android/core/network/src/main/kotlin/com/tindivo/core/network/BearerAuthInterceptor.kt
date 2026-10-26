@@ -63,8 +63,15 @@ class BearerAuthInterceptor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        if (!request.url.isSameOrigin(apiOrigin)) return chain.proceed(request)
-        val token = runBlocking { source.accessToken() } ?: return chain.proceed(request)
+        val token = if (request.url.isSameOrigin(apiOrigin)) runBlocking { source.accessToken() } else null
+        return if (token == null) chain.proceed(request) else proceedWithToken(chain, request, token)
+    }
+
+    private fun proceedWithToken(
+        chain: Interceptor.Chain,
+        request: Request,
+        token: String,
+    ): Response {
         val response = chain.proceed(request.withBearer(token))
         if (response.code != HTTP_UNAUTHORIZED) return response
         val replacement = runBlocking { gate.replacementFor(token) } ?: return response
