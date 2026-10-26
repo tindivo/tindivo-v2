@@ -18,6 +18,11 @@
  *  · un artículo de Store con el prefijo `ZZ Test Store`.
  */
 import { createClient } from '@supabase/supabase-js'
+import {
+  CustomerSecurityNoticesSchema,
+  PhoneTransferSchema,
+  ProblemDetailsSchema,
+} from '@tindivo/contracts'
 import { OPERATIONS } from '@tindivo/contracts/openapi'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { E2E as FIXTURES } from '../../scripts/e2e-fixtures'
@@ -71,11 +76,14 @@ import {
 } from '../../app/api/v1/customer/orders/route'
 import { GET as getPaymentOptions } from '../../app/api/v1/customer/payment-options/route'
 import { POST as sendPhoneCode } from '../../app/api/v1/customer/phone/send-code/route'
+import { POST as transferPhone } from '../../app/api/v1/customer/phone/transfer/route'
 import { POST as verifyPhoneCode } from '../../app/api/v1/customer/phone/verify/route'
 import {
   GET as getCustomerProfile,
   PUT as updateCustomerProfile,
 } from '../../app/api/v1/customer/profile/route'
+import { POST as seeSecurityNotice } from '../../app/api/v1/customer/security-notices/[id]/seen/route'
+import { GET as getSecurityNotices } from '../../app/api/v1/customer/security-notices/route'
 import { POST as acceptTerms } from '../../app/api/v1/customer/terms-acceptance/route'
 import { GET as getHealth } from '../../app/api/v1/health/route'
 import { GET as getBusiness } from '../../app/api/v1/public/businesses/[id]/route'
@@ -246,6 +254,8 @@ afterAll(async () => {
   if (!userId) return
   await borrarPedidosDelCliente()
   await db.from('courier_orders').delete().eq('customer_user_id', userId)
+  await db.from('phone_transfer_challenges').delete().eq('user_id', userId).throwOnError()
+  await db.from('phone_assignments').delete().eq('user_id', userId).throwOnError()
   await db.from('users').delete().eq('id', userId)
   await db.auth.admin.deleteUser(userId)
 })
@@ -669,6 +679,80 @@ describe('MV5: borrar la cuenta', () => {
       // Queda la lápida de `public.users`: no tiene pedidos, se puede quitar.
       await db.from('users').delete().eq('id', id)
       await db.auth.admin.deleteUser(id)
+    }
+  })
+})
+
+describe('traslado del número y avisos de seguridad', () => {
+  it('las tres rutas nuevas responden con el contrato publicado', async () => {
+    const ids: string[] = []
+    const number = `9${String(Date.now()).slice(-8)}`
+    try {
+      const sessions: string[] = []
+      for (const side of ['a', 'b']) {
+        const email = `phone-conformance-${side}-${crypto.randomUUID()}@integration.local`
+        const { data, error } = await db.auth.admin.createUser({
+          email,
+          password: 'test-password-12345',
+          email_confirm: true,
+          user_metadata: { full_name: NOMBRE_FIXTURE },
+        })
+        if (error) throw new Error(error.message)
+        ids.push(data.user.id)
+        await db
+          .from('customer_profiles')
+          .insert({ user_id: data.user.id, full_name: NOMBRE_FIXTURE })
+          .throwOnError()
+        sessions.push(await signIn(email, 'test-password-12345'))
+      }
+      const [a, b] = sessions
+      if (!a || !b) throw new Error('sin sesiones')
+      await conforms('verifyPhoneCode', 200, verifyPhoneCode, {
+        method: 'POST',
+        bearer: a,
+        body: { phone: number, code: DEV_OTP_CODE },
+      })
+      const pending = await call(verifyPhoneCode, {
+        method: 'POST',
+        bearer: b,
+        body: { phone: number, code: DEV_OTP_CODE },
+      })
+      expect(pending.status).toBe(409)
+      const proof = PhoneTransferSchema.parse(ProblemDetailsSchema.parse(pending.body).transfer)
+      await conforms('transferCustomerPhone', 200, transferPhone, {
+        method: 'POST',
+        bearer: b,
+        body: { challengeId: proof.challengeId },
+      })
+      const listed = await call(getSecurityNotices, { bearer: a })
+      expect(listed.status).toBe(200)
+      expectConforms('getCustomerSecurityNotices', 200, listed.body)
+      const rows = CustomerSecurityNoticesSchema.parse((listed.body as { data: unknown }).data)
+      const id = rows[0]?.id
+      if (!id) throw new Error('sin aviso')
+      await conforms('seeCustomerSecurityNotice', 204, seeSecurityNotice, {
+        method: 'POST',
+        bearer: a,
+        body: {},
+        params: { id },
+      })
+    } finally {
+      if (ids.length) {
+        const { data: rows } = await db
+          .from('customer_security_notices')
+          .select('id')
+          .in('user_id', ids)
+          .throwOnError()
+        for (const n of rows ?? [])
+          await db.from('domain_events').delete().eq('aggregate_id', n.id).throwOnError()
+        await db.from('customer_security_notices').delete().in('user_id', ids).throwOnError()
+        await db.from('phone_transfer_challenges').delete().in('user_id', ids).throwOnError()
+        await db.from('phone_assignments').delete().in('user_id', ids).throwOnError()
+        for (const id of ids) {
+          await db.from('users').delete().eq('id', id).throwOnError()
+          await db.auth.admin.deleteUser(id)
+        }
+      }
     }
   })
 })

@@ -295,7 +295,7 @@ describe('registro y borrado de cuenta simultáneos (dos sesiones)', () => {
     const { error } = await db.from('customer_profiles').insert({
       user_id: u.id,
       full_name: 'Vecino MV7a carreras',
-      phone: `9${String(Date.now()).slice(-6)}${String(secuencia).padStart(2, '0')}`,
+      phone: `+519${String(Date.now()).slice(-6)}${String(secuencia).padStart(2, '0')}`,
       phone_verified_at: new Date().toISOString(),
     })
     if (error) throw new Error(`crear el perfil falló: ${error.message}`)

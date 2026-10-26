@@ -13,6 +13,7 @@ import { ProfileEditSheet } from '@/features/account/components/profile-edit-she
 import { ProfileHero } from '@/features/account/components/profile-hero'
 import { QuickActionsGrid } from '@/features/account/components/quick-actions-grid'
 import { RecentOrdersPreview } from '@/features/account/components/recent-orders-preview'
+import { SecurityNotices } from '@/features/account/components/security-notices'
 import { useAccountPage } from '@/features/account/hooks/use-account-page'
 import type { Address } from '@/features/account/types'
 import { frameFallback } from '@/lib/address-record'
@@ -65,6 +66,7 @@ export default function CuentaPage() {
         <AccountSkeleton />
       ) : (
         <div className="px-4 pt-2">
+          <SecurityNotices />
           <ProfileHero
             name={profile.name}
             email={profile.email}
