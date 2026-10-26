@@ -76,10 +76,17 @@ fun addToCart(
     line: CartLine,
 ): AddResult {
     require(line.quantity in 1..MAX_QUANTITY) { "quantity fuera de 1..$MAX_QUANTITY" }
-    if (cart == null || cart.isEmpty()) {
-        return AddResult.Added(Cart(businessId, businessName, listOf(line)), capped = false)
+    return when {
+        cart == null || cart.isEmpty() -> AddResult.Added(Cart(businessId, businessName, listOf(line)), capped = false)
+        !cart.businessId.equals(businessId, ignoreCase = true) -> AddResult.OtherBusiness(cart.businessName)
+        else -> mergeInto(cart, line)
     }
-    if (!cart.businessId.equals(businessId, ignoreCase = true)) return AddResult.OtherBusiness(cart.businessName)
+}
+
+private fun mergeInto(
+    cart: Cart,
+    line: CartLine,
+): AddResult.Added {
     val existing = cart.lines.indexOfFirst { it.signature == line.signature }
     if (existing < 0) return AddResult.Added(cart.copy(lines = cart.lines + line), capped = false)
     val wanted = cart.lines[existing].quantity + line.quantity
