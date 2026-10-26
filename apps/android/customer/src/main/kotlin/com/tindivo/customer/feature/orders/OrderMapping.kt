@@ -8,7 +8,9 @@ import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseDat
 import java.time.Instant
 
 // Falla cerrado: si un importe no tiene la forma del contrato o una fecha no se lee, el mapeo devuelve `null` y la
-// pantalla entera queda en error. Nunca se enseña un importe a medias ni se suma nada en el cliente.
+// pantalla entera queda en error. Se validan todos los importes y fechas que trae la respuesta, también los que no se
+// muestran: una respuesta con un campo ilegible no es de fiar en ninguno. Nunca se enseña un importe a medias ni se
+// suma nada en el cliente.
 
 private const val PICKUP = "pickup"
 private const val PENDING_CASH = "pending_cash"
@@ -22,9 +24,14 @@ private fun <T, R : Any> List<T>.mapAllOrNull(transform: (T) -> R?): List<R>? {
     return result
 }
 
-/** `true` si cada importe presente tiene la forma del contrato (uno ausente no cuenta como ilegible). */
-private fun allMoneyReadable(amounts: List<String?>): Boolean =
-    amounts.all { it == null || apiMoneyTextOrNull(it) != null }
+/**
+ * `true` si cada valor presente se puede leer con [read] (`apiMoneyTextOrNull` para importes, `apiInstantOrNull` para
+ * fechas). Uno ausente no cuenta como ilegible.
+ */
+private fun allReadable(
+    values: List<String?>,
+    read: (String) -> Any?,
+): Boolean = values.all { it == null || read(it) != null }
 
 /** Una página del historial; `null` si alguna tarjeta no se pudo leer (la pantalla entera queda en error). */
 internal fun ListCustomerOrders200ResponseData.toPageUi(now: Instant): OrdersPageUi? {
@@ -35,7 +42,8 @@ internal fun ListCustomerOrders200ResponseData.toPageUi(now: Instant): OrdersPag
 private fun ListCustomerOrders200ResponseDataItemsInner.toCardUi(now: Instant): OrderCardUi? {
     val created = apiInstantOrNull(createdAt) ?: return null
     val totalText = apiMoneyTextOrNull(total) ?: return null
-    if (!allMoneyReadable(items.map { it.lineTotal } + deliveryFee)) return null
+    val moneyOk = allReadable(items.map { it.lineTotal } + listOf(amount, deliveryFee), ::apiMoneyTextOrNull)
+    if (!moneyOk || !allReadable(listOf(deliveredAt), ::apiInstantOrNull)) return null
     return OrderCardUi(
         id = id,
         shortId = shortId,
@@ -48,12 +56,14 @@ private fun ListCustomerOrders200ResponseDataItemsInner.toCardUi(now: Instant): 
     )
 }
 
-/** El detalle de un pedido; `null` si algún importe o la fecha de creación no se pudo leer. */
+/** El detalle de un pedido; `null` si algún importe o alguna fecha no se pudo leer. */
 internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
     val feeText = apiMoneyTextOrNull(deliveryFee) ?: return null
     val totalText = apiMoneyTextOrNull(total) ?: return null
     val lineUis = items.mapAllOrNull { it.toLineUi() } ?: return null
-    if (apiInstantOrNull(createdAt) == null || !allMoneyReadable(listOf(paysWith, changeToGive))) return null
+    val moneyOk = allReadable(listOf(amount, paysWith, changeToGive), ::apiMoneyTextOrNull)
+    val dates = listOf(createdAt, deliveredAt, estimatedReadyAt, arrivedAtCustomerAt, paymentVerifiedAt)
+    if (!moneyOk || !allReadable(dates, ::apiInstantOrNull)) return null
     val phase = orderPhaseOf(status, cancelReason)
     val pickup = deliveryMethod == PICKUP
     val payment =

@@ -11,10 +11,12 @@ import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Clock
 import javax.inject.Inject
 
@@ -61,14 +63,20 @@ internal class OrdersViewModel
 
         init {
             viewModelScope.launch {
-                sessionStore.state.collect { if (it is SessionState.SignedOut) _state.value = OrdersUiState.LoggedOut }
+                sessionStore.state.collect {
+                    if (it is SessionState.SignedOut) {
+                        // La carga en curso es de la sesión cerrada: se cancela y su respuesta no se publica.
+                        loadJob?.cancel()
+                        _state.value = OrdersUiState.LoggedOut
+                    }
+                }
             }
             refresh()
         }
 
-        /** Vuelve a pedir la primera página. Si ya hay una carga en curso, no lanza otra. */
+        /** Vuelve a pedir la primera página. Si ya hay una carga en curso o la sesión se cerró, no lanza otra. */
         fun refresh() {
-            if (loadJob?.isActive == true) return
+            if (loadJob?.isActive == true || _state.value is OrdersUiState.LoggedOut) return
             _state.value = OrdersUiState.Loading
             loadJob = viewModelScope.launch { onFirstPage(customer.orders(null)) }
         }
@@ -132,8 +140,9 @@ internal class OrdersViewModel
         private suspend fun onFailure(error: AppError): AppError? {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             if (!error.isUnauthorized()) return error
-            // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también.
-            sessionStore.signOut()
+            // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también. El cierre cancela
+            // esta misma carga: que no corte a medias el borrado de la sesión.
+            withContext(NonCancellable) { sessionStore.signOut() }
             _state.value = OrdersUiState.LoggedOut
             return null
         }
