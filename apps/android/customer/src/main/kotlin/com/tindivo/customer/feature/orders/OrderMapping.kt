@@ -56,16 +56,23 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
     if (apiInstantOrNull(createdAt) == null || !allMoneyReadable(listOf(paysWith, changeToGive))) return null
     val phase = orderPhaseOf(status, cancelReason)
     val pickup = deliveryMethod == PICKUP
+    val payment =
+        PaymentFacts(
+            prepaid = paymentIntent == PREPAID,
+            proofSent = proofAttempt >= 1,
+            verified = paymentVerifiedAt != null,
+        )
     return OrderDetailUi(
         id = id,
         shortId = shortId,
         businessName = businessName,
         phase = phase,
-        headline = headlineOf(phase, status, paymentIntent, pickup),
+        headline = headlineOf(phase, status, payment, pickup),
         isPickup = pickup,
         lines = lineUis,
         deliveryFee = feeText,
         total = totalText,
+        totalPaid = payment.prepaid && payment.verified,
         cash = cashPaymentOf(),
         address = if (pickup) null else deliveryAddress,
         reference = if (pickup) null else deliveryReference,
@@ -102,16 +109,21 @@ private fun GetCustomerOrder200ResponseData.cashPaymentOf(): CashPaymentUi? {
 
 /**
  * El motorizado es un dato personal: el nombre solo cuando ya va en camino, ya entregó o llegó a la puerta; el
- * teléfono nunca como texto, solo como botón de WhatsApp cuando el servidor lo manda y el pedido no está entregado.
+ * teléfono nunca como texto, solo como botón de WhatsApp con el motorizado en la puerta y el pedido sin entregar, como
+ * la web (`tracking-driver.tsx`). El servidor solo manda el teléfono en ese caso; la app lo exige igual.
  */
 private fun GetCustomerOrder200ResponseData.driverOf(phase: OrderPhase): DriverUi? {
     val driver = driver ?: return null
     val onTheWay = phase is OrderPhase.Active && phase.step == TrackingStep.OnTheWay
+    val atDoor = arrivedAtCustomerAt != null && phase !is OrderPhase.Delivered
     val nameVisible = onTheWay || phase is OrderPhase.Delivered || arrivedAtCustomerAt != null
-    val link =
-        driver.phone
-            ?.takeIf { phase !is OrderPhase.Delivered }
-            ?.let { driverWhatsappLink(it, businessName, shortId) }
+    val link = driver.phone?.takeIf { atDoor }?.let { driverWhatsappLink(it, businessName, shortId) }
     val shownName = driver.name.takeIf { nameVisible }
-    return if (shownName == null && link == null) null else DriverUi(name = shownName, whatsappLink = link)
+    return if (shownName == null &&
+        link == null
+    ) {
+        null
+    } else {
+        DriverUi(name = shownName, atDoor = atDoor, whatsappLink = link)
+    }
 }

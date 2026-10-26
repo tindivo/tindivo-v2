@@ -1,42 +1,54 @@
 package com.tindivo.customer.feature.orders
 
-private const val PREPAID = "prepaid"
-
 /** El título del pedido según su fase, con los textos de la web (`STEPS`, `getStepSub`, `cancelledCopy`). */
 internal fun headlineOf(
     phase: OrderPhase,
     status: String,
-    paymentIntent: String,
+    payment: PaymentFacts,
     isPickup: Boolean,
 ): OrderHeadline =
     when (phase) {
-        is OrderPhase.Cancelled -> OrderHeadline.Cancelled(cancelCopyOf(phase.reason, isPickup))
-        OrderPhase.Delivered -> OrderHeadline.Progress(OrderHero.Delivered)
-        OrderPhase.Unknown -> OrderHeadline.Progress(OrderHero.Unknown)
-        is OrderPhase.Active -> OrderHeadline.Progress(heroOf(phase.step, status, paymentIntent == PREPAID, isPickup))
+        is OrderPhase.Cancelled -> {
+            OrderHeadline.Cancelled(cancelCopyOf(phase.reason, isPickup), alreadyPaid = payment.alreadyPaid)
+        }
+
+        OrderPhase.Delivered -> {
+            OrderHeadline.Progress(OrderHero.Delivered)
+        }
+
+        OrderPhase.Unknown -> {
+            OrderHeadline.Progress(OrderHero.Unknown)
+        }
+
+        is OrderPhase.Active -> {
+            OrderHeadline.Progress(heroOf(phase.step, status, payment, isPickup))
+        }
     }
 
 private fun heroOf(
     step: TrackingStep,
     status: String,
-    prepaid: Boolean,
+    payment: PaymentFacts,
     isPickup: Boolean,
 ): OrderHero =
     when (step) {
-        TrackingStep.Received -> receivedHeroOf(status, prepaid)
+        TrackingStep.Received -> receivedHeroOf(status, payment)
         TrackingStep.Preparing -> OrderHero.Preparing
         TrackingStep.OnTheWay -> if (isPickup) OrderHero.ReadyForPickup else OrderHero.OnTheWay
         TrackingStep.Delivered -> OrderHero.Delivered
     }
 
+/** El orden de las preguntas es el de `getStepSub` de la web. */
 private fun receivedHeroOf(
     status: String,
-    prepaid: Boolean,
+    payment: PaymentFacts,
 ): OrderHero =
     when {
-        !prepaid -> OrderHero.Received
-        status == "validando" || status == "pending_acceptance" -> OrderHero.AwaitingAvailability
+        !payment.prepaid -> OrderHero.Received
+        status == "pending_acceptance" -> OrderHero.AwaitingAvailability
+        status == "validando" && !payment.proofSent -> OrderHero.AwaitingAvailability
         status == "awaiting_payment" -> OrderHero.PayNow
+        status == "validando" -> OrderHero.VerifyingProof
         status == "confirmed" -> OrderHero.PaymentVerified
         else -> OrderHero.Received
     }
