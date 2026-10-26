@@ -208,7 +208,7 @@ class BusinessViewModelTest {
 
                 val state = newViewModel().settled()
 
-                assertEquals(bad, BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE)), state)
+                assertEquals(bad, BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_MENU)), state)
             }
         }
 
@@ -284,7 +284,7 @@ class BusinessViewModelTest {
 
             val state = newViewModel().settled()
 
-            assertEquals(BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE)), state)
+            assertEquals(BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_MENU)), state)
         }
 
     @Test
@@ -349,7 +349,7 @@ class BusinessViewModelTest {
             backgroundScope.launch(dispatcher) { viewModel.screen().collect { seen += it } }
             dispatcher.scheduler.advanceTimeBy(61_000L)
 
-            val failed = BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
+            val failed = BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_MENU))
             assertTrue(seen.isNotEmpty())
             assertTrue(seen.all { it == failed })
             assertEquals(failed, viewModel.state.value)

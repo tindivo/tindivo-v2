@@ -78,7 +78,9 @@ internal data class DishSheetState(
     /** Cuántos grupos obligatorios faltan por completar. */
     val missing: Int get() = issues.count { it is ModifierSelectionIssue.Missing }
 
-    val isValid: Boolean get() = issues.isEmpty() && selectedIds.size <= MAX_MODIFIERS
+    // Que cada id elegido sea UNA opción del plato: si no, el precio sumaría otra cosa que lo validado.
+    val isValid: Boolean
+        get() = issues.isEmpty() && selectedIds.size <= MAX_MODIFIERS && selectedModifiers.size == selectedIds.size
 
     private val selectedModifiers: List<CartModifier>
         get() =

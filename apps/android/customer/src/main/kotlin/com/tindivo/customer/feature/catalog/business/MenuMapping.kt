@@ -8,12 +8,13 @@ import com.tindivo.customer.feature.cart.menuPriceOrNull
 import com.tindivo.customer.feature.catalog.home.parseAccent
 import java.math.BigDecimal
 import java.time.Instant
+import java.util.Locale
 
-internal const val INVALID_PRICE = "base_price fuera de numeric(10,2)"
+internal const val INVALID_MENU = "carta inválida: un precio fuera de numeric(10,2) o una opción repetida"
 
 /**
- * `null` si algún plato o alguna opción trae un precio que no se puede mostrar tal cual: la carta falla entera (ver
- * [formatPrice]).
+ * `null` si algún plato o alguna opción trae un precio que no se puede mostrar tal cual (ver [formatPrice]), o si un
+ * plato repite un grupo o una opción: la carta falla entera.
  */
 internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi? {
     val menu =
@@ -68,6 +69,7 @@ private fun GetBusiness200ResponseDataCategoriesInnerItemsInner.toItem(): MenuIt
                     },
             )
         }
+    if (groups.hasRepeatedIds()) return null
     return MenuItemUi(
         id = id.toString(),
         name = name,
@@ -80,6 +82,17 @@ private fun GetBusiness200ResponseDataCategoriesInnerItemsInner.toItem(): MenuIt
         available = isAvailable,
         window = DishWindow(days = availableDays, from = availableFrom, to = availableTo),
     )
+}
+
+/**
+ * Un plato que repite un grupo o una opción (sin distinguir mayúsculas) no es una carta que se pueda enseñar: la
+ * ficha sumaría dos veces el precio de esa opción y el pedido la rechazaría (`checkModifierSelection`, 0275). No se
+ * deduplica.
+ */
+private fun List<ModifierGroupUi>.hasRepeatedIds(): Boolean {
+    val groupIds = map { it.id.lowercase(Locale.ROOT) }
+    val optionIds = flatMap { group -> group.options.map { it.id.lowercase(Locale.ROOT) } }
+    return groupIds.toSet().size != groupIds.size || optionIds.toSet().size != optionIds.size
 }
 
 /**

@@ -266,4 +266,19 @@ class DishSheetStateTest {
         assertTrue(state.isDisabled(one, a))
         assertEquals(state, state.toggle(one, a))
     }
+
+    @Test
+    fun `si el plato repite una opcion la seleccion no vale y el boton no muestra importe`() {
+        // CAX-004: aunque la carta lo descarta al mapearla, la ficha tampoco suma dos veces una opción elegida una vez.
+        val top = "99999999.99"
+        val repeated = group("rep", "multi", false, options = List(1050) { option("x", top) })
+        val state =
+            DishSheetState(item(repeated).copy(basePrice = BigDecimal(top)))
+                .withQuantity(MAX_QUANTITY)
+                .tap(repeated, "x")
+
+        assertEquals(listOf("x"), state.selectedIds)
+        assertFalse(state.isValid)
+        assertTrue(state.cta is DishCta.Complete)
+    }
 }

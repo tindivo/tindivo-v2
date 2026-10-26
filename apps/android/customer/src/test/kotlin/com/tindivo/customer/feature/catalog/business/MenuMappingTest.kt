@@ -122,9 +122,25 @@ class MenuMappingTest {
     @Test
     fun `una opcion con tres decimales, negativa o enorme deja la carta entera en Failed`() =
         runTest {
-            val failed = BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
+            val failed = BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_MENU))
             for (bad in listOf("2.505", "-1", "100000000", "1E+400")) {
                 assertEquals(bad, failed, load(menu(option(1, "1"), option(2, bad))))
             }
+        }
+
+    @Test
+    fun `una opcion repetida en el plato deja la carta entera en Failed sin lanzar`() =
+        runTest {
+            val failed = BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_MENU))
+            val same = option(1, "2.50")
+
+            fun hex(id: String) = """{"id":"$id","name":"Ají","description":null,"additional_price":1.00}"""
+            assertEquals(failed, load(menu(same, same)))
+            assertEquals(
+                failed,
+                load(menu(hex("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"), hex("AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"))),
+            )
+            // El contraejemplo de CAX-004: 1050 veces la misma opción al precio máximo nunca llega a la ficha.
+            assertEquals(failed, load(menu(*Array(1050) { option(1, "99999999.99") })))
         }
 }

@@ -149,7 +149,7 @@ class BusinessViewModel
                         when (val result = catalog.business(id)) {
                             is ApiResult.Success -> {
                                 result.data.toDetail()?.let { BusinessUiState.Loaded(it) }
-                                    ?: BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
+                                    ?: BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_MENU))
                             }
 
                             is ApiResult.Failure -> {
