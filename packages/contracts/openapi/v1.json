@@ -9776,6 +9776,316 @@
         "x-tindivo-role": "customer"
       }
     },
+    "/customer/orders/{id}/reorder": {
+      "get": {
+        "operationId": "getCustomerReorder",
+        "summary": "Repetir un pedido propio: su bolsa con el menú de hoy y lo que cambió",
+        "tags": [
+          "orders"
+        ],
+        "responses": {
+          "200": {
+            "description": "La bolsa rearmada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "orderId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "businessId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "businessName": {
+                          "type": "string"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "menuItemId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Nombre ACTUAL del plato"
+                              },
+                              "quantity": {
+                                "type": "integer"
+                              },
+                              "note": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "basePrice": {
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$",
+                                "description": "Precio actual del plato, sin opciones"
+                              },
+                              "modifiers": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "groupName": {
+                                      "type": "string"
+                                    },
+                                    "optionName": {
+                                      "type": "string"
+                                    },
+                                    "price": {
+                                      "type": "string",
+                                      "pattern": "^\\d+\\.\\d{2}$",
+                                      "description": "Precio adicional actual de la opción"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "groupName",
+                                    "optionName",
+                                    "price"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "unitPrice": {
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$",
+                                "description": "basePrice más el precio de sus opciones"
+                              },
+                              "imageUrl": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "thumbnailUrl": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "menuItemId",
+                              "name",
+                              "quantity",
+                              "note",
+                              "basePrice",
+                              "modifiers",
+                              "unitPrice",
+                              "imageUrl",
+                              "thumbnailUrl"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Solo lo que se puede volver a pedir tal cual. El pedido no guarda el orden en que se agregaron los platos: llegan en un orden fijo, no necesariamente el original"
+                        },
+                        "changes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "x-known-values": [
+                                  "item_removed",
+                                  "item_unavailable",
+                                  "price_changed",
+                                  "choose_again"
+                                ],
+                                "description": "Valores conocidos: item_removed, item_unavailable, price_changed, choose_again. Puede llegar uno nuevo; trátalo como desconocido."
+                              },
+                              "itemName": {
+                                "type": "string",
+                                "description": "Nombre del plato en el pedido original"
+                              },
+                              "menuItemId": {
+                                "nullable": true,
+                                "description": "Null si el plato ya no existe; con id para abrir su ficha",
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "before": {
+                                "nullable": true,
+                                "description": "Precio unitario anterior; solo en price_changed",
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$"
+                              },
+                              "after": {
+                                "nullable": true,
+                                "description": "Precio unitario actual; solo en price_changed",
+                                "type": "string",
+                                "pattern": "^\\d+\\.\\d{2}$"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "itemName",
+                              "menuItemId",
+                              "before",
+                              "after"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "orderId",
+                        "businessId",
+                        "businessName",
+                        "items",
+                        "changes"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Solo lectura (D-51): no crea pedido ni toca nada. Las opciones se rearman por nombre, porque el pedido no guarda sus ids; lo que no se puede rearmar sin adivinar va a `changes` como `choose_again`. El total y el envío se piden a `POST /customer/checkout/quote`. Un pedido ajeno, inexistente o de Entregas responde 404.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
     "/customer/terms-acceptance": {
       "post": {
         "operationId": "acceptTerms",
