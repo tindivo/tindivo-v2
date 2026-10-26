@@ -7,7 +7,6 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
 import com.tindivo.customer.config.ConfigService
-import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -62,9 +61,10 @@ internal class OrdersViewModel
         private var nextCursor: String? = null
 
         init {
+            val watch = SessionWatch()
             viewModelScope.launch {
                 sessionStore.state.collect {
-                    if (it is SessionState.SignedOut) {
+                    if (watch.ended(it)) {
                         // La carga en curso es de la sesión cerrada: se cancela y su respuesta no se publica.
                         loadJob?.cancel()
                         _state.value = OrdersUiState.LoggedOut
@@ -129,9 +129,18 @@ internal class OrdersViewModel
                     }
                 }
 
-                // Un fallo de red al pedir más no tira lo ya cargado: el botón vuelve y avisa que falló.
+                // Un fallo de red al pedir más no tira lo ya cargado: el botón vuelve y avisa que falló. Una respuesta
+                // que no se pudo leer sí lo tira, igual que un importe ilegible.
                 is ApiResult.Failure -> {
-                    onFailure(result.error)?.let { settle(before.copy(loadingMore = false, loadMoreFailed = true)) }
+                    onFailure(result.error)?.let { error ->
+                        settle(
+                            if (error.keepsShownOrders()) {
+                                before.copy(loadingMore = false, loadMoreFailed = true)
+                            } else {
+                                OrdersUiState.Failed(error)
+                            },
+                        )
+                    }
                 }
             }
         }

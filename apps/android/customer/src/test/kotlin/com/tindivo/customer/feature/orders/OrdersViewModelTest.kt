@@ -242,6 +242,35 @@ class OrdersViewModelTest {
             assertEquals(1, server.requestCount)
         }
 
+    @Test
+    fun `una pagina siguiente que no se puede decodificar tira lo cargado y deja el error`() =
+        runTest {
+            server.enqueue(response(200, pageJson(ids(1), next = "c2")))
+            server.enqueue(response(200, withObjectAt(pageJson(ids(2), next = null), "total")))
+            val viewModel = viewModel()
+            viewModel.settled()
+
+            viewModel.loadMore()
+
+            val failed = viewModel.state.value as OrdersUiState.Failed
+            assertTrue(failed.error is AppError.Unknown)
+        }
+
+    @Test
+    fun `otra cuenta en la sesion cierra el historial`() =
+        runTest {
+            server.enqueue(response(200, pageJson(ids(1), next = "c2")))
+            val viewModel = viewModel()
+            viewModel.settled()
+
+            store.signInUserId = "user-2"
+            store.signInWithGoogle("token", "nonce")
+            viewModel.refresh()
+
+            assertEquals(OrdersUiState.LoggedOut, viewModel.state.value)
+            assertEquals(1, server.requestCount)
+        }
+
     private companion object {
         const val UNAUTHORIZED =
             "{\"type\":\"about:blank\",\"title\":\"No autorizado\",\"status\":401,\"code\":\"unauthorized\"}"
