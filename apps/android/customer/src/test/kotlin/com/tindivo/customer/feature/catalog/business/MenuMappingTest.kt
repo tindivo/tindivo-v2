@@ -73,7 +73,7 @@ class MenuMappingTest {
     private fun option(
         id: Int,
         price: String,
-    ) = """{"id":"00000000-0000-4000-8000-0000000001$id","name":"Opcion $id","description":"  ",
+    ) = """{"id":"00000000-0000-4000-8000-0000000001${"%02d".format(id)}","name":"Opcion $id","description":"  ",
         "additional_price":$price}"""
 
     private fun menu(vararg options: String) =
