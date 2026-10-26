@@ -1,16 +1,5 @@
 package com.tindivo.customer.session
 
-import io.github.jan.supabase.auth.Auth
-import io.github.jan.supabase.auth.MemoryCodeVerifierCache
-import io.github.jan.supabase.auth.SessionManager
-import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.auth.exception.NoSessionFoundException
-import io.github.jan.supabase.auth.providers.Google
-import io.github.jan.supabase.auth.providers.builtin.IDToken
-import io.github.jan.supabase.auth.user.UserSession
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.logging.LogLevel
-import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
@@ -21,8 +10,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
 import java.time.Clock
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -179,72 +170,14 @@ internal class SupabaseSessionStore(
     }
 }
 
-/** [AuthBackend] sobre el SDK: el único sitio que lo toca. */
-internal class SupabaseAuthBackend(
-    private val auth: Auth,
-) : AuthBackend {
-    override suspend fun restore(): TokenSnapshot? = if (auth.loadFromStorage(autoRefresh = false)) snapshot() else null
-
-    override suspend fun signInWithGoogle(
-        idToken: String,
-        rawNonce: String,
-    ): TokenSnapshot {
-        auth.signInWith(IDToken, redirectUrl = null) {
-            this.idToken = idToken
-            provider = Google
-            nonce = rawNonce
-        }
-        return snapshot()
-    }
-
-    override suspend fun refresh(): TokenSnapshot {
-        auth.refreshCurrentSession()
-        return snapshot()
-    }
-
-    override suspend fun signOut() = auth.signOut()
-
-    override suspend fun clear() = auth.clearSession()
-
-    private fun snapshot(): TokenSnapshot {
-        val session = auth.currentSessionOrNull() ?: error("No hay sesión")
-        val userId = session.user?.id ?: error("La sesión no trae usuario")
-        return TokenSnapshot(session.accessToken, userId, session.expiresAt.epochSeconds)
-    }
-}
+private const val AUTH_CONNECT_TIMEOUT_SECONDS = 10L
+private const val AUTH_IO_TIMEOUT_SECONDS = 15L
+private const val AUTH_CALL_TIMEOUT_SECONDS = 20L
 
 /**
- * Guarda la [UserSession] como JSON dentro de [file], que ya la cifra. `encodeDefaults` es obligatorio: `expiresAt`
- * tiene valor por defecto y sin él no se guardaría.
+ * Arma el almacén de sesión real: Auth por REST ([GoTrueAuthBackend]) con un cliente HTTP propio, sin el token de la
+ * API, sin reintentos ni redirecciones, y la sesión cifrada en [file].
  */
-internal class EncryptedSessionManager(
-    private val file: SessionFile,
-    private val io: CoroutineDispatcher,
-) : SessionManager {
-    private val json = Json { encodeDefaults = true }
-
-    override suspend fun saveSession(session: UserSession) {
-        withContext(io) { file.write(json.encodeToString(session)) }
-    }
-
-    override suspend fun loadSession(): UserSession =
-        withContext(io) {
-            val plain = file.read() ?: throw NoSessionFoundException()
-            try {
-                json.decodeFromString<UserSession>(plain)
-            } catch (_: IllegalArgumentException) {
-                // JSON que ya no encaja con el modelo: vale como sin sesión.
-                file.delete()
-                throw NoSessionFoundException()
-            }
-        }
-
-    override suspend fun deleteSession() {
-        withContext(io) { file.delete() }
-    }
-}
-
-/** Arma el almacén de sesión real: Auth sin refresco propio, sesión cifrada y el motor OkHttp de Ktor. */
 internal fun createSupabaseSessionStore(
     url: String,
     publishableKey: String,
@@ -254,18 +187,16 @@ internal fun createSupabaseSessionStore(
     io: CoroutineDispatcher,
 ): SessionStore {
     val client =
-        createSupabaseClient(url, publishableKey) {
-            httpEngine = OkHttp.create()
-            // Los logs del SDK pueden llevar la sesión: apagados.
-            defaultLogLevel = LogLevel.NONE
-            install(Auth) {
-                alwaysAutoRefresh = false
-                autoLoadFromStorage = false
-                autoSaveToStorage = true
-                enableLifecycleCallbacks = false
-                sessionManager = EncryptedSessionManager(file, io)
-                codeVerifierCache = MemoryCodeVerifierCache()
-            }
-        }
-    return SupabaseSessionStore(SupabaseAuthBackend(client.auth), clock, scope)
+        OkHttpClient
+            .Builder()
+            .connectTimeout(AUTH_CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(AUTH_IO_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(AUTH_IO_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .callTimeout(AUTH_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .retryOnConnectionFailure(false)
+            .build()
+    val backend = GoTrueAuthBackend("${url.trimEnd('/')}/auth/v1/".toHttpUrl(), publishableKey, client, file, clock, io)
+    return SupabaseSessionStore(backend, clock, scope)
 }
