@@ -48,20 +48,26 @@ import coil3.compose.AsyncImage
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.account.AccountEntryViewModel
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
 fun CatalogHomeDestination(
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
+    onOpenAccount: (signedIn: Boolean) -> Unit,
     viewModel: CatalogHomeViewModel = hiltViewModel(),
+    accountEntry: AccountEntryViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val signedIn = accountEntry.signedIn.collectAsStateWithLifecycle().value
     CatalogHomeScreen(
         state = state,
         onRefresh = viewModel::refresh,
         onOpenBusiness = onOpenBusiness,
         onOpenDiagnostics = onOpenDiagnostics,
+        signedIn = signedIn,
+        onOpenAccount = { onOpenAccount(signedIn) },
     )
 }
 
@@ -72,6 +78,8 @@ fun CatalogHomeScreen(
     onRefresh: () -> Unit,
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)? = null,
+    signedIn: Boolean = false,
+    onOpenAccount: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -90,6 +98,8 @@ fun CatalogHomeScreen(
                             state = state,
                             onOpenBusiness = onOpenBusiness,
                             onOpenDiagnostics = onOpenDiagnostics,
+                            signedIn = signedIn,
+                            onOpenAccount = onOpenAccount,
                         )
                     }
                 }
@@ -103,6 +113,8 @@ private fun BusinessList(
     state: CatalogHomeUiState.Loaded,
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
+    signedIn: Boolean,
+    onOpenAccount: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -120,6 +132,9 @@ private fun BusinessList(
                     TextButton(onClick = it, modifier = Modifier.heightIn(min = 48.dp)) {
                         Text(text = stringResource(R.string.diagnostics_title))
                     }
+                }
+                TextButton(onClick = onOpenAccount, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(text = stringResource(if (signedIn) R.string.account_entry else R.string.signin_entry))
                 }
             }
         }

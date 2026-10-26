@@ -30,10 +30,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.account.AccountDestination
 import com.tindivo.customer.feature.catalog.business.BusinessDestination
 import com.tindivo.customer.feature.catalog.business.BusinessRoute
 import com.tindivo.customer.feature.catalog.home.CatalogHomeDestination
 import com.tindivo.customer.feature.diagnostics.DiagnosticsDestination
+import com.tindivo.customer.feature.signin.SignInDestination
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
 
@@ -45,6 +47,12 @@ data object DiagnosticsRoute
 
 @Serializable
 data object UpdateRoute
+
+@Serializable
+data object SignInRoute
+
+@Serializable
+data object AccountRoute
 
 @Composable
 fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
@@ -76,6 +84,9 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             composable<CatalogHomeRoute> {
                 CatalogHomeDestination(
                     onOpenBusiness = { id -> navController.navigate(BusinessRoute(id)) },
+                    onOpenAccount = { signedIn ->
+                        navController.navigate(if (signedIn) AccountRoute else SignInRoute)
+                    },
                     // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
                     onOpenDiagnostics =
                         if (BuildConfig.DEBUG) {
@@ -86,6 +97,8 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 )
             }
             composable<BusinessRoute> { BusinessDestination(onBack = { navController.popBackStack() }) }
+            composable<SignInRoute> { SignInDestination(onBack = { navController.popBackStack() }) }
+            composable<AccountRoute> { AccountDestination(onLeave = { navController.popBackStack() }) }
             if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
             composable<UpdateRoute> { UpdateScreen() }
         }
