@@ -27,6 +27,7 @@ const PUBLIC_KEYS = [
   'prepay_threshold',
   'max_cash_bill',
   'max_change',
+  'timers',
 ] as const
 
 type Obj = Record<string, unknown>
@@ -49,8 +50,8 @@ function numbers<K extends string>(v: unknown, keys: readonly K[]): Record<K, nu
 }
 
 /**
- * GET /public/config: cobertura, bandas de envío, umbral de prepago y topes de
- * efectivo. Sin sesión. NO es `GET /config` (compatibilidad de versión, MV3).
+ * GET /public/config: cobertura, bandas de envío, umbral de prepago, topes de
+ * efectivo y plazos del prepago. Sin sesión. NO es `GET /config` (compatibilidad de versión, MV3).
  * Un bloque ausente o malformado sale `null`: la app decide su respaldo.
  */
 export async function GET(req: Request): Promise<Response> {
@@ -67,6 +68,11 @@ export async function GET(req: Request): Promise<Response> {
     const poly = isObj(s.coverage_polygon) ? s.coverage_polygon.polygon : null
     const points = Array.isArray(poly) ? poly.map((p) => numbers(p, ['lat', 'lng'] as const)) : null
     const coveragePolygon = points && points.every((p) => p !== null) ? points : null
+
+    // De `timers` solo salen los dos plazos del prepago, en minutos enteros y positivos.
+    const timers = numbers(s.timers, ['acceptanceMinutes', 'paymentMinutes'] as const)
+    const prepayTimers =
+      timers && Object.values(timers).every((n) => Number.isInteger(n) && n > 0) ? timers : null
 
     const bands = isObj(s.delivery_bands)
       ? { near: toMoneyText(s.delivery_bands.near), far: toMoneyText(s.delivery_bands.far) }
@@ -86,6 +92,7 @@ export async function GET(req: Request): Promise<Response> {
         prepayThreshold: toMoneyText(s.prepay_threshold),
         maxCashBill: toMoneyText(s.max_cash_bill),
         maxChange: toMoneyText(s.max_change),
+        prepayTimers,
       },
       { headers: { ...corsHeaders(req), 'Cache-Control': CACHE } },
     )
