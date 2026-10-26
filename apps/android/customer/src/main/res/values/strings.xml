@@ -93,6 +93,22 @@
     <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
     <string name="error_code">Código: %1$s</string>
 
+    <string name="signin_entry">Entrar</string>
+    <string name="signin_back">Volver</string>
+    <string name="signin_title">Entrar a Tindivo</string>
+    <string name="signin_google">Continuar con Google</string>
+    <string name="signin_error">No se pudo entrar. Inténtalo otra vez.</string>
+    <string name="signin_unavailable">El inicio de sesión aún no está disponible en esta versión.</string>
+
+    <string name="account_entry">Mi cuenta</string>
+    <string name="account_back">Volver</string>
+    <string name="account_title">Mi cuenta</string>
+    <string name="account_loading">Cargando</string>
+    <string name="account_retry">Reintentar</string>
+    <string name="account_phone_verified">Teléfono verificado</string>
+    <string name="account_phone_missing">Falta verificar tu teléfono para pedir</string>
+    <string name="account_sign_out">Cerrar sesión</string>
+
     <string name="update_title">Actualiza la app</string>
     <string name="update_message">Hay una versión nueva de Tindivo y necesitas instalarla para seguir usando la app.</string>
     <string name="update_min_version">Versión mínima: %1$s</string>
