@@ -8,7 +8,6 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseData
 import com.tindivo.customer.config.ConfigService
-import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,12 +16,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
@@ -64,8 +62,9 @@ private data class PollStep(
 /**
  * El seguimiento de un pedido. Mientras la pantalla está visible y el pedido no es terminal, lo vuelve a consultar
  * cada [ORDER_POLL_MILLIS]; con la pantalla en segundo plano (más de cinco segundos sin quien mire) deja de hacerlo.
- * Un pedido terminal o un 404 no se vuelven a consultar mientras viva el ViewModel, y al cerrarse la sesión se cancela
- * la consulta en curso: su respuesta ya no llega a la pantalla.
+ * Un pedido terminal o un 404 no se vuelven a consultar mientras viva el ViewModel. La sesión se vigila mientras viva el
+ * ViewModel, también en segundo plano: al cerrarse se cancela la consulta en curso, se olvida lo leído y la pantalla
+ * queda en [OrderDetailUiState.LoggedOut] aunque luego se vuelva a entrar.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -87,28 +86,28 @@ internal class OrderDetailViewModel
         /** Lo que detuvo el sondeo para siempre (un pedido terminal o un 404): al volver a la pantalla no se consulta. */
         private var settled: OrderDetailUiState? = null
 
-        /** Una vez cerrada la sesión, esta pantalla no vuelve a consultar aunque se entre con otra cuenta. */
-        private var loggedOut = false
+        /** Una vez cerrada la sesión, esta pantalla no vuelve a consultar aunque se entre otra vez. */
+        private val loggedOut = MutableStateFlow(false)
 
         private val restart = MutableStateFlow(0)
 
+        // Sin `replayExpirationMillis = 0`, el último estado quedaría guardado en segundo plano y volvería a verse al
+        // regresar, antes de que el sondeo diga nada. Lo que sí debe volver a verse lo reemite `polling()`.
         val state: StateFlow<OrderDetailUiState> =
-            sessionStore.state
-                .map { it is SessionState.SignedOut }
-                .distinctUntilChanged()
-                .flatMapLatest { signedOut ->
+            loggedOut
+                .flatMapLatest { out ->
                     // Cambiar de flujo cancela el sondeo y la petición en curso: nada de la sesión cerrada se publica.
-                    if (signedOut || loggedOut) {
-                        loggedOut = true
-                        flowOf(OrderDetailUiState.LoggedOut)
-                    } else {
-                        restart.flatMapLatest { polling() }
-                    }
+                    if (out) flowOf(OrderDetailUiState.LoggedOut) else restart.flatMapLatest { polling() }
                 }.stateIn(
                     scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+                    started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS, replayExpirationMillis = 0),
                     initialValue = OrderDetailUiState.Loading,
                 )
+
+        init {
+            val watch = SessionWatch()
+            viewModelScope.launch { sessionStore.state.collect { if (watch.ended(it)) invalidate() } }
+        }
 
         /** Vuelve a consultar desde cero (después de un error sin datos). */
         fun retry() {
@@ -126,7 +125,7 @@ internal class OrderDetailViewModel
                     emit(it)
                     return@flow
                 }
-                if (lastOrder == null) emit(OrderDetailUiState.Loading)
+                emit(lastOrder?.let(OrderDetailUiState::Loaded) ?: OrderDetailUiState.Loading)
                 do {
                     val step = reduce(customer.order(id))
                     emit(step.state)
@@ -160,8 +159,7 @@ internal class OrderDetailViewModel
             return when {
                 error.isUnauthorized() -> {
                     // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también.
-                    loggedOut = true
-                    lastOrder = null
+                    invalidate()
                     // El cierre cancela este mismo sondeo: que no corte a medias el borrado de la sesión.
                     withContext(NonCancellable) { sessionStore.signOut() }
                     PollStep(OrderDetailUiState.LoggedOut, keepPolling = false)
@@ -180,16 +178,25 @@ internal class OrderDetailViewModel
         }
 
         /**
-         * Con datos ya cargados, un error de red del sondeo los conserva y se vuelve a intentar; sin datos, pantalla de
-         * error. Un pedido terminal nunca llega aquí: se queda en [settled] y no se vuelve a consultar.
+         * Con datos ya cargados, un fallo que no dice nada del pedido ([keepsShownOrders]) los conserva y se vuelve a
+         * intentar; cualquier otro, o sin datos, pantalla de error. Un pedido terminal nunca llega aquí: se queda en
+         * [settled] y no se vuelve a consultar.
          */
         private fun failedStep(error: AppError): PollStep {
             val kept = lastOrder
-            return if (kept != null && error !is AppError.UpgradeRequired) {
+            return if (kept != null && error.keepsShownOrders()) {
                 PollStep(OrderDetailUiState.Loaded(kept), keepPolling = true)
             } else {
+                lastOrder = null
                 PollStep(OrderDetailUiState.Failed(error), keepPolling = false)
             }
+        }
+
+        /** Lo leído es de la sesión que terminó: se olvida y la pantalla queda en [OrderDetailUiState.LoggedOut]. */
+        private fun invalidate() {
+            lastOrder = null
+            settled = null
+            loggedOut.value = true
         }
     }
 

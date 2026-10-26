@@ -126,6 +126,18 @@ internal fun detailJson(
      "paymentVerifiedAt":null,"driver":null}}
     """.trimIndent()
 
+/**
+ * [json] con el valor de [field] cambiado por `{}`: un tipo JSON que el modelo generado no puede leer, así que la
+ * respuesta falla al decodificarse, antes de llegar al mapeo.
+ */
+internal fun withObjectAt(
+    json: String,
+    field: String,
+): String {
+    val match = Regex("\"$field\":\"[^\"]*\"").find(json) ?: error("sin $field en el JSON")
+    return json.replaceRange(match.range, "\"$field\":{}")
+}
+
 /** El cuerpo JSON de una página del historial; [next] es el `nextCursor`. */
 internal fun pageJson(
     ids: List<String>,
