@@ -402,8 +402,19 @@ describe('GET /customer/orders/{id}/reorder (D-51)', () => {
 
   it('no confirma que exista un pedido ajeno o inventado, ni responde sin sesión', async () => {
     const id = await placeOrder()
-    expect((await reorder(id, stranger().token)).status).toBe(404)
-    expect((await reorder(crypto.randomUUID())).status).toBe(404)
+    // Ajeno e inventado dan el mismo cuerpo; solo cambia el requestId de cada llamada.
+    const notFound = async (res: Response) => {
+      expect(res.status).toBe(404)
+      const text = await res.text()
+      expect(text).not.toContain(id)
+      expect(text).not.toContain('Test Restaurant Integration')
+      const { requestId, ...rest } = JSON.parse(text) as Record<string, unknown>
+      expect(typeof requestId).toBe('string')
+      return rest
+    }
+    const foreign = await notFound(await reorder(id, stranger().token))
+    const invented = await notFound(await reorder(crypto.randomUUID()))
+    expect(foreign).toEqual(invented)
     expect((await reorder(id, null)).status).toBe(401)
     expect((await reorder('no-es-un-id')).status).toBe(422)
     // Repetir no crea nada.
@@ -413,5 +424,28 @@ describe('GET /customer/orders/{id}/reorder (D-51)', () => {
       .eq('business_id', businessId)
       .throwOnError()
     expect(count).toBe(1)
+  })
+
+  it('una sesión válida sin el rol de cliente: 403, sin datos del pedido', async () => {
+    const id = await placeOrder()
+    const email = `reorder-${crypto.randomUUID()}@integration.local`
+    const { data, error } = await db.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: 'Vecino Integración' },
+    })
+    if (error) throw new Error(`No se pudo crear el usuario: ${error.message}`)
+    authIds.push(data.user.id)
+    await db.from('user_roles').delete().eq('user_id', data.user.id).throwOnError()
+    await db.from('user_roles').insert({ user_id: data.user.id, role: 'driver' }).throwOnError()
+    // Aunque el pedido fuera suyo, sin el rol no llega a leerlo.
+    await db.from('orders').update({ customer_user_id: data.user.id }).eq('id', id).throwOnError()
+    const res = await reorder(id, await signIn(email))
+    expect(res.status).toBe(403)
+    const text = await res.text()
+    expect(text).not.toContain(id)
+    expect(text).not.toContain('Pizza')
+    expect(text).not.toContain('Test Restaurant Integration')
   })
 })
