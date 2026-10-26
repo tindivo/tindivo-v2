@@ -41,9 +41,11 @@
             tools:node="remove" />
 
         <!-- play-services-auth (lo trae credentials-play-services-auth) añade este servicio EXPORTADO para avisar de
-             revocaciones al GoogleSignInClient antiguo. Credential Manager no lo usa: se quita. -->
+             revocaciones al GoogleSignInClient antiguo. Credential Manager no lo usa: se quita. MissingClass: la clase
+             vive en el .aar de Google y lint no la ve desde un nodo que solo existe para quitarse. -->
         <service
             android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
+            tools:ignore="MissingClass"
             tools:node="remove" />
     </application>
 
