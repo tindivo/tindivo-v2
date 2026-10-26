@@ -1,11 +1,13 @@
 package com.tindivo.core.network
 
 import com.tindivo.core.network.generated.api.CustomerApi
-import com.tindivo.core.network.generated.infrastructure.ApiResponse
-import com.tindivo.core.network.generated.model.GetCustomerProfile200Response
+import com.tindivo.core.network.generated.api.OrdersApi
+import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseData
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
+import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
 import kotlinx.coroutines.CoroutineDispatcher
 import okhttp3.OkHttpClient
+import java.util.UUID
 
 /**
  * Lo del cliente con sesión. Devuelve [ApiResult]: ningún error de red ni de lectura sale como excepción. El
@@ -23,9 +25,27 @@ class CustomerRepository(
 ) {
     /** `GET /customer/profile`: nombre, teléfono y si está verificado. Sin sesión válida llega como 401. */
     suspend fun profile(): ApiResult<GetCustomerProfile200ResponseData> =
-        call { it.getCustomerProfileWithHttpInfo(null, null, null, null) }.map { it.data }
+        apiCall(client, ioDispatcher, { CustomerApi(baseUrl, it) }) {
+            it.getCustomerProfileWithHttpInfo(null, null, null, null)
+        }.map { it.data }
 
-    private suspend fun call(
-        request: (CustomerApi) -> ApiResponse<GetCustomerProfile200Response?>,
-    ): ApiResult<GetCustomerProfile200Response> = apiCall(client, ioDispatcher, { CustomerApi(baseUrl, it) }, request)
+    /**
+     * `GET /customer/orders`: una página del historial, la más reciente primero. [cursor] es el `nextCursor` de la
+     * página anterior (`null` para la primera); cuando `nextCursor` llega `null` no hay más.
+     */
+    suspend fun orders(cursor: String?): ApiResult<ListCustomerOrders200ResponseData> =
+        apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
+            it.listCustomerOrdersWithHttpInfo(PAGE_SIZE, cursor, null, null, null, null)
+        }.map { it.data }
+
+    /** `GET /customer/orders/{id}`: el detalle de un pedido del cliente. Uno ajeno o inexistente llega como 404. */
+    suspend fun order(id: UUID): ApiResult<GetCustomerOrder200ResponseData> =
+        apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
+            it.getCustomerOrderWithHttpInfo(id, null, null, null, null)
+        }.map { it.data }
+
+    private companion object {
+        /** Tamaño de página del historial (el query del contrato va como texto). */
+        const val PAGE_SIZE = "20"
+    }
 }
