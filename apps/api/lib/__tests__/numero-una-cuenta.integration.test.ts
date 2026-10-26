@@ -5,6 +5,7 @@
  */
 import { execFileSync, spawn } from 'node:child_process'
 import { randomInt } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { CustomerSecurityNoticesSchema, PhoneTransferSchema } from '@tindivo/contracts'
 import type { Database, TablesInsert } from '@tindivo/supabase'
@@ -29,6 +30,10 @@ process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= ANON_KEY
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= SERVICE_KEY
 
 const NAME = 'Vecino Número Único'
+const MIGRATION_0277 = new globalThis.URL(
+  '../../../../supabase/migrations/0277_un_numero_verificado_una_sola_cuenta.sql',
+  import.meta.url,
+)
 const PASSWORD = 'test-password-12345'
 const opts = { auth: { persistSession: false, autoRefreshToken: false } }
 const anon = () => createClient<Database>(URL, ANON_KEY, opts)
@@ -252,6 +257,84 @@ async function courier(c: Customer) {
     .throwOnError()
   if (!data) throw new Error('sin Entrega')
   return data.id
+}
+
+/** create_courier_order por HTTP real (PostgREST), como la llama la API. */
+function courierRpc(c: Customer) {
+  return fetch(`${URL}/rest/v1/rpc/create_courier_order`, {
+    method: 'POST',
+    headers: {
+      apikey: SERVICE_KEY,
+      authorization: `Bearer ${SERVICE_KEY}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      p_directory_business_id: null,
+      p_customer_user_id: c.id,
+      p_requester_name: NAME,
+      p_requester_phone: c.phone,
+      p_origin_name: 'Origen',
+      p_origin_phone: c.phone,
+      p_origin_lat: COURIER_POINT_A.lat,
+      p_origin_lng: COURIER_POINT_A.lng,
+      p_origin_reference_text: 'Frente al parque',
+      p_destination_name: NAME,
+      p_destination_phone: c.phone,
+      p_destination_lat: COURIER_POINT_B.lat,
+      p_destination_lng: COURIER_POINT_B.lng,
+      p_destination_reference_text: 'Casa de prueba',
+      p_item_description: 'Paquete',
+      p_is_fragile: false,
+      p_ready_in_min: 0,
+      p_payer: 'destination',
+      p_weight_confirmed: true,
+      p_prepaid_confirmed: true,
+    }),
+  })
+}
+
+async function restrict(c: Customer) {
+  const until = new Date(Date.now() + 48 * 3600_000).toISOString()
+  await db
+    .from('customer_profiles')
+    .update({ blocked_until: until, contraentrega_blocked: true })
+    .eq('user_id', c.id)
+    .throwOnError()
+  return until
+}
+
+/** Bloqueo y prepago que el número arrastra para `c`, también ante la cajera. */
+async function expectRestricted(c: Customer, number: string, until: string, sourceId: string) {
+  const { data: rows } = await db
+    .from('phone_restrictions')
+    .select('kind,until,source_user_id,lifted_at')
+    .eq('phone', number)
+    .throwOnError()
+  expect(rows?.filter((r) => r.lifted_at === null)).toHaveLength(2)
+  expect(rows?.every((r) => r.source_user_id === sourceId)).toBe(true)
+  expect(new Date(rows?.find((r) => r.kind === 'blocked')?.until ?? '').toISOString()).toBe(until)
+  expect(
+    (await db.rpc('customer_is_blocked', { p_user_id: c.id, p_phone: number }).throwOnError()).data,
+  ).toBe(true)
+  expect(
+    (
+      await db
+        .rpc('customer_requires_prepayment', {
+          p_user_id: c.id,
+          p_phone: number,
+          p_reference: '',
+        })
+        .throwOnError()
+    ).data,
+  ).toBe(true)
+  const manual = await db.rpc('create_business_manual_order', {
+    p_business_user_id: ownerId,
+    p_customer_phone: number,
+    p_delivery_method: 'pickup',
+    p_payment_intent: 'pending_cash',
+    p_total_amount: 10,
+  })
+  expect(manual.error?.message).toMatch(/bloque|operativ/i)
 }
 
 beforeAll(async () => {
@@ -781,6 +864,175 @@ describe('0277 · un número, una cuenta', () => {
     }
   })
 
+  it('CAX-001 · A restringida cambia su número N por M: N se lleva el riesgo y B lo recibe', async () => {
+    const a = await customer()
+    const b = await customer()
+    await claim(a)
+    const until = await restrict(a)
+    const m = phone()
+    expect((await call(verify, a, { phone: m, code: DEV_OTP_CODE })).status).toBe(200)
+    expect(await profile(a)).toMatchObject({ phone: `+51${m}` })
+    expect((await assignments(a.phone)).find((x) => x.user_id === a.id)?.end_reason).toBe(
+      'replaced',
+    )
+    // N quedó libre: B lo verifica sin traslado, pero con el riesgo de A.
+    expect((await call(verify, b, { phone: a.phone, code: DEV_OTP_CODE })).status).toBe(200)
+    await expectRestricted(b, a.phone, until, a.id)
+    // A conserva su propio riesgo en la cuenta, también con M.
+    expect(
+      (await db.rpc('customer_is_blocked', { p_user_id: a.id, p_phone: m }).throwOnError()).data,
+    ).toBe(true)
+  })
+
+  it('CAX-001 · B restringida se lleva el número de A: su número anterior conserva el riesgo de B', async () => {
+    const a = await customer()
+    const b = await customer()
+    const c = await customer()
+    await claim(a)
+    await claim(b)
+    const until = await restrict(b)
+    const proof = await challenge(b, a.phone)
+    expect((await call(transfer, b, { challengeId: proof.challengeId })).status).toBe(200)
+    expect((await assignments(b.phone)).find((x) => x.user_id === b.id)?.end_reason).toBe(
+      'replaced',
+    )
+    expect((await call(verify, c, { phone: b.phone, code: DEV_OTP_CODE })).status).toBe(200)
+    await expectRestricted(c, b.phone, until, b.id)
+  })
+
+  it('CAX-002 · dos traslados cruzados simultáneos: uno gana, el otro queda inválido, sin abrazo mortal', async () => {
+    const a = await customer()
+    const b = await customer()
+    await claim(a)
+    await claim(b)
+    const proofA = await challenge(a, b.phone)
+    const proofB = await challenge(b, a.phone)
+    const [ra, rb] = await withDatabaseGate(
+      `select user_id from public.customer_profiles where user_id in ('${a.id}', '${b.id}') for update`,
+      ['claim_customer_phone'],
+      () =>
+        Promise.all([
+          call(transfer, a, { challengeId: proofA.challengeId }),
+          call(transfer, b, { challengeId: proofB.challengeId }),
+        ]),
+    )
+    expect([ra.status, rb.status].sort()).toEqual([200, 409])
+    const loser = ra.status === 409 ? ra : rb
+    expect((await loser.json()).detail).toBe('El código ya no sirve. Pide uno nuevo.')
+    const winner = ra.status === 200 ? a : b
+    const other = winner === a ? b : a
+    expect(await profile(winner)).toMatchObject({
+      phone: `+51${other.phone}`,
+      phone_verified_at: expect.any(String),
+    })
+    expect(await profile(other)).toMatchObject({ phone_verified_at: null })
+    const { data: open } = await db
+      .from('phone_assignments')
+      .select('user_id,phone')
+      .in('user_id', [a.id, b.id])
+      .is('ended_at', null)
+      .throwOnError()
+    expect(open).toEqual([{ user_id: winner.id, phone: `+51${other.phone}` }])
+  })
+
+  it('CAX-002 · traslado y creación de una Entrega simultáneos conservan la guarda', async () => {
+    const a = await customer()
+    const b = await customer()
+    await claim(a)
+    const proof = await challenge(b, a.phone)
+    const [created, moved] = await withDatabaseGate(
+      `select user_id from public.customer_profiles where user_id = '${a.id}' for update`,
+      // pg_stat_activity trunca la consulta (1024 bytes) y la Entrega lleva veinte
+      // parámetros: su nombre no llega a verse. Solo estas dos llamadas usan PostgREST aquí.
+      ['pgrst_source'],
+      () => Promise.all([courierRpc(a), call(transfer, b, { challengeId: proof.challengeId })]),
+    )
+    const body = await created.json()
+    if (created.status === 200) {
+      expect(moved.status).toBe(409)
+      expect((await moved.json()).detail).toBe(
+        'Ese número tiene un pedido en curso. Intenta cuando termine.',
+      )
+      expect((await profile(a))?.phone_verified_at).not.toBeNull()
+    } else {
+      expect(JSON.stringify(body)).toMatch(/courier_phone_not_verified/)
+      expect(moved.status).toBe(200)
+      expect((await profile(a))?.phone_verified_at).toBeNull()
+      const { count } = await db
+        .from('courier_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_user_id', a.id)
+        .throwOnError()
+      expect(count).toBe(0)
+    }
+  })
+
+  it('CAX-002 · la migración desverifica los duplicados, se reaplica sin cambios y rechaza datos inválidos sin efectos', async () => {
+    const a = await customer()
+    const b = await customer()
+    const bad = await customer()
+    const shared = phone()
+    const migration = readFileSync(MIGRATION_0277, 'utf8')
+    const counts = (tag: string) =>
+      `select '${tag}|' || (select count(*) from public.customer_profiles where user_id in ('${a.id}', '${b.id}') and phone_verified_at is not null)` +
+      ` || '|' || (select count(*) from public.phone_assignments where user_id in ('${a.id}', '${b.id}') and end_reason = 'duplicate_cleared' and phone = '+51${shared}')` +
+      ` || '|' || (select count(*) from public.phone_assignments)` +
+      ` || '|' || (select count(*) from public.phone_assignments where ended_at is null)` +
+      ` || '|' || (select count(*) from public.customer_profiles where phone_verified_at is not null)` +
+      ` || '|' || (select count(*) from public.phone_restrictions);`
+    // Base local desechable; todo va dentro de una transacción que se revierte.
+    const output = execFileSync('docker', PSQL, {
+      input: [
+        'begin;',
+        'drop index public.customer_profiles_verified_phone_unique;',
+        `update public.customer_profiles set phone = '+51${shared}', phone_verified_at = now() where user_id in ('${a.id}', '${b.id}');`,
+        counts('ANTES'),
+        migration,
+        counts('UNA'),
+        migration,
+        counts('DOS'),
+        'rollback;',
+      ].join('\n'),
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    const line = (tag: string) =>
+      output
+        .split(/\r?\n/)
+        .find((l) => l.startsWith(`${tag}|`))
+        ?.split('|')
+        .slice(1)
+        .map(Number)
+    expect(line('ANTES')?.slice(0, 2)).toEqual([2, 0])
+    const once = line('UNA')
+    expect(once?.slice(0, 2)).toEqual([0, 2])
+    expect(line('DOS')).toEqual(once)
+    // Un teléfono verificado fuera de E.164: la migración falla entera y no deja nada.
+    let failure = ''
+    try {
+      execFileSync('docker', PSQL, {
+        input: [
+          'begin;',
+          'alter table public.customer_profiles drop constraint customer_profiles_phone_e164;',
+          `update public.customer_profiles set phone = '${phone()}', phone_verified_at = now() where user_id = '${bad.id}';`,
+          migration,
+          'commit;',
+        ].join('\n'),
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    } catch (error) {
+      failure = String((error as { stderr?: string }).stderr ?? error)
+    }
+    expect(failure).toMatch(/0277: hay teléfonos verificados fuera de E.164/)
+    expect(await profile(bad)).toMatchObject({ phone: null, phone_verified_at: null })
+    const kept = execFileSync('docker', PSQL, {
+      input: `select count(*) from pg_constraint where conname = 'customer_profiles_phone_e164';`,
+      encoding: 'utf8',
+    })
+    expect(kept.trim()).toBe('1')
+  })
+
   it('solo el dueño lee avisos; seen es idempotente y no toca los ajenos', async () => {
     const a = await customer()
     const b = await customer()
@@ -948,36 +1200,7 @@ describe('0277 · un número, una cuenta', () => {
       (await db.rpc('customer_contraentrega_decision', { p_customer_user_id: a.id }).throwOnError())
         .data,
     ).toBe('no_history')
-    const result = await fetch(`${URL}/rest/v1/rpc/create_courier_order`, {
-      method: 'POST',
-      headers: {
-        apikey: SERVICE_KEY,
-        authorization: `Bearer ${SERVICE_KEY}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        p_directory_business_id: null,
-        p_customer_user_id: a.id,
-        p_requester_name: NAME,
-        p_requester_phone: a.phone,
-        p_origin_name: 'Origen',
-        p_origin_phone: a.phone,
-        p_origin_lat: COURIER_POINT_A.lat,
-        p_origin_lng: COURIER_POINT_A.lng,
-        p_origin_reference_text: 'Frente al parque',
-        p_destination_name: NAME,
-        p_destination_phone: a.phone,
-        p_destination_lat: COURIER_POINT_B.lat,
-        p_destination_lng: COURIER_POINT_B.lng,
-        p_destination_reference_text: 'Casa de prueba',
-        p_item_description: 'Paquete',
-        p_is_fragile: false,
-        p_ready_in_min: 0,
-        p_payer: 'destination',
-        p_weight_confirmed: true,
-        p_prepaid_confirmed: true,
-      }),
-    })
+    const result = await courierRpc(a)
     expect(result.status).toBe(200)
     expect(await result.json()).toBeTruthy()
     // Como en 0272, la lista solo la usa el trigger: ni el servicio puede llamarla.

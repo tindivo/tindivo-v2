@@ -90,7 +90,7 @@ create table if not exists public.phone_restrictions (
   kind text not null check (kind in ('blocked', 'contraentrega_blocked')),
   "until" timestamptz,
   source_user_id uuid references public.users(id),
-  source text not null check (source = 'transfer'),
+  source text not null check (source in ('transfer', 'replaced')),
   created_at timestamptz not null default now(),
   lifted_at timestamptz,
   lifted_by uuid references public.users(id),
@@ -126,7 +126,40 @@ grant select on public.phone_assignments, public.phone_restrictions, public.cust
 grant all on public.phone_assignments, public.phone_transfer_challenges,
   public.phone_restrictions, public.customer_security_notices to service_role;
 
--- 2 · La API solo llega aquí después de comprobar el SMS (o el simulacro local).
+-- 2 · Un número que deja una cuenta se lleva sus restricciones vigentes, con el
+-- mismo plazo; la cuenta conserva las suyas. Solo la llama claim_customer_phone.
+create or replace function public.keep_phone_restrictions(p_phone text, p_user_id uuid, p_source text)
+returns void
+language plpgsql set search_path = ''
+as $$
+declare
+  v_phone text := regexp_replace(p_phone, '^[+]51', '');
+  v_blocked_until timestamptz;
+  v_contraentrega boolean;
+begin
+  select cp.blocked_until, cp.contraentrega_blocked into v_blocked_until, v_contraentrega
+  from public.customer_profiles cp where cp.user_id = p_user_id;
+  if v_blocked_until > now() and not exists (
+    select 1 from public.phone_restrictions r
+    where r.phone = v_phone and r.kind = 'blocked' and r.source_user_id = p_user_id
+      and r."until" = v_blocked_until and r.lifted_at is null
+  ) then
+    insert into public.phone_restrictions(phone, kind, "until", source_user_id, source)
+    values (v_phone, 'blocked', v_blocked_until, p_user_id, p_source);
+  end if;
+  if coalesce(v_contraentrega, false) and not exists (
+    select 1 from public.phone_restrictions r
+    where r.phone = v_phone and r.kind = 'contraentrega_blocked' and r.source_user_id = p_user_id
+      and r.lifted_at is null
+  ) then
+    insert into public.phone_restrictions(phone, kind, source_user_id, source)
+    values (v_phone, 'contraentrega_blocked', p_user_id, p_source);
+  end if;
+end;
+$$;
+revoke all on function public.keep_phone_restrictions(text, uuid, text) from public, anon, authenticated, service_role;
+
+-- 3 · La API solo llega aquí después de comprobar el SMS (o el simulacro local).
 create or replace function public.claim_customer_phone(p_user_id uuid, p_phone text, p_challenge_id uuid default null)
 returns jsonb
 language plpgsql security definer set search_path = ''
@@ -163,8 +196,11 @@ begin
     select 1 from public.customer_profiles cp
     where cp.user_id = v_sealed_user and cp.phone = p_phone and cp.phone_verified_at is not null
   ) then
-    update public.phone_assignments set ended_at = now(), end_reason = 'replaced'
-    where user_id = v_sealed_user and ended_at is null;
+    select * into v_previous from public.phone_assignments where user_id = v_sealed_user and ended_at is null;
+    if v_previous.id is not null then
+      perform public.keep_phone_restrictions(v_previous.phone, v_sealed_user, 'replaced');
+      update public.phone_assignments set ended_at = now(), end_reason = 'replaced' where id = v_previous.id;
+    end if;
     insert into public.phone_assignments(phone, user_id, started_at, start_reason)
     select p_phone, cp.user_id, cp.phone_verified_at, 'verification'
     from public.customer_profiles cp where cp.user_id = v_sealed_user
@@ -211,8 +247,10 @@ begin
       -- Sellado fuera de esta RPC (seeds, fixtures): el índice único ya garantiza
       -- que nadie más lo tiene verificado, así que solo falta registrar su asignación.
       if v_owner.id is null then
-        update public.phone_assignments set ended_at = now(), end_reason = 'replaced'
-        where id = v_previous.id and ended_at is null;
+        if v_previous.id is not null then
+          perform public.keep_phone_restrictions(v_previous.phone, p_user_id, 'replaced');
+          update public.phone_assignments set ended_at = now(), end_reason = 'replaced' where id = v_previous.id;
+        end if;
         insert into public.phone_assignments(phone, user_id, started_at, start_reason)
         values (p_phone, p_user_id, v_customer.phone_verified_at, 'verification');
       end if;
@@ -243,18 +281,15 @@ begin
     if not found or v_source.phone is distinct from p_phone or v_source.phone_verified_at is null then
       return jsonb_build_object('status', 'challenge_invalid');
     end if;
-    if v_source.blocked_until > now() then
-      insert into public.phone_restrictions(phone, kind, "until", source_user_id, source)
-      values (regexp_replace(p_phone, '^[+]51', ''), 'blocked', v_source.blocked_until, v_source.user_id, 'transfer');
-    end if;
-    if v_source.contraentrega_blocked then
-      insert into public.phone_restrictions(phone, kind, source_user_id, source)
-      values (regexp_replace(p_phone, '^[+]51', ''), 'contraentrega_blocked', v_source.user_id, 'transfer');
-    end if;
+    perform public.keep_phone_restrictions(p_phone, v_owner.user_id, 'transfer');
     update public.customer_profiles set phone_verified_at = null where user_id = v_owner.user_id;
     update public.phone_assignments set ended_at = now(), end_reason = 'self_transfer' where id = v_owner.id;
   end if;
 
+  -- El número propio que se sustituye también se lleva el riesgo de esta cuenta.
+  if v_previous.id is not null and v_previous.phone <> p_phone then
+    perform public.keep_phone_restrictions(v_previous.phone, p_user_id, 'replaced');
+  end if;
   update public.phone_assignments set ended_at = now(), end_reason = 'replaced'
   where id = v_previous.id and ended_at is null;
   update public.customer_profiles set phone = p_phone, phone_verified_at = now() where user_id = p_user_id;
@@ -276,7 +311,7 @@ $$;
 revoke execute on function public.claim_customer_phone(uuid, text, uuid) from public, anon, authenticated;
 grant execute on function public.claim_customer_phone(uuid, text, uuid) to service_role;
 
--- 3 · Riesgo anterior intacto; además, restricciones vigentes del número.
+-- 4 · Riesgo anterior intacto; además, restricciones vigentes del número.
 create or replace function public.customer_is_blocked(p_user_id uuid, p_phone text)
 returns boolean
 language plpgsql stable security definer set search_path = ''
@@ -380,7 +415,7 @@ $$;
 revoke execute on function public.customer_requires_prepayment(uuid, text, text) from public, anon, authenticated;
 grant execute on function public.customer_requires_prepayment(uuid, text, text) to service_role;
 
--- 4 · El riesgo va primero; sin otro dueño se conservan las tres reglas.
+-- 5 · El riesgo va primero; sin otro dueño se conservan las tres reglas.
 CREATE OR REPLACE FUNCTION public.customer_contraentrega_decision(p_customer_user_id uuid)
 RETURNS text
 LANGUAGE plpgsql
@@ -465,7 +500,7 @@ end $fn$;
 revoke execute on function public.customer_contraentrega_decision(uuid) from public, anon, authenticated;
 grant execute on function public.customer_contraentrega_decision(uuid) to service_role;
 
--- 5 · Lista completa de 0272 más el aviso de seguridad.
+-- 6 · Lista completa de 0272 más el aviso de seguridad.
 create or replace function public.push_event_types()
   returns text[]
   language sql immutable set search_path = ''
@@ -493,7 +528,7 @@ $$;
 -- Igual que 0272: solo la usa el trigger, ningún rol la llama.
 revoke all on function public.push_event_types() from public, anon, authenticated, service_role;
 
--- 6 · Copia de 0276: solo se añade FOR SHARE al leer el perfil sellado.
+-- 7 · Copia de 0276: solo se añade FOR SHARE al leer el perfil sellado.
 CREATE OR REPLACE FUNCTION public.create_customer_order(p_business_id uuid, p_customer_user_id uuid, p_delivery_method delivery_method, p_payment_intent payment_intent, p_customer_name text, p_customer_phone text, p_items jsonb, p_delivery_address text, p_delivery_reference text, p_delivery_lat numeric DEFAULT NULL::numeric, p_delivery_lng numeric DEFAULT NULL::numeric, p_source order_source DEFAULT 'customer_pwa'::order_source, p_client_pays_with numeric DEFAULT NULL::numeric, p_customer_gps_lat double precision DEFAULT NULL::double precision, p_customer_gps_lng double precision DEFAULT NULL::double precision, p_customer_gps_accuracy_m double precision DEFAULT NULL::double precision, p_customer_gps_distance_to_center_km numeric DEFAULT NULL::numeric, p_customer_gps_method text DEFAULT NULL::text, p_customer_notes text DEFAULT NULL::text, p_delivery_accuracy_m integer DEFAULT NULL::integer, p_delivery_confirmed_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_pickup_timing text DEFAULT NULL::text)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -1305,7 +1340,7 @@ grant execute on function public.create_courier_order(
   text, boolean, int, public.courier_payer, boolean, boolean, text, text
 ) to service_role;
 
--- 7 · PostgREST no debe encontrar sobrecargas ni estados incompletos.
+-- 8 · PostgREST no debe encontrar sobrecargas ni estados incompletos.
 do $$
 declare
   v_function text;
@@ -1322,6 +1357,14 @@ begin
         or has_function_privilege('authenticated', p.oid, 'execute')
         or has_function_privilege('service_role', p.oid, 'execute'))) then
     raise exception '0277: push_event_types debe quedar como en 0272';
+  end if;
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'keep_phone_restrictions'
+      and (p.prosecdef or p.proconfig is distinct from array['search_path=""']
+        or has_function_privilege('anon', p.oid, 'execute')
+        or has_function_privilege('authenticated', p.oid, 'execute')
+        or has_function_privilege('service_role', p.oid, 'execute'))) then
+    raise exception '0277: keep_phone_restrictions solo la llama claim_customer_phone';
   end if;
   foreach v_function in array array['claim_customer_phone', 'customer_is_blocked',
     'customer_requires_prepayment', 'customer_contraentrega_decision',
