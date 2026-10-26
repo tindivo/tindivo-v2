@@ -49,6 +49,7 @@ import coil3.compose.AsyncImage
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
+import java.math.BigDecimal
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -267,7 +268,17 @@ private fun errorMessage(error: AppError): String =
 @Composable
 private fun BusinessPreview() {
     val pollo =
-        MenuItemUi("1", "1/4 de pollo", "Con papas y ensalada", "S/ 12.50", null, true, DishWindow(null, null, null))
+        MenuItemUi(
+            "1",
+            "1/4 de pollo",
+            "Con papas y ensalada",
+            "S/ 12.50",
+            BigDecimal("12.50"),
+            emptyList(),
+            null,
+            true,
+            DishWindow(null, null, null),
+        )
     TindivoTheme {
         BusinessScreen(
             state =

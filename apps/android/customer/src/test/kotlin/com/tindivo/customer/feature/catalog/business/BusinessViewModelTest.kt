@@ -361,7 +361,7 @@ class BusinessViewModelTest {
             id: String,
             window: DishWindow,
             available: Boolean = true,
-        ) = MenuItemUi(id, id, null, "S/ 1.00", null, available, window)
+        ) = MenuItemUi(id, id, null, "S/ 1.00", BigDecimal("1.00"), emptyList(), null, available, window)
 
         val open = DishWindow(null, "11:00", "15:00")
         val closed = DishWindow(null, "13:00", "15:00")
