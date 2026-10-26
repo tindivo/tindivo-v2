@@ -59,6 +59,7 @@
         <item quantity="other">Completa %1$d opciones</item>
     </plurals>
     <string name="dish_added">Añadido a tu bolsa</string>
+    <string name="dish_bag_full">Tu bolsa ya tiene %1$d platos distintos: es el máximo por pedido</string>
     <string name="dish_added_capped">Ya tienes %1$d de este plato: es el máximo por pedido</string>
     <string name="dish_save_failed">No se pudo guardar tu bolsa. Inténtalo de nuevo.</string>
     <string name="dish_new_bag_title">¿Empezar una bolsa nueva?</string>

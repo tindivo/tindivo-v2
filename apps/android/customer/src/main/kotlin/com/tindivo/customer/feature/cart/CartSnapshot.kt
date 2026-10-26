@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.cart
 
 import kotlinx.serialization.Serializable
 import java.math.BigDecimal
+import java.util.Locale
 
 /** La versión del formato guardado en disco. Cualquier otra se descarta entera: no se migra a medias. */
 const val CART_SNAPSHOT_VERSION = 1
@@ -65,12 +66,13 @@ private fun CartLine.toSnapshot() =
 
 /**
  * La bolsa que representa [this], o `null` si algo no cuadra. Falla cerrado: una versión distinta, un importe que no
- * es un precio de carta, una cantidad, una lista de opciones o una nota fuera de los límites del pedido, o dos líneas
- * con la misma firma descartan la bolsa entera. Nunca se arregla a medias: lo que se enseñaría podría no ser lo que
- * la persona eligió.
+ * es un precio de carta, más platos, una cantidad, una lista de opciones o una nota fuera de los límites del pedido,
+ * una opción repetida en una línea, o dos líneas con la misma firma descartan la bolsa entera. Nunca se arregla a
+ * medias: lo que se enseñaría podría no ser lo que la persona eligió.
  */
 fun CartSnapshot.toCartOrNull(): Cart? {
-    if (version != CART_SNAPSHOT_VERSION || businessId.isBlank() || lines.isEmpty()) return null
+    if (version != CART_SNAPSHOT_VERSION || businessId.isBlank()) return null
+    if (lines.isEmpty() || lines.size > MAX_LINES) return null
     val restored = lines.map { it.toLineOrNull() ?: return null }
     if (restored.map { it.signature }.toSet().size != restored.size) return null
     return Cart(businessId, businessName, restored)
@@ -79,6 +81,8 @@ fun CartSnapshot.toCartOrNull(): Cart? {
 private fun CartLineSnapshot.toLineOrNull(): CartLine? {
     if (quantity !in 1..MAX_QUANTITY || modifiers.size > MAX_MODIFIERS) return null
     if ((note?.length ?: 0) > MAX_NOTE_LENGTH) return null
+    // Una opción repetida es una selección que el pedido rechaza (`checkModifierSelection`, 0275): no se deduplica.
+    if (modifiers.map { it.optionId.lowercase(Locale.ROOT) }.toSet().size != modifiers.size) return null
     val base = cartPriceOrNull(basePrice) ?: return null
     val restored =
         modifiers.map {

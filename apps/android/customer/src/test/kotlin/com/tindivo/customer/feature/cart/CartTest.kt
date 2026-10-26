@@ -137,4 +137,14 @@ class CartTest {
         assertNull(normalizeNote("   "))
         assertEquals(MAX_NOTE_LENGTH, normalizeNote("a".repeat(200))?.length)
     }
+
+    @Test
+    fun `con 50 platos distintos no entra otro y la bolsa no cambia, pero el mismo plato si suma`() {
+        val full = Cart("n", "Negocio", List(MAX_LINES) { line("p$it") })
+
+        assertEquals(AddResult.Full, addToCart(full, "n", "Negocio", line("otro")))
+        val merged = added(addToCart(full, "n", "Negocio", line("p0")))
+        assertEquals(MAX_LINES, merged.cart.lines.size)
+        assertEquals(2, merged.cart.lines[0].quantity)
+    }
 }

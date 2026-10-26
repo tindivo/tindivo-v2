@@ -26,7 +26,7 @@ class CartStore(
             result = outcome
             when (outcome) {
                 is AddResult.Added -> outcome.cart.toSnapshot()
-                is AddResult.OtherBusiness -> current
+                is AddResult.OtherBusiness, AddResult.Full -> current
             }
         }
         return checkNotNull(result)

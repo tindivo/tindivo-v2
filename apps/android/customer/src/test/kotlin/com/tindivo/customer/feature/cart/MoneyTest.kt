@@ -34,4 +34,12 @@ class MoneyTest {
         assertNull(menuPriceOrNull(BigDecimal("-1")))
         assertNull(menuPriceOrNull(BigDecimal("1e2147483647")))
     }
+
+    @Test
+    fun `el tope de importe sale de los limites de la bolsa y el maximo se muestra entero`() {
+        // 50 platos × 50 unidades × (plato + 20 opciones) a 99999999.99 cada uno.
+        assertEquals(BigDecimal("5249999999475.00"), MAX_AMOUNT)
+        assertEquals("S/ 5,249,999,999,475.00", formatAmount(MAX_AMOUNT).plain())
+        assertNull(formatAmount(MAX_AMOUNT + BigDecimal("0.01")))
+    }
 }

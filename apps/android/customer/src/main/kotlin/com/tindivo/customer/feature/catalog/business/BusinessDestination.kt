@@ -10,6 +10,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.cart.CartLine
+import com.tindivo.customer.feature.cart.MAX_LINES
 import com.tindivo.customer.feature.cart.MAX_QUANTITY
 import kotlinx.coroutines.launch
 
@@ -83,10 +84,12 @@ internal fun BagFeedback(
     val added = stringResource(R.string.dish_added)
     val capped = stringResource(R.string.dish_added_capped, MAX_QUANTITY)
     val failed = stringResource(R.string.dish_save_failed)
+    val full = stringResource(R.string.dish_bag_full, MAX_LINES)
     LaunchedEffect(outcome) {
         val message =
             when (outcome) {
                 is AddOutcome.Added -> if (outcome.capped) capped else added
+                AddOutcome.Full -> full
                 AddOutcome.Failed -> failed
                 else -> null
             }

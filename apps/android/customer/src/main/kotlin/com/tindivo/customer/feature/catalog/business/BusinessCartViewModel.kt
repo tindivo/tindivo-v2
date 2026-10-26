@@ -6,7 +6,7 @@ import com.tindivo.customer.feature.cart.AddResult
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartLine
 import com.tindivo.customer.feature.cart.CartStore
-import com.tindivo.customer.feature.cart.formatAmount
+import com.tindivo.customer.feature.cart.requireAmountText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +33,7 @@ internal fun cartBarFor(
     businessId: String,
 ): CartBarUi? {
     if (cart == null || cart.isEmpty() || !cart.businessId.equals(businessId, ignoreCase = true)) return null
-    return CartBarUi(cart.count, formatAmount(cart.subtotal).orEmpty())
+    return CartBarUi(cart.count, requireAmountText(cart.subtotal))
 }
 
 /** El resultado de pulsar «Agregar» en la ficha; la pantalla lo consume una sola vez. */
@@ -47,6 +47,9 @@ sealed interface AddOutcome {
         val currentBusinessName: String,
         val newBusinessName: String,
     ) : AddOutcome
+
+    /** La bolsa ya tiene el máximo de platos distintos del pedido; no se añadió. */
+    data object Full : AddOutcome
 
     /** No se pudo guardar en el teléfono. */
     data object Failed : AddOutcome
@@ -84,6 +87,11 @@ class BusinessCartViewModel
                 is AddResult.OtherBusiness -> {
                     pending = request
                     _outcome.value = AddOutcome.OtherBusiness(result.currentBusinessName, businessName)
+                }
+
+                AddResult.Full -> {
+                    pending = null
+                    _outcome.value = AddOutcome.Full
                 }
             }
         }

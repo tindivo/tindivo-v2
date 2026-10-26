@@ -63,6 +63,9 @@ sealed interface AddResult {
     data class OtherBusiness(
         val currentBusinessName: String,
     ) : AddResult
+
+    /** La bolsa ya tiene [MAX_LINES] platos distintos: el pedido no admite más. La bolsa no cambia. */
+    data object Full : AddResult
 }
 
 /**
@@ -86,8 +89,9 @@ fun addToCart(
 private fun mergeInto(
     cart: Cart,
     line: CartLine,
-): AddResult.Added {
+): AddResult {
     val existing = cart.lines.indexOfFirst { it.signature == line.signature }
+    if (existing < 0 && cart.lines.size >= MAX_LINES) return AddResult.Full
     if (existing < 0) return AddResult.Added(cart.copy(lines = cart.lines + line), capped = false)
     val wanted = cart.lines[existing].quantity + line.quantity
     val merged = line.copy(quantity = minOf(wanted, MAX_QUANTITY))
@@ -119,7 +123,8 @@ fun Cart.setQuantity(
 
 fun Cart.removeLine(signature: String): Cart = copy(lines = lines.filterNot { it.signature == signature })
 
-/** Lo que admite `POST /customer/orders` por plato (`packages/contracts/src/requests.ts`). */
+/** Lo que admite `POST /customer/orders` (`packages/contracts/src/requests.ts`): platos distintos y, por plato. */
+const val MAX_LINES = 50
 const val MAX_QUANTITY = 50
 const val MAX_NOTE_LENGTH = 140
 const val MAX_MODIFIERS = 20

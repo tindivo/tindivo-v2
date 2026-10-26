@@ -102,6 +102,25 @@ class CartSnapshotTest {
     }
 
     @Test
+    fun `una opcion repetida en una linea descarta la bolsa entera`() {
+        val queso = CartModifierSnapshot("6f1c0000-0000-4000-8000-00000000000a", "Extras", "Queso", "2.50")
+        val upper = queso.copy(optionId = queso.optionId.uppercase())
+        val valid = lineSnapshot(itemId = "otro")
+
+        assertNull(withLines(valid, lineSnapshot(modifiers = listOf(queso, queso))).toCartOrNull())
+        assertNull(withLines(valid, lineSnapshot(modifiers = listOf(queso, upper))).toCartOrNull())
+        assertTrue(withLines(valid, lineSnapshot(modifiers = listOf(queso))).toCartOrNull() != null)
+    }
+
+    @Test
+    fun `mas de 50 platos distintos descartan la bolsa`() {
+        fun lines(n: Int) = Array(n) { lineSnapshot(itemId = "p$it") }
+
+        assertEquals(MAX_LINES, withLines(*lines(MAX_LINES)).toCartOrNull()?.lines?.size)
+        assertNull(withLines(*lines(MAX_LINES + 1)).toCartOrNull())
+    }
+
+    @Test
     fun `sin negocio o sin lineas no hay bolsa`() {
         assertNull(snapshot().copy(businessId = " ").toCartOrNull())
         assertNull(snapshot().copy(lines = emptyList()).toCartOrNull())

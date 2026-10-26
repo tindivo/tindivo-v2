@@ -57,12 +57,12 @@ internal fun Cart?.toUi(): CartUiState {
                     options = line.modifiers.map { CartOptionUi(it.groupName, it.optionName) },
                     note = line.note,
                     quantity = line.quantity,
-                    total = formatAmount(line.total).orEmpty(),
+                    total = requireAmountText(line.total),
                     canDecrease = line.quantity > 1,
                     canIncrease = line.quantity < MAX_QUANTITY,
                 )
             },
-        subtotal = formatAmount(subtotal).orEmpty(),
+        subtotal = requireAmountText(subtotal),
     )
 }
 

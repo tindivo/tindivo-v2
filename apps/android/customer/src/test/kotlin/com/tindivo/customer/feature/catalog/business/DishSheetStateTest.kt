@@ -235,4 +235,35 @@ class DishSheetStateTest {
         assertEquals(MAX_MODIFIERS, state.selectedIds.size)
         assertTrue(state.isValid)
     }
+
+    @Test
+    fun `con 20 opciones elegidas se puede cambiar la de un grupo single y siguen siendo 20`() {
+        val many = group("many", "multi", false, options = List(MAX_MODIFIERS - 1) { option("o$it", "1.00") })
+        val one = group("one", "single", true, options = listOf(option("a", "2.00"), option("b", "3.00")))
+        var state = DishSheetState(item(many, one)).tap(one, "a")
+        many.options.forEach { state = state.toggle(many, it) }
+        assertEquals(MAX_MODIFIERS, state.selectedIds.size)
+
+        val b = one.options.first { it.id == "b" }
+        assertFalse(state.isDisabled(one, b))
+        val swapped = state.toggle(one, b)
+
+        assertEquals(MAX_MODIFIERS, swapped.selectedIds.size)
+        assertTrue("b" in swapped.selectedIds && "a" !in swapped.selectedIds)
+        assertTrue(swapped.isValid)
+        // 18.00 + 19 × 1.00 + 3.00
+        assertEquals(BigDecimal("40.00"), swapped.toLine().unitPrice)
+    }
+
+    @Test
+    fun `con 20 opciones elegidas un grupo single vacio no suma la 21`() {
+        val many = group("many", "multi", false, options = List(MAX_MODIFIERS) { option("o$it") })
+        val one = group("one", "single", false, options = listOf(option("a")))
+        var state = DishSheetState(item(many, one))
+        many.options.forEach { state = state.toggle(many, it) }
+
+        val a = one.options.single()
+        assertTrue(state.isDisabled(one, a))
+        assertEquals(state, state.toggle(one, a))
+    }
 }

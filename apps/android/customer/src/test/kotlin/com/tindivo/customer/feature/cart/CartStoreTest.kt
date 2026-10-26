@@ -40,7 +40,13 @@ class CartStoreTest {
         itemId: String = "plato",
         price: String = "12.50",
         quantity: Int = 1,
-    ) = CartLine(itemId, "Lomo", BigDecimal(price), emptyList(), null, quantity, null)
+        modifiers: List<CartModifier> = emptyList(),
+    ) = CartLine(itemId, "Lomo", BigDecimal(price), modifiers, null, quantity, null)
+
+    private suspend fun writeSnapshot(snapshot: CartSnapshot) =
+        file().outputStream().use {
+            CartSerializer.writeTo(snapshot, it)
+        }
 
     @Test
     fun `sin nada guardado no hay bolsa`() =
@@ -139,5 +145,33 @@ class CartStoreTest {
             assertNull(store.cart.first())
             store.add("m", "Chifa", line())
             assertEquals("m", checkNotNull(store.cart.first()).businessId)
+        }
+
+    @Test
+    fun `la bolsa mas cara admitida se guarda, se lee exacta y se muestra entera`() =
+        runTest {
+            val store = store()
+            val top = "99999999.99"
+            val options = List(MAX_MODIFIERS) { CartModifier("o$it", "Extras", "Opción $it", BigDecimal(top)) }
+            repeat(MAX_LINES) { store.add("n", "Pollería", line("p$it", top, MAX_QUANTITY, options)) }
+
+            assertEquals(AddResult.Full, store.add("n", "Pollería", line("otro")))
+            val cart = checkNotNull(store.cart.first())
+            assertEquals(MAX_LINES, cart.lines.size)
+            assertEquals(BigDecimal("5249999999475.00"), cart.subtotal)
+            val ui = cart.toUi() as CartUiState.Filled
+            assertEquals("S/ 5,249,999,999,475.00", ui.subtotal.replace('\u00A0', ' '))
+            assertEquals("S/ 104,999,999,989.50", ui.lines[0].total.replace('\u00A0', ' '))
+        }
+
+    @Test
+    fun `un archivo con una opcion repetida se lee como sin bolsa aunque las otras lineas valgan`() =
+        runTest {
+            val queso = CartModifierSnapshot("queso", "Extras", "Queso", "2.50")
+            val good = CartLineSnapshot("a", "Lomo", "10.00", emptyList(), null, 1, null)
+            val bad = good.copy(itemId = "b", modifiers = listOf(queso, queso.copy(optionId = "QUESO")))
+            writeSnapshot(CartSnapshot(businessId = "n", businessName = "Pollería", lines = listOf(good, bad)))
+
+            assertNull(store().cart.first())
         }
 }

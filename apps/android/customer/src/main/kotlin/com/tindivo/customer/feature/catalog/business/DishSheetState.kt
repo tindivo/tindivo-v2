@@ -13,6 +13,7 @@ import com.tindivo.customer.feature.cart.SINGLE
 import com.tindivo.customer.feature.cart.checkModifierSelection
 import com.tindivo.customer.feature.cart.formatAmount
 import com.tindivo.customer.feature.cart.normalizeNote
+import com.tindivo.customer.feature.cart.requireAmountText
 import java.math.BigDecimal
 import java.util.Locale
 
@@ -93,7 +94,7 @@ internal data class DishSheetState(
     val total: BigDecimal get() = unitPrice * BigDecimal(quantity)
 
     val cta: DishCta
-        get() = if (isValid) DishCta.Add(formatAmount(total).orEmpty()) else DishCta.Complete(missing)
+        get() = if (isValid) DishCta.Add(requireAmountText(total)) else DishCta.Complete(missing)
 
     fun isSelected(option: ModifierOptionUi): Boolean = option.id in selectedIds
 
@@ -110,11 +111,18 @@ internal data class DishSheetState(
 
     private fun count(group: ModifierGroupUi): Int = group.options.count { it.id in selectedIds }
 
-    /** En un grupo de varias opciones que llegó a su tope, las no elegidas se deshabilitan. */
+    /**
+     * Las no elegidas se deshabilitan si el grupo de varias opciones llegó a su tope, o si tocarlas sumaría una opción
+     * por encima de [MAX_MODIFIERS]. En un grupo `single` con una elegida, tocar otra la sustituye y el total no sube.
+     */
     fun isDisabled(
         group: ModifierGroupUi,
         option: ModifierOptionUi,
-    ): Boolean = !isSelected(option) && (isFull(group) || selectedIds.size >= MAX_MODIFIERS)
+    ): Boolean {
+        if (isSelected(option)) return false
+        val replaces = group.selectionType == SINGLE && count(group) > 0
+        return isFull(group) || (!replaces && selectedIds.size >= MAX_MODIFIERS)
+    }
 
     private fun isFull(group: ModifierGroupUi): Boolean {
         val max = group.maxSelections
@@ -137,8 +145,8 @@ internal data class DishSheetState(
             when {
                 chosen && (group.selectionType != SINGLE || !group.isRequired) -> current - option.id
                 chosen -> current
-                group.selectionType == SINGLE -> listOf(option.id)
                 isDisabled(group, option) -> current
+                group.selectionType == SINGLE -> listOf(option.id)
                 else -> current + option.id
             }
         return copy(selectedIds = others + next)
