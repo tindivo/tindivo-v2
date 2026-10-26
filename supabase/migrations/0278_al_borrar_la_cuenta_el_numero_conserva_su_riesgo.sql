@@ -59,6 +59,7 @@ declare
   c_gone constant text := 'Cuenta eliminada';
   v_phone      text;
   v_verified_at timestamptz;
+  v_closed_at  timestamptz;
 begin
   -- ORDEN DE CANDADOS, común con `customer_address_save`: primero el candado de
   -- aviso de la libreta de este usuario, después `users`, después sus direcciones.
@@ -195,6 +196,10 @@ begin
   -- (D-63), y su historia se queda (D-44: antifraude por teléfono): quien lo tome
   -- después empieza sin la confianza de esta cuenta (P5 de 0277). Va antes de borrar
   -- el perfil, porque keep_phone_restrictions lee de ahí el bloqueo y el prepago.
+  -- El cierre es el reloj de AHORA, no el `now()` del inicio de la transacción: mientras
+  -- el borrado esperaba la libreta, la misma cuenta pudo verificar un número y abrir una
+  -- asignación que empieza después (CAX-001). Ya con `users` bloqueado no se abre otra.
+  v_closed_at := clock_timestamp();
   select cp.phone, cp.phone_verified_at into v_phone, v_verified_at
   from public.customer_profiles cp
   where cp.user_id = p_user_id and cp.phone_verified_at is not null;
@@ -205,11 +210,13 @@ begin
     if not exists (select 1 from public.phone_assignments a
                    where a.user_id = p_user_id and a.ended_at is null) then
       insert into public.phone_assignments(phone, user_id, started_at, start_reason, ended_at, end_reason)
-      values (v_phone, p_user_id, v_verified_at, 'verification', now(), 'account_deleted');
+      values (v_phone, p_user_id, v_verified_at, 'verification',
+              greatest(v_verified_at, v_closed_at), 'account_deleted');
     end if;
   end if;
-  update public.phone_assignments set ended_at = now(), end_reason = 'account_deleted'
-  where user_id = p_user_id and ended_at is null;
+  update public.phone_assignments
+     set ended_at = greatest(started_at, v_closed_at), end_reason = 'account_deleted'
+   where user_id = p_user_id and ended_at is null;
   -- El desafío de traslado y el aviso de seguridad son de la persona: se van.
   delete from public.phone_transfer_challenges where user_id = p_user_id;
   delete from public.customer_security_notices where user_id = p_user_id;

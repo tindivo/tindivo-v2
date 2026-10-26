@@ -37,6 +37,10 @@ const MIGRATION_0277 = new globalThis.URL(
   '../../../../supabase/migrations/0277_un_numero_verificado_una_sola_cuenta.sql',
   import.meta.url,
 )
+const MIGRATION_0278 = new globalThis.URL(
+  '../../../../supabase/migrations/0278_al_borrar_la_cuenta_el_numero_conserva_su_riesgo.sql',
+  import.meta.url,
+)
 const PASSWORD = 'test-password-12345'
 const opts = { auth: { persistSession: false, autoRefreshToken: false } }
 const anon = () => createClient<Database>(URL, ANON_KEY, opts)
@@ -69,11 +73,15 @@ const PSQL = [
   '-',
 ]
 
-/** La barrera no se abre hasta MEDIR dos backends distintos esperando un bloqueo. */
+/**
+ * La barrera no se abre hasta MEDIR `waiters` backends distintos (dos por defecto)
+ * esperando un bloqueo; `whileWaiting` corre con ellos todavía esperando.
+ */
 async function withDatabaseGate<T>(
   lockSql: string,
   names: string[],
   run: () => Promise<T>,
+  { waiters = 2, whileWaiting }: { waiters?: number; whileWaiting?: () => Promise<void> } = {},
 ): Promise<T> {
   const gate = spawn('docker', PSQL, { stdio: ['pipe', 'pipe', 'pipe'] })
   const exited = new Promise<number | null>((resolve, reject) => {
@@ -106,18 +114,19 @@ async function withDatabaseGate<T>(
     pending = run()
     let waiting = 0
     const deadline = Date.now() + 10_000
-    while (waiting < 2 && Date.now() < deadline) {
+    while (waiting < waiters && Date.now() < deadline) {
       const raw = execFileSync('docker', PSQL, {
         input: `select count(distinct pid) from pg_stat_activity where state = 'active' and wait_event_type = 'Lock' and (${names.map((n) => `query like '%${n}%'`).join(' or ')});`,
         encoding: 'utf8',
       })
       waiting = Number(raw.trim())
-      if (waiting < 2) await new Promise((resolve) => setTimeout(resolve, 30))
+      if (waiting < waiters) await new Promise((resolve) => setTimeout(resolve, 30))
     }
     expect(
       waiting,
-      'dos conexiones HTTP deben estar esperando al mismo tiempo',
-    ).toBeGreaterThanOrEqual(2)
+      'las conexiones HTTP deben estar esperando al mismo tiempo',
+    ).toBeGreaterThanOrEqual(waiters)
+    if (whileWaiting) await whileWaiting()
   } finally {
     gate.stdin.end('commit;\n')
     expect(await exited).toBe(0)
@@ -1468,5 +1477,80 @@ describe('0278 · al borrar la cuenta, el número conserva su riesgo', () => {
       p_reason: 'motivo',
     })
     expect(notAdmin?.message).toMatch(/Solo un admin/)
+  })
+  it('CAX-001 · la cuenta verifica un número mientras su borrado espera: el borrado termina y el cierre no queda antes del inicio', async () => {
+    const a = await customer()
+    await restrict(a)
+    // Sin número todavía: lo verifica mientras su borrado espera el candado de la libreta.
+    const deleted = await withDatabaseGate(
+      `select pg_advisory_xact_lock(hashtextextended('customer_address:${a.id}', 0))`,
+      ['delete_customer_account'],
+      () => deleteOwnAccount(a),
+      {
+        waiters: 1,
+        whileWaiting: async () => {
+          await claim(a)
+        },
+      },
+    )
+    expect(deleted.status).toBe(204)
+    const rows = await assignments(a.phone)
+    expect(rows).toHaveLength(1)
+    const [row] = rows
+    expect(row).toMatchObject({ user_id: a.id, end_reason: 'account_deleted' })
+    expect(new Date(String(row?.ended_at)).getTime()).toBeGreaterThanOrEqual(
+      new Date(String(row?.started_at)).getTime(),
+    )
+    expect((await openRestrictions(a.phone)).map((r) => [r.kind, r.source])).toEqual([
+      ['blocked', 'account_deleted'],
+      ['contraentrega_blocked', 'account_deleted'],
+    ])
+  })
+
+  it('CAX-002 · 0278 se reaplica sobre restricciones existentes sin cambiarlas y rechaza un levantamiento incompleto', async () => {
+    const a = await customer()
+    const n = phone()
+    const migration = readFileSync(MIGRATION_0278, 'utf8')
+    const snapshot = (tag: string) =>
+      `select '${tag}|' || (select string_agg(kind || ',' || coalesce("until"::text, '-') || ',' || source || ',' || coalesce(lifted_at::text, '-') || ',' || coalesce(lifted_by::text, '-') || ',' || coalesce(lift_reason, '-'), ';' order by kind) from public.phone_restrictions where phone = '${n}')` +
+      ` || '|' || (select string_agg(conname || ':' || convalidated, ',' order by conname) from pg_constraint where conrelid = 'public.phone_restrictions'::regclass and contype = 'c')` +
+      ` || '|' || (select count(*) from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname in ('delete_customer_account', 'lift_phone_restriction'))` +
+      ` || '|' || (select count(*) from pg_trigger where tgname = 'trg_reject_deleted_account' and not tgisinternal and tgrelid in ('public.phone_assignments'::regclass, 'public.phone_transfer_challenges'::regclass, 'public.customer_security_notices'::regclass, 'public.phone_restrictions'::regclass));`
+    // Base local desechable; todo va dentro de una transacción que se revierte.
+    const output = execFileSync('docker', PSQL, {
+      input: [
+        'begin;',
+        `insert into public.phone_restrictions(phone, kind, "until", source, source_user_id) values ('${n}', 'blocked', now() + interval '2 days', 'transfer', '${a.id}');`,
+        `insert into public.phone_restrictions(phone, kind, source, source_user_id, lifted_at, lifted_by, lift_reason) values ('${n}', 'contraentrega_blocked', 'account_deleted', '${a.id}', now(), '${a.id}', 'Número reciclado, confirmado');`,
+        snapshot('ANTES'),
+        migration,
+        snapshot('UNA'),
+        migration,
+        snapshot('DOS'),
+        'create temp table lift_try(result text);',
+        `do $$ begin update public.phone_restrictions set lifted_at = now() where phone = '${n}' and kind = 'blocked'; insert into lift_try values ('aceptado'); exception when check_violation then insert into lift_try values ('rechazado'); end $$;`,
+        `select 'LEVANTAR|' || result from lift_try;`,
+        'rollback;',
+      ].join('\n'),
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    const line = (tag: string) =>
+      output
+        .split(/\r?\n/)
+        .find((l) => l.startsWith(`${tag}|`))
+        ?.split('|')
+        .slice(1)
+    const before = line('ANTES')
+    expect(before?.[0]).toMatch(
+      /^blocked,.+,transfer,-,-,-;contraentrega_blocked,-,account_deleted,.+,Número reciclado, confirmado$/,
+    )
+    expect(line('UNA')).toEqual(before)
+    expect(line('DOS')).toEqual(before)
+    // Los CHECK quedan validados, con una sola versión de cada función y los cuatro guards.
+    expect(before?.[1]).toMatch(/phone_restrictions_lift_check:true/)
+    expect(before?.[1]).toMatch(/phone_restrictions_source_check:true/)
+    expect(before?.slice(2)).toEqual(['2', '4'])
+    expect(line('LEVANTAR')).toEqual(['rechazado'])
   })
 })
