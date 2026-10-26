@@ -124,7 +124,13 @@ beforeAll(async () => {
         additional_price: 20,
         display_order: 1,
       },
-      { id: cheeseId, group_id: extrasGroupId, name: 'Queso', additional_price: 1.5 },
+      {
+        id: cheeseId,
+        group_id: extrasGroupId,
+        name: 'Queso',
+        additional_price: 1.5,
+        display_order: 0,
+      },
     ])
     .throwOnError()
 })
