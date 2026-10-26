@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.orders
 import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseDataDriver
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseDataItemsInner
+import com.tindivo.customer.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -133,6 +134,7 @@ class OrderMappingTest {
         assertTrue(link, link.startsWith("https://wa.me/51987654321?text="))
         assertTrue(link, link.contains("Hola%2C%20te%20escribo%20por%20mi%20pedido%20de%20Poller%C3%ADa%20Rosa"))
         assertTrue(link, link.contains("%28%23ABCD2345%29"))
+        assertTrue(ui?.driver?.atDoor == true)
         assertNull(detail(status = "delivered", driver = driver).toDetailUi()?.driver?.whatsappLink)
         val noPhone = GetCustomerOrder200ResponseDataDriver(name = "Luis", phone = null)
         assertNull(detail(status = "picked_up", driver = noPhone).toDetailUi()?.driver?.whatsappLink)
@@ -193,5 +195,89 @@ class OrderMappingTest {
         )
         assertFalse(detail(status = "awaiting_payment").toDetailUi()?.webPaymentNotice == true)
         assertFalse(detail(status = "preparing", paymentIntent = "prepaid").toDetailUi()?.webPaymentNotice == true)
+    }
+
+    @Test
+    fun `sin el motorizado en la puerta no hay boton de WhatsApp aunque llegue un telefono`() {
+        val driver = GetCustomerOrder200ResponseDataDriver(name = "Luis", phone = "987654321")
+
+        val ui = detail(status = "picked_up", driver = driver).toDetailUi()?.driver
+
+        assertEquals("Luis", ui?.name)
+        assertFalse(ui?.atDoor == true)
+        assertNull(ui?.whatsappLink)
+    }
+
+    @Test
+    fun `con el prepago ya enviado o verificado la cancelacion no dice sin costo`() {
+        fun cancelled(
+            reason: String,
+            intent: String = "prepaid",
+            proofAttempt: Int = 0,
+            verifiedAt: String? = null,
+        ) = detail(
+            status = "cancelled",
+            cancelReason = reason,
+            paymentIntent = intent,
+            proofAttempt = proofAttempt,
+            paymentVerifiedAt = verifiedAt,
+        ).toDetailUi()?.headline
+
+        val verified = "2026-10-26T15:10:00Z"
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.CustomerCancelled, alreadyPaid = true),
+            cancelled("customer_cancelled", proofAttempt = 1),
+        )
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.BusinessCancelled, alreadyPaid = true),
+            cancelled("business_cancelled", verifiedAt = verified),
+        )
+        // Un comprobante rechazado cuenta: pudo haber pagado, así que tampoco se le dice «sin costo».
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.AdminCancelled, alreadyPaid = true),
+            cancelled("admin_cancelled", proofAttempt = 2),
+        )
+        assertEquals(OrderHeadline.Cancelled(CancelCopy.CouldNotConfirm), cancelled("validation_timeout"))
+        // Solo el prepago: en efectivo no hay pago adelantado aunque llegue un dato de pago.
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.CustomerCancelled),
+            cancelled("customer_cancelled", intent = "pending_cash", proofAttempt = 1),
+        )
+    }
+
+    @Test
+    fun `cada motivo con pago ya enviado elige la frase de coordinar el pago`() {
+        assertEquals(R.string.order_cancel_customer_paid_body, CancelCopy.CustomerCancelled.bodyRes(alreadyPaid = true))
+        assertEquals(
+            R.string.order_cancel_unconfirmed_paid_body,
+            CancelCopy.CouldNotConfirm.bodyRes(alreadyPaid = true),
+        )
+        assertEquals(R.string.order_cancel_business_paid_body, CancelCopy.BusinessCancelled.bodyRes(alreadyPaid = true))
+        assertEquals(R.string.order_cancel_admin_paid_body, CancelCopy.AdminCancelled.bodyRes(alreadyPaid = true))
+        assertEquals(R.string.order_cancel_customer_body, CancelCopy.CustomerCancelled.bodyRes(alreadyPaid = false))
+        assertEquals(R.string.order_cancel_prepay_body, CancelCopy.PrepayTimeout.bodyRes(alreadyPaid = true))
+    }
+
+    @Test
+    fun `en validando el prepago con comprobante se esta verificando y sin comprobante espera disponibilidad`() {
+        fun hero(proofAttempt: Int) =
+            detail(status = "validando", paymentIntent = "prepaid", proofAttempt = proofAttempt).toDetailUi()?.headline
+
+        assertEquals(OrderHeadline.Progress(OrderHero.AwaitingAvailability), hero(0))
+        assertEquals(OrderHeadline.Progress(OrderHero.VerifyingProof), hero(1))
+    }
+
+    @Test
+    fun `total pagado solo con el prepago verificado, no por haber subido un comprobante`() {
+        val verified = "2026-10-26T15:10:00Z"
+
+        assertTrue(detail(paymentIntent = "prepaid", paymentVerifiedAt = verified).toDetailUi()?.totalPaid == true)
+        assertFalse(
+            detail(status = "awaiting_payment", paymentIntent = "prepaid", proofAttempt = 1).toDetailUi()?.totalPaid ==
+                true,
+        )
+        assertFalse(
+            detail(paymentIntent = "pending_cash", paymentVerifiedAt = verified).toDetailUi()?.totalPaid == true,
+        )
     }
 }

@@ -55,6 +55,8 @@ internal fun detail(
     modifierPrice: String = "2.50",
     lineTotal: String = "45.00",
     createdAt: String = "2026-10-26T15:00:00.000Z",
+    proofAttempt: Int = 0,
+    paymentVerifiedAt: String? = null,
 ) = GetCustomerOrder200ResponseData(
     id = ORDER_ID,
     shortId = "ABCD2345",
@@ -92,8 +94,8 @@ internal fun detail(
     changeToGive = changeToGive,
     estimatedReadyAt = null,
     arrivedAtCustomerAt = arrivedAtCustomerAt,
-    proofAttempt = 0,
-    paymentVerifiedAt = null,
+    proofAttempt = proofAttempt,
+    paymentVerifiedAt = paymentVerifiedAt,
     driver = driver,
 )
 

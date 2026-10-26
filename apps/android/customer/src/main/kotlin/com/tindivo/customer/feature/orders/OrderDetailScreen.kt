@@ -154,11 +154,12 @@ private fun OrderDetailPreview() {
                 ),
             deliveryFee = "S/ 3.50",
             total = "S/ 48.50",
+            totalPaid = false,
             cash = CashPaymentUi("S/ 50.00", CashChange.Amount("S/ 1.50")),
             address = "Jr. Lima 123",
             reference = "Frente al parque",
             customerNotes = "Tocar el timbre",
-            driver = DriverUi(name = "Luis", whatsappLink = null),
+            driver = DriverUi(name = "Luis", atDoor = false, whatsappLink = null),
             webPaymentNotice = false,
         )
     TindivoTheme {

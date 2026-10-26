@@ -55,11 +55,10 @@ internal fun OrderHeadlineBlock(headline: OrderHeadline) {
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
-                Text(text = stringResource(headline.copy.bodyRes()), style = MaterialTheme.typography.bodyLarge)
-                // Sin enlace: el número de soporte no viene en la API.
-                if (headline.copy.needsHelpLine()) {
-                    Text(text = stringResource(R.string.order_cancel_help), style = MaterialTheme.typography.bodyLarge)
-                }
+                Text(
+                    text = stringResource(headline.copy.bodyRes(headline.alreadyPaid)),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
             }
         }
     }
@@ -97,7 +96,7 @@ internal fun OrderSteps(
     }
 }
 
-/** Quién trae el pedido. El teléfono nunca se escribe: solo el botón, cuando el servidor lo manda. */
+/** Quién trae el pedido. El teléfono nunca se escribe: solo el botón, con el motorizado en la puerta. */
 @Composable
 internal fun DriverBlock(
     driver: DriverUi,
@@ -112,6 +111,9 @@ internal fun DriverBlock(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(text = name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            if (driver.atDoor) {
+                Text(text = stringResource(R.string.order_driver_at_door), style = MaterialTheme.typography.bodyMedium)
             }
             driver.whatsappLink?.let { link ->
                 Button(
@@ -143,16 +145,26 @@ internal fun OrderLines(lines: List<OrderLineUi>) {
                         fontWeight = FontWeight.Bold,
                     )
                 }
+                // Como la web: solo el nombre de la opción y, si cuesta, el extra a la derecha.
                 line.options.forEach { option ->
-                    Text(
-                        text =
-                            listOfNotNull(
-                                stringResource(R.string.order_option, option.group, option.name),
-                                option.extra,
-                            ).joinToString(" "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = option.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        option.extra?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
                 line.note?.let {
                     Text(
@@ -186,7 +198,10 @@ internal fun OrderTotals(order: OrderDetailUi) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        StatusRow(label = stringResource(R.string.order_total), value = order.total)
+        StatusRow(
+            label = stringResource(if (order.totalPaid) R.string.order_total_paid else R.string.order_total),
+            value = order.total,
+        )
     }
 }
 

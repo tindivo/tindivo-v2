@@ -9,6 +9,7 @@ internal fun OrderHero.titleRes(): Int =
         OrderHero.Received,
         OrderHero.AwaitingAvailability,
         OrderHero.PayNow,
+        OrderHero.VerifyingProof,
         OrderHero.PaymentVerified,
         -> R.string.order_hero_received
 
@@ -29,6 +30,7 @@ internal fun OrderHero.subtitleRes(): Int? =
         OrderHero.Received -> R.string.order_hero_received_sub
         OrderHero.AwaitingAvailability -> R.string.order_hero_awaiting_availability_sub
         OrderHero.PayNow -> R.string.order_hero_pay_now_sub
+        OrderHero.VerifyingProof -> R.string.order_hero_verifying_proof_sub
         OrderHero.PaymentVerified -> R.string.order_hero_payment_verified_sub
         OrderHero.Preparing -> R.string.order_hero_preparing_sub
         OrderHero.OnTheWay -> R.string.order_hero_on_the_way_sub
@@ -50,32 +52,47 @@ internal fun CancelCopy.titleRes(): Int =
         CancelCopy.Generic -> R.string.order_cancel_generic_title
     }
 
-internal fun CancelCopy.bodyRes(): Int =
-    when (this) {
-        CancelCopy.CustomerCancelled -> R.string.order_cancel_customer_body
-        CancelCopy.PrepayTimeout -> R.string.order_cancel_prepay_body
-        CancelCopy.CouldNotConfirm -> R.string.order_cancel_unconfirmed_body
-        CancelCopy.BusinessCancelled -> R.string.order_cancel_business_body
-        CancelCopy.AdminCancelled -> R.string.order_cancel_admin_body
-        CancelCopy.ProofRejected -> R.string.order_cancel_proof_body
-        CancelCopy.PickupNoShow -> R.string.order_cancel_pickup_no_show_body
-        CancelCopy.DeliveryNoShow -> R.string.order_cancel_delivery_no_show_body
-        CancelCopy.Generic -> R.string.order_cancel_generic_body
-    }
-
 /**
- * `true` si a la frase de la web hay que añadirle «Si tienes dudas, escríbenos por WhatsApp.». Las demás ya
- * terminan invitando a escribir por WhatsApp. Sin enlace: el número de soporte no viene en la API.
+ * El cuerpo del aviso de cancelación. Con [alreadyPaid], los cuatro motivos en los que la web diría «sin costo» o «no
+ * se te cobró nada» cambian a la frase que pide escribir por WhatsApp para coordinar el pago (`cancelledCopy`).
  */
-internal fun CancelCopy.needsHelpLine(): Boolean =
+internal fun CancelCopy.bodyRes(alreadyPaid: Boolean): Int =
     when (this) {
-        CancelCopy.CustomerCancelled,
-        CancelCopy.PrepayTimeout,
-        CancelCopy.CouldNotConfirm,
-        CancelCopy.BusinessCancelled,
-        -> true
+        CancelCopy.CustomerCancelled -> {
+            if (alreadyPaid) R.string.order_cancel_customer_paid_body else R.string.order_cancel_customer_body
+        }
 
-        else -> false
+        CancelCopy.CouldNotConfirm -> {
+            if (alreadyPaid) R.string.order_cancel_unconfirmed_paid_body else R.string.order_cancel_unconfirmed_body
+        }
+
+        CancelCopy.BusinessCancelled -> {
+            if (alreadyPaid) R.string.order_cancel_business_paid_body else R.string.order_cancel_business_body
+        }
+
+        CancelCopy.AdminCancelled -> {
+            if (alreadyPaid) R.string.order_cancel_admin_paid_body else R.string.order_cancel_admin_body
+        }
+
+        CancelCopy.PrepayTimeout -> {
+            R.string.order_cancel_prepay_body
+        }
+
+        CancelCopy.ProofRejected -> {
+            R.string.order_cancel_proof_body
+        }
+
+        CancelCopy.PickupNoShow -> {
+            R.string.order_cancel_pickup_no_show_body
+        }
+
+        CancelCopy.DeliveryNoShow -> {
+            R.string.order_cancel_delivery_no_show_body
+        }
+
+        CancelCopy.Generic -> {
+            R.string.order_cancel_generic_body
+        }
     }
 
 /** El nombre del paso del seguimiento; en recojo el tercero se llama «Listo». */
@@ -92,6 +109,6 @@ internal fun OrderPhase.labelRes(isPickup: Boolean): Int =
     when (this) {
         is OrderPhase.Active -> step.labelRes(isPickup)
         OrderPhase.Delivered -> R.string.order_step_delivered
-        is OrderPhase.Cancelled -> R.string.order_cancelled_eyebrow
+        is OrderPhase.Cancelled -> R.string.order_card_cancelled
         OrderPhase.Unknown -> R.string.order_hero_unknown
     }
