@@ -3905,6 +3905,14 @@ export type Database = {
         Returns: boolean
       }
       is_within_platform_schedule: { Args: never; Returns: boolean }
+      lift_phone_restriction: {
+        Args: {
+          p_admin_user_id: string
+          p_reason: string
+          p_restriction_id: string
+        }
+        Returns: Json
+      }
       list_proof_purge_due: {
         Args: {
           p_after_deleted_at?: string

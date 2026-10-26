@@ -26,6 +26,7 @@ import {
   setOrderStatus,
 } from './helpers/local-db'
 import { callCreateCourierOrder, patchCourierSettings } from './helpers/local-db-courier'
+import { cleanupPhoneSecurityFixtures } from './helpers/phone-security-fixtures'
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
 const LOCAL_ANON_KEY =
@@ -220,6 +221,8 @@ afterAll(async () => {
     await db.from('courier_orders').delete().eq('customer_user_id', id)
     await db.from('customer_incidents').delete().eq('customer_user_id', id)
     await db.from('reports').delete().eq('customer_user_id', id)
+    // 0278: una cuenta borrada deja su historia del número.
+    await cleanupPhoneSecurityFixtures(db, [id])
     await db.from('users').delete().eq('id', id)
     await db.auth.admin.deleteUser(id)
   }

@@ -24,6 +24,7 @@ import {
   setOrderStatus,
 } from './helpers/local-db'
 import { callCreateCourierOrder, patchCourierSettings } from './helpers/local-db-courier'
+import { cleanupPhoneSecurityFixtures } from './helpers/phone-security-fixtures'
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
 const LOCAL_ANON_KEY =
@@ -175,6 +176,8 @@ afterAll(async () => {
   for (const id of clientes) {
     await db.from('courier_orders').delete().eq('customer_user_id', id)
     await db.from('order_reviews').delete().eq('customer_user_id', id)
+    // 0278: una cuenta borrada deja su historia del número.
+    await cleanupPhoneSecurityFixtures(db, [id])
     await db.from('users').delete().eq('id', id)
     await db.auth.admin.deleteUser(id)
   }
@@ -205,6 +208,9 @@ const BORRADAS = new Set([
   'promo_redemptions',
   'customer_otp_attempts',
   'user_roles',
+  // 0278: el desafío de traslado y el aviso de seguridad son de la persona.
+  'phone_transfer_challenges',
+  'customer_security_notices',
 ])
 
 /**
@@ -218,13 +224,11 @@ const CONSERVADAS = new Set([
   'address_directory',
   'fraud_coverage_claims',
   'business_charges', // el ledger: dinero
-  // 0277: historia del número y sus restricciones (antifraude, como customer_strikes), el
-  // desafío de traslado y el aviso a la cuenta anterior. Hoy 0259 no las toca; qué se borra
-  // o se cierra al darse de baja lo decide S2b (Docs/planes/movil/decisiones.md, D-63).
+  // 0278: la historia del número (cerrada) y sus restricciones se quedan, como
+  // customer_strikes: el riesgo es del número (D-63) y el antifraude por teléfono se
+  // conserva (D-44). Sin la historia, quien tome el número heredaría la confianza.
   'phone_assignments',
   'phone_restrictions',
-  'phone_transfer_challenges',
-  'customer_security_notices',
 ])
 
 /** Datos del negocio, del motorizado o de la configuración: no son de la persona que se va. */

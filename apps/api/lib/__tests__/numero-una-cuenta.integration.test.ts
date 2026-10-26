@@ -10,6 +10,9 @@ import { createClient } from '@supabase/supabase-js'
 import { CustomerSecurityNoticesSchema, PhoneTransferSchema } from '@tindivo/contracts'
 import type { Database, TablesInsert } from '@tindivo/supabase'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { POST as liftRestriction } from '../../app/api/v1/admin/phone-restrictions/[id]/lift/route'
+import { GET as adminRestrictions } from '../../app/api/v1/admin/phone-restrictions/route'
+import { DELETE as deleteAccount } from '../../app/api/v1/customer/account/route'
 import { POST as sendCode } from '../../app/api/v1/customer/phone/send-code/route'
 import { POST as transfer } from '../../app/api/v1/customer/phone/transfer/route'
 import { POST as verify } from '../../app/api/v1/customer/phone/verify/route'
@@ -722,7 +725,11 @@ describe('0277 · un número, una cuenta', () => {
     expect(manual.error?.message).toMatch(/bloque|operativ/i)
     await db
       .from('phone_restrictions')
-      .update({ lifted_at: new Date().toISOString() })
+      .update({
+        lifted_at: new Date().toISOString(),
+        lifted_by: ownerId,
+        lift_reason: 'Prueba: levantado a mano',
+      })
       .eq('phone', a.phone)
       .eq('kind', 'blocked')
       .throwOnError()
@@ -1214,5 +1221,252 @@ describe('0277 · un número, una cuenta', () => {
       body: '{}',
     })
     expect(pushTypes.status).toBe(403)
+  })
+})
+
+async function admin() {
+  const a = await customer()
+  await db.from('user_roles').insert({ user_id: a.id, role: 'admin' }).throwOnError()
+  return a
+}
+
+function deleteOwnAccount(c: Customer) {
+  return deleteAccount(
+    new Request('http://localhost:3001/api/v1/customer/account', {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${c.token}` },
+    }),
+  )
+}
+
+async function openRestrictions(number: string) {
+  const { data } = await db
+    .from('phone_restrictions')
+    .select('id,kind,until,source,source_user_id,lifted_at,lifted_by,lift_reason')
+    .eq('phone', number)
+    .is('lifted_at', null)
+    .order('kind')
+    .throwOnError()
+  return data ?? []
+}
+
+describe('0278 · al borrar la cuenta, el número conserva su riesgo', () => {
+  it('A bloqueada y con prepago borra su cuenta: el número se lleva el riesgo y B lo hereda', async () => {
+    const a = await customer()
+    const b = await customer()
+    expect((await call(verify, a, { phone: a.phone, code: DEV_OTP_CODE })).status).toBe(200)
+    const until = await restrict(a)
+    expect((await deleteOwnAccount(a)).status).toBe(204)
+    const kept = await openRestrictions(a.phone)
+    expect(kept.map((r) => [r.kind, r.source, r.source_user_id])).toEqual([
+      ['blocked', 'account_deleted', a.id],
+      ['contraentrega_blocked', 'account_deleted', a.id],
+    ])
+    expect((await assignments(a.phone)).map((x) => [x.user_id, x.end_reason])).toEqual([
+      [a.id, 'account_deleted'],
+    ])
+    expect((await call(verify, b, { phone: a.phone, code: DEV_OTP_CODE })).status).toBe(200)
+    await expectRestricted(b, a.phone, until, a.id)
+  })
+
+  it('sin riesgo no crea restricciones; borra sus desafíos y avisos y conserva la historia', async () => {
+    const a = await customer()
+    const c = await customer()
+    await claim(a)
+    await claim(c)
+    // A tiene un desafío pendiente contra el número de C y un aviso propio.
+    await challenge(a, c.phone)
+    await db
+      .from('customer_security_notices')
+      .insert({ user_id: a.id, kind: 'phone_moved', phone_last3: '123' })
+      .throwOnError()
+    expect((await deleteOwnAccount(a)).status).toBe(204)
+    expect(await openRestrictions(a.phone)).toEqual([])
+    for (const table of ['phone_transfer_challenges', 'customer_security_notices'] as const) {
+      const { count } = await db
+        .from(table)
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', a.id)
+        .throwOnError()
+      expect(count, table).toBe(0)
+    }
+    expect((await assignments(a.phone)).map((x) => x.end_reason)).toEqual(['account_deleted'])
+    // C sigue siendo dueña de su número.
+    expect(await profile(c)).toMatchObject({ phone: `+51${c.phone}` })
+    expect((await assignments(c.phone)).map((x) => [x.user_id, x.ended_at])).toEqual([[c.id, null]])
+  })
+
+  it('un perfil sellado sin asignación (seed) deja igual su historia, cerrada', async () => {
+    const a = await customer()
+    await db
+      .from('customer_profiles')
+      .update({ phone: `+51${a.phone}`, phone_verified_at: new Date().toISOString() })
+      .eq('user_id', a.id)
+      .throwOnError()
+    expect(await assignments(a.phone)).toEqual([])
+    await restrict(a)
+    expect((await deleteOwnAccount(a)).status).toBe(204)
+    expect(await assignments(a.phone)).toMatchObject([
+      { user_id: a.id, start_reason: 'verification', end_reason: 'account_deleted' },
+    ])
+    expect(await openRestrictions(a.phone)).toHaveLength(2)
+  })
+
+  it('quien toma el número de una cuenta borrada no hereda la confianza del directorio', async () => {
+    const a = await customer()
+    const b = await customer()
+    await claim(a)
+    await db
+      .from('address_directory')
+      .insert({ phone: a.phone, reference: 'Casa de prueba', source: 'admin_curated' })
+      .throwOnError()
+    const before = await db
+      .rpc('customer_contraentrega_decision', { p_customer_user_id: a.id })
+      .throwOnError()
+    expect(before.data).toBe('trusted')
+    expect((await deleteOwnAccount(a)).status).toBe(204)
+    expect((await call(verify, b, { phone: a.phone, code: DEV_OTP_CODE })).status).toBe(200)
+    const after = await db
+      .rpc('customer_contraentrega_decision', { p_customer_user_id: b.id })
+      .throwOnError()
+    expect(after.data).toBe('no_history')
+  })
+
+  it('una cuenta borrada no recibe filas nuevas en las tablas del número', async () => {
+    const a = await customer()
+    await claim(a)
+    expect((await deleteOwnAccount(a)).status).toBe(204)
+    const n = phone()
+    const attempts = [
+      db
+        .from('phone_assignments')
+        .insert({ phone: `+51${n}`, user_id: a.id, start_reason: 'verification' }),
+      db
+        .from('customer_security_notices')
+        .insert({ user_id: a.id, kind: 'phone_moved', phone_last3: '123' }),
+      db.from('phone_restrictions').insert({
+        phone: n,
+        kind: 'blocked',
+        source_user_id: a.id,
+        source: 'account_deleted',
+      }),
+    ]
+    for (const attempt of attempts) {
+      const { error } = await attempt
+      expect(error?.message).toMatch(/account was deleted/)
+    }
+    const { data: open } = await db
+      .from('phone_assignments')
+      .select('id')
+      .eq('user_id', a.id)
+      .is('ended_at', null)
+      .throwOnError()
+    expect(open).toEqual([])
+  })
+
+  it('borrar la cuenta y trasladar su número a la vez: el riesgo queda una sola vez', async () => {
+    const a = await customer()
+    const b = await customer()
+    await claim(a)
+    await claim(b)
+    await restrict(a)
+    const proof = await challenge(b, a.phone)
+    const [deleted, moved] = await withDatabaseGate(
+      `select id from public.users where id = '${a.id}' for update`,
+      ['delete_customer_account', 'claim_customer_phone'],
+      () =>
+        Promise.all([deleteOwnAccount(a), call(transfer, b, { challengeId: proof.challengeId })]),
+    )
+    expect(deleted.status).toBe(204)
+    if (moved.status === 409) {
+      // El borrado entró primero: el desafío quedó sin dueño y B verifica el número libre.
+      expect((await moved.json()).detail).toBe('El código ya no sirve. Pide uno nuevo.')
+      expect((await call(verify, b, { phone: a.phone, code: DEV_OTP_CODE })).status).toBe(200)
+    } else {
+      expect(moved.status).toBe(200)
+    }
+    expect(await profile(b)).toMatchObject({ phone: `+51${a.phone}` })
+    const kept = await openRestrictions(a.phone)
+    expect(kept.map((r) => r.kind)).toEqual(['blocked', 'contraentrega_blocked'])
+    expect(kept.every((r) => r.source_user_id === a.id)).toBe(true)
+  })
+
+  it('un admin lista y levanta una restricción con motivo; los demás no pueden', async () => {
+    const a = await customer()
+    const b = await customer()
+    const boss = await admin()
+    await claim(a)
+    await restrict(a)
+    expect((await deleteOwnAccount(a)).status).toBe(204)
+    expect((await call(verify, b, { phone: a.phone, code: DEV_OTP_CODE })).status).toBe(200)
+
+    const list = await adminRestrictions(
+      new Request(`http://localhost:3001/api/v1/admin/phone-restrictions?phone=${a.phone}`, {
+        headers: { authorization: `Bearer ${boss.token}` },
+      }),
+      { params: Promise.resolve({}) },
+    )
+    expect(list.status).toBe(200)
+    const listed = (await list.json()).data as { id: string; kind: string; source: string }[]
+    expect(listed.map((r) => [r.kind, r.source]).sort()).toEqual([
+      ['blocked', 'account_deleted'],
+      ['contraentrega_blocked', 'account_deleted'],
+    ])
+    const blocked = listed.find((r) => r.kind === 'blocked')
+    if (!blocked) throw new Error('sin bloqueo')
+
+    // Un cliente no puede, y un motivo vacío no sirve.
+    expect((await call(liftRestriction, b, { reason: 'quiero' }, { id: blocked.id })).status).toBe(
+      403,
+    )
+    expect((await call(liftRestriction, boss, { reason: ' ' }, { id: blocked.id })).status).toBe(
+      422,
+    )
+    const reason = 'Número reciclado, confirmado por WhatsApp'
+    expect((await call(liftRestriction, boss, { reason }, { id: blocked.id })).status).toBe(204)
+    expect((await call(liftRestriction, boss, { reason }, { id: blocked.id })).status).toBe(409)
+    expect(
+      (await call(liftRestriction, boss, { reason }, { id: crypto.randomUUID() })).status,
+    ).toBe(404)
+
+    const { data: row } = await db
+      .from('phone_restrictions')
+      .select('lifted_at,lifted_by,lift_reason')
+      .eq('id', blocked.id)
+      .single()
+      .throwOnError()
+    expect(row).toMatchObject({ lifted_by: boss.id, lift_reason: reason })
+    // Se levantó el bloqueo; el prepago sigue hasta que se levante aparte.
+    expect(
+      (await db.rpc('customer_is_blocked', { p_user_id: b.id, p_phone: a.phone }).throwOnError())
+        .data,
+    ).toBe(false)
+    expect(
+      (
+        await db
+          .rpc('customer_requires_prepayment', {
+            p_user_id: b.id,
+            p_phone: a.phone,
+            p_reference: '',
+          })
+          .throwOnError()
+      ).data,
+    ).toBe(true)
+  })
+
+  it('la función de levantar no se llama con una sesión y exige que el id sea de un admin', async () => {
+    const a = await customer()
+    const { error: denied } = await a.client.rpc('lift_phone_restriction', {
+      p_restriction_id: crypto.randomUUID(),
+      p_admin_user_id: a.id,
+      p_reason: 'motivo',
+    })
+    expect(denied?.code).toBe('42501')
+    const { error: notAdmin } = await db.rpc('lift_phone_restriction', {
+      p_restriction_id: crypto.randomUUID(),
+      p_admin_user_id: a.id,
+      p_reason: 'motivo',
+    })
+    expect(notAdmin?.message).toMatch(/Solo un admin/)
   })
 })

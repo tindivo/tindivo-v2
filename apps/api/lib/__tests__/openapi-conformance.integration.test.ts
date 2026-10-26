@@ -29,6 +29,7 @@ import { E2E as FIXTURES } from '../../scripts/e2e-fixtures'
 import { localClient as db, E2E, uploadProofObject } from './helpers/local-db'
 import { COURIER_POINT_A, COURIER_POINT_B } from './helpers/local-db-courier'
 import { checkedOperations, expectConforms } from './helpers/openapi-conformance'
+import { cleanupPhoneSecurityFixtures } from './helpers/phone-security-fixtures'
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
 const LOCAL_ANON_KEY =
@@ -677,6 +678,8 @@ describe('MV5: borrar la cuenta', () => {
       })
     } finally {
       // Queda la lápida de `public.users`: no tiene pedidos, se puede quitar.
+      // 0278: una cuenta borrada deja su historia del número.
+      await cleanupPhoneSecurityFixtures(db, [id])
       await db.from('users').delete().eq('id', id)
       await db.auth.admin.deleteUser(id)
     }
