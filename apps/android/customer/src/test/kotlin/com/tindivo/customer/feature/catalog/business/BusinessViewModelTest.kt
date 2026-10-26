@@ -367,6 +367,7 @@ class BusinessViewModelTest {
         val closed = DishWindow(null, "13:00", "15:00")
         val detail =
             BusinessDetailUi(
+                id = "x",
                 name = "x",
                 tagline = null,
                 logoUrl = null,

@@ -22,6 +22,7 @@ internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi? {
             .map { it.toCategory() ?: return null }
             .filter { it.items.isNotEmpty() }
     return BusinessDetailUi(
+        id = business.id.toString(),
         name = business.name,
         tagline = business.tagline?.takeIf { it.isNotBlank() },
         logoUrl = business.logoUrl?.takeIf { it.isNotBlank() },

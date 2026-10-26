@@ -1,27 +1,25 @@
 package com.tindivo.customer.feature.catalog.business
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,41 +31,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
 import java.math.BigDecimal
 
-/** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
-fun BusinessDestination(
-    onBack: () -> Unit,
-    viewModel: BusinessViewModel = hiltViewModel(),
-) {
-    val state = viewModel.state.collectAsStateWithLifecycle().value
-    val now = viewModel.now.collectAsStateWithLifecycle().value
-    val visible = remember(state, now) { state.visibleAt(now) }
-    BusinessScreen(state = visible, onRefresh = viewModel::refresh, onBack = onBack)
-}
-
-@Composable
-fun BusinessScreen(
+internal fun BusinessScreen(
     state: BusinessUiState,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
+    cart: BusinessCartState = BusinessCartState(),
+    cartActions: BusinessCartActions = BusinessCartActions({}, {}, {}, {}),
 ) {
     // La posición de la carta vive aquí y no en MenuList: al buscar, la lista se reemplaza por los resultados y, al
     // salir, tiene que reaparecer donde estaba.
@@ -84,8 +66,20 @@ fun BusinessScreen(
     }
     val searching = query != null && business != null
     BackHandler(enabled = searching) { query = null }
+    // La ficha abierta se recuerda por id: sobrevive a girar la pantalla y se cierra sola si el plato sale de la carta.
+    var openDishId by rememberSaveable { mutableStateOf<String?>(null) }
+    val openDish = remember(business, openDishId) { business.findDish(openDishId) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    BagFeedback(
+        outcome = cart.outcome,
+        snackbarHostState = snackbarHostState,
+        onAdded = { openDishId = null },
+        actions = cartActions,
+    )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = { cart.bar?.let { CartBar(bar = it, onClick = cartActions.onOpenCart) } },
         topBar = {
             MenuTopBar(
                 business = business,
@@ -110,13 +104,16 @@ fun BusinessScreen(
                 is BusinessUiState.Loaded -> {
                     val text = query.orEmpty()
                     if (parseTerms(text).isNotEmpty()) {
-                        MenuSearchResults(business = state.business, query = text)
+                        MenuSearchResults(business = state.business, query = text, onDishClick = { openDishId = it.id })
                     } else {
-                        MenuList(rows = rows, listState = listState)
+                        MenuList(rows = rows, listState = listState, onDishClick = { openDishId = it.id })
                     }
                 }
             }
         }
+    }
+    openDish?.let { dish ->
+        DishSheet(item = dish, onDismiss = { openDishId = null }, onAdd = cartActions.onAdd)
     }
 }
 
@@ -124,6 +121,7 @@ fun BusinessScreen(
 private fun MenuList(
     rows: List<MenuRow>,
     listState: LazyListState,
+    onDishClick: (MenuItemUi) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -151,83 +149,9 @@ private fun MenuList(
                 }
 
                 is MenuRow.Dish -> {
-                    MenuItemRow(row.item)
+                    MenuItemRow(row.item, onClick = { onDishClick(row.item) })
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun BusinessHeader(business: BusinessDetailUi) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BusinessLogo(business)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = business.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-            business.tagline?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BusinessLogo(business: BusinessDetailUi) {
-    val logoModifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp))
-    if (business.logoUrl != null) {
-        // Decorativo a propósito: el nombre está al lado, y un contentDescription lo haría sonar dos veces.
-        AsyncImage(
-            model = business.logoUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = logoModifier,
-        )
-    } else {
-        val accent = business.accent?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
-        Box(modifier = logoModifier.background(accent), contentAlignment = Alignment.Center) {
-            Text(
-                text =
-                    business.name
-                        .trim()
-                        .firstOrNull()
-                        ?.uppercase() ?: "T",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-            )
-        }
-    }
-}
-
-@Composable
-private fun CategoryHeader(category: MenuCategoryUi) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            text = category.name,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.semantics { heading() },
-        )
-        category.blurb?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -284,6 +208,7 @@ private fun BusinessPreview() {
             state =
                 BusinessUiState.Loaded(
                     BusinessDetailUi(
+                        id = "negocio",
                         name = "Pollería Don Lucho",
                         tagline = "Pollo a la brasa",
                         logoUrl = null,

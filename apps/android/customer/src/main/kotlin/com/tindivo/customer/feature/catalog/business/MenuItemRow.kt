@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.catalog.business
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,7 +37,8 @@ import com.tindivo.customer.R
 /**
  * La fila de un plato. Los textos entran ya como [AnnotatedString] para que los resultados de búsqueda reusen la
  * misma fila con el nombre y la descripción resaltados, sin duplicarla; en la carta salen sin anotaciones.
- * [categoryName] solo se pasa en los resultados, donde el plato aparece fuera de su sección.
+ * [categoryName] solo se pasa en los resultados, donde el plato aparece fuera de su sección. [onClick] abre la ficha
+ * del plato; los agotados no responden al toque.
  */
 @Composable
 internal fun MenuItemRow(
@@ -44,10 +47,25 @@ internal fun MenuItemRow(
     name: AnnotatedString = AnnotatedString(menuItem.name),
     description: AnnotatedString? = menuItem.description?.let(::AnnotatedString),
     categoryName: String? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     val dim = if (menuItem.available) Modifier else Modifier.alpha(0.5f)
+    // Un plato agotado no se abre: se sigue viendo, atenuado.
+    val click =
+        if (menuItem.available &&
+            onClick != null
+        ) {
+            Modifier.clickable(role = Role.Button, onClick = onClick)
+        } else {
+            Modifier
+        }
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp).then(dim),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(click)
+                .padding(horizontal = 16.dp)
+                .then(dim),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top,
     ) {

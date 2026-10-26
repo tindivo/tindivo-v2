@@ -30,6 +30,7 @@ class MenuRowTest {
         banner: String?,
         vararg categories: MenuCategoryUi,
     ) = BusinessDetailUi(
+        id = "negocio",
         name = "Pizza Priamo",
         tagline = null,
         logoUrl = null,

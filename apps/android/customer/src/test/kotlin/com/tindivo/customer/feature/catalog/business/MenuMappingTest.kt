@@ -101,6 +101,7 @@ class MenuMappingTest {
                     .single()
                     .items
                     .single()
+            assertEquals("8f1f2b5e-6d3c-4a7b-9e10-1a2b3c4d5e6f", state.business.id)
             assertEquals(BigDecimal("18.00"), item.basePrice)
             assertEquals("S/ 18.00", item.price.replace('\u00A0', ' '))
             val group = item.modifierGroups.single()

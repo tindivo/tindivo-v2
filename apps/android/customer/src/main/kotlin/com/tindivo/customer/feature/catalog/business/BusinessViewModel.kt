@@ -70,6 +70,8 @@ data class MenuCategoryUi(
 )
 
 data class BusinessDetailUi(
+    /** El uuid del negocio: la bolsa lo guarda para saber de qué restaurante es. */
+    val id: String,
     val name: String,
     val tagline: String?,
     val logoUrl: String?,

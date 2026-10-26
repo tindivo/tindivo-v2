@@ -268,6 +268,7 @@ private fun SearchBarPreview() {
         )
     val business =
         BusinessDetailUi(
+            id = "negocio",
             name = "Pizza Priamo",
             tagline = null,
             logoUrl = null,
