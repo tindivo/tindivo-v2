@@ -280,4 +280,23 @@ class OrderMappingTest {
             detail(paymentIntent = "pending_cash", paymentVerifiedAt = verified).toDetailUi()?.totalPaid == true,
         )
     }
+
+    @Test
+    fun `una fecha ilegible del detalle lo deja en null aunque no se muestre`() {
+        assertNull(detail(paymentIntent = "prepaid", paymentVerifiedAt = "ayer").toDetailUi())
+        assertNull(detail(status = "picked_up", arrivedAtCustomerAt = "ayer").toDetailUi())
+        assertNull(detail(deliveredAt = "ayer").toDetailUi())
+        assertNull(detail(estimatedReadyAt = "ayer").toDetailUi())
+    }
+
+    @Test
+    fun `el importe sin envio tambien se valida aunque no se muestre`() {
+        assertNull(detail(amount = "45").toDetailUi())
+        assertNull(page(listItem(amount = "45")).toPageUi(now))
+    }
+
+    @Test
+    fun `una fecha de entrega ilegible en el historial deja la pagina en null`() {
+        assertNull(page(listItem(deliveredAt = "ayer")).toPageUi(now))
+    }
 }

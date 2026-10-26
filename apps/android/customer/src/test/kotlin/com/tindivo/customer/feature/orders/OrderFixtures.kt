@@ -18,6 +18,8 @@ internal fun listItem(
     lineTotal: String = "45.00",
     createdAt: String = "2026-10-26T15:00:00.000Z",
     businessName: String? = "Pollería Rosa",
+    amount: String = "45.00",
+    deliveredAt: String? = null,
 ) = ListCustomerOrders200ResponseDataItemsInner(
     id = ORDER_ID,
     shortId = "ABCD2345",
@@ -28,11 +30,11 @@ internal fun listItem(
     cancelReason = null,
     businessId = BUSINESS_ID,
     businessName = businessName,
-    amount = "45.00",
+    amount = amount,
     deliveryFee = deliveryFee,
     total = total,
     createdAt = createdAt,
-    deliveredAt = null,
+    deliveredAt = deliveredAt,
     items =
         listOf(
             ListCustomerOrders200ResponseDataItemsInnerItemsInner("Pollo", 2, lineTotal),
@@ -57,6 +59,9 @@ internal fun detail(
     createdAt: String = "2026-10-26T15:00:00.000Z",
     proofAttempt: Int = 0,
     paymentVerifiedAt: String? = null,
+    amount: String = "45.00",
+    deliveredAt: String? = null,
+    estimatedReadyAt: String? = null,
 ) = GetCustomerOrder200ResponseData(
     id = ORDER_ID,
     shortId = "ABCD2345",
@@ -67,11 +72,11 @@ internal fun detail(
     cancelReason = cancelReason,
     businessId = BUSINESS_ID,
     businessName = "Pollería Rosa",
-    amount = "45.00",
+    amount = amount,
     deliveryFee = deliveryFee,
     total = total,
     createdAt = createdAt,
-    deliveredAt = null,
+    deliveredAt = deliveredAt,
     items =
         listOf(
             GetCustomerOrder200ResponseDataItemsInner(
@@ -92,17 +97,21 @@ internal fun detail(
     deliveryCoordinates = null,
     paysWith = paysWith,
     changeToGive = changeToGive,
-    estimatedReadyAt = null,
+    estimatedReadyAt = estimatedReadyAt,
     arrivedAtCustomerAt = arrivedAtCustomerAt,
     proofAttempt = proofAttempt,
     paymentVerifiedAt = paymentVerifiedAt,
     driver = driver,
 )
 
+/** Un texto JSON o `null`. */
+private fun jsonText(value: String?): String = if (value == null) "null" else "\"$value\""
+
 /** El cuerpo JSON de un pedido para las pruebas que pasan por la red. */
 internal fun detailJson(
     status: String = "preparing",
     total: String = "48.50",
+    arrivedAtCustomerAt: String? = null,
 ): String =
     """
     {"data":{"id":"$ORDER_ID","shortId":"ABCD2345","orderNumber":12,"status":"$status",
@@ -111,7 +120,9 @@ internal fun detailJson(
      "total":"$total","createdAt":"2026-10-26T15:00:00.000Z","deliveredAt":null,
      "items":[{"name":"Pollo","quantity":2,"lineTotal":"45.00","note":null,"modifiers":[]}],
      "customerNotes":null,"deliveryAddress":"Jr. Lima 123","deliveryReference":null,"deliveryCoordinates":null,
-     "paysWith":null,"changeToGive":null,"estimatedReadyAt":null,"arrivedAtCustomerAt":null,"proofAttempt":0,
+     "paysWith":null,"changeToGive":null,"estimatedReadyAt":null,"arrivedAtCustomerAt":${jsonText(
+        arrivedAtCustomerAt,
+    )},"proofAttempt":0,
      "paymentVerifiedAt":null,"driver":null}}
     """.trimIndent()
 

@@ -227,6 +227,21 @@ class OrdersViewModelTest {
             assertEquals(ConfigState.UpgradeRequired("1.2.0"), configService.state.value)
         }
 
+    @Test
+    fun `tras cerrar la sesion ni recargar ni pedir mas vuelven a la red`() =
+        runTest {
+            server.enqueue(response(200, pageJson(ids(1), next = "c2")))
+            val viewModel = viewModel()
+            viewModel.settled()
+
+            store.signOut()
+            viewModel.refresh()
+            viewModel.loadMore()
+
+            assertEquals(OrdersUiState.LoggedOut, viewModel.state.value)
+            assertEquals(1, server.requestCount)
+        }
+
     private companion object {
         const val UNAUTHORIZED =
             "{\"type\":\"about:blank\",\"title\":\"No autorizado\",\"status\":401,\"code\":\"unauthorized\"}"
