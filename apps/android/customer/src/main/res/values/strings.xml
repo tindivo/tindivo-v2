@@ -58,6 +58,82 @@
     <string name="account_phone_verified">Teléfono verificado</string>
     <string name="account_phone_missing">Falta verificar tu teléfono para pedir</string>
     <string name="account_sign_out">Cerrar sesión</string>
+    <string name="account_orders">Mis pedidos</string>
+
+    <string name="orders_title">Mis pedidos</string>
+    <string name="orders_back">Volver</string>
+    <string name="orders_loading">Cargando</string>
+    <string name="orders_retry">Reintentar</string>
+    <string name="orders_load_more">Ver más pedidos</string>
+    <string name="orders_empty_title">Aún no tienes pedidos</string>
+    <string name="orders_empty_body">Cuando hagas tu primera compra aparecerá aquí para que la revises cuando quieras.</string>
+    <string name="orders_empty_action">Explorar restaurantes</string>
+    <string name="order_business_fallback">Restaurante</string>
+    <string name="order_short_id">#%1$s</string>
+    <string name="order_ago_now">hace un momento</string>
+    <string name="order_ago_minutes">hace %1$d min</string>
+    <string name="order_ago_hours">hace %1$d h</string>
+    <string name="order_ago_yesterday">ayer</string>
+    <plurals name="order_ago_days">
+        <item quantity="one">hace %1$d día</item>
+        <item quantity="other">hace %1$d días</item>
+    </plurals>
+
+    <string name="order_step_received">Recibido</string>
+    <string name="order_step_preparing">Preparando</string>
+    <string name="order_step_on_the_way">En camino</string>
+    <string name="order_step_ready">Listo</string>
+    <string name="order_step_delivered">Entregado</string>
+
+    <string name="order_hero_received">Pedido recibido</string>
+    <string name="order_hero_received_sub">Estamos confirmándolo con el restaurante</string>
+    <string name="order_hero_awaiting_availability_sub">Esperando confirmación de disponibilidad</string>
+    <string name="order_hero_pay_now_sub">Restaurante confirmó. Paga ahora</string>
+    <string name="order_hero_payment_verified_sub">Pago verificado. En preparación</string>
+    <string name="order_hero_preparing">Preparando</string>
+    <string name="order_hero_preparing_sub">Tu pedido está en cocina</string>
+    <string name="order_hero_on_the_way">En camino</string>
+    <string name="order_hero_on_the_way_sub">El motorizado va en ruta</string>
+    <string name="order_hero_ready">Listo para recoger</string>
+    <string name="order_hero_ready_sub">Pásalo a recoger en el local</string>
+    <string name="order_hero_delivered">Entregado</string>
+    <string name="order_hero_delivered_sub">¡Buen provecho!</string>
+    <string name="order_hero_unknown">Tu pedido sigue en curso</string>
+
+    <string name="order_cancelled_eyebrow">Pedido cancelado</string>
+    <string name="order_cancel_customer_title">Cancelaste tu pedido</string>
+    <string name="order_cancel_customer_body">Tu pedido fue cancelado sin costo porque aún no estaba confirmado por el restaurante. Puedes volver a pedir cuando quieras.</string>
+    <string name="order_cancel_prepay_title">Se acabó el tiempo para pagar</string>
+    <string name="order_cancel_prepay_body">Tu pedido fue cancelado porque no recibimos tu comprobante a tiempo. Puedes volver a pedir cuando quieras.</string>
+    <string name="order_cancel_unconfirmed_title">No pudimos confirmar tu pedido</string>
+    <string name="order_cancel_unconfirmed_body">El restaurante no respondió a tiempo, así que cancelamos tu pedido sin costo. Puedes intentarlo de nuevo.</string>
+    <string name="order_cancel_business_title">El restaurante canceló tu pedido</string>
+    <string name="order_cancel_business_body">Lamentablemente el restaurante no pudo tomar tu pedido. No se te cobró nada. Puedes pedir en otro momento.</string>
+    <string name="order_cancel_admin_title">Cancelamos tu pedido</string>
+    <string name="order_cancel_admin_body">Tuvimos que cancelar tu pedido. Si quieres saber qué pasó, escríbenos por WhatsApp.</string>
+    <string name="order_cancel_proof_title">No pudimos verificar tu pago</string>
+    <string name="order_cancel_proof_body">El restaurante no pudo confirmar el comprobante que enviaste. Si crees que hubo un error, escríbenos por WhatsApp.</string>
+    <string name="order_cancel_pickup_no_show_title">Tu pedido se quedó sin recoger</string>
+    <string name="order_cancel_pickup_no_show_body">Lo tuvimos listo en el mostrador hasta la hora de cierre. Escríbenos por WhatsApp y lo vemos contigo.</string>
+    <string name="order_cancel_delivery_no_show_title">No pudimos entregarte el pedido</string>
+    <string name="order_cancel_delivery_no_show_body">El motorizado llegó a la dirección y no logró encontrarte. El pedido volvió al restaurante. Escríbenos por WhatsApp y lo vemos contigo.</string>
+    <string name="order_cancel_generic_title">Tu pedido fue cancelado</string>
+    <string name="order_cancel_generic_body">Tu pedido fue cancelado. Si tienes dudas, escríbenos por WhatsApp.</string>
+    <string name="order_cancel_help">Si tienes dudas, escríbenos por WhatsApp.</string>
+    <string name="order_web_payment_notice">Para pagar o apelar, abre tu pedido en la web de Tindivo.</string>
+
+    <string name="order_driver_label">Tu motorizado</string>
+    <string name="order_driver_whatsapp">Escribirle por WhatsApp</string>
+    <string name="order_delivery_fee">Envío</string>
+    <string name="order_total">Total</string>
+    <string name="order_pays_with">Pagas con</string>
+    <string name="order_change">vuelto %1$s</string>
+    <string name="order_change_exact">importe exacto</string>
+    <string name="order_address">Dirección</string>
+    <string name="order_reference">Referencia</string>
+    <string name="order_customer_note">Nota</string>
+    <string name="order_quantity_name">%1$d× %2$s</string>
+    <string name="order_option">%1$s: %2$s</string>
 
     <string name="update_title">Actualiza la app</string>
     <string name="update_message">Hay una versión nueva de Tindivo y necesitas instalarla para seguir usando la app.</string>
