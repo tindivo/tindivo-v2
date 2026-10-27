@@ -1,6 +1,5 @@
 'use client'
 
-import { UpdateCustomerProfileRequestSchema } from '@tindivo/contracts'
 import { saveAddressRow } from '@/lib/address-save'
 import { api } from '@/lib/api'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -15,16 +14,10 @@ function authErrorMessage(message: string): string {
     m.includes('not enabled') ||
     m.includes('unsupported provider')
   ) {
-    return 'El inicio con Google no está disponible por ahora. Usa tu correo para continuar.'
-  }
-  if (m.includes('already registered') || m.includes('already been registered')) {
-    return 'Este correo ya tiene una cuenta. Inicia sesión.'
+    return 'El inicio con Google no está disponible por ahora. Vuelve a intentarlo en unos minutos.'
   }
   if (m.includes('invalid login credentials')) {
     return 'Correo o contraseña incorrectos.'
-  }
-  if (m.includes('password should be at least')) {
-    return 'La contraseña debe tener al menos 6 caracteres.'
   }
   if (m.includes('rate limit') || m.includes('too many requests')) {
     return 'Demasiados intentos. Espera un momento y vuelve a intentar.'
@@ -35,33 +28,6 @@ function authErrorMessage(message: string): string {
 /** Registra la aceptación desde el servidor; repetir la versión conserva la fecha. */
 async function acceptTerms() {
   await api.post('/customer/terms-acceptance', { version: TERMS_VERSION })
-}
-
-/**
- * Crea cuenta con correo (sin verificación: confirmation OFF en el dashboard).
- * Crea también customer_profiles — primera escritura de la fila del perfil.
- */
-export async function signUpWithEmail(input: {
-  fullName: string
-  email: string
-  password: string
-}): Promise<{ userId: string }> {
-  // Validar antes de crear Auth evita dejar una cuenta sin perfil por el nombre.
-  UpdateCustomerProfileRequestSchema.parse({ fullName: input.fullName })
-  const supabase = getSupabaseBrowser()
-  const { data, error } = await supabase.auth.signUp({
-    email: input.email,
-    password: input.password,
-    options: { data: { full_name: input.fullName } },
-  })
-  if (error) throw new Error(authErrorMessage(error.message))
-  if (!data.session || !data.user) {
-    // Defensive: solo ocurre si "Confirm email" sigue activado en el dashboard.
-    throw new Error('Tu cuenta requiere confirmación por correo. Revisa tu bandeja para activarla.')
-  }
-  await acceptTerms()
-  await upsertProfile({ userId: data.user.id, fullName: input.fullName })
-  return { userId: data.user.id }
 }
 
 export async function signInWithEmail(input: { email: string; password: string }) {
