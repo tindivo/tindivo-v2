@@ -80,12 +80,12 @@ let contador = 0
  * perfil con el teléfono YA verificado — sin eso `create_customer_order` corta
  * antes de llegar a la promo.
  *
- * @param telefonoCompartido fuerza el mismo número en dos cuentas distintas.
- *        Es el escenario de «me abro otra cuenta con mi mismo WhatsApp».
+ * Desde 0277 un número verificado vale para una sola cuenta: «me abro otra
+ * cuenta con mi mismo WhatsApp» pasa por `trasladarTelefono`.
  */
-async function nuevoCliente(telefonoCompartido?: string): Promise<Cliente> {
+async function nuevoCliente(): Promise<Cliente> {
   contador += 1
-  const phone = telefonoCompartido ?? `${PREFIJO_TEL}${String(100000 + contador).slice(-6)}`
+  const phone = `${PREFIJO_TEL}${String(100000 + contador).slice(-6)}`
 
   const { data: authUser, error: authErr } = await db.auth.admin.createUser({
     email: `promo-${crypto.randomUUID().slice(0, 8)}@integration.local`,
@@ -107,6 +107,24 @@ async function nuevoCliente(telefonoCompartido?: string): Promise<Cliente> {
   const cliente = { userId, phone }
   creados.push(cliente)
   return cliente
+}
+
+/** La cuenta `a` se lleva el número de `de` por el traslado de 0277 (SMS ya comprobado). */
+async function trasladarTelefono(de: Cliente, a: Cliente): Promise<Cliente> {
+  const pedirlo = (challengeId?: string) =>
+    db
+      .rpc('claim_customer_phone', {
+        p_user_id: a.userId,
+        p_phone: de.phone,
+        ...(challengeId ? { p_challenge_id: challengeId } : {}),
+      })
+      .throwOnError()
+  const { data: desafio } = await pedirlo()
+  const { challengeId } = desafio as { status: string; challengeId: string }
+  const { data: hecho } = await pedirlo(challengeId)
+  expect(hecho).toEqual({ status: 'transferred' })
+  a.phone = de.phone
+  return a
 }
 
 interface ResultadoPedido {
@@ -455,18 +473,18 @@ describe('promo de envío gratis · elegibilidad y aplicación', () => {
     expect(segundo.promoApplied).toBe(false)
   })
 
-  it('3 · dos cuentas con el MISMO teléfono verificado: la segunda paga', async () => {
+  it('3 · otra cuenta que se lleva el MISMO teléfono verificado: la segunda paga', async () => {
     await configurarPromo(promoViva())
-    const telefono = `${PREFIJO_TEL}777001`
-    const cuentaA = await nuevoCliente(telefono)
-    const cuentaB = await nuevoCliente(telefono)
-    expect(cuentaA.userId).not.toBe(cuentaB.userId)
-
+    const cuentaA = await nuevoCliente()
     const a = await pedir(cuentaA)
     expect(a.deliveryFee).toBe(0)
 
-    // Negocio distinto para que el guard de pedido activo no interfiera: lo que
-    // se prueba es el índice por teléfono, no el de pedido activo.
+    // El traslado espera a que A no tenga pedidos en curso.
+    await db.from('orders').update({ status: 'delivered' }).eq('id', a.id).throwOnError()
+    const cuentaB = await trasladarTelefono(cuentaA, await nuevoCliente())
+    expect(cuentaA.userId).not.toBe(cuentaB.userId)
+
+    // Lo que se prueba es el índice por teléfono: la cuenta B no tiene canjes propios.
     const b = await pedir(cuentaB)
     expect(b.deliveryFee).toBe(tarifaNear)
     expect(b.promoApplied).toBe(false)
@@ -726,29 +744,10 @@ describe('promo de envío gratis · tope global', () => {
       }),
     ])
 
-    // (b) cuentas distintas, mismo teléfono verificado -> índice por TELÉFONO.
-    const tel = `${PREFIJO_TEL}777002`
-    const cuentaA = await nuevoCliente(tel)
-    const cuentaB = await nuevoCliente(tel)
-    const parB = await Promise.all([
-      pedirCrudo(cuentaA),
-      db.rpc('create_customer_order', {
-        p_customer_user_id: cuentaB.userId,
-        p_business_id: E2E.BUSINESS_ID,
-        p_delivery_method: 'delivery',
-        p_payment_intent: 'prepaid',
-        p_customer_name: NOMBRE_FIXTURE,
-        p_customer_phone: cuentaB.phone,
-        p_delivery_address: 'Jr. Promo 1',
-        p_delivery_reference: 'Promo',
-        p_delivery_lat: PIN.lat,
-        p_delivery_lng: PIN.lng,
-        p_items: [{ menu_item_id: ITEM_POLLO_ID, quantity: 1, modifiers: [] }],
-        p_source: 'customer_pwa',
-      }),
-    ])
-
-    for (const par of [parA, parB]) {
+    // Ya no hay un (b) «cuentas distintas, mismo teléfono verificado, a la vez»: 0277 lo
+    // impide con un índice único, y el traslado espera a que no haya pedidos en curso.
+    // El índice por TELÉFONO sigue cubierto por la prueba 3.
+    for (const par of [parA]) {
       for (const r of par) {
         const err = r.error as { code?: string; message?: string } | null
         // 23505 = unique_violation. Es exactamente lo que NO debe escapar.

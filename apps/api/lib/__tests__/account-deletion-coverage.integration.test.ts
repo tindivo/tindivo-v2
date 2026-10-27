@@ -69,7 +69,7 @@ async function crearCliente(): Promise<Cliente> {
   await db.from('customer_profiles').insert({
     user_id: userId,
     full_name: NOMBRE,
-    phone,
+    phone: `+51${phone}`,
     phone_verified_at: new Date().toISOString(),
   })
   const anon = createClient(LOCAL_URL, LOCAL_ANON_KEY, { auth: { persistSession: false } })
@@ -218,6 +218,13 @@ const CONSERVADAS = new Set([
   'address_directory',
   'fraud_coverage_claims',
   'business_charges', // el ledger: dinero
+  // 0277: historia del número y sus restricciones (antifraude, como customer_strikes), el
+  // desafío de traslado y el aviso a la cuenta anterior. Hoy 0259 no las toca; qué se borra
+  // o se cierra al darse de baja lo decide S2b (Docs/planes/movil/decisiones.md, D-63).
+  'phone_assignments',
+  'phone_restrictions',
+  'phone_transfer_challenges',
+  'customer_security_notices',
 ])
 
 /** Datos del negocio, del motorizado o de la configuración: no son de la persona que se va. */
@@ -959,6 +966,13 @@ const INVENTARIO_PRODUCTORES: Record<string, ClaseProductor> = {
     claves: ['count', 'eventTypes'],
   },
   'admin_correct_delivery_band|order|AdminCorrectedDeliveryBand': PA(),
+  // 0277: el agregado es el aviso; el payload solo lleva el UUID de la cuenta avisada (su
+  // lápida en users sobrevive al borrado), nunca el número.
+  'claim_customer_phone|customer_security_notice|CustomerPhoneMoved': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['userId'],
+  },
   'advance_order|order|CustomerNoShow': PA(2),
   'advance_order|order|OrderReleased': PA(),
   'advance_order|order|OrderStatusChanged': PA(),

@@ -80,7 +80,7 @@ async function crearCliente(): Promise<Cliente> {
   const { error: pErr } = await db.from('customer_profiles').insert({
     user_id: userId,
     full_name: NOMBRE,
-    phone,
+    phone: `+51${phone}`,
     phone_verified_at: new Date().toISOString(),
   })
   if (pErr) throw new Error(`perfil falló: ${pErr.message}`)

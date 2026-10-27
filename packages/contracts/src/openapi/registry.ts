@@ -15,6 +15,12 @@ import {
 import { CreateCourierOrderRequestSchema } from '../courier'
 import type { ApiErrorCode } from '../errors'
 import {
+  CustomerSecurityNoticeParamsSchema,
+  CustomerSecurityNoticesSchema,
+  TransferCustomerPhoneRequestSchema,
+  TransferredCustomerPhoneSchema,
+} from '../phone-security'
+import {
   PushDeviceParamsSchema,
   PushDeviceRegistrationSchema,
   PushDeviceSchema,
@@ -565,6 +571,54 @@ export const OPERATIONS: OperationSpec[] = [
       200: { description: 'Teléfono verificado', envelope: 'data', schema: PhoneVerifiedSchema },
     },
     errors: ['validation_error', 'unauthorized', 'forbidden', 'conflict'],
+    documented: true,
+  },
+
+  {
+    method: 'post',
+    path: '/customer/phone/transfer',
+    operationId: 'transferCustomerPhone',
+    summary: 'Usar en esta cuenta el número comprobado por SMS',
+    tags: ['account'],
+    auth: 'customer',
+    body: TransferCustomerPhoneRequestSchema,
+    success: {
+      200: {
+        description: 'Número trasladado',
+        envelope: 'data',
+        schema: TransferredCustomerPhoneSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'conflict'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/security-notices',
+    operationId: 'getCustomerSecurityNotices',
+    summary: 'Leer los avisos de seguridad propios no vistos',
+    tags: ['account'],
+    auth: 'customer',
+    success: {
+      200: {
+        description: 'Avisos no vistos',
+        envelope: 'data',
+        schema: CustomerSecurityNoticesSchema,
+      },
+    },
+    errors: ['unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'post',
+    path: '/customer/security-notices/{id}/seen',
+    operationId: 'seeCustomerSecurityNotice',
+    summary: 'Marcar como visto un aviso propio',
+    tags: ['account'],
+    auth: 'customer',
+    pathParams: CustomerSecurityNoticeParamsSchema.shape,
+    success: { 204: { description: 'Aviso visto o ya ausente', envelope: 'none' } },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
     documented: true,
   },
 

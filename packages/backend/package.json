@@ -8,6 +8,7 @@
     "./shared": "./src/shared/index.ts",
     "./composition": "./src/composition/index.ts",
     "./identity": "./src/modules/identity/index.ts",
+    "./identity/http": "./src/modules/identity/http/index.ts",
     "./ordering/http": "./src/modules/ordering/http/index.ts",
     "./retention": "./src/modules/retention/index.ts",
     "./notifications": "./src/modules/notifications/http/index.ts"
