@@ -320,6 +320,15 @@ export const TRANSFER_REQUEST_STATUSES = [
 export const TransferRequestStatusSchema = z.enum(TRANSFER_REQUEST_STATUSES)
 export type TransferRequestStatus = z.infer<typeof TransferRequestStatusSchema>
 
+// --- Repetir un pedido (D-51): qué cambió respecto del pedido original. No es un enum de la base. ---
+export const REORDER_CHANGE_KINDS = [
+  'item_removed', // el plato ya no existe en el menú del negocio
+  'item_unavailable', // existe, pero no se puede pedir ahora (agotado o fuera de su franja)
+  'price_changed', // entra en la bolsa con otro precio unitario
+  'choose_again', // sus opciones no se pueden rearmar sin adivinar: el cliente las vuelve a elegir
+] as const
+export type ReorderChangeKind = (typeof REORDER_CHANGE_KINDS)[number]
+
 /** Registro central de enums (para el test de drift contra el esquema de DB). */
 export const DOMAIN_ENUMS = {
   user_role: USER_ROLES,

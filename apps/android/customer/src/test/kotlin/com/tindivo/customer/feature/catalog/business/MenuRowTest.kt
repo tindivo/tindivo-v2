@@ -5,6 +5,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.math.BigDecimal
 
 class MenuRowTest {
     private fun item(name: String) =
@@ -13,6 +14,8 @@ class MenuRowTest {
             name = name,
             description = null,
             price = "S/ 10.00",
+            basePrice = BigDecimal("10.00"),
+            modifierGroups = emptyList(),
             imageUrl = null,
             available = true,
             window = DishWindow(days = null, from = null, to = null),
@@ -27,6 +30,7 @@ class MenuRowTest {
         banner: String?,
         vararg categories: MenuCategoryUi,
     ) = BusinessDetailUi(
+        id = "negocio",
         name = "Pizza Priamo",
         tagline = null,
         logoUrl = null,
