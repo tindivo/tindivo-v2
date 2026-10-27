@@ -146,7 +146,13 @@ class GoTrueAuthBackendRefreshTest {
     fun `un 500 en el refresco deja el archivo marcado y un backend nuevo no restaura nada`() {
         val file = SharedFile()
         server.enqueue(tokens("acceso-1", "refresh-1"))
-        server.enqueue(MockResponse.Builder().code(500).body("{}").build())
+        server.enqueue(
+            MockResponse
+                .Builder()
+                .code(500)
+                .body("{}")
+                .build(),
+        )
         val first = signedIn(file)
 
         assertThrows(AuthHttpException::class.java) { runBlocking { first.refresh() } }

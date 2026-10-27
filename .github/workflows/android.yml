@@ -294,14 +294,24 @@ jobs:
           AVDMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/avdmanager"
           echo no | "${AVDMANAGER}" create avd -n tindivo -k 'system-images;android-34;google_apis;x86_64' --device pixel_6 --force
 
+      # Sin `adb wait-for-device`: espera sin plazo, y si el emulador no arranca el job se queda colgado hasta el
+      # timeout sin mostrar por qué. El bucle tiene plazo y comprueba que el proceso sigue vivo.
       - name: Arrancar el emulador
+        timeout-minutes: 8
         run: |
           export PATH="${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
+          ls -l /dev/kvm
+          emulator -accel-check
           nohup emulator -avd tindivo -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect \
             > "${RUNNER_TEMP}/emulator.log" 2>&1 &
-          adb wait-for-device
+          EMULATOR_PID=$!
+          adb start-server
           booted=""
           for _ in $(seq 1 150); do
+            if ! kill -0 "${EMULATOR_PID}" 2> /dev/null; then
+              echo "::error::El emulador terminó antes de arrancar"
+              break
+            fi
             if [ "$(adb shell getprop sys.boot_completed 2> /dev/null | tr -d '\r')" = "1" ]; then
               booted=1
               break
@@ -310,12 +320,13 @@ jobs:
           done
           if [ -z "${booted}" ]; then
             echo "::error::El emulador no terminó de arrancar en 300 s"
-            tail -n 50 "${RUNNER_TEMP}/emulator.log" || true
+            tail -n 80 "${RUNNER_TEMP}/emulator.log" || true
             exit 1
           fi
           adb shell input keyevent 82
 
       - name: Pruebas instrumentadas de la sesión
+        timeout-minutes: 15
         working-directory: apps/android
         run: ./gradlew :customer:connectedDevDebugAndroidTest
 
@@ -327,5 +338,6 @@ jobs:
           path: |
             apps/android/customer/build/reports/androidTests/
             apps/android/customer/build/outputs/androidTest-results/
+            ${{ runner.temp }}/emulator.log
           if-no-files-found: ignore
           retention-days: 14
