@@ -6,11 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CatalogRepository
-import com.tindivo.core.network.generated.model.GetBusiness200ResponseData
-import com.tindivo.core.network.generated.model.GetBusiness200ResponseDataCategoriesInner
-import com.tindivo.core.network.generated.model.GetBusiness200ResponseDataCategoriesInnerItemsInner
 import com.tindivo.customer.config.ConfigService
-import com.tindivo.customer.feature.catalog.home.parseAccent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,11 +19,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.math.RoundingMode
-import java.text.NumberFormat
 import java.time.Clock
 import java.time.Instant
-import java.util.Locale
 import javax.inject.Inject
 
 /** Un plato de la carta, ya decidido: la pantalla no conoce los modelos generados. */
@@ -37,10 +30,36 @@ data class MenuItemUi(
     val description: String?,
     /** Texto listo para mostrar (`S/ 12.50`); nunca se usa para calcular. */
     val price: String,
+    /** El precio de carta como número, con dos decimales: base del subtotal que se enseña, nunca un importe a cobrar. */
+    val basePrice: BigDecimal,
+    val modifierGroups: List<ModifierGroupUi>,
     val imageUrl: String?,
     val available: Boolean,
     /** Franja horaria: fuera de ella el plato no se muestra (ver [visibleAt]). */
     val window: DishWindow,
+)
+
+/** Un grupo de opciones del plato. [selectionType] y [priceDisplay] llegan como los sirve la carta. */
+data class ModifierGroupUi(
+    val id: String,
+    val name: String,
+    val selectionType: String,
+    val isRequired: Boolean,
+    val minSelections: Int,
+    val maxSelections: Int?,
+    /** `delta` (+ S/ x) o `total` (el precio final del plato); un valor nuevo se trata como `delta`. */
+    val priceDisplay: String,
+    val options: List<ModifierOptionUi>,
+)
+
+data class ModifierOptionUi(
+    val id: String,
+    val name: String,
+    val description: String?,
+    /** Precio de carta de la opción: suma al subtotal que se enseña, nunca se envía como importe. */
+    val price: BigDecimal,
+    /** El mismo precio listo para mostrar (`S/ 2.50`). */
+    val priceText: String,
 )
 
 data class MenuCategoryUi(
@@ -51,6 +70,8 @@ data class MenuCategoryUi(
 )
 
 data class BusinessDetailUi(
+    /** El uuid del negocio: la bolsa lo guarda para saber de qué restaurante es. */
+    val id: String,
     val name: String,
     val tagline: String?,
     val logoUrl: String?,
@@ -128,7 +149,7 @@ class BusinessViewModel
                         when (val result = catalog.business(id)) {
                             is ApiResult.Success -> {
                                 result.data.toDetail()?.let { BusinessUiState.Loaded(it) }
-                                    ?: BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_PRICE))
+                                    ?: BusinessUiState.Failed(AppError.Unknown(code = null, detail = INVALID_MENU))
                             }
 
                             is ApiResult.Failure -> {
@@ -149,89 +170,3 @@ private const val RECHECK_MILLIS = 60_000L
 
 // Lo que sobrevive la suscripción al girar la pantalla, sin dejar el reloj corriendo con la app en segundo plano.
 private const val STOP_TIMEOUT_MILLIS = 5_000L
-
-internal const val INVALID_PRICE = "base_price fuera de numeric(10,2)"
-
-/** `null` si algún plato trae un precio que no se puede mostrar tal cual: la carta falla entera (ver [formatPrice]). */
-internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi? {
-    val menu =
-        categories
-            .sortedBy { it.displayOrder }
-            .map { it.toCategory() ?: return null }
-            .filter { it.items.isNotEmpty() }
-    return BusinessDetailUi(
-        name = business.name,
-        tagline = business.tagline?.takeIf { it.isNotBlank() },
-        logoUrl = business.logoUrl?.takeIf { it.isNotBlank() },
-        bannerUrl = business.bannerUrl?.takeIf { it.isNotBlank() },
-        accent = parseAccent(business.accentColor),
-        categories = menu,
-    )
-}
-
-private fun GetBusiness200ResponseDataCategoriesInner.toCategory(): MenuCategoryUi? {
-    val menu = items.sortedBy { it.displayOrder }.map { it.toItem() ?: return null }
-    return MenuCategoryUi(
-        id = id.toString(),
-        name = name,
-        blurb = blurb?.takeIf { it.isNotBlank() },
-        items = menu,
-    )
-}
-
-private fun GetBusiness200ResponseDataCategoriesInnerItemsInner.toItem(): MenuItemUi? {
-    val price = formatPrice(basePrice) ?: return null
-    return MenuItemUi(
-        id = id.toString(),
-        name = name,
-        description = description?.takeIf { it.isNotBlank() },
-        price = price,
-        // D-55: la miniatura si existe; si no, la foto grande.
-        imageUrl = thumbnailUrl?.takeIf { it.isNotBlank() } ?: imageUrl?.takeIf { it.isNotBlank() },
-        available = isAvailable,
-        window = DishWindow(days = availableDays, from = availableFrom, to = availableTo),
-    )
-}
-
-/**
- * Quita los platos fuera de su franja en el instante [now] y las categorías que se quedan sin platos. Los agotados
- * (`available = false`) no se tocan: esos se siguen mostrando atenuados. Se aplica a la carta ya validada.
- */
-internal fun BusinessUiState.visibleAt(now: Instant): BusinessUiState =
-    if (this is BusinessUiState.Loaded) BusinessUiState.Loaded(business.visibleAt(now)) else this
-
-internal fun BusinessDetailUi.visibleAt(now: Instant): BusinessDetailUi =
-    copy(
-        categories =
-            categories
-                .map { category -> category.copy(items = category.items.filter { it.window.isOpenAt(now) }) }
-                .filter { it.items.isNotEmpty() },
-    )
-
-/** `decimal(10,2)`: dos decimales y diez cifras en total, como `menu_items.base_price` en la base. */
-private const val PRICE_SCALE = 2
-private val MAX_PRICE = BigDecimal("99999999.99")
-
-/**
- * Solo para mostrar (KT-8): `S/ 12.50` en soles de Perú; nunca se usa para calcular. `DecimalFormat` formatea el
- * [BigDecimal] sin pasar por `Double` ni `Float`. Una instancia por llamada: `NumberFormat` no es seguro entre hilos.
- *
- * Devuelve `null` si el importe no cabe en `numeric(10,2)` (más de dos decimales o más de ocho cifras enteras) o es
- * negativo, que no es un precio de carta aunque la columna no lo impida: antes que redondear o enseñar un precio así,
- * la carta falla. Dentro de ese dominio nunca hay redondeo (`UNNECESSARY`): se muestra exactamente el importe recibido.
- */
-internal fun formatPrice(amount: BigDecimal): String? {
-    // La magnitud va primero y con `compareTo`, que no cambia la escala: con un exponente extremo (`1e2147483647`)
-    // `setScale` lanzaría ArithmeticException. Ya acotado, el cambio de escala es pequeño y exacto.
-    if (amount.signum() < 0 || amount > MAX_PRICE) return null
-    val exact =
-        amount
-            .stripTrailingZeros()
-            .takeIf { it.scale() <= PRICE_SCALE }
-            ?.setScale(PRICE_SCALE, RoundingMode.UNNECESSARY)
-            ?: return null
-    return NumberFormat
-        .getCurrencyInstance(Locale.forLanguageTag("es-PE"))
-        .apply { roundingMode = RoundingMode.UNNECESSARY }
-        .format(exact)
-}

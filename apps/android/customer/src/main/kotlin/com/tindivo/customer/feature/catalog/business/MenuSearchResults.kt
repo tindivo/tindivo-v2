@@ -28,6 +28,7 @@ private const val HIGHLIGHT_ALPHA = 0.2f
 internal fun MenuSearchResults(
     business: BusinessDetailUi,
     query: String,
+    onDishClick: (MenuItemUi) -> Unit,
 ) {
     val hits = remember(business, query) { searchMenu(business.categories, query) }
     if (hits.isEmpty()) {
@@ -46,6 +47,7 @@ internal fun MenuSearchResults(
                 name = highlightedText(hit.item.name, hit.nameRanges, highlight),
                 description = hit.item.description?.let { highlightedText(it, hit.descriptionRanges, highlight) },
                 categoryName = hit.categoryName,
+                onClick = { onDishClick(hit.item) },
             )
         }
     }
