@@ -9,6 +9,7 @@
  * Cubre: el envoltorio por RPC (valor válido, ausente e inválido; que no se
  * herede entre llamadas; el reintento) y la ruta HTTP real con y sin cabecera.
  */
+import { execFileSync } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
 import { CLIENT_HEADERS } from '@tindivo/contracts'
 import { afterAll, afterEach, describe, expect, it } from 'vitest'
@@ -28,6 +29,16 @@ process.env.SUPABASE_SERVICE_ROLE_KEY ??= LOCAL_SERVICE_ROLE_KEY
 
 const CLAVE = 'test-password-12345'
 const NOMBRE = 'Vecino Plataforma'
+const CONTAINER = 'supabase_db_zpnipajgwfthxhdtzhly'
+
+/** SQL por stdin contra la base local, como en `alta-solo-con-google`; corta al primer error. */
+function psql(sql: string): string {
+  return execFileSync(
+    'docker',
+    ['exec', '-i', CONTAINER, 'psql', '-U', 'postgres', '-At', '-v', 'ON_ERROR_STOP=1', '-f', '-'],
+    { input: sql, encoding: 'utf8' },
+  )
+}
 
 interface Cliente {
   id: string
@@ -222,6 +233,35 @@ describe('create_order_idempotently guarda la plataforma', () => {
     } finally {
       await cleanup(seed)
     }
+  })
+
+  it('dentro de la misma transacción, tras el envoltorio el ajuste ya está vacío', async () => {
+    // PostgREST abre una transacción por llamada, así que esto solo se ve con SQL directo.
+    // Sin el `set_config(..., '', true)` del final, aquí seguiría valiendo 'ios'.
+    const c = await crearCliente()
+    const args = JSON.stringify(argsPedido(c, { client_platform: 'ios' })).replaceAll("'", "''")
+    const out = psql(`
+      begin;
+      select 'pedido|' || (public.create_order_idempotently(
+        '${c.id}'::uuid, 'create_order', gen_random_uuid(), 'hash-psql', '${args}'::jsonb
+      ) -> 'data' ->> 'id');
+      select 'ajuste|' || coalesce(current_setting('tindivo.client_platform', true), '<null>');
+      rollback;
+    `)
+    const linea = (tag: string) => out.split(/\r?\n/).find((l) => l.startsWith(`${tag}|`))
+    expect(linea('pedido')).toMatch(/^pedido\|[0-9a-f-]{36}$/)
+    expect(linea('ajuste')).toBe('ajuste|')
+  })
+
+  it('el reintento con la misma clave y otra plataforma devuelve el pedido original sin cambiarla', async () => {
+    const c = await crearCliente()
+    const key = crypto.randomUUID()
+    const a = await crearPorRpc(c, { client_platform: 'android' }, key)
+    const b = await crearPorRpc(c, { client_platform: 'ios' }, key)
+    expect(b.error, b.error?.message).toBeNull()
+    expect(b.data?.replayed).toBe(true)
+    expect(b.id).toBe(a.id)
+    expect(await plataformaDe(String(a.id))).toBe('android')
   })
 
   it('el reintento con la misma clave devuelve el mismo pedido con su plataforma original', async () => {
