@@ -2382,6 +2382,7 @@ export type Database = {
           change_advanced: number | null
           change_to_give: number | null
           client_pays_with: number | null
+          client_platform: string | null
           commission_amount: number | null
           comprobante_prepago_url: string | null
           confirmed_at: string | null
@@ -2484,6 +2485,7 @@ export type Database = {
           change_advanced?: number | null
           change_to_give?: number | null
           client_pays_with?: number | null
+          client_platform?: string | null
           commission_amount?: number | null
           comprobante_prepago_url?: string | null
           confirmed_at?: string | null
@@ -2586,6 +2588,7 @@ export type Database = {
           change_advanced?: number | null
           change_to_give?: number | null
           client_pays_with?: number | null
+          client_platform?: string | null
           commission_amount?: number | null
           comprobante_prepago_url?: string | null
           confirmed_at?: string | null
