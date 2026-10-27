@@ -16,6 +16,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
@@ -80,6 +81,13 @@ class SessionInvalidationTest {
         assumeTrue("este sistema no deja quitar el permiso de escritura", path.setWritable(false) && !path.canWrite())
     }
 
+    // El almacenamiento vuelve a funcionar, y el archivo viejo sigue ahí con su contenido: lo que impide restaurarlo
+    // son las claves destruidas, no el borrado.
+    private fun recoverStorage(path: File) {
+        assertTrue(path.setWritable(true))
+        assertTrue(path.length() > 0)
+    }
+
     // Deja el archivo ya escrito y sin permiso de escritura: ni se borra ni se puede vaciar.
     private fun stuckFile(
         path: File,
@@ -122,6 +130,7 @@ class SessionInvalidationTest {
         assertEquals(session, EncryptedSessionFile(path, aead, keys).read())
 
         stuck.delete()
+        recoverStorage(path)
 
         assertNull(EncryptedSessionFile(path, aead, keys).read())
     }
@@ -157,6 +166,7 @@ class SessionInvalidationTest {
             first.signOut()
 
             assertEquals(SessionState.SignedOut, first.state.value)
+            recoverStorage(path)
             val second = store(EncryptedSessionFile(path, aead, keys))
             runCurrent()
             assertEquals(SessionState.SignedOut, second.state.value)
