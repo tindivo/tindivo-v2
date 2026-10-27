@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.catalog.business
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.math.BigDecimal
 
 /**
  * Los casos de `apps/customer/features/catalog/lib/__tests__/menu-search.test.ts`, uno a uno (sin
@@ -17,6 +18,8 @@ class MenuSearchTest {
         name = name,
         description = description,
         price = "S/ 13.00",
+        basePrice = BigDecimal("13.00"),
+        modifierGroups = emptyList(),
         imageUrl = null,
         available = true,
         window = DishWindow(days = null, from = null, to = null),

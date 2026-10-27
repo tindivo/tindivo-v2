@@ -30,6 +30,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.cart.CartDestination
 import com.tindivo.customer.feature.catalog.business.BusinessDestination
 import com.tindivo.customer.feature.catalog.business.BusinessRoute
 import com.tindivo.customer.feature.catalog.home.CatalogHomeDestination
@@ -39,6 +40,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data object CatalogHomeRoute
+
+/** La bolsa del cliente: una sola, de un solo restaurante. */
+@Serializable
+data object CartRoute
 
 @Serializable
 data object DiagnosticsRoute
@@ -85,7 +90,24 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                         },
                 )
             }
-            composable<BusinessRoute> { BusinessDestination(onBack = { navController.popBackStack() }) }
+            composable<BusinessRoute> {
+                BusinessDestination(
+                    onBack = { navController.popBackStack() },
+                    onOpenCart = { navController.navigate(CartRoute) },
+                )
+            }
+            composable<CartRoute> {
+                CartDestination(
+                    onBack = { navController.popBackStack() },
+                    // Si la carta de ese negocio ya está en la pila se vuelve a ella; si no, se abre.
+                    onAddMore = { id ->
+                        if (!navController.popBackStack<BusinessRoute>(inclusive = false)) {
+                            navController.navigate(BusinessRoute(id))
+                        }
+                    },
+                    onSeeBusinesses = { navController.popBackStack<CatalogHomeRoute>(inclusive = false) },
+                )
+            }
             if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
             composable<UpdateRoute> { UpdateScreen() }
         }

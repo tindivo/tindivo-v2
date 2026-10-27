@@ -49,6 +49,7 @@ import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 
 /** Desde cuántas categorías aparece el botón del índice (D-61). */
 private const val INDEX_MIN_CATEGORIES = 5
@@ -253,9 +254,21 @@ private fun IndexButton(
 @Preview(showBackground = true)
 @Composable
 private fun SearchBarPreview() {
-    val dish = MenuItemUi("1", "Pizza americana", null, "S/ 30.00", null, true, DishWindow(null, null, null))
+    val dish =
+        MenuItemUi(
+            "1",
+            "Pizza americana",
+            null,
+            "S/ 30.00",
+            BigDecimal("30.00"),
+            emptyList(),
+            null,
+            true,
+            DishWindow(null, null, null),
+        )
     val business =
         BusinessDetailUi(
+            id = "negocio",
             name = "Pizza Priamo",
             tagline = null,
             logoUrl = null,
