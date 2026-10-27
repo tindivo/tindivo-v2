@@ -88,13 +88,14 @@ export async function POST(req: Request): Promise<Response> {
           `[twilio] simulacro · ${fullPhone} verificado sin código (el maestro sigue siendo ${DEV_OTP_CODE})`,
         )
 
-        const { error: updateErr } = await service
+        const { data: updated, error: updateErr } = await service
           .from('customer_profiles')
           .update({
             phone: fullPhone,
             phone_verified_at: new Date().toISOString(),
           })
           .eq('user_id', user.id)
+          .select('user_id')
 
         if (updateErr) {
           if (updateErr.code === '23505') {
@@ -105,6 +106,15 @@ export async function POST(req: Request): Promise<Response> {
             })
           }
           throw new Error(updateErr.message)
+        }
+
+        // El simulacro sella aquí: exige la misma fila que /verify.
+        if (updated?.length !== 1) {
+          return problem('conflict', {
+            detail: 'Completa tu nombre antes de verificar tu número.',
+            requestId,
+            headers: corsHeaders(req),
+          })
         }
 
         return ok(

@@ -64,6 +64,7 @@ import {
 import { POST as cancelOrder } from '../../app/api/v1/customer/orders/[id]/cancel/route'
 import { GET as getPrepayInfo } from '../../app/api/v1/customer/orders/[id]/prepay-info/route'
 import { POST as confirmPrepayProof } from '../../app/api/v1/customer/orders/[id]/prepay-proof/route'
+import { GET as getCustomerReorder } from '../../app/api/v1/customer/orders/[id]/reorder/route'
 import { GET as getCustomerOrder } from '../../app/api/v1/customer/orders/[id]/route'
 import {
   POST as createOrder,
@@ -72,7 +73,10 @@ import {
 import { GET as getPaymentOptions } from '../../app/api/v1/customer/payment-options/route'
 import { POST as sendPhoneCode } from '../../app/api/v1/customer/phone/send-code/route'
 import { POST as verifyPhoneCode } from '../../app/api/v1/customer/phone/verify/route'
-import { GET as getCustomerProfile } from '../../app/api/v1/customer/profile/route'
+import {
+  GET as getCustomerProfile,
+  PUT as updateCustomerProfile,
+} from '../../app/api/v1/customer/profile/route'
 import { POST as acceptTerms } from '../../app/api/v1/customer/terms-acceptance/route'
 import { GET as getHealth } from '../../app/api/v1/health/route'
 import { GET as getBusiness } from '../../app/api/v1/public/businesses/[id]/route'
@@ -264,6 +268,11 @@ describe('rutas públicas', () => {
   })
 
   it('MV4a: perfil y opciones de pago del cliente', async () => {
+    await conforms('updateCustomerProfile', 200, updateCustomerProfile, {
+      method: 'PUT',
+      bearer: token,
+      body: { fullName: NOMBRE_FIXTURE },
+    })
     // El perfil de este fichero se creó sin teléfono: `phone` y `phoneVerifiedAt` salen null.
     const profile = await conforms('getCustomerProfile', 200, getCustomerProfile, { bearer: token })
     expect(profile.fullName).toBe(NOMBRE_FIXTURE)
@@ -623,6 +632,10 @@ describe('el cliente con sesión', () => {
     const first = (orders.items as { id: string }[])[0]
     expect(first).toBeDefined()
     await conforms('getCustomerOrder', 200, getCustomerOrder, {
+      bearer: token,
+      params: { id: String(first?.id) },
+    })
+    await conforms('getCustomerReorder', 200, getCustomerReorder, {
       bearer: token,
       params: { id: String(first?.id) },
     })

@@ -11,6 +11,7 @@ import {
   PAYMENT_INTENTS,
   PAYMENT_WALLETS,
   PICKUP_TIMINGS,
+  REORDER_CHANGE_KINDS,
   REPORT_STATUSES,
 } from '../enums'
 import {
@@ -355,6 +356,58 @@ export const CustomerOrderDetailSchema = z.object({
       }),
     })
     .nullable(),
+})
+
+/**
+ * GET /customer/orders/{id}/reorder (D-51): la bolsa de un pedido propio, rearmada con
+ * el menú de HOY. Solo para pintar: el total y el envío salen de `/checkout/quote`, y
+ * `POST /customer/orders` vuelve a decidir. Dinero como texto (D-39).
+ */
+export const CustomerReorderSchema = z.object({
+  orderId: uuidOut,
+  businessId: uuidOut,
+  businessName: z.string(),
+  items: z
+    .array(
+      z.object({
+        menuItemId: uuidOut,
+        name: z.string().meta({ description: 'Nombre ACTUAL del plato' }),
+        quantity: z.number().int(),
+        note: z.string().nullable(),
+        basePrice: moneyText.meta({ description: 'Precio actual del plato, sin opciones' }),
+        modifiers: z.array(
+          z.object({
+            id: uuidOut,
+            groupName: z.string(),
+            optionName: z.string(),
+            price: moneyText.meta({ description: 'Precio adicional actual de la opción' }),
+          }),
+        ),
+        unitPrice: moneyText.meta({ description: 'basePrice más el precio de sus opciones' }),
+        imageUrl: z.string().nullable(),
+        thumbnailUrl: z.string().nullable(),
+      }),
+    )
+    .meta({
+      description:
+        'Solo lo que se puede volver a pedir tal cual. El pedido no guarda el orden en que se agregaron ' +
+        'los platos: llegan en un orden fijo, no necesariamente el original',
+    }),
+  changes: z.array(
+    z.object({
+      kind: openEnum(REORDER_CHANGE_KINDS),
+      itemName: z.string().meta({ description: 'Nombre del plato en el pedido original' }),
+      menuItemId: uuidOut
+        .nullable()
+        .meta({ description: 'Null si el plato ya no existe; con id para abrir su ficha' }),
+      before: moneyText
+        .nullable()
+        .meta({ description: 'Precio unitario anterior; solo en price_changed' }),
+      after: moneyText
+        .nullable()
+        .meta({ description: 'Precio unitario actual; solo en price_changed' }),
+    }),
+  ),
 })
 
 const courierPoint = z.object({

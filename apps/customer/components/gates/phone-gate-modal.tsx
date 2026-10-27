@@ -3,6 +3,7 @@
 import { BottomSheet } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
+import { GoogleNameStep } from '../auth-onboarding/steps/google-name-step'
 import { PhoneStep } from '../auth-onboarding/steps/phone-step'
 
 type Props = {
@@ -12,30 +13,35 @@ type Props = {
 
 export function PhoneGateModal({ onComplete, onClose }: Props) {
   const [userId, setUserId] = useState<string | null>(null)
-  const [profile, setProfile] = useState<{ fullName: string | null; email: string | null } | null>(
-    null,
-  )
+  const [profile, setProfile] = useState<{
+    fullName: string | null
+    email: string | null
+    hasProfile: boolean
+  } | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = getSupabaseBrowser()
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       const u = data.user
-      if (!u) return
+      if (!u) {
+        setError('No pudimos consultar tu sesión. Cierra esta ventana e intenta de nuevo.')
+        return
+      }
       setUserId(u.id)
       const emailStr = u.email ?? null
       const metaName = u.user_metadata?.full_name ?? u.user_metadata?.name ?? null
-      if (metaName) {
-        setProfile({ fullName: metaName, email: emailStr })
-      } else {
-        supabase
-          .from('customer_profiles')
-          .select('full_name')
-          .eq('user_id', u.id)
-          .maybeSingle()
-          .then(({ data: p }) => {
-            setProfile({ fullName: p?.full_name ?? emailStr ?? 'usuario', email: emailStr })
-          })
+      // El nombre de Auth no prueba que exista la fila que /verify va a sellar.
+      const { data: p, error: readError } = await supabase
+        .from('customer_profiles')
+        .select('full_name')
+        .eq('user_id', u.id)
+        .maybeSingle()
+      if (readError) {
+        setError('No pudimos consultar tu perfil. Cierra esta ventana e intenta de nuevo.')
+        return
       }
+      setProfile({ fullName: p?.full_name ?? metaName, email: emailStr, hasProfile: p !== null })
     })
   }, [])
 
@@ -52,14 +58,29 @@ export function PhoneGateModal({ onComplete, onClose }: Props) {
        * campo. Ver la nota larga en `steps/phone-step.tsx`.
        */}
       <div className="h-[min(500px,70dvh)]">
-        <PhoneStep
-          active
-          mode="gate"
-          fullName={profile?.fullName ?? null}
-          email={profile?.email ?? null}
-          userId={userId}
-          onDone={onComplete}
-        />
+        {error ? (
+          <p className="px-5 text-[13px] text-danger">{error}</p>
+        ) : profile && !profile.hasProfile ? (
+          <GoogleNameStep
+            active
+            initialName={profile.fullName}
+            userId={userId}
+            onDone={(fullName) => setProfile({ ...profile, fullName, hasProfile: true })}
+          />
+        ) : profile ? (
+          <PhoneStep
+            active
+            mode="gate"
+            fullName={profile.fullName}
+            email={profile.email}
+            userId={userId}
+            onDone={onComplete}
+          />
+        ) : (
+          <p role="status" className="px-5 text-[13px] text-ink-muted">
+            Cargando tu perfil…
+          </p>
+        )}
       </div>
     </BottomSheet>
   )
