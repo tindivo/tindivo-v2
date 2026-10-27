@@ -109,6 +109,63 @@ class CatalogRepositoryTest {
         }
 
     @Test
+    fun `un base_price con un exponente que BigDecimal no representa da Unknown sin lanzar`() =
+        runTest {
+            for (bad in listOf("1e999999999999", "\"1e-999999999999\"")) {
+                server.enqueue(json(200, BUSINESS_DETAIL.replace("\"base_price\":12.50", "\"base_price\":$bad")))
+
+                val result = repository.business("don-lucho")
+
+                assertTrue("base_price=$bad", result is ApiResult.Failure && result.error is AppError.Unknown)
+            }
+        }
+
+    @Test
+    fun `un additional_price ilegible tumba la carta como Unknown sin lanzar`() =
+        runTest {
+            for (bad in listOf("\"dos\"", "\"\"", "null", "true", "{}", "[]", "1e999999999999")) {
+                val group =
+                    """[{"id":"33333333-3333-4333-8333-333333333333","name":"Salsa","selection_type":"multi",
+                    "is_required":false,"min_selections":0,"max_selections":null,"price_display":"delta",
+                    "options":[{"id":"44444444-4444-4444-8444-444444444444","name":"Ají","description":null,
+                    "additional_price":$bad}]}]"""
+                server.enqueue(
+                    json(200, BUSINESS_DETAIL.replaceFirst("\"modifier_groups\":[]", "\"modifier_groups\":$group")),
+                )
+
+                val result = repository.business("don-lucho")
+
+                assertTrue("additional_price=$bad", result is ApiResult.Failure && result.error is AppError.Unknown)
+            }
+        }
+
+    @Test
+    fun `un additional_price valido llega exacto como BigDecimal`() =
+        runTest {
+            val group =
+                """[{"id":"33333333-3333-4333-8333-333333333333","name":"Salsa","selection_type":"multi",
+                "is_required":false,"min_selections":0,"max_selections":null,"price_display":"delta",
+                "options":[{"id":"44444444-4444-4444-8444-444444444444","name":"Ají","description":null,
+                "additional_price":2.50}]}]"""
+            server.enqueue(
+                json(200, BUSINESS_DETAIL.replaceFirst("\"modifier_groups\":[]", "\"modifier_groups\":$group")),
+            )
+
+            val data = (repository.business("don-lucho") as ApiResult.Success).data
+            val price =
+                data.categories
+                    .single()
+                    .items[0]
+                    .modifierGroups
+                    .single()
+                    .options
+                    .single()
+                    .additionalPrice
+
+            assertEquals(BigDecimal("2.50"), price)
+        }
+
+    @Test
     fun `un base_price con exponente o entre comillas llega con el mismo valor exacto`() =
         runTest {
             // Un exponente es un número JSON válido (RFC 8259 §6); el adaptador lee el literal sin pasar por Double.

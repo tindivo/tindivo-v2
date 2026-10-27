@@ -39,6 +39,56 @@
         <item quantity="other">%1$d platos</item>
     </plurals>
 
+    <string name="dish_group_required">Obligatorio</string>
+    <string name="dish_group_done">Listo</string>
+    <string name="dish_group_counter">%1$d/%2$d</string>
+    <string name="dish_group_counter_unlimited">%1$d/∞</string>
+    <string name="dish_group_pick_one">Elige una opción</string>
+    <string name="dish_group_up_to">Hasta %1$d</string>
+    <string name="dish_option_included">Incluido</string>
+    <string name="dish_option_delta">+%1$s</string>
+    <string name="dish_note_label">Nota (opcional)</string>
+    <string name="dish_note_placeholder">Ej. sin cebolla, bien cocido, tocar timbre 2 veces…</string>
+    <string name="dish_note_counter">%1$d/%2$d</string>
+    <string name="dish_quantity_label">Cantidad</string>
+    <string name="dish_quantity_less">Una menos</string>
+    <string name="dish_quantity_more">Una más</string>
+    <string name="dish_add_cta">Agregar · %1$s</string>
+    <plurals name="dish_complete_cta">
+        <item quantity="one">Completa %1$d opción</item>
+        <item quantity="other">Completa %1$d opciones</item>
+    </plurals>
+    <string name="dish_added">Añadido a tu bolsa</string>
+    <string name="dish_bag_full">Tu bolsa ya tiene %1$d platos distintos: es el máximo por pedido</string>
+    <string name="dish_added_capped">Ya tienes %1$d de este plato: es el máximo por pedido</string>
+    <string name="dish_save_failed">No se pudo guardar tu bolsa. Inténtalo de nuevo.</string>
+    <string name="dish_new_bag_title">¿Empezar una bolsa nueva?</string>
+    <string name="dish_new_bag_text">Tu bolsa tiene productos de %1$s. Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en %2$s.</string>
+    <string name="dish_new_bag_keep">Mantener</string>
+    <string name="dish_new_bag_replace">Vaciar y empezar</string>
+
+    <string name="cart_bar_label">Ver mi bolsa</string>
+    <string name="cart_bar_summary">%1$s · %2$s</string>
+    <plurals name="cart_units">
+        <item quantity="one">%1$d unidad</item>
+        <item quantity="other">%1$d unidades</item>
+    </plurals>
+    <string name="cart_title">Mi bolsa</string>
+    <string name="cart_clear">Vaciar</string>
+    <string name="cart_clear_title">¿Vaciar tu bolsa?</string>
+    <string name="cart_clear_cancel">Cancelar</string>
+    <string name="cart_clear_confirm">Vaciar</string>
+    <string name="cart_subtotal">Subtotal</string>
+    <string name="cart_shipping_note">El envío y el total final se calculan al confirmar el pedido.</string>
+    <string name="cart_add_more">+ Agregar más</string>
+    <string name="cart_empty">Tu bolsa está vacía</string>
+    <string name="cart_see_businesses">Ver negocios</string>
+    <string name="cart_remove">Quitar</string>
+    <string name="cart_line_less">Quitar una unidad de %1$s</string>
+    <string name="cart_line_more">Agregar una unidad de %1$s</string>
+    <string name="cart_option">%1$s: %2$s</string>
+    <string name="cart_line_note">Nota: %1$s</string>
+
     <string name="error_network">Sin conexión. Revisa tu internet e inténtalo de nuevo.</string>
     <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
     <string name="error_code">Código: %1$s</string>
