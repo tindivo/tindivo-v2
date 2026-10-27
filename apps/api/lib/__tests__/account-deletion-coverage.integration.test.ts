@@ -316,6 +316,7 @@ const CONSERVADAS_COLUMNA = new Set([
   'courier_orders.cancel_reason', // enum, no texto
   'customer_order_items.line_total', // importe
   'orders.risk_flags', // banderas booleanas de antifraude
+  'orders.client_platform', // ios | android | web con CHECK: la plataforma, no la persona (D-33)
   'order_reviews.tags', // etiquetas predefinidas
   'order_reviews.comment', // la nota de la reseña, sin autor (expediente §8)
   'customer_order_items.item_name_snapshot', // nombre del plato
