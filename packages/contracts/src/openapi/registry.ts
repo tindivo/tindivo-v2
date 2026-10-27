@@ -42,6 +42,7 @@ import {
   CustomerOrderDetailSchema,
   CustomerOrderListSchema,
   CustomerProfileSchema,
+  CustomerReorderSchema,
   PaymentOptionsSchema,
   PhoneCodeSentSchema,
   PhoneVerifiedSchema,
@@ -908,6 +909,25 @@ export const OPERATIONS: OperationSpec[] = [
     pathParams: { id: uuidParam },
     success: {
       200: { description: 'El pedido', envelope: 'data', schema: CustomerOrderDetailSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/orders/{id}/reorder',
+    operationId: 'getCustomerReorder',
+    summary: 'Repetir un pedido propio: su bolsa con el menú de hoy y lo que cambió',
+    description:
+      'Solo lectura (D-51): no crea pedido ni toca nada. Las opciones se rearman por nombre, porque el ' +
+      'pedido no guarda sus ids; lo que no se puede rearmar sin adivinar va a `changes` como ' +
+      '`choose_again`. El total y el envío se piden a `POST /customer/checkout/quote`. Un pedido ajeno, ' +
+      'inexistente o de Entregas responde 404.',
+    tags: ['orders'],
+    auth: 'customer',
+    pathParams: { id: uuidParam },
+    success: {
+      200: { description: 'La bolsa rearmada', envelope: 'data', schema: CustomerReorderSchema },
     },
     errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
     documented: true,
