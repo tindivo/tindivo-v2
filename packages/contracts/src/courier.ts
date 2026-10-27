@@ -45,7 +45,10 @@ export const CreateCourierOrderRequestSchema = z.object({
   origin: CourierEndpointSchema,
   destination: CourierEndpointSchema,
   requesterName: z.string().trim().min(1).max(120),
-  requesterPhone: PhonePeSchema,
+  requesterPhone: PhonePeSchema.meta({
+    description:
+      'El servidor lo ignora y usa el teléfono verificado, salvo para la cuenta de operación sin límite.',
+  }),
   itemDescription: z.string().trim().min(1).max(COURIER_ITEM_DESCRIPTION_MAX),
   isFragile: z.boolean(),
   /** Minutos hasta que está listo para recoger. 0 = "Ya". */
