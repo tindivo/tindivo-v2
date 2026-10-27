@@ -35,36 +35,68 @@ internal class LazyAead(
     ): ByteArray = delegate.decrypt(ciphertext, associatedData)
 }
 
+/** Lo que necesita [createSessionAead] del keyset: en el aparato, Tink con el Android Keystore; en pruebas, un doble. */
+internal interface SessionKeyset {
+    /** Abre (o crea) el keyset guardado. */
+    fun open(): OpenedKeyset
+
+    /** Borra el keyset guardado. */
+    fun wipe()
+}
+
+/** Un keyset abierto: si [usesKeystore] es falso, su clave maestra no está en el Keystore y no debe usarse. */
+internal class OpenedKeyset(
+    val usesKeystore: Boolean,
+    val aead: () -> Aead,
+)
+
+/** El [SessionKeyset] real: un keyset de Tink en preferencias, protegido por la clave maestra del Android Keystore. */
+internal class AndroidSessionKeyset(
+    private val context: Context,
+) : SessionKeyset {
+    override fun open(): OpenedKeyset {
+        AeadConfig.register()
+        val manager =
+            AndroidKeysetManager
+                .Builder()
+                .withSharedPref(context, KEYSET_NAME, KEYSET_PREFS)
+                .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
+                .withMasterKeyUri(MASTER_KEY_URI)
+                .build()
+        return OpenedKeyset(
+            usesKeystore = manager.isUsingKeystore,
+            aead = { manager.keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java) },
+        )
+    }
+
+    override fun wipe() {
+        context.deleteSharedPreferences(KEYSET_PREFS)
+    }
+}
+
 /**
  * Si el keyset guardado no se puede abrir (clave maestra perdida tras restaurar el aparato, por ejemplo), Tink lo
  * declara irrecuperable: se borra y se crea uno nuevo una vez. Lo cifrado con el anterior ya no sirve; vale como
  * sin sesión y la persona vuelve a entrar.
  */
-internal fun createSessionAead(context: Context): Aead =
+internal fun createSessionAead(keyset: SessionKeyset): Aead =
     try {
-        buildAead(context)
+        buildAead(keyset)
     } catch (_: GeneralSecurityException) {
-        context.deleteSharedPreferences(KEYSET_PREFS)
-        buildAead(context)
+        keyset.wipe()
+        buildAead(keyset)
     } catch (_: IOException) {
-        context.deleteSharedPreferences(KEYSET_PREFS)
-        buildAead(context)
+        keyset.wipe()
+        buildAead(keyset)
     }
 
-private fun buildAead(context: Context): Aead {
-    AeadConfig.register()
-    val manager =
-        AndroidKeysetManager
-            .Builder()
-            .withSharedPref(context, KEYSET_NAME, KEYSET_PREFS)
-            .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
-            .withMasterKeyUri(MASTER_KEY_URI)
-            .build()
+private fun buildAead(keyset: SessionKeyset): Aead {
+    val opened = keyset.open()
     // Si Tink descartó el Keystore por poco fiable, el keyset ya quedó en claro en las preferencias: se borra y se
     // rechaza (KT-9). Nada llega a cifrarse con él.
-    if (!manager.isUsingKeystore) {
-        context.deleteSharedPreferences(KEYSET_PREFS)
+    if (!opened.usesKeystore) {
+        keyset.wipe()
         throw GeneralSecurityException("El Android Keystore no está disponible")
     }
-    return manager.keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
+    return opened.aead()
 }

@@ -136,10 +136,11 @@ internal class GoTrueAuthBackend(
         val text = post(url, body, bearer = null)
         return try {
             json.decodeFromString<TokenResponse>(text)
-        } catch (e: SerializationException) {
-            throw IOException("respuesta de Auth ilegible", e)
-        } catch (e: IllegalArgumentException) {
-            throw IOException("respuesta de Auth ilegible", e)
+        } catch (_: SerializationException) {
+            // Sin causa a propósito: sus mensajes pueden citar fragmentos del JSON, con tokens.
+            throw IOException("respuesta de Auth ilegible")
+        } catch (_: IllegalArgumentException) {
+            throw IOException("respuesta de Auth ilegible")
         }
     }
 

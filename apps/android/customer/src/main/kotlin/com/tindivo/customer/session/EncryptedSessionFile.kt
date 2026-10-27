@@ -14,6 +14,7 @@ interface SessionFile {
 
     fun write(plain: String)
 
+    /** Borra lo guardado; si no lo puede borrar, lo vacía (vale como sin sesión); si tampoco, lanza [IOException]. */
     fun delete()
 }
 
@@ -31,6 +32,10 @@ class EncryptedSessionFile(
 
     override fun read(): String? {
         if (!file.exists()) return null
+        if (file.length() == 0L) {
+            delete()
+            return null
+        }
         return try {
             String(aead.decrypt(file.readBytes(), associatedData), Charsets.UTF_8)
         } catch (_: GeneralSecurityException) {
@@ -51,7 +56,20 @@ class EncryptedSessionFile(
     }
 
     override fun delete() {
-        file.delete()
-        File(file.parentFile, "${file.name}.tmp").delete()
+        remove(file)
+        remove(File(file.parentFile, "${file.name}.tmp"))
+    }
+
+    // Si no se puede borrar, se vacía: un archivo de 0 bytes no se restaura y vale como sin sesión. Si ni eso, se avisa.
+    private fun remove(target: File) {
+        if (!target.exists()) return
+        target.delete()
+        if (!target.exists()) return
+        try {
+            target.writeBytes(ByteArray(0))
+        } catch (_: IOException) {
+            // Se decide abajo con lo que quedó en disco.
+        }
+        if (target.exists() && target.length() != 0L) throw IOException("no se pudo borrar la sesión guardada")
     }
 }

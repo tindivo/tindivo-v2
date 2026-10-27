@@ -2,6 +2,7 @@ package com.tindivo.customer.di
 
 import android.content.Context
 import com.tindivo.customer.BuildConfig
+import com.tindivo.customer.session.AndroidSessionKeyset
 import com.tindivo.customer.session.EncryptedSessionFile
 import com.tindivo.customer.session.LazyAead
 import com.tindivo.customer.session.SessionFile
@@ -32,7 +33,7 @@ object SessionModule {
     ): SessionFile =
         EncryptedSessionFile(
             file = File(context.noBackupFilesDir, SESSION_FILE_NAME),
-            aead = LazyAead { createSessionAead(context) },
+            aead = LazyAead { createSessionAead(AndroidSessionKeyset(context)) },
         )
 
     @Provides

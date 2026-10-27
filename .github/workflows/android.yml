@@ -183,6 +183,23 @@ jobs:
         working-directory: apps/android
         run: ./gradlew :customer:bundleProdRelease -PversionCode=${{ github.run_number }}
 
+      # EVID-01: el manifiesto fusionado de prodRelease (el que entra al AAB), con la misma comprobación de superficie que
+      # el del APK de depuración. El applicationId de prod no lleva sufijo (el de dev es com.tindivo.customer.dev). Se
+      # guarda junto al informe de tamaño, con los hashes del AAB y del manifiesto en el log.
+      - name: Comprobar el manifiesto final del AAB prod
+        run: |
+          MANIFESTS=$(find apps/android/customer/build/intermediates -path '*/merged_manifests/prodRelease/*' -name AndroidManifest.xml)
+          if [ "$(printf '%s\n' "${MANIFESTS}" | grep -c .)" -ne 1 ]; then
+            echo "Se esperaba exactamente un manifiesto fusionado de prodRelease; encontrados:"
+            echo "${MANIFESTS:-(ninguno)}"
+            exit 1
+          fi
+          AAB=$(ls apps/android/customer/build/outputs/bundle/prodRelease/*.aab)
+          mkdir -p "${RUNNER_TEMP}/size"
+          cp "${MANIFESTS}" "${RUNNER_TEMP}/size/AndroidManifest-prodRelease.xml"
+          sha256sum "${AAB}" "${MANIFESTS}" "${RUNNER_TEMP}/size/AndroidManifest-prodRelease.xml"
+          python3 scripts/android-check-manifest.py "${RUNNER_TEMP}/size/AndroidManifest-prodRelease.xml" com.tindivo.customer
+
       # D-57: tamaño de descarga que vería el usuario. `build-apks` genera el conjunto de APK del AAB (lo firma con la
       # clave de depuración que AGP ya creó, o lo deja sin firmar: el tamaño es el mismo; no hay claves ni secretos) y
       # `get-size total` calcula el mínimo y el máximo. Se mide (1) sobre todas las configuraciones de dispositivo y
@@ -216,6 +233,7 @@ jobs:
             ${{ runner.temp }}/size/informe-tamano.md
             ${{ runner.temp }}/size/todas.csv
             ${{ runner.temp }}/size/gama-baja.csv
+            ${{ runner.temp }}/size/AndroidManifest-prodRelease.xml
           if-no-files-found: error
           retention-days: 14
 

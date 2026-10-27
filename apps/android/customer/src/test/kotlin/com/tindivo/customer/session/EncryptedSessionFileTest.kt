@@ -92,4 +92,33 @@ class EncryptedSessionFileTest {
         assertNull(store.read())
         assertFalse(file.exists())
     }
+
+    // Un File cuyo delete() siempre falla, como un archivo bloqueado o en un volumen de solo lectura para borrar.
+    private class UndeletableFile(
+        path: java.io.File,
+    ) : java.io.File(path.path) {
+        override fun delete(): Boolean = false
+    }
+
+    @Test
+    fun `si el archivo no se puede borrar, delete lo vacia y una instancia nueva no lo restaura`() {
+        val path = java.io.File(folder.root, "sesion.bin")
+        val aead = newAead()
+        val store = EncryptedSessionFile(UndeletableFile(path), aead)
+        store.write(session)
+
+        store.delete()
+
+        assertEquals(0L, path.length())
+        assertNull(EncryptedSessionFile(path, aead).read())
+    }
+
+    @Test
+    fun `un archivo vacio no se restaura`() {
+        val path = java.io.File(folder.root, "sesion.bin")
+        path.writeBytes(ByteArray(0))
+
+        assertNull(EncryptedSessionFile(path, newAead()).read())
+        assertFalse(path.exists())
+    }
 }
