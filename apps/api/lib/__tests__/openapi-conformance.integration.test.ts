@@ -64,6 +64,7 @@ import {
 import { POST as cancelOrder } from '../../app/api/v1/customer/orders/[id]/cancel/route'
 import { GET as getPrepayInfo } from '../../app/api/v1/customer/orders/[id]/prepay-info/route'
 import { POST as confirmPrepayProof } from '../../app/api/v1/customer/orders/[id]/prepay-proof/route'
+import { GET as getCustomerReorder } from '../../app/api/v1/customer/orders/[id]/reorder/route'
 import { GET as getCustomerOrder } from '../../app/api/v1/customer/orders/[id]/route'
 import {
   POST as createOrder,
@@ -623,6 +624,10 @@ describe('el cliente con sesión', () => {
     const first = (orders.items as { id: string }[])[0]
     expect(first).toBeDefined()
     await conforms('getCustomerOrder', 200, getCustomerOrder, {
+      bearer: token,
+      params: { id: String(first?.id) },
+    })
+    await conforms('getCustomerReorder', 200, getCustomerReorder, {
       bearer: token,
       params: { id: String(first?.id) },
     })
