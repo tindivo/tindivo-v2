@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Authenticator
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
+import java.io.IOException
 import java.net.ConnectException
 import java.net.NoRouteToHostException
 import java.net.UnknownHostException
@@ -130,21 +131,18 @@ internal class SupabaseSessionStore(
             withContext(NonCancellable) { adopt(backend.refresh()).accessToken }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             if (!expired && e.neverReachedAuth()) {
                 snapshot.accessToken
             } else {
                 drop()
                 null
             }
+        } catch (_: Exception) {
+            drop()
+            null
         }
     }
-
-    // Solo estos tres errores ocurren antes de que haya conexión con Auth (el nombre no resuelve, la conexión se
-    // rechaza o no hay ruta): el refresh token no salió del aparato. Un timeout, un corte a mitad o una respuesta
-    // ilegible no prueban nada: el servidor pudo haberlo recibido y rotado.
-    private fun Throwable.neverReachedAuth(): Boolean =
-        this is UnknownHostException || this is ConnectException || this is NoRouteToHostException
 
     // Mismo criterio de cancelación que arriba: el refresco se completa aunque se cancele quien llamó.
     private suspend fun refreshOrDrop(): String? {
@@ -186,6 +184,12 @@ internal class SupabaseSessionStore(
         }
     }
 }
+
+// Solo estos tres errores ocurren antes de que haya conexión con Auth (el nombre no resuelve, la conexión se
+// rechaza o no hay ruta): el refresh token no salió del aparato. Un timeout, un corte a mitad o una respuesta
+// ilegible no prueban nada: el servidor pudo haberlo recibido y rotado.
+private fun IOException.neverReachedAuth(): Boolean =
+    this is UnknownHostException || this is ConnectException || this is NoRouteToHostException
 
 private const val AUTH_CONNECT_TIMEOUT_SECONDS = 10L
 private const val AUTH_IO_TIMEOUT_SECONDS = 15L
