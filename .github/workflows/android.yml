@@ -289,10 +289,15 @@ jobs:
           yes | "${SDKMANAGER}" --licenses > /dev/null
           "${SDKMANAGER}" 'emulator' 'system-images;android-34;google_apis;x86_64'
 
+      # `avdmanager` y `emulator` no buscan los AVD en la misma carpeta por defecto: se fija una para los dos.
       - name: Crear el dispositivo virtual
         run: |
+          export ANDROID_AVD_HOME="${RUNNER_TEMP}/avd"
+          mkdir -p "${ANDROID_AVD_HOME}"
+          echo "ANDROID_AVD_HOME=${ANDROID_AVD_HOME}" >> "${GITHUB_ENV}"
           AVDMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/avdmanager"
           echo no | "${AVDMANAGER}" create avd -n tindivo -k 'system-images;android-34;google_apis;x86_64' --device pixel_6 --force
+          "${AVDMANAGER}" list avd
 
       # Sin `adb wait-for-device`: espera sin plazo, y si el emulador no arranca el job se queda colgado hasta el
       # timeout sin mostrar por qué. El bucle tiene plazo y comprueba que el proceso sigue vivo.
