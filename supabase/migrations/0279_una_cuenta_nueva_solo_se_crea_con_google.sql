@@ -24,9 +24,10 @@
 -- Tampoco corre al iniciar sesión ni al vincular una identidad a una cuenta que ya existe.
 --
 -- REGLA. Lista de permitidos, no de prohibidos: solo pasa `app_metadata.provider = 'google'`
--- sin `is_anonymous`. Todo lo demás (correo, teléfono, anónimo, SSO, web3, un proveedor que se
--- active mañana o un evento sin proveedor) se rechaza con 403. Si un día se añade Apple, se
--- añade aquí con su propia migración.
+-- con `is_anonymous` ausente o `false` (JSON). Todo lo demás (correo, teléfono, anónimo, SSO,
+-- web3, un proveedor que se active mañana, un evento sin proveedor o un `is_anonymous` que no
+-- sea `false`) se rechaza con 403. Si un día se añade Apple, se añade aquí con su propia
+-- migración.
 --
 -- ORDEN EN PRODUCCIÓN. El hook se activa en la configuración de Auth (panel o Management API),
 -- no en esta migración. Primero `db push` (crea la función), después se activa el hook: al
@@ -57,7 +58,7 @@ set search_path = ''
 as $$
 begin
   if event #>> '{user,app_metadata,provider}' is not distinct from 'google'
-     and coalesce((event #>> '{user,is_anonymous}')::boolean, false) = false then
+     and coalesce(event #> '{user,is_anonymous}', 'false'::jsonb) = 'false'::jsonb then
     return '{}'::jsonb;
   end if;
 

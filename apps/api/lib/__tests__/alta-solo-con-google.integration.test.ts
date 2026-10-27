@@ -7,7 +7,8 @@
  *    crearía: estas pruebas lo detectan.
  *  · Alta administrativa (`auth.admin.createUser`, como el personal): sigue funcionando, y esa
  *    cuenta entra con contraseña.
- *  · La función decide por lista de permitidos: solo `provider = 'google'` sin `is_anonymous`.
+ *  · La función decide por lista de permitidos: solo `provider = 'google'` con `is_anonymous` ausente o
+ *    `false`; cualquier otro valor, aunque no sea booleano, se rechaza con 403.
  *  · Solo `supabase_auth_admin` puede ejecutarla.
  *
  * El alta con Google no se puede ejecutar aquí (no hay proveedor Google en la base local): se
@@ -129,6 +130,14 @@ describe('0279 · la función', () => {
     ['teléfono', '{"user": {"app_metadata": {"provider": "phone"}}}'],
     ['Google anónimo', '{"user": {"app_metadata": {"provider": "google"}, "is_anonymous": true}}'],
     ['anónimo sin proveedor', '{"user": {"app_metadata": {}, "is_anonymous": true}}'],
+    [
+      'is_anonymous que no es booleano',
+      '{"user": {"app_metadata": {"provider": "google"}, "is_anonymous": "false"}}',
+    ],
+    [
+      'is_anonymous nulo',
+      '{"user": {"app_metadata": {"provider": "google"}, "is_anonymous": null}}',
+    ],
     ['proveedor con otra grafía', '{"user": {"app_metadata": {"provider": "Google"}}}'],
     ['proveedor nuevo', '{"user": {"app_metadata": {"provider": "apple"}}}'],
     ['sin app_metadata', '{"user": {}}'],
