@@ -41,6 +41,7 @@ import {
   CustomerCourierOrderListSchema,
   CustomerOrderDetailSchema,
   CustomerOrderListSchema,
+  CustomerPendingReviewSchema,
   CustomerProfileSchema,
   CustomerReorderSchema,
   PaymentOptionsSchema,
@@ -930,6 +931,28 @@ export const OPERATIONS: OperationSpec[] = [
       200: { description: 'La bolsa rearmada', envelope: 'data', schema: CustomerReorderSchema },
     },
     errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/reviews/pending',
+    operationId: 'getCustomerPendingReview',
+    summary: 'El pedido por el que preguntar «¿cómo estuvo?», o null',
+    description:
+      'El pedido de restaurante entregado más reciente del cliente, dentro de la ventana ' +
+      '(`app_settings.reviews.windowDays`), sin reseña ni descarte, con el catálogo de etiquetas. ' +
+      'Uno solo, nunca una cola; `data` es `null` si no hay nada que preguntar. Las Entregas no ' +
+      'tienen reseña.',
+    tags: ['reviews'],
+    auth: 'customer',
+    success: {
+      200: {
+        description: 'El pendiente, o null',
+        envelope: 'data',
+        schema: CustomerPendingReviewSchema.nullable(),
+      },
+    },
+    errors: ['unauthorized', 'forbidden'],
     documented: true,
   },
   {

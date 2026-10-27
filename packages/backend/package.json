@@ -10,6 +10,7 @@
     "./identity": "./src/modules/identity/index.ts",
     "./identity/http": "./src/modules/identity/http/index.ts",
     "./ordering/http": "./src/modules/ordering/http/index.ts",
+    "./reviews/http": "./src/modules/reviews/http/index.ts",
     "./retention": "./src/modules/retention/index.ts",
     "./notifications": "./src/modules/notifications/http/index.ts"
   },

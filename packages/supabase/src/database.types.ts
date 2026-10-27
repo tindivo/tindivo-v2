@@ -3750,6 +3750,16 @@ export type Database = {
         }
         Returns: Json
       }
+      create_order_review_for: {
+        Args: {
+          p_actor_user_id: string
+          p_comment?: string
+          p_order_id: string
+          p_rating: number
+          p_tags?: string[]
+        }
+        Returns: Json
+      }
       current_business_id: { Args: never; Returns: string }
       current_customer_contraentrega_outcome: {
         Args: {
@@ -3827,6 +3837,10 @@ export type Database = {
           p_uses_tindivo_drivers: boolean
         }
         Returns: Database["public"]["Enums"]["business_primary_capability"]
+      }
+      dismiss_order_review_for: {
+        Args: { p_actor_user_id: string; p_order_id: string }
+        Returns: boolean
       }
       dispute_cash_settlement: {
         Args: {
@@ -4284,6 +4298,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      review_pending_for: { Args: { p_actor_user_id: string }; Returns: Json }
       search_address_directory: {
         Args: { p_phone: string }
         Returns: {
