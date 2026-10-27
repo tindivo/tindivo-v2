@@ -63,7 +63,7 @@ apps/android/
 
 ## Decisiones aplicadas (Jesús, 2026-10-24)
 
-- **KT-16, ampliada** (`Docs/planes/movil/decisiones.md` D-54): Coil, supabase-kt solo Auth con el motor OkHttp de Ktor, Credential Manager, DataStore, Tink y Google Maps SDK. Cada una entra con el PR que la usa, con su versión exacta en `libs.versions.toml`; supabase-kt, solo si su peso cabe en el presupuesto (D-57).
+- **KT-16, ampliada** (`Docs/planes/movil/decisiones.md` D-54): Coil, Credential Manager, DataStore, Tink y Google Maps SDK. Cada una entra con el PR que la usa, con su versión exacta en `libs.versions.toml`. Auth no usa SDK: va por REST sobre OkHttp, y no entran supabase-kt ni Ktor.
 - **KT-15, CI:** además de `devDebug`, la CI construye el AAB `prodRelease` sin firmar, con R8 y `isShrinkResources`, solo para medir su tamaño de descarga (D-57); no se publica ni se sube.
 
 ## Ejemplo: ViewModel (KT-3, KT-5, KT-6)
