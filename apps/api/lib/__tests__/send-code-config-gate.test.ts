@@ -10,7 +10,8 @@ vi.mock('@/lib/http/auth', () => ({ requireRole: async () => ({ user: { id: 'u1'
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => {
     // Encadenable y «esperable»: cada .eq/.gte/.update devuelve algo que también se espera.
-    const result = { count: 0, error: null }
+    // `data`: la fila que el simulacro sella (exige exactamente una, como /verify).
+    const result = { count: 0, data: [{ user_id: 'u1' }], error: null }
     const chain = {
       select: () => q,
       eq: () => q,

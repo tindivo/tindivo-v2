@@ -425,7 +425,8 @@ describe('nada nuevo se escribe sobre la lápida', () => {
       customerUserId: c.userId,
       requesterPhone: c.phone,
     })
-    expect(carrera.error?.message ?? '').toMatch(/account was deleted/)
+    // El borrado ya quitó el perfil: ahora la RPC corta antes de insertar.
+    expect(carrera.error?.message).toBe('courier_phone_not_verified')
     const { count } = await db
       .from('courier_orders')
       .select('*', { count: 'exact', head: true })

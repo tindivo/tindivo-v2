@@ -3563,6 +3563,7 @@
                     "maxLength": 120
                   },
                   "customerPhone": {
+                    "description": "Se acepta por compatibilidad; el servidor lo ignora y usa el teléfono verificado del perfil.",
                     "type": "string"
                   },
                   "deliveryAddress": {
@@ -5638,6 +5639,7 @@
                     "maxLength": 120
                   },
                   "requesterPhone": {
+                    "description": "El servidor lo ignora y usa el teléfono verificado, salvo para la cuenta de operación sin límite.",
                     "type": "string"
                   },
                   "itemDescription": {
@@ -7772,6 +7774,201 @@
       }
     },
     "/customer/profile": {
+      "put": {
+        "operationId": "updateCustomerProfile",
+        "summary": "Crea el perfil del cliente o actualiza solo su nombre",
+        "tags": [
+          "customer"
+        ],
+        "responses": {
+          "200": {
+            "description": "Su perfil guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "phone": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "phoneVerified": {
+                          "type": "boolean"
+                        },
+                        "phoneVerifiedAt": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "contraentregaBlocked": {
+                          "type": "boolean",
+                          "description": "Bloqueo preventivo: solo puede pagar por adelantado"
+                        },
+                        "blockedUntil": {
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "blocked": {
+                          "type": "boolean",
+                          "description": "`true` mientras `blockedUntil` esté en el futuro: no puede pedir"
+                        }
+                      },
+                      "required": [
+                        "fullName",
+                        "phone",
+                        "phoneVerified",
+                        "phoneVerifiedAt",
+                        "contraentregaBlocked",
+                        "blockedUntil",
+                        "blocked"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 40,
+                    "pattern": "^[\\p{L}\\s'.-]+$"
+                  }
+                },
+                "required": [
+                  "fullName"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      },
       "get": {
         "operationId": "getCustomerProfile",
         "summary": "Perfil del cliente: nombre, teléfono, verificación y bloqueo preventivo",

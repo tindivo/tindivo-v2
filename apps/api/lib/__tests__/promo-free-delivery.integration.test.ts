@@ -232,7 +232,7 @@ async function sembrarEntregaPrevia(cliente: Cliente): Promise<string> {
       business_id: E2E.BUSINESS_ID,
       customer_user_id: cliente.userId,
       short_id: shortId,
-      customer_phone: cliente.phone,
+      customer_phone: cliente.phone.replace(/^[+]51/, ''),
       order_amount: 30.0,
       delivery_fee: tarifaNear,
       payment_intent: 'pending_cash',
@@ -282,7 +282,16 @@ async function borrarPedido(orderId: string): Promise<void> {
 
 /** Todos los pedidos de los clientes de esta suite. */
 async function borrarPedidosDeLaSuite(): Promise<void> {
-  const { data } = await db.from('orders').select('id').like('customer_phone', `${PREFIJO_TEL}%`)
+  if (creados.length === 0) return
+  // El perfil usa E.164 y el pedido nueve dígitos: el dueño identifica la
+  // basura de esta suite sin depender del formato del teléfono guardado.
+  const { data } = await db
+    .from('orders')
+    .select('id')
+    .in(
+      'customer_user_id',
+      creados.map((c) => c.userId),
+    )
   for (const o of data ?? []) await borrarPedido(o.id)
 }
 

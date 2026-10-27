@@ -73,7 +73,10 @@ import {
 import { GET as getPaymentOptions } from '../../app/api/v1/customer/payment-options/route'
 import { POST as sendPhoneCode } from '../../app/api/v1/customer/phone/send-code/route'
 import { POST as verifyPhoneCode } from '../../app/api/v1/customer/phone/verify/route'
-import { GET as getCustomerProfile } from '../../app/api/v1/customer/profile/route'
+import {
+  GET as getCustomerProfile,
+  PUT as updateCustomerProfile,
+} from '../../app/api/v1/customer/profile/route'
 import { POST as acceptTerms } from '../../app/api/v1/customer/terms-acceptance/route'
 import { GET as getHealth } from '../../app/api/v1/health/route'
 import { GET as getBusiness } from '../../app/api/v1/public/businesses/[id]/route'
@@ -265,6 +268,11 @@ describe('rutas públicas', () => {
   })
 
   it('MV4a: perfil y opciones de pago del cliente', async () => {
+    await conforms('updateCustomerProfile', 200, updateCustomerProfile, {
+      method: 'PUT',
+      bearer: token,
+      body: { fullName: NOMBRE_FIXTURE },
+    })
     // El perfil de este fichero se creó sin teléfono: `phone` y `phoneVerifiedAt` salen null.
     const profile = await conforms('getCustomerProfile', 200, getCustomerProfile, { bearer: token })
     expect(profile.fullName).toBe(NOMBRE_FIXTURE)
