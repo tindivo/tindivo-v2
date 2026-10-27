@@ -566,3 +566,62 @@ describe('las funciones *_for no se llaman con la sesión de un usuario', () => 
     expect(count).toBe(0)
   })
 })
+
+// Lo que la R1 de Codex (#115) dejó como riesgo residual sin prueba propia.
+describe('cuenta borrada, Entregas y anon', () => {
+  it('una cuenta borrada no califica ni descarta: 401 y nada escrito', async () => {
+    const borrado = await crearPersona(true)
+    const id = await pedido({ de: borrado })
+    await db
+      .from('users')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', borrado.id)
+      .throwOnError()
+    expect((await calificar(id, { rating: 4 }, borrado.token)).status).toBe(401)
+    expect((await descartar(id, borrado.token)).status).toBe(401)
+    const { count: resenas } = await db
+      .from('order_reviews')
+      .select('id', { count: 'exact', head: true })
+      .eq('order_id', id)
+      .throwOnError()
+    const { count: descartes } = await db
+      .from('order_review_dismissals')
+      .select('order_id', { count: 'exact', head: true })
+      .eq('order_id', id)
+      .throwOnError()
+    expect([resenas, descartes]).toEqual([0, 0])
+  })
+
+  it('descartar el id de una Entrega: 404 y nada escrito', async () => {
+    await patchCourierSettings({ enabled: true, ignoreSchedule: true })
+    const created = await callCreateCourierOrder({
+      customerUserId: dueno.id,
+      requesterPhone: await phoneOf(dueno),
+    })
+    if (created.error) throw new Error(`crear la Entrega falló: ${created.error.message}`)
+    const courierId = (created.data as { id: string }).id
+    expect((await descartar(courierId)).status).toBe(404)
+    const { count } = await db
+      .from('order_review_dismissals')
+      .select('order_id', { count: 'exact', head: true })
+      .eq('order_id', courierId)
+      .throwOnError()
+    expect(count).toBe(0)
+  })
+
+  it('anon tampoco ejecuta las funciones *_for', async () => {
+    const id = await pedido()
+    const anon = createClient(LOCAL_URL, LOCAL_ANON_KEY, { auth: { persistSession: false } })
+    const llamadas = await Promise.all([
+      anon.rpc('review_pending_for', { p_actor_user_id: dueno.id }),
+      anon.rpc('create_order_review_for', {
+        p_actor_user_id: dueno.id,
+        p_order_id: id,
+        p_rating: 5,
+        p_tags: [],
+      }),
+      anon.rpc('dismiss_order_review_for', { p_actor_user_id: dueno.id, p_order_id: id }),
+    ])
+    expect(llamadas.map((r) => r.error?.code)).toEqual(['42501', '42501', '42501'])
+  })
+})
