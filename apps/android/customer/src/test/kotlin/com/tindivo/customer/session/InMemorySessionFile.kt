@@ -14,3 +14,8 @@ internal class InMemorySessionFile : SessionFile {
         plain = null
     }
 }
+
+/** [SessionKeys] que no hace nada, para las pruebas que no miran la destrucción de claves. */
+internal object NoKeys : SessionKeys {
+    override fun destroy() = Unit
+}

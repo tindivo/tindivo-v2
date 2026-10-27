@@ -8,10 +8,12 @@ import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import java.io.IOException
 import java.security.GeneralSecurityException
+import java.security.KeyStore
 
 internal const val KEYSET_PREFS = "tindivo_session_keyset"
 private const val KEYSET_NAME = "session_keyset"
-private const val MASTER_KEY_URI = "android-keystore://tindivo_session_master"
+internal const val MASTER_KEY_ALIAS = "tindivo_session_master"
+private const val MASTER_KEY_URI = "android-keystore://$MASTER_KEY_ALIAS"
 
 /**
  * El `Aead` de la sesión: AES256-GCM con un keyset de Tink protegido por una clave maestra del Android Keystore
@@ -21,18 +23,32 @@ private const val MASTER_KEY_URI = "android-keystore://tindivo_session_master"
 internal class LazyAead(
     private val factory: () -> Aead,
 ) : Aead {
-    // `lazy` no recuerda un fallo: cada uso vuelve a intentarlo.
-    private val delegate by lazy(factory)
+    // Como `lazy`, pero se puede vaciar. No recuerda un fallo: cada uso vuelve a intentarlo.
+    @Volatile
+    private var cached: Aead? = null
+
+    private fun delegate(): Aead =
+        synchronized(this) {
+            cached ?: factory().also { cached = it }
+        }
+
+    /**
+     * Tras destruir las claves, el `Aead` en memoria aún tiene la clave vieja: lo siguiente debe cifrarse con un
+     * keyset nuevo.
+     */
+    fun reset() {
+        synchronized(this) { cached = null }
+    }
 
     override fun encrypt(
         plaintext: ByteArray,
         associatedData: ByteArray,
-    ): ByteArray = delegate.encrypt(plaintext, associatedData)
+    ): ByteArray = delegate().encrypt(plaintext, associatedData)
 
     override fun decrypt(
         ciphertext: ByteArray,
         associatedData: ByteArray,
-    ): ByteArray = delegate.decrypt(ciphertext, associatedData)
+    ): ByteArray = delegate().decrypt(ciphertext, associatedData)
 }
 
 /** Lo que necesita [createSessionAead] del keyset: en el aparato, Tink con el Android Keystore; en pruebas, un doble. */
@@ -42,6 +58,9 @@ internal interface SessionKeyset {
 
     /** Borra el keyset guardado. */
     fun wipe()
+
+    /** Destruye el keyset y su clave maestra del Keystore: lo cifrado con ellos ya no se descifra. */
+    fun destroy()
 }
 
 /** Un keyset abierto: si [usesKeystore] es falso, su clave maestra no está en el Keystore y no debe usarse. */
@@ -70,7 +89,21 @@ internal class AndroidSessionKeyset(
     }
 
     override fun wipe() {
-        context.deleteSharedPreferences(KEYSET_PREFS)
+        if (!context.deleteSharedPreferences(KEYSET_PREFS)) throw IOException("no se pudo borrar el keyset")
+    }
+
+    override fun destroy() {
+        // La clave maestra es la que hace indescifrable el keyset aunque el archivo de preferencias sobreviva: si
+        // falla su borrado, el error sale. Si solo falla `wipe()`, el keyset que queda no se puede abrir sin ella.
+        KeyStore
+            .getInstance("AndroidKeyStore")
+            .apply { load(null) }
+            .deleteEntry(MASTER_KEY_ALIAS)
+        try {
+            wipe()
+        } catch (_: IOException) {
+            // Sin la clave maestra, el keyset en preferencias ya no sirve.
+        }
     }
 }
 

@@ -26,6 +26,9 @@ ktlint = "1.8.0"
 # con el Kotlin del proyecto. La versión vive aquí para que haya una sola fuente.
 detekt = "1.23.8"
 junit = "4.13.2"
+# Pruebas instrumentadas (EVID-01): la sesión contra el Android Keystore real, en emulador.
+androidxTestRunner = "1.6.2"
+androidxTestExtJunit = "1.2.1"
 # Sesión (D-54, opción REST): Auth por su API REST con el OkHttp de la app, Credential Manager y Tink. Todas con más
 # de dos semanas de publicadas. tink-android 1.24.0 no: tiene diez días.
 credentials = "1.6.0"
@@ -56,6 +59,8 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
 androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }

@@ -19,6 +19,7 @@ android {
         // KT-15: el versionCode lo pone la CI con -PversionCode=<run_number>; en local vale 1.
         versionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(1)
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // :core:network compila a bytecode 21: un módulo Android solo puede resolverlo si declara ese mismo objetivo.
@@ -111,4 +112,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }

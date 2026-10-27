@@ -6,6 +6,7 @@ import com.tindivo.customer.session.AndroidSessionKeyset
 import com.tindivo.customer.session.EncryptedSessionFile
 import com.tindivo.customer.session.LazyAead
 import com.tindivo.customer.session.SessionFile
+import com.tindivo.customer.session.SessionKeys
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.createSessionAead
 import com.tindivo.customer.session.createSupabaseSessionStore
@@ -30,11 +31,19 @@ object SessionModule {
     @Singleton
     fun provideSessionFile(
         @ApplicationContext context: Context,
-    ): SessionFile =
-        EncryptedSessionFile(
+    ): SessionFile {
+        val keyset = AndroidSessionKeyset(context)
+        val aead = LazyAead { createSessionAead(keyset) }
+        return EncryptedSessionFile(
             file = File(context.noBackupFilesDir, SESSION_FILE_NAME),
-            aead = LazyAead { createSessionAead(AndroidSessionKeyset(context)) },
+            aead = aead,
+            keys =
+                SessionKeys {
+                    aead.reset()
+                    keyset.destroy()
+                },
         )
+    }
 
     @Provides
     @Singleton

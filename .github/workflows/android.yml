@@ -237,8 +237,8 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Subir los informes si algo falló
-        if: failure()
+      - name: Subir los informes de pruebas y lint
+        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-informes-${{ github.run_number }}
@@ -247,5 +247,85 @@ jobs:
             apps/android/**/build/reports/lint-results-*.html
             apps/android/**/build/reports/lint-results-*.xml
             apps/android/**/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # EVID-01: la sesión contra el Android Keystore real. Las pruebas JVM usan Tink sin Keystore; estas corren en un
+  # emulador (API 34, x86_64) y comprueban el cifrado de ida y vuelta y la destrucción de claves al borrar (CAX-004).
+  # Sin acciones de terceros nuevas: el emulador se arma con las CLI del SDK que trae la imagen del runner.
+  keystore:
+    name: Keystore real en emulador
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Preparar JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
+      - name: Preparar el SDK de Android
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${SDKMANAGER}" --licenses > /dev/null
+          "${SDKMANAGER}" --list_installed | grep -E 'platforms;|build-tools;' || true
+
+      # Sin KVM el emulador x86_64 no arranca en un tiempo razonable.
+      - name: Habilitar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Instalar el emulador y la imagen del sistema
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${SDKMANAGER}" --licenses > /dev/null
+          "${SDKMANAGER}" 'emulator' 'system-images;android-34;google_apis;x86_64'
+
+      - name: Crear el dispositivo virtual
+        run: |
+          AVDMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/avdmanager"
+          echo no | "${AVDMANAGER}" create avd -n tindivo -k 'system-images;android-34;google_apis;x86_64' --device pixel_6 --force
+
+      - name: Arrancar el emulador
+        run: |
+          export PATH="${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
+          nohup emulator -avd tindivo -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect \
+            > "${RUNNER_TEMP}/emulator.log" 2>&1 &
+          adb wait-for-device
+          booted=""
+          for _ in $(seq 1 150); do
+            if [ "$(adb shell getprop sys.boot_completed 2> /dev/null | tr -d '\r')" = "1" ]; then
+              booted=1
+              break
+            fi
+            sleep 2
+          done
+          if [ -z "${booted}" ]; then
+            echo "::error::El emulador no terminó de arrancar en 300 s"
+            tail -n 50 "${RUNNER_TEMP}/emulator.log" || true
+            exit 1
+          fi
+          adb shell input keyevent 82
+
+      - name: Pruebas instrumentadas de la sesión
+        working-directory: apps/android
+        run: ./gradlew :customer:connectedDevDebugAndroidTest
+
+      - name: Subir los informes del Keystore
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-keystore-informes-${{ github.run_number }}
+          path: |
+            apps/android/customer/build/reports/androidTests/
+            apps/android/customer/build/outputs/androidTest-results/
           if-no-files-found: ignore
           retention-days: 14

@@ -41,6 +41,8 @@ class SessionAeadTest {
 
         override fun open(): OpenedKeyset = opens[openCalls++]()
 
+        override fun destroy() = Unit
+
         override fun wipe() {
             wipeCalls++
         }
@@ -120,7 +122,7 @@ class SessionAeadTest {
     @Test
     fun `si el Aead no se puede armar, escribir lanza y no deja archivo ni temporal`() {
         val file = File(folder.root, "sesion.bin")
-        val session = EncryptedSessionFile(file, LazyAead { throw GeneralSecurityException("sin Keystore") })
+        val session = EncryptedSessionFile(file, LazyAead { throw GeneralSecurityException("sin Keystore") }, NoKeys)
 
         assertFailsWithSecurityException { session.write("{}") }
 
@@ -131,9 +133,11 @@ class SessionAeadTest {
     @Test
     fun `si el Aead no se puede armar, leer un archivo existente devuelve null`() {
         val file = File(folder.root, "sesion.bin")
-        EncryptedSessionFile(file, newAead()).write("{}")
+        EncryptedSessionFile(file, newAead(), NoKeys).write("{}")
 
-        assertNull(EncryptedSessionFile(file, LazyAead { throw GeneralSecurityException("sin Keystore") }).read())
+        val unavailable = LazyAead { throw GeneralSecurityException("sin Keystore") }
+
+        assertNull(EncryptedSessionFile(file, unavailable, NoKeys).read())
     }
 
     @Test
@@ -146,6 +150,7 @@ class SessionAeadTest {
                     calls++
                     throw GeneralSecurityException("sin Keystore")
                 },
+                NoKeys,
             )
 
         repeat(2) { assertFailsWithSecurityException { session.write("{}") } }

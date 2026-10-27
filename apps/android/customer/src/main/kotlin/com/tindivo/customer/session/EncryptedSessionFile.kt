@@ -20,6 +20,11 @@ interface SessionFile {
 
 private const val ASSOCIATED_DATA = "tindivo-session-v1"
 
+/** Destruye las claves con que se cifró la sesión: lo que quede en disco ya no se descifra. */
+fun interface SessionKeys {
+    fun destroy()
+}
+
 /**
  * La sesión en un archivo cifrado con Tink AEAD (AES256-GCM, KT-9). Nunca queda texto claro en el disco. Si lo
  * guardado no se descifra (clave nueva, archivo corrupto o cortado), se borra y vale como sin sesión.
@@ -27,6 +32,7 @@ private const val ASSOCIATED_DATA = "tindivo-session-v1"
 class EncryptedSessionFile(
     private val file: File,
     private val aead: Aead,
+    private val keys: SessionKeys,
 ) : SessionFile {
     private val associatedData = ASSOCIATED_DATA.toByteArray(Charsets.UTF_8)
 
@@ -56,8 +62,25 @@ class EncryptedSessionFile(
     }
 
     override fun delete() {
-        remove(file)
-        remove(File(file.parentFile, "${file.name}.tmp"))
+        val fileFailure =
+            try {
+                remove(file)
+                remove(File(file.parentFile, "${file.name}.tmp"))
+                null
+            } catch (e: IOException) {
+                e
+            }
+        // Siempre se destruyen las claves: aunque el archivo sobreviva, ya no se descifra.
+        val keysDestroyed =
+            try {
+                keys.destroy()
+                true
+            } catch (_: IOException) {
+                false
+            } catch (_: GeneralSecurityException) {
+                false
+            }
+        if (fileFailure != null && !keysDestroyed) throw IOException("no se pudo invalidar la sesión guardada")
     }
 
     // Si no se puede borrar, se vacía: un archivo de 0 bytes no se restaura y vale como sin sesión. Si ni eso, se avisa.

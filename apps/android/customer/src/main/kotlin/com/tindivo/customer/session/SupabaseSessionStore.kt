@@ -188,7 +188,7 @@ internal class SupabaseSessionStore(
 // Solo estos tres errores ocurren antes de que haya conexión con Auth (el nombre no resuelve, la conexión se
 // rechaza o no hay ruta): el refresh token no salió del aparato. Un timeout, un corte a mitad o una respuesta
 // ilegible no prueban nada: el servidor pudo haberlo recibido y rotado.
-private fun IOException.neverReachedAuth(): Boolean =
+internal fun IOException.neverReachedAuth(): Boolean =
     this is UnknownHostException || this is ConnectException || this is NoRouteToHostException
 
 private const val AUTH_CONNECT_TIMEOUT_SECONDS = 10L
