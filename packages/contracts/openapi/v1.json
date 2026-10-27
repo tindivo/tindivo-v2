@@ -10781,6 +10781,557 @@
         "x-tindivo-role": "customer"
       }
     },
+    "/customer/reviews/pending": {
+      "get": {
+        "operationId": "getCustomerPendingReview",
+        "summary": "El pedido por el que preguntar «¿cómo estuvo?», o null",
+        "tags": [
+          "reviews"
+        ],
+        "responses": {
+          "200": {
+            "description": "El pendiente, o null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "orderId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "shortId": {
+                          "type": "string"
+                        },
+                        "businessId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "businessName": {
+                          "type": "string"
+                        },
+                        "businessLogoUrl": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "deliveredAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "closesAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Hasta cuándo se puede calificar este pedido"
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Las etiquetas que se pueden marcar; `id` es lo que se envía al calificar"
+                        }
+                      },
+                      "required": [
+                        "orderId",
+                        "shortId",
+                        "businessId",
+                        "businessName",
+                        "businessLogoUrl",
+                        "deliveredAt",
+                        "closesAt",
+                        "tags"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "El pedido de restaurante entregado más reciente del cliente, dentro de la ventana (`app_settings.reviews.windowDays`), sin reseña ni descarte, con el catálogo de etiquetas. Uno solo, nunca una cola; `data` es `null` si no hay nada que preguntar. Las Entregas no tienen reseña.",
+        "parameters": [
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
+    "/customer/orders/{id}/review": {
+      "post": {
+        "operationId": "createCustomerReview",
+        "summary": "Calificar un pedido entregado",
+        "tags": [
+          "reviews"
+        ],
+        "responses": {
+          "200": {
+            "description": "La reseña guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "orderId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "rating": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 5
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "orderId",
+                        "rating"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Una reseña por pedido, propio, entregado y dentro de la ventana. Las etiquetas fuera del catálogo se descartan y el comentario se recorta al máximo configurado. Un pedido ajeno, inexistente o de Entregas responde 404; uno ya calificado, no entregado o fuera de plazo, 409.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "tags": {
+                    "default": [],
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 40
+                    }
+                  },
+                  "comment": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "rating"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
+    "/customer/orders/{id}/review/dismiss": {
+      "post": {
+        "operationId": "dismissCustomerReview",
+        "summary": "Descartar la pregunta «¿cómo estuvo?» de un pedido",
+        "tags": [
+          "reviews"
+        ],
+        "responses": {
+          "204": {
+            "description": "Descartada; sin cuerpo"
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Idempotente: repetirlo no falla. Solo apaga la pregunta; no impide calificar el pedido después.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
     "/customer/terms-acceptance": {
       "post": {
         "operationId": "acceptTerms",

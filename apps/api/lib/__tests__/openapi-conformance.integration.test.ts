@@ -26,7 +26,13 @@ import {
 import { OPERATIONS } from '@tindivo/contracts/openapi'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { E2E as FIXTURES } from '../../scripts/e2e-fixtures'
-import { localClient as db, E2E, uploadProofObject } from './helpers/local-db'
+import {
+  cleanup,
+  localClient as db,
+  E2E,
+  seedContraentregaOrder,
+  uploadProofObject,
+} from './helpers/local-db'
 import { COURIER_POINT_A, COURIER_POINT_B } from './helpers/local-db-courier'
 import { checkedOperations, expectConforms } from './helpers/openapi-conformance'
 import { cleanupPhoneSecurityFixtures } from './helpers/phone-security-fixtures'
@@ -71,6 +77,8 @@ import { POST as cancelOrder } from '../../app/api/v1/customer/orders/[id]/cance
 import { GET as getPrepayInfo } from '../../app/api/v1/customer/orders/[id]/prepay-info/route'
 import { POST as confirmPrepayProof } from '../../app/api/v1/customer/orders/[id]/prepay-proof/route'
 import { GET as getCustomerReorder } from '../../app/api/v1/customer/orders/[id]/reorder/route'
+import { POST as dismissCustomerReview } from '../../app/api/v1/customer/orders/[id]/review/dismiss/route'
+import { POST as createCustomerReview } from '../../app/api/v1/customer/orders/[id]/review/route'
 import { GET as getCustomerOrder } from '../../app/api/v1/customer/orders/[id]/route'
 import {
   POST as createOrder,
@@ -84,6 +92,7 @@ import {
   GET as getCustomerProfile,
   PUT as updateCustomerProfile,
 } from '../../app/api/v1/customer/profile/route'
+import { GET as getCustomerPendingReview } from '../../app/api/v1/customer/reviews/pending/route'
 import { POST as seeSecurityNotice } from '../../app/api/v1/customer/security-notices/[id]/seen/route'
 import { GET as getSecurityNotices } from '../../app/api/v1/customer/security-notices/route'
 import { POST as acceptTerms } from '../../app/api/v1/customer/terms-acceptance/route'
@@ -660,6 +669,44 @@ describe('el cliente con sesión', () => {
       bearer: token,
       body: { version: `conf-${RUN}` },
     })
+  })
+})
+
+describe('reseñas', () => {
+  it('pregunta por el entregado, lo descarta y aún lo califica', async () => {
+    const seed = await seedContraentregaOrder()
+    try {
+      // Las reseñas van sobre un pedido entregado y propio: el seed se pone a nombre de este cliente.
+      await db
+        .from('orders')
+        .update({
+          customer_user_id: userId,
+          driver_id: E2E.DRIVER_ID,
+          status: 'delivered',
+          delivered_at: new Date().toISOString(),
+        })
+        .eq('id', seed.orderId)
+        .throwOnError()
+      const pending = await conforms('getCustomerPendingReview', 200, getCustomerPendingReview, {
+        bearer: token,
+      })
+      expect(pending.orderId).toBe(seed.orderId)
+      await conforms('dismissCustomerReview', 204, dismissCustomerReview, {
+        method: 'POST',
+        bearer: token,
+        body: {},
+        params: { id: seed.orderId },
+      })
+      await conforms('createCustomerReview', 200, createCustomerReview, {
+        method: 'POST',
+        bearer: token,
+        body: { rating: 5 },
+        params: { id: seed.orderId },
+      })
+    } finally {
+      // `order_reviews`, las descartadas y `order_event_log` caen en cascada con el pedido.
+      await cleanup(seed)
+    }
   })
 })
 

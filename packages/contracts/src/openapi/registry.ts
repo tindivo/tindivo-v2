@@ -3,6 +3,7 @@ import {
   CheckoutQuoteRequestSchema,
   CreateCustomerAddressRequestSchema,
   CreateOrderAppealRequestSchema,
+  CreateReviewRequestSchema,
   PrepayProofRequestSchema,
   PushSubscriptionRequestSchema,
   PushUnsubscribeRequestSchema,
@@ -34,6 +35,7 @@ import {
   CheckoutQuoteSchema,
   CreatedCourierOrderSchema,
   CreatedOrderSchema,
+  CreatedReviewSchema,
   CustomerAddressListSchema,
   CustomerAddressSchema,
   CustomerAppealListSchema,
@@ -953,6 +955,40 @@ export const OPERATIONS: OperationSpec[] = [
       },
     },
     errors: ['unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'post',
+    path: '/customer/orders/{id}/review',
+    operationId: 'createCustomerReview',
+    summary: 'Calificar un pedido entregado',
+    description:
+      'Una reseña por pedido, propio, entregado y dentro de la ventana. Las etiquetas fuera del ' +
+      'catálogo se descartan y el comentario se recorta al máximo configurado. Un pedido ajeno, ' +
+      'inexistente o de Entregas responde 404; uno ya calificado, no entregado o fuera de plazo, 409.',
+    tags: ['reviews'],
+    auth: 'customer',
+    pathParams: { id: uuidParam },
+    body: CreateReviewRequestSchema,
+    success: {
+      200: { description: 'La reseña guardada', envelope: 'data', schema: CreatedReviewSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found', 'conflict'],
+    documented: true,
+  },
+  {
+    method: 'post',
+    path: '/customer/orders/{id}/review/dismiss',
+    operationId: 'dismissCustomerReview',
+    summary: 'Descartar la pregunta «¿cómo estuvo?» de un pedido',
+    description:
+      'Idempotente: repetirlo no falla. Solo apaga la pregunta; no impide calificar el pedido ' +
+      'después.',
+    tags: ['reviews'],
+    auth: 'customer',
+    pathParams: { id: uuidParam },
+    success: { 204: { description: 'Descartada; sin cuerpo', envelope: 'none' } },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
     documented: true,
   },
   {
