@@ -78,7 +78,13 @@ class SessionPersistenceTest {
             val path = File(folder.root, "sesion.bin")
             val aead = newAead()
             server.enqueue(signInResponse())
-            server.enqueue(MockResponse.Builder().code(500).body("{}").build())
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(500)
+                    .body("{}")
+                    .build(),
+            )
             val first = store(EncryptedSessionFile(UndeletableFile(path), aead))
             assertEquals(SignInResult.Success, first.signInWithGoogle("id-token", "nonce"))
 
