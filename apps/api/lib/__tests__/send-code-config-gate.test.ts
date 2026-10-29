@@ -10,7 +10,6 @@ vi.mock('@/lib/http/auth', () => ({ requireRole: async () => ({ user: { id: 'u1'
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => {
     // Encadenable y «esperable»: cada .eq/.gte/.update devuelve algo que también se espera.
-    // `data`: la fila que el simulacro sella (exige exactamente una, como /verify).
     const result = { count: 0, data: [{ user_id: 'u1' }], error: null }
     const chain = {
       select: () => q,
@@ -21,7 +20,8 @@ vi.mock('@/lib/supabase/service', () => ({
     }
     // Una promesa REAL con los métodos encadenables, para poder hacerle `await`.
     const q: typeof chain & Promise<typeof result> = Object.assign(Promise.resolve(result), chain)
-    return { from: () => q }
+    // El simulacro sella con la misma RPC que /verify (0277).
+    return { from: () => q, rpc: async () => ({ data: { status: 'verified' }, error: null }) }
   },
 }))
 vi.mock('@/lib/otp/phone-limit', async (orig) => ({

@@ -3,6 +3,7 @@ import {
   CheckoutQuoteRequestSchema,
   CreateCustomerAddressRequestSchema,
   CreateOrderAppealRequestSchema,
+  CreateReviewRequestSchema,
   PrepayProofRequestSchema,
   PushSubscriptionRequestSchema,
   PushUnsubscribeRequestSchema,
@@ -14,6 +15,12 @@ import {
 } from '../client-requests'
 import { CreateCourierOrderRequestSchema } from '../courier'
 import type { ApiErrorCode } from '../errors'
+import {
+  CustomerSecurityNoticeParamsSchema,
+  CustomerSecurityNoticesSchema,
+  TransferCustomerPhoneRequestSchema,
+  TransferredCustomerPhoneSchema,
+} from '../phone-security'
 import {
   PushDeviceParamsSchema,
   PushDeviceRegistrationSchema,
@@ -28,6 +35,7 @@ import {
   CheckoutQuoteSchema,
   CreatedCourierOrderSchema,
   CreatedOrderSchema,
+  CreatedReviewSchema,
   CustomerAddressListSchema,
   CustomerAddressSchema,
   CustomerAppealListSchema,
@@ -35,8 +43,10 @@ import {
   CustomerCourierOrderListSchema,
   CustomerOrderDetailSchema,
   CustomerOrderListSchema,
+  CustomerPendingReviewSchema,
   CustomerProfileSchema,
   CustomerReorderSchema,
+  OrderAttemptSchema,
   PaymentOptionsSchema,
   PhoneCodeSentSchema,
   PhoneVerifiedSchema,
@@ -395,6 +405,24 @@ export const OPERATIONS: OperationSpec[] = [
     documented: true,
   },
   {
+    method: 'get',
+    path: '/customer/orders/attempts/{key}',
+    operationId: 'getOrderAttempt',
+    summary: 'Saber si una Idempotency-Key ya creó un pedido',
+    tags: ['orders'],
+    auth: 'customer',
+    pathParams: { key: uuidParam },
+    success: {
+      200: {
+        description: 'Estado del intento: creado, sin rastro o desconocido',
+        envelope: 'data',
+        schema: OrderAttemptSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
     method: 'post',
     path: '/customer/orders/{id}/cancel',
     operationId: 'cancelOrder',
@@ -565,6 +593,54 @@ export const OPERATIONS: OperationSpec[] = [
       200: { description: 'Teléfono verificado', envelope: 'data', schema: PhoneVerifiedSchema },
     },
     errors: ['validation_error', 'unauthorized', 'forbidden', 'conflict'],
+    documented: true,
+  },
+
+  {
+    method: 'post',
+    path: '/customer/phone/transfer',
+    operationId: 'transferCustomerPhone',
+    summary: 'Usar en esta cuenta el número comprobado por SMS',
+    tags: ['account'],
+    auth: 'customer',
+    body: TransferCustomerPhoneRequestSchema,
+    success: {
+      200: {
+        description: 'Número trasladado',
+        envelope: 'data',
+        schema: TransferredCustomerPhoneSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'conflict'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/security-notices',
+    operationId: 'getCustomerSecurityNotices',
+    summary: 'Leer los avisos de seguridad propios no vistos',
+    tags: ['account'],
+    auth: 'customer',
+    success: {
+      200: {
+        description: 'Avisos no vistos',
+        envelope: 'data',
+        schema: CustomerSecurityNoticesSchema,
+      },
+    },
+    errors: ['unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'post',
+    path: '/customer/security-notices/{id}/seen',
+    operationId: 'seeCustomerSecurityNotice',
+    summary: 'Marcar como visto un aviso propio',
+    tags: ['account'],
+    auth: 'customer',
+    pathParams: CustomerSecurityNoticeParamsSchema.shape,
+    success: { 204: { description: 'Aviso visto o ya ausente', envelope: 'none' } },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
     documented: true,
   },
 
@@ -875,6 +951,62 @@ export const OPERATIONS: OperationSpec[] = [
     success: {
       200: { description: 'La bolsa rearmada', envelope: 'data', schema: CustomerReorderSchema },
     },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/reviews/pending',
+    operationId: 'getCustomerPendingReview',
+    summary: 'El pedido por el que preguntar «¿cómo estuvo?», o null',
+    description:
+      'El pedido de restaurante entregado más reciente del cliente, dentro de la ventana ' +
+      '(`app_settings.reviews.windowDays`), sin reseña ni descarte, con el catálogo de etiquetas. ' +
+      'Uno solo, nunca una cola; `data` es `null` si no hay nada que preguntar. Las Entregas no ' +
+      'tienen reseña.',
+    tags: ['reviews'],
+    auth: 'customer',
+    success: {
+      200: {
+        description: 'El pendiente, o null',
+        envelope: 'data',
+        schema: CustomerPendingReviewSchema.nullable(),
+      },
+    },
+    errors: ['unauthorized', 'forbidden'],
+    documented: true,
+  },
+  {
+    method: 'post',
+    path: '/customer/orders/{id}/review',
+    operationId: 'createCustomerReview',
+    summary: 'Calificar un pedido entregado',
+    description:
+      'Una reseña por pedido, propio, entregado y dentro de la ventana. Las etiquetas fuera del ' +
+      'catálogo se descartan y el comentario se recorta al máximo configurado. Un pedido ajeno, ' +
+      'inexistente o de Entregas responde 404; uno ya calificado, no entregado o fuera de plazo, 409.',
+    tags: ['reviews'],
+    auth: 'customer',
+    pathParams: { id: uuidParam },
+    body: CreateReviewRequestSchema,
+    success: {
+      200: { description: 'La reseña guardada', envelope: 'data', schema: CreatedReviewSchema },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found', 'conflict'],
+    documented: true,
+  },
+  {
+    method: 'post',
+    path: '/customer/orders/{id}/review/dismiss',
+    operationId: 'dismissCustomerReview',
+    summary: 'Descartar la pregunta «¿cómo estuvo?» de un pedido',
+    description:
+      'Idempotente: repetirlo no falla. Solo apaga la pregunta; no impide calificar el pedido ' +
+      'después.',
+    tags: ['reviews'],
+    auth: 'customer',
+    pathParams: { id: uuidParam },
+    success: { 204: { description: 'Descartada; sin cuerpo', envelope: 'none' } },
     errors: ['validation_error', 'unauthorized', 'forbidden', 'not_found'],
     documented: true,
   },

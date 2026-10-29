@@ -554,6 +554,19 @@ async function markDone(eventId: string): Promise<void> {
 }
 
 async function buildNotes(eventType: string, aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
+  if (eventType === 'CustomerPhoneMoved') {
+    if (typeof payload.userId !== 'string') return []
+    return [{
+      userId: payload.userId,
+      app: 'customer',
+      title: 'Verificación de tu número',
+      body: 'Un número dejó de estar verificado en tu cuenta. Tus pedidos y datos siguen aquí.',
+      tag: `CustomerPhoneMoved-${aggregateId.slice(0, 8)}`,
+      url: '/cuenta',
+      requireInteraction: false,
+      vibrate: false,
+    }]
+  }
   const out: Note[] = []
   const action = (payload?.action as string) ?? ''
   const tagOf = (sid: string) => `${eventType}-${action}-${sid}`

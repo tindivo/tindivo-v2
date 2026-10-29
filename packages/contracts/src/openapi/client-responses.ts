@@ -52,6 +52,24 @@ export const CreatedOrderSchema = z.object({
   pickupTiming: openEnum(PICKUP_TIMINGS, 'Null en un delivery').nullable(),
 })
 
+/** Estados posibles de GET /customer/orders/attempts/{key}. */
+export const ORDER_ATTEMPT_STATES = ['created', 'not_found', 'unknown'] as const
+
+/**
+ * GET /customer/orders/attempts/{key} — ¿esta `Idempotency-Key` ya creó un pedido
+ * de este cliente? Para reconciliar cuando se perdió la respuesta del POST.
+ */
+export const OrderAttemptSchema = z.object({
+  state: openEnum(
+    ORDER_ATTEMPT_STATES,
+    '`created`: la clave creó el pedido de `order`. `not_found`: la clave NO ha creado nada TODAVÍA; solo prueba el presente, porque una petición en vuelo puede crearlo después y, pasada la retención (7 días), se pierde el rastro. `unknown`: no se sabe si el pedido existe, porque solo hay una reserva de la API anterior o no se pudo leer el registro; reintenta la consulta más tarde',
+  ),
+  order: z.object({ id: uuidOut, shortId: z.string() }).nullable().meta({
+    description:
+      'El pedido que creó la clave. Null salvo en `created`. Un `created` con `order` null puede pasar: el pedido existe pero no se pudo leer su código (`id`/`shortId`)',
+  }),
+})
+
 /** POST /customer/orders/{id}/cancel — `cancel_customer_order()`. */
 export const CancelledOrderSchema = z.object({
   id: uuidOut,
@@ -464,4 +482,31 @@ export const TermsAcceptedSchema = z.object({
   alreadyAccepted: z.boolean().meta({
     description: 'Repetirla no crea otra fila: devuelve la fecha original',
   }),
+})
+
+// ── Reseñas (0215, 0280) ─────────────────────────────────────────────────────
+
+/**
+ * GET /customer/reviews/pending: el pedido entregado más reciente del cliente sin calificar ni
+ * descartar, dentro de la ventana, con el catálogo de etiquetas. `null` si no hay nada que
+ * preguntar: nunca una cola. Las Entregas no tienen reseña.
+ */
+export const CustomerPendingReviewSchema = z.object({
+  orderId: uuidOut,
+  shortId: z.string(),
+  businessId: uuidOut,
+  businessName: z.string(),
+  businessLogoUrl: z.string().nullable(),
+  deliveredAt: timestampOut,
+  closesAt: timestampOut.meta({ description: 'Hasta cuándo se puede calificar este pedido' }),
+  tags: z.array(z.object({ id: z.string(), label: z.string() })).meta({
+    description: 'Las etiquetas que se pueden marcar; `id` es lo que se envía al calificar',
+  }),
+})
+
+/** POST /customer/orders/{id}/review: la reseña creada. */
+export const CreatedReviewSchema = z.object({
+  id: uuidOut,
+  orderId: uuidOut,
+  rating: z.number().int().min(1).max(5),
 })

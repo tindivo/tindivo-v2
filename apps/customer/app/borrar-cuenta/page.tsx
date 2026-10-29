@@ -33,7 +33,7 @@ export default function BorrarCuentaPage() {
             <li>Tu cuenta y tu inicio de sesión (Google, Apple o correo).</li>
             <li>Tu perfil: nombre, teléfono y correo.</li>
             <li>Tus direcciones guardadas y tu ubicación en el mapa.</li>
-            <li>Tus avisos en el celular y tu aceptación de términos.</li>
+            <li>Tus avisos en el celular, tus avisos de seguridad y tu aceptación de términos.</li>
             <li>Tus canjes de promociones.</li>
           </ul>
         </section>
@@ -47,10 +47,12 @@ export default function BorrarCuentaPage() {
             que te identifica: tu nombre, tu teléfono, la dirección, la referencia, la ubicación y
             tus notas. Solo quedan el importe, el estado y las fechas. También se conservan, por
             seguridad contra fraudes, los reportes de pedidos no recibidos ligados a un número de
-            teléfono, y el directorio de direcciones que usa la cajera para reconocer vecinos. Las
-            reseñas se quedan sin tu nombre. Las fotos de comprobantes de pago se guardan con el
-            pedido anonimizado el tiempo que su negocio las necesite para su caja; el plazo exacto
-            está en la política de privacidad.
+            teléfono, y el directorio de direcciones que usa la cajera para reconocer vecinos. Si tu
+            número estaba bloqueado o solo podía pagar por adelantado, esa restricción se queda con
+            el número hasta su fecha, aunque otra cuenta lo verifique después. Las reseñas se quedan
+            sin tu nombre. Las fotos de comprobantes de pago se guardan con el pedido anonimizado el
+            tiempo que su negocio las necesite para su caja; el plazo exacto está en la política de
+            privacidad.
           </p>
         </section>
 

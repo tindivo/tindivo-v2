@@ -274,7 +274,7 @@ reclamo definitivo de la 0264 y conserva las columnas para auditar). Antes, apag
 
 ## 2.1 Supabase Auth — onboarding del cliente **[tú]**
 
-El onboarding del customer (bottom-sheet con Google + correo sin verificación) requiere
+El onboarding del customer (bottom-sheet con Google; desde la 0279 el correo solo sirve para entrar a cuentas que ya existen) requiere
 configuración manual en dashboards:
 
 1. **Google Cloud Console** (console.cloud.google.com → APIs & Services → Credentials):
@@ -287,6 +287,17 @@ configuración manual en dashboards:
      (el flujo es "sin verificación de correo; empiezas a pedir al instante").
    - Authentication → URL Configuration → Redirect URLs: añadir
      `http://localhost:3000/auth/callback` y `https://tindivo.com/auth/callback`.
+3. **Cuentas nuevas solo con Google (migración 0279)**. Con «Confirm email» apagado, el alta por correo
+   permite preapropiar la cuenta de otra persona; el hook la cierra sin tocar la contraseña del personal.
+   - **Primero** `supabase db push` con la 0279 (crea `auth_hooks.before_user_created`). **Después**:
+     Authentication → Hooks → «Before User Created» → Postgres → esquema `auth_hooks`, función
+     `before_user_created` → activar.
+     Al revés, GoTrue no encuentra la función y falla TODA alta, también la de Google.
+   - Comprobar: un `signUp` con correo desde la clave anónima responde 403 «Las cuentas nuevas de Tindivo se
+     crean con Google.»; entrar con Google con una cuenta nueva sigue funcionando; crear un negocio o un
+     motorizado desde Admin sigue funcionando (`auth.admin.createUser` no pasa por el hook).
+   - Marcha atrás: apagar el hook en el panel. La función puede quedarse.
+   - `supabase/config.toml` lo activa solo en local; el panel de prod no lo lee.
 
 > El mapa de direcciones usa **Leaflet + OpenStreetMap**: no requiere API key ni billing.
 

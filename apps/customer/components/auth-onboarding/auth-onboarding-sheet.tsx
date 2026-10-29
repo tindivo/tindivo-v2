@@ -13,29 +13,21 @@ import {
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { signInWithGoogle } from './persistence'
 import { AddressStep } from './steps/address-step'
-import { EmailSignupStep } from './steps/email-signup-step'
 import { GoogleNameStep } from './steps/google-name-step'
 import { LoginStep } from './steps/login-step'
 import { MethodStep } from './steps/method-step'
 import { PhoneStep } from './steps/phone-step'
 
 // Orden fijo del carrusel (todos los paneles montados, como el demo).
-const PANEL_ORDER: OnboardingStep[] = [
-  'method',
-  'email-signup',
-  'login',
-  'google-name',
-  'phone',
-  'address',
-]
+const PANEL_ORDER: OnboardingStep[] = ['method', 'login', 'google-name', 'phone', 'address']
 
 // Pasos posteriores a la creación de cuenta: el X significa "completar después".
 const SKIPPABLE: OnboardingStep[] = ['google-name', 'address']
 
 /**
  * Bottom-sheet de onboarding multi-paso (réplica de tindivo-demo.vercel.app).
- * Camino correo: method → email-signup → phone → address.
- * Camino Google: redirect OAuth → (resume) google-name → phone → address.
+ * Cuenta nueva: solo con Google (0279). Redirect OAuth → (resume) google-name → phone → address.
+ * Quien ya tiene cuenta con contraseña (personal, cuentas antiguas): method → login.
  */
 export function AuthOnboardingSheet() {
   const router = useRouter()
@@ -97,7 +89,7 @@ export function AuthOnboardingSheet() {
   }
 
   function onHeaderLeading() {
-    if (ob.step === 'email-signup' || ob.step === 'login') {
+    if (ob.step === 'login') {
       ob.goTo('method')
     } else if (SKIPPABLE.includes(ob.step)) {
       finish()
@@ -106,16 +98,10 @@ export function AuthOnboardingSheet() {
     }
   }
 
-  const isBack = ob.step === 'email-signup' || ob.step === 'login'
+  const isBack = ob.step === 'login'
   const skippable = SKIPPABLE.includes(ob.step)
   const headerLabel =
-    ob.step === 'method'
-      ? 'Crear cuenta'
-      : ob.step === 'email-signup'
-        ? 'Con correo'
-        : ob.step === 'login'
-          ? 'Iniciar sesión'
-          : null
+    ob.step === 'method' ? 'Crear cuenta' : ob.step === 'login' ? 'Iniciar sesión' : null
   const chip = stepNumber[ob.step]
 
   const canDismiss = SKIPPABLE.includes(ob.step)
@@ -199,22 +185,7 @@ export function AuthOnboardingSheet() {
                       saveOnboardingResume(useOnboarding.getState().next)
                       await signInWithGoogle()
                     }}
-                    onEmail={() => ob.goTo('email-signup')}
                     onLogin={() => ob.goTo('login')}
-                  />
-                )}
-                {panel === 'email-signup' && (
-                  <EmailSignupStep
-                    active={active}
-                    onDone={({ fullName, email }) => {
-                      ob.setIdentity({ fullName, email })
-                      ob.setPath('email')
-                      ob.goTo('phone')
-                    }}
-                    onGoToLogin={(email) => {
-                      ob.setIdentity({ email })
-                      ob.goTo('login')
-                    }}
                   />
                 )}
                 {panel === 'login' && (

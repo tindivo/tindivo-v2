@@ -155,3 +155,15 @@ export const CustomerPageQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(CUSTOMER_PAGE_MAX).default(CUSTOMER_PAGE_DEFAULT),
   cursor: z.string().min(1).max(300).optional(),
 })
+
+/**
+ * POST /customer/orders/{id}/review (0215, 0280). Las etiquetas fuera del catálogo y el
+ * comentario que pase de `app_settings.reviews.commentMaxLength` no fallan: la base descarta
+ * unas y recorta el otro, para que un catálogo editado en vivo no tumbe un envío. Los topes de
+ * aquí solo frenan un cuerpo absurdo.
+ */
+export const CreateReviewRequestSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  tags: z.array(z.string().max(40)).max(20).default([]),
+  comment: z.string().max(2000).nullable().optional(),
+})

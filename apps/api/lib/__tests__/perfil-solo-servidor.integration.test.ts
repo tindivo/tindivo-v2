@@ -236,6 +236,8 @@ afterAll(async () => {
     await db.from('reports').delete().eq('created_by', c.id).throwOnError()
     // El trigger de strikes crea reportes sin created_by cuando no hay operador.
     await db.from('reports').delete().eq('customer_phone', c.phone).throwOnError()
+    await db.from('phone_transfer_challenges').delete().eq('user_id', c.id).throwOnError()
+    await db.from('phone_assignments').delete().eq('user_id', c.id).throwOnError()
     await db.from('users').delete().eq('id', c.id).throwOnError()
     const { error } = await db.auth.admin.deleteUser(c.id)
     if (error) throw new Error(error.message)
