@@ -141,7 +141,7 @@ class IdempotencyKeysTest {
         }
 
     @Test
-    fun `un 409 que no es de idempotencia regenera la clave y no reintenta`() =
+    fun `un 409 conflict (la misma peticion sigue en proceso) conserva la clave`() =
         runTest {
             var calls = 0
 
@@ -151,56 +151,54 @@ class IdempotencyKeysTest {
             }
 
             assertEquals(1, calls)
+            assertEquals(UUID(0L, 1L), keys.keyFor(cart()))
+        }
+
+    @Test
+    fun `un 429 rate_limited conserva la clave`() =
+        runTest {
+            keys.place(cart()) { known(ApiErrorCode.RateLimited, 429) }
+
+            assertEquals(UUID(0L, 1L), keys.keyFor(cart()))
+        }
+
+    @Test
+    fun `un 408 conserva la clave`() =
+        runTest {
+            keys.place(cart()) { known(ApiErrorCode.ValidationError, 408) }
+
+            assertEquals(AttemptOutcome.Unknown, known(ApiErrorCode.ValidationError, 408).toAttemptOutcome())
+            assertEquals(UUID(0L, 1L), keys.keyFor(cart()))
+        }
+
+    @Test
+    fun `idempotency_conflict se devuelve sin reintentar y conserva la clave`() =
+        runTest {
+            val sent = mutableListOf<UUID>()
+            val conflict = known(ApiErrorCode.IdempotencyConflict, 409)
+
+            val result =
+                keys.place(cart()) {
+                    sent += it
+                    conflict
+                }
+
+            assertEquals(conflict, result)
+            assertEquals(AttemptOutcome.KeyConflict, result.toAttemptOutcome())
+            assertEquals(listOf(UUID(0L, 1L)), sent)
+            assertEquals(UUID(0L, 1L).toString(), store.attempt?.key)
+            assertEquals(UUID(0L, 1L), keys.keyFor(cart()))
+        }
+
+    @Test
+    fun `discardAfterConflict borra la clave y el siguiente keyFor crea otra`() =
+        runTest {
+            keys.place(cart()) { known(ApiErrorCode.IdempotencyConflict, 409) }
+
+            keys.discardAfterConflict()
+
+            assertNull(store.attempt)
             assertEquals(UUID(0L, 2L), keys.keyFor(cart()))
-        }
-
-    @Test
-    fun `idempotency_conflict regenera la clave y reintenta una sola vez`() =
-        runTest {
-            val sent = mutableListOf<UUID>()
-
-            val result =
-                keys.place(cart()) {
-                    sent += it
-                    if (sent.size == 1) known(ApiErrorCode.IdempotencyConflict, 409) else created
-                }
-
-            assertEquals(created, result)
-            assertEquals(listOf(UUID(0L, 1L), UUID(0L, 2L)), sent)
-            assertNull(store.attempt)
-        }
-
-    @Test
-    fun `dos idempotency_conflict seguidos no hacen un tercer intento`() =
-        runTest {
-            val sent = mutableListOf<UUID>()
-
-            val result =
-                keys.place(cart()) {
-                    sent += it
-                    known(ApiErrorCode.IdempotencyConflict, 409)
-                }
-
-            assertEquals(2, sent.size)
-            assertEquals(known(ApiErrorCode.IdempotencyConflict, 409), result)
-            assertNull(store.attempt)
-        }
-
-    @Test
-    fun `tras un conflicto el reintento que falla por red conserva la clave nueva`() =
-        runTest {
-            var calls = 0
-
-            keys.place(cart()) {
-                calls++
-                if (calls == 1) {
-                    known(ApiErrorCode.IdempotencyConflict, 409)
-                } else {
-                    ApiResult.Failure(AppError.Network(IOException("timeout")))
-                }
-            }
-
-            assertEquals(UUID(0L, 2L).toString(), store.attempt?.key)
         }
 
     @Test

@@ -65,7 +65,15 @@ private fun AppError.toAttemptOutcome(): AttemptOutcome =
         is AppError.Known -> {
             when {
                 code == ApiErrorCode.IdempotencyConflict -> AttemptOutcome.KeyConflict
+
+                // 409 `conflict`: la misma petición con esa clave sigue en proceso (idempotency.ts); 429 y 408: el
+                // servidor no llegó a decidir. En los tres el pedido puede existir o estar creándose: se conserva.
+                code == ApiErrorCode.Conflict -> AttemptOutcome.Unknown
+
+                code == ApiErrorCode.RateLimited || status in UNDECIDED_STATUSES -> AttemptOutcome.Unknown
+
                 status in CLIENT_ERRORS -> AttemptOutcome.Rejected
+
                 else -> AttemptOutcome.Unknown
             }
         }
@@ -73,6 +81,7 @@ private fun AppError.toAttemptOutcome(): AttemptOutcome =
 
 private const val FIRST_CLIENT_ERROR = 400
 private const val LAST_CLIENT_ERROR = 499
+private val UNDECIDED_STATUSES = setOf(408, 429)
 private val CLIENT_ERRORS = FIRST_CLIENT_ERROR..LAST_CLIENT_ERROR
 
 /**
@@ -83,13 +92,17 @@ fun Cart.fingerprint(): String =
     businessId.lowercase() + "#" + lines.map { "${it.signature}*${it.quantity}" }.sorted().joinToString(";")
 
 /**
- * La `Idempotency-Key` del pedido en curso (CLI-6), con la misma política que la web
- * (`use-checkout-actions.ts`): una clave por intento.
+ * La `Idempotency-Key` del pedido en curso (CLI-6): una clave por intento.
  *
- * - Se **conserva** ante un error de red o un 5xx: el servidor pudo crear el pedido y repetir la clave lo recupera.
- *   También sobrevive a que el proceso muera, porque vive en [store].
- * - Se **regenera** tras un 201, tras un 4xx (el servidor no creó nada) y ante `idempotency_conflict`, que además se
- *   reintenta **una sola vez**.
+ * - Se **conserva** ante un error de red, un 5xx, un 408, un 429 o un 409 `conflict` (la misma petición sigue en
+ *   proceso): el servidor pudo crear el pedido y repetir la clave lo recupera. También sobrevive a que el proceso
+ *   muera, porque vive en [store].
+ * - Se **regenera** tras un 201 y tras un 4xx que sí es un rechazo (el servidor no creó nada).
+ * - Ante `idempotency_conflict` (409) **no se reintenta y la clave se conserva**. Esto SE APARTA DE LA WEB a propósito:
+ *   allí se regenera la clave y se reintenta sola. Pero tras un error de red el reintento lleva otro cuerpo (el GPS
+ *   cambia en cada intento), el servidor contesta `idempotency_conflict` y, si el primer pedido sí se creó, mandar
+ *   otra clave lo duplica. Quien decide es la persona: la UI llama a [discardAfterConflict] solo después de comprobar
+ *   en «Mis pedidos» que no hay un pedido reciente de ese negocio.
  * - Si la bolsa cambia, la clave guardada ya no vale: [keyFor] crea otra.
  *
  * @param newKey de dónde sale una clave nueva; se inyecta para fijarla en las pruebas.
@@ -116,26 +129,22 @@ class IdempotencyKeys(
 
     /**
      * Manda el pedido con la clave del intento y aplica la política según lo que conteste. [send] recibe la clave y
-     * devuelve el resultado de `POST /customer/orders`. Si el servidor dice `idempotency_conflict`, se genera una
-     * clave nueva y se manda otra vez, una sola vez: lo que conteste esa segunda llamada es lo que se devuelve.
+     * devuelve el resultado de `POST /customer/orders`. Un `idempotency_conflict` se devuelve tal cual, sin reintento
+     * y con la clave guardada (ver [discardAfterConflict]).
      */
     suspend fun <T> place(
         cart: Cart,
         send: suspend (UUID) -> ApiResult<T>,
     ): ApiResult<T> {
-        val first = attempt(cart, send)
-        if (first.toAttemptOutcome() != AttemptOutcome.KeyConflict) return first
-        return attempt(cart, send)
-    }
-
-    private suspend fun <T> attempt(
-        cart: Cart,
-        send: suspend (UUID) -> ApiResult<T>,
-    ): ApiResult<T> {
         val result = send(keyFor(cart))
-        if (result.toAttemptOutcome() != AttemptOutcome.Unknown) clear()
+        if (result.toAttemptOutcome().forgetsKey()) clear()
         return result
     }
+
+    /** Tras un `idempotency_conflict` y solo si no hay un pedido reciente de ese negocio: el siguiente [keyFor] crea otra. */
+    suspend fun discardAfterConflict() = clear()
+
+    private fun AttemptOutcome.forgetsKey() = this == AttemptOutcome.Created || this == AttemptOutcome.Rejected
 }
 
 private fun String.toUuidOrNull(): UUID? =
