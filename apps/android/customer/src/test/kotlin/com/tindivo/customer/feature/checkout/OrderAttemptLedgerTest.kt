@@ -482,7 +482,13 @@ class OrderAttemptLedgerTest {
             assertEquals(listOf(key(1)), sender.keys)
         }
 
+    @Test
+    fun `la ventana de vuelo por defecto supera la duracion maxima de una peticion en Vercel`() {
+        assertTrue(DEFAULT_FLIGHT_WINDOW_MS > VERCEL_DEFAULT_MAX_DURATION_MS)
+    }
+
     private companion object {
+        const val VERCEL_DEFAULT_MAX_DURATION_MS = 300_000L
         const val A = "cuenta-a"
         const val B = "cuenta-b"
         const val START = 1_000_000_000L

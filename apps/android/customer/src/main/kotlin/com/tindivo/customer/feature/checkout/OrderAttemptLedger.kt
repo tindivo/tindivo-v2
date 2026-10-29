@@ -74,8 +74,13 @@ fun Cart.fingerprint(): String =
 private const val MILLIS_PER_MINUTE = 60_000L
 private const val MILLIS_PER_DAY = 86_400_000L
 
-/** Cuánto puede seguir en vuelo un envío cuya respuesta no llegó (el plazo de una petición más el reintento). */
-const val DEFAULT_FLIGHT_WINDOW_MS = 2 * MILLIS_PER_MINUTE
+/**
+ * Cuánto puede seguir en vuelo un envío cuya respuesta no llegó. Tiene que superar lo que el servidor deja vivir una
+ * petición: `POST /customer/orders` no fija `maxDuration`, así que rige el máximo por defecto de Vercel (300 s), y
+ * un `not_found` antes de ese plazo no prueba que la petición no vaya a crear el pedido. Si la API fija un
+ * `maxDuration` menor, esta ventana puede bajar, nunca por debajo de ese valor más un margen.
+ */
+const val DEFAULT_FLIGHT_WINDOW_MS = 6 * MILLIS_PER_MINUTE
 
 /** El servidor guarda la fila de idempotencia 7 días; pasados 6 una consulta ya no prueba nada. */
 const val DEFAULT_RETENTION_LIMIT_MS = 6 * MILLIS_PER_DAY
