@@ -991,6 +991,63 @@ describe('POST /customer/checkout/quote · payment', () => {
     expect(r.body.data.payment.cash).toBeNull()
   })
 
+  it('recojo sin pickupTiming se trata como later: pickup_later (trusted y no_history)', async () => {
+    for (const c of [await clienteDeConfianza(), await crearCliente()]) {
+      const r = await cotizar(c, { deliveryMethod: 'pickup' })
+      expect(r.status).toBe(200)
+      expect(r.body.data.payment.options).toEqual([
+        { intent: 'pending_cash', available: false, unavailableReason: 'pickup_later' },
+        { intent: 'prepaid', available: true, unavailableReason: null },
+      ])
+      expect(r.body.data.payment.cash).toBeNull()
+      const ahora = await cotizar(c, { deliveryMethod: 'pickup', pickupTiming: 'now' })
+      expect(ahora.body.data.payment.options[0]).toEqual({
+        intent: 'pending_cash',
+        available: true,
+        unavailableReason: null,
+      })
+    }
+  })
+
+  it('una petición antigua de delivery, sin pickupTiming, sigue aceptada', async () => {
+    const c = await crearCliente()
+    const r = await cotizar(c)
+    expect(r.status).toBe(200)
+    expect(r.body.data.payment.options[0].available).toBe(true)
+  })
+
+  it('ajustes reales menores que los respaldos: umbral y billete salen de app_settings', async () => {
+    const c = await clienteDeConfianza()
+    const leer = async (key: string) =>
+      (await db.from('app_settings').select('value').eq('key', key).single()).data?.value
+    const previoUmbral = await leer('prepay_threshold')
+    const previoBillete = await leer('max_cash_bill')
+    try {
+      await db.from('app_settings').update({ value: 40 }).eq('key', 'prepay_threshold')
+      await db.from('app_settings').update({ value: 50 }).eq('key', 'max_cash_bill')
+      // Un plato de 48.00 pasa de 40 pero no del respaldo de 80.
+      const alto = await cotizar(c)
+      expect(alto.body.data.exceedsPrepayThreshold).toBe(true)
+      expect(alto.body.data.payment.options[0]).toEqual({
+        intent: 'pending_cash',
+        available: false,
+        unavailableReason: 'exceeds_threshold',
+      })
+      await db.from('app_settings').update({ value: 80 }).eq('key', 'prepay_threshold')
+      const bajo = await cotizar(c)
+      expect(bajo.body.data.payment.cash.maxBill).toBe('50.00')
+    } finally {
+      await db
+        .from('app_settings')
+        .update({ value: previoUmbral as never })
+        .eq('key', 'prepay_threshold')
+      await db
+        .from('app_settings')
+        .update({ value: previoBillete as never })
+        .eq('key', 'max_cash_bill')
+    }
+  })
+
   it('pickupTiming con delivery: 422', async () => {
     const c = await crearCliente()
     const r = await cotizar(c, { pickupTiming: 'now' })

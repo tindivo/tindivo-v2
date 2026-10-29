@@ -6,6 +6,7 @@ const base: QuotePaymentInput = {
   pickupTiming: null,
   contraentregaAllowed: true,
   exceedsPrepayThreshold: false,
+  settingsReliable: true,
   maxCashBill: '100.00',
   maxChange: '20.00',
 }
@@ -88,8 +89,44 @@ describe('planQuotePayment', () => {
     expect(r.cash).toBeNull()
   })
 
-  it('recojo sin contestar cuándo: se trata como now (no es later)', () => {
+  it('recojo sin contestar cuándo: se trata como later (como la creación)', () => {
     const input: QuotePaymentInput = { ...base, deliveryMethod: 'pickup', pickupTiming: null }
-    expect(opt(input, 'pending_cash').available).toBe(true)
+    expect(opt(input, 'pending_cash')).toMatchObject({
+      available: false,
+      unavailableReason: 'pickup_later',
+    })
+    expect(opt(input, 'prepaid').available).toBe(true)
+    expect(planQuotePayment(input).cash).toBeNull()
+  })
+
+  it('lectura de ajustes fallida: solo prepaid, prepay_required y cash null', () => {
+    for (const allowed of [true, false]) {
+      const input = { ...base, settingsReliable: false, contraentregaAllowed: allowed }
+      const r = planQuotePayment(input)
+      expect(opt(input, 'pending_cash')).toMatchObject({
+        available: false,
+        unavailableReason: 'prepay_required',
+      })
+      expect(opt(input, 'pending_yape')).toMatchObject({
+        available: false,
+        unavailableReason: 'prepay_required',
+      })
+      expect(opt(input, 'prepaid').available).toBe(true)
+      expect(r.cash).toBeNull()
+    }
+  })
+
+  it('lectura fallida en recojo now: también prepay_required', () => {
+    const input: QuotePaymentInput = {
+      ...base,
+      deliveryMethod: 'pickup',
+      pickupTiming: 'now',
+      settingsReliable: false,
+    }
+    expect(opt(input, 'pending_cash').unavailableReason).toBe('prepay_required')
+  })
+
+  it('delivery ignora pickupTiming nulo: contraentrega disponible', () => {
+    expect(opt(base, 'pending_cash').available).toBe(true)
   })
 })

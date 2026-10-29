@@ -94,7 +94,7 @@ export const CheckoutQuoteRequestSchema = z
     coordinates: CoordinatesSchema.optional(),
     /**
      * Cuándo recoge el cliente. Solo vale con `pickup` (con `delivery` es 422, como
-     * en `POST /customer/orders`). Sin él, el recojo se cotiza como «ahora».
+     * en `POST /customer/orders`). Sin él, el recojo se cotiza como «later», igual que la creación del pedido.
      */
     pickupTiming: PickupTimingSchema.optional(),
     items: z

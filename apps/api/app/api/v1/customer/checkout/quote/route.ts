@@ -221,10 +221,13 @@ export async function POST(req: Request): Promise<Response> {
     const totalCents = subtotalCents + deliveryCents
 
     // ── Vuelto máximo y umbral de prepago ────────────────────────────────────
-    const { data: settings } = await service
+    const { data: settings, error: settingsErr } = await service
       .from('app_settings')
       .select('key,value')
       .in('key', ['prepay_threshold', 'max_change', 'max_cash_bill'])
+    // Lectura fallida ≠ clave ausente: con la lectura rota los respaldos (80 / 100)
+    // podrían ofrecer más que los ajustes reales, así que `payment` va al lado seguro.
+    if (settingsErr) console.error('[checkout/quote] ajustes:', settingsErr.message)
     const setting = (key: string): unknown => settings?.find((s) => s.key === key)?.value
     const threshold = Number(setting('prepay_threshold') ?? 80)
     const thresholdCents = cents(Number.isFinite(threshold) ? threshold : 80)
@@ -252,6 +255,7 @@ export async function POST(req: Request): Promise<Response> {
       deliveryMethod: body.deliveryMethod,
       pickupTiming: body.pickupTiming ?? null,
       contraentregaAllowed: decisionErr === null && decision !== 'risk_blocked',
+      settingsReliable: settingsErr === null && changeErr === null,
       exceedsPrepayThreshold: totalCents > thresholdCents,
       // Mismo respaldo que `create_customer_order`: S/ 100 si el ajuste falta.
       maxCashBill: toMoneyText(setting('max_cash_bill') ?? 100) ?? '100.00',
