@@ -11873,6 +11873,26 @@
                           "description": "Vuelto máximo general; el de cada negocio puede ser menor esa noche",
                           "type": "string",
                           "pattern": "^\\d+\\.\\d{2}$"
+                        },
+                        "prepayTimers": {
+                          "nullable": true,
+                          "description": "Plazos del prepago (`app_settings.timers`); null si falta alguno",
+                          "type": "object",
+                          "properties": {
+                            "acceptanceMinutes": {
+                              "type": "integer",
+                              "description": "Minutos que tiene el negocio para aceptar un pedido prepagado"
+                            },
+                            "paymentMinutes": {
+                              "type": "integer",
+                              "description": "Minutos que tiene el cliente para pagar y subir la captura después de que el negocio confirma"
+                            }
+                          },
+                          "required": [
+                            "acceptanceMinutes",
+                            "paymentMinutes"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -11882,7 +11902,8 @@
                         "deliveryBands",
                         "prepayThreshold",
                         "maxCashBill",
-                        "maxChange"
+                        "maxChange",
+                        "prepayTimers"
                       ],
                       "additionalProperties": false
                     }
