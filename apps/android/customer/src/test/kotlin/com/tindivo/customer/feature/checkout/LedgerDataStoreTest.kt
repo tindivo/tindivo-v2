@@ -49,10 +49,13 @@ class LedgerDataStoreTest {
         }, newKey = { UUID(0L, 7L) })
 
     /** Si algo llegara a enviar, la prueba falla. */
-    private suspend fun assertNothingSent(store: LedgerStore) {
+    private suspend fun assertNothingSent(
+        store: LedgerStore,
+        account: String = "cuenta",
+    ) {
         var sent = false
         val result =
-            ledger(store).place("cuenta", cart) {
+            ledger(store).place(account, cart) {
                 sent = true
                 ApiResult.Success("no debe enviarse")
             }
@@ -72,7 +75,7 @@ class LedgerDataStoreTest {
     @Test
     fun `lo escrito se lee de nuevo`() =
         runTest {
-            val attempt = Attempt("k", "f", AttemptPhase.Uncertain, 5L, true)
+            val attempt = Attempt(UUID(0L, 9L).toString(), "f", AttemptPhase.Uncertain, 5L, true)
             store().write(Ledger(attempts = mapOf("cuenta" to attempt)))
 
             val snapshot = file().inputStream().use { LedgerSerializer.readFrom(it) }
@@ -113,13 +116,29 @@ class LedgerDataStoreTest {
         }
 
     @Test
-    fun `CAX-005 una clave que no es UUID guardada en disco no envia nada`() =
+    fun `CAX-005 una clave invalida de A en disco hace perdido todo el registro y B llamando primero no envia`() =
         runTest {
             file().writeText(
-                """{"version":1,"attempts":{"cuenta":{"key":"no-es-uuid","cartFingerprint":"f","phase":"Uncertain",""" +
-                    """"sentAtEpochMs":1,"lastResponseDefinitive":true}}}""",
+                """{"version":1,"attempts":{"cuenta-a":{"key":"x-no-uuid","cartFingerprint":"f",""" +
+                    """"phase":"Uncertain","sentAtEpochMs":1,"lastResponseDefinitive":true}}}""",
+            )
+            val store = store()
+
+            assertTrue(store.read().lost)
+            assertTrue(store.read().attempts.isEmpty())
+            assertNothingSent(store, "cuenta-b")
+            assertNothingSent(store, "cuenta-a")
+        }
+
+    @Test
+    fun `CAX-005 un InFlight sin hora hace perdido todo el registro`() =
+        runTest {
+            val valid = UUID(0L, 3L)
+            file().writeText(
+                """{"version":1,"attempts":{"cuenta-a":{"key":"$valid","cartFingerprint":"f","phase":"InFlight",""" +
+                    """"sentAtEpochMs":null,"lastResponseDefinitive":false}}}""",
             )
 
-            assertNothingSent(store())
+            assertTrue(store().read().lost)
         }
 }

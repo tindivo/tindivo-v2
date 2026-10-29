@@ -97,6 +97,9 @@ sealed interface PlaceResult<out T> {
         val error: AppError,
     ) : PlaceResult<Nothing>
 
+    /** Otra llamada de la misma cuenta sigue en curso: no se leyó, no se envió y no se tocó el registro. */
+    data object Busy : PlaceResult<Nothing>
+
     /** Un envío anterior pudo seguir en vuelo: se espera a que pase la ventana. No se envió nada. */
     data object StillProcessing : PlaceResult<Nothing>
 

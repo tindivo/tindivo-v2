@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.UUID
 
 /** La versión del formato en disco. Cualquier otra se trata como pérdida del registro, nunca como «vacío». */
 const val LEDGER_VERSION = 1
@@ -51,6 +52,9 @@ object LedgerSerializer : Serializer<LedgerSnapshot> {
         try {
             json.decodeFromString(LedgerSnapshot.serializer(), input.readBytes().decodeToString()).also {
                 if (it.version != LEDGER_VERSION) throw CorruptionException("Versión ${it.version} desconocida")
+                it.attempts.values.firstOrNull { a -> !a.isCoherent() }?.let {
+                    throw CorruptionException("Hay un intento con clave ilegible o hora incoherente")
+                }
             }
         } catch (e: IllegalArgumentException) {
             // SerializationException hereda de IllegalArgumentException.
@@ -63,6 +67,19 @@ object LedgerSerializer : Serializer<LedgerSnapshot> {
     ) {
         output.write(json.encodeToString(LedgerSnapshot.serializer(), t).encodeToByteArray())
     }
+}
+
+// Clave UUID y hora coherente: una sola entrada rota convierte TODO el registro en perdido (misma vía que la corrupción).
+private fun AttemptSnapshot.isCoherent(): Boolean {
+    val validKey =
+        try {
+            UUID.fromString(key)
+            true
+        } catch (_: IllegalArgumentException) {
+            false
+        }
+    val validTime = sentAtEpochMs?.let { it >= 0 } ?: (phase != AttemptPhase.InFlight)
+    return validKey && validTime
 }
 
 /** [LedgerStore] sobre DataStore (KT-9): cada escritura es un único `updateData`. */

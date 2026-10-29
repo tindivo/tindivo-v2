@@ -102,7 +102,7 @@ const val DEFAULT_RETENTION_LIMIT_MS = 6 * MILLIS_PER_DAY
  *   enviar; `not_found` reenvía con la MISMA clave, salvo que un envío anterior aún pueda estar en vuelo
  *   ([flightWindowMs]); `unknown` devuelve [PlaceResult.NeedsReconciliation].
  * - Pasados [retentionLimitMs] la consulta ya no prueba nada: [PlaceResult.NeedsReconciliation].
- * - Si el archivo se pierde (corrupto, versión desconocida o clave ilegible), `place` devuelve
+ * - Si el archivo se pierde (corrupto, versión desconocida o una clave ilegible en CUALQUIER cuenta), `place` devuelve
  *   [PlaceResult.NeedsReconciliation] para cualquier cuenta hasta [acknowledgeReconciled]. Es la única vía para tener
  *   una clave nueva sin un `created`, y solo la UI la llama, tras enseñar «Mis pedidos» y obtener una confirmación
  *   explícita de la persona.
@@ -132,18 +132,26 @@ class OrderAttemptLedger(
     /**
      * Intenta crear el pedido de [cart] para [accountId] (el usuario autenticado al empezar). [send] recibe la clave y
      * devuelve el resultado de `POST /customer/orders`.
+     *
+     * Una llamada mientras otra de la misma cuenta está en curso no espera: devuelve [PlaceResult.Busy] sin leer, sin
+     * enviar y sin tocar el registro. Un pedido nuevo después de un [PlaceResult.Created] es una decisión nueva de la UI.
      */
     suspend fun <T> place(
         accountId: String,
         cart: Cart,
         send: suspend (UUID) -> ApiResult<T>,
-    ): PlaceResult<T> =
-        lockOf(accountId).withLock {
-            when (val gate = prepare(accountId, cart)) {
+    ): PlaceResult<T> {
+        val lock = lockOf(accountId)
+        if (!lock.tryLock()) return PlaceResult.Busy
+        try {
+            return when (val gate = prepare(accountId, cart)) {
                 is Gate.Stop -> gate.result
                 is Gate.Send -> settle(accountId, gate.key, send(gate.key))
             }
+        } finally {
+            lock.unlock()
         }
+    }
 
     /**
      * La persona revisó «Mis pedidos» y confirmó que puede seguir: olvida el intento de [accountId] y, si el archivo se
@@ -173,21 +181,40 @@ class OrderAttemptLedger(
         cart: Cart,
     ): Gate {
         val ledger = store.read()
+        if (!ledger.lost && ledger.hasInvalidKey()) {
+            update { it.markLostIfInvalid() }
+            return Gate.Stop(PlaceResult.NeedsReconciliation)
+        }
         if (ledger.lost && accountId !in ledger.acknowledged) return Gate.Stop(PlaceResult.NeedsReconciliation)
-        val existing = ledger.attempts[accountId]
-        if (existing == null) return Gate.Send(newKey().also { markInFlight(accountId, it, cart) })
-        val key = existing.key.toUuidOrNull()
-        return when {
-            key == null -> {
-                update { it.copy(lost = true, acknowledged = emptySet()) }
-                Gate.Stop(PlaceResult.NeedsReconciliation)
-            }
+        val existing = ledger.attempts[accountId] ?: return authorize(accountId, expectedKey = null, cart = cart)
+        val key = existing.key.toUuidOrNull() ?: return Gate.Stop(PlaceResult.NeedsReconciliation)
+        return reconcile(accountId, key, existing, cart)
+    }
 
-            else -> {
-                reconcile(accountId, key, existing, cart)
+    /**
+     * El único paso que deja pasar a un envío, y atómico: sobre el estado VIGENTE (no sobre la lectura de `prepare`)
+     * comprueba la barrera `lost`, que la entrada de la cuenta siga siendo la esperada (`null` en un primer envío, o la
+     * clave que se reconcilió) y persiste [AttemptPhase.InFlight]. Si algo no cuadra, no hay envío.
+     */
+    private suspend fun authorize(
+        accountId: String,
+        expectedKey: UUID?,
+        cart: Cart,
+    ): Gate =
+        storeMutex.withLock {
+            val read = store.read()
+            val current = read.markLostIfInvalid()
+            if (current !== read) store.write(current)
+            val blocked = current.lost && accountId !in current.acknowledged
+            if (blocked || current.attempts[accountId]?.key != expectedKey?.toString()) {
+                Gate.Stop(PlaceResult.NeedsReconciliation)
+            } else {
+                val key = expectedKey ?: newKey()
+                val attempt = Attempt(key.toString(), cart.fingerprint(), AttemptPhase.InFlight, clock(), false)
+                store.write(current.copy(attempts = current.attempts + (accountId to attempt)))
+                Gate.Send(key)
             }
         }
-    }
 
     private suspend fun reconcile(
         accountId: String,
@@ -210,12 +237,7 @@ class OrderAttemptLedger(
 
             LookupResult.NotFound -> {
                 val maybeInFlight = !existing.lastResponseDefinitive && sentAt != null && now - sentAt < flightWindowMs
-                if (maybeInFlight) {
-                    Gate.Stop(PlaceResult.StillProcessing)
-                } else {
-                    markInFlight(accountId, key, cart)
-                    Gate.Send(key)
-                }
+                if (maybeInFlight) Gate.Stop(PlaceResult.StillProcessing) else authorize(accountId, key, cart)
             }
         }
     }
@@ -270,15 +292,6 @@ class OrderAttemptLedger(
             }
         }
 
-    private suspend fun markInFlight(
-        accountId: String,
-        key: UUID,
-        cart: Cart,
-    ) {
-        val attempt = Attempt(key.toString(), cart.fingerprint(), AttemptPhase.InFlight, clock(), false)
-        update { it.copy(attempts = it.attempts + (accountId to attempt)) }
-    }
-
     // Solo si la clave guardada sigue siendo la que se envió: una respuesta atrasada no cierra otro intento.
     private suspend fun markUncertain(
         accountId: String,
@@ -311,6 +324,18 @@ class OrderAttemptLedger(
         storeMutex.withLock { store.write(transform(store.read())) }
     }
 }
+
+private fun Ledger.hasInvalidKey() = attempts.values.any { it.key.toUuidOrNull() == null }
+
+/** Una sola clave ilegible en cualquier cuenta es pérdida global: nadie puede enviar hasta confirmar. */
+private fun Ledger.markLostIfInvalid() =
+    if (!lost &&
+        hasInvalidKey()
+    ) {
+        copy(lost = true, acknowledged = emptySet())
+    } else {
+        this
+    }
 
 private fun String.toUuidOrNull(): UUID? =
     try {
