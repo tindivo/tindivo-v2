@@ -27,7 +27,7 @@ class IdempotencyKeysTest {
 
     private var counter = 0
     private val store = MemoryStore()
-    private val keys = IdempotencyKeys(store, newKey = { UUID(0L, ++counter.toLong()) })
+    private val keys = IdempotencyKeys(store, newKey = { UUID(0L, (++counter).toLong()) })
 
     private fun line(
         itemId: String = "plato",
