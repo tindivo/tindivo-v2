@@ -1,6 +1,10 @@
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
-import { isIdempotencyKey, readCreationRecord } from '@/lib/http/idempotency'
+import {
+  CreationRecordReadError,
+  isIdempotencyKey,
+  readCreationRecord,
+} from '@/lib/http/idempotency'
 import { privateHeaders } from '@/lib/http/private-response'
 import { handleError, ok, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
@@ -40,12 +44,21 @@ export async function GET(
       })
     }
     const service = createServiceClient()
-    const record = await readCreationRecord(service, {
-      userId: user.id,
-      scope: 'create_order',
-      key,
-    })
     const headers = privateHeaders(req)
+    let record: Awaited<ReturnType<typeof readCreationRecord>>
+    try {
+      record = await readCreationRecord(service, {
+        userId: user.id,
+        scope: 'create_order',
+        key,
+      })
+    } catch (err) {
+      // No se pudo leer el registro: no se sabe si el pedido existe. Nunca `not_found`.
+      if (err instanceof CreationRecordReadError) {
+        return ok({ state: 'unknown', order: null }, { headers })
+      }
+      throw err
+    }
     if (!record) return ok({ state: 'not_found', order: null }, { headers })
     if (record.state === 'reserved') return ok({ state: 'unknown', order: null }, { headers })
     // Legada `completed` con respuesta de error: la clave está consumida pero el pedido no

@@ -62,7 +62,7 @@ export const ORDER_ATTEMPT_STATES = ['created', 'not_found', 'unknown'] as const
 export const OrderAttemptSchema = z.object({
   state: openEnum(
     ORDER_ATTEMPT_STATES,
-    '`created`: la clave creó el pedido de `order`. `not_found`: la clave NO ha creado nada TODAVÍA; solo prueba el presente, porque una petición en vuelo puede crearlo después y, pasada la retención (7 días), se pierde el rastro. `unknown`: solo hay una reserva de la API anterior y no se puede saber',
+    '`created`: la clave creó el pedido de `order`. `not_found`: la clave NO ha creado nada TODAVÍA; solo prueba el presente, porque una petición en vuelo puede crearlo después y, pasada la retención (7 días), se pierde el rastro. `unknown`: no se sabe si el pedido existe, porque solo hay una reserva de la API anterior o no se pudo leer el registro; reintenta la consulta más tarde',
   ),
   order: z.object({ id: uuidOut, shortId: z.string() }).nullable().meta({
     description:
