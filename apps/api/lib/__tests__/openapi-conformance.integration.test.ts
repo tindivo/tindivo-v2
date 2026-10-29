@@ -81,6 +81,7 @@ import { GET as getCustomerReorder } from '../../app/api/v1/customer/orders/[id]
 import { POST as dismissCustomerReview } from '../../app/api/v1/customer/orders/[id]/review/dismiss/route'
 import { POST as createCustomerReview } from '../../app/api/v1/customer/orders/[id]/review/route'
 import { GET as getCustomerOrder } from '../../app/api/v1/customer/orders/[id]/route'
+import { GET as getOrderAttempt } from '../../app/api/v1/customer/orders/attempts/[key]/route'
 import {
   POST as createOrder,
   GET as listCustomerOrders,
@@ -470,12 +471,18 @@ describe('el cliente con sesión', () => {
   })
 
   it('pide, sigue y cancela un pedido', async () => {
+    const attemptKey = crypto.randomUUID()
     const created = await conforms('createOrder', 201, createOrder, {
       method: 'POST',
       bearer: token,
-      headers: { 'idempotency-key': crypto.randomUUID() },
+      headers: { 'idempotency-key': attemptKey },
       body: orderBody(),
     })
+    const attempt = await conforms('getOrderAttempt', 200, getOrderAttempt, {
+      bearer: token,
+      params: { key: attemptKey },
+    })
+    expect(attempt.state).toBe('created')
     await conforms('getOrderTracking', 200, getOrderTracking, {
       params: { shortId: String(created.shortId) },
     })
