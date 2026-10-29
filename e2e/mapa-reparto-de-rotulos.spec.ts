@@ -172,8 +172,8 @@ test.beforeEach(async () => {
 test.afterEach(limpiar)
 
 async function entrar(page: import('@playwright/test').Page) {
-  // El `filter` no es adorno: en /entrar hay DOS formularios montados a la vez
-  // (crear cuenta e iniciar sesión) con los mismos placeholders.
+  // El `filter` no es adorno: en /entrar están montados a la vez todos los pasos de la
+  // hoja (iniciar sesión, nombre, celular, dirección), cada uno con su formulario.
   await page.goto('/entrar')
   await page.getByRole('button', { name: 'Iniciar sesión' }).click()
   const formLogin = page.locator('form').filter({ hasText: 'Hola de nuevo' })

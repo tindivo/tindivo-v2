@@ -8,6 +8,15 @@ major_version = 17
 [db.migrations]
 schema_paths = ["./migrations"]
 
+# Solo se crean cuentas nuevas con Google (0279). El hook corre en las altas públicas (correo,
+# teléfono, anónimas, OAuth, id_token) y NO en `auth.admin.createUser`, que es como se crea al
+# personal y a las cuentas de prueba. Local: lo aplica `supabase start`. Producción: NO lo aplica
+# este archivo; se activa en Auth → Hooks, DESPUÉS del `db push` que crea la función (al revés,
+# falla toda alta, también la de Google). Guía: Docs/operacion/deploy.md §2.1, paso 3.
+[auth.hook.before_user_created]
+enabled = true
+uri = "pg-functions://postgres/auth_hooks/before_user_created"
+
 # send-push lo llama el trigger `dispatch_event` (pg_net) con la clave anónima como Bearer y el
 # `event_id` del evento en el cuerpo (0264). `verify_jwt = true` es el valor por defecto, declarado
 # a propósito: NO es una defensa (la clave anónima es un JWT válido y viaja en los bundles web); la

@@ -21,11 +21,15 @@
  *      cómo llegar es un campo que no existe.
  *
  * SE CREA SU PROPIO CLIENTE, y no usa los tres sembrados, porque los tres nacen
- * con el teléfono ya verificado y este paso solo existe antes de eso. Lo crea
- * por la UI real (bolsa → «Ir a pagar» → crear cuenta con correo), que es el
- * camino exacto del que se quejó el vecino. Y lo borra al terminar: `auth.users`
- * NO arrastra a `public.users` —no hay FK entre las dos—, así que hay que
- * borrar de las dos, y de `customer_otp_attempts` a mano, que tampoco la tiene.
+ * con el teléfono ya verificado y este paso solo existe antes de eso. Desde la
+ * 0279 una cuenta nueva solo nace con Google, y en local no hay Google: la
+ * cuenta se crea por servicio, sin perfil, entra con su contraseña y se deja la
+ * marca de reanudación que deja `signInWithGoogle` antes de salir a Google. Al
+ * recargar, el host reanuda el onboarding como al volver de Google: nombre →
+ * celular, el camino que hace hoy un vecino nuevo. Y lo borra al terminar:
+ * `auth.users` NO arrastra a `public.users` —no hay FK entre las dos—, así que
+ * hay que borrar de las dos, y de `customer_otp_attempts` a mano, que tampoco la
+ * tiene.
  *
  * EL SMS NO SE ENVÍA. En local no hay Twilio, así que `send-code` se responde
  * desde el test. Y para pasar del paso se marca `phone_verified_at` por
@@ -144,34 +148,52 @@ test('el campo del código sigue a la vista cuando el teclado come pantalla', as
     }),
   )
 
-  // ── Cuenta nueva, por el camino del que se quejó el vecino ────────────────
+  // ── Cuenta nueva, como la deja Google: sin perfil de cliente ──────────────
   const email = `${PREFIJO}${Date.now()}@e2e.local`
+  const { data: creado, error: alta } = await db.auth.admin.createUser({
+    email,
+    password: PASSWORD,
+    email_confirm: true,
+    user_metadata: { full_name: 'Vecino De Prueba' },
+  })
+  expect(alta, 'crear la cuenta por servicio no debe fallar').toBeNull()
+  userId = creado.user?.id as string
 
   await page.goto('/negocio/la-florencia-e2e')
   await page.getByText(ITEM).first().click()
   await page.getByRole('button', { name: /^Agregar ·/ }).click()
+  await expect(page.getByRole('button', { name: /Ver mi bolsa/ })).toBeVisible()
 
-  const bolsa = page.getByRole('button', { name: /Ver mi bolsa/ })
-  await expect(bolsa).toBeVisible()
-  await bolsa.click()
-  await page.getByRole('button', { name: 'Ir a pagar' }).click()
+  await page.goto('/entrar')
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click()
+  const formLogin = page.locator('form').filter({ hasText: 'Hola de nuevo' })
+  await formLogin.getByPlaceholder('tu@correo.com').fill(email)
+  await formLogin.getByPlaceholder('Tu contraseña').fill(PASSWORD)
+  await formLogin.locator('button[type="submit"]').click()
+  await page.waitForURL((u) => !u.pathname.startsWith('/entrar'), { timeout: 20_000 })
 
+  // La misma marca que deja `saveOnboardingResume` antes de salir a Google.
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'tindivo.onboarding.resume',
+      JSON.stringify({ v: 1, next: '/checkout', ts: Date.now() }),
+    ),
+  )
+  await page.goto('/negocio/la-florencia-e2e')
+  await expect(page.getByRole('heading', { name: '¿Cómo te llamamos?' })).toBeVisible({
+    timeout: 20_000,
+  })
+  // Todos los paneles del carrusel están montados: se acota al formulario del nombre, que
+  // viene prellenado con el `full_name` de la cuenta, como el que trae Google.
   await page
-    .getByRole('button', { name: /correo/i })
-    .first()
+    .locator('form')
+    .filter({ hasText: '¿Cómo te llamamos?' })
+    .getByRole('button', { name: 'Continuar' })
     .click()
-  await page.getByPlaceholder('Ej. María López').fill('Vecino De Prueba')
-  await page.getByPlaceholder('tu@correo.com').first().fill(email)
-  await page.getByPlaceholder('Mínimo 6 caracteres').first().fill(PASSWORD)
-  await page.locator('form:visible button[type="submit"]').first().click()
 
   // ── Paso del celular ──────────────────────────────────────────────────────
   const campoTelefono = 'input[placeholder^="9"]'
   await expect(page.getByRole('heading', { name: /número\s*de celular/i })).toBeVisible()
-
-  const { data: creado } = await db.from('users').select('id').eq('email', email).maybeSingle()
-  expect(creado?.id, 'la cuenta nueva tiene que existir en users').toBeTruthy()
-  userId = creado?.id as string
 
   for (const alto of ALTURAS_CON_TECLADO) {
     await page.setViewportSize({ width: ANCHO, height: alto })
@@ -207,12 +229,13 @@ test('el campo del código sigue a la vista cuando el teclado come pantalla', as
     )
   }
 
-  // EL CARRUSEL NO PUEDE HABERSE DESPLAZADO POR SU CUENTA. Mide seis paneles de
-  // ancho y se coloca con `translateX`, así que cualquier `scrollLeft` que le
+  // EL CARRUSEL NO PUEDE HABERSE DESPLAZADO POR SU CUENTA. Mide un panel por paso
+  // de ancho y se coloca con `translateX`, así que cualquier `scrollLeft` que le
   // ponga el navegador corre el panel activo y asoma el de al lado — y con
   // `overflow: hidden` no había forma humana de devolverlo. Medido el
-  // 2026-09-04, llegaba aquí con 16 px heredados del formulario de registro:
-  // los ponía el navegador al enfocar aquellos campos. Lo cierra
+  // 2026-09-04, llegaba aquí con 16 px heredados del formulario de registro por
+  // correo (retirado en la 0279): los ponía el navegador al enfocar aquellos
+  // campos; hoy el que se enfoca antes es el del nombre. Lo cierra
   // `.overflow-clip-safe`, que recorta sin ser contenedor de scroll.
   const desplazamiento = await page.evaluate(() => {
     const c = document.querySelector('[data-testid="onboarding-carrusel"]')
@@ -239,7 +262,11 @@ test('el campo del código sigue a la vista cuando el teclado come pantalla', as
   expect(sello, 'sellar el teléfono por servicio no debe fallar').toBeNull()
 
   // La bolsa sobrevive a la recarga (vive en localStorage), así que se puede
-  // volver a pedir sin rehacer el pedido.
+  // volver a pedir sin rehacer el pedido. La marca de reanudación de Google, en
+  // cambio, se quita: con ella el host reabriría la hoja en la dirección por su
+  // cuenta, y la aserción de abajo pasaría sin que el guard del checkout leyera
+  // el sello.
+  await page.evaluate(() => localStorage.removeItem('tindivo.onboarding.resume'))
   await page.reload()
   await page.getByRole('button', { name: /Ver mi bolsa/ }).click()
   await page.getByRole('button', { name: 'Ir a pagar' }).click()

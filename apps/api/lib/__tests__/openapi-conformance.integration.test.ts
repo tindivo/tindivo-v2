@@ -18,12 +18,24 @@
  *  · un artículo de Store con el prefijo `ZZ Test Store`.
  */
 import { createClient } from '@supabase/supabase-js'
+import {
+  CustomerSecurityNoticesSchema,
+  PhoneTransferSchema,
+  ProblemDetailsSchema,
+} from '@tindivo/contracts'
 import { OPERATIONS } from '@tindivo/contracts/openapi'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { E2E as FIXTURES } from '../../scripts/e2e-fixtures'
-import { localClient as db, E2E, uploadProofObject } from './helpers/local-db'
+import {
+  cleanup,
+  localClient as db,
+  E2E,
+  seedContraentregaOrder,
+  uploadProofObject,
+} from './helpers/local-db'
 import { COURIER_POINT_A, COURIER_POINT_B } from './helpers/local-db-courier'
 import { checkedOperations, expectConforms } from './helpers/openapi-conformance'
+import { cleanupPhoneSecurityFixtures } from './helpers/phone-security-fixtures'
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
 const LOCAL_ANON_KEY =
@@ -65,6 +77,8 @@ import { POST as cancelOrder } from '../../app/api/v1/customer/orders/[id]/cance
 import { GET as getPrepayInfo } from '../../app/api/v1/customer/orders/[id]/prepay-info/route'
 import { POST as confirmPrepayProof } from '../../app/api/v1/customer/orders/[id]/prepay-proof/route'
 import { GET as getCustomerReorder } from '../../app/api/v1/customer/orders/[id]/reorder/route'
+import { POST as dismissCustomerReview } from '../../app/api/v1/customer/orders/[id]/review/dismiss/route'
+import { POST as createCustomerReview } from '../../app/api/v1/customer/orders/[id]/review/route'
 import { GET as getCustomerOrder } from '../../app/api/v1/customer/orders/[id]/route'
 import {
   POST as createOrder,
@@ -72,11 +86,15 @@ import {
 } from '../../app/api/v1/customer/orders/route'
 import { GET as getPaymentOptions } from '../../app/api/v1/customer/payment-options/route'
 import { POST as sendPhoneCode } from '../../app/api/v1/customer/phone/send-code/route'
+import { POST as transferPhone } from '../../app/api/v1/customer/phone/transfer/route'
 import { POST as verifyPhoneCode } from '../../app/api/v1/customer/phone/verify/route'
 import {
   GET as getCustomerProfile,
   PUT as updateCustomerProfile,
 } from '../../app/api/v1/customer/profile/route'
+import { GET as getCustomerPendingReview } from '../../app/api/v1/customer/reviews/pending/route'
+import { POST as seeSecurityNotice } from '../../app/api/v1/customer/security-notices/[id]/seen/route'
+import { GET as getSecurityNotices } from '../../app/api/v1/customer/security-notices/route'
 import { POST as acceptTerms } from '../../app/api/v1/customer/terms-acceptance/route'
 import { GET as getHealth } from '../../app/api/v1/health/route'
 import { GET as getBusiness } from '../../app/api/v1/public/businesses/[id]/route'
@@ -247,6 +265,8 @@ afterAll(async () => {
   if (!userId) return
   await borrarPedidosDelCliente()
   await db.from('courier_orders').delete().eq('customer_user_id', userId)
+  await db.from('phone_transfer_challenges').delete().eq('user_id', userId).throwOnError()
+  await db.from('phone_assignments').delete().eq('user_id', userId).throwOnError()
   await db.from('users').delete().eq('id', userId)
   await db.auth.admin.deleteUser(userId)
 })
@@ -652,6 +672,44 @@ describe('el cliente con sesión', () => {
   })
 })
 
+describe('reseñas', () => {
+  it('pregunta por el entregado, lo descarta y aún lo califica', async () => {
+    const seed = await seedContraentregaOrder()
+    try {
+      // Las reseñas van sobre un pedido entregado y propio: el seed se pone a nombre de este cliente.
+      await db
+        .from('orders')
+        .update({
+          customer_user_id: userId,
+          driver_id: E2E.DRIVER_ID,
+          status: 'delivered',
+          delivered_at: new Date().toISOString(),
+        })
+        .eq('id', seed.orderId)
+        .throwOnError()
+      const pending = await conforms('getCustomerPendingReview', 200, getCustomerPendingReview, {
+        bearer: token,
+      })
+      expect(pending.orderId).toBe(seed.orderId)
+      await conforms('dismissCustomerReview', 204, dismissCustomerReview, {
+        method: 'POST',
+        bearer: token,
+        body: {},
+        params: { id: seed.orderId },
+      })
+      await conforms('createCustomerReview', 200, createCustomerReview, {
+        method: 'POST',
+        bearer: token,
+        body: { rating: 5 },
+        params: { id: seed.orderId },
+      })
+    } finally {
+      // `order_reviews`, las descartadas y `order_event_log` caen en cascada con el pedido.
+      await cleanup(seed)
+    }
+  })
+})
+
 describe('MV5: borrar la cuenta', () => {
   it('una cuenta propia, recién creada y sin pedidos, se borra con 204', async () => {
     const email = `conformidad-borrar-${RUN}@integration.local`
@@ -672,8 +730,84 @@ describe('MV5: borrar la cuenta', () => {
       })
     } finally {
       // Queda la lápida de `public.users`: no tiene pedidos, se puede quitar.
+      // 0278: una cuenta borrada deja su historia del número.
+      await cleanupPhoneSecurityFixtures(db, [id])
       await db.from('users').delete().eq('id', id)
       await db.auth.admin.deleteUser(id)
+    }
+  })
+})
+
+describe('traslado del número y avisos de seguridad', () => {
+  it('las tres rutas nuevas responden con el contrato publicado', async () => {
+    const ids: string[] = []
+    const number = `9${String(Date.now()).slice(-8)}`
+    try {
+      const sessions: string[] = []
+      for (const side of ['a', 'b']) {
+        const email = `phone-conformance-${side}-${crypto.randomUUID()}@integration.local`
+        const { data, error } = await db.auth.admin.createUser({
+          email,
+          password: 'test-password-12345',
+          email_confirm: true,
+          user_metadata: { full_name: NOMBRE_FIXTURE },
+        })
+        if (error) throw new Error(error.message)
+        ids.push(data.user.id)
+        await db
+          .from('customer_profiles')
+          .insert({ user_id: data.user.id, full_name: NOMBRE_FIXTURE })
+          .throwOnError()
+        sessions.push(await signIn(email, 'test-password-12345'))
+      }
+      const [a, b] = sessions
+      if (!a || !b) throw new Error('sin sesiones')
+      await conforms('verifyPhoneCode', 200, verifyPhoneCode, {
+        method: 'POST',
+        bearer: a,
+        body: { phone: number, code: DEV_OTP_CODE },
+      })
+      const pending = await call(verifyPhoneCode, {
+        method: 'POST',
+        bearer: b,
+        body: { phone: number, code: DEV_OTP_CODE },
+      })
+      expect(pending.status).toBe(409)
+      const proof = PhoneTransferSchema.parse(ProblemDetailsSchema.parse(pending.body).transfer)
+      await conforms('transferCustomerPhone', 200, transferPhone, {
+        method: 'POST',
+        bearer: b,
+        body: { challengeId: proof.challengeId },
+      })
+      const listed = await call(getSecurityNotices, { bearer: a })
+      expect(listed.status).toBe(200)
+      expectConforms('getCustomerSecurityNotices', 200, listed.body)
+      const rows = CustomerSecurityNoticesSchema.parse((listed.body as { data: unknown }).data)
+      const id = rows[0]?.id
+      if (!id) throw new Error('sin aviso')
+      await conforms('seeCustomerSecurityNotice', 204, seeSecurityNotice, {
+        method: 'POST',
+        bearer: a,
+        body: {},
+        params: { id },
+      })
+    } finally {
+      if (ids.length) {
+        const { data: rows } = await db
+          .from('customer_security_notices')
+          .select('id')
+          .in('user_id', ids)
+          .throwOnError()
+        for (const n of rows ?? [])
+          await db.from('domain_events').delete().eq('aggregate_id', n.id).throwOnError()
+        await db.from('customer_security_notices').delete().in('user_id', ids).throwOnError()
+        await db.from('phone_transfer_challenges').delete().in('user_id', ids).throwOnError()
+        await db.from('phone_assignments').delete().in('user_id', ids).throwOnError()
+        for (const id of ids) {
+          await db.from('users').delete().eq('id', id).throwOnError()
+          await db.auth.admin.deleteUser(id)
+        }
+      }
     }
   })
 })
