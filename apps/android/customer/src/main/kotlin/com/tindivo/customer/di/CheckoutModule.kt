@@ -8,10 +8,12 @@ import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.core.network.GeneratedJson
 import com.tindivo.core.network.PhoneRepository
 import com.tindivo.customer.BuildConfig
-import com.tindivo.customer.feature.checkout.DataStorePendingAttemptStore
-import com.tindivo.customer.feature.checkout.IdempotencyKeys
-import com.tindivo.customer.feature.checkout.PendingAttemptSerializer
-import com.tindivo.customer.feature.checkout.PendingAttemptSnapshot
+import com.tindivo.customer.feature.checkout.DataStoreLedgerStore
+import com.tindivo.customer.feature.checkout.LedgerSerializer
+import com.tindivo.customer.feature.checkout.LedgerSnapshot
+import com.tindivo.customer.feature.checkout.LostLedgerSnapshot
+import com.tindivo.customer.feature.checkout.NotImplementedAttemptLookup
+import com.tindivo.customer.feature.checkout.OrderAttemptLedger
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,9 +24,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
 import java.io.File
+import java.time.Clock
 import javax.inject.Singleton
 
-private const val ATTEMPT_FILE = "tindivo_checkout_attempt.json"
+private const val LEDGER_FILE = "tindivo_checkout_ledger.json"
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -59,24 +62,32 @@ object CheckoutModule {
         return PhoneRepository(BuildConfig.API_BASE_URL, client, io)
     }
 
-    /** Un archivo ilegible se reemplaza por «sin intento»: la siguiente clave será nueva. */
+    /**
+     * Un archivo ilegible NO se reemplaza por «vacío»: se marca como perdido (`LostLedgerSnapshot`) y [OrderAttemptLedger]
+     * no envía nada hasta que la persona confirme tras ver «Mis pedidos». El `AttemptLookup` real llega en otro PR:
+     * mientras tanto va [NotImplementedAttemptLookup], que responde `unknown` (lo seguro: no reenviar).
+     */
     @Provides
     @Singleton
-    fun provideIdempotencyKeys(
+    fun provideOrderAttemptLedger(
         @ApplicationContext context: Context,
         @IoDispatcher io: CoroutineDispatcher,
-    ): IdempotencyKeys =
-        IdempotencyKeys(
-            DataStorePendingAttemptStore(
-                DataStoreFactory.create(
-                    serializer = PendingAttemptSerializer,
-                    corruptionHandler =
-                        ReplaceFileCorruptionHandler<PendingAttemptSnapshot?>(
-                            produceNewData = { null },
-                        ),
-                    scope = CoroutineScope(io + SupervisorJob()),
-                    produceFile = { File(context.filesDir, ATTEMPT_FILE) },
+        clock: Clock,
+    ): OrderAttemptLedger =
+        OrderAttemptLedger(
+            store =
+                DataStoreLedgerStore(
+                    DataStoreFactory.create(
+                        serializer = LedgerSerializer,
+                        corruptionHandler =
+                            ReplaceFileCorruptionHandler<LedgerSnapshot>(
+                                produceNewData = { LostLedgerSnapshot },
+                            ),
+                        scope = CoroutineScope(io + SupervisorJob()),
+                        produceFile = { File(context.filesDir, LEDGER_FILE) },
+                    ),
                 ),
-            ),
+            lookup = NotImplementedAttemptLookup,
+            clock = { clock.millis() },
         )
 }
