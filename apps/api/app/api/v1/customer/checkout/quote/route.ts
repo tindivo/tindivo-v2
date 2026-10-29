@@ -1,3 +1,4 @@
+import { planQuotePayment } from '@tindivo/backend/ordering'
 import {
   CheckoutQuoteRequestSchema,
   checkModifierSelection,
@@ -35,7 +36,9 @@ const text = (c: number): string => (c / 100).toFixed(2)
  *   · el envío gratis por promo de lanzamiento (`current_customer_promo_free_delivery`)
  *     o por plato (`cart_item_free_delivery`), en el mismo orden de la creación;
  *   · el vuelto máximo: `effective_max_change`;
- *   · el umbral de prepago de `app_settings`.
+ *   · el umbral de prepago de `app_settings`;
+ *   · qué métodos de pago puede usar el cliente (`payment`, H-7): la regla vive
+ *     en `planQuotePayment`; aquí solo se reúnen sus datos.
  * Los precios salen de `menu_items` y de las opciones de modificador, nunca del
  * cliente. Es solo para pintar: `create_customer_order` vuelve a decidir.
  *
@@ -221,7 +224,7 @@ export async function POST(req: Request): Promise<Response> {
     const { data: settings } = await service
       .from('app_settings')
       .select('key,value')
-      .in('key', ['prepay_threshold', 'max_change'])
+      .in('key', ['prepay_threshold', 'max_change', 'max_cash_bill'])
     const setting = (key: string): unknown => settings?.find((s) => s.key === key)?.value
     const threshold = Number(setting('prepay_threshold') ?? 80)
     const thresholdCents = cents(Number.isFinite(threshold) ? threshold : 80)
@@ -231,6 +234,24 @@ export async function POST(req: Request): Promise<Response> {
     })
     if (changeErr) console.error('[checkout/quote] vuelto máximo:', changeErr.message)
     const changeValue = Number(changeErr ? setting('max_change') : change)
+
+    // ── Métodos de pago ──────────────────────────────────────────────────────
+    // Mismo predicado y mismo lado seguro que `GET /customer/payment-options`:
+    // ante un error, la contraentrega no se ofrece.
+    const { data: trusted, error: trustedErr } = await asUser.rpc(
+      'current_customer_trusted_for_contraentrega',
+    )
+    if (trustedErr) console.error('[checkout/quote] historial de entregas:', trustedErr.message)
+    const maxChangeText = toMoneyText(Number.isFinite(changeValue) ? changeValue : 0) ?? '0.00'
+    const payment = planQuotePayment({
+      deliveryMethod: body.deliveryMethod,
+      pickupTiming: body.pickupTiming ?? null,
+      trustedForContraentrega: trusted === true,
+      exceedsPrepayThreshold: totalCents > thresholdCents,
+      // Mismo respaldo que `create_customer_order`: S/ 100 si el ajuste falta.
+      maxCashBill: toMoneyText(setting('max_cash_bill') ?? 100) ?? '100.00',
+      maxChange: maxChangeText,
+    })
 
     return ok(
       {
@@ -243,9 +264,10 @@ export async function POST(req: Request): Promise<Response> {
         deliveryFee: text(deliveryCents),
         freeDelivery: { applies: freeReason !== null, reason: freeReason },
         total: text(totalCents),
-        maxChange: toMoneyText(Number.isFinite(changeValue) ? changeValue : 0) ?? '0.00',
+        maxChange: maxChangeText,
         prepayThreshold: text(thresholdCents),
         exceedsPrepayThreshold: totalCents > thresholdCents,
+        payment,
       },
       { headers: privateHeaders(req) },
     )

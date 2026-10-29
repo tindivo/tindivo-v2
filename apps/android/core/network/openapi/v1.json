@@ -8923,6 +8923,82 @@
                         "exceedsPrepayThreshold": {
                           "type": "boolean",
                           "description": "El total pasa del umbral: el pago debe ser adelantado"
+                        },
+                        "payment": {
+                          "type": "object",
+                          "properties": {
+                            "options": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "intent": {
+                                    "type": "string",
+                                    "x-known-values": [
+                                      "pending_cash",
+                                      "pending_yape",
+                                      "prepaid"
+                                    ],
+                                    "description": "Valores conocidos: pending_cash, pending_yape, prepaid. Puede llegar uno nuevo; trátalo como desconocido."
+                                  },
+                                  "available": {
+                                    "type": "boolean"
+                                  },
+                                  "unavailableReason": {
+                                    "nullable": true,
+                                    "description": "`prepay_required` no distingue riesgo de falta de historial (antifraude)",
+                                    "type": "string",
+                                    "x-known-values": [
+                                      "prepay_required",
+                                      "exceeds_threshold",
+                                      "pickup_later"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "intent",
+                                  "available",
+                                  "unavailableReason"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "En este orden. El recojo no trae `pending_yape` (no hay motorizado a quien transferirle)"
+                            },
+                            "cash": {
+                              "nullable": true,
+                              "description": "Null si el efectivo no está disponible o es un recojo (en caja no se declara billete)",
+                              "type": "object",
+                              "properties": {
+                                "maxBill": {
+                                  "type": "string",
+                                  "pattern": "^\\d+\\.\\d{2}$",
+                                  "description": "Billete máximo con el que se puede declarar el pago"
+                                },
+                                "maxChange": {
+                                  "type": "string",
+                                  "pattern": "^\\d+\\.\\d{2}$",
+                                  "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                                },
+                                "step": {
+                                  "type": "string",
+                                  "pattern": "^\\d+\\.\\d{2}$",
+                                  "description": "Múltiplo en que se declara el billete"
+                                }
+                              },
+                              "required": [
+                                "maxBill",
+                                "maxChange",
+                                "step"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "options",
+                            "cash"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Qué métodos de pago puede usar el cliente en este pedido, decididos en el servidor (H-7). Solo para pintar: la creación del pedido vuelve a decidir"
                         }
                       },
                       "required": [
@@ -8937,7 +9013,8 @@
                         "total",
                         "maxChange",
                         "prepayThreshold",
-                        "exceedsPrepayThreshold"
+                        "exceedsPrepayThreshold",
+                        "payment"
                       ],
                       "additionalProperties": false
                     }
@@ -9108,6 +9185,13 @@
                     "required": [
                       "lat",
                       "lng"
+                    ]
+                  },
+                  "pickupTiming": {
+                    "type": "string",
+                    "enum": [
+                      "now",
+                      "later"
                     ]
                   },
                   "items": {
