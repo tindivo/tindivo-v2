@@ -71,7 +71,9 @@ private fun AppError.toAttemptOutcome(): AttemptOutcome =
         }
     }
 
-private val CLIENT_ERRORS = 400..499
+private const val FIRST_CLIENT_ERROR = 400
+private const val LAST_CLIENT_ERROR = 499
+private val CLIENT_ERRORS = FIRST_CLIENT_ERROR..LAST_CLIENT_ERROR
 
 /**
  * La huella de la bolsa: negocio y, por plato, su firma y su cantidad (sin importar el orden). Si cambia, es otro
