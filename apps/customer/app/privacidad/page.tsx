@@ -32,7 +32,7 @@ const SECTIONS: { h: string; p: string }[] = [
   },
   {
     h: '6. Conservación y seguridad',
-    p: 'Conservamos tus datos mientras tu cuenta esté activa y el tiempo necesario para cumplir obligaciones legales. Aplicamos medidas de seguridad (control de acceso por roles, cifrado en tránsito) para protegerlos.',
+    p: 'Conservamos tus datos mientras tu cuenta esté activa y el tiempo necesario para cumplir obligaciones legales. Si borras tu cuenta, los reportes antifraude y las restricciones ligadas a tu número de teléfono (un bloqueo o el pago por adelantado obligatorio) se conservan con el número, hasta su fecha, aunque otra cuenta lo verifique después. Aplicamos medidas de seguridad (control de acceso por roles, cifrado en tránsito) para protegerlos.',
   },
   {
     h: '7. Contacto',

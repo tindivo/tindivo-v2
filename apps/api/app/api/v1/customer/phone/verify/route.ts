@@ -1,3 +1,4 @@
+import { claimCustomerPhone, phoneClaimProblem } from '@tindivo/backend/identity/http'
 import { VerifyPhoneCodeRequestSchema } from '@tindivo/contracts'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
@@ -85,28 +86,9 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    // Éxito: actualizar phone (E.164) + phone_verified_at.
-    // Guardamos en formato internacional (+519XXXXXXXX) para
-    // compatibilidad futura con pasarelas de pago y WhatsApp Business API.
-    const service = createServiceClient()
-    const { error } = await service
-      .from('customer_profiles')
-      .update({
-        phone: fullPhone,
-        phone_verified_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id)
-
-    if (error) {
-      if (error.code === '23505') {
-        return problem('conflict', {
-          detail: 'Este número ya está asociado a otra cuenta.',
-          requestId,
-          headers: corsHeaders(req),
-        })
-      }
-      throw new Error(error.message)
-    }
+    const result = await claimCustomerPhone(createServiceClient(), user.id, fullPhone)
+    const conflict = phoneClaimProblem(result, requestId, corsHeaders(req))
+    if (conflict) return conflict
 
     return ok({ verified: true, phone: fullPhone }, { status: 200, headers: corsHeaders(req) })
   } catch (err) {

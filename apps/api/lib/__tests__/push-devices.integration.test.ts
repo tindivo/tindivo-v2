@@ -385,7 +385,7 @@ describe('borrado de cuenta (DB-13)', () => {
     const { error: perr } = await db.from('customer_profiles').insert({
       user_id: u.id,
       full_name: 'Vecino MV7a',
-      phone: `9${String(Date.now()).slice(-8)}`,
+      phone: `+519${String(Date.now()).slice(-8)}`,
       phone_verified_at: new Date().toISOString(),
     })
     if (perr) throw new Error(`crear el perfil falló: ${perr.message}`)

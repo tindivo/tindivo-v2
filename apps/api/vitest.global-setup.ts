@@ -25,6 +25,7 @@
  */
 import type { TestProject } from 'vitest/node'
 import { assertDbLock } from '../../scripts/db-lock-guard.mjs'
+import { cleanupPhoneSecurityFixtures } from './lib/__tests__/helpers/phone-security-fixtures'
 
 // `local-db.ts` se importa de forma dinámica (más abajo) para que el candado
 // se compruebe ANTES de que exista un cliente contra la base.
@@ -34,6 +35,7 @@ let TELEFONOS_FIXTURE: LocalDb['TELEFONOS_FIXTURE']
 
 /** Negocios que crean los fixtures. Ver `local-db.ts` y `ledger-fixtures.ts`. */
 const NEGOCIOS_FIXTURE = [
+  'ZZ Test número único',
   'La Florencia (cash test)', // seedContraentregaOrder
   'La Florencia (timer test)', // seedPrepaidOrder
   'Test Restaurant Integration', // seedFraudClaim
@@ -53,6 +55,7 @@ const NEGOCIOS_SEED = [
  * `Dueño E2E`, `Motorizado E2E`, etc., así que no pueden caer aquí por error.
  */
 const USUARIOS_FIXTURE = [
+  'Vecino Número Único',
   'Ledger Test Owner',
   'Ledger Test Driver',
   'Test Business Owner',
@@ -381,6 +384,7 @@ async function barrer(): Promise<Barrido> {
   }
 
   await enLotes(userIds, async (lote) => {
+    await cleanupPhoneSecurityFixtures(db, lote)
     const { error } = await db.from('users').delete().in('id', lote)
     if (error) throw new Error(`barrido: borrar users falló: ${error.message}`)
   })

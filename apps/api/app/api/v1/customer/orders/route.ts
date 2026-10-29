@@ -1,4 +1,4 @@
-import { CreateOrderRequestSchema, getOpenStatus } from '@tindivo/contracts'
+import { CreateOrderRequestSchema, getOpenStatus, parseClientContext } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { listCustomerOrders } from '@/lib/customer/history'
 import { requireRole } from '@/lib/http/auth'
@@ -106,7 +106,8 @@ export async function POST(req: Request): Promise<Response> {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (!profile?.phone_verified_at) {
+    const customerPhone = profile?.phone?.replace(/^[+]51/, '')
+    if (!profile?.phone_verified_at || !customerPhone || !/^9[0-9]{8}$/.test(customerPhone)) {
       return problem('forbidden', {
         detail: 'Verifica tu número de WhatsApp antes de hacer un pedido.',
         requestId,
@@ -311,6 +312,7 @@ export async function POST(req: Request): Promise<Response> {
     // El pedido y su clave de idempotencia se guardan en UNA transacción (0251):
     // si el proceso cae después del commit, el reintento recupera el pedido en
     // vez de duplicarlo o quedarse en un 409 «en proceso».
+    const clientPlatform = parseClientContext(req.headers)?.platform ?? null
     const result = await (async () => {
       const { data, error } = await createIdempotently(service, {
         userId: user.id,
@@ -323,7 +325,7 @@ export async function POST(req: Request): Promise<Response> {
           p_delivery_method: body.deliveryMethod,
           p_payment_intent: body.paymentIntent,
           p_customer_name: body.customerName,
-          p_customer_phone: body.customerPhone,
+          p_customer_phone: customerPhone,
           /*
             EN UN RECOJO ESTOS DOS LLEGAN VACÍOS, y hay que saberlo aguas abajo.
 
@@ -368,6 +370,9 @@ export async function POST(req: Request): Promise<Response> {
           // tal cual: la RPC lo vuelve a normalizar por su cuenta, y su default
           // es el lado caro ('later'), no el permisivo.
           p_pickup_timing: body.pickupTiming,
+          // DESDE DÓNDE se pidió (D-33, 0281): lo lee el envoltorio y lo guarda en
+          // `orders.client_platform`. Sin cabecera (la PWA de hoy) no se manda y queda NULL.
+          ...(clientPlatform ? { client_platform: clientPlatform } : {}),
         },
       })
       if (error) {

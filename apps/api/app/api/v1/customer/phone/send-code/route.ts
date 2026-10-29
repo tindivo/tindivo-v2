@@ -1,3 +1,4 @@
+import { claimCustomerPhone, phoneClaimProblem } from '@tindivo/backend/identity/http'
 import { SendPhoneCodeRequestSchema } from '@tindivo/contracts'
 import { after } from 'next/server'
 import { requireRole } from '@/lib/http/auth'
@@ -70,8 +71,8 @@ export async function POST(req: Request): Promise<Response> {
        * acababa editando `customer_profiles` a mano. `verify` sigue aceptando
        * el código maestro para quien quiera recorrer esa pantalla a propósito.
        *
-       * El sellado repite el de `verify` (mismo E.164, mismo 409 por el índice
-       * único): si aquel cambia, este tiene que cambiar con él.
+       * Comparte con `verify` la RPC transaccional: también ofrece el traslado
+       * si el número está verificado en otra cuenta.
        *
        * SALE ANTES DEL RATE LIMIT A PROPÓSITO. El tope de 3 en 24 horas
        * protege una factura que en local no existe, y aplicarlo aquí deja la
@@ -88,24 +89,9 @@ export async function POST(req: Request): Promise<Response> {
           `[twilio] simulacro · ${fullPhone} verificado sin código (el maestro sigue siendo ${DEV_OTP_CODE})`,
         )
 
-        const { error: updateErr } = await service
-          .from('customer_profiles')
-          .update({
-            phone: fullPhone,
-            phone_verified_at: new Date().toISOString(),
-          })
-          .eq('user_id', user.id)
-
-        if (updateErr) {
-          if (updateErr.code === '23505') {
-            return problem('conflict', {
-              detail: 'Este número ya está asociado a otra cuenta.',
-              requestId,
-              headers: corsHeaders(req),
-            })
-          }
-          throw new Error(updateErr.message)
-        }
+        const result = await claimCustomerPhone(service, user.id, fullPhone)
+        const conflict = phoneClaimProblem(result, requestId, corsHeaders(req))
+        if (conflict) return conflict
 
         return ok(
           { sent: true, verified: true, channel: 'dev' },
