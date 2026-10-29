@@ -24,9 +24,9 @@ import java.math.BigDecimal
  * antes, así que los importes de las respuestas, que llegan como texto, no cambian.
  *
  * El generador solo deja configurar el `Json` antes de su primer uso. Todo uso pasa por [apiCall] o [toAppError], que
- * llaman a [ensureConfigured] primero.
+ * llaman a [ensureConfigured] primero, y los proveedores de Hilt que crean los repositorios también.
  */
-internal object GeneratedJson {
+object GeneratedJson {
     private val configured: Unit by lazy {
         Serializer.kotlinxSerializationJsonConfiguration = {
             serializersModule =

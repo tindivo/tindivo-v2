@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.tindivo.core.network.AddressRepository
 import com.tindivo.core.network.CheckoutRepository
+import com.tindivo.core.network.GeneratedJson
 import com.tindivo.core.network.PhoneRepository
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.feature.checkout.DataStorePendingAttemptStore
@@ -33,21 +34,30 @@ object CheckoutModule {
     fun provideCheckoutRepository(
         client: OkHttpClient,
         @IoDispatcher io: CoroutineDispatcher,
-    ): CheckoutRepository = CheckoutRepository(BuildConfig.API_BASE_URL, client, io)
+    ): CheckoutRepository {
+        GeneratedJson.ensureConfigured()
+        return CheckoutRepository(BuildConfig.API_BASE_URL, client, io)
+    }
 
     @Provides
     @Singleton
     fun provideAddressRepository(
         client: OkHttpClient,
         @IoDispatcher io: CoroutineDispatcher,
-    ): AddressRepository = AddressRepository(BuildConfig.API_BASE_URL, client, io)
+    ): AddressRepository {
+        GeneratedJson.ensureConfigured()
+        return AddressRepository(BuildConfig.API_BASE_URL, client, io)
+    }
 
     @Provides
     @Singleton
     fun providePhoneRepository(
         client: OkHttpClient,
         @IoDispatcher io: CoroutineDispatcher,
-    ): PhoneRepository = PhoneRepository(BuildConfig.API_BASE_URL, client, io)
+    ): PhoneRepository {
+        GeneratedJson.ensureConfigured()
+        return PhoneRepository(BuildConfig.API_BASE_URL, client, io)
+    }
 
     /** Un archivo ilegible se reemplaza por «sin intento»: la siguiente clave será nueva. */
     @Provides
