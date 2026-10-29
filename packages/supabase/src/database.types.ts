@@ -4020,6 +4020,10 @@ export type Database = {
         Args: { p_lat: number; p_lng: number; p_ring: Json }
         Returns: boolean
       }
+      prepay_proof_next_attempt: {
+        Args: { p_customer_user_id: string; p_order_id: string }
+        Returns: number
+      }
       proof_purge_precheck: { Args: { p_user_id: string }; Returns: string }
       prune_creation_idempotency: { Args: never; Returns: number }
       prune_push_devices: { Args: never; Returns: number }

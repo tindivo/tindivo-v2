@@ -43,6 +43,22 @@ export const PrepayProofRequestSchema = z.object({
   }),
 })
 
+/** Tipos que admite el bucket `payment-proofs` (0254). */
+export const PREPAY_PROOF_CONTENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+] as const
+
+/** POST /customer/orders/{id}/prepay-proof/upload-url — qué tipo de archivo se va a subir. */
+export const PrepayProofUploadUrlRequestSchema = z.object({
+  contentType: z.enum(PREPAY_PROOF_CONTENT_TYPES).meta({
+    description: 'Tipo MIME de la foto que se va a subir; el bucket solo admite estos cinco',
+  }),
+})
+
 /**
  * POST /customer/orders/{id}/appeal. No es `CreateAppealSchema`: aquel es
  * `.strict()` y esta ruta siempre ha aceptado propiedades de más.

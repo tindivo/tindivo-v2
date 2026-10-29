@@ -110,6 +110,19 @@ export const PrepayInfoSchema = z.object({
 /** POST /customer/orders/{id}/prepay-proof */
 export const PrepayProofAcceptedSchema = z.object({ ok: z.literal(true) })
 
+/** POST /customer/orders/{id}/prepay-proof/upload-url */
+export const PrepayProofUploadUrlSchema = z.object({
+  path: z.string().meta({
+    description:
+      'Ruta del archivo en el bucket `payment-proofs`. Es la que se manda después a `prepay-proof`',
+  }),
+  uploadUrl: z.string().meta({
+    description: 'URL firmada: se sube la foto con un PUT. Un solo uso; no sobrescribe',
+  }),
+  token: z.string().meta({ description: 'Token de la URL firmada, por si el cliente lo prefiere' }),
+  expiresAt: timestampOut.meta({ description: 'Caducidad de la URL firmada (UTC)' }),
+})
+
 // ── Apelaciones ──────────────────────────────────────────────────────────────
 
 /** Apelación vista por su cliente (`CustomerAppealDto`). */
