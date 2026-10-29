@@ -73,7 +73,7 @@ class AddressRepositoryTest : HttpClientTestBase() {
             val sent = server.takeRequest()
             assertEquals("POST", sent.method)
             assertEquals("/api/v1/customer/addresses", sent.url.encodedPath)
-            assertTrue(sent.body!!.utf8().contains(""""reference":"Frente al parque""""))
+            assertTrue(checkNotNull(sent.body).utf8().contains(""""reference":"Frente al parque""""))
         }
 
     @Test
@@ -110,7 +110,7 @@ class AddressRepositoryTest : HttpClientTestBase() {
             val sent = server.takeRequest()
             assertEquals("PATCH", sent.method)
             assertEquals("/api/v1/customer/addresses/$ID", sent.url.encodedPath)
-            assertTrue(sent.body!!.utf8().contains(""""label":"Trabajo""""))
+            assertTrue(checkNotNull(sent.body).utf8().contains(""""label":"Trabajo""""))
         }
 
     @Test

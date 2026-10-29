@@ -82,7 +82,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
             assertEquals("POST", sent.method)
             assertEquals("/api/v1/customer/checkout/quote", sent.url.encodedPath)
             assertEquals("android", sent.headers["X-Tindivo-Platform"])
-            assertTrue(sent.body!!.utf8().contains(""""quantity":2"""))
+            assertTrue(checkNotNull(sent.body).utf8().contains(""""quantity":2"""))
         }
 
     @Test
@@ -149,7 +149,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
 
             checkout().createOrder(orderRequest(cashPayingWith = BigDecimal("50.00")), KEY)
 
-            val body = server.takeRequest().body!!.utf8()
+            val body = checkNotNull(server.takeRequest().body).utf8()
             assertTrue(body, body.contains(""""cashPayingWith":50.00"""))
             assertTrue(body, body.contains(""""lat":-9.3333333"""))
             assertTrue(body, body.contains(""""lng":-77.5000000"""))
