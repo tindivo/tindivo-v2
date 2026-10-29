@@ -14,6 +14,14 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * Códigos de negocio estables de `create_customer_order` (DB-16) -> texto para el
+ * cliente. Los P0001 antiguos siguen viajando con su mensaje en español.
+ */
+const ORDER_RPC_ERRORS: Record<string, string> = {
+  pickup_requires_prepaid: 'Un recojo se paga por adelantado. Elige el prepago para continuar.',
+}
+
 /** Modo ocupado: el negocio pausó (futuro o 'infinity'). */
 function isBusinessPaused(until: string | null): boolean {
   if (!until) return false
@@ -409,7 +417,12 @@ export async function POST(req: Request): Promise<Response> {
             })
         }
         if (error.code === 'P0002') throw new DomainError(error.message, 'not_found')
-        if (error.code === 'P0001') throw new DomainError(error.message, 'validation_error')
+        if (error.code === 'P0001') {
+          throw new DomainError(
+            ORDER_RPC_ERRORS[error.message] ?? error.message,
+            'validation_error',
+          )
+        }
         throw new Error(error.message)
       }
       return {
