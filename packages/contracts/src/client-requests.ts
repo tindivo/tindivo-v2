@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DeliveryMethodSchema } from './enums'
+import { DeliveryMethodSchema, PickupTimingSchema } from './enums'
 import {
   AddressLineSchema,
   AddressReferenceSchema,
@@ -40,6 +40,22 @@ export const VerifyPhoneCodeRequestSchema = z.object({
 export const PrepayProofRequestSchema = z.object({
   path: z.string().trim().min(1).max(500).meta({
     description: 'Ruta dentro del bucket `payment-proofs`; empieza por `<id del usuario>/`',
+  }),
+})
+
+/** Tipos que admite el bucket `payment-proofs` (0254). */
+export const PREPAY_PROOF_CONTENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+] as const
+
+/** POST /customer/orders/{id}/prepay-proof/upload-url — qué tipo de archivo se va a subir. */
+export const PrepayProofUploadUrlRequestSchema = z.object({
+  contentType: z.enum(PREPAY_PROOF_CONTENT_TYPES).meta({
+    description: 'Tipo MIME de la foto que se va a subir; el bucket solo admite estos cinco',
   }),
 })
 
@@ -86,22 +102,32 @@ export const PushUnsubscribeRequestSchema = z.union([
  * POST /customer/checkout/quote. Las líneas son las del carrito; el servidor
  * pone los precios (nunca confía en uno que venga del cliente).
  */
-export const CheckoutQuoteRequestSchema = z.object({
-  businessId: UuidSchema,
-  deliveryMethod: DeliveryMethodSchema,
-  /** Punto de entrega. Sin él, un delivery se cotiza en la banda cercana. */
-  coordinates: CoordinatesSchema.optional(),
-  items: z
-    .array(
-      z.object({
-        menuItemId: UuidSchema,
-        quantity: z.number().int().min(1).max(50),
-        modifiers: z.array(UuidSchema).max(20).optional(),
-      }),
-    )
-    .min(1)
-    .max(50),
-})
+export const CheckoutQuoteRequestSchema = z
+  .object({
+    businessId: UuidSchema,
+    deliveryMethod: DeliveryMethodSchema,
+    /** Punto de entrega. Sin él, un delivery se cotiza en la banda cercana. */
+    coordinates: CoordinatesSchema.optional(),
+    /**
+     * Cuándo recoge el cliente. Solo vale con `pickup` (con `delivery` es 422, como
+     * en `POST /customer/orders`). Sin él, el recojo se cotiza como «later», igual que la creación del pedido.
+     */
+    pickupTiming: PickupTimingSchema.optional(),
+    items: z
+      .array(
+        z.object({
+          menuItemId: UuidSchema,
+          quantity: z.number().int().min(1).max(50),
+          modifiers: z.array(UuidSchema).max(20).optional(),
+        }),
+      )
+      .min(1)
+      .max(50),
+  })
+  .refine((d) => d.deliveryMethod === 'pickup' || d.pickupTiming === undefined, {
+    message: 'pickupTiming solo aplica a pedidos de recojo',
+    path: ['pickupTiming'],
+  })
 
 const AddressLabelSchema = z.string().trim().min(1).max(30)
 const AccuracySchema = z.number().positive().max(100_000)

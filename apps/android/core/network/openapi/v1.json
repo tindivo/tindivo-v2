@@ -4681,6 +4681,226 @@
         "x-tindivo-role": "customer"
       }
     },
+    "/customer/orders/{id}/prepay-proof/upload-url": {
+      "post": {
+        "operationId": "createPrepayProofUploadUrl",
+        "summary": "Pedir la URL firmada para subir el comprobante",
+        "tags": [
+          "orders",
+          "payments"
+        ],
+        "responses": {
+          "200": {
+            "description": "URL firmada para subir la foto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "description": "Ruta del archivo en el bucket `payment-proofs`. Es la que se manda después a `prepay-proof`"
+                        },
+                        "uploadUrl": {
+                          "type": "string",
+                          "description": "URL firmada: se sube la foto con un PUT. Un solo uso; no sobrescribe"
+                        },
+                        "token": {
+                          "type": "string",
+                          "description": "Token de la URL firmada, por si el cliente lo prefiere"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Caducidad de la URL firmada (UTC)"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "uploadUrl",
+                        "token",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem Details (RFC 9457). `code`: not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem Details (RFC 9457). `code`: invalid_state_transition",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "description": "Para las apps nativas, que no hablan con Storage. El servidor comprueba que el pedido es del cliente, espera comprobante y le quedan intentos; si es así, devuelve una URL firmada. La app sube la foto con un PUT a `uploadUrl` y después llama a `confirmPrepayProof` con el `path` devuelto.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "contentType": {
+                    "type": "string",
+                    "enum": [
+                      "image/jpeg",
+                      "image/png",
+                      "image/webp",
+                      "image/heic",
+                      "image/heif"
+                    ],
+                    "description": "Tipo MIME de la foto que se va a subir; el bucket solo admite estos cinco"
+                  }
+                },
+                "required": [
+                  "contentType"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
     "/customer/orders/{id}/prepay-proof": {
       "post": {
         "operationId": "confirmPrepayProof",
@@ -9104,6 +9324,82 @@
                         "exceedsPrepayThreshold": {
                           "type": "boolean",
                           "description": "El total pasa del umbral: el pago debe ser adelantado"
+                        },
+                        "payment": {
+                          "type": "object",
+                          "properties": {
+                            "options": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "intent": {
+                                    "type": "string",
+                                    "x-known-values": [
+                                      "pending_cash",
+                                      "pending_yape",
+                                      "prepaid"
+                                    ],
+                                    "description": "Valores conocidos: pending_cash, pending_yape, prepaid. Puede llegar uno nuevo; trátalo como desconocido."
+                                  },
+                                  "available": {
+                                    "type": "boolean"
+                                  },
+                                  "unavailableReason": {
+                                    "nullable": true,
+                                    "description": "`prepay_required` no distingue riesgo de falta de historial (antifraude)",
+                                    "type": "string",
+                                    "x-known-values": [
+                                      "prepay_required",
+                                      "exceeds_threshold",
+                                      "pickup_later"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "intent",
+                                  "available",
+                                  "unavailableReason"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "En este orden. El recojo no trae `pending_yape` (no hay motorizado a quien transferirle)"
+                            },
+                            "cash": {
+                              "nullable": true,
+                              "description": "Null si el efectivo no está disponible o es un recojo (en caja no se declara billete)",
+                              "type": "object",
+                              "properties": {
+                                "maxBill": {
+                                  "type": "string",
+                                  "pattern": "^\\d+\\.\\d{2}$",
+                                  "description": "Billete máximo con el que se puede declarar el pago"
+                                },
+                                "maxChange": {
+                                  "type": "string",
+                                  "pattern": "^\\d+\\.\\d{2}$",
+                                  "description": "Soles como texto decimal con dos decimales, p. ej. `\"12.50\"` (D-39)."
+                                },
+                                "step": {
+                                  "type": "string",
+                                  "pattern": "^\\d+\\.\\d{2}$",
+                                  "description": "Múltiplo en que se declara el billete"
+                                }
+                              },
+                              "required": [
+                                "maxBill",
+                                "maxChange",
+                                "step"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "options",
+                            "cash"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Qué métodos de pago puede usar el cliente en este pedido, decididos en el servidor (H-7). Solo para pintar: la creación del pedido vuelve a decidir"
                         }
                       },
                       "required": [
@@ -9118,7 +9414,8 @@
                         "total",
                         "maxChange",
                         "prepayThreshold",
-                        "exceedsPrepayThreshold"
+                        "exceedsPrepayThreshold",
+                        "payment"
                       ],
                       "additionalProperties": false
                     }
@@ -9289,6 +9586,13 @@
                     "required": [
                       "lat",
                       "lng"
+                    ]
+                  },
+                  "pickupTiming": {
+                    "type": "string",
+                    "enum": [
+                      "now",
+                      "later"
                     ]
                   },
                   "items": {
