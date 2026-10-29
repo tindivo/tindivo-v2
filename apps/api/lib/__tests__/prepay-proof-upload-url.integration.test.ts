@@ -222,6 +222,21 @@ describe('POST /customer/orders/{id}/prepay-proof/upload-url', () => {
 // CAX-002: lo que la URL firmada conserva, medido contra el Storage local real.
 describe('la URL firmada conserva las restricciones del bucket', () => {
   const BUCKET = 'payment-proofs'
+  let storageVersion: { status: number; body: string } = { status: 0, body: '' }
+
+  beforeAll(async () => {
+    const res = await fetch(`${LOCAL_URL}/storage/v1/version`, {
+      headers: { apikey: LOCAL_SERVICE_ROLE_KEY },
+    })
+    storageVersion = { status: res.status, body: (await res.text()).trim() }
+    console.info('[storage-version]', storageVersion.status, storageVersion.body)
+  })
+
+  it('registra la versión de Storage ensayada', () => {
+    expect(storageVersion.status).toBe(200)
+    expect(storageVersion.body.length).toBeGreaterThan(0)
+  })
+
   const MAX = 15 * 1024 * 1024
   const sha = (b: Uint8Array | Buffer) => createHash('sha256').update(b).digest('hex')
   const png = (n: number, fill = 7) => new Uint8Array(n).fill(fill)
@@ -305,6 +320,49 @@ describe('la URL firmada conserva las restricciones del bucket', () => {
     console.log(`CAX-002.4 ${tipo} ->`, res.status, await res.text())
     expect(res.ok).toBe(false)
     expect(await existe(f.path)).toBe(false)
+  })
+
+  it('el token de payment-proofs no sube a otro bucket (con control positivo en ese bucket)', async () => {
+    // `menu-items` (0005/0151) existe en la base local y admite image/png.
+    const OTRO = 'menu-items'
+    const x = `cax-002-control/${crypto.randomUUID()}.png`
+    const a = await firmada()
+    try {
+      // Control positivo: el otro bucket sí recibe una subida firmada legítima.
+      const { data: firma, error: firmaErr } = await db.storage.from(OTRO).createSignedUploadUrl(x)
+      expect(firmaErr).toBeNull()
+      const control = await put(firma?.signedUrl ?? '', png(16))
+      const controlTexto = await control.text()
+      console.info('CAX-002.6 control positivo en', OTRO, '->', control.status, controlTexto)
+      expect(control.status).toBe(200)
+      expect(
+        await db.storage
+          .from(OTRO)
+          .download(x)
+          .then((r) => !r.error),
+      ).toBe(true)
+
+      // El ataque: el token de payment-proofs (ruta A) hacia el otro bucket.
+      const sdk = await db.storage.from(OTRO).uploadToSignedUrl(a.path, a.token, png(16))
+      console.info('CAX-002.6 uploadToSignedUrl(otro bucket, A, token) ->', JSON.stringify(sdk))
+      expect(sdk.error).not.toBeNull()
+
+      const urlOtro = a.uploadUrl.replace(`/sign/${BUCKET}/`, `/sign/${OTRO}/`)
+      expect(urlOtro).not.toBe(a.uploadUrl)
+      const res = await put(urlOtro, png(16))
+      console.info('CAX-002.6 PUT con el bucket cambiado ->', res.status, await res.text())
+      expect(res.ok).toBe(false)
+      expect(
+        await db.storage
+          .from(OTRO)
+          .download(a.path)
+          .then((r) => !r.error),
+      ).toBe(false)
+      // Y el bucket original sigue sin objeto: el ataque no subió nada por el camino.
+      expect(await existe(a.path)).toBe(false)
+    } finally {
+      await db.storage.from(OTRO).remove([x, a.path])
+    }
   })
 
   it('una URL caducada no sirve (token re-firmado con exp en el pasado)', async () => {
