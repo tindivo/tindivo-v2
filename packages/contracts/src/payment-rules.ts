@@ -14,46 +14,42 @@ import type { DeliveryMethod, PaymentIntent, PickupTiming } from './enums'
  * pasa por aquí y no debe: un recojo manual cobrado por Yape es legítimo, ella
  * ya tuvo el dinero en la mano antes de crear la fila.
  *
- * ── LAS TRES REGLAS Y POR QUÉ ────────────────────────────────────────────────
+ * ── LA TABLA VIGENTE (0283) Y POR QUÉ ────────────────────────────────────────
  *
- * 1. `pending_yape` NO EXISTE EN UN RECOJO. Ese método significa una cosa
- *    concreta y física: el cliente le transfiere AL MOTORIZADO cuando le
- *    entrega la bolsa. En un mostrador no hay motorizado — cobra la caja, y la
- *    caja ya declara al cerrar si entró efectivo o Yape (`payment_real`, la
- *    pregunta «¿cómo pagó?» del pie del mostrador). Ofrecerlo era pedirle al
- *    cliente que eligiera un mecanismo inexistente; el sistema lo reinterpretaba
- *    en silencio como «cobrar en caja» y funcionaba de casualidad.
+ * | | delivery | recojo (ahora o más tarde) |
+ * |---|---|---|
+ * | Efectivo (`pending_cash`) | sí | no |
+ * | Yape al recibir (`pending_yape`) | sí | no |
+ * | Prepago con captura (`prepaid`) | sí | sí |
  *
- * 2. UN RECOJO «MÁS TARDE» VA PREPAGADO. Es el único caso del canal donde se
- *    cocina sin nadie delante Y sin caja a la que cobrarle: si el cliente no
- *    aparece, el negocio se comió el plato. Con el dinero dentro antes de
- *    encender la sartén, el plantón deja de costar comida.
+ * 1. EL RECOJO SOLO SE PAGA POR PREPAGO, «ahora» o «más tarde» (decisión de
+ *    Jesús, 2026-10-29). Un recojo llega a cocina pagado: era la regla del
+ *    restaurante del piloto y desde 0283 vale también para «ahora». Revierte
+ *    la columna «recojo ahora» de 0223, que aún admitía la caja.
  *
- * 3. UN RECOJO «AHORA» SÍ PUEDE PAGAR EN CAJA. El cliente está de pie frente al
- *    mostrador: paga ahí mismo, en efectivo o por Yape, y quien lo cobra es la
- *    misma persona que lo está mirando.
+ * 2. `pending_yape` NO EXISTE EN UN RECOJO (desde 0223). Ese método significa
+ *    que el cliente le transfiere AL MOTORIZADO cuando le entrega la bolsa, y
+ *    en un mostrador no hay motorizado.
  *
  * El delivery no cambia: ahí el motorizado sí existe y las tres siguen valiendo.
  *
  * ── EL ESPEJO EN SQL ─────────────────────────────────────────────────────────
- * `create_customer_order` repite estas reglas para el origen `customer_pwa`.
- * Si cambias esta función, cambia también esa migración: son dos redes para lo
- * mismo, y la de SQL es la que de verdad protege (un cliente puede llamar a la
- * API sin pasar por esta pantalla).
+ * `create_customer_order` repite la regla del recojo para el origen
+ * `customer_pwa` (0283, `pickup_requires_prepaid`), y `orders_pickup_payment_chk`
+ * (0223) queda de suelo. Si cambias esta función, cambia también esa migración:
+ * son redes distintas para lo mismo, y la de SQL es la que de verdad protege (un
+ * cliente puede llamar a la API sin pasar por esta pantalla).
  */
 export function customerPaymentIntents(
   deliveryMethod: DeliveryMethod,
   /**
-   * `null` = la pregunta del recojo todavía sin contestar. Devuelve entonces
-   * TODO lo que ese método puede llegar a admitir, que es justo lo que la
-   * pantalla necesita PINTAR; lo que se puede elegir ahora mismo sale de
-   * volver a llamar con la respuesta ya puesta.
+   * Desde 0283 no cambia el resultado: «ahora», «más tarde» y sin contestar
+   * dan lo mismo. Se conserva en la firma para no tocar a los llamadores.
    */
-  pickupTiming: PickupTiming | null,
+  _pickupTiming: PickupTiming | null,
 ): readonly PaymentIntent[] {
   if (deliveryMethod !== 'pickup') return ['pending_cash', 'pending_yape', 'prepaid']
-  if (pickupTiming === 'later') return ['prepaid']
-  return ['pending_cash', 'prepaid']
+  return ['prepaid']
 }
 
 /** `true` si el cliente puede elegir ese pago con ese método. */
@@ -66,7 +62,7 @@ export function isCustomerPaymentAllowed(
 }
 
 /**
- * `true` cuando es EL MÉTODO el que obliga a prepagar, no la cuenta ni el monto.
+ * `true` cuando es EL MÉTODO el que obliga a prepagar (todo recojo, desde 0283), no la cuenta ni el monto.
  *
  * Se separa de `isCustomerPaymentAllowed` porque la pantalla los trata
  * distinto, y la diferencia importa: una opción que NO EXISTE en este canal se
@@ -78,7 +74,7 @@ export function isCustomerPaymentAllowed(
  */
 export function pickupForcesPrepay(
   deliveryMethod: DeliveryMethod,
-  pickupTiming: PickupTiming | null,
+  _pickupTiming: PickupTiming | null,
 ): boolean {
-  return deliveryMethod === 'pickup' && pickupTiming === 'later'
+  return deliveryMethod === 'pickup'
 }

@@ -139,7 +139,15 @@ export const CreateOrderRequestSchema = z
     pantalla lleva al cliente.
   */
   .refine(
-    (d) => isCustomerPaymentAllowed(d.paymentIntent, d.deliveryMethod, d.pickupTiming ?? null),
+    (d) =>
+      d.deliveryMethod !== 'pickup' ||
+      isCustomerPaymentAllowed(d.paymentIntent, d.deliveryMethod, d.pickupTiming ?? null),
+    { message: 'Un recojo se paga por adelantado', path: ['paymentIntent'] },
+  )
+  .refine(
+    (d) =>
+      d.deliveryMethod === 'pickup' ||
+      isCustomerPaymentAllowed(d.paymentIntent, d.deliveryMethod, null),
     {
       message: 'Esa forma de pago no está disponible para este tipo de pedido',
       path: ['paymentIntent'],

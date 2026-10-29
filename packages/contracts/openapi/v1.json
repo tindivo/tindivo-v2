@@ -9127,7 +9127,7 @@
                                   },
                                   "unavailableReason": {
                                     "nullable": true,
-                                    "description": "`prepay_required` no distingue riesgo de falta de historial (antifraude)",
+                                    "description": "`prepay_required` no distingue riesgo de falta de historial (antifraude). `pickup_later` ya no se emite (0283: todo recojo solo ofrece `prepaid`); sigue en el enum por las apps instaladas",
                                     "type": "string",
                                     "x-known-values": [
                                       "prepay_required",
