@@ -458,7 +458,7 @@ el pago en caja deja de existir y vuelve la validación telefónica.
 
 | | `pickup_timing = 'later'` | `pickup_timing = 'now'` |
 |---|---|---|
-| Cómo se paga (`0223`) | **Prepago y punto** | Caja del local (efectivo o Yape) o prepago |
+| Cómo se paga (`0223`) | **Prepago y punto** | Caja del local (efectivo o Yape) o prepago — **revisado por `0283`: solo prepago** |
 | Antifraude | No llega a aplicarse: no se fía nada | Se salta el guard de historial y `validando` |
 | GPS | Se captura como evidencia, **ya no decide** | Se captura como evidencia, **nunca bloquea** |
 | Qué lo garantiza | El dinero, cobrado antes de cocinar | La cajera, mirando a quien pidió, antes de aceptar |
