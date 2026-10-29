@@ -914,6 +914,46 @@ describe('0219/0220 · el recojo en el local', () => {
     })
 
     /**
+     * 0283 · EL RECOJO «AHORA» TAMBIÉN VA PREPAGADO, Y NO PIDE COBRO EN CAJA.
+     *
+     * `advance_order` (0224) exige `paymentReal` solo si el pedido NO es
+     * `prepaid`; aquí se acepta SIN declararlo. Mismo recorrido que el «más
+     * tarde»: crear, aceptar, captura, validar, listo, entregar.
+     */
+    it('«ahora» prepagado: se acepta, valida, prepara y entrega sin declarar cobro en caja', async () => {
+      const cliente = await crearCliente()
+      const { data, error } = await pedirRecojo(cliente, 'now')
+      expect(error, `debería entrar: ${error?.message}`).toBeNull()
+      const creado = registrar(data)
+      expect((await estado(creado.id)).status).toBe('pending_acceptance')
+
+      const { error: errAccept } = await avanzar(creado.id, bizUserId, 'business', 'accept', {
+        prepTimeMinutes: 20,
+      })
+      expect(errAccept, errAccept?.message).toBeNull()
+      expect((await estado(creado.id)).status).toBe('awaiting_payment')
+
+      await subirCaptura(creado.id)
+      const { data: validado, error: errVal } = await db.rpc('validate_order', {
+        p_order_id: creado.id,
+        p_actor_user_id: bizUserId,
+        p_actor_role: 'business',
+        p_pass: true,
+        p_prep_time_minutes: 20,
+      })
+      expect(errVal, errVal?.message).toBeNull()
+      expect(validado).toMatchObject({ ok: true, status: 'preparing', context: 'proof' })
+
+      const { error: errReady } = await avanzar(creado.id, bizUserId, 'business', 'ready')
+      expect(errReady, errReady?.message).toBeNull()
+      const { error: errHandover } = await avanzar(creado.id, bizUserId, 'business', 'handover')
+      expect(errHandover, errHandover?.message).toBeNull()
+      const cerrado = await estado(creado.id)
+      expect(cerrado.status).toBe('delivered')
+      expect(cerrado.payment_real).toBe('paid_prepaid')
+    })
+
+    /**
      * 0225 · LA VENTANA DE LA COLA NO SE ABRE PARA EL MOSTRADOR.
      *
      * `advance_order` ya lo cuidaba —hay un caso, «aceptar un recojo no abre la
