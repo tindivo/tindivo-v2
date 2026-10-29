@@ -76,6 +76,7 @@ import {
 import { POST as cancelOrder } from '../../app/api/v1/customer/orders/[id]/cancel/route'
 import { GET as getPrepayInfo } from '../../app/api/v1/customer/orders/[id]/prepay-info/route'
 import { POST as confirmPrepayProof } from '../../app/api/v1/customer/orders/[id]/prepay-proof/route'
+import { POST as createPrepayProofUploadUrl } from '../../app/api/v1/customer/orders/[id]/prepay-proof/upload-url/route'
 import { GET as getCustomerReorder } from '../../app/api/v1/customer/orders/[id]/reorder/route'
 import { POST as dismissCustomerReview } from '../../app/api/v1/customer/orders/[id]/review/dismiss/route'
 import { POST as createCustomerReview } from '../../app/api/v1/customer/orders/[id]/review/route'
@@ -498,6 +499,12 @@ describe('el cliente con sesión', () => {
     await db.from('orders').update({ status: 'awaiting_payment' }).eq('id', id)
 
     await conforms('getPrepayInfo', 200, getPrepayInfo, { bearer: token, params: { id } })
+    await conforms('createPrepayProofUploadUrl', 200, createPrepayProofUploadUrl, {
+      method: 'POST',
+      bearer: token,
+      params: { id },
+      body: { contentType: 'image/png' },
+    })
     await conforms('confirmPrepayProof', 200, confirmPrepayProof, {
       method: 'POST',
       bearer: token,
