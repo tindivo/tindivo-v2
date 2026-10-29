@@ -4047,6 +4047,187 @@
         "x-tindivo-role": "customer"
       }
     },
+    "/customer/orders/attempts/{key}": {
+      "get": {
+        "operationId": "getOrderAttempt",
+        "summary": "Saber si una Idempotency-Key ya creó un pedido",
+        "tags": [
+          "orders"
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado del intento: creado, sin rastro o desconocido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "x-known-values": [
+                            "created",
+                            "not_found",
+                            "unknown"
+                          ],
+                          "description": "`created`: la clave creó el pedido de `order`. `not_found`: la clave NO ha creado nada TODAVÍA; solo prueba el presente, porque una petición en vuelo puede crearlo después y, pasada la retención (7 días), se pierde el rastro. `unknown`: solo hay una reserva de la API anterior y no se puede saber. Valores conocidos: created, not_found, unknown. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
+                        "order": {
+                          "nullable": true,
+                          "description": "El pedido que creó la clave. Null salvo en `created` (y en un `created` cuyo pedido ya no se puede leer)",
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "shortId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "shortId"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "order"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem Details (RFC 9457). `code`: unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem Details (RFC 9457). `code`: forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem Details (RFC 9457). `code`: validation_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Problem Details (RFC 9457). `code`: client_upgrade_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem Details (RFC 9457). `code`: internal_error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Tindivo-Platform",
+            "in": "header",
+            "required": false,
+            "description": "Plataforma de la app",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android",
+                "web"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App",
+            "in": "header",
+            "required": false,
+            "description": "App que llama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "negocios",
+                "motorizados"
+              ]
+            }
+          },
+          {
+            "name": "X-Tindivo-App-Version",
+            "in": "header",
+            "required": false,
+            "description": "Versión de la app (x.y.z). Si está por debajo del mínimo de /config para su app y plataforma, 426",
+            "schema": {
+              "type": "string",
+              "example": "1.2.0"
+            }
+          },
+          {
+            "name": "X-Tindivo-Build",
+            "in": "header",
+            "required": false,
+            "description": "Número de build de la app",
+            "schema": {
+              "type": "string",
+              "example": "57"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-tindivo-role": "customer"
+      }
+    },
     "/customer/orders/{id}/cancel": {
       "post": {
         "operationId": "cancelOrder",

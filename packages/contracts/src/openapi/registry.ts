@@ -46,6 +46,7 @@ import {
   CustomerPendingReviewSchema,
   CustomerProfileSchema,
   CustomerReorderSchema,
+  OrderAttemptSchema,
   PaymentOptionsSchema,
   PhoneCodeSentSchema,
   PhoneVerifiedSchema,
@@ -401,6 +402,24 @@ export const OPERATIONS: OperationSpec[] = [
       'conflict',
       'idempotency_conflict',
     ],
+    documented: true,
+  },
+  {
+    method: 'get',
+    path: '/customer/orders/attempts/{key}',
+    operationId: 'getOrderAttempt',
+    summary: 'Saber si una Idempotency-Key ya creó un pedido',
+    tags: ['orders'],
+    auth: 'customer',
+    pathParams: { key: uuidParam },
+    success: {
+      200: {
+        description: 'Estado del intento: creado, sin rastro o desconocido',
+        envelope: 'data',
+        schema: OrderAttemptSchema,
+      },
+    },
+    errors: ['validation_error', 'unauthorized', 'forbidden'],
     documented: true,
   },
   {

@@ -31,17 +31,55 @@ export async function findStoredCreation(
   supabase: TypedSupabaseClient,
   args: { userId: string; scope: CreationScope; key: string; requestHash: string },
 ): Promise<{ body: { data: unknown } } | { conflict: true } | { inFlight: true } | null> {
+  const row = await readCreationRecord(supabase, args)
+  if (!row) return null
+  if (row.requestHash !== args.requestHash) return { conflict: true }
+  if (row.state === 'completed') return { body: { data: row.response } }
+  // `reserved`: la API anterior la reclamó y no guardó la respuesta. No hay forma
+  // de saber si el pedido llegó a crearse (la antigüedad no prueba abandono: si
+  // se creó y ya terminó o se canceló, los guards de activos dejarían crear
+  // otro), y la tabla vieja no guarda a qué pedido corresponde. Sin una
+  // asociación verificable se conserva el 409 hasta que la fila venza (24 h),
+  // que es lo que ya hacía la API anterior.
+  return { inFlight: true }
+}
+
+/** Lo que hay guardado para una clave de creación de UN usuario (ya descartadas las vencidas). */
+export type CreationRecord = {
+  requestHash: string
+  /** Id del recurso creado, si la fila nueva lo tiene (`creation_idempotency.resource_id`). */
+  resourceId: string | null
+} & (
+  | { state: 'completed'; response: unknown }
+  // Solo la tabla legada: la API anterior reclamó la clave y no guardó el resultado.
+  | { state: 'reserved' }
+)
+
+/**
+ * Lectura común de la clave de una creación, aislada por usuario (H-4): la tabla
+ * nueva `creation_idempotency` y, por compatibilidad de despliegue, la legada
+ * `idempotency_keys`. Una fila vencida y sin purgar no existe. No decide nada
+ * sobre el payload: eso lo hace cada llamador.
+ */
+export async function readCreationRecord(
+  supabase: TypedSupabaseClient,
+  args: { userId: string; scope: CreationScope; key: string },
+): Promise<CreationRecord | null> {
   const { data } = await supabase
     .from('creation_idempotency')
-    .select('request_hash,response,expires_at')
+    .select('request_hash,response,resource_id,expires_at')
     .eq('user_id', args.userId)
     .eq('scope', args.scope)
     .eq('key', args.key)
     .maybeSingle()
   // Una fila vencida y sin purgar ya no vale (la RPC la descarta igual).
   if (data && Date.parse(data.expires_at) > Date.now()) {
-    if (data.request_hash !== args.requestHash) return { conflict: true }
-    return { body: { data: data.response } }
+    return {
+      state: 'completed',
+      requestHash: data.request_hash,
+      response: data.response,
+      resourceId: data.resource_id,
+    }
   }
 
   // Compatibilidad de despliegue: una creación hecha por la API ANTERIOR solo
@@ -55,17 +93,15 @@ export async function findStoredCreation(
     .eq('user_id', args.userId)
     .maybeSingle()
   if (!legacy || Date.parse(legacy.expires_at) <= Date.now()) return null
-  if (legacy.request_hash !== args.requestHash) return { conflict: true }
   if (legacy.status === 'completed') {
-    return { body: legacy.response_body as { data: unknown } }
+    return {
+      state: 'completed',
+      requestHash: legacy.request_hash,
+      response: (legacy.response_body as { data?: unknown } | null)?.data ?? null,
+      resourceId: null,
+    }
   }
-  // `reserved`: la API anterior la reclamó y no guardó la respuesta. No hay forma
-  // de saber si el pedido llegó a crearse (la antigüedad no prueba abandono: si
-  // se creó y ya terminó o se canceló, los guards de activos dejarían crear
-  // otro), y la tabla vieja no guarda a qué pedido corresponde. Sin una
-  // asociación verificable se conserva el 409 hasta que la fila venza (24 h),
-  // que es lo que ya hacía la API anterior.
-  return { inFlight: true }
+  return { state: 'reserved', requestHash: legacy.request_hash, resourceId: null }
 }
 
 /**
