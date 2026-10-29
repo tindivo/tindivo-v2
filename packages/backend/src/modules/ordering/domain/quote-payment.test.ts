@@ -4,7 +4,7 @@ import { CASH_STEP_TEXT, planQuotePayment, type QuotePaymentInput } from './quot
 const base: QuotePaymentInput = {
   deliveryMethod: 'delivery',
   pickupTiming: null,
-  trustedForContraentrega: true,
+  contraentregaAllowed: true,
   exceedsPrepayThreshold: false,
   maxCashBill: '100.00',
   maxChange: '20.00',
@@ -26,7 +26,7 @@ describe('planQuotePayment', () => {
   })
 
   it('prepaid siempre disponible', () => {
-    const input = { ...base, trustedForContraentrega: false, exceedsPrepayThreshold: true }
+    const input = { ...base, contraentregaAllowed: false, exceedsPrepayThreshold: true }
     expect(opt(input, 'prepaid')).toEqual({
       intent: 'prepaid',
       available: true,
@@ -35,7 +35,7 @@ describe('planQuotePayment', () => {
   })
 
   it('sin confianza: la contraentrega es prepay_required y no hay bloque de efectivo', () => {
-    const input = { ...base, trustedForContraentrega: false }
+    const input = { ...base, contraentregaAllowed: false }
     expect(opt(input, 'pending_cash')).toMatchObject({
       available: false,
       unavailableReason: 'prepay_required',
@@ -60,9 +60,9 @@ describe('planQuotePayment', () => {
       pickupTiming: 'later',
       exceedsPrepayThreshold: true,
     }
-    expect(
-      opt({ ...later, trustedForContraentrega: false }, 'pending_cash').unavailableReason,
-    ).toBe('prepay_required')
+    expect(opt({ ...later, contraentregaAllowed: false }, 'pending_cash').unavailableReason).toBe(
+      'prepay_required',
+    )
     expect(opt(later, 'pending_cash').unavailableReason).toBe('exceeds_threshold')
     expect(opt({ ...later, exceedsPrepayThreshold: false }, 'pending_cash').unavailableReason).toBe(
       'pickup_later',

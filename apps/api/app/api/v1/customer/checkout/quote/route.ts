@@ -49,7 +49,7 @@ const text = (c: number): string => (c / 100).toFixed(2)
 export async function POST(req: Request): Promise<Response> {
   const requestId = getRequestId(req)
   try {
-    const { token } = await requireRole(req, 'customer')
+    const { token, user } = await requireRole(req, 'customer')
     const body = CheckoutQuoteRequestSchema.parse(await req.json())
     // Postgres compara UUID sin distinguir mayúsculas; normalizamos para las consultas y mapas.
     body.items = body.items.map((item) => ({
@@ -236,17 +236,22 @@ export async function POST(req: Request): Promise<Response> {
     const changeValue = Number(changeErr ? setting('max_change') : change)
 
     // ── Métodos de pago ──────────────────────────────────────────────────────
-    // Mismo predicado y mismo lado seguro que `GET /customer/payment-options`:
-    // ante un error, la contraentrega no se ofrece.
-    const { data: trusted, error: trustedErr } = await asUser.rpc(
-      'current_customer_trusted_for_contraentrega',
+    // El MISMO predicado que la creación: `customer_contraentrega_decision` es la
+    // fuente única y la capa HTTP solo corta `risk_blocked` (ver el comentario en
+    // `customer/orders/route.ts`, guard de contraentrega). `no_history` NO se
+    // corta: lo decide `create_customer_order` con el GPS o el mostrador. Un error
+    // del RPC va al lado seguro, como allí.
+    const { data: decision, error: decisionErr } = await service.rpc(
+      'customer_contraentrega_decision',
+      { p_customer_user_id: user.id },
     )
-    if (trustedErr) console.error('[checkout/quote] historial de entregas:', trustedErr.message)
+    if (decisionErr)
+      console.error('[checkout/quote] decisión de contraentrega:', decisionErr.message)
     const maxChangeText = toMoneyText(Number.isFinite(changeValue) ? changeValue : 0) ?? '0.00'
     const payment = planQuotePayment({
       deliveryMethod: body.deliveryMethod,
       pickupTiming: body.pickupTiming ?? null,
-      trustedForContraentrega: trusted === true,
+      contraentregaAllowed: decisionErr === null && decision !== 'risk_blocked',
       exceedsPrepayThreshold: totalCents > thresholdCents,
       // Mismo respaldo que `create_customer_order`: S/ 100 si el ajuste falta.
       maxCashBill: toMoneyText(setting('max_cash_bill') ?? 100) ?? '100.00',

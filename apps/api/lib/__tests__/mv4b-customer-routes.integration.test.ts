@@ -927,8 +927,24 @@ describe('POST /customer/checkout/quote · payment', () => {
     })
   })
 
-  it('cliente sin confianza: la contraentrega es prepay_required y cash es null', async () => {
+  it('cliente sin historial: la contraentrega sigue disponible (la creación decide con GPS o mostrador)', async () => {
     const c = await crearCliente()
+    const r = await cotizar(c)
+    expect(r.body.data.payment.options).toEqual([
+      { intent: 'pending_cash', available: true, unavailableReason: null },
+      { intent: 'pending_yape', available: true, unavailableReason: null },
+      { intent: 'prepaid', available: true, unavailableReason: null },
+    ])
+    expect(r.body.data.payment.cash).not.toBeNull()
+  })
+
+  it('cuenta con contraentrega bloqueada (risk_blocked): prepay_required y cash null', async () => {
+    const c = await clienteDeConfianza() // el riesgo manda sobre el historial
+    const { error } = await db
+      .from('customer_profiles')
+      .update({ contraentrega_blocked: true })
+      .eq('user_id', c.id)
+    if (error) throw new Error(error.message)
     const r = await cotizar(c)
     expect(r.body.data.payment.options).toEqual([
       { intent: 'pending_cash', available: false, unavailableReason: 'prepay_required' },

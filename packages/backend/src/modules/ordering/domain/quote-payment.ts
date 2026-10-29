@@ -14,8 +14,8 @@ export interface QuotePaymentInput {
   deliveryMethod: DeliveryMethod
   /** `null` = el cliente aún no contestó cuándo recoge (o es delivery). */
   pickupTiming: PickupTiming | null
-  /** Lo que contesta `current_customer_trusted_for_contraentrega()`; un error es `false`. */
-  trustedForContraentrega: boolean
+  /** `false` si `customer_contraentrega_decision` da `risk_blocked` o falla; `no_history` cuenta como `true`. */
+  contraentregaAllowed: boolean
   exceedsPrepayThreshold: boolean
   /** `app_settings.max_cash_bill`, ya como texto con dos decimales. */
   maxCashBill: string
@@ -43,7 +43,7 @@ export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
     if (intent === 'prepaid') {
       return { intent, available: true, unavailableReason: null }
     }
-    const unavailableReason: QuoteUnavailableReason | null = !input.trustedForContraentrega
+    const unavailableReason: QuoteUnavailableReason | null = !input.contraentregaAllowed
       ? 'prepay_required'
       : input.exceedsPrepayThreshold
         ? 'exceeds_threshold'
