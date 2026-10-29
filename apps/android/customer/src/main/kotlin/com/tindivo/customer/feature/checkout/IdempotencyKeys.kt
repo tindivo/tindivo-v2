@@ -81,7 +81,9 @@ private fun AppError.toAttemptOutcome(): AttemptOutcome =
 
 private const val FIRST_CLIENT_ERROR = 400
 private const val LAST_CLIENT_ERROR = 499
-private val UNDECIDED_STATUSES = setOf(408, 429)
+private const val REQUEST_TIMEOUT = 408
+private const val TOO_MANY_REQUESTS = 429
+private val UNDECIDED_STATUSES = setOf(REQUEST_TIMEOUT, TOO_MANY_REQUESTS)
 private val CLIENT_ERRORS = FIRST_CLIENT_ERROR..LAST_CLIENT_ERROR
 
 /**
