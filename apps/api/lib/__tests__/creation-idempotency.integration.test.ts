@@ -93,13 +93,13 @@ async function crearCliente(): Promise<Cliente> {
   return c
 }
 
-/** Los argumentos de `create_customer_order` para un recojo en efectivo. */
+/** Los argumentos de `create_customer_order` para un recojo prepagado. */
 function argsPedido(c: Cliente, extra: Record<string, unknown> = {}) {
   return {
     p_customer_user_id: c.id,
     p_business_id: BUSINESS_ID,
     p_delivery_method: 'pickup',
-    p_payment_intent: 'pending_cash',
+    p_payment_intent: 'prepaid',
     p_customer_name: 'Vecino',
     p_customer_phone: c.tel9,
     p_delivery_address: '',
@@ -459,7 +459,7 @@ describe('restaurantes por HTTP: el replay va antes de los guards', () => {
     const cuerpo = {
       businessId: BUSINESS_ID,
       deliveryMethod: 'pickup',
-      paymentIntent: 'pending_cash',
+      paymentIntent: 'prepaid',
       pickupTiming: 'now',
       customerName: 'Vecino',
       customerPhone: c.tel9,
@@ -994,5 +994,57 @@ describe('Entregas: por la ruta HTTP real', () => {
     const r = await postCourierOrder(peticion(c, 'no-es-uuid', cuerpoEntrega(c)))
     expect(r.status).toBe(422)
     expect(await contarEntregas(c.id)).toBe(0)
+  })
+})
+
+describe('un recojo solo se paga por adelantado (0283), por HTTP', () => {
+  it('un recojo en caja es 422 con su mensaje y no deja ningún pedido; el prepago entra', async () => {
+    const c = await crearCliente()
+    await db.from('user_roles').insert({ user_id: c.id, role: 'customer' })
+    const anon = createClient(LOCAL_URL, LOCAL_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { data: ses, error: lerr } = await anon.auth.signInWithPassword({
+      email: `idem-${c.tel9}@integration.local`,
+      password: CLAVE,
+    })
+    expect(lerr, lerr?.message).toBeNull()
+    const token = ses.session?.access_token ?? ''
+
+    const cuerpo = (paymentIntent: string, pickupTiming: string) => ({
+      businessId: BUSINESS_ID,
+      deliveryMethod: 'pickup',
+      paymentIntent,
+      pickupTiming,
+      customerName: 'Vecino',
+      customerPhone: c.tel9,
+      items: [{ menuItemId: ITEM_POLLO_ID, quantity: 1 }],
+    })
+    const pedir = (body: unknown) =>
+      postOrder(
+        new Request(`${LOCAL_URL}/api/v1/customer/orders`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${token}`,
+            'idempotency-key': crypto.randomUUID(),
+          },
+          body: JSON.stringify(body),
+        }),
+      )
+
+    for (const timing of ['now', 'later']) {
+      const r = await pedir(cuerpo('pending_cash', timing))
+      const json = (await r.json()) as { code?: string; detail?: string; errors?: unknown }
+      expect(r.status, JSON.stringify(json)).toBe(422)
+      expect(json.code).toBe('validation_error')
+      expect(JSON.stringify(json)).toContain('Un recojo se paga por adelantado')
+    }
+    expect(await contarPedidos(c.id)).toBe(0)
+
+    const ok = await pedir(cuerpo('prepaid', 'now'))
+    expect(ok.status, await ok.clone().text()).toBe(201)
+    pedidos.push(((await ok.json()) as { data: { id: string } }).data.id)
+    expect(await contarPedidos(c.id)).toBe(1)
   })
 })

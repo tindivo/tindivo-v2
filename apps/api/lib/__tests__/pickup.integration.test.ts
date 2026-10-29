@@ -93,22 +93,19 @@ interface GpsEnVivo {
 }
 
 /**
- * Un recojo en efectivo, tal como lo manda el checkout.
+ * Un recojo del canal del cliente, tal como lo manda el checkout.
+ *
+ * Desde la 0283 solo se paga por prepago, así que ese es el default. Los otros
+ * dos valores existen para probar que se RECHAZAN.
  *
  * SIN `p_client_pays_with`: en el mostrador no se pregunta con qué billete
- * viene el cliente. Ese dato existe para el sencillo que la caja le adelanta al
- * motorizado, y aquí no hay motorizado ni adelanto.
+ * viene el cliente.
  */
 async function pedirRecojo(
   cliente: Cliente,
   timing: 'now' | 'later',
   gps?: GpsEnVivo,
-  /**
-   * El default es la caja porque es el caso normal del mostrador. Los otros dos
-   * valores existen para los tests de la 0223: `prepaid` es el único camino de
-   * un «más tarde», y `pending_yape` el que ya no existe en ningún recojo.
-   */
-  intent: 'pending_cash' | 'pending_yape' | 'prepaid' = 'pending_cash',
+  intent: 'pending_cash' | 'pending_yape' | 'prepaid' = 'prepaid',
 ): Promise<{ data: unknown; error: { message: string } | null }> {
   return db.rpc('create_customer_order', {
     p_customer_user_id: cliente.id,
@@ -130,6 +127,35 @@ async function pedirRecojo(
         }
       : {}),
   })
+}
+
+/**
+ * Un recojo «ahora» cobrado en caja, TAL COMO LO DEJABA EL CANAL ANTES DE LA 0283.
+ *
+ * Ya no se puede crear por la RPC, pero puede haber pedidos así en vuelo el día
+ * que se despliegue (nacieron antes), y todo lo de después de crear —cobrar al
+ * aceptar, entregar, el plantón, el aviso— tiene que seguir funcionando con
+ * ellos. Se fabrica creando un prepago «ahora» (mismo estado, `pending_acceptance`)
+ * y volviéndolo a efectivo: `orders_pickup_payment_chk` (0223) lo sigue admitiendo.
+ */
+async function pedirRecojoEnCajaDeAntes(
+  cliente: Cliente,
+): Promise<{ data: unknown; error: { message: string } | null }> {
+  const r = await pedirRecojo(cliente, 'now')
+  if (r.error) return r
+  const { id } = r.data as { id: string }
+  const { error } = await db.from('orders').update({ payment_intent: 'pending_cash' }).eq('id', id)
+  return error ? { data: r.data, error } : r
+}
+
+/** Cuántos pedidos tiene el cliente: para probar que un rechazo no deja ninguno. */
+async function contarPedidos(cliente: Cliente): Promise<number> {
+  const { count, error } = await db
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('customer_user_id', cliente.id)
+  if (error) throw new Error(error.message)
+  return count ?? 0
 }
 
 /** El pedido creado, con lo que hace falta mirar de él. */
@@ -284,13 +310,10 @@ describe('0219/0220 · el recojo en el local', () => {
 
   describe('el recojo «ahora»: la garantía es la persona', () => {
     /**
-     * EL CASO QUE ABRE EL CANAL. Antes de la 0220 este pedido moría con «Pago
-     * adelantado requerido»: el guard de contraentrega corre ANTES de ramificar
-     * por método, y sin GPS `customer_gps_in_coverage` da false. O sea que el
-     * mostrador estaba CERRADO al vecino que estaba de pie delante de él — el
-     * problema era el contrario del que se suponía.
+     * 0283: el recojo «ahora» ya no admite la caja. Sin historial y sin GPS
+     * entra igual —la cajera lo tiene delante—, pero prepagado.
      */
-    it('sin historial y sin GPS entra igual, porque la cajera lo tiene delante', async () => {
+    it('sin historial y sin GPS entra prepagado', async () => {
       const cliente = await crearCliente()
 
       const { data, error } = await pedirRecojo(cliente, 'now')
@@ -301,17 +324,20 @@ describe('0219/0220 · el recojo en el local', () => {
 
       const fila = await estado(creado.id)
       expect(fila.pickup_timing).toBe('now')
-      expect((fila.risk_flags as Record<string, unknown>).pickupNowPresence).toBe(true)
+      const { data: pago } = await db
+        .from('orders')
+        .select('payment_intent')
+        .eq('id', creado.id)
+        .single()
+      expect(pago?.payment_intent).toBe('prepaid')
     })
 
     /**
      * `validando` SIGNIFICA «LA CAJERA LLAMA POR TELÉFONO», y no se llama a
-     * quien está al otro lado del mostrador. Un cliente sin historial dispara
-     * `standard_validation_rule` (es su primer pedido con ese teléfono), así
-     * que sin la rama de la 0220 acabaría ahí — y su pedido se cancelaría solo
-     * a los 5 minutos esperando una llamada que nadie iba a hacer.
+     * quien está al otro lado del mostrador. El prepago no pasa por el
+     * antifraude de contraentrega, así que tampoco acaba ahí.
      */
-    it('nunca entra a `validando`, pero las señales de riesgo NO se pierden', async () => {
+    it('nunca entra a `validando`', async () => {
       const cliente = await crearCliente()
 
       const { data, error } = await pedirRecojo(cliente, 'now')
@@ -319,22 +345,28 @@ describe('0219/0220 · el recojo en el local', () => {
       const creado = registrar(data)
 
       expect(creado.status).not.toBe('validando')
-      const fila = await estado(creado.id)
-      // El hecho se guarda aunque no cambie el estado: la tarjeta lo enseña, y
-      // quien resuelve la duda es la persona que lo tiene delante.
-      expect(fila.requires_validation).toBe(true)
-      expect(fila.validation_reason_code).toBe('standard_validation_rule')
-      expect((fila.risk_flags as Record<string, unknown>).resolvedAtCounter).toBe(true)
     })
 
     /**
-     * EL LÍMITE DEL CANAL, Y EL CASO QUE NO SE PUEDE BORRAR.
-     *
-     * Estar de pie en el mostrador no levanta una sanción de cuenta. Si esta
-     * rama se relaja «porque total, es presencial», el recojo se convierte en
-     * la puerta de atrás de todo cliente con strikes de DECISIONS §8.
+     * 0283: la caja ya no es un camino, ni siquiera para quien tiene historial
+     * limpio. El rechazo es el código estable de DB-16 y NO deja ninguna fila.
      */
-    it('un cliente con strikes sigue bloqueado aunque diga estar en el local', async () => {
+    it('la caja se rechaza con un código estable y no crea ningún pedido', async () => {
+      const cliente = await crearCliente()
+      const antes = await contarPedidos(cliente)
+
+      const { data, error } = await pedirRecojo(cliente, 'now', undefined, 'pending_cash')
+
+      expect(data).toBeNull()
+      expect(error?.message).toBe('pickup_requires_prepaid')
+      expect(await contarPedidos(cliente)).toBe(antes)
+    })
+
+    /**
+     * El límite del canal sigue en pie: un cliente con strikes y prepago entra
+     * (el prepago no fía nada), y lo que no puede es fiar en caja.
+     */
+    it('un cliente con strikes pide prepagado, y la caja se le rechaza igual', async () => {
       const cliente = await crearCliente()
       const { data: st, error: stErr } = await db
         .from('customer_strikes')
@@ -346,9 +378,12 @@ describe('0219/0220 · el recojo en el local', () => {
       if (stErr) throw new Error(stErr.message)
       for (const s of st ?? []) strikesCreados.push(s.id)
 
-      const { error } = await pedirRecojo(cliente, 'now')
+      const caja = await pedirRecojo(cliente, 'now', undefined, 'pending_cash')
+      expect(caja.error?.message).toBe('pickup_requires_prepaid')
 
-      expect(error?.message).toContain('Pago adelantado requerido')
+      const { data, error } = await pedirRecojo(cliente, 'now')
+      expect(error, `el prepago debería entrar: ${error?.message}`).toBeNull()
+      registrar(data)
     })
   })
 
@@ -371,9 +406,9 @@ describe('0219/0220 · el recojo en el local', () => {
     it('sin historial y sin GPS exige prepago', async () => {
       const cliente = await crearCliente()
 
-      const { error } = await pedirRecojo(cliente, 'later')
+      const { error } = await pedirRecojo(cliente, 'later', undefined, 'pending_cash')
 
-      expect(error?.message).toContain('Pago adelantado requerido')
+      expect(error?.message).toBe('pickup_requires_prepaid')
     })
 
     /**
@@ -387,14 +422,14 @@ describe('0219/0220 · el recojo en el local', () => {
     it('el crédito de GPS ya no abre la contraentrega: sigue exigiendo prepago', async () => {
       const cliente = await crearCliente()
 
-      const { error } = await pedirRecojo(cliente, 'later', {
-        lat: LAT,
-        lng: LNG,
-        method: 'gps_high_accuracy',
-      })
+      const { error } = await pedirRecojo(
+        cliente,
+        'later',
+        { lat: LAT, lng: LNG, method: 'gps_high_accuracy' },
+        'pending_cash',
+      )
 
-      expect(error).not.toBeNull()
-      expect(error?.message).toContain('orders_pickup_payment_chk')
+      expect(error?.message).toBe('pickup_requires_prepaid')
     })
 
     it('prepagado sí entra, y es el único camino', async () => {
@@ -430,7 +465,7 @@ describe('0219/0220 · el recojo en el local', () => {
 
       const { error } = await pedirRecojo(cliente, 'now', undefined, 'pending_yape')
 
-      expect(error?.message).toContain('orders_pickup_payment_chk')
+      expect(error?.message).toBe('pickup_requires_prepaid')
     })
 
     /**
@@ -441,7 +476,7 @@ describe('0219/0220 · el recojo en el local', () => {
      */
     it('no deja mandar a cocina un recojo «ahora» sin cobrarlo', async () => {
       const cliente = await crearCliente()
-      const { data, error } = await pedirRecojo(cliente, 'now')
+      const { data, error } = await pedirRecojoEnCajaDeAntes(cliente)
       expect(error).toBeNull()
       const creado = registrar(data)
 
@@ -455,7 +490,7 @@ describe('0219/0220 · el recojo en el local', () => {
 
     it('cobrar al aceptar sella quién vio el dinero, y el pie ya no lo pregunta', async () => {
       const cliente = await crearCliente()
-      const { data, error } = await pedirRecojo(cliente, 'now')
+      const { data, error } = await pedirRecojoEnCajaDeAntes(cliente)
       expect(error).toBeNull()
       const creado = registrar(data)
 
@@ -480,13 +515,14 @@ describe('0219/0220 · el recojo en el local', () => {
       expect((await estado(creado.id)).payment_real).toBe('paid_yape')
     })
 
-    it('un recojo «ahora» sí puede pagar en caja: hay a quién cobrarle', async () => {
+    it('un recojo «ahora» ya no puede pagar en caja (0283)', async () => {
       const cliente = await crearCliente()
+      const antes = await contarPedidos(cliente)
 
-      const { data, error } = await pedirRecojo(cliente, 'now')
+      const { error } = await pedirRecojo(cliente, 'now', undefined, 'pending_cash')
 
-      expect(error, `debería entrar: ${error?.message}`).toBeNull()
-      registrar(data)
+      expect(error?.message).toBe('pickup_requires_prepaid')
+      expect(await contarPedidos(cliente)).toBe(antes)
     })
 
     /**
@@ -521,6 +557,31 @@ describe('0219/0220 · el recojo en el local', () => {
       // Si entró hay que registrarlo o el barrido del globalSetup se estrella
       // contra la FK a `users` al borrar el cliente de este test.
       if (!error) registrar(data)
+    })
+
+    it('el delivery sigue aceptando efectivo (0283 no lo toca)', async () => {
+      const cliente = await crearCliente()
+
+      const { data, error } = await db.rpc('create_customer_order', {
+        p_customer_user_id: cliente.id,
+        p_business_id: BUSINESS_ID,
+        p_delivery_method: 'delivery',
+        p_payment_intent: 'pending_cash',
+        p_customer_name: 'Vecino',
+        p_customer_phone: cliente.tel9,
+        p_delivery_address: 'Jr. Los Pinos 123',
+        p_delivery_reference: 'Portón azul',
+        p_delivery_lat: LAT,
+        p_delivery_lng: LNG,
+        p_items: [{ menu_item_id: ITEM_POLLO_ID, quantity: 1, modifiers: [] }],
+        p_source: 'customer_pwa',
+        p_customer_gps_lat: LAT,
+        p_customer_gps_lng: LNG,
+        p_customer_gps_method: 'gps_high_accuracy',
+      })
+
+      expect(error, `debería entrar: ${error?.message}`).toBeNull()
+      registrar(data)
     })
 
     /**
@@ -573,7 +634,7 @@ describe('0219/0220 · el recojo en el local', () => {
       p_source: 'customer_pwa',
     })
 
-    expect(error?.message).toContain('Pago adelantado requerido')
+    expect(error?.message).toBe('pickup_requires_prepaid')
   })
 
   // ── Que ningún recojo acabe en la cola de reparto ────────────────────────
@@ -581,7 +642,7 @@ describe('0219/0220 · el recojo en el local', () => {
   describe('el recojo no entra en el flujo del motorizado', () => {
     async function recojoEnCocina(): Promise<string> {
       const cliente = await crearCliente()
-      const { data, error } = await pedirRecojo(cliente, 'now')
+      const { data, error } = await pedirRecojoEnCajaDeAntes(cliente)
       if (error) throw new Error(error.message)
       const creado = registrar(data)
       await aceptarCobrando(creado.id)
@@ -634,7 +695,7 @@ describe('0219/0220 · el recojo en el local', () => {
   describe('cerrar el recojo', () => {
     async function recojoEnMostrador(): Promise<{ id: string; cliente: Cliente }> {
       const cliente = await crearCliente()
-      const { data, error } = await pedirRecojo(cliente, 'now')
+      const { data, error } = await pedirRecojoEnCajaDeAntes(cliente)
       if (error) throw new Error(error.message)
       const creado = registrar(data)
       await aceptarCobrando(creado.id)
@@ -896,7 +957,7 @@ describe('0219/0220 · el recojo en el local', () => {
   describe('el cliente que no viene', () => {
     async function recojoEsperandoDesde(minutos: number): Promise<{ id: string; tel9: string }> {
       const cliente = await crearCliente()
-      const { data, error } = await pedirRecojo(cliente, 'now')
+      const { data, error } = await pedirRecojoEnCajaDeAntes(cliente)
       if (error) throw new Error(error.message)
       const creado = registrar(data)
       await aceptarCobrando(creado.id)
@@ -1036,7 +1097,7 @@ describe('0219/0220 · el recojo en el local', () => {
   describe('el aviso de WhatsApp', () => {
     async function recojoEnMostrador(): Promise<{ id: string; cliente: Cliente }> {
       const cliente = await crearCliente()
-      const { data, error } = await pedirRecojo(cliente, 'now')
+      const { data, error } = await pedirRecojoEnCajaDeAntes(cliente)
       if (error) throw new Error(error.message)
       const creado = registrar(data)
       await aceptarCobrando(creado.id)
@@ -1106,7 +1167,7 @@ describe('0219/0220 · el recojo en el local', () => {
      */
     it('no deja avisar de un pedido que sigue en cocina', async () => {
       const cliente = await crearCliente()
-      const { data, error } = await pedirRecojo(cliente, 'now')
+      const { data, error } = await pedirRecojoEnCajaDeAntes(cliente)
       if (error) throw new Error(error.message)
       const creado = registrar(data)
       await aceptarCobrando(creado.id)
@@ -1208,7 +1269,7 @@ describe('0219/0220 · el recojo en el local', () => {
    */
   it('un recojo en el mostrador bloquea un pedido nuevo del mismo cliente', async () => {
     const cliente = await crearCliente()
-    const { data, error } = await pedirRecojo(cliente, 'now')
+    const { data, error } = await pedirRecojoEnCajaDeAntes(cliente)
     if (error) throw new Error(error.message)
     const creado = registrar(data)
     await aceptarCobrando(creado.id)
