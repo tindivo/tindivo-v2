@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { PhoneTransferSchema } from './phone-security'
 
 /**
  * Catálogo estable de códigos de error de negocio. Los clientes pueden ramificar
@@ -58,5 +59,6 @@ export const ProblemDetailsSchema = z.object({
   instance: z.string().optional(),
   requestId: z.string().optional(),
   errors: z.array(ValidationIssueSchema).optional(),
+  transfer: PhoneTransferSchema.optional(),
 })
 export type ProblemDetails = z.infer<typeof ProblemDetailsSchema>

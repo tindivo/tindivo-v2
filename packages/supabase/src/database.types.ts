@@ -14,6 +14,138 @@ export type Database = {
   }
   public: {
     Tables: {
+      // DUDA(Claude): tipos aditivos de 0277 escritos sin consultar la base;
+      // el orquestador debe regenerarlos después de aplicar la migración.
+      phone_assignments: {
+        Row: {
+          id: string
+          phone: string
+          user_id: string
+          started_at: string
+          start_reason: string
+          ended_at: string | null
+          end_reason: string | null
+        }
+        Insert: {
+          id?: string
+          phone: string
+          user_id: string
+          started_at?: string
+          start_reason: string
+          ended_at?: string | null
+          end_reason?: string | null
+        }
+        Update: {
+          id?: string
+          phone?: string
+          user_id?: string
+          started_at?: string
+          start_reason?: string
+          ended_at?: string | null
+          end_reason?: string | null
+        }
+        Relationships: []
+      }
+      phone_transfer_challenges: {
+        Row: {
+          id: string
+          user_id: string
+          phone: string
+          assignment_id: string
+          created_at: string
+          expires_at: string
+          consumed_at: string | null
+          result_assignment_id: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          phone: string
+          assignment_id: string
+          created_at?: string
+          expires_at?: string
+          consumed_at?: string | null
+          result_assignment_id?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          phone?: string
+          assignment_id?: string
+          created_at?: string
+          expires_at?: string
+          consumed_at?: string | null
+          result_assignment_id?: string | null
+        }
+        Relationships: []
+      }
+      phone_restrictions: {
+        Row: {
+          id: string
+          phone: string
+          kind: string
+          until: string | null
+          source_user_id: string | null
+          source: string
+          created_at: string
+          lifted_at: string | null
+          lifted_by: string | null
+          lift_reason: string | null
+        }
+        Insert: {
+          id?: string
+          phone: string
+          kind: string
+          until?: string | null
+          source_user_id?: string | null
+          source: string
+          created_at?: string
+          lifted_at?: string | null
+          lifted_by?: string | null
+          lift_reason?: string | null
+        }
+        Update: {
+          id?: string
+          phone?: string
+          kind?: string
+          until?: string | null
+          source_user_id?: string | null
+          source?: string
+          created_at?: string
+          lifted_at?: string | null
+          lifted_by?: string | null
+          lift_reason?: string | null
+        }
+        Relationships: []
+      }
+      customer_security_notices: {
+        Row: {
+          id: string
+          user_id: string
+          kind: string
+          phone_last3: string
+          created_at: string
+          seen_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          kind: string
+          phone_last3: string
+          created_at?: string
+          seen_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          kind?: string
+          phone_last3?: string
+          created_at?: string
+          seen_at?: string | null
+        }
+        Relationships: []
+      }
+
       address_directory: {
         Row: {
           accuracy_m: number | null
@@ -2250,6 +2382,7 @@ export type Database = {
           change_advanced: number | null
           change_to_give: number | null
           client_pays_with: number | null
+          client_platform: string | null
           commission_amount: number | null
           comprobante_prepago_url: string | null
           confirmed_at: string | null
@@ -2352,6 +2485,7 @@ export type Database = {
           change_advanced?: number | null
           change_to_give?: number | null
           client_pays_with?: number | null
+          client_platform?: string | null
           commission_amount?: number | null
           comprobante_prepago_url?: string | null
           confirmed_at?: string | null
@@ -2454,6 +2588,7 @@ export type Database = {
           change_advanced?: number | null
           change_to_give?: number | null
           client_pays_with?: number | null
+          client_platform?: string | null
           commission_amount?: number | null
           comprobante_prepago_url?: string | null
           confirmed_at?: string | null
@@ -3343,6 +3478,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_customer_phone: {
+        Args: { p_user_id: string; p_phone: string; p_challenge_id?: string }
+        Returns: Json
+      }
+
       account_deletion_blockers: { Args: { p_user_id: string }; Returns: Json }
       admin_confirm_courier_remittance: {
         Args: { p_actor_user_id: string; p_courier_order_id: string }
@@ -3613,6 +3753,16 @@ export type Database = {
         }
         Returns: Json
       }
+      create_order_review_for: {
+        Args: {
+          p_actor_user_id: string
+          p_comment?: string
+          p_order_id: string
+          p_rating: number
+          p_tags?: string[]
+        }
+        Returns: Json
+      }
       current_business_id: { Args: never; Returns: string }
       current_customer_contraentrega_outcome: {
         Args: {
@@ -3691,6 +3841,10 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["business_primary_capability"]
       }
+      dismiss_order_review_for: {
+        Args: { p_actor_user_id: string; p_order_id: string }
+        Returns: boolean
+      }
       dispute_cash_settlement: {
         Args: {
           p_business_user_id: string
@@ -3768,6 +3922,14 @@ export type Database = {
         Returns: boolean
       }
       is_within_platform_schedule: { Args: never; Returns: boolean }
+      lift_phone_restriction: {
+        Args: {
+          p_admin_user_id: string
+          p_reason: string
+          p_restriction_id: string
+        }
+        Returns: Json
+      }
       list_proof_purge_due: {
         Args: {
           p_after_deleted_at?: string
@@ -4139,6 +4301,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      review_pending_for: { Args: { p_actor_user_id: string }; Returns: Json }
       search_address_directory: {
         Args: { p_phone: string }
         Returns: {

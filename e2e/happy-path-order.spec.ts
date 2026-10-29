@@ -60,14 +60,14 @@ async function promoVivaEnLaBase(): Promise<boolean> {
 async function login(page: Page): Promise<void> {
   await page.goto('/entrar')
 
-  // `/entrar` es un stepper (method -> email-signup -> login) que mantiene todos
-  // los paneles montados pero INERTES (`tabindex="-1"`, submit deshabilitado)
-  // hasta llegar al suyo. Hay que ir explícitamente al de login: "Ingresar con
-  // correo" lleva a CREAR CUENTA, mientras "Iniciar sesión" es el que abre login.
+  // `/entrar` es un stepper (method -> login, o Google -> nombre -> celular) que
+  // mantiene todos los paneles montados pero INERTES (`tabindex="-1"`, submit
+  // deshabilitado) hasta llegar al suyo. Hay que ir explícitamente al de login:
+  // «Iniciar sesión» es el que lo abre (desde la 0279 no hay alta por correo).
   await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
-  // Siguen montados DOS formularios con los mismos placeholders (crear cuenta y
-  // login), así que hay que acotar al de login por su encabezado.
+  // Siguen montados los formularios de los otros pasos, así que hay que acotar
+  // al de login por su encabezado.
   const formLogin = page.locator('form').filter({ hasText: 'Hola de nuevo' })
 
   await formLogin.getByPlaceholder('tu@correo.com').fill(E2E.CUSTOMER_EMAIL)

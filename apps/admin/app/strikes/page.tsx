@@ -5,6 +5,7 @@ import { Button } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { EmptyState, Ico, SectionHeader, StatusBadge } from '@/components/admin'
 import { api, errMsg } from '@/lib/api'
+import { PhoneRestrictions } from './phone-restrictions'
 
 interface StrikeRow {
   user_id: string
@@ -79,6 +80,8 @@ export default function StrikesPage() {
           })}
         </ul>
       )}
+
+      <PhoneRestrictions />
     </div>
   )
 }

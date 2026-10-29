@@ -465,3 +465,30 @@ export const TermsAcceptedSchema = z.object({
     description: 'Repetirla no crea otra fila: devuelve la fecha original',
   }),
 })
+
+// ── Reseñas (0215, 0280) ─────────────────────────────────────────────────────
+
+/**
+ * GET /customer/reviews/pending: el pedido entregado más reciente del cliente sin calificar ni
+ * descartar, dentro de la ventana, con el catálogo de etiquetas. `null` si no hay nada que
+ * preguntar: nunca una cola. Las Entregas no tienen reseña.
+ */
+export const CustomerPendingReviewSchema = z.object({
+  orderId: uuidOut,
+  shortId: z.string(),
+  businessId: uuidOut,
+  businessName: z.string(),
+  businessLogoUrl: z.string().nullable(),
+  deliveredAt: timestampOut,
+  closesAt: timestampOut.meta({ description: 'Hasta cuándo se puede calificar este pedido' }),
+  tags: z.array(z.object({ id: z.string(), label: z.string() })).meta({
+    description: 'Las etiquetas que se pueden marcar; `id` es lo que se envía al calificar',
+  }),
+})
+
+/** POST /customer/orders/{id}/review: la reseña creada. */
+export const CreatedReviewSchema = z.object({
+  id: uuidOut,
+  orderId: uuidOut,
+  rating: z.number().int().min(1).max(5),
+})

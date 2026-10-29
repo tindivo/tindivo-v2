@@ -20,6 +20,7 @@ interface ProblemOptions {
   errors?: ValidationIssue[] | undefined
   requestId?: string | undefined
   headers?: HeadersInit | undefined
+  transfer?: ProblemDetails['transfer'] | undefined
 }
 
 /** Respuesta de error canónica (RFC 9457 Problem Details). */
@@ -33,6 +34,7 @@ export function problem(code: ApiErrorCode, opts: ProblemOptions = {}): Response
     detail: opts.detail,
     requestId: opts.requestId,
     errors: opts.errors,
+    ...(opts.transfer === undefined ? {} : { transfer: opts.transfer }),
   }
   return Response.json(body, {
     status,
