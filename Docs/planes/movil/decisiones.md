@@ -51,7 +51,7 @@
 **Reglas aplicables que no son decisiones del plan** (ya están en los estándares de código v2, ADR 0038, y se citan sin
 número D propio): `DES-6` (el contrato es compatible hacia atrás; `oasdiff` contra la rama base en la CI) y `CLI-14`
 (toda publicación pasa por pruebas internas y sale con liberación gradual o escalonada). Los números `D-54` y `D-55`
-quedan **libres**: la siguiente decisión del plan tomaba `D-54`; desde el 2026-10-26 la siguiente es `D-64`.
+quedan **libres**: la siguiente decisión del plan tomaba `D-54`; desde el 2026-10-29 la siguiente es `D-65`.
 
 ### Decididas el 2026-10-24
 
@@ -97,6 +97,12 @@ aprobación manual: «no quiero trabajo manual de aprobar cambio de número».
 |---|---|---|
 | D-62 | **Tindivo Store y Tindivo Entregas entran en la app del cliente**, además de los pedidos de restaurante | Jesús, 2026-10-26 («sí, agrega ambos, store y entregas») |
 | D-63 | **Un número verificado pertenece a una sola cuenta.** Si otra cuenta lo verifica por SMS, la app pregunta y el cliente puede **trasladarlo él mismo**, sin aprobación de Tindivo; la otra cuenta pierde la verificación y recibe un aviso que queda en su cuenta (el push es solo un intento). **No se mueven pedidos, datos, deudas ni roles**, y el SMS no da acceso a la otra cuenta. Se espera solo si alguna de las dos tiene un pedido o Entrega en curso. **El riesgo se queda con el número**: strikes, bloqueos y restricciones de contraentrega de la cuenta anterior siguen aplicando, y tras un traslado la confianza para contraentrega solo cuenta las entregas de la cuenta nueva con ese número. Cada traslado exige un código nuevo, de un solo uso, sin plazo de espera entre traslados. Un número reciclado sigue el mismo camino; la excepción va por WhatsApp. Resuelve lo que `D-22` dejaba abierto sobre el teléfono ya verificado en otra cuenta | Jesús, 2026-10-26 |
+
+### Cierre de sesión en Android, decidido el 2026-10-29
+
+| # | Decisión | Quién / cuándo |
+|---|---|---|
+| D-64 | **Al cerrar sesión, la app Android invalida la sesión guardada por dos vías independientes**: borra o vacía el archivo cifrado y destruye la clave del Keystore que lo descifra. **La garantía de que no queda una sesión restaurable vale mientras funcione al menos una de las dos.** Si fallan las dos a la vez y luego ambas se recuperan, la sesión anterior puede volver al reiniciar en ese mismo teléfono. Es un límite aceptado, no un defecto por corregir: exige dos fallos independientes del aparato, y el afectado es su propio dueño. No se añade una tercera vía (opción B). Origen: CAX-004 del PR #111, escalado tras tres rondas de Codex (expediente `tindivo-auditorias/2026-10-26-android-sesion-google`, fuera del repo) | Jesús, 2026-10-29 (opción A) |
 
 ## 2. Decisiones abiertas — organización y plazos externos
 
