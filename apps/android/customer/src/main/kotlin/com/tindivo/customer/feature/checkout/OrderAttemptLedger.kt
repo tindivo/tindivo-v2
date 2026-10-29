@@ -127,8 +127,6 @@ class OrderAttemptLedger(
     private val storeMutex = Mutex()
     private val accountLocks = ConcurrentHashMap<String, Mutex>()
 
-    private fun lockOf(accountId: String): Mutex = accountLocks.getOrPut(accountId) { Mutex() }
-
     /**
      * Intenta crear el pedido de [cart] para [accountId] (el usuario autenticado al empezar). [send] recibe la clave y
      * devuelve el resultado de `POST /customer/orders`.
@@ -141,7 +139,7 @@ class OrderAttemptLedger(
         cart: Cart,
         send: suspend (UUID) -> ApiResult<T>,
     ): PlaceResult<T> {
-        val lock = lockOf(accountId)
+        val lock = accountLocks.getOrPut(accountId) { Mutex() }
         if (!lock.tryLock()) return PlaceResult.Busy
         try {
             return when (val gate = prepare(accountId, cart)) {
@@ -158,7 +156,7 @@ class OrderAttemptLedger(
      * había perdido, deja a esa cuenta enviar con una clave nueva. Solo la UI lo llama, nunca automáticamente.
      */
     suspend fun acknowledgeReconciled(accountId: String) {
-        lockOf(accountId).withLock {
+        accountLocks.getOrPut(accountId) { Mutex() }.withLock {
             update {
                 val acknowledged = if (it.lost) it.acknowledged + accountId else it.acknowledged
                 it.copy(attempts = it.attempts - accountId, acknowledged = acknowledged)
@@ -181,14 +179,30 @@ class OrderAttemptLedger(
         cart: Cart,
     ): Gate {
         val ledger = store.read()
-        if (!ledger.lost && ledger.hasInvalidKey()) {
-            update { it.markLostIfInvalid() }
-            return Gate.Stop(PlaceResult.NeedsReconciliation)
+        val existing = ledger.attempts[accountId]
+        val key = existing?.key?.toUuidOrNull()
+        return when {
+            !ledger.lost && ledger.hasInvalidKey() -> {
+                update { it.markLostIfInvalid() }
+                Gate.Stop(PlaceResult.NeedsReconciliation)
+            }
+
+            ledger.lost && accountId !in ledger.acknowledged -> {
+                Gate.Stop(PlaceResult.NeedsReconciliation)
+            }
+
+            existing == null -> {
+                authorize(accountId, expectedKey = null, cart = cart)
+            }
+
+            key == null -> {
+                Gate.Stop(PlaceResult.NeedsReconciliation)
+            }
+
+            else -> {
+                reconcile(accountId, key, existing, cart)
+            }
         }
-        if (ledger.lost && accountId !in ledger.acknowledged) return Gate.Stop(PlaceResult.NeedsReconciliation)
-        val existing = ledger.attempts[accountId] ?: return authorize(accountId, expectedKey = null, cart = cart)
-        val key = existing.key.toUuidOrNull() ?: return Gate.Stop(PlaceResult.NeedsReconciliation)
-        return reconcile(accountId, key, existing, cart)
     }
 
     /**
