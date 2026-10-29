@@ -48,6 +48,18 @@ export async function GET(
     const headers = privateHeaders(req)
     if (!record) return ok({ state: 'not_found', order: null }, { headers })
     if (record.state === 'reserved') return ok({ state: 'unknown', order: null }, { headers })
+    // Legada `completed` con respuesta de error: la clave está consumida pero el pedido no
+    // se creó (o no se sabe). La tabla nueva no tiene `responseStatus` y siempre prueba creación.
+    if (
+      record.responseStatus !== undefined &&
+      !(
+        record.responseStatus !== null &&
+        record.responseStatus >= 200 &&
+        record.responseStatus <= 299
+      )
+    ) {
+      return ok({ state: 'unknown', order: null }, { headers })
+    }
 
     const saved = (record.response ?? {}) as { id?: unknown; shortId?: unknown }
     let id = typeof saved.id === 'string' ? saved.id : (record.resourceId ?? null)

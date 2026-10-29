@@ -240,6 +240,27 @@ describe('GET /customer/orders/attempts/{key}', () => {
     })
   })
 
+  it.each([
+    [422, 'unknown'],
+    [500, 'unknown'],
+  ])('una fila legada completed con respuesta %i es unknown (la clave está consumida)', async (status, state) => {
+    const c = await crearCliente()
+    const key = crypto.randomUUID()
+    const { error } = await db.from('idempotency_keys').insert({
+      key,
+      scope: 'create_order',
+      user_id: c.id,
+      request_hash: 'hash-legado',
+      status: 'completed',
+      response_status: status,
+      response_body: { type: 'about:blank' },
+    })
+    expect(error, error?.message).toBeNull()
+
+    const res = await consultar(key, c.token)
+    expect((await res.json()).data).toEqual({ state, order: null })
+  })
+
   it('una clave que no es UUID es 422 validation_error', async () => {
     const c = await crearCliente()
     const res = await consultar('no-es-uuid', c.token)

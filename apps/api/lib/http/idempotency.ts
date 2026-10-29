@@ -50,7 +50,12 @@ export type CreationRecord = {
   /** Id del recurso creado, si la fila nueva lo tiene (`creation_idempotency.resource_id`). */
   resourceId: string | null
 } & (
-  | { state: 'completed'; response: unknown }
+  | {
+      state: 'completed'
+      response: unknown
+      /** Solo la tabla legada: `completed` también se guarda con un handler que respondió error. */
+      responseStatus?: number | null
+    }
   // Solo la tabla legada: la API anterior reclamó la clave y no guardó el resultado.
   | { state: 'reserved' }
 )
@@ -87,7 +92,7 @@ export async function readCreationRecord(
   // tras el despliegue duplicaría el pedido. Siempre filtrado por usuario.
   const { data: legacy } = await supabase
     .from('idempotency_keys')
-    .select('status,request_hash,response_body,expires_at')
+    .select('status,request_hash,response_body,response_status,expires_at')
     .eq('key', args.key)
     .eq('scope', args.scope)
     .eq('user_id', args.userId)
@@ -98,6 +103,7 @@ export async function readCreationRecord(
       state: 'completed',
       requestHash: legacy.request_hash,
       response: (legacy.response_body as { data?: unknown } | null)?.data ?? null,
+      responseStatus: legacy.response_status,
       resourceId: null,
     }
   }

@@ -4076,7 +4076,7 @@
                         },
                         "order": {
                           "nullable": true,
-                          "description": "El pedido que creó la clave. Null salvo en `created` (y en un `created` cuyo pedido ya no se puede leer)",
+                          "description": "El pedido que creó la clave. Null salvo en `created`. Un `created` con `order` null puede pasar: el pedido existe pero no se pudo leer su código (`id`/`shortId`)",
                           "type": "object",
                           "properties": {
                             "id": {

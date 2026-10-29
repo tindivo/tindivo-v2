@@ -66,7 +66,7 @@ export const OrderAttemptSchema = z.object({
   ),
   order: z.object({ id: uuidOut, shortId: z.string() }).nullable().meta({
     description:
-      'El pedido que creó la clave. Null salvo en `created` (y en un `created` cuyo pedido ya no se puede leer)',
+      'El pedido que creó la clave. Null salvo en `created`. Un `created` con `order` null puede pasar: el pedido existe pero no se pudo leer su código (`id`/`shortId`)',
   }),
 })
 
