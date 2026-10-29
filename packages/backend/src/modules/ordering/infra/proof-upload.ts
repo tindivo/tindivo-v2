@@ -27,7 +27,8 @@ export async function nextProofAttempt(
       // Intentos agotados: lo mismo que responde `prepay-proof`.
       throw new DomainError(error.message, 'forbidden')
     }
-    throw new Error(`No se pudo consultar el intento del comprobante: ${error.message}`)
+    // Sin el texto del proveedor: el fallo viaja como `cause` y el logger solo lo describe.
+    throw new Error('No se pudo consultar el intento del comprobante', { cause: error })
   }
   if (typeof data !== 'number') throw new Error('prepay_proof_next_attempt no devolvió un intento')
   return data
@@ -58,7 +59,8 @@ export async function signProofUpload(
 ): Promise<SignedProofUpload> {
   const { data, error } = await db.storage.from(BUCKET).createSignedUploadUrl(path)
   if (error || !data) {
-    throw new Error(`No se pudo firmar la subida del comprobante: ${error?.message ?? 'sin datos'}`)
+    // Sin el texto de Storage: puede traer la URL o el token. Va como `cause`, que el logger solo describe.
+    throw new Error('No se pudo firmar la subida del comprobante', { cause: error ?? undefined })
   }
   const expiresMs = tokenExpiryMs(data.token) ?? now + DEFAULT_TTL_MS
   return {

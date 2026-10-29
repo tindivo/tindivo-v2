@@ -3,6 +3,7 @@
  * comprobante y la app la hace con un PUT a la URL firmada (sin el SDK de Supabase). Después
  * confirma con el `prepay-proof` de siempre. Contra la base local, con JWT reales.
  */
+import { createHash, createHmac } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
@@ -214,5 +215,129 @@ describe('POST /customer/orders/{id}/prepay-proof/upload-url', () => {
     const id = await pedidoDelCliente()
     const res = await pedir(id, { contentType: 'image/png' }, null)
     expect(res.status).toBe(401)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CAX-002: lo que la URL firmada conserva, medido contra el Storage local real.
+describe('la URL firmada conserva las restricciones del bucket', () => {
+  const BUCKET = 'payment-proofs'
+  const MAX = 15 * 1024 * 1024
+  const sha = (b: Uint8Array | Buffer) => createHash('sha256').update(b).digest('hex')
+  const png = (n: number, fill = 7) => new Uint8Array(n).fill(fill)
+
+  interface Firmada {
+    id: string
+    path: string
+    uploadUrl: string
+    token: string
+  }
+  async function firmada(): Promise<Firmada> {
+    const id = await pedidoDelCliente()
+    const res = await pedir(id, { contentType: 'image/png' })
+    expect(res.status).toBe(200)
+    const { data } = await res.json()
+    return { id, ...data }
+  }
+  const put = (url: string, body: Uint8Array, contentType = 'image/png', extra = {}) =>
+    fetch(url, { method: 'PUT', headers: { 'content-type': contentType, ...extra }, body })
+  const existe = async (path: string) => !(await db.storage.from(BUCKET).download(path)).error
+  /** Misma carpeta y pedido, otro nombre de archivo. */
+  const otraRuta = (f: Firmada) => `${CUSTOMER_USER_ID}/${f.id}/attempt-1-otro-${Date.now()}.png`
+
+  it('el token de la ruta A no sube a la ruta B (ni con el SDK ni cambiando el path de la URL)', async () => {
+    const a = await firmada()
+    const b = otraRuta(a)
+
+    const sdk = await db.storage.from(BUCKET).uploadToSignedUrl(b, a.token, png(10))
+    expect(sdk.error).not.toBeNull()
+
+    const urlB = a.uploadUrl.replace(a.path, b)
+    expect(urlB).not.toBe(a.uploadUrl)
+    const res = await put(urlB, png(10))
+    console.log('CAX-002.1 PUT a ruta B con token de A ->', res.status, await res.text())
+    expect(res.ok).toBe(false)
+    expect(await existe(b)).toBe(false)
+  })
+
+  it('tras subir bien, un segundo PUT con la misma URL (incluso pidiendo upsert) falla y el objeto no cambia', async () => {
+    const f = await firmada()
+    const original = png(64, 1)
+    expect((await put(f.uploadUrl, original)).status).toBe(200)
+
+    const otra = png(64, 2)
+    const segundo = await put(f.uploadUrl, otra)
+    console.log('CAX-002.2 segundo PUT ->', segundo.status, await segundo.text())
+    expect(segundo.ok).toBe(false)
+    const conUpsert = await put(f.uploadUrl, otra, 'image/png', { 'x-upsert': 'true' })
+    console.log('CAX-002.2 segundo PUT con x-upsert ->', conUpsert.status, await conUpsert.text())
+    expect(conUpsert.ok).toBe(false)
+    const sdk = await db.storage.from(BUCKET).uploadToSignedUrl(f.path, f.token, otra)
+    expect(sdk.error).not.toBeNull()
+
+    const { data: bajado, error } = await db.storage.from(BUCKET).download(f.path)
+    expect(error).toBeNull()
+    expect(sha(Buffer.from(await (bajado as Blob).arrayBuffer()))).toBe(sha(original))
+  })
+
+  it('un archivo de 15 MB + 1 byte se rechaza y no queda objeto', async () => {
+    const f = await firmada()
+    const res = await put(f.uploadUrl, png(MAX + 1))
+    console.log('CAX-002.3 15 MB + 1 ->', res.status, await res.text())
+    expect(res.ok).toBe(false)
+    expect(await existe(f.path)).toBe(false)
+  })
+
+  it('un archivo de exactamente 15 MB sí se acepta (el límite no está de más)', async () => {
+    const f = await firmada()
+    const res = await put(f.uploadUrl, png(MAX))
+    console.log('CAX-002.3b 15 MB exactos ->', res.status)
+    expect(res.status).toBe(200)
+  })
+
+  it.each([
+    'text/plain',
+    'application/pdf',
+    'text/html',
+  ])('Content-Type %s con la URL firmada se rechaza y no queda objeto', async (tipo) => {
+    const f = await firmada()
+    const res = await put(f.uploadUrl, png(10), tipo)
+    console.log(`CAX-002.4 ${tipo} ->`, res.status, await res.text())
+    expect(res.ok).toBe(false)
+    expect(await existe(f.path)).toBe(false)
+  })
+
+  it('una URL caducada no sirve (token re-firmado con exp en el pasado)', async () => {
+    const f = await firmada()
+    const [h, p] = f.token.split('.') as [string, string]
+    const claims = JSON.parse(Buffer.from(p, 'base64url').toString())
+    const secret =
+      process.env.SUPABASE_JWT_SECRET ?? 'super-secret-jwt-token-with-at-least-32-characters-long'
+    const firmar = (exp: number) => {
+      const body = Buffer.from(JSON.stringify({ ...claims, exp })).toString('base64url')
+      const sig = createHmac('sha256', secret).update(`${h}.${body}`).digest('base64url')
+      return `${h}.${body}.${sig}`
+    }
+    const urlCon = (tok: string) => f.uploadUrl.replace(/token=[^&]+/, `token=${tok}`)
+
+    // Control: con exp en el futuro y la misma firma, la subida SÍ funciona. Prueba que el
+    // secreto es el de este Storage; si fallara, el rechazo de abajo no diría nada de la caducidad.
+    const ahora = Math.floor(Date.now() / 1000)
+    const control = await put(urlCon(firmar(ahora + 600)), png(8))
+    console.log('CAX-002.5 control (exp futuro) ->', control.status)
+    expect(control.status).toBe(200)
+
+    const g = await firmada()
+    const [h2, p2] = g.token.split('.') as [string, string]
+    const c2 = JSON.parse(Buffer.from(p2, 'base64url').toString())
+    const body = Buffer.from(JSON.stringify({ ...c2, exp: ahora - 60 })).toString('base64url')
+    const sig = createHmac('sha256', secret).update(`${h2}.${body}`).digest('base64url')
+    const vencida = await put(
+      g.uploadUrl.replace(/token=[^&]+/, `token=${h2}.${body}.${sig}`),
+      png(8),
+    )
+    console.log('CAX-002.5 caducada ->', vencida.status, await vencida.text())
+    expect(vencida.ok).toBe(false)
+    expect(await existe(g.path)).toBe(false)
   })
 })
