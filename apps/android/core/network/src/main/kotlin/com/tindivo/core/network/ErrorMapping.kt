@@ -1,6 +1,5 @@
 package com.tindivo.core.network
 
-import com.tindivo.core.network.generated.infrastructure.Serializer
 import com.tindivo.core.network.generated.model.ProblemDetails
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -11,7 +10,7 @@ import java.util.UUID
 private const val UPGRADE_REQUIRED_STATUS = 426
 
 // El lector del generador ya ignora las claves desconocidas (CLI-2); el test de la fábrica lo comprueba.
-private val json: Json get() = Serializer.kotlinxSerializationJson
+private val json: Json get() = GeneratedJson.json
 
 /**
  * Traduce una respuesta de error (RFC 9457) a un [AppError] (KT-6). Nunca lanza: un cuerpo ausente, que no es JSON o

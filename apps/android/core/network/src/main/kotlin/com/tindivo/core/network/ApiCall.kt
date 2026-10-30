@@ -30,6 +30,7 @@ internal suspend fun <A, T : Any> apiCall(
 ): ApiResult<T> {
     // Una llamada bloqueante no responde a la cancelación de la corrutina: al cancelar se cancela la `Call` de OkHttp,
     // el hilo sale con IOException y `coroutineScope` termina. CancellationException (KT-5) siempre se relanza.
+    GeneratedJson.ensureConfigured()
     val tracker = CallTracker(client)
     val generated = api(tracker)
     return coroutineScope {

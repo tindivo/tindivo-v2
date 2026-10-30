@@ -36,30 +36,25 @@ describe('0223 · qué puede pagar el cliente según cómo recibe', () => {
       }
     })
 
-    it('un recojo «más tarde» solo admite prepago', () => {
-      expect(customerPaymentIntents('pickup', 'later')).toEqual(['prepaid'])
-    })
-
-    it('un recojo «ahora» admite la caja, porque hay alguien a quien cobrarle', () => {
-      expect(customerPaymentIntents('pickup', 'now')).toEqual(['pending_cash', 'prepaid'])
-    })
-
     /**
-     * Sin respuesta todavía devuelve lo que ese método puede llegar a admitir,
-     * que es lo que la pantalla necesita PINTAR. Si aquí se devolviera solo el
-     * prepago, la fila de caja aparecería de la nada al tocar «ahora» en vez de
-     * estar ahí, visible, desde que se elige Recojo.
+     * 0283 (Jesús, 2026-10-29): en el canal del cliente un recojo solo se paga
+     * por adelantado, «ahora» o «más tarde». Revierte la columna «ahora» de 0223.
      */
-    it('sin contestar todavía, devuelve todo lo que el recojo puede admitir', () => {
-      expect(customerPaymentIntents('pickup', null)).toEqual(['pending_cash', 'prepaid'])
+    it('un recojo, ahora o más tarde, solo admite prepago', () => {
+      expect(customerPaymentIntents('pickup', 'later')).toEqual(['prepaid'])
+      expect(customerPaymentIntents('pickup', 'now')).toEqual(['prepaid'])
+    })
+
+    it('sin contestar todavía, el recojo también es solo prepago', () => {
+      expect(customerPaymentIntents('pickup', null)).toEqual(['prepaid'])
     })
   })
 
   describe('pickupForcesPrepay', () => {
-    it('solo un recojo «más tarde» obliga por método', () => {
+    it('todo recojo obliga a prepagar por método; el delivery no', () => {
       expect(pickupForcesPrepay('pickup', 'later')).toBe(true)
-      expect(pickupForcesPrepay('pickup', 'now')).toBe(false)
-      expect(pickupForcesPrepay('pickup', null)).toBe(false)
+      expect(pickupForcesPrepay('pickup', 'now')).toBe(true)
+      expect(pickupForcesPrepay('pickup', null)).toBe(true)
       expect(pickupForcesPrepay('delivery', null)).toBe(false)
     })
   })
@@ -68,8 +63,9 @@ describe('0223 · qué puede pagar el cliente según cómo recibe', () => {
     it('acepta y rechaza las mismas combinaciones que la lista', () => {
       expect(isCustomerPaymentAllowed('pending_yape', 'delivery', null)).toBe(true)
       expect(isCustomerPaymentAllowed('pending_yape', 'pickup', 'now')).toBe(false)
-      expect(isCustomerPaymentAllowed('pending_cash', 'pickup', 'now')).toBe(true)
+      expect(isCustomerPaymentAllowed('pending_cash', 'pickup', 'now')).toBe(false)
       expect(isCustomerPaymentAllowed('pending_cash', 'pickup', 'later')).toBe(false)
+      expect(isCustomerPaymentAllowed('prepaid', 'pickup', 'now')).toBe(true)
       expect(isCustomerPaymentAllowed('prepaid', 'pickup', 'later')).toBe(true)
     })
 
@@ -109,6 +105,18 @@ describe('0223 · qué puede pagar el cliente según cómo recibe', () => {
       expect(r.error?.issues.some((i) => i.path.includes('paymentIntent'))).toBe(true)
     })
 
+    it('rechaza un recojo «ahora» pagado en caja (0283)', () => {
+      const r = CreateOrderRequestSchema.safeParse({
+        ...base,
+        deliveryMethod: 'pickup',
+        pickupTiming: 'now',
+        paymentIntent: 'pending_cash',
+      })
+      expect(r.success).toBe(false)
+      const issues = r.error?.issues.filter((i) => i.path.includes('paymentIntent')) ?? []
+      expect(issues.map((i) => i.message)).toEqual(['Un recojo se paga por adelantado'])
+    })
+
     it('rechaza un recojo «más tarde» que no venga prepagado', () => {
       const r = CreateOrderRequestSchema.safeParse({
         ...base,
@@ -120,9 +128,8 @@ describe('0223 · qué puede pagar el cliente según cómo recibe', () => {
       expect(r.error?.issues.some((i) => i.path.includes('paymentIntent'))).toBe(true)
     })
 
-    it('deja pasar los dos caminos que sí existen', () => {
+    it('deja pasar los dos caminos que sí existen: prepago ahora o más tarde', () => {
       for (const [timing, intent] of [
-        ['now', 'pending_cash'],
         ['now', 'prepaid'],
         ['later', 'prepaid'],
       ] as const) {

@@ -12,7 +12,10 @@ export type QuoteUnavailableReason = 'prepay_required' | 'exceeds_threshold' | '
 
 export interface QuotePaymentInput {
   deliveryMethod: DeliveryMethod
-  /** Recojo sin respuesta (`null`) = `later`, como `create_customer_order` (0277:629-634). */
+  /**
+   * Desde 0283 no cambia las opciones: todo recojo (ahora, más tarde o sin
+   * contestar) solo ofrece `prepaid`. Se conserva porque la ruta ya lo manda.
+   */
   pickupTiming: PickupTiming | null
   /** `false` si `customer_contraentrega_decision` da `risk_blocked` o falla; `no_history` cuenta como `true`. */
   contraentregaAllowed: boolean
@@ -39,9 +42,13 @@ export interface QuotePaymentPlan {
 
 /**
  * Qué métodos de pago puede usar el cliente en este pedido (H-7). Pura: la ruta
- * reúne los datos. `prepaid` siempre; la contraentrega solo si el cliente es de
- * confianza, el total no pasa del umbral y no es un recojo «más tarde» (o sin contestar). El
- * motivo no distingue riesgo de falta de historial (antifraude).
+ * reúne los datos. `prepaid` siempre; la contraentrega solo en delivery, si el
+ * cliente es de confianza y el total no pasa del umbral. Un recojo solo ofrece
+ * `prepaid` (0283). El motivo no distingue riesgo de falta de historial
+ * (antifraude).
+ *
+ * `pickup_later` ya no se emite (0283): sigue en el enum de la respuesta porque
+ * una app instalada pudo conocerlo (API-3).
  */
 export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
   const intents = customerPaymentIntents(input.deliveryMethod, null)
@@ -54,9 +61,7 @@ export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
         ? 'prepay_required'
         : input.exceedsPrepayThreshold
           ? 'exceeds_threshold'
-          : input.deliveryMethod === 'pickup' && input.pickupTiming !== 'now'
-            ? 'pickup_later'
-            : null
+          : null
     return { intent, available: unavailableReason === null, unavailableReason }
   })
   const cashAvailable = options.some((o) => o.intent === 'pending_cash' && o.available)
