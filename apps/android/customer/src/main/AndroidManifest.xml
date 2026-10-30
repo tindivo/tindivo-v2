@@ -4,10 +4,21 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- androidx.credentials los pide para las llaves de acceso (passkeys) con huella. Aquí solo se entra con el ID
+         token de Google, que no usa la biometría de la app: se quitan del manifiesto fusionado. -->
+    <uses-permission
+        android:name="android.permission.USE_BIOMETRIC"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.USE_FINGERPRINT"
+        tools:node="remove" />
+
     <!-- usesCleartextTraffic en false de forma explícita: en API 26-27 el valor por defecto permitiría HTTP. -->
     <application
         android:name=".TindivoApp"
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -27,6 +38,14 @@
              vistas previas del editor siguen funcionando (lo detectó la comprobación del manifiesto final del APK). -->
         <activity
             android:name="androidx.compose.ui.tooling.PreviewActivity"
+            tools:node="remove" />
+
+        <!-- play-services-auth (lo trae credentials-play-services-auth) añade este servicio EXPORTADO para avisar de
+             revocaciones al GoogleSignInClient antiguo. Credential Manager no lo usa: se quita. MissingClass: la clase
+             vive en el .aar de Google y lint no la ve desde un nodo que solo existe para quitarse. -->
+        <service
+            android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
+            tools:ignore="MissingClass"
             tools:node="remove" />
     </application>
 
