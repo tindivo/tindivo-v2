@@ -1,17 +1,10 @@
 package com.tindivo.core.network
 
-import com.tindivo.core.network.generated.api.AccountApi
 import com.tindivo.core.network.generated.api.CustomerApi
 import com.tindivo.core.network.generated.api.OrdersApi
 import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseData
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
-import com.tindivo.core.network.generated.model.SendPhoneCode200ResponseData
-import com.tindivo.core.network.generated.model.SendPhoneCodeRequest
-import com.tindivo.core.network.generated.model.TransferCustomerPhone200ResponseData
-import com.tindivo.core.network.generated.model.TransferCustomerPhoneRequest
-import com.tindivo.core.network.generated.model.VerifyPhoneCode200ResponseData
-import com.tindivo.core.network.generated.model.VerifyPhoneCodeRequest
 import kotlinx.coroutines.CoroutineDispatcher
 import okhttp3.OkHttpClient
 import java.util.UUID
@@ -49,31 +42,6 @@ class CustomerRepository(
     suspend fun order(id: UUID): ApiResult<GetCustomerOrder200ResponseData> =
         apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
             it.getCustomerOrderWithHttpInfo(id, null, null, null, null)
-        }.map { it.data }
-
-    /**
-     * `POST /customer/phone/send-code`: pide el SMS. [phone] son los 9 dígitos que escribió la persona; el servidor
-     * normaliza. Sin `Idempotency-Key`, así que [RetryInterceptor] nunca lo repite: un envío es un toque.
-     */
-    suspend fun sendPhoneCode(phone: String): ApiResult<SendPhoneCode200ResponseData> =
-        apiCall(client, ioDispatcher, { AccountApi(baseUrl, it) }) {
-            it.sendPhoneCodeWithHttpInfo(SendPhoneCodeRequest(phone = phone), null, null, null, null)
-        }.map { it.data }
-
-    /** `POST /customer/phone/verify`: comprueba el [code] de 6 dígitos. Tampoco se repite solo. */
-    suspend fun verifyPhoneCode(
-        phone: String,
-        code: String,
-    ): ApiResult<VerifyPhoneCode200ResponseData> =
-        apiCall(client, ioDispatcher, { AccountApi(baseUrl, it) }) {
-            it.verifyPhoneCodeWithHttpInfo(VerifyPhoneCodeRequest(phone = phone, code = code), null, null, null, null)
-        }.map { it.data }
-
-    /** `POST /customer/phone/transfer`: usa aquí el número verificado en otra cuenta (D-63). Tampoco se repite solo. */
-    suspend fun transferPhone(challengeId: UUID): ApiResult<TransferCustomerPhone200ResponseData> =
-        apiCall(client, ioDispatcher, { AccountApi(baseUrl, it) }) {
-            val body = TransferCustomerPhoneRequest(challengeId = challengeId)
-            it.transferCustomerPhoneWithHttpInfo(body, null, null, null, null)
         }.map { it.data }
 
     private companion object {

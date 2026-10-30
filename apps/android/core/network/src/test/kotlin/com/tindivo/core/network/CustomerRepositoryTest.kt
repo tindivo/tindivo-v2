@@ -11,7 +11,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.Instant
 import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -185,143 +184,7 @@ class CustomerRepositoryTest {
             assertTrue((repository().order(ORDER_ID) as ApiResult.Failure).error is AppError.Unknown)
         }
 
-    @Test
-    fun `sendPhoneCode manda los 9 digitos sin Idempotency-Key y lee el canal`() =
-        runTest {
-            server.enqueue(json(200, """{"data":{"sent":true,"channel":"sms"}}"""))
-
-            val data = (repository().sendPhoneCode("987654321") as ApiResult.Success).data
-
-            assertEquals("sms", data.channel)
-            assertNull(data.verified)
-            val request = server.takeRequest()
-            assertEquals("POST", request.method)
-            assertEquals("/api/v1/customer/phone/send-code", request.url.encodedPath)
-            assertEquals("""{"phone":"987654321"}""", request.body?.utf8())
-            assertNull(request.headers["Idempotency-Key"])
-        }
-
-    @Test
-    fun `sendPhoneCode con el simulacro local trae verified true`() =
-        runTest {
-            server.enqueue(json(200, """{"data":{"sent":true,"channel":"dev","verified":true}}"""))
-
-            val data = (repository().sendPhoneCode("987654321") as ApiResult.Success).data
-
-            assertEquals("dev", data.channel)
-            assertEquals(true, data.verified)
-        }
-
-    @Test
-    fun `un 5xx en un POST de telefono no se reintenta`() =
-        runTest {
-            server.enqueue(json(500, INTERNAL, "application/problem+json"))
-            server.enqueue(json(200, """{"data":{"sent":true,"channel":"sms"}}"""))
-
-            val error = (repository().sendPhoneCode("987654321") as ApiResult.Failure).error
-
-            assertEquals(ApiErrorCode.InternalError, (error as AppError.Known).code)
-            assertEquals(1, server.requestCount)
-        }
-
-    @Test
-    fun `un 429 en send-code llega con su detail y sin reintento`() =
-        runTest {
-            server.enqueue(json(429, RATE_LIMITED, "application/problem+json"))
-            server.enqueue(json(200, """{"data":{"sent":true,"channel":"sms"}}"""))
-
-            val error = (repository().sendPhoneCode("987654321") as ApiResult.Failure).error as AppError.Known
-
-            assertEquals(ApiErrorCode.RateLimited, error.code)
-            assertEquals("Ya pediste 3 códigos hoy. Inténtalo mañana.", error.detail)
-            assertEquals(1, server.requestCount)
-        }
-
-    @Test
-    fun `verifyPhoneCode manda telefono y codigo y lee el numero en E164`() =
-        runTest {
-            server.enqueue(json(200, """{"data":{"verified":true,"phone":"+51987654321"}}"""))
-
-            val data = (repository().verifyPhoneCode("987654321", "123456") as ApiResult.Success).data
-
-            assertEquals("+51987654321", data.phone)
-            val request = server.takeRequest()
-            assertEquals("/api/v1/customer/phone/verify", request.url.encodedPath)
-            assertEquals("""{"phone":"987654321","code":"123456"}""", request.body?.utf8())
-        }
-
-    @Test
-    fun `un 409 con transfer trae el challengeId y el vencimiento`() =
-        runTest {
-            server.enqueue(json(409, CONFLICT_WITH_TRANSFER, "application/problem+json"))
-
-            val error = verifyFailure()
-
-            assertEquals(ApiErrorCode.Conflict, error.code)
-            assertEquals(CHALLENGE_ID, error.transfer?.challengeId)
-            assertEquals(Instant.parse("2026-10-30T15:10:00Z"), error.transfer?.expiresAt)
-            assertEquals("Ese número ya está verificado en otra cuenta.", error.detail)
-        }
-
-    @Test
-    fun `un 409 sin transfer deja la oferta en null y conserva el detail`() =
-        runTest {
-            server.enqueue(json(409, CONFLICT_PLAIN, "application/problem+json"))
-
-            val error = verifyFailure()
-
-            assertNull(error.transfer)
-            assertEquals("El código ya no sirve. Pide uno nuevo.", error.detail)
-        }
-
-    @Test
-    fun `un 409 con un vencimiento ilegible no ofrece traslado`() =
-        runTest {
-            val body = CONFLICT_WITH_TRANSFER.replace("2026-10-30T10:10:00-05:00", "mañana")
-            server.enqueue(json(409, body, "application/problem+json"))
-
-            val error = (repository().sendPhoneCode("987654321") as ApiResult.Failure).error as AppError.Known
-
-            assertNull(error.transfer)
-            assertEquals("Ese número ya está verificado en otra cuenta.", error.detail)
-        }
-
-    @Test
-    fun `un 422 conserva el mensaje del primer campo`() =
-        runTest {
-            server.enqueue(json(422, VALIDATION, "application/problem+json"))
-
-            val error = (repository().sendPhoneCode("123") as ApiResult.Failure).error as AppError.Known
-
-            assertEquals(ApiErrorCode.ValidationError, error.code)
-            assertEquals("Número de celular inválido", error.fieldMessage)
-        }
-
-    @Test
-    fun `transferPhone manda el challengeId y lee el numero trasladado`() =
-        runTest {
-            server.enqueue(json(200, """{"data":{"verified":true,"phone":"+51987654321","transferred":true}}"""))
-
-            val data = (repository().transferPhone(CHALLENGE_ID) as ApiResult.Success).data
-
-            assertEquals("+51987654321", data.phone)
-            val request = server.takeRequest()
-            assertEquals("/api/v1/customer/phone/transfer", request.url.encodedPath)
-            assertEquals("""{"challengeId":"$CHALLENGE_ID"}""", request.body?.utf8())
-        }
-
-    @Test
-    fun `el toString de la oferta no muestra el challengeId`() {
-        val offer = TransferOffer(CHALLENGE_ID, Instant.parse("2026-10-30T15:10:00Z"))
-
-        assertTrue(!offer.toString().contains(CHALLENGE_ID.toString()))
-    }
-
-    private suspend fun verifyFailure(): AppError.Known =
-        (repository().verifyPhoneCode("987654321", "123456") as ApiResult.Failure).error as AppError.Known
-
     private companion object {
-        val CHALLENGE_ID: UUID = UUID.fromString("7c2a737a-018f-4c2d-9a11-6f0d3c1e8a09")
         val ORDER_ID: UUID = UUID.fromString("5b2a737a-018f-4c2d-9a11-6f0d3c1e8a01")
 
         const val ORDERS_PAGE = """
@@ -343,29 +206,6 @@ class CustomerRepositoryTest {
              "deliveryCoordinates":null,"paysWith":"50.00","changeToGive":"1.50","estimatedReadyAt":null,
              "arrivedAtCustomerAt":null,"proofAttempt":0,"paymentVerifiedAt":null,
              "driver":{"name":"Rosa","phone":null}}}
-        """
-
-        const val INTERNAL = """{"type":"about:blank","title":"Error","status":500,"code":"internal_error"}"""
-
-        const val RATE_LIMITED = """
-            {"type":"about:blank","title":"Demasiados intentos","status":429,"code":"rate_limited",
-             "detail":"Ya pediste 3 códigos hoy. Inténtalo mañana."}
-        """
-
-        const val CONFLICT_PLAIN = """
-            {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",
-             "detail":"El código ya no sirve. Pide uno nuevo."}
-        """
-
-        const val CONFLICT_WITH_TRANSFER = """
-            {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",
-             "detail":"Ese número ya está verificado en otra cuenta.",
-             "transfer":{"challengeId":"7c2a737a-018f-4c2d-9a11-6f0d3c1e8a09","expiresAt":"2026-10-30T10:10:00-05:00"}}
-        """
-
-        const val VALIDATION = """
-            {"type":"about:blank","title":"Datos inválidos","status":422,"code":"validation_error",
-             "errors":[{"field":"phone","message":"Número de celular inválido"}]}
         """
 
         const val NOT_FOUND = """{"type":"about:blank","title":"No encontrado","status":404,"code":"not_found"}"""

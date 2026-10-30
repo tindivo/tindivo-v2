@@ -1,7 +1,7 @@
 package com.tindivo.customer.feature.phone
 
 import com.tindivo.core.network.ClientInfo
-import com.tindivo.core.network.CustomerRepository
+import com.tindivo.core.network.PhoneRepository
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
@@ -70,7 +70,7 @@ class PhoneVerifyViewModelTest {
         createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = RetryInterceptor(sleeper = { _, _ -> }))
 
     private fun viewModel(io: CoroutineDispatcher = dispatcher) =
-        PhoneVerifyViewModel(CustomerRepository(baseUrl, client(), io), store, configService, clock)
+        PhoneVerifyViewModel(PhoneRepository(baseUrl, client(), io), store, configService, clock)
 
     private fun response(
         code: Int,

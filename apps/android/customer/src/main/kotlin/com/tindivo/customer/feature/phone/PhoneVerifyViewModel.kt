@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
-import com.tindivo.core.network.CustomerRepository
+import com.tindivo.core.network.PhoneRepository
 import com.tindivo.core.network.TransferOffer
+import com.tindivo.core.network.generated.model.SendPhoneCodeRequest
+import com.tindivo.core.network.generated.model.TransferCustomerPhoneRequest
+import com.tindivo.core.network.generated.model.VerifyPhoneCodeRequest
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.orders.SessionWatch
 import com.tindivo.customer.session.SessionStore
@@ -79,7 +82,7 @@ internal data class PhoneUiState(
 internal class PhoneVerifyViewModel
     @Inject
     constructor(
-        private val customer: CustomerRepository,
+        private val phones: PhoneRepository,
         private val sessionStore: SessionStore,
         private val configService: ConfigService,
         private val clock: Clock,
@@ -131,7 +134,7 @@ internal class PhoneVerifyViewModel
                 return
             }
             launchCall {
-                when (val result = customer.verifyPhoneCode(current.phone, current.code)) {
+                when (val result = phones.verify(VerifyPhoneCodeRequest(phone = current.phone, code = current.code))) {
                     is ApiResult.Success -> finish(result.data.phone)
                     is ApiResult.Failure -> onFailure(result.error, offersTransfer = true)
                 }
@@ -154,7 +157,7 @@ internal class PhoneVerifyViewModel
                 return
             }
             launchCall {
-                when (val result = customer.transferPhone(offer.challengeId)) {
+                when (val result = phones.transfer(TransferCustomerPhoneRequest(challengeId = offer.challengeId))) {
                     is ApiResult.Success -> finish(result.data.phone)
                     is ApiResult.Failure -> onFailure(result.error, offersTransfer = false)
                 }
@@ -176,7 +179,7 @@ internal class PhoneVerifyViewModel
         }
 
         private suspend fun sendAndAdvance(phone: String) {
-            when (val result = customer.sendPhoneCode(phone)) {
+            when (val result = phones.sendCode(SendPhoneCodeRequest(phone = phone))) {
                 is ApiResult.Success -> {
                     if (result.data.verified == true) {
                         // Simulacro local: el número ya quedó verificado y no hay código que pedir.
