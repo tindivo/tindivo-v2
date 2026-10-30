@@ -320,7 +320,7 @@ export const CheckoutQuoteSchema = z.object({
             available: z.boolean(),
             unavailableReason: openEnum(QUOTE_PAYMENT_UNAVAILABLE_REASONS).nullable().meta({
               description:
-                '`prepay_required` no distingue riesgo de falta de historial (antifraude)',
+                '`prepay_required` no distingue riesgo de falta de historial (antifraude). `pickup_later` ya no se emite (0283: todo recojo solo ofrece `prepaid`); sigue en el enum por las apps instaladas',
             }),
           }),
         )

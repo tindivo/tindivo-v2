@@ -327,6 +327,8 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 
 ### En el mostrador no se fía: qué puede pagar un recojo (`0223`)
 
+_Revisada por la sección siguiente (`0283`)._
+
 Regla del restaurante del piloto, no una inferencia nuestra: **un recojo llega a
 cocina pagado**. O el cliente sube su captura, o cancela en la caja ahí mismo.
 
@@ -363,6 +365,38 @@ fuente; el `.refine` de `CreateOrderRequestSchema` da el 422 legible; el CHECK
 sin pasar por el contrato. **Solo aplica a `source = 'customer_pwa'`**: un recojo
 manual de la cajera cobrado por Yape es legítimo — ella tuvo el dinero en la mano
 antes de crear la fila.
+
+### Un recojo siempre va prepagado (`0283`)
+
+**Decisión de Jesús, 2026-10-29:** en el canal del cliente, un pedido de recojo
+(`delivery_method = 'pickup'`) solo se paga por prepago (`prepaid`), sea «ahora»
+o «más tarde». Desaparece la caja (`pending_cash`) del recojo «ahora».
+
+|  | delivery | recojo «ahora» | recojo «más tarde» |
+|---|---|---|---|
+| Efectivo (`pending_cash`) | ✅ | ⛔ prepago | ⛔ prepago |
+| Yape al recibir (`pending_yape`) | ✅ | ⛔ no existe | ⛔ no existe |
+| Prepago con captura (`prepaid`) | ✅ | ✅ | ✅ |
+
+**Revierte la columna «recojo ahora» de `0223`**, que aún admitía la caja. El
+resto de `0223` sigue: `pending_yape` no existe en un recojo y «más tarde» ya
+era solo prepago.
+
+**Los pedidos del negocio no cambian.** Lo que crea la cajera desde su panel
+(`create_business_manual_order`, otra función y otro canal) conserva su regla: ella
+tiene el dinero en la mano antes de crear la fila. Tampoco cambia el delivery.
+
+**Por qué.** «Un recojo llega a cocina pagado» ya era la regla del restaurante del
+piloto (ver `0223`); ahora vale también para «ahora».
+
+**Dónde vive.** `customerPaymentIntents` (`@tindivo/contracts`) es la fuente; el
+`.refine` de `CreateOrderRequestSchema` da el 422 legible («Un recojo se paga por
+adelantado»); `create_customer_order` (`0283`) rechaza con el código estable
+`pickup_requires_prepaid` (DB-16) y la API lo traduce a ese mismo 422. El CHECK
+`orders_pickup_payment_chk` (`0223`) no cambia: sigue de suelo, más estrecho.
+La cotización (`/customer/checkout/quote`) solo ofrece `prepaid` en un recojo;
+`pickup_later` ya no se emite, pero queda en el enum de la respuesta para las apps
+instaladas.
 
 ### El dinero entra antes de cocinar, y el plantón pagado no es una falta (`0224`)
 
@@ -424,7 +458,7 @@ el pago en caja deja de existir y vuelve la validación telefónica.
 
 | | `pickup_timing = 'later'` | `pickup_timing = 'now'` |
 |---|---|---|
-| Cómo se paga (`0223`) | **Prepago y punto** | Caja del local (efectivo o Yape) o prepago |
+| Cómo se paga (`0223`) | **Prepago y punto** | Caja del local (efectivo o Yape) o prepago — **revisado por `0283`: solo prepago** |
 | Antifraude | No llega a aplicarse: no se fía nada | Se salta el guard de historial y `validando` |
 | GPS | Se captura como evidencia, **ya no decide** | Se captura como evidencia, **nunca bloquea** |
 | Qué lo garantiza | El dinero, cobrado antes de cocinar | La cajera, mirando a quien pidió, antes de aceptar |

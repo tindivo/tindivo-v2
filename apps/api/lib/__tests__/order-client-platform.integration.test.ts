@@ -85,7 +85,7 @@ function argsPedido(c: Cliente, extra: Record<string, unknown> = {}) {
     p_customer_user_id: c.id,
     p_business_id: E2E.BUSINESS_ID,
     p_delivery_method: 'pickup',
-    p_payment_intent: 'pending_cash',
+    p_payment_intent: 'prepaid',
     p_customer_name: NOMBRE,
     p_customer_phone: c.tel9,
     p_delivery_address: '',
