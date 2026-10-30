@@ -199,12 +199,14 @@ internal class PhoneVerifyViewModel
             ticker?.cancel()
             ticker =
                 viewModelScope.launch {
-                    while (true) {
+                    // Acotado: aunque el reloj no avance (en las pruebas), termina tras el plazo de reenvío.
+                    repeat(RESEND_SECONDS.toInt() + 1) {
                         val left = secondsLeft()
                         _state.update { if (it.loggedOut) it else it.copy(resendSeconds = left) }
-                        if (left <= 0) break
+                        if (left <= 0) return@launch
                         delay(TICK_MILLIS)
                     }
+                    _state.update { if (it.loggedOut) it else it.copy(resendSeconds = 0) }
                 }
         }
 
