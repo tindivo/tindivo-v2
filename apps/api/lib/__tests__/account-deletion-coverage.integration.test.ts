@@ -24,6 +24,7 @@ import {
   setOrderStatus,
 } from './helpers/local-db'
 import { callCreateCourierOrder, patchCourierSettings } from './helpers/local-db-courier'
+import { cleanupPhoneSecurityFixtures } from './helpers/phone-security-fixtures'
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
 const LOCAL_ANON_KEY =
@@ -69,7 +70,7 @@ async function crearCliente(): Promise<Cliente> {
   await db.from('customer_profiles').insert({
     user_id: userId,
     full_name: NOMBRE,
-    phone,
+    phone: `+51${phone}`,
     phone_verified_at: new Date().toISOString(),
   })
   const anon = createClient(LOCAL_URL, LOCAL_ANON_KEY, { auth: { persistSession: false } })
@@ -175,6 +176,8 @@ afterAll(async () => {
   for (const id of clientes) {
     await db.from('courier_orders').delete().eq('customer_user_id', id)
     await db.from('order_reviews').delete().eq('customer_user_id', id)
+    // 0278: una cuenta borrada deja su historia del número.
+    await cleanupPhoneSecurityFixtures(db, [id])
     await db.from('users').delete().eq('id', id)
     await db.auth.admin.deleteUser(id)
   }
@@ -205,6 +208,9 @@ const BORRADAS = new Set([
   'promo_redemptions',
   'customer_otp_attempts',
   'user_roles',
+  // 0278: el desafío de traslado y el aviso de seguridad son de la persona.
+  'phone_transfer_challenges',
+  'customer_security_notices',
 ])
 
 /**
@@ -218,6 +224,11 @@ const CONSERVADAS = new Set([
   'address_directory',
   'fraud_coverage_claims',
   'business_charges', // el ledger: dinero
+  // 0278: la historia del número (cerrada) y sus restricciones se quedan, como
+  // customer_strikes: el riesgo es del número (D-63) y el antifraude por teléfono se
+  // conserva (D-44). Sin la historia, quien tome el número heredaría la confianza.
+  'phone_assignments',
+  'phone_restrictions',
 ])
 
 /** Datos del negocio, del motorizado o de la configuración: no son de la persona que se va. */
@@ -305,6 +316,7 @@ const CONSERVADAS_COLUMNA = new Set([
   'courier_orders.cancel_reason', // enum, no texto
   'customer_order_items.line_total', // importe
   'orders.risk_flags', // banderas booleanas de antifraude
+  'orders.client_platform', // ios | android | web con CHECK: la plataforma, no la persona (D-33)
   'order_reviews.tags', // etiquetas predefinidas
   'order_reviews.comment', // la nota de la reseña, sin autor (expediente §8)
   'customer_order_items.item_name_snapshot', // nombre del plato
@@ -425,7 +437,8 @@ describe('nada nuevo se escribe sobre la lápida', () => {
       customerUserId: c.userId,
       requesterPhone: c.phone,
     })
-    expect(carrera.error?.message ?? '').toMatch(/account was deleted/)
+    // El borrado ya quitó el perfil: ahora la RPC corta antes de insertar.
+    expect(carrera.error?.message).toBe('courier_phone_not_verified')
     const { count } = await db
       .from('courier_orders')
       .select('*', { count: 'exact', head: true })
@@ -958,6 +971,13 @@ const INVENTARIO_PRODUCTORES: Record<string, ClaseProductor> = {
     claves: ['count', 'eventTypes'],
   },
   'admin_correct_delivery_band|order|AdminCorrectedDeliveryBand': PA(),
+  // 0277: el agregado es el aviso; el payload solo lleva el UUID de la cuenta avisada (su
+  // lápida en users sobrevive al borrado), nunca el número.
+  'claim_customer_phone|customer_security_notice|CustomerPhoneMoved': {
+    clase: 'sin_datos_del_cliente',
+    n: 1,
+    claves: ['userId'],
+  },
   'advance_order|order|CustomerNoShow': PA(2),
   'advance_order|order|OrderReleased': PA(),
   'advance_order|order|OrderStatusChanged': PA(),

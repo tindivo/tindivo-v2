@@ -5,7 +5,7 @@ import { Button, Card } from '@tindivo/ui'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 
-type PhoneStepPhase = 'input' | 'verify'
+type PhoneStepPhase = 'input' | 'verify' | 'transfer'
 
 /** Paso Celular / SMS: el repartidor contacta aquí. Soporta modo onboarding y gate de checkout. */
 export function PhoneStep({
@@ -24,6 +24,7 @@ export function PhoneStep({
   mode?: 'onboarding' | 'gate'
 }) {
   const [phase, setPhase] = useState<PhoneStepPhase>('input')
+  const [challengeId, setChallengeId] = useState<string | null>(null)
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [cooldown, setCooldown] = useState(0)
@@ -86,9 +87,12 @@ export function PhoneStep({
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
-          setError(
-            'Este número ya está registrado en otra cuenta. Si es tuyo, cierra sesión e inicia con esa cuenta.',
-          )
+          if (err.problem.transfer) {
+            setChallengeId(err.problem.transfer.challengeId)
+            setPhase('transfer')
+          } else {
+            setError(err.message)
+          }
         } else if (err.status === 429) {
           setError('Demasiados intentos. Intenta mañana.')
         } else if (err.status === 503) {
@@ -119,10 +123,12 @@ export function PhoneStep({
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
-          setError(
-            'Este número ya está registrado en otra cuenta. Si es tuyo, cierra sesión e inicia con esa cuenta.',
-          )
-          setPhase('input')
+          if (err.problem.transfer) {
+            setChallengeId(err.problem.transfer.challengeId)
+            setPhase('transfer')
+          } else {
+            setError(err.message)
+          }
           setCode('')
           return
         }
@@ -134,6 +140,58 @@ export function PhoneStep({
     } finally {
       setBusy(false)
     }
+  }
+
+  async function handleTransfer() {
+    if (!challengeId || busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      await api.post('/customer/phone/transfer', { challengeId })
+      onDone()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No pudimos confirmar el traslado.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (phase === 'transfer') {
+    return (
+      <div className="flex h-full flex-col px-5 py-4">
+        <p className="text-[14px] text-ink">
+          Este número está verificado en otra cuenta de Tindivo. ¿Quieres usarlo en esta? La otra
+          cuenta ya no podrá pedir con él. No se mueven pedidos ni datos.
+        </p>
+        {error && (
+          <p role="alert" className="mt-3 text-[13px] text-danger">
+            {error}
+          </p>
+        )}
+        <Button
+          className="mt-5"
+          disabled={busy}
+          onClick={() => void handleTransfer()}
+          tabIndex={active ? 0 : -1}
+        >
+          {busy ? 'Confirmando…' : 'Usar en esta cuenta'}
+        </Button>
+        <Button
+          variant="ghost"
+          className="mt-2"
+          disabled={busy}
+          tabIndex={active ? 0 : -1}
+          onClick={() => {
+            setChallengeId(null)
+            setPhase('input')
+            setCode('')
+            setError(null)
+          }}
+        >
+          Usar otro número
+        </Button>
+      </div>
+    )
   }
 
   const maskedPhone = phone.length === 9 ? `${phone.slice(0, 3)} *** ${phone.slice(-3)}` : phone

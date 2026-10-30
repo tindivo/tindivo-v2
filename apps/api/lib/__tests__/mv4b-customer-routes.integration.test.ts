@@ -704,15 +704,20 @@ describe('GET /customer/courier-orders', () => {
   it('pagina, trae sus contactos frecuentes (solo en la primera página) y no mezcla clientes', async () => {
     const c = await crearCliente()
     const otro = await crearCliente()
-    // Tres solicitudes con teléfonos distintos del solicitante (el tope de activas es por teléfono).
+    // Tres solicitudes. El tope de activas es por el teléfono verificado (0276), que es el
+    // mismo en las tres: las dos primeras se dan por entregadas antes de pedir la siguiente.
     for (let i = 0; i < 3; i++) {
-      const { error } = await callCreateCourierOrder({
+      const { data, error } = await callCreateCourierOrder({
         customerUserId: c.id,
         requesterPhone: telefonoNuevo(),
         origin: COURIER_POINT_A,
         destination: COURIER_POINT_B,
       })
       if (error) throw new Error(`create_courier_order: ${error.message}`)
+      if (i < 2) {
+        const id = (data as { id: string }).id
+        await db.from('courier_orders').update({ status: 'delivered' }).eq('id', id).throwOnError()
+      }
     }
     const ajena = await callCreateCourierOrder({
       customerUserId: otro.id,
@@ -860,6 +865,194 @@ describe('quote: lo que la creación rechazaría, la cotización también', () =
         .update({ available_from: null, available_to: null })
         .eq('id', FIXTURES.ITEM_MEDIO_ID)
     }
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('POST /customer/checkout/quote · payment', () => {
+  // Un plato (48.00): bajo el umbral con o sin envío.
+  const bolsa = (extra: Record<string, unknown> = {}) => ({
+    businessId: FIXTURES.BUSINESS_ID,
+    deliveryMethod: 'delivery',
+    items: [
+      { menuItemId: FIXTURES.ITEM_POLLO_ID, quantity: 1, modifiers: [FIXTURES.MODOPT_QUESO_ID] },
+    ],
+    ...extra,
+  })
+  const directorio: string[] = []
+
+  /** Cliente con historial: una fila del directorio para su teléfono lo vuelve de confianza (0171). */
+  async function clienteDeConfianza(): Promise<Cliente> {
+    const c = await crearCliente()
+    const { data, error } = await db
+      .from('address_directory')
+      .insert({
+        phone: c.tel9,
+        reference: 'Casa de dos pisos, prueba MV4b',
+        source: 'admin_curated',
+      })
+      .select('id')
+      .single()
+    if (error) throw new Error(`sembrar el directorio falló: ${error.message}`)
+    directorio.push(data.id)
+    return c
+  }
+
+  afterAll(async () => {
+    if (directorio.length > 0) await db.from('address_directory').delete().in('id', directorio)
+  })
+
+  const cotizar = async (c: Cliente, extra: Record<string, unknown> = {}) =>
+    pedir(postQuote, { bearer: c.token, method: 'POST', body: bolsa(extra) })
+
+  it('cliente de confianza en delivery: las tres disponibles y el efectivo declara billete', async () => {
+    const c = await clienteDeConfianza()
+    const r = await cotizar(c)
+    expect(r.status).toBe(200)
+    expect(r.body.data.exceedsPrepayThreshold).toBe(false)
+    expect(r.body.data.payment.options).toEqual([
+      { intent: 'pending_cash', available: true, unavailableReason: null },
+      { intent: 'pending_yape', available: true, unavailableReason: null },
+      { intent: 'prepaid', available: true, unavailableReason: null },
+    ])
+    const { data: ajuste } = await db
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'max_cash_bill')
+      .single()
+    expect(r.body.data.payment.cash).toEqual({
+      maxBill: Number(ajuste?.value).toFixed(2),
+      maxChange: r.body.data.maxChange,
+      step: '0.50',
+    })
+  })
+
+  it('cliente sin historial: la contraentrega sigue disponible (la creación decide con GPS o mostrador)', async () => {
+    const c = await crearCliente()
+    const r = await cotizar(c)
+    expect(r.body.data.payment.options).toEqual([
+      { intent: 'pending_cash', available: true, unavailableReason: null },
+      { intent: 'pending_yape', available: true, unavailableReason: null },
+      { intent: 'prepaid', available: true, unavailableReason: null },
+    ])
+    expect(r.body.data.payment.cash).not.toBeNull()
+  })
+
+  it('cuenta con contraentrega bloqueada (risk_blocked): prepay_required y cash null', async () => {
+    const c = await clienteDeConfianza() // el riesgo manda sobre el historial
+    const { error } = await db
+      .from('customer_profiles')
+      .update({ contraentrega_blocked: true })
+      .eq('user_id', c.id)
+    if (error) throw new Error(error.message)
+    const r = await cotizar(c)
+    expect(r.body.data.payment.options).toEqual([
+      { intent: 'pending_cash', available: false, unavailableReason: 'prepay_required' },
+      { intent: 'pending_yape', available: false, unavailableReason: 'prepay_required' },
+      { intent: 'prepaid', available: true, unavailableReason: null },
+    ])
+    expect(r.body.data.payment.cash).toBeNull()
+  })
+
+  it('total sobre el umbral: exceeds_threshold', async () => {
+    const c = await clienteDeConfianza()
+    const r = await cotizar(c, {
+      items: [
+        { menuItemId: FIXTURES.ITEM_POLLO_ID, quantity: 2, modifiers: [FIXTURES.MODOPT_QUESO_ID] },
+      ],
+    })
+    expect(r.body.data.exceedsPrepayThreshold).toBe(true)
+    expect(r.body.data.payment.options[0]).toEqual({
+      intent: 'pending_cash',
+      available: false,
+      unavailableReason: 'exceeds_threshold',
+    })
+    expect(r.body.data.payment.cash).toBeNull()
+  })
+
+  it('recojo later: la caja no está (pickup_later) y no hay pending_yape', async () => {
+    const c = await clienteDeConfianza()
+    const r = await cotizar(c, { deliveryMethod: 'pickup', pickupTiming: 'later' })
+    expect(r.status).toBe(200)
+    expect(r.body.data.payment.options).toEqual([
+      { intent: 'pending_cash', available: false, unavailableReason: 'pickup_later' },
+      { intent: 'prepaid', available: true, unavailableReason: null },
+    ])
+    expect(r.body.data.payment.cash).toBeNull()
+  })
+
+  it('recojo now: pending_cash disponible, sin pending_yape y sin billete', async () => {
+    const c = await clienteDeConfianza()
+    const r = await cotizar(c, { deliveryMethod: 'pickup', pickupTiming: 'now' })
+    expect(r.body.data.payment.options).toEqual([
+      { intent: 'pending_cash', available: true, unavailableReason: null },
+      { intent: 'prepaid', available: true, unavailableReason: null },
+    ])
+    expect(r.body.data.payment.cash).toBeNull()
+  })
+
+  it('recojo sin pickupTiming se trata como later: pickup_later (trusted y no_history)', async () => {
+    for (const c of [await clienteDeConfianza(), await crearCliente()]) {
+      const r = await cotizar(c, { deliveryMethod: 'pickup' })
+      expect(r.status).toBe(200)
+      expect(r.body.data.payment.options).toEqual([
+        { intent: 'pending_cash', available: false, unavailableReason: 'pickup_later' },
+        { intent: 'prepaid', available: true, unavailableReason: null },
+      ])
+      expect(r.body.data.payment.cash).toBeNull()
+      const ahora = await cotizar(c, { deliveryMethod: 'pickup', pickupTiming: 'now' })
+      expect(ahora.body.data.payment.options[0]).toEqual({
+        intent: 'pending_cash',
+        available: true,
+        unavailableReason: null,
+      })
+    }
+  })
+
+  it('una petición antigua de delivery, sin pickupTiming, sigue aceptada', async () => {
+    const c = await crearCliente()
+    const r = await cotizar(c)
+    expect(r.status).toBe(200)
+    expect(r.body.data.payment.options[0].available).toBe(true)
+  })
+
+  it('ajustes reales menores que los respaldos: umbral y billete salen de app_settings', async () => {
+    const c = await clienteDeConfianza()
+    const leer = async (key: string) =>
+      (await db.from('app_settings').select('value').eq('key', key).single()).data?.value
+    const previoUmbral = await leer('prepay_threshold')
+    const previoBillete = await leer('max_cash_bill')
+    try {
+      await db.from('app_settings').update({ value: 40 }).eq('key', 'prepay_threshold')
+      await db.from('app_settings').update({ value: 50 }).eq('key', 'max_cash_bill')
+      // Un plato de 48.00 pasa de 40 pero no del respaldo de 80.
+      const alto = await cotizar(c)
+      expect(alto.body.data.exceedsPrepayThreshold).toBe(true)
+      expect(alto.body.data.payment.options[0]).toEqual({
+        intent: 'pending_cash',
+        available: false,
+        unavailableReason: 'exceeds_threshold',
+      })
+      await db.from('app_settings').update({ value: 80 }).eq('key', 'prepay_threshold')
+      const bajo = await cotizar(c)
+      expect(bajo.body.data.payment.cash.maxBill).toBe('50.00')
+    } finally {
+      await db
+        .from('app_settings')
+        .update({ value: previoUmbral as never })
+        .eq('key', 'prepay_threshold')
+      await db
+        .from('app_settings')
+        .update({ value: previoBillete as never })
+        .eq('key', 'max_cash_bill')
+    }
+  })
+
+  it('pickupTiming con delivery: 422', async () => {
+    const c = await crearCliente()
+    const r = await cotizar(c, { pickupTiming: 'now' })
+    expect(r.status).toBe(422)
+    expect(r.body.code).toBe('validation_error')
   })
 })
 

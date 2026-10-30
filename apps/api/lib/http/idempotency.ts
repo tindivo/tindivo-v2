@@ -31,34 +31,10 @@ export async function findStoredCreation(
   supabase: TypedSupabaseClient,
   args: { userId: string; scope: CreationScope; key: string; requestHash: string },
 ): Promise<{ body: { data: unknown } } | { conflict: true } | { inFlight: true } | null> {
-  const { data } = await supabase
-    .from('creation_idempotency')
-    .select('request_hash,response,expires_at')
-    .eq('user_id', args.userId)
-    .eq('scope', args.scope)
-    .eq('key', args.key)
-    .maybeSingle()
-  // Una fila vencida y sin purgar ya no vale (la RPC la descarta igual).
-  if (data && Date.parse(data.expires_at) > Date.now()) {
-    if (data.request_hash !== args.requestHash) return { conflict: true }
-    return { body: { data: data.response } }
-  }
-
-  // Compatibilidad de despliegue: una creación hecha por la API ANTERIOR solo
-  // dejó su clave en `idempotency_keys`. Sin mirar allí, el primer reintento
-  // tras el despliegue duplicaría el pedido. Siempre filtrado por usuario.
-  const { data: legacy } = await supabase
-    .from('idempotency_keys')
-    .select('status,request_hash,response_body,expires_at')
-    .eq('key', args.key)
-    .eq('scope', args.scope)
-    .eq('user_id', args.userId)
-    .maybeSingle()
-  if (!legacy || Date.parse(legacy.expires_at) <= Date.now()) return null
-  if (legacy.request_hash !== args.requestHash) return { conflict: true }
-  if (legacy.status === 'completed') {
-    return { body: legacy.response_body as { data: unknown } }
-  }
+  const row = await readCreationRecord(supabase, args)
+  if (!row) return null
+  if (row.requestHash !== args.requestHash) return { conflict: true }
+  if (row.state === 'completed') return { body: { data: row.response } }
   // `reserved`: la API anterior la reclamó y no guardó la respuesta. No hay forma
   // de saber si el pedido llegó a crearse (la antigüedad no prueba abandono: si
   // se creó y ya terminó o se canceló, los guards de activos dejarían crear
@@ -66,6 +42,88 @@ export async function findStoredCreation(
   // asociación verificable se conserva el 409 hasta que la fila venza (24 h),
   // que es lo que ya hacía la API anterior.
   return { inFlight: true }
+}
+
+/** Lo que hay guardado para una clave de creación de UN usuario (ya descartadas las vencidas). */
+export type CreationRecord = {
+  requestHash: string
+  /** Id del recurso creado, si la fila nueva lo tiene (`creation_idempotency.resource_id`). */
+  resourceId: string | null
+} & (
+  | {
+      state: 'completed'
+      response: unknown
+      /** Solo la tabla legada: `completed` también se guarda con un handler que respondió error. */
+      responseStatus?: number | null
+    }
+  // Solo la tabla legada: la API anterior reclamó la clave y no guardó el resultado.
+  | { state: 'reserved' }
+)
+
+/**
+ * La lectura del registro de claves falló (no es «no hay clave»): no se sabe si la
+ * creación existe. Quien la recibe no debe tomar la incertidumbre como permiso para
+ * crear ni como prueba de que no se creó nada. El error original va en `cause`.
+ */
+export class CreationRecordReadError extends Error {
+  constructor(options?: { cause?: unknown }) {
+    super('No se pudo leer el registro de la clave de creación', options)
+    this.name = 'CreationRecordReadError'
+  }
+}
+
+/**
+ * Lectura común de la clave de una creación, aislada por usuario (H-4): la tabla
+ * nueva `creation_idempotency` y, por compatibilidad de despliegue, la legada
+ * `idempotency_keys`. Una fila vencida y sin purgar no existe. No decide nada
+ * sobre el payload: eso lo hace cada llamador. Si CUALQUIERA de las dos consultas
+ * falla, lanza `CreationRecordReadError`: devolver `null` afirmaría «no hay clave»
+ * sin haberlo comprobado.
+ */
+export async function readCreationRecord(
+  supabase: TypedSupabaseClient,
+  args: { userId: string; scope: CreationScope; key: string },
+): Promise<CreationRecord | null> {
+  const { data, error } = await supabase
+    .from('creation_idempotency')
+    .select('request_hash,response,resource_id,expires_at')
+    .eq('user_id', args.userId)
+    .eq('scope', args.scope)
+    .eq('key', args.key)
+    .maybeSingle()
+  if (error) throw new CreationRecordReadError({ cause: error })
+  // Una fila vencida y sin purgar ya no vale (la RPC la descarta igual).
+  if (data && Date.parse(data.expires_at) > Date.now()) {
+    return {
+      state: 'completed',
+      requestHash: data.request_hash,
+      response: data.response,
+      resourceId: data.resource_id,
+    }
+  }
+
+  // Compatibilidad de despliegue: una creación hecha por la API ANTERIOR solo
+  // dejó su clave en `idempotency_keys`. Sin mirar allí, el primer reintento
+  // tras el despliegue duplicaría el pedido. Siempre filtrado por usuario.
+  const { data: legacy, error: legacyError } = await supabase
+    .from('idempotency_keys')
+    .select('status,request_hash,response_body,response_status,expires_at')
+    .eq('key', args.key)
+    .eq('scope', args.scope)
+    .eq('user_id', args.userId)
+    .maybeSingle()
+  if (legacyError) throw new CreationRecordReadError({ cause: legacyError })
+  if (!legacy || Date.parse(legacy.expires_at) <= Date.now()) return null
+  if (legacy.status === 'completed') {
+    return {
+      state: 'completed',
+      requestHash: legacy.request_hash,
+      response: (legacy.response_body as { data?: unknown } | null)?.data ?? null,
+      responseStatus: legacy.response_status,
+      resourceId: null,
+    }
+  }
+  return { state: 'reserved', requestHash: legacy.request_hash, resourceId: null }
 }
 
 /**

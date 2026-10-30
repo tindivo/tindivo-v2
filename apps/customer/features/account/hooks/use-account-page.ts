@@ -12,6 +12,7 @@ import type {
 } from '@/features/account/types'
 import { useActiveOrders } from '@/lib/active-orders'
 import { heirAfterRemoving, pickDefaultAddress, SAVED_ADDRESS_COLUMNS } from '@/lib/address-record'
+import { api } from '@/lib/api'
 import { clearOnboardingResume } from '@/lib/onboarding-store'
 import { signOutDevice, signOutEverywhereDevice } from '@/lib/sign-out'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
@@ -297,7 +298,7 @@ export function useAccountPage() {
     const session = await readSession()
     if (!session) return
     const supabase = getSupabaseBrowser()
-    await supabase.from('customer_profiles').upsert({ user_id: session.userId, full_name: name })
+    await api.put('/customer/profile', { fullName: name })
     await supabase.auth.updateUser({ data: { full_name: name } })
     // El nombre también vive en `user_metadata`, que es de donde sale el
     // fallback mientras no haya fila de perfil: sin refrescar la copia cacheada,

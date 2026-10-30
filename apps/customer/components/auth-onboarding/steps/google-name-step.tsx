@@ -1,10 +1,9 @@
 'use client'
 
+import { UpdateCustomerProfileRequestSchema } from '@tindivo/contracts'
 import { Button } from '@tindivo/ui'
 import { type FormEvent, useEffect, useState } from 'react'
 import { saveGoogleName } from '../persistence'
-
-const NAME_RE = /^[\p{L}\s'.-]+$/u
 
 /** Camino Google: confirmar el nombre que aparecerá en el pedido. */
 export function GoogleNameStep({
@@ -28,7 +27,7 @@ export function GoogleNameStep({
   }, [initialName])
 
   const trimmed = name.trim()
-  const valid = trimmed.length >= 2 && trimmed.length <= 40 && NAME_RE.test(trimmed)
+  const valid = UpdateCustomerProfileRequestSchema.shape.fullName.safeParse(name).success
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
