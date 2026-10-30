@@ -11,8 +11,8 @@ import com.tindivo.core.network.generated.model.SendPhoneCodeRequest
 import com.tindivo.core.network.generated.model.TransferCustomerPhoneRequest
 import com.tindivo.core.network.generated.model.VerifyPhoneCodeRequest
 import com.tindivo.customer.config.ConfigService
-import com.tindivo.customer.feature.orders.SessionWatch
 import com.tindivo.customer.session.SessionStore
+import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
