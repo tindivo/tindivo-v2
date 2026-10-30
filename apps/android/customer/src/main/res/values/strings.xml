@@ -200,4 +200,26 @@
     <string name="os_notice_title">Tu Android es antiguo</string>
     <string name="os_notice_message">Puedes seguir usando Tindivo, pero algunas funciones podrían no ir bien en esta versión de Android.</string>
     <string name="os_notice_dismiss">Entendido</string>
+    <string name="review_prompt_title">¿Cómo estuvo tu pedido?</string>
+    <string name="review_prompt_subtitle">%1$s · tu nota le llega directo al negocio</string>
+    <string name="review_not_now">Ahora no</string>
+    <string name="review_form_title">¿Cómo estuvo tu pedido de %1$s?</string>
+    <string name="review_privacy">Tu nota la ve %1$s. Lo que escribas lo lee solo el equipo de Tindivo.</string>
+    <string name="review_tags_title">¿Algo que destacar?</string>
+    <string name="review_comment_label">¿Quieres contarnos algo más? (opcional)</string>
+    <string name="review_comment_placeholder">Lo que quieras que sepan</string>
+    <string name="review_comment_count">%1$d/%2$d</string>
+    <string name="review_send">Enviar</string>
+    <string name="review_sending">Enviando…</string>
+    <string name="review_send_error">No se pudo enviar. Inténtalo de nuevo.</string>
+    <string name="review_rate">Calificar</string>
+    <string name="review_rating_1">Muy mal</string>
+    <string name="review_rating_2">Mal</string>
+    <string name="review_rating_3">Regular</string>
+    <string name="review_rating_4">Bien</string>
+    <string name="review_rating_5">Muy bien</string>
+    <plurals name="review_star_description">
+        <item quantity="one">%d estrella</item>
+        <item quantity="other">%d estrellas</item>
+    </plurals>
 </resources>

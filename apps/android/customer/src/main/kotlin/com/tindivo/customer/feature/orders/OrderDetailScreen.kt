@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -31,6 +33,8 @@ import java.util.UUID
 @Composable
 internal fun OrderDetailDestination(
     onBack: () -> Unit,
+    canRate: (UUID) -> Boolean = { false },
+    onRate: () -> Unit = {},
     viewModel: OrderDetailViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
@@ -50,6 +54,8 @@ internal fun OrderDetailDestination(
             }
         },
         onBack = onBack,
+        canRate = canRate,
+        onRate = onRate,
     )
 }
 
@@ -59,6 +65,8 @@ internal fun OrderDetailScreen(
     onRetry: () -> Unit,
     onOpenLink: (String) -> Unit,
     onBack: () -> Unit,
+    canRate: (UUID) -> Boolean = { false },
+    onRate: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
@@ -80,7 +88,12 @@ internal fun OrderDetailScreen(
                 }
 
                 is OrderDetailUiState.Loaded -> {
-                    OrderBody(order = state.order, onOpenLink = onOpenLink)
+                    OrderBody(
+                        order = state.order,
+                        onOpenLink = onOpenLink,
+                        showRate = state.order.phase is OrderPhase.Delivered && canRate(state.order.id),
+                        onRate = onRate,
+                    )
                 }
             }
         }
@@ -91,6 +104,8 @@ internal fun OrderDetailScreen(
 private fun OrderBody(
     order: OrderDetailUi,
     onOpenLink: (String) -> Unit,
+    showRate: Boolean,
+    onRate: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
@@ -98,6 +113,11 @@ private fun OrderBody(
     ) {
         OrderTitle(order = order)
         OrderHeadlineBlock(headline = order.headline)
+        if (showRate) {
+            Button(onClick = onRate, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(text = stringResource(R.string.review_rate))
+            }
+        }
         if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
             OrderSteps(phase = order.phase, isPickup = order.isPickup)
         }
