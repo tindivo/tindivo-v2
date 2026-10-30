@@ -4,6 +4,9 @@ import com.tindivo.core.network.generated.infrastructure.Serializer
 import com.tindivo.core.network.generated.model.ProblemDetails
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import java.time.OffsetDateTime
+import java.time.format.DateTimeParseException
+import java.util.UUID
 
 private const val UPGRADE_REQUIRED_STATUS = 426
 
@@ -34,7 +37,15 @@ internal fun toAppError(
         }
 
         else -> {
-            ApiErrorCode.fromWire(code)?.let { AppError.Known(it, status, problem.detail) }
+            ApiErrorCode.fromWire(code)?.let {
+                AppError.Known(
+                    code = it,
+                    status = status,
+                    detail = problem.detail,
+                    transfer = problem.transferOffer(),
+                    fieldMessage = problem.errors?.firstOrNull()?.message,
+                )
+            }
                 ?: AppError.Unknown(code = code, detail = problem.detail)
         }
     }
@@ -48,3 +59,18 @@ private fun decodeProblem(body: String): ProblemDetails? =
     } catch (_: IllegalArgumentException) {
         null
     }
+
+/** La oferta de traslado del 409 de teléfono. Si viene incompleta o ilegible no hay oferta: se muestra el `detail`. */
+private fun ProblemDetails.transferOffer(): TransferOffer? {
+    val raw = transfer ?: return null
+    return try {
+        TransferOffer(
+            challengeId = UUID.fromString(raw.challengeId.toString()),
+            expiresAt = OffsetDateTime.parse(raw.expiresAt.toString()).toInstant(),
+        )
+    } catch (_: IllegalArgumentException) {
+        null
+    } catch (_: DateTimeParseException) {
+        null
+    }
+}
