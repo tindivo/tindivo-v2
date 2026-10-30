@@ -36,6 +36,10 @@ import com.tindivo.customer.feature.catalog.business.BusinessDestination
 import com.tindivo.customer.feature.catalog.business.BusinessRoute
 import com.tindivo.customer.feature.catalog.home.CatalogHomeDestination
 import com.tindivo.customer.feature.diagnostics.DiagnosticsDestination
+import com.tindivo.customer.feature.orders.OrderDetailDestination
+import com.tindivo.customer.feature.orders.OrderDetailRoute
+import com.tindivo.customer.feature.orders.OrdersDestination
+import com.tindivo.customer.feature.orders.OrdersRoute
 import com.tindivo.customer.feature.signin.SignInDestination
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
@@ -120,7 +124,20 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 )
             }
             composable<SignInRoute> { SignInDestination(onBack = { navController.popBackStack() }) }
-            composable<AccountRoute> { AccountDestination(onLeave = { navController.popBackStack() }) }
+            composable<AccountRoute> {
+                AccountDestination(
+                    onLeave = { navController.popBackStack() },
+                    onOpenOrders = { navController.navigate(OrdersRoute) },
+                )
+            }
+            composable<OrdersRoute> {
+                OrdersDestination(
+                    onBack = { navController.popBackStack() },
+                    onOpenOrder = { id -> navController.navigate(OrderDetailRoute(id)) },
+                    onExplore = { navController.popBackStack(CatalogHomeRoute, inclusive = false) },
+                )
+            }
+            composable<OrderDetailRoute> { OrderDetailDestination(onBack = { navController.popBackStack() }) }
             if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
             composable<UpdateRoute> { UpdateScreen() }
         }

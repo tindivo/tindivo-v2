@@ -15,6 +15,9 @@ class FakeSessionStore(
     val signInCalls = mutableListOf<Pair<String, String>>()
     var signOutCalls = 0
 
+    /** La cuenta con la que entra [signInWithGoogle]. */
+    var signInUserId = "user-1"
+
     override suspend fun accessToken(): String? = null
 
     override suspend fun refresh(): String? = null
@@ -24,7 +27,7 @@ class FakeSessionStore(
         rawNonce: String,
     ): SignInResult {
         signInCalls += idToken to rawNonce
-        if (signInResult == SignInResult.Success) mutableState.value = SessionState.SignedIn("user-1")
+        if (signInResult == SignInResult.Success) mutableState.value = SessionState.SignedIn(signInUserId)
         return signInResult
     }
 
