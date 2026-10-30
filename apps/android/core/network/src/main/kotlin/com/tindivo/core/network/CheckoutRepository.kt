@@ -4,6 +4,7 @@ import com.tindivo.core.network.generated.api.CustomerApi
 import com.tindivo.core.network.generated.api.OrdersApi
 import com.tindivo.core.network.generated.model.CreateOrder201ResponseData
 import com.tindivo.core.network.generated.model.CreateOrderRequest
+import com.tindivo.core.network.generated.model.GetOrderAttempt200ResponseData
 import com.tindivo.core.network.generated.model.GetPaymentOptions200ResponseData
 import com.tindivo.core.network.generated.model.QuoteCheckout200ResponseData
 import com.tindivo.core.network.generated.model.QuoteCheckoutRequest
@@ -52,5 +53,15 @@ class CheckoutRepository(
     ): ApiResult<CreateOrder201ResponseData> =
         apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
             it.createOrderWithHttpInfo(idempotencyKey, request, null, null, null, null)
+        }.map { it.data }
+
+    /**
+     * `GET /customer/orders/attempts/{key}`: si esa `Idempotency-Key` ya creó un pedido. `state` llega como texto
+     * (`created`, `not_found`, `unknown`) y el contrato avisa de que puede llegar un valor nuevo: quien lo lea debe
+     * tratar lo que no conoce como desconocido.
+     */
+    suspend fun attempt(idempotencyKey: UUID): ApiResult<GetOrderAttempt200ResponseData> =
+        apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
+            it.getOrderAttemptWithHttpInfo(idempotencyKey, null, null, null, null)
         }.map { it.data }
 }

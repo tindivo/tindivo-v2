@@ -72,14 +72,6 @@ interface AttemptLookup {
     suspend fun lookup(key: UUID): LookupResult
 }
 
-/**
- * PENDIENTE: el endpoint `GET /customer/orders/attempts/{key}` llega en otro PR. Mientras tanto responde
- * [LookupResult.Unknown], que es lo seguro: [OrderAttemptLedger] no reenvía ningún intento incierto.
- */
-object NotImplementedAttemptLookup : AttemptLookup {
-    override suspend fun lookup(key: UUID): LookupResult = LookupResult.Unknown
-}
-
 /** Lo que pasó al intentar crear el pedido. */
 sealed interface PlaceResult<out T> {
     /** 201 de la clave de este intento. */

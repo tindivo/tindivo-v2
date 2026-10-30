@@ -8,11 +8,11 @@ import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.core.network.GeneratedJson
 import com.tindivo.core.network.PhoneRepository
 import com.tindivo.customer.BuildConfig
+import com.tindivo.customer.feature.checkout.ApiAttemptLookup
 import com.tindivo.customer.feature.checkout.DataStoreLedgerStore
 import com.tindivo.customer.feature.checkout.LedgerSerializer
 import com.tindivo.customer.feature.checkout.LedgerSnapshot
 import com.tindivo.customer.feature.checkout.LostLedgerSnapshot
-import com.tindivo.customer.feature.checkout.NotImplementedAttemptLookup
 import com.tindivo.customer.feature.checkout.OrderAttemptLedger
 import dagger.Module
 import dagger.Provides
@@ -64,8 +64,8 @@ object CheckoutModule {
 
     /**
      * Un archivo ilegible NO se reemplaza por «vacío»: se marca como perdido (`LostLedgerSnapshot`) y [OrderAttemptLedger]
-     * no envía nada hasta que la persona confirme tras ver «Mis pedidos». El `AttemptLookup` real llega en otro PR:
-     * mientras tanto va [NotImplementedAttemptLookup], que responde `unknown` (lo seguro: no reenviar).
+     * no envía nada hasta que la persona confirme tras ver «Mis pedidos». El `AttemptLookup` es [ApiAttemptLookup]:
+     * pregunta al servidor y, ante cualquier duda, responde `unknown` (lo seguro: no reenviar).
      */
     @Provides
     @Singleton
@@ -73,6 +73,7 @@ object CheckoutModule {
         @ApplicationContext context: Context,
         @IoDispatcher io: CoroutineDispatcher,
         clock: Clock,
+        checkout: CheckoutRepository,
     ): OrderAttemptLedger =
         OrderAttemptLedger(
             store =
@@ -87,7 +88,7 @@ object CheckoutModule {
                         produceFile = { File(context.filesDir, LEDGER_FILE) },
                     ),
                 ),
-            lookup = NotImplementedAttemptLookup,
+            lookup = ApiAttemptLookup(checkout),
             clock = { clock.millis() },
         )
 }

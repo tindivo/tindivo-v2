@@ -215,10 +215,58 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
             assertEquals(null, server.takeRequest().headers["Idempotency-Key"])
         }
 
+    @Test
+    fun `attempt manda GET a la ruta de la clave y lee created con pedido`() =
+        runTest {
+            server.enqueue(json(200, attemptBody("created", ORDER_JSON)))
+
+            val data = (checkout().attempt(KEY) as ApiResult.Success).data
+
+            assertEquals("created", data.state)
+            assertEquals("ABCD2345", data.order?.shortId)
+            val sent = server.takeRequest()
+            assertEquals("GET", sent.method)
+            assertEquals("/api/v1/customer/orders/attempts/$KEY", sent.url.encodedPath)
+        }
+
+    @Test
+    fun `attempt lee created con order null`() =
+        runTest {
+            server.enqueue(json(200, attemptBody("created", "null")))
+
+            val data = (checkout().attempt(KEY) as ApiResult.Success).data
+
+            assertEquals("created", data.state)
+            assertEquals(null, data.order)
+        }
+
+    @Test
+    fun `attempt lee not_found`() =
+        runTest {
+            server.enqueue(json(200, attemptBody("not_found", "null")))
+
+            assertEquals("not_found", (checkout().attempt(KEY) as ApiResult.Success).data.state)
+        }
+
+    @Test
+    fun `attempt no falla ante un estado nuevo`() =
+        runTest {
+            server.enqueue(json(200, attemptBody("pending_x", "null")))
+
+            assertEquals("pending_x", (checkout().attempt(KEY) as ApiResult.Success).data.state)
+        }
+
     private companion object {
         val BUSINESS_ID: UUID = UUID.fromString("6b2a737a-018f-4c2d-9a11-6f0d3c1e8a02")
         val ITEM_ID: UUID = UUID.fromString("7c2a737a-018f-4c2d-9a11-6f0d3c1e8a03")
         val KEY: UUID = UUID.fromString("8d2a737a-018f-4c2d-9a11-6f0d3c1e8a04")
+
+        const val ORDER_JSON = """{"id":"9e2a737a-018f-4c2d-9a11-6f0d3c1e8a05","shortId":"ABCD2345"}"""
+
+        fun attemptBody(
+            state: String,
+            order: String,
+        ) = """{"data":{"state":"$state","order":$order}}"""
 
         const val QUOTE = """
             {"data":{"businessId":"6b2a737a-018f-4c2d-9a11-6f0d3c1e8a02","deliveryMethod":"delivery",
