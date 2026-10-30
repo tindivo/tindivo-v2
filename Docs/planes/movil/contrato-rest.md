@@ -128,3 +128,19 @@ aplican por MCP y `CLAUDE.md` exige la CLI (manda la CLI).
 | [`02-claude.md`](../../trabajo/movil/debate-rest/02-claude.md) · [`02-codex.md`](../../trabajo/movil/debate-rest/02-codex.md) | Réplicas. Codex corrige «atascada para siempre» y detecta H-2 |
 | [`03-claude.md`](../../trabajo/movil/debate-rest/03-claude.md) · [`03-codex.md`](../../trabajo/movil/debate-rest/03-codex.md) | Ronda con la base viva (solo lectura). Codex firma con cambios; sin desacuerdos de fondo |
 | [`04-codex-auditoria.md`](../../trabajo/movil/debate-rest/04-codex-auditoria.md) | Auditoría de esta conclusión por Codex |
+
+## 8. Ampliaciones aditivas del contrato v1
+
+Todas son aditivas (API-3): ninguna retira un campo, un código ni una ruta. **La forma exacta manda en el OpenAPI**
+(`packages/contracts/openapi/v1.json`, que genera los modelos de Kotlin y Swift); esta tabla dice qué resuelve cada una
+y dónde se decidió.
+
+| Qué | Para qué | Reglas que la app debe respetar | Origen |
+|---|---|---|---|
+| **Bloque `payment` en `POST /customer/checkout/quote`** | La app pinta los métodos de pago que el servidor aceptará, sin recalcular la regla | `options` llega en orden y cada una trae `available` y `unavailableReason` (`prepay_required`, `exceeds_threshold`; `pickup_later` ya no se emite desde `0283`, pero sigue en el enum). `prepay_required` **no distingue** riesgo de falta de historial (antifraude). `cash` trae `maxBill`, `maxChange` y `step` como cadenas decimales (D-39), o `null` si no hay efectivo o es un recojo. Crear el pedido **vuelve a validar**: la cotización orienta, no autoriza | PR #121 |
+| **`pickupTiming` (`now` / `later`)** en la cotización y en `POST /customer/orders` | Cuándo recoge el cliente | Solo vale con `pickup`; con `delivery` es 422. **Un recojo siempre va prepagado** (`0283`, revisa `0223`): el recojo solo ofrece `prepaid`, y otro método es 422 `validation_error` («Un recojo se paga por adelantado…»). En caja no se declara billete | PR #124 · `DECISIONS.md` «Un recojo siempre va prepagado (`0283`)» |
+| **`GET /customer/orders/attempts/{key}`** | Si se pierde la respuesta de crear pedido (red, 5xx, proceso muerto), saber si esa `Idempotency-Key` ya creó el pedido **antes** de reenviar | `created` → el pedido existe (`order` puede llegar `null` si no se pudo leer su código: **sigue existiendo**). `not_found` → no hay rastro **hoy**; una petición en vuelo aún puede crearlo, y pasada la retención se pierde el rastro (hoy 7 días: `creation_idempotency.expires_at`, `0250`; **plazo propuesto, pendiente de aprobación de Jesús**, `0252` y `Docs/planes/migraciones/cola.md` C4a-d). `unknown` → no se sabe; se vuelve a consultar más tarde, **nunca** se trata como `not_found`. La clave de otro cliente es indistinguible de una inexistente | PR #123 (y #120 en Android) |
+| **`POST /customer/orders/{id}/prepay-proof/upload-url`** | Subir el comprobante sin tocar Storage directamente (frontera de §1) | Devuelve `path`, `uploadUrl` (PUT de un solo uso que no sobrescribe), `token` y `expiresAt` (UTC). La foto se sube a `uploadUrl` y después se confirma con `POST /customer/orders/{id}/prepay-proof` enviando ese `path`. Formatos y tope de D-40 | PR #122 (`0282`) |
+
+**Lo que aún falta en REST para la app nativa:** que el cliente vuelva a ver el comprobante que subió. Es menor: no
+bloquea pedir ni pagar. La web del cliente (`apps/customer`) está congelada y no adopta estas ampliaciones.

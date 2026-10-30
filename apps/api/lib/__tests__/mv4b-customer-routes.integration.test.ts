@@ -978,42 +978,26 @@ describe('POST /customer/checkout/quote · payment', () => {
     expect(r.body.data.payment.cash).toBeNull()
   })
 
-  it('recojo later: la caja no está (pickup_later) y no hay pending_yape', async () => {
+  it('0283 · recojo, ahora o más tarde: solo prepaid, sin caja ni pending_yape ni billete', async () => {
     const c = await clienteDeConfianza()
-    const r = await cotizar(c, { deliveryMethod: 'pickup', pickupTiming: 'later' })
-    expect(r.status).toBe(200)
-    expect(r.body.data.payment.options).toEqual([
-      { intent: 'pending_cash', available: false, unavailableReason: 'pickup_later' },
-      { intent: 'prepaid', available: true, unavailableReason: null },
-    ])
-    expect(r.body.data.payment.cash).toBeNull()
+    for (const extra of [{ pickupTiming: 'later' }, { pickupTiming: 'now' }]) {
+      const r = await cotizar(c, { deliveryMethod: 'pickup', ...extra })
+      expect(r.status).toBe(200)
+      expect(r.body.data.payment.options).toEqual([
+        { intent: 'prepaid', available: true, unavailableReason: null },
+      ])
+      expect(r.body.data.payment.cash).toBeNull()
+    }
   })
 
-  it('recojo now: pending_cash disponible, sin pending_yape y sin billete', async () => {
-    const c = await clienteDeConfianza()
-    const r = await cotizar(c, { deliveryMethod: 'pickup', pickupTiming: 'now' })
-    expect(r.body.data.payment.options).toEqual([
-      { intent: 'pending_cash', available: true, unavailableReason: null },
-      { intent: 'prepaid', available: true, unavailableReason: null },
-    ])
-    expect(r.body.data.payment.cash).toBeNull()
-  })
-
-  it('recojo sin pickupTiming se trata como later: pickup_later (trusted y no_history)', async () => {
+  it('0283 · recojo sin pickupTiming: también solo prepaid (trusted y no_history)', async () => {
     for (const c of [await clienteDeConfianza(), await crearCliente()]) {
       const r = await cotizar(c, { deliveryMethod: 'pickup' })
       expect(r.status).toBe(200)
       expect(r.body.data.payment.options).toEqual([
-        { intent: 'pending_cash', available: false, unavailableReason: 'pickup_later' },
         { intent: 'prepaid', available: true, unavailableReason: null },
       ])
       expect(r.body.data.payment.cash).toBeNull()
-      const ahora = await cotizar(c, { deliveryMethod: 'pickup', pickupTiming: 'now' })
-      expect(ahora.body.data.payment.options[0]).toEqual({
-        intent: 'pending_cash',
-        available: true,
-        unavailableReason: null,
-      })
     }
   })
 

@@ -74,7 +74,7 @@ function argsPedido(c: Cliente) {
     p_customer_user_id: c.id,
     p_business_id: BUSINESS_ID,
     p_delivery_method: 'pickup',
-    p_payment_intent: 'pending_cash',
+    p_payment_intent: 'prepaid',
     p_customer_name: 'Vecino',
     p_customer_phone: c.tel9,
     p_delivery_address: '',
