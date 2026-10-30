@@ -28,9 +28,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.account.AccountDestination
+import com.tindivo.customer.feature.addresses.AddressFormDestination
+import com.tindivo.customer.feature.addresses.AddressFormRoute
+import com.tindivo.customer.feature.addresses.AddressesDestination
+import com.tindivo.customer.feature.addresses.AddressesRoute
+import com.tindivo.customer.feature.addresses.PICKED_ADDRESS_KEY
 import com.tindivo.customer.feature.cart.CartDestination
 import com.tindivo.customer.feature.catalog.business.BusinessDestination
 import com.tindivo.customer.feature.catalog.business.BusinessRoute
@@ -128,8 +134,23 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 AccountDestination(
                     onLeave = { navController.popBackStack() },
                     onOpenOrders = { navController.navigate(OrdersRoute) },
+                    onOpenAddresses = { navController.navigate(AddressesRoute()) },
                 )
             }
+            composable<AddressesRoute> { entry ->
+                AddressesDestination(
+                    pick = entry.toRoute<AddressesRoute>().pick,
+                    onBack = { navController.popBackStack() },
+                    onAdd = { navController.navigate(AddressFormRoute()) },
+                    onEdit = { id -> navController.navigate(AddressFormRoute(id)) },
+                    // El selector devuelve el id a quien lo abrió (el checkout) y se cierra.
+                    onPicked = { id ->
+                        navController.previousBackStackEntry?.savedStateHandle?.set(PICKED_ADDRESS_KEY, id)
+                        navController.popBackStack()
+                    },
+                )
+            }
+            composable<AddressFormRoute> { AddressFormDestination(onDone = { navController.popBackStack() }) }
             composable<OrdersRoute> {
                 OrdersDestination(
                     onBack = { navController.popBackStack() },

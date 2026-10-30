@@ -13,6 +13,12 @@
         android:name="android.permission.USE_FINGERPRINT"
         tools:node="remove" />
 
+    <!-- play-services-maps pide ACCESS_NETWORK_STATE para saber si hay red; esta app no pide más permisos que INTERNET
+         (la comprobación del manifiesto final los exige), así que se quita del manifiesto fusionado. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:node="remove" />
+
     <!-- usesCleartextTraffic en false de forma explícita: en API 26-27 el valor por defecto permitiría HTTP. -->
     <application
         android:name=".TindivoApp"
@@ -32,6 +38,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Clave del SDK de Maps: la pone el build desde MAPS_API_KEY (ver customer/build.gradle.kts), nunca el repo. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsApiKey}" />
 
         <!-- ui-tooling (debugImplementation) añade esta actividad EXPORTADA y sin permiso: cualquier app del teléfono
              podría lanzarla y pedirle que dibuje un composable por reflexión. Se quita del manifiesto fusionado; las
