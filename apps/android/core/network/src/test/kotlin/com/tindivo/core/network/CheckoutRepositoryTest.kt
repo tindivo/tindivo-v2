@@ -78,6 +78,8 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
             assertEquals("48.50", data.total)
             assertEquals("3.50", data.deliveryFee)
             assertEquals("50.00", data.maxChange)
+            assertEquals(3, data.payment.options.size)
+            assertEquals("50.00", data.payment.cash?.maxBill)
             val sent = server.takeRequest()
             assertEquals("POST", sent.method)
             assertEquals("/api/v1/customer/checkout/quote", sent.url.encodedPath)
@@ -224,7 +226,11 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
               "unitPrice":"22.50","lineTotal":"45.00"}],
              "subtotal":"45.00","deliveryBand":"near","nominalDeliveryFee":"3.50","deliveryFee":"3.50",
              "freeDelivery":{"applies":false,"reason":null},"total":"48.50","maxChange":"50.00",
-             "prepayThreshold":"60.00","exceedsPrepayThreshold":false}}
+             "prepayThreshold":"60.00","exceedsPrepayThreshold":false,
+             "payment":{"options":[{"intent":"pending_cash","available":true,"unavailableReason":null},
+              {"intent":"pending_yape","available":true,"unavailableReason":null},
+              {"intent":"prepaid","available":true,"unavailableReason":null}],
+              "cash":{"maxBill":"50.00","maxChange":"50.00","step":"10.00"}}}}
         """
 
         const val CREATED = """

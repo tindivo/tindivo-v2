@@ -46,7 +46,11 @@ class GeneratedJsonTest {
             {"businessId":"6b2a737a-018f-4c2d-9a11-6f0d3c1e8a02","deliveryMethod":"delivery","items":[],
              "subtotal":"12.50","deliveryBand":null,"nominalDeliveryFee":"3.50","deliveryFee":"3.50",
              "freeDelivery":{"applies":false,"reason":null},"total":"16.00","maxChange":"50.00",
-             "prepayThreshold":"60.00","exceedsPrepayThreshold":false,"claveNueva":{"x":1}}
+             "prepayThreshold":"60.00","exceedsPrepayThreshold":false,"claveNueva":{"x":1},
+             "payment":{"options":[{"intent":"pending_cash","available":true,"unavailableReason":null},
+             {"intent":"pending_yape","available":true,"unavailableReason":null},
+             {"intent":"prepaid","available":true,"unavailableReason":null}],
+             "cash":{"maxBill":"50.00","maxChange":"50.00","step":"10.00"}}}
             """.trimIndent()
 
         val data = json.decodeFromString<QuoteCheckout200ResponseData>(body)
