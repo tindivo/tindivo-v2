@@ -171,6 +171,12 @@ describe('send-code · tope por número de destino', () => {
     for (const v of vecinos) {
       await localClient.from('customer_otp_attempts').delete().eq('user_id', v.userId)
       await localClient.from('customer_profiles').delete().eq('user_id', v.userId)
+      await localClient
+        .from('phone_transfer_challenges')
+        .delete()
+        .eq('user_id', v.userId)
+        .throwOnError()
+      await localClient.from('phone_assignments').delete().eq('user_id', v.userId).throwOnError()
       await localClient.from('users').delete().eq('id', v.userId)
       await localClient.auth.admin.deleteUser(v.userId).catch(() => {})
     }

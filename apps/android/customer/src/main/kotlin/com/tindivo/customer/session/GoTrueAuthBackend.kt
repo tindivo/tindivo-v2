@@ -23,6 +23,8 @@ internal class StoredSession(
     val refreshToken: String,
     val userId: String,
     val expiresAtEpochSeconds: Long,
+    // Con valor por defecto: lo guardado sin este campo sigue leyéndose. Solo se escribe cuando es `true`.
+    val refreshSpent: Boolean = false,
 ) {
     fun isComplete(): Boolean = accessToken.isNotBlank() && refreshToken.isNotBlank() && userId.isNotBlank()
 
@@ -81,10 +83,15 @@ internal class GoTrueAuthBackend(
                 } catch (_: IllegalArgumentException) {
                     null
                 }
-            // Lo guardado que no se entiende vale como sin sesión, y se borra para no volver a leerlo.
-            if (session == null) file.delete()
+            // Lo guardado que no se entiende vale como sin sesión, y se borra para no volver a leerlo. Igual si está
+            // marcado como gastado: el refresco anterior pudo gastar ese token en Auth y la respuesta no llegó a guardarse.
+            if (session == null || session.refreshSpent) {
+                file.delete()
+                stored = null
+                return@withContext null
+            }
             stored = session
-            session?.toSnapshot()
+            session.toSnapshot()
         }
 
     override suspend fun signInWithGoogle(
@@ -101,9 +108,35 @@ internal class GoTrueAuthBackend(
     }
 
     override suspend fun refresh(): TokenSnapshot {
-        val refreshToken = checkNotNull(stored) { "no hay sesión que refrescar" }.refreshToken
-        val body = buildJsonObject { put("refresh_token", refreshToken) }
-        return adopt(token("refresh_token", body.toString()))
+        val current = checkNotNull(stored) { "no hay sesión que refrescar" }
+        val body = buildJsonObject { put("refresh_token", current.refreshToken) }
+        // Antes de enviar, el archivo queda marcado: si el proceso muere a mitad, ese token pudo gastarse en Auth y no
+        // debe reenviarse. Si no se puede escribir la marca, no se envía nada.
+        save(current, spent = true)
+        val response =
+            try {
+                token("refresh_token", body.toString())
+            } catch (e: IOException) {
+                // Solo si la petición nunca salió el token sigue valiendo: se quita la marca. Otro fallo la deja puesta.
+                if (e.neverReachedAuth()) save(current, spent = false)
+                throw e
+            }
+        return adopt(response)
+    }
+
+    private suspend fun save(
+        session: StoredSession,
+        spent: Boolean,
+    ) {
+        val toWrite =
+            StoredSession(
+                session.accessToken,
+                session.refreshToken,
+                session.userId,
+                session.expiresAtEpochSeconds,
+                refreshSpent = spent,
+            )
+        withContext(io) { file.write(json.encodeToString(toWrite)) }
     }
 
     /** `scope=local`: revoca solo la sesión de este aparato. Sin sesión no hay nada que revocar. */
@@ -136,10 +169,11 @@ internal class GoTrueAuthBackend(
         val text = post(url, body, bearer = null)
         return try {
             json.decodeFromString<TokenResponse>(text)
-        } catch (e: SerializationException) {
-            throw IOException("respuesta de Auth ilegible", e)
-        } catch (e: IllegalArgumentException) {
-            throw IOException("respuesta de Auth ilegible", e)
+        } catch (_: SerializationException) {
+            // Sin causa a propósito: sus mensajes pueden citar fragmentos del JSON, con tokens.
+            throw IOException("respuesta de Auth ilegible")
+        } catch (_: IllegalArgumentException) {
+            throw IOException("respuesta de Auth ilegible")
         }
     }
 

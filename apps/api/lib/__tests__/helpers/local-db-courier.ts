@@ -39,7 +39,16 @@ export async function seedCourierCustomer(): Promise<CourierCustomer> {
     user_metadata: { full_name: 'Vecino Entregas' },
   })
   if (authErr) throw new Error(`seed courier customer auth falló: ${authErr.message}`)
-  return { userId: authUser.user.id, phone: nextPhone() }
+  const phone = nextPhone()
+  // Como en la app: el solicitante normal tiene un perfil sellado por el servidor.
+  const { error } = await localClient.from('customer_profiles').insert({
+    user_id: authUser.user.id,
+    full_name: 'Vecino Entregas',
+    phone: `+51${phone}`,
+    phone_verified_at: new Date().toISOString(),
+  })
+  if (error) throw new Error(`seed courier profile falló: ${error.message}`)
+  return { userId: authUser.user.id, phone }
 }
 
 export async function seedCourierDriver(

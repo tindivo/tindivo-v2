@@ -3,13 +3,7 @@
 import { create } from 'zustand'
 
 /** Pasos del sheet de onboarding (carrusel horizontal, orden fijo). */
-export type OnboardingStep =
-  | 'method'
-  | 'email-signup'
-  | 'login'
-  | 'google-name'
-  | 'phone'
-  | 'address'
+export type OnboardingStep = 'method' | 'login' | 'google-name' | 'phone' | 'address'
 
 export type OnboardingVariant = 'fresh' | 'google-resume' | 'profile-incomplete'
 

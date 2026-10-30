@@ -120,6 +120,12 @@ describe('simulacro local de OTP', () => {
     // `customer_otp_attempts` no tiene FK a `users`: no se va sola.
     await localClient.from('customer_otp_attempts').delete().eq('user_id', userId)
     await localClient.from('customer_profiles').delete().eq('user_id', userId)
+    await localClient
+      .from('phone_transfer_challenges')
+      .delete()
+      .eq('user_id', userId)
+      .throwOnError()
+    await localClient.from('phone_assignments').delete().eq('user_id', userId).throwOnError()
     await localClient.from('users').delete().eq('id', userId)
     await localClient.auth.admin.deleteUser(userId)
   })

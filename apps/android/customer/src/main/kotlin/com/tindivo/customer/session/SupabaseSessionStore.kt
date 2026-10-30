@@ -1,5 +1,6 @@
 package com.tindivo.customer.session
 
+import com.tindivo.core.network.RetryAfterShieldInterceptor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
@@ -10,8 +11,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okhttp3.Authenticator
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
+import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.UnknownHostException
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -84,18 +90,19 @@ internal class SupabaseSessionStore(
             }
         }
 
+    // Salir siempre termina: ni esperar el candado ni restaurar ni revocar se cancelan a medias, porque una sesión
+    // que sigue abierta tras «cerrar sesión» es peor que tardar (la revocación está acotada por el callTimeout).
     override suspend fun signOut() {
-        mutex.withLock {
-            restoreOnce()
-            try {
-                backend.signOut()
-            } catch (e: CancellationException) {
+        withContext(NonCancellable) {
+            mutex.withLock {
+                restoreOnce()
+                try {
+                    backend.signOut()
+                } catch (_: Exception) {
+                    // Sin red o sesión ya revocada: igual se cierra en el aparato.
+                }
                 drop()
-                throw e
-            } catch (_: Exception) {
-                // Sin red o sesión ya revocada: igual se cierra en el aparato.
             }
-            drop()
         }
     }
 
@@ -113,28 +120,35 @@ internal class SupabaseSessionStore(
         if (snapshot != null) adopt(snapshot, countsAsChange = false) else mutableState.value = SessionState.SignedOut
     }
 
-    // El token está por vencer: si el refresco falla pero aún no venció, se usa igual (si el servidor lo rechaza,
-    // el 401 pasa por refresh()); si ya venció, es lo mismo que un 401 sin remedio.
+    // El token está por vencer. Una vez enviado el refresh token, Auth puede haberlo gastado: solo si el error prueba
+    // que la petición nunca llegó a Auth (y el token aún no venció) se sigue con el token actual (si el servidor lo
+    // rechaza, el 401 pasa por refresh()); cualquier otro fallo cierra la sesión y ese refresh token no se reenvía.
+    // El refresco va en NonCancellable: si quien llamó se cancela, la respuesta igual se recoge y se adopta (acotado
+    // por el callTimeout); la cancelación se propaga en la siguiente suspensión.
     private suspend fun refreshProactively(snapshot: TokenSnapshot): String? {
         val expired = snapshot.expiresAtEpochSeconds <= clock.instant().epochSecond
         return try {
-            adopt(backend.refresh()).accessToken
+            withContext(NonCancellable) { adopt(backend.refresh()).accessToken }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            if (expired) {
+        } catch (e: IOException) {
+            if (!expired && e.neverReachedAuth()) {
+                snapshot.accessToken
+            } else {
                 drop()
                 null
-            } else {
-                snapshot.accessToken
             }
+        } catch (_: Exception) {
+            drop()
+            null
         }
     }
 
+    // Mismo criterio de cancelación que arriba: el refresco se completa aunque se cancele quien llamó.
     private suspend fun refreshOrDrop(): String? {
         if (current == null) return null
         return try {
-            adopt(backend.refresh()).accessToken
+            withContext(NonCancellable) { adopt(backend.refresh()).accessToken }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -164,11 +178,18 @@ internal class SupabaseSessionStore(
             try {
                 backend.clear()
             } catch (_: Exception) {
-                // Ya quedó cerrada en memoria; si el borrado falla, lo guardado no se descifra sin sesión válida.
+                // Ya quedó cerrada en memoria. El archivo ya se vació (EncryptedSessionFile.delete) o, si ni eso, este
+                // error de disco es el riesgo residual: lo guardado seguiría siendo una sesión válida.
             }
         }
     }
 }
+
+// Solo estos tres errores ocurren antes de que haya conexión con Auth (el nombre no resuelve, la conexión se
+// rechaza o no hay ruta): el refresh token no salió del aparato. Un timeout, un corte a mitad o una respuesta
+// ilegible no prueban nada: el servidor pudo haberlo recibido y rotado.
+internal fun IOException.neverReachedAuth(): Boolean =
+    this is UnknownHostException || this is ConnectException || this is NoRouteToHostException
 
 private const val AUTH_CONNECT_TIMEOUT_SECONDS = 10L
 private const val AUTH_IO_TIMEOUT_SECONDS = 15L
@@ -176,7 +197,9 @@ private const val AUTH_CALL_TIMEOUT_SECONDS = 20L
 
 /**
  * Arma el almacén de sesión real: Auth por REST ([GoTrueAuthBackend]) con un cliente HTTP propio, sin el token de la
- * API, sin reintentos ni redirecciones, y la sesión cifrada en [file].
+ * API, sin reintentos ni redirecciones, y la sesión cifrada en [file]. Lleva el mismo escudo que el cliente de la API
+ * (`TindivoHttp.kt`): sin autenticadores (401 y 407) y con [RetryAfterShieldInterceptor], porque OkHttp reenvía solo
+ * un 503 con `Retry-After: 0` y un refresh token solo vale una vez.
  */
 internal fun createSupabaseSessionStore(
     url: String,
@@ -196,6 +219,9 @@ internal fun createSupabaseSessionStore(
             .followRedirects(false)
             .followSslRedirects(false)
             .retryOnConnectionFailure(false)
+            .authenticator(Authenticator.NONE)
+            .proxyAuthenticator(Authenticator.NONE)
+            .addNetworkInterceptor(RetryAfterShieldInterceptor())
             .build()
     val backend = GoTrueAuthBackend("${url.trimEnd('/')}/auth/v1/".toHttpUrl(), publishableKey, client, file, clock, io)
     return SupabaseSessionStore(backend, clock, scope)

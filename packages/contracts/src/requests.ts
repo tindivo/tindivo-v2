@@ -48,7 +48,10 @@ export const CreateOrderRequestSchema = z
     deliveryMethod: DeliveryMethodSchema,
     paymentIntent: PaymentIntentSchema,
     customerName: z.string().trim().min(1).max(120),
-    customerPhone: PhonePeSchema,
+    customerPhone: PhonePeSchema.meta({
+      description:
+        'Se acepta por compatibilidad; el servidor lo ignora y usa el teléfono verificado del perfil.',
+    }),
     deliveryAddress: AddressLineSchema.optional(),
     deliveryReference: AddressReferenceSchema.optional(),
     coordinates: CoordinatesSchema.optional(),

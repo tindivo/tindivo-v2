@@ -19,9 +19,12 @@ export const dynamic = 'force-dynamic'
  * texto al mensaje que ve el cliente en `Pedir-5-estados.dc.html`.
  */
 function courierErrorDetail(message: string): {
-  code: 'conflict' | 'validation_error'
+  code: 'conflict' | 'validation_error' | 'forbidden'
   detail: string
 } {
+  if (message.startsWith('courier_phone_not_verified')) {
+    return { code: 'forbidden', detail: 'Verifica tu número de WhatsApp antes de hacer un pedido.' }
+  }
   if (message.startsWith('courier_disabled')) {
     return { code: 'conflict', detail: 'Tindivo Entregas no está disponible ahora.' }
   }

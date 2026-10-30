@@ -52,6 +52,24 @@ export const CreatedOrderSchema = z.object({
   pickupTiming: openEnum(PICKUP_TIMINGS, 'Null en un delivery').nullable(),
 })
 
+/** Estados posibles de GET /customer/orders/attempts/{key}. */
+export const ORDER_ATTEMPT_STATES = ['created', 'not_found', 'unknown'] as const
+
+/**
+ * GET /customer/orders/attempts/{key} — ¿esta `Idempotency-Key` ya creó un pedido
+ * de este cliente? Para reconciliar cuando se perdió la respuesta del POST.
+ */
+export const OrderAttemptSchema = z.object({
+  state: openEnum(
+    ORDER_ATTEMPT_STATES,
+    '`created`: la clave creó el pedido de `order`. `not_found`: la clave NO ha creado nada TODAVÍA; solo prueba el presente, porque una petición en vuelo puede crearlo después y, pasada la retención (7 días), se pierde el rastro. `unknown`: no se sabe si el pedido existe, porque solo hay una reserva de la API anterior o no se pudo leer el registro; reintenta la consulta más tarde',
+  ),
+  order: z.object({ id: uuidOut, shortId: z.string() }).nullable().meta({
+    description:
+      'El pedido que creó la clave. Null salvo en `created`. Un `created` con `order` null puede pasar: el pedido existe pero no se pudo leer su código (`id`/`shortId`)',
+  }),
+})
+
 /** POST /customer/orders/{id}/cancel — `cancel_customer_order()`. */
 export const CancelledOrderSchema = z.object({
   id: uuidOut,
@@ -91,6 +109,19 @@ export const PrepayInfoSchema = z.object({
 
 /** POST /customer/orders/{id}/prepay-proof */
 export const PrepayProofAcceptedSchema = z.object({ ok: z.literal(true) })
+
+/** POST /customer/orders/{id}/prepay-proof/upload-url */
+export const PrepayProofUploadUrlSchema = z.object({
+  path: z.string().meta({
+    description:
+      'Ruta del archivo en el bucket `payment-proofs`. Es la que se manda después a `prepay-proof`',
+  }),
+  uploadUrl: z.string().meta({
+    description: 'URL firmada: se sube la foto con un PUT. Un solo uso; no sobrescribe',
+  }),
+  token: z.string().meta({ description: 'Token de la URL firmada, por si el cliente lo prefiere' }),
+  expiresAt: timestampOut.meta({ description: 'Caducidad de la URL firmada (UTC)' }),
+})
 
 // ── Apelaciones ──────────────────────────────────────────────────────────────
 
@@ -238,6 +269,12 @@ export const PaymentOptionsSchema = z.object({
 const coordinatesOut = z.object({ lat: z.number(), lng: z.number() })
 
 export const FREE_DELIVERY_REASONS = ['launch_promo', 'dish'] as const
+export const QUOTE_PAYMENT_INTENTS = ['pending_cash', 'pending_yape', 'prepaid'] as const
+export const QUOTE_PAYMENT_UNAVAILABLE_REASONS = [
+  'prepay_required',
+  'exceeds_threshold',
+  'pickup_later',
+] as const
 
 /**
  * POST /customer/checkout/quote. Todo lo que el checkout pinta, decidido en el
@@ -274,6 +311,41 @@ export const CheckoutQuoteSchema = z.object({
   exceedsPrepayThreshold: z.boolean().meta({
     description: 'El total pasa del umbral: el pago debe ser adelantado',
   }),
+  payment: z
+    .object({
+      options: z
+        .array(
+          z.object({
+            intent: openEnum(QUOTE_PAYMENT_INTENTS),
+            available: z.boolean(),
+            unavailableReason: openEnum(QUOTE_PAYMENT_UNAVAILABLE_REASONS).nullable().meta({
+              description:
+                '`prepay_required` no distingue riesgo de falta de historial (antifraude)',
+            }),
+          }),
+        )
+        .meta({
+          description:
+            'En este orden. El recojo no trae `pending_yape` (no hay motorizado a quien transferirle)',
+        }),
+      cash: z
+        .object({
+          maxBill: moneyText.meta({
+            description: 'Billete máximo con el que se puede declarar el pago',
+          }),
+          maxChange: moneyText,
+          step: moneyText.meta({ description: 'Múltiplo en que se declara el billete' }),
+        })
+        .nullable()
+        .meta({
+          description:
+            'Null si el efectivo no está disponible o es un recojo (en caja no se declara billete)',
+        }),
+    })
+    .meta({
+      description:
+        'Qué métodos de pago puede usar el cliente en este pedido, decididos en el servidor (H-7). Solo para pintar: la creación del pedido vuelve a decidir',
+    }),
 })
 
 /** Una dirección de la libreta del cliente. */
@@ -464,4 +536,31 @@ export const TermsAcceptedSchema = z.object({
   alreadyAccepted: z.boolean().meta({
     description: 'Repetirla no crea otra fila: devuelve la fecha original',
   }),
+})
+
+// ── Reseñas (0215, 0280) ─────────────────────────────────────────────────────
+
+/**
+ * GET /customer/reviews/pending: el pedido entregado más reciente del cliente sin calificar ni
+ * descartar, dentro de la ventana, con el catálogo de etiquetas. `null` si no hay nada que
+ * preguntar: nunca una cola. Las Entregas no tienen reseña.
+ */
+export const CustomerPendingReviewSchema = z.object({
+  orderId: uuidOut,
+  shortId: z.string(),
+  businessId: uuidOut,
+  businessName: z.string(),
+  businessLogoUrl: z.string().nullable(),
+  deliveredAt: timestampOut,
+  closesAt: timestampOut.meta({ description: 'Hasta cuándo se puede calificar este pedido' }),
+  tags: z.array(z.object({ id: z.string(), label: z.string() })).meta({
+    description: 'Las etiquetas que se pueden marcar; `id` es lo que se envía al calificar',
+  }),
+})
+
+/** POST /customer/orders/{id}/review: la reseña creada. */
+export const CreatedReviewSchema = z.object({
+  id: uuidOut,
+  orderId: uuidOut,
+  rating: z.number().int().min(1).max(5),
 })

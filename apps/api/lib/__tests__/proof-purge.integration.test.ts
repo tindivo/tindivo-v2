@@ -25,6 +25,7 @@ import {
   seedOrder,
 } from './helpers/ledger-fixtures'
 import { localClient as db } from './helpers/local-db'
+import { cleanupPhoneSecurityFixtures } from './helpers/phone-security-fixtures'
 
 const CONTAINER = 'supabase_db_zpnipajgwfthxhdtzhly'
 const CLAVE = 'test-password-12345'
@@ -260,6 +261,8 @@ afterAll(async () => {
     await cleanupLedgerWorld(world)
   }
   for (const id of creados) {
+    // 0278: una cuenta borrada deja su historia del número.
+    await cleanupPhoneSecurityFixtures(db, [id])
     await db.from('users').delete().eq('id', id)
     await db.auth.admin.deleteUser(id)
   }

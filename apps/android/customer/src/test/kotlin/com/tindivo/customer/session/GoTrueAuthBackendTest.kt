@@ -13,6 +13,7 @@ import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -181,7 +182,7 @@ class GoTrueAuthBackendTest {
         }
 
     @Test
-    fun `un refresh rechazado lanza AuthHttpException con el codigo y conserva lo guardado`() =
+    fun `un refresh rechazado lanza AuthHttpException con el codigo y deja lo guardado marcado como gastado`() =
         runTest {
             val file = MemoryFile()
             server.enqueue(tokens("acceso-1", "refresh-1"))
@@ -195,8 +196,9 @@ class GoTrueAuthBackendTest {
             assertTrue(error is AuthHttpException)
             assertEquals(400, (error as AuthHttpException).code)
             assertFalse(error.message.orEmpty().contains("refresh"))
-            // Borrar la sesión ante un rechazo lo decide SupabaseSessionStore, no el backend.
-            assertEquals(saved, file.plain)
+            // Borrar la sesión ante un rechazo lo decide SupabaseSessionStore, no el backend; aquí solo queda la marca.
+            assertNotEquals(saved, file.plain)
+            assertTrue(file.plain.orEmpty().contains("\"refreshSpent\":true"))
         }
 
     @Test

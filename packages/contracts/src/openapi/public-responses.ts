@@ -442,6 +442,18 @@ export const PublicConfigSchema = z.object({
   maxChange: moneyText.nullable().meta({
     description: 'Vuelto máximo general; el de cada negocio puede ser menor esa noche',
   }),
+  prepayTimers: z
+    .object({
+      acceptanceMinutes: z.number().int().meta({
+        description: 'Minutos que tiene el negocio para aceptar un pedido prepagado',
+      }),
+      paymentMinutes: z.number().int().meta({
+        description:
+          'Minutos que tiene el cliente para pagar y subir la captura después de que el negocio confirma',
+      }),
+    })
+    .nullable()
+    .meta({ description: 'Plazos del prepago (`app_settings.timers`); null si falta alguno' }),
 })
 
 /** GET /public/landmarks */

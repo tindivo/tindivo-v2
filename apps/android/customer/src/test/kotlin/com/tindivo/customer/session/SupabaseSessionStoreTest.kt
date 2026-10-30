@@ -3,7 +3,6 @@ package com.tindivo.customer.session
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -19,38 +18,6 @@ import java.time.ZoneOffset
 class SupabaseSessionStoreTest {
     private val now = 1_000_000L
     private val clock = Clock.fixed(Instant.ofEpochSecond(now), ZoneOffset.UTC)
-
-    private class FakeBackend : AuthBackend {
-        var stored: TokenSnapshot? = null
-        var refreshResult: () -> TokenSnapshot = { error("sin configurar") }
-        var signInResult: () -> TokenSnapshot = { error("sin configurar") }
-        var signOutFails = false
-        var refreshCalls = 0
-        var clearCalls = 0
-        var signOutCalls = 0
-
-        override suspend fun restore(): TokenSnapshot? = stored
-
-        override suspend fun signInWithGoogle(
-            idToken: String,
-            rawNonce: String,
-        ): TokenSnapshot = signInResult()
-
-        override suspend fun refresh(): TokenSnapshot {
-            refreshCalls++
-            delay(REFRESH_MILLIS)
-            return refreshResult()
-        }
-
-        override suspend fun signOut() {
-            signOutCalls++
-            if (signOutFails) error("sin red")
-        }
-
-        override suspend fun clear() {
-            clearCalls++
-        }
-    }
 
     private fun snapshot(
         token: String,
@@ -142,21 +109,6 @@ class SupabaseSessionStoreTest {
         }
 
     @Test
-    fun `si el refresco proactivo falla y el token aun no vencio, se usa y la sesion sigue`() =
-        runTest {
-            val backend =
-                FakeBackend().apply {
-                    stored = snapshot("por-vencer", expiresIn = 30)
-                    refreshResult = { error("sin red") }
-                }
-            val store = store(backend)
-
-            assertEquals("por-vencer", store.accessToken())
-            assertEquals(SessionState.SignedIn("user-1"), store.state.value)
-            assertEquals(0, backend.clearCalls)
-        }
-
-    @Test
     fun `si el refresco proactivo falla y el token ya vencio, la sesion se cierra`() =
         runTest {
             val backend =
@@ -209,9 +161,5 @@ class SupabaseSessionStoreTest {
     @Test
     fun `el snapshot no imprime el token`() {
         assertTrue(!snapshot("secreto-123").toString().contains("secreto-123"))
-    }
-
-    private companion object {
-        const val REFRESH_MILLIS = 100L
     }
 }

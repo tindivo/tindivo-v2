@@ -239,6 +239,7 @@ describe('GET /public/config', () => {
         'maxCashBill',
         'maxChange',
         'prepayThreshold',
+        'prepayTimers',
       ].sort(),
     )
     expect(data.deliveryBands).toMatchObject({
@@ -248,6 +249,10 @@ describe('GET /public/config', () => {
     expect(data.prepayThreshold).toMatch(/^\d+\.\d{2}$/)
     expect(data.maxCashBill).toMatch(/^\d+\.\d{2}$/)
     expect(data.maxChange).toMatch(/^\d+\.\d{2}$/)
+    // Los dos plazos del prepago, en minutos enteros; nada más de `timers` sale por aquí.
+    expect(Object.keys(data.prepayTimers).sort()).toEqual(['acceptanceMinutes', 'paymentMinutes'])
+    expect(Number.isInteger(data.prepayTimers.acceptanceMinutes)).toBe(true)
+    expect(Number.isInteger(data.prepayTimers.paymentMinutes)).toBe(true)
     expect(data.coverage.radiusKm).toEqual(expect.any(Number))
     expect(data.coveragePolygon.length).toBeGreaterThanOrEqual(3)
     expect(data.coveragePolygon[0]).toEqual({ lat: expect.any(Number), lng: expect.any(Number) })

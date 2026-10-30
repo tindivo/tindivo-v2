@@ -33,7 +33,7 @@ class EncryptedSessionFileTest {
     @Test
     fun `lo que se guarda se lee igual y en disco no queda texto claro`() {
         val file = folder.newFile("sesion.bin").also { it.delete() }
-        val store = EncryptedSessionFile(file, newAead())
+        val store = EncryptedSessionFile(file, newAead(), NoKeys)
 
         store.write(session)
 
@@ -44,7 +44,7 @@ class EncryptedSessionFileTest {
 
     @Test
     fun `sin archivo no hay sesion`() {
-        val store = EncryptedSessionFile(java.io.File(folder.root, "nada.bin"), newAead())
+        val store = EncryptedSessionFile(java.io.File(folder.root, "nada.bin"), newAead(), NoKeys)
 
         assertNull(store.read())
     }
@@ -52,10 +52,10 @@ class EncryptedSessionFileTest {
     @Test
     fun `si el descifrado falla con otra clave el archivo se borra y vale como sin sesion`() {
         val file = java.io.File(folder.root, "sesion.bin")
-        EncryptedSessionFile(file, newAead()).write(session)
+        EncryptedSessionFile(file, newAead(), NoKeys).write(session)
         assertTrue(file.exists())
 
-        val withNewKey = EncryptedSessionFile(file, newAead())
+        val withNewKey = EncryptedSessionFile(file, newAead(), NoKeys)
 
         assertNull(withNewKey.read())
         assertFalse(file.exists())
@@ -65,10 +65,10 @@ class EncryptedSessionFileTest {
     fun `un archivo corrupto o cortado se borra y vale como sin sesion`() {
         val file = java.io.File(folder.root, "sesion.bin")
         val aead = newAead()
-        EncryptedSessionFile(file, aead).write(session)
+        EncryptedSessionFile(file, aead, NoKeys).write(session)
         file.writeBytes(file.readBytes().copyOf(10))
 
-        assertNull(EncryptedSessionFile(file, aead).read())
+        assertNull(EncryptedSessionFile(file, aead, NoKeys).read())
         assertFalse(file.exists())
     }
 
@@ -78,18 +78,47 @@ class EncryptedSessionFileTest {
         val aead = newAead()
         file.writeBytes(aead.encrypt(session.toByteArray(), "otra-cosa".toByteArray()))
 
-        assertNull(EncryptedSessionFile(file, aead).read())
+        assertNull(EncryptedSessionFile(file, aead, NoKeys).read())
     }
 
     @Test
     fun `delete borra la sesion`() {
         val file = java.io.File(folder.root, "sesion.bin")
-        val store = EncryptedSessionFile(file, newAead())
+        val store = EncryptedSessionFile(file, newAead(), NoKeys)
         store.write(session)
 
         store.delete()
 
         assertNull(store.read())
         assertFalse(file.exists())
+    }
+
+    // Un File cuyo delete() siempre falla, como un archivo bloqueado o en un volumen de solo lectura para borrar.
+    private class UndeletableFile(
+        path: java.io.File,
+    ) : java.io.File(path.path) {
+        override fun delete(): Boolean = false
+    }
+
+    @Test
+    fun `si el archivo no se puede borrar, delete lo vacia y una instancia nueva no lo restaura`() {
+        val path = java.io.File(folder.root, "sesion.bin")
+        val aead = newAead()
+        val store = EncryptedSessionFile(UndeletableFile(path), aead, NoKeys)
+        store.write(session)
+
+        store.delete()
+
+        assertEquals(0L, path.length())
+        assertNull(EncryptedSessionFile(path, aead, NoKeys).read())
+    }
+
+    @Test
+    fun `un archivo vacio no se restaura`() {
+        val path = java.io.File(folder.root, "sesion.bin")
+        path.writeBytes(ByteArray(0))
+
+        assertNull(EncryptedSessionFile(path, newAead(), NoKeys).read())
+        assertFalse(path.exists())
     }
 }
