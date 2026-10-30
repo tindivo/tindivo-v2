@@ -846,9 +846,11 @@ describe('quote: lo que la creación rechazaría, la cotización también', () =
     // Una franja de un minuto 12 horas después de la hora de Lima: fija a las 03:00, la CI que corría a esa hora
     // encontraba el plato dentro de su franja y la cotización respondía 200.
     const horaLima = Number(
-      new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Lima', hour: '2-digit', hourCycle: 'h23' }).format(
-        new Date(),
-      ),
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Lima',
+        hour: '2-digit',
+        hourCycle: 'h23',
+      }).format(new Date()),
     )
     const hora = String((horaLima + 12) % 24).padStart(2, '0')
     await db
