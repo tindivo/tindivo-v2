@@ -98,19 +98,19 @@ internal class PhoneVerifyViewModel
 
         fun onPhoneChanged(text: String) {
             if (_state.value.step != PhoneStep.Number) return
-            _state.update { it.copy(phone = text.digitsOnly(PHONE_LENGTH), error = null) }
+            _state.update { if (it.loggedOut) it else it.copy(phone = text.digitsOnly(PHONE_LENGTH), error = null) }
         }
 
         fun onCodeChanged(text: String) {
             if (_state.value.step != PhoneStep.Code) return
-            _state.update { it.copy(code = text.digitsOnly(CODE_LENGTH), error = null) }
+            _state.update { if (it.loggedOut) it else it.copy(code = text.digitsOnly(CODE_LENGTH), error = null) }
         }
 
         /** «Enviar código» (primer envío). */
         fun sendCode() {
             val phone = _state.value.phone
             if (!phone.matches(PERU_MOBILE)) {
-                _state.update { it.copy(error = PhoneError.InvalidNumber) }
+                fail(PhoneError.InvalidNumber)
                 return
             }
             launchCall { sendAndAdvance(phone) }
@@ -127,7 +127,7 @@ internal class PhoneVerifyViewModel
             val current = _state.value
             if (current.step != PhoneStep.Code) return
             if (current.code.length != CODE_LENGTH) {
-                _state.update { it.copy(error = PhoneError.InvalidCode) }
+                fail(PhoneError.InvalidCode)
                 return
             }
             launchCall {
@@ -143,7 +143,13 @@ internal class PhoneVerifyViewModel
             val offer = _state.value.transfer ?: return
             if (!offer.expiresAt.isAfter(clock.instant())) {
                 if (!_state.value.sending) {
-                    _state.update { it.copy(transfer = null, code = "", error = PhoneError.ChallengeExpired) }
+                    _state.update {
+                        if (it.loggedOut) {
+                            it
+                        } else {
+                            it.copy(transfer = null, code = "", error = PhoneError.ChallengeExpired)
+                        }
+                    }
                 }
                 return
             }
@@ -236,6 +242,11 @@ internal class PhoneVerifyViewModel
             }
             val offer = if (offersTransfer) (error as? AppError.Known)?.takeIf { it.isConflict() }?.transfer else null
             settle { it.copy(error = if (offer == null) error.toPhoneError() else null, transfer = offer) }
+        }
+
+        /** Un error de validación local; con la sesión cerrada no toca el estado. */
+        private fun fail(error: PhoneError) {
+            _state.update { if (it.loggedOut) it else it.copy(error = error) }
         }
 
         /** Lo que llega después de cerrar la sesión no se publica. */
