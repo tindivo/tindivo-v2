@@ -69,7 +69,8 @@ class AccountViewModelTest {
 
             val state = AccountViewModel(customer, store, configService).settled()
 
-            assertEquals(AccountUiState.Loaded(AccountProfileUi("Rosa Quispe", phoneVerified = false)), state)
+            val expected = AccountProfileUi("Rosa Quispe", phoneVerified = false, phone = "+51987654321")
+            assertEquals(AccountUiState.Loaded(expected), state)
         }
 
     @Test
@@ -79,7 +80,8 @@ class AccountViewModelTest {
 
             val state = AccountViewModel(customer, store, configService).settled()
 
-            assertEquals(AccountUiState.Loaded(AccountProfileUi("Rosa Quispe", phoneVerified = true)), state)
+            val expected = AccountProfileUi("Rosa Quispe", phoneVerified = true, phone = "+51987654321")
+            assertEquals(AccountUiState.Loaded(expected), state)
         }
 
     @Test
