@@ -181,7 +181,12 @@ class PhoneRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(422, VALIDATION, "application/problem+json"))
 
-            val error = (phone().sendCode(SendPhoneCodeRequest(phone = "123")) as ApiResult.Failure).error as AppError.Known
+            val error =
+                (
+                    phone().sendCode(
+                        SendPhoneCodeRequest(phone = "123"),
+                    ) as ApiResult.Failure
+                ).error as AppError.Known
 
             assertEquals(ApiErrorCode.ValidationError, error.code)
             assertEquals("Número de celular inválido", error.fieldMessage)
@@ -192,7 +197,12 @@ class PhoneRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(200, """{"data":{"verified":true,"phone":"+51987654321","transferred":true}}"""))
 
-            val data = (phone().transfer(TransferCustomerPhoneRequest(challengeId = CHALLENGE_ID)) as ApiResult.Success).data
+            val data =
+                (
+                    phone().transfer(
+                        TransferCustomerPhoneRequest(challengeId = CHALLENGE_ID),
+                    ) as ApiResult.Success
+                ).data
 
             assertEquals("+51987654321", data.phone)
             val sent = server.takeRequest()
