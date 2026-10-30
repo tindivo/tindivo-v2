@@ -8,7 +8,7 @@
 -- desde su panel (`create_business_manual_order`, otra función).
 --
 -- Qué hace: copia ENTERA `create_customer_order` desde 0277 (su última versión) y
--- añade un solo rechazo: recojo con `p_payment_intent <> 'prepaid'` ->
+-- añade un solo rechazo: recojo con `p_payment_intent is distinct from 'prepaid'` ->
 -- `pickup_requires_prepaid` (P0001, código estable de DB-16). Firma, SECURITY
 -- DEFINER, `search_path = ''` y GRANT/REVOKE iguales a 0277.
 --
@@ -132,7 +132,7 @@ begin
   -- el rechazo no deja ningún pedido. El código es el contrato con la API (DB-16);
   -- el texto para el cliente lo pone ella. `orders_pickup_payment_chk` (0223)
   -- sigue de suelo, más estrecho.
-  if p_delivery_method = 'pickup' and p_payment_intent <> 'prepaid' then
+  if p_delivery_method = 'pickup' and p_payment_intent is distinct from 'prepaid' then
     raise exception using errcode = 'P0001', message = 'pickup_requires_prepaid';
   end if;
 

@@ -121,19 +121,21 @@ async function borrarPedido(id: string) {
 }
 
 async function contarPedidos(userId: string): Promise<number> {
-  const { count } = await db
+  const { count, error } = await db
     .from('orders')
     .select('id', { count: 'exact', head: true })
     .eq('customer_user_id', userId)
+  expect(error, error?.message).toBeNull()
   return count ?? 0
 }
 
 async function filasDeClave(userId: string, key: string) {
-  const { data } = await db
+  const { data, error } = await db
     .from('creation_idempotency')
     .select('*')
     .eq('user_id', userId)
     .eq('key', key)
+  expect(error, error?.message).toBeNull()
   return data ?? []
 }
 
@@ -1044,6 +1046,135 @@ describe('un recojo solo se paga por adelantado (0283), por HTTP', () => {
 
     const ok = await pedir(cuerpo('prepaid', 'now'))
     expect(ok.status, await ok.clone().text()).toBe(201)
+    pedidos.push(((await ok.json()) as { data: { id: string } }).data.id)
+    expect(await contarPedidos(c.id)).toBe(1)
+  })
+
+  it('RPC directa: un recojo con p_payment_intent null se rechaza con pickup_requires_prepaid y no deja pedido', async () => {
+    const c = await crearCliente()
+    const r = await db.rpc('create_customer_order', argsPedido(c, { p_payment_intent: null }))
+    expect(r.error?.message).toContain('pickup_requires_prepaid')
+    expect(await contarPedidos(c.id)).toBe(0)
+  })
+
+  it('la envoltura idempotente rechaza un recojo con intent null u omitido y no consume la clave', async () => {
+    const c = await crearCliente()
+    const sinIntent = (() => {
+      const { p_payment_intent: _omitido, ...resto } = argsPedido(c)
+      return resto
+    })()
+    for (const args of [argsPedido(c, { p_payment_intent: null }), sinIntent]) {
+      const key = crypto.randomUUID()
+      const r = await db.rpc('create_order_idempotently', {
+        p_user_id: c.id,
+        p_scope: 'create_order',
+        p_key: key,
+        p_request_hash: 'hash-a',
+        p_args: args,
+      })
+      expect(r.error?.message).toContain('pickup_requires_prepaid')
+      expect(await filasDeClave(c.id, key)).toHaveLength(0)
+    }
+    expect(await contarPedidos(c.id)).toBe(0)
+  })
+
+  it('envoltura con clave fija: el recojo en caja se rechaza y la misma clave con prepago crea el pedido', async () => {
+    const c = await crearCliente()
+    const key = crypto.randomUUID()
+    const llamar = (args: Record<string, unknown>) =>
+      db.rpc('create_order_idempotently', {
+        p_user_id: c.id,
+        p_scope: 'create_order',
+        p_key: key,
+        p_request_hash: 'hash-a',
+        p_args: args,
+      })
+
+    const malo = await llamar(argsPedido(c, { p_payment_intent: 'pending_cash' }))
+    expect(malo.error?.message).toContain('pickup_requires_prepaid')
+    expect(await filasDeClave(c.id, key)).toHaveLength(0)
+    expect(await contarPedidos(c.id)).toBe(0)
+
+    const bueno = await llamar(argsPedido(c))
+    expect(bueno.error, bueno.error?.message).toBeNull()
+    const res = bueno.data as { replayed: boolean; data: { id: string } }
+    expect(res.replayed).toBe(false)
+    pedidos.push(res.data.id)
+    expect(await contarPedidos(c.id)).toBe(1)
+    const filas = await filasDeClave(c.id, key)
+    expect(filas).toHaveLength(1)
+    expect(filas[0]?.resource_id).toBe(res.data.id)
+  })
+
+  it('HTTP con la misma Idempotency-Key: el 422 del recojo en caja no deja rastro y el prepago entra con 201', async () => {
+    const c = await crearCliente()
+    await db.from('user_roles').insert({ user_id: c.id, role: 'customer' })
+    const anon = createClient(LOCAL_URL, LOCAL_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { data: ses, error: lerr } = await anon.auth.signInWithPassword({
+      email: `idem-${c.tel9}@integration.local`,
+      password: CLAVE,
+    })
+    expect(lerr, lerr?.message).toBeNull()
+    const token = ses.session?.access_token ?? ''
+    const key = crypto.randomUUID()
+    const pedir = (paymentIntent: string) =>
+      postOrder(
+        new Request(`${LOCAL_URL}/api/v1/customer/orders`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${token}`,
+            'idempotency-key': key,
+          },
+          body: JSON.stringify({
+            businessId: BUSINESS_ID,
+            deliveryMethod: 'pickup',
+            paymentIntent,
+            pickupTiming: 'now',
+            customerName: 'Vecino',
+            customerPhone: c.tel9,
+            items: [{ menuItemId: ITEM_POLLO_ID, quantity: 1 }],
+          }),
+        }),
+      )
+
+    // Los eventos de un pedido rechazado no tendrían a qué pedido apuntar: se cuenta
+    // la tabla entera antes y después (las pruebas de este archivo van en serie).
+    const contarEventos = async () => {
+      const { count, error } = await db
+        .from('domain_events')
+        .select('id', { count: 'exact', head: true })
+      expect(error, error?.message).toBeNull()
+      return count
+    }
+    const eventosAntes = await contarEventos()
+
+    const malo = await pedir('pending_cash')
+    const jmalo = (await malo.json()) as { code?: string }
+    expect(malo.status, JSON.stringify(jmalo)).toBe(422)
+    expect(jmalo.code).toBe('validation_error')
+
+    // Sin rastro del rechazo: ni clave, ni pedido, ni eventos, ni reservas de promo.
+    expect(await filasDeClave(c.id, key)).toHaveLength(0)
+    const { data: suyos, error: eped } = await db
+      .from('orders')
+      .select('id')
+      .eq('customer_user_id', c.id)
+    expect(eped, eped?.message).toBeNull()
+    expect(suyos).toHaveLength(0)
+    expect(await contarEventos()).toBe(eventosAntes)
+    const { count: reservas, error: eres } = await db
+      .from('promo_redemptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('customer_user_id', c.id)
+    expect(eres, eres?.message).toBeNull()
+    expect(reservas).toBe(0)
+
+    const ok = await pedir('prepaid')
+    expect(ok.status, await ok.clone().text()).toBe(201)
+    expect(ok.headers.get('idempotency-replayed')).toBe('false')
     pedidos.push(((await ok.json()) as { data: { id: string } }).data.id)
     expect(await contarPedidos(c.id)).toBe(1)
   })
