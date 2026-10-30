@@ -25,12 +25,16 @@ private const val IO_TIMEOUT_SECONDS = 30L
  * conexión HTTP/2 compartida con otro dominio: por RFC 9110 el servidor no procesó la petición, así que repetirla no
  * duplica nada.
  *
+ * [auth], si hay, va entre las cabeceras y los reintentos: el reintento de un 5xx lleva el token, y el refresco tras un
+ * 401 no gasta el presupuesto de reintentos. Sin él, el cliente no manda `Authorization` (catálogo público, imágenes).
+ *
  * @param callTimeout solo se cambia en pruebas.
  */
 fun createOkHttpClient(
     client: ClientInfo,
     retry: RetryInterceptor = RetryInterceptor(),
     callTimeout: Duration = 30.seconds,
+    auth: BearerAuthInterceptor? = null,
 ): OkHttpClient =
     OkHttpClient
         .Builder()
@@ -44,6 +48,7 @@ fun createOkHttpClient(
         .authenticator(Authenticator.NONE)
         .proxyAuthenticator(Authenticator.NONE)
         .addInterceptor(ClientHeadersInterceptor(client))
+        .apply { if (auth != null) addInterceptor(auth) }
         .addInterceptor(retry)
         .addNetworkInterceptor(RetryAfterShieldInterceptor())
         .build()

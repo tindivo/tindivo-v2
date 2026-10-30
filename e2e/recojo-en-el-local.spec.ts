@@ -109,7 +109,7 @@ async function ultimoPedido(userId: string) {
   const { data } = await db
     .from('orders')
     .select(
-      'id, short_id, status, delivery_method, pickup_timing, delivery_fee, risk_flags, delivery_address',
+      'id, short_id, status, delivery_method, pickup_timing, payment_intent, delivery_fee, delivery_address',
     )
     .eq('customer_user_id', userId)
     .order('created_at', { ascending: false })
@@ -224,28 +224,28 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
   })
 
   /**
-   * EL CASO QUE ABRE EL CANAL, Y EL QUE ESTABA CERRADO.
+   * EL CASO QUE ABRE EL CANAL, AHORA PREPAGADO (0283).
    *
-   * Sin historial, sin GPS (headless, sin permiso de geolocalización) y pagando
-   * al recibir. Antes de la 0220 esto moría con «Pago adelantado requerido»: el
-   * guard de contraentrega corre antes de ramificar por método y sin
-   * coordenadas `customer_gps_in_coverage` da false. O sea que el mostrador
-   * estaba cerrado al vecino que estaba de pie delante de él.
-   *
-   * Y nace en `pending_acceptance`, NO en `validando`: no se llama por teléfono
-   * a quien está al otro lado del mostrador.
+   * Sin historial y sin GPS (headless, sin permiso de geolocalización). Desde la
+   * 0283 un recojo solo se paga por prepago, así que el pedido nace
+   * `prepaid` —la caja ya no se ofrece— y en `pending_acceptance`, NO en
+   * `validando`: no se llama por teléfono a quien está al otro lado del
+   * mostrador.
    */
-  test('«ahora» entra sin historial y sin GPS, y va a la cola de la cajera', async ({ page }) => {
+  test('«ahora» entra prepagado sin historial y sin GPS, y va a la cola de la cajera', async ({
+    page,
+  }) => {
     await login(page, CLIENTE.email)
     await llegarAlCheckout(page)
 
     await page.getByRole('button', { name: 'Recojo' }).click()
     await page.getByRole('button', { name: /Sí, voy y espero ahí/ }).click()
-    await expect(page.getByText(/Pagas en la caja y lo preparan mientras esperas/)).toBeVisible()
 
-    // El envío desaparece de la cuenta: en un recojo no hay nada que cobrar por
-    // llevarlo. Y el pie del CTA deja de hablar de motorizados.
-    await expect(page.getByText('Pagas en la caja del local.')).toBeVisible()
+    // La caja no se ofrece y lo único que queda, marcado, es el prepago. El pie
+    // del CTA deja de hablar de motorizados y de caja.
+    await expect(radioDe(page, 'Pagas en el local')).toHaveCount(0)
+    await expect(radioDe(page, 'No pagas nada ahora')).toBeChecked()
+    await expect(page.getByText('Pagas en la caja del local.')).toHaveCount(0)
 
     const confirmar = page.getByRole('button', { name: /Confirmar pedido/ })
     await expect(confirmar).toBeEnabled()
@@ -266,7 +266,7 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     expect(pedido?.pickup_timing).toBe('now')
     expect(pedido?.status).toBe('pending_acceptance')
     expect(Number(pedido?.delivery_fee)).toBe(0)
-    expect(pedido?.risk_flags?.pickupNowPresence).toBe(true)
+    expect(pedido?.payment_intent).toBe('prepaid')
     /*
      * Y NO SE LLEVA LA DIRECCIÓN DE CASA. Era el único campo de logística del
      * payload sin gatear por método: el pedido de mostrador se guardaba con el
@@ -288,7 +288,7 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
    * plantón que motivó todo esto, así que se le pide lo mismo que a un
    * delivery. Sin historial y sin GPS, eso es prepago.
    */
-  test('«más tarde» obliga a prepagar, y lo dice antes de que el cliente lo descubra', async ({
+  test('«más tarde» solo ofrece el prepago, y lo dice antes de que el cliente lo descubra', async ({
     page,
   }) => {
     await login(page, CLIENTE.email)
@@ -297,13 +297,11 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     await page.getByRole('button', { name: 'Recojo' }).click()
 
     /*
-     * ANTES DE CONTESTAR, LA CAJA ESTÁ Y SE PUEDE ELEGIR. Es la mitad que hace
-     * al test valer algo: si `paymentOptionsFor` devolviera solo el prepago
-     * para todo recojo, la segunda mitad pasaría igual y nadie se enteraría de
-     * que un recojo de mostrador perdió su forma natural de pagar.
+     * DESDE LA 0283 LA CAJA NO EXISTE EN UN RECOJO, ni antes de contestar ni
+     * después: solo queda el prepago.
      */
     const caja = radioDe(page, 'Pagas en el local')
-    await expect(caja).toBeEnabled()
+    await expect(caja).toHaveCount(0)
 
     await page.getByRole('button', { name: 'No, paso más tarde' }).click()
 
@@ -320,13 +318,9 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
      * cliente sino de que NO VA A ESTAR: la comida se hace sin nadie delante y
      * sin caja a la que cobrarle.
      *
-     * La caja NO desaparece: se apaga con su motivo al lado. Que siga en
-     * pantalla es deliberado (ver `payment-method-list`): una fila que se
-     * evapora justo después de tocar el botón de al lado se lee como un fallo,
-     * y además el cliente perdería la información de que existe si elige
-     * «ahora».
+     * Con la 0283 la caja ya no se apaga con motivo: directamente no está.
      */
-    await expect(caja).toBeDisabled()
+    await expect(caja).toHaveCount(0)
     await expect(page.getByText(/Como pasas más tarde, el pago va adelantado/)).toBeVisible()
 
     /*
@@ -352,9 +346,7 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
    * día sí, y no hay otro día. La distinción está escrita en
    * `paymentOptionsFor` y esta es la aserción que la sostiene.
    */
-  test('el recojo no ofrece «Yape al recibir», que es pagarle a un motorizado que no hay', async ({
-    page,
-  }) => {
+  test('el recojo no ofrece «Yape al recibir» ni la caja: solo el prepago', async ({ page }) => {
     await login(page, CLIENTE.email)
     await llegarAlCheckout(page)
 
@@ -368,8 +360,8 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     await page.getByRole('button', { name: 'Recojo' }).click()
 
     await expect(yapeAlMotorizado).toHaveCount(0)
-    // Y las dos que sí existen siguen ahí.
-    await expect(radioDe(page, 'Pagas en el local')).toHaveCount(1)
+    // Y la caja tampoco (0283): solo queda el prepago.
+    await expect(radioDe(page, 'Pagas en el local')).toHaveCount(0)
     await expect(radioDe(page, 'Pagas apenas el local confirme')).toHaveCount(1)
   })
 
