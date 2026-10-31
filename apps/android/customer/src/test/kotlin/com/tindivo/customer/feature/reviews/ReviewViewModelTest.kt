@@ -15,6 +15,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -29,6 +31,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Collections
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -76,10 +79,12 @@ class ReviewViewModelTest {
         code: Int,
         slug: String,
         detail: String? = null,
+        delayMillis: Long = 0,
     ) = MockResponse
         .Builder()
         .code(code)
         .addHeader("Content-Type", "application/problem+json")
+        .apply { if (delayMillis > 0) bodyDelay(delayMillis, TimeUnit.MILLISECONDS) }
         .body(
             "{\"type\":\"about:blank\",\"title\":\"x\",\"status\":$code,\"code\":\"$slug\"" +
                 (detail?.let { ",\"detail\":\"$it\"" } ?: "") + "}",
@@ -401,25 +406,101 @@ class ReviewViewModelTest {
         }
 
     @Test
-    fun `el envio de una cuenta que se fue no cambia el estado de la siguiente`() =
+    fun `la consulta de una cuenta que se fue no publica nada aunque llegue despues del cambio`() =
+        runTest {
+            server.enqueue(ok(PENDING, delayMillis = 400))
+            val viewModel = viewModel(Dispatchers.IO)
+            viewModel.enableAutoPrompt()
+            val seen = backgroundScope.collectStates(viewModel)
+            server.takeRequest()
+            server.enqueue(ok(PENDING_B))
+
+            switchToAccountB()
+            viewModel.state.first { it.pending != null }
+            letLateResponsesArrive()
+
+            assertTrue(seen.toString(), seen.none { it.pending?.orderId == ORDER_ID })
+            val prompts = seen.filter { it.step == ReviewStep.Prompt }
+            assertTrue(seen.toString(), prompts.all { it.pending?.orderId == ORDER_B_ID })
+            assertEquals(ORDER_B_ID, viewModel.state.value.pending?.orderId)
+        }
+
+    @Test
+    fun `la consulta de una cuenta que cerro sesion no publica nada aunque llegue despues`() =
+        runTest {
+            server.enqueue(ok(PENDING, delayMillis = 400))
+            val viewModel = viewModel(Dispatchers.IO)
+            viewModel.enableAutoPrompt()
+            val seen = backgroundScope.collectStates(viewModel)
+            server.takeRequest()
+
+            store.signOut()
+            letLateResponsesArrive()
+
+            assertTrue(seen.toString(), seen.all { it == ReviewUiState() })
+            assertEquals(ReviewUiState(), viewModel.state.value)
+        }
+
+    @Test
+    fun `un envio de una cuenta que se fue no publica su exito sobre la siguiente`() =
         runTest {
             val viewModel = readyToSend(delayMillis = 400, io = Dispatchers.IO)
             viewModel.submit()
+            val seen = backgroundScope.collectStates(viewModel)
             server.takeRequest()
             server.takeRequest()
             server.enqueue(ok(PENDING_B))
 
             switchToAccountB()
             viewModel.state.first { it.pending != null }
-            withContext(Dispatchers.Default) { delay(800) }
+            letLateResponsesArrive()
 
-            val state = viewModel.state.value
-            assertFalse(state.submitting)
-            assertEquals(ORDER_B_ID, state.pending?.orderId)
-            assertEquals(ReviewStep.Hidden, state.step)
-            assertEquals(0, state.rating)
-            assertNull(state.error)
+            assertNextAccountUntouched(viewModel, seen)
         }
+
+    @Test
+    fun `un envio de una cuenta que se fue no publica su fallo sobre la siguiente`() =
+        runTest {
+            val viewModel = pendingViewModel(Dispatchers.IO)
+            viewModel.openForm()
+            viewModel.onRating(4)
+            server.enqueue(problem(409, "conflict", "Ya calificaste este pedido", delayMillis = 400))
+            viewModel.submit()
+            val seen = backgroundScope.collectStates(viewModel)
+            server.takeRequest()
+            server.takeRequest()
+            server.enqueue(ok(PENDING_B))
+
+            switchToAccountB()
+            viewModel.state.first { it.pending != null }
+            letLateResponsesArrive()
+
+            assertNextAccountUntouched(viewModel, seen)
+        }
+
+    private fun assertNextAccountUntouched(
+        viewModel: ReviewViewModel,
+        seen: List<ReviewUiState>,
+    ) {
+        val state = viewModel.state.value
+        assertFalse(state.submitting)
+        assertEquals(ORDER_B_ID, state.pending?.orderId)
+        assertEquals(ReviewStep.Hidden, state.step)
+        assertEquals(0, state.rating)
+        assertNull(state.error)
+        // Ninguna emisión después del cambio trae el error ni el cierre del envío de A.
+        val afterSwitch = seen.dropWhile { it.pending?.orderId != ORDER_B_ID }
+        assertTrue(seen.toString(), afterSwitch.all { it.pending?.orderId == ORDER_B_ID && it.error == null })
+    }
+
+    private fun CoroutineScope.collectStates(viewModel: ReviewViewModel): List<ReviewUiState> {
+        val seen = Collections.synchronizedList(mutableListOf<ReviewUiState>())
+        launch(Dispatchers.Unconfined) { viewModel.state.toList(seen) }
+        return seen
+    }
+
+    /** Las respuestas demoradas de la cuenta que se fue (400 ms) llegan de verdad antes de comprobar. */
+    private suspend fun letLateResponsesArrive() = withContext(Dispatchers.Default) { delay(900) }
 
     @Test
     fun `la pregunta vuelve a salir para la cuenta nueva aunque ya saliera para la anterior`() =

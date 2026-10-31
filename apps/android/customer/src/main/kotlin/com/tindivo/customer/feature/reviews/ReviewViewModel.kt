@@ -10,7 +10,6 @@ import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,11 +39,16 @@ internal class ReviewViewModel
         private var promptShown = false
         private var loadedFor: String? = null
 
-        /** El envío en curso: si la cuenta cambia o se cierra, se cancela y su resultado no se publica. */
+        /**
+         * Cambia con cada cierre o cambio de cuenta. La carga y el envío anotan la que vieron al empezar y, antes de
+         * publicar cualquier resultado (éxito o fallo), comprueban que sigue siendo la misma: si no, lo descartan.
+         */
+        private var generation = 0
+        private var loadJob: Job? = null
         private var submitJob: Job? = null
 
         init {
-            viewModelScope.launch { sessionStore.state.collect(::onSession) }
+            viewModelScope.launch { sessionStore.state.collect { onSession(it) } }
         }
 
         /** Pide que, si hay un pendiente, salga la pregunta de las cinco estrellas (el inicio). */
@@ -89,6 +93,7 @@ internal class ReviewViewModel
             if (pending == null || !current.canSubmit) return
             // `submitting` se fija antes de lanzar nada: un doble toque ve ya el estado nuevo.
             mutableState.update { it.copy(submitting = true, error = null) }
+            val started = generation
             submitJob =
                 viewModelScope.launch {
                     val result =
@@ -98,7 +103,7 @@ internal class ReviewViewModel
                             tags = pending.tags.map { it.id }.filter { it in current.selectedTags },
                             comment = current.comment.trim().ifEmpty { null },
                         )
-                    ensureActive()
+                    if (started != generation) return@launch
                     when (result) {
                         is ApiResult.Success -> {
                             mutableState.value = ReviewUiState()
@@ -127,14 +132,15 @@ internal class ReviewViewModel
             if (pending != null) viewModelScope.launch { reviews.dismiss(pending.orderId) }
         }
 
-        private suspend fun onSession(session: SessionState) {
+        private fun onSession(session: SessionState) {
             when (session) {
                 is SessionState.SignedIn -> {
                     if (loadedFor != session.userId) {
                         // De una cuenta a otra sin pasar por la salida: lo de la anterior no se queda ni se publica.
-                        if (loadedFor != null) clearAccountState()
+                        clearAccountState()
                         loadedFor = session.userId
-                        load()
+                        val started = generation
+                        loadJob = viewModelScope.launch { load(started) }
                     }
                 }
 
@@ -151,14 +157,19 @@ internal class ReviewViewModel
         }
 
         private fun clearAccountState() {
+            generation++
+            loadJob?.cancel()
+            loadJob = null
             submitJob?.cancel()
             submitJob = null
             promptShown = false
             mutableState.value = ReviewUiState()
         }
 
-        private suspend fun load() {
-            when (val result = reviews.pending()) {
+        private suspend fun load(started: Int) {
+            val result = reviews.pending()
+            if (started != generation) return
+            when (result) {
                 is ApiResult.Success -> {
                     val pending = result.data?.toUi()
                     mutableState.update { it.copy(pending = pending) }
