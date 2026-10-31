@@ -1,9 +1,7 @@
-package com.tindivo.customer.feature.orders
-
-import com.tindivo.customer.session.SessionState
+package com.tindivo.customer.session
 
 /**
- * Detecta el fin de la sesión con la que se abrió una pantalla de pedidos: un cierre, o una cuenta distinta de la
+ * Detecta el fin de la sesión con la que se abrió una pantalla de la cuenta (pedidos, teléfono): un cierre, o una cuenta distinta de la
  * primera que vio con sesión abierta. Lo segundo cubre un cierre y una entrada tan seguidos que `StateFlow` no deja ver
  * el cierre a quien observa. Una vez terminada, sigue terminada.
  */

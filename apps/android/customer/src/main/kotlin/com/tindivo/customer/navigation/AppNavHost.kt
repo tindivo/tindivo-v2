@@ -46,6 +46,9 @@ import com.tindivo.customer.feature.orders.OrderDetailDestination
 import com.tindivo.customer.feature.orders.OrderDetailRoute
 import com.tindivo.customer.feature.orders.OrdersDestination
 import com.tindivo.customer.feature.orders.OrdersRoute
+import com.tindivo.customer.feature.phone.PHONE_CHANGED_KEY
+import com.tindivo.customer.feature.phone.PhoneVerifyDestination
+import com.tindivo.customer.feature.phone.PhoneVerifyRoute
 import com.tindivo.customer.feature.signin.SignInDestination
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
@@ -130,11 +133,29 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 )
             }
             composable<SignInRoute> { SignInDestination(onBack = { navController.popBackStack() }) }
-            composable<AccountRoute> {
+            composable<AccountRoute> { entry ->
+                // El flujo del teléfono avisa por aquí que cambió el número; no lleva ningún dato sensible.
+                val phoneChanged =
+                    entry.savedStateHandle
+                        .getStateFlow(PHONE_CHANGED_KEY, false)
+                        .collectAsStateWithLifecycle()
+                        .value
                 AccountDestination(
                     onLeave = { navController.popBackStack() },
                     onOpenOrders = { navController.navigate(OrdersRoute) },
                     onOpenAddresses = { navController.navigate(AddressesRoute()) },
+                    onVerifyPhone = { navController.navigate(PhoneVerifyRoute) },
+                    phoneChanged = phoneChanged,
+                    onPhoneChangeHandled = { entry.savedStateHandle[PHONE_CHANGED_KEY] = false },
+                )
+            }
+            composable<PhoneVerifyRoute> {
+                PhoneVerifyDestination(
+                    onBack = { navController.popBackStack() },
+                    onDone = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set(PHONE_CHANGED_KEY, true)
+                        navController.popBackStack()
+                    },
                 )
             }
             composable<AddressesRoute> { entry ->

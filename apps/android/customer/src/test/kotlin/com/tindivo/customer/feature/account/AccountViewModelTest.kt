@@ -63,13 +63,22 @@ class AccountViewModelTest {
     private suspend fun AccountViewModel.settled(): AccountUiState = state.first { it !is AccountUiState.Loading }
 
     @Test
+    fun `el telefono no sale en el toString del perfil ni del estado`() {
+        val profile = AccountProfileUi("Rosa Quispe", phoneVerified = true, phone = "+51987654321")
+
+        assertTrue(!profile.toString().contains("987654321"))
+        assertTrue(!AccountUiState.Loaded(profile).toString().contains("987654321"))
+    }
+
+    @Test
     fun `muestra lo que dice el servidor, con telefono sin verificar`() =
         runTest {
             server.enqueue(response(200, profile(verified = false)))
 
             val state = AccountViewModel(customer, store, configService).settled()
 
-            assertEquals(AccountUiState.Loaded(AccountProfileUi("Rosa Quispe", phoneVerified = false)), state)
+            val expected = AccountProfileUi("Rosa Quispe", phoneVerified = false, phone = "+51987654321")
+            assertEquals(AccountUiState.Loaded(expected), state)
         }
 
     @Test
@@ -79,7 +88,8 @@ class AccountViewModelTest {
 
             val state = AccountViewModel(customer, store, configService).settled()
 
-            assertEquals(AccountUiState.Loaded(AccountProfileUi("Rosa Quispe", phoneVerified = true)), state)
+            val expected = AccountProfileUi("Rosa Quispe", phoneVerified = true, phone = "+51987654321")
+            assertEquals(AccountUiState.Loaded(expected), state)
         }
 
     @Test

@@ -36,9 +36,19 @@ fun AccountDestination(
     onLeave: () -> Unit,
     onOpenOrders: () -> Unit,
     onOpenAddresses: () -> Unit,
+    onVerifyPhone: () -> Unit,
+    phoneChanged: Boolean,
+    onPhoneChangeHandled: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    // Volvió del flujo del teléfono: se pide el perfil otra vez para ver el número nuevo.
+    LaunchedEffect(phoneChanged) {
+        if (phoneChanged) {
+            viewModel.load()
+            onPhoneChangeHandled()
+        }
+    }
     LaunchedEffect(state) {
         if (state is AccountUiState.LoggedOut) onLeave()
     }
@@ -47,6 +57,7 @@ fun AccountDestination(
         onRetry = viewModel::load,
         onOpenOrders = onOpenOrders,
         onOpenAddresses = onOpenAddresses,
+        onVerifyPhone = onVerifyPhone,
         onSignOut = viewModel::signOut,
         onBack = onLeave,
     )
@@ -58,6 +69,7 @@ fun AccountScreen(
     onRetry: () -> Unit,
     onOpenOrders: () -> Unit,
     onOpenAddresses: () -> Unit,
+    onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -88,6 +100,7 @@ fun AccountScreen(
                         profile = state.profile,
                         onOpenOrders = onOpenOrders,
                         onOpenAddresses = onOpenAddresses,
+                        onVerifyPhone = onVerifyPhone,
                         onSignOut = onSignOut,
                     )
                 }
@@ -134,6 +147,7 @@ private fun Profile(
     profile: AccountProfileUi,
     onOpenOrders: () -> Unit,
     onOpenAddresses: () -> Unit,
+    onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -145,6 +159,21 @@ private fun Profile(
                 ),
             style = MaterialTheme.typography.bodyLarge,
         )
+        if (profile.phoneVerified && profile.phone != null) {
+            Text(text = profile.phone, style = MaterialTheme.typography.bodyLarge)
+        }
+        OutlinedButton(
+            onClick = onVerifyPhone,
+            modifier = Modifier.heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        ) {
+            Text(
+                text =
+                    stringResource(
+                        if (profile.phoneVerified) R.string.account_phone_change else R.string.account_phone_verify,
+                    ),
+            )
+        }
         Button(
             onClick = onOpenOrders,
             modifier = Modifier.heightIn(min = 48.dp),
@@ -178,6 +207,7 @@ private fun AccountPreview() {
             onRetry = {},
             onOpenOrders = {},
             onOpenAddresses = {},
+            onVerifyPhone = {},
             onSignOut = {},
             onBack = {},
         )
