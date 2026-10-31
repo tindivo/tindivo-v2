@@ -49,6 +49,7 @@ fun CartDestination(
     onBack: () -> Unit,
     onAddMore: (businessId: String) -> Unit,
     onSeeBusinesses: () -> Unit,
+    onCheckout: () -> Unit,
     viewModel: CartViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
@@ -59,6 +60,7 @@ fun CartDestination(
                 onBack = onBack,
                 onAddMore = onAddMore,
                 onSeeBusinesses = onSeeBusinesses,
+                onCheckout = onCheckout,
                 onChangeQuantity = viewModel::changeQuantity,
                 onRemove = viewModel::remove,
                 onClear = viewModel::clear,
@@ -73,6 +75,7 @@ class CartActions(
     val onChangeQuantity: (signature: String, delta: Int) -> Unit,
     val onRemove: (String) -> Unit,
     val onClear: () -> Unit,
+    val onCheckout: () -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,6 +110,16 @@ fun CartScreen(
                     }
                 },
             )
+        },
+        bottomBar = {
+            if (state is CartUiState.Filled) {
+                Button(
+                    onClick = actions.onCheckout,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp).heightIn(min = 48.dp),
+                ) {
+                    Text(text = stringResource(R.string.cart_continue))
+                }
+            }
         },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -291,7 +304,7 @@ private fun CartPreview() {
     TindivoTheme {
         CartScreen(
             state = CartUiState.Filled("n", "Pollería Don Lucho", listOf(line), "S/ 25.00"),
-            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}),
+            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}, {}),
         )
     }
 }

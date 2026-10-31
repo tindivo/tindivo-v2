@@ -25,6 +25,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -35,11 +37,16 @@ import com.tindivo.customer.feature.cart.CartDestination
 import com.tindivo.customer.feature.catalog.business.BusinessDestination
 import com.tindivo.customer.feature.catalog.business.BusinessRoute
 import com.tindivo.customer.feature.catalog.home.CatalogHomeDestination
+import com.tindivo.customer.feature.checkout.CheckoutActions
+import com.tindivo.customer.feature.checkout.CheckoutDestination
 import com.tindivo.customer.feature.diagnostics.DiagnosticsDestination
 import com.tindivo.customer.feature.orders.OrderDetailDestination
 import com.tindivo.customer.feature.orders.OrderDetailRoute
 import com.tindivo.customer.feature.orders.OrdersDestination
 import com.tindivo.customer.feature.orders.OrdersRoute
+import com.tindivo.customer.feature.phone.PHONE_CHANGED_KEY
+import com.tindivo.customer.feature.phone.PhoneVerifyDestination
+import com.tindivo.customer.feature.phone.PhoneVerifyRoute
 import com.tindivo.customer.feature.signin.SignInDestination
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
@@ -50,6 +57,10 @@ data object CatalogHomeRoute
 /** La bolsa del cliente: una sola, de un solo restaurante. */
 @Serializable
 data object CartRoute
+
+/** Revisar y confirmar el pedido de la bolsa (D-49). */
+@Serializable
+data object CheckoutRoute
 
 @Serializable
 data object DiagnosticsRoute
@@ -121,13 +132,33 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                         }
                     },
                     onSeeBusinesses = { navController.popBackStack<CatalogHomeRoute>(inclusive = false) },
+                    onCheckout = { navController.navigate(CheckoutRoute) },
                 )
             }
+            checkoutDestination(navController)
             composable<SignInRoute> { SignInDestination(onBack = { navController.popBackStack() }) }
-            composable<AccountRoute> {
+            composable<AccountRoute> { entry ->
+                // El flujo del teléfono avisa por aquí que cambió el número; no lleva ningún dato sensible.
+                val phoneChanged =
+                    entry.savedStateHandle
+                        .getStateFlow(PHONE_CHANGED_KEY, false)
+                        .collectAsStateWithLifecycle()
+                        .value
                 AccountDestination(
                     onLeave = { navController.popBackStack() },
                     onOpenOrders = { navController.navigate(OrdersRoute) },
+                    onVerifyPhone = { navController.navigate(PhoneVerifyRoute) },
+                    phoneChanged = phoneChanged,
+                    onPhoneChangeHandled = { entry.savedStateHandle[PHONE_CHANGED_KEY] = false },
+                )
+            }
+            composable<PhoneVerifyRoute> {
+                PhoneVerifyDestination(
+                    onBack = { navController.popBackStack() },
+                    onDone = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set(PHONE_CHANGED_KEY, true)
+                        navController.popBackStack()
+                    },
                 )
             }
             composable<OrdersRoute> {
@@ -141,6 +172,30 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
             composable<UpdateRoute> { UpdateScreen() }
         }
+    }
+}
+
+/** El checkout. Sale de aquí hacia Mi cuenta por un solo punto ([CheckoutActions.onOpenAccount]). */
+private fun NavGraphBuilder.checkoutDestination(navController: NavHostController) {
+    composable<CheckoutRoute> {
+        CheckoutDestination(
+            actions =
+                CheckoutActions(
+                    onBack = { navController.popBackStack() },
+                    // El pedido existe: el checkout sale de la pila para que «atrás» no vuelva a una bolsa vacía.
+                    onOrderOpened = { id ->
+                        navController.navigate(OrderDetailRoute(id)) {
+                            popUpTo<CheckoutRoute> { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    // Punto único hacia Mi cuenta (direcciones, verificar el celular): se recablea aquí cuando lleguen.
+                    onOpenAccount = { navController.navigate(AccountRoute) },
+                    onOpenOrders = { navController.navigate(OrdersRoute) },
+                    onSignIn = { navController.navigate(SignInRoute) },
+                    onSeeBusinesses = { navController.popBackStack<CatalogHomeRoute>(inclusive = false) },
+                ),
+        )
     }
 }
 
