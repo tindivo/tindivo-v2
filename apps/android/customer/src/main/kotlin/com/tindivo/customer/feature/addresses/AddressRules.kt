@@ -17,8 +17,8 @@ private const val COORDINATE_SCALE = 7
 /** Las tres etiquetas del contrato (`AddressLabelSchema`), tal como viajan. */
 internal val ADDRESS_LABELS = listOf("Casa", "Trabajo", "Otro")
 
-private val repeatedChar = Regex("(.)\1{3,}", RegexOption.IGNORE_CASE)
-private val repeatedPattern = Regex("^(.{2,})\1+$")
+private val repeatedChar = Regex("""(.)\1{3,}""", RegexOption.IGNORE_CASE)
+private val repeatedPattern = Regex("""^(.{2,})\1+$""")
 
 /** Texto basura que el servidor rechaza (`isGarbageText`): solo dígitos, 4 letras iguales seguidas o un patrón repetido. */
 internal fun isGarbageText(value: String): Boolean {
