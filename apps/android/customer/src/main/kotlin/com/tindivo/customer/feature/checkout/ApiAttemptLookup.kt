@@ -13,12 +13,17 @@ import java.util.UUID
  * - `not_found`: [LookupResult.NotFound].
  * - `unknown`, un estado que esta versión no conoce (el contrato avisa de que puede llegar uno nuevo) y cualquier
  *   error (red, 401, 403, 422, 426, 5xx, cuerpo ilegible): [LookupResult.Unknown]. Lo seguro es no enviar nada.
+ * - La consulta solo sale con el token de [accountId] ([CheckoutRepository.attempt]). Si la sesión cambió de cuenta,
+ *   no sale y vuelve un error de red: [LookupResult.Unknown]. Un `not_found` de otra cuenta nunca llega aquí.
  */
 class ApiAttemptLookup(
     private val repository: CheckoutRepository,
 ) : AttemptLookup {
-    override suspend fun lookup(key: UUID): LookupResult {
-        val result = repository.attempt(key)
+    override suspend fun lookup(
+        key: UUID,
+        accountId: String,
+    ): LookupResult {
+        val result = repository.attempt(key, accountId)
         if (result !is ApiResult.Success) return LookupResult.Unknown
         val order = result.data.order
         return when {

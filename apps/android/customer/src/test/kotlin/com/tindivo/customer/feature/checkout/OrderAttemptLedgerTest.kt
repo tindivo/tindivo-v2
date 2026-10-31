@@ -204,6 +204,7 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
             assertEquals(PlaceResult.AlreadyCreated(order), result)
             assertEquals(listOf(key(1)), sender.keys)
             assertEquals(listOf(key(1)), lookup.asked)
+            assertEquals(listOf(A), lookup.askedFor)
             assertNull(storedKey(A))
         }
 

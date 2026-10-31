@@ -67,9 +67,16 @@ sealed interface LookupResult {
     data object Unknown : LookupResult
 }
 
-/** Consulta si una clave ya creó su pedido. */
+/**
+ * Consulta si una clave ya creó su pedido. El servidor responde por la cuenta de la sesión, así que la respuesta solo
+ * vale para [accountId] si la consulta salió con la sesión de esa cuenta: si no, la implementación devuelve
+ * [LookupResult.Unknown].
+ */
 interface AttemptLookup {
-    suspend fun lookup(key: UUID): LookupResult
+    suspend fun lookup(
+        key: UUID,
+        accountId: String,
+    ): LookupResult
 }
 
 /** Lo que pasó al intentar crear el pedido. */
