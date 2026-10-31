@@ -13,11 +13,13 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.After
@@ -386,8 +388,68 @@ class ReviewViewModelTest {
             assertEquals(ReviewStep.Hidden, viewModel.state.value.step)
         }
 
+    @Test
+    fun `si la sesion pasa de una cuenta a otra y la carga falla, no queda nada de la primera`() =
+        runTest {
+            val viewModel = pendingViewModel()
+            viewModel.enableAutoPrompt()
+            server.enqueue(problem(500, "internal_error"))
+
+            switchToAccountB()
+
+            assertEquals(ReviewUiState(), viewModel.state.value)
+        }
+
+    @Test
+    fun `el envio de una cuenta que se fue no cambia el estado de la siguiente`() =
+        runTest {
+            val viewModel = readyToSend(delayMillis = 400, io = Dispatchers.IO)
+            viewModel.submit()
+            server.takeRequest()
+            server.takeRequest()
+            server.enqueue(ok(PENDING_B))
+
+            switchToAccountB()
+            viewModel.state.first { it.pending != null }
+            withContext(Dispatchers.Default) { delay(800) }
+
+            val state = viewModel.state.value
+            assertFalse(state.submitting)
+            assertEquals(ORDER_B_ID, state.pending?.orderId)
+            assertEquals(ReviewStep.Hidden, state.step)
+            assertEquals(0, state.rating)
+            assertNull(state.error)
+        }
+
+    @Test
+    fun `la pregunta vuelve a salir para la cuenta nueva aunque ya saliera para la anterior`() =
+        runTest {
+            val viewModel = pendingViewModel()
+            viewModel.enableAutoPrompt()
+            assertEquals(ReviewStep.Prompt, viewModel.state.value.step)
+            server.enqueue(ok(PENDING_B))
+
+            switchToAccountB()
+
+            assertEquals(ReviewStep.Prompt, viewModel.state.value.step)
+            assertEquals(ORDER_B_ID, viewModel.state.value.pending?.orderId)
+        }
+
+    private suspend fun switchToAccountB() {
+        store.signInUserId = "user-2"
+        store.signInWithGoogle("token", "nonce")
+    }
+
     private companion object {
         val ORDER_ID: UUID = UUID.fromString("5b2a737a-018f-4c2d-9a11-6f0d3c1e8a01")
+        val ORDER_B_ID: UUID = UUID.fromString("5b2a737a-018f-4c2d-9a11-6f0d3c1e8a99")
+
+        const val PENDING_B = """
+            {"data":{"orderId":"5b2a737a-018f-4c2d-9a11-6f0d3c1e8a99","shortId":"WXYZ2345",
+             "businessId":"6b2a737a-018f-4c2d-9a11-6f0d3c1e8a02","businessName":"Cevichería Luz","businessLogoUrl":null,
+             "deliveredAt":"2026-10-26T15:00:00.000Z","closesAt":"2026-11-02T15:00:00.000Z",
+             "tags":[{"id":"rapido","label":"Llegó rápido"}]}}
+        """
 
         const val PENDING = """
             {"data":{"orderId":"5b2a737a-018f-4c2d-9a11-6f0d3c1e8a01","shortId":"ABCD2345",

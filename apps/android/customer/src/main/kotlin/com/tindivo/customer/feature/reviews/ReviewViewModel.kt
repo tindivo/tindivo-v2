@@ -9,6 +9,8 @@ import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +39,9 @@ internal class ReviewViewModel
         /** La pregunta emergente sale una sola vez por ViewModel, aunque se descarte o se vuelva a la pantalla. */
         private var promptShown = false
         private var loadedFor: String? = null
+
+        /** El envío en curso: si la cuenta cambia o se cierra, se cancela y su resultado no se publica. */
+        private var submitJob: Job? = null
 
         init {
             viewModelScope.launch { sessionStore.state.collect(::onSession) }
@@ -84,7 +89,7 @@ internal class ReviewViewModel
             if (pending == null || !current.canSubmit) return
             // `submitting` se fija antes de lanzar nada: un doble toque ve ya el estado nuevo.
             mutableState.update { it.copy(submitting = true, error = null) }
-            viewModelScope.launch {
+            submitJob = viewModelScope.launch {
                 val result =
                     reviews.create(
                         orderId = pending.orderId,
@@ -92,6 +97,7 @@ internal class ReviewViewModel
                         tags = pending.tags.map { it.id }.filter { it in current.selectedTags },
                         comment = current.comment.trim().ifEmpty { null },
                     )
+                ensureActive()
                 when (result) {
                     is ApiResult.Success -> {
                         mutableState.value = ReviewUiState()
@@ -124,6 +130,8 @@ internal class ReviewViewModel
             when (session) {
                 is SessionState.SignedIn -> {
                     if (loadedFor != session.userId) {
+                        // De una cuenta a otra sin pasar por la salida: lo de la anterior no se queda ni se publica.
+                        if (loadedFor != null) clearAccountState()
                         loadedFor = session.userId
                         load()
                     }
@@ -132,14 +140,20 @@ internal class ReviewViewModel
                 SessionState.SignedOut -> {
                     // Lo de la cuenta que salió no se queda en pantalla.
                     loadedFor = null
-                    promptShown = false
-                    mutableState.value = ReviewUiState()
+                    clearAccountState()
                 }
 
                 SessionState.Unknown -> {
                     Unit
                 }
             }
+        }
+
+        private fun clearAccountState() {
+            submitJob?.cancel()
+            submitJob = null
+            promptShown = false
+            mutableState.value = ReviewUiState()
         }
 
         private suspend fun load() {
