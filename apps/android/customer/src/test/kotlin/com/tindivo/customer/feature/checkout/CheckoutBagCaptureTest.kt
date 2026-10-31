@@ -66,8 +66,13 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
         check(reached.await(WAIT_SECONDS, TimeUnit.SECONDS))
         whileHeld()
         release.countDown()
-        repeat(MAX_TURNS) {
-            if (!vm.state.value.sending) return
+        var turns = 0
+        while (vm.state.value.sending && turns++ < MAX_TURNS) {
+            Thread.sleep(TURN_MS)
+            advanceUntilIdle()
+        }
+        // Lo que sigue en vuelo (la recotización de la bolsa nueva, vaciar la bolsa) termina antes de acabar la prueba.
+        repeat(DRAIN_TURNS) {
             Thread.sleep(TURN_MS)
             advanceUntilIdle()
         }
@@ -121,5 +126,6 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
         const val WAIT_SECONDS = 20L
         const val MAX_TURNS = 200
         const val TURN_MS = 25L
+        const val DRAIN_TURNS = 20
     }
 }
