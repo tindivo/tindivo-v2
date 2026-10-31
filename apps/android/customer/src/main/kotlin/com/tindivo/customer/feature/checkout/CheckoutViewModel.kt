@@ -161,13 +161,13 @@ class CheckoutViewModel
             quoteJob =
                 viewModelScope.launch {
                     if (debounced) debounce.await()
-                    val outcome = fetchQuote()
+                    val outcome = fetchQuote(cart)
                     mutableState.update { it.withQuote(outcome, lastIntent) }
                 }
         }
 
-        private suspend fun fetchQuote(): QuoteOutcome {
-            val current = cart ?: return QuoteOutcome.Failed
+        private suspend fun fetchQuote(bag: Cart?): QuoteOutcome {
+            val current = bag ?: return QuoteOutcome.Failed
             val request = buildQuoteRequest(mutableState.value, current) ?: return QuoteOutcome.Invalid
             return when (val result = checkout.quote(request)) {
                 is ApiResult.Failure -> QuoteOutcome.Failed
@@ -181,14 +181,19 @@ class CheckoutViewModel
             if (current.phase != CheckoutPhase.Form || current.sending || !current.cta.canConfirm) return
             // La cuenta se captura UNA vez aqui y firma el pedido hasta el POST: la sesion no se vuelve a leer.
             val account = accountId
+            // La bolsa tambien se captura UNA vez: es la que se cotiza, la que se compara y la que se envia.
+            val bag = cart
             mutableState.update { it.copy(sending = true, message = null) }
-            viewModelScope.launch { submit(account) }
+            viewModelScope.launch { submit(account, bag) }
         }
 
-        private suspend fun submit(account: String?) {
+        private suspend fun submit(
+            account: String?,
+            bag: Cart?,
+        ) {
             quoteJob?.cancel()
             val shown = mutableState.value.quote?.total
-            val outcome = fetchQuote()
+            val outcome = fetchQuote(bag)
             val fresh = (outcome as? QuoteOutcome.Ok)?.view
             if (fresh == null) {
                 mutableState.update { it.withQuote(outcome, lastIntent).copy(sending = false) }
@@ -199,9 +204,11 @@ class CheckoutViewModel
             mutableState.value = next
             val ready = next.copy(sending = false).cta.canConfirm
             when {
+                // La bolsa cambio mientras se recotizaba: el total mostrado no es el de lo que se enviaria.
+                cart?.fingerprint() != bag?.fingerprint() -> stop(CheckoutMessage.OptionsChanged)
                 shown == null || fresh.total.compareTo(shown) != 0 -> stop(CheckoutMessage.TotalChanged(fresh.total))
                 next.pay != before.pay || !ready -> stop(CheckoutMessage.OptionsChanged)
-                else -> place(account, next, fresh)
+                else -> place(account, bag, next, fresh)
             }
         }
 
@@ -209,10 +216,10 @@ class CheckoutViewModel
 
         private suspend fun place(
             account: String?,
+            current: Cart?,
             form: CheckoutUiState,
             quote: QuoteView,
         ) {
-            val current = cart
             val request = if (current == null) null else buildOrderRequest(form, current, quote)
             if (account == null || current == null || request == null) {
                 stop(CheckoutMessage.Generic)
@@ -269,11 +276,13 @@ class CheckoutViewModel
         /** «Ya revisé, hacer este pedido»: olvida el intento anterior y vuelve a intentar UNA vez. */
         fun acknowledgeAndRetry() {
             val account = accountId
+            // La bolsa tambien se captura UNA vez: es la que se cotiza, la que se compara y la que se envia.
+            val bag = cart
             if (account == null || !mutableState.value.reconcileSeen || mutableState.value.sending) return
             mutableState.update { it.copy(phase = CheckoutPhase.Form, sending = true, message = null) }
             viewModelScope.launch {
                 ledger.acknowledgeReconciled(account)
-                submit(account)
+                submit(account, bag)
             }
         }
     }
