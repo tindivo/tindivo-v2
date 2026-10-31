@@ -318,6 +318,50 @@ class PhoneVerifyViewModelTest {
         }
 
     @Test
+    fun `cerrada la sesion desde el paso del codigo ninguna accion cambia el estado ni sale a la red`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            viewModel.onCodeChanged("123456")
+
+            store.signOut()
+
+            val closed = PhoneUiState(loggedOut = true)
+            assertEquals(closed, viewModel.state.value)
+            val before = server.requestCount
+            viewModel.changeNumber()
+            viewModel.onPhoneChanged("912345678")
+            viewModel.onCodeChanged("654321")
+            viewModel.sendCode()
+            clock.now = Instant.parse("2026-10-30T15:05:00Z")
+            viewModel.resend()
+            viewModel.verify()
+            viewModel.confirmTransfer()
+            viewModel.dismissTransfer()
+            assertEquals(closed, viewModel.state.value)
+            assertEquals(before, server.requestCount)
+        }
+
+    @Test
+    fun `el cambio directo de cuenta cierra igual y no se reabre`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+
+            store.signInUserId = "user-2"
+            store.signInWithGoogle("token", "nonce")
+
+            val closed = PhoneUiState(loggedOut = true)
+            assertEquals(closed, viewModel.state.value)
+            val before = server.requestCount
+            viewModel.changeNumber()
+            viewModel.onPhoneChanged("912345678")
+            viewModel.sendCode()
+            assertEquals(closed, viewModel.state.value)
+            assertEquals(before, server.requestCount)
+        }
+
+    @Test
     fun `una respuesta que llega tras cerrar la sesion no se publica`() =
         runTest {
             server.enqueue(response(200, SENT, delayMillis = 300))

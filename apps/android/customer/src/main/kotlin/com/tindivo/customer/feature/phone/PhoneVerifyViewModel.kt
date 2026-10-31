@@ -94,23 +94,27 @@ internal class PhoneVerifyViewModel
         private var ticker: Job? = null
         private var resendAt: Instant = Instant.EPOCH
 
+        // Irreversible: una vez cerrada la sesión, esta instancia no acepta acciones ni publica resultados.
+        private var closed = false
+
         init {
             val watch = SessionWatch()
             viewModelScope.launch { sessionStore.state.collect { if (watch.ended(it)) endSession() } }
         }
 
         fun onPhoneChanged(text: String) {
-            if (_state.value.step != PhoneStep.Number) return
+            if (closed || _state.value.step != PhoneStep.Number) return
             _state.update { if (it.loggedOut) it else it.copy(phone = text.digitsOnly(PHONE_LENGTH), error = null) }
         }
 
         fun onCodeChanged(text: String) {
-            if (_state.value.step != PhoneStep.Code) return
+            if (closed || _state.value.step != PhoneStep.Code) return
             _state.update { if (it.loggedOut) it else it.copy(code = text.digitsOnly(CODE_LENGTH), error = null) }
         }
 
         /** «Enviar código» (primer envío). */
         fun sendCode() {
+            if (closed) return
             val phone = _state.value.phone
             if (!phone.matches(PERU_MOBILE)) {
                 fail(PhoneError.InvalidNumber)
@@ -122,13 +126,13 @@ internal class PhoneVerifyViewModel
         /** «Reenviar código»: solo cuando pasaron los 60 s. */
         fun resend() {
             val current = _state.value
-            if (current.step != PhoneStep.Code || clock.instant().isBefore(resendAt)) return
+            if (closed || current.step != PhoneStep.Code || clock.instant().isBefore(resendAt)) return
             launchCall { sendAndAdvance(current.phone) }
         }
 
         fun verify() {
             val current = _state.value
-            if (current.step != PhoneStep.Code) return
+            if (closed || current.step != PhoneStep.Code) return
             if (current.code.length != CODE_LENGTH) {
                 fail(PhoneError.InvalidCode)
                 return
@@ -143,6 +147,7 @@ internal class PhoneVerifyViewModel
 
         /** «Usar en esta cuenta». Si el permiso ya venció, no se llama: se pide un código nuevo. */
         fun confirmTransfer() {
+            if (closed) return
             val offer = _state.value.transfer ?: return
             if (!offer.expiresAt.isAfter(clock.instant())) {
                 if (!_state.value.sending) {
@@ -166,13 +171,13 @@ internal class PhoneVerifyViewModel
 
         /** «Cancelar» en el diálogo de traslado: el permiso se olvida. */
         fun dismissTransfer() {
-            if (_state.value.sending) return
+            if (closed || _state.value.sending) return
             _state.update { it.copy(transfer = null, code = "") }
         }
 
         /** «Cambiar número»: vuelve a la pantalla del número y olvida código y permiso. */
         fun changeNumber() {
-            if (_state.value.sending) return
+            if (closed || _state.value.sending) return
             ticker?.cancel()
             resendAt = Instant.EPOCH
             _state.update { PhoneUiState(phone = it.phone) }
@@ -227,7 +232,7 @@ internal class PhoneVerifyViewModel
         /** Una sola llamada a la vez: con otra en curso, o con la sesión cerrada, el toque no hace nada. */
         private fun launchCall(block: suspend () -> Unit) {
             val current = _state.value
-            if (current.sending || current.loggedOut) return
+            if (closed || current.sending || current.loggedOut) return
             _state.update { it.copy(sending = true, error = null) }
             work = viewModelScope.launch { block() }
         }
@@ -249,15 +254,18 @@ internal class PhoneVerifyViewModel
 
         /** Un error de validación local; con la sesión cerrada no toca el estado. */
         private fun fail(error: PhoneError) {
+            if (closed) return
             _state.update { if (it.loggedOut) it else it.copy(error = error) }
         }
 
         /** Lo que llega después de cerrar la sesión no se publica. */
         private fun settle(next: (PhoneUiState) -> PhoneUiState) {
+            if (closed) return
             _state.update { if (it.loggedOut) it else next(it).copy(sending = false) }
         }
 
         private fun endSession() {
+            closed = true
             work?.cancel()
             ticker?.cancel()
             resendAt = Instant.EPOCH
