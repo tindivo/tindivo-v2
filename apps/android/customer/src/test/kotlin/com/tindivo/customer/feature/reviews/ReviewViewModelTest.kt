@@ -112,7 +112,10 @@ class ReviewViewModelTest {
             val state = pendingViewModel().state.value
 
             assertEquals(ORDER_ID, state.pending?.orderId)
-            assertEquals(listOf(ReviewTagUi("rapido", "Llegó rápido")), state.pending?.tags)
+            assertEquals(
+                listOf(ReviewTagUi("rapido", "Llegó rápido"), ReviewTagUi("otro", "Otro")),
+                state.pending?.tags,
+            )
             assertEquals(ReviewStep.Hidden, state.step)
             assertEquals("/api/v1/customer/reviews/pending", server.takeRequest().url.encodedPath)
         }
