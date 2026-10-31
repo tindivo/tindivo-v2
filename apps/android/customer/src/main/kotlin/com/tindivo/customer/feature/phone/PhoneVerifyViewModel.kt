@@ -114,7 +114,7 @@ internal class PhoneVerifyViewModel
 
         /** «Enviar código» (primer envío). */
         fun sendCode() {
-            if (closed) return
+            if (closed || _state.value.step != PhoneStep.Number) return
             val phone = _state.value.phone
             if (!phone.matches(PERU_MOBILE)) {
                 fail(PhoneError.InvalidNumber)

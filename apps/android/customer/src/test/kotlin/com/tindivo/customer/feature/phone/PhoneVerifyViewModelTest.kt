@@ -392,6 +392,20 @@ class PhoneVerifyViewModelTest {
         }
 
     @Test
+    fun `un segundo enviar desde el paso del codigo no sale a la red antes de los 60 segundos`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            assertEquals(1, server.requestCount)
+
+            server.enqueue(response(200, SENT))
+            viewModel.sendCode()
+
+            assertEquals(1, server.requestCount)
+            assertEquals(PhoneStep.Code, viewModel.state.value.step)
+        }
+
+    @Test
     fun `reenviar no se habilita antes de 60 segundos`() =
         runTest {
             val viewModel = viewModel()
