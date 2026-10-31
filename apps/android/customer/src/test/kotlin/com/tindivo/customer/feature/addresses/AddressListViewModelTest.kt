@@ -119,4 +119,16 @@ internal class AddressListViewModelTest : AddressHarness() {
             assertEquals(AddressListUiState.LoggedOut, vm.settled())
             assertEquals(1, store.signOutCalls)
         }
+
+    @Test
+    fun `si la sesion pasa a otra cuenta la lista queda cerrada y sin las direcciones de la anterior`() =
+        runTest {
+            server.enqueue(addressList(address(), address(ID_B, isDefault = false)))
+            val vm = viewModel()
+            assertTrue(vm.settled() is AddressListUiState.Loaded)
+
+            store.switchTo("user-2")
+
+            assertEquals(AddressListUiState.LoggedOut, vm.state.value)
+        }
 }

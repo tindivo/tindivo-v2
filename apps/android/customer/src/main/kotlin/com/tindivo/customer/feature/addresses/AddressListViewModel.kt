@@ -7,8 +7,8 @@ import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequest
 import com.tindivo.customer.config.ConfigService
-import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -56,9 +56,10 @@ internal class AddressListViewModel
         private var job: Job? = null
 
         init {
+            val watch = SessionWatch()
             viewModelScope.launch {
                 sessionStore.state.collect {
-                    if (it is SessionState.SignedOut) {
+                    if (watch.ended(it)) {
                         job?.cancel()
                         _state.value = AddressListUiState.LoggedOut
                     }

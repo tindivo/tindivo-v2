@@ -12,8 +12,8 @@ import com.tindivo.core.network.generated.model.CreateOrderRequestCoordinates
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequest
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequestCoordinates
 import com.tindivo.customer.config.ConfigService
-import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -72,14 +72,17 @@ internal class AddressFormViewModel
 
         private var job: Job? = null
 
+        private val loggedOut get() = _state.value.outcome == FormOutcome.LoggedOut
+
         /** El punto con el que se abrió: solo si cambia (o no estaba confirmado) viaja al guardar. */
         private var originalPoint: GeoPoint? = null
         private var originalConfirmed = false
 
         init {
+            val watch = SessionWatch()
             viewModelScope.launch {
                 sessionStore.state.collect {
-                    if (it is SessionState.SignedOut) {
+                    if (watch.ended(it)) {
                         job?.cancel()
                         _state.update { s -> s.copy(outcome = FormOutcome.LoggedOut) }
                     }
@@ -89,7 +92,7 @@ internal class AddressFormViewModel
         }
 
         fun load() {
-            if (job?.isActive == true) return
+            if (job?.isActive == true || loggedOut) return
             _state.update { it.copy(loading = true, loadError = null) }
             job = viewModelScope.launch { loadAll() }
         }
@@ -117,13 +120,13 @@ internal class AddressFormViewModel
         fun save() {
             val s = _state.value
             val point = s.point
-            if (!s.canSave || point == null || job?.isActive == true) return
+            if (!s.canSave || point == null || job?.isActive == true || loggedOut) return
             _state.update { it.copy(saving = true, saveError = null) }
             job =
                 viewModelScope.launch {
                     val result = if (editingId == null) create(s, point) else update(editingId, s, point)
                     when (result) {
-                        is ApiResult.Success -> _state.update { it.copy(saving = false, outcome = FormOutcome.Saved) }
+                        is ApiResult.Success -> settle { it.copy(saving = false, outcome = FormOutcome.Saved) }
                         is ApiResult.Failure -> onActionFailure(result.error)
                     }
                 }
@@ -132,19 +135,19 @@ internal class AddressFormViewModel
         /** Borra la dirección que se está editando, ya confirmado en la propia pantalla. */
         fun confirmDelete() {
             val id = editingId ?: return
-            if (!_state.value.confirmingDelete || job?.isActive == true) return
+            if (!_state.value.confirmingDelete || job?.isActive == true || loggedOut) return
             _state.update { it.copy(deleting = true, saveError = null) }
             job =
                 viewModelScope.launch {
                     when (val result = addresses.delete(id)) {
                         is ApiResult.Success -> {
-                            _state.update { it.copy(deleting = false, outcome = FormOutcome.Deleted) }
+                            settle { it.copy(deleting = false, outcome = FormOutcome.Deleted) }
                         }
 
                         // Si ya no existe (la borraron en otro teléfono) el resultado es el que se quería.
                         is ApiResult.Failure -> {
                             if (result.error.isNotFound()) {
-                                _state.update { it.copy(deleting = false, outcome = FormOutcome.Deleted) }
+                                settle { it.copy(deleting = false, outcome = FormOutcome.Deleted) }
                             } else {
                                 onActionFailure(result.error)
                             }
@@ -224,7 +227,7 @@ internal class AddressFormViewModel
         ) {
             originalPoint = current?.point
             originalConfirmed = current?.confirmed == true
-            _state.update {
+            settle {
                 it.copy(
                     loading = false,
                     loadError = null,
@@ -241,12 +244,17 @@ internal class AddressFormViewModel
 
         private suspend fun onLoadFailure(error: AppError) {
             if (handleSession(error)) return
-            _state.update { it.copy(loading = false, loadError = error) }
+            settle { it.copy(loading = false, loadError = error) }
         }
 
         private suspend fun onActionFailure(error: AppError) {
             if (handleSession(error)) return
-            _state.update { it.copy(saving = false, deleting = false, confirmingDelete = false, saveError = error) }
+            settle { it.copy(saving = false, deleting = false, confirmingDelete = false, saveError = error) }
+        }
+
+        /** Una respuesta que llega después de cerrar la sesión (o de cambiar de cuenta) no deshace el cierre. */
+        private fun settle(change: (AddressFormState) -> AddressFormState) {
+            _state.update { if (it.outcome == FormOutcome.LoggedOut) it else change(it) }
         }
 
         /** Avisa de un 426 y cierra la sesión ante un 401. Devuelve `true` si la sesión terminó. */

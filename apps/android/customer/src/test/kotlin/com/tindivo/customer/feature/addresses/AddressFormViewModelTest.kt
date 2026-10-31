@@ -6,8 +6,10 @@ import com.tindivo.core.network.AppError
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import mockwebserver3.RecordedRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -254,5 +256,27 @@ internal class AddressFormViewModelTest : AddressHarness() {
 
             assertTrue(state.loadError is AppError.Unknown)
             assertFalse(state.canSave)
+        }
+
+    @Test
+    fun `si la sesion pasa a otra cuenta con un guardado en curso el cierre no se deshace y no sale otra peticion`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList(address()))
+            server.enqueue(response(200, """{"data":${address()}}""", delayMillis = 400))
+            val vm = viewModel(id = ID_A, io = Dispatchers.IO)
+            vm.ready()
+            vm.onReference("Otra referencia mas clara")
+            vm.save()
+            assertTrue(vm.state.value.saving)
+
+            store.switchTo("user-2")
+            withContext(Dispatchers.IO) { delay(700) }
+
+            assertEquals(FormOutcome.LoggedOut, vm.state.value.outcome)
+            vm.save()
+            vm.confirmDelete()
+            assertEquals(3, server.requestCount)
+            assertEquals(FormOutcome.LoggedOut, vm.state.value.outcome)
         }
 }
