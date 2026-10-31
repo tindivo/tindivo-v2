@@ -44,6 +44,13 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
         vm: CheckoutViewModel,
         whileHeld: suspend () -> Unit,
     ) {
+        // La red va por otro hilo: se espera a que el checkout cargue y cotice antes de confirmar.
+        var turns = 0
+        while (!vm.state.value.cta.canConfirm && turns++ < MAX_TURNS) {
+            advanceUntilIdle()
+            Thread.sleep(TURN_MS)
+        }
+        check(vm.state.value.cta.canConfirm)
         val quote = handlers.getValue("POST /customer/checkout/quote")
         var held = false
         handlers["POST /customer/checkout/quote"] = { request ->
