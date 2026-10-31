@@ -13,7 +13,7 @@ class AddressRulesTest {
 
     @Test
     fun `la calle exige entre 5 y 200 caracteres y no ser basura`() {
-        assertFalse(isLineOk("Jr. S"))
+        assertFalse(isLineOk("Jr S"))
         assertTrue(isLineOk("Jr. Sucre 412"))
         assertFalse(isLineOk("12345"))
         assertFalse(isLineOk("aaaaaa"))

@@ -26,9 +26,13 @@ import java.math.BigDecimal
  * El generador solo deja configurar el `Json` antes de su primer uso. Todo uso pasa por [apiCall] o [toAppError], que
  * llaman a [ensureConfigured] primero, y los proveedores de Hilt que crean los repositorios también.
  */
+@OptIn(ExperimentalSerializationApi::class)
 object GeneratedJson {
     private val configured: Unit by lazy {
         Serializer.kotlinxSerializationJsonConfiguration = {
+            // Lo que es null no viaja: el contrato usa `.optional()` (rechaza null con 422) y en el PATCH de direcciones
+            // `coordinates: null` BORRA el punto, así que un null implícito sería un borrado no pedido.
+            explicitNulls = false
             serializersModule =
                 serializersModule overwriteWith SerializersModule { contextual(BigDecimal::class, DecimalAsJsonNumber) }
         }
