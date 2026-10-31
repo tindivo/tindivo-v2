@@ -50,7 +50,7 @@ abstract class CheckoutHarness {
     protected val session = FakeSessionStore()
 
     /** El token que lleva cada petición: el de la cuenta de [session]; una prueba lo cambia para simular otra cuenta. */
-    protected val tokens = SessionTokens(token = sessionJwt("user-1"))
+    internal val tokens = SessionTokens(token = sessionJwt("user-1"))
     protected val requests = CopyOnWriteArrayList<RecordedRequest>()
 
     /** `METHOD /ruta` → respuesta. Cada prueba puede cambiar una; el resto es el camino feliz. */

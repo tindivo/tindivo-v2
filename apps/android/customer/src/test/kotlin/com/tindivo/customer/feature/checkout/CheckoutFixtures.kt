@@ -19,7 +19,10 @@ class FakeAttemptLookup(
 ) : AttemptLookup {
     val asked = mutableListOf<UUID>()
 
-    override suspend fun lookup(key: UUID): LookupResult {
+    override suspend fun lookup(
+        key: UUID,
+        accountId: String,
+    ): LookupResult {
         asked += key
         return next
     }
