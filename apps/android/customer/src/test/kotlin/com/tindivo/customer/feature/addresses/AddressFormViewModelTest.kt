@@ -310,15 +310,17 @@ internal class AddressFormViewModelTest : AddressHarness() {
             tokens.onRefresh = sessionJwt("user-2")
             vm.save()
             assertTrue(vm.state.value.saving)
+            // La petición ya está en el servidor, retenida: el token pasa a otra cuenta mientras espera (sin cancelar el
+            // trabajo, para probar el interceptor y no solo la cancelación).
+            server.takeRequest()
+            server.takeRequest()
+            val held = server.takeRequest()
 
             tokens.token = sessionJwt("user-2")
-            store.switchTo("user-2")
             withContext(Dispatchers.IO) { delay(700) }
 
             assertEquals(FormOutcome.LoggedOut, vm.state.value.outcome)
             assertEquals(3, server.requestCount)
-            server.takeRequest()
-            server.takeRequest()
-            assertEquals("Bearer ${sessionJwt("user-1")}", server.takeRequest().headers["Authorization"])
+            assertEquals("Bearer ${sessionJwt("user-1")}", held.headers["Authorization"])
         }
 }
