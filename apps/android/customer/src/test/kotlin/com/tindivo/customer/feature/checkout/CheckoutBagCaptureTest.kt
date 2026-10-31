@@ -66,8 +66,8 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
         check(reached.await(WAIT_SECONDS, TimeUnit.SECONDS))
         whileHeld()
         release.countDown()
-        var turns = 0
-        while (vm.state.value.sending && turns++ < MAX_TURNS) {
+        var waited = 0
+        while (vm.state.value.sending && waited++ < MAX_TURNS) {
             Thread.sleep(TURN_MS)
             advanceUntilIdle()
         }
