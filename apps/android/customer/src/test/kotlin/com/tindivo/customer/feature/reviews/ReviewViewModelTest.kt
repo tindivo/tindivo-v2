@@ -432,7 +432,11 @@ class ReviewViewModelTest {
             switchToAccountB()
 
             assertEquals(ReviewStep.Prompt, viewModel.state.value.step)
-            assertEquals(ORDER_B_ID, viewModel.state.value.pending?.orderId)
+            assertEquals(
+                ORDER_B_ID,
+                viewModel.state.value.pending
+                    ?.orderId,
+            )
         }
 
     private suspend fun switchToAccountB() {

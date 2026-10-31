@@ -89,27 +89,28 @@ internal class ReviewViewModel
             if (pending == null || !current.canSubmit) return
             // `submitting` se fija antes de lanzar nada: un doble toque ve ya el estado nuevo.
             mutableState.update { it.copy(submitting = true, error = null) }
-            submitJob = viewModelScope.launch {
-                val result =
-                    reviews.create(
-                        orderId = pending.orderId,
-                        rating = current.rating,
-                        tags = pending.tags.map { it.id }.filter { it in current.selectedTags },
-                        comment = current.comment.trim().ifEmpty { null },
-                    )
-                ensureActive()
-                when (result) {
-                    is ApiResult.Success -> {
-                        mutableState.value = ReviewUiState()
-                    }
+            submitJob =
+                viewModelScope.launch {
+                    val result =
+                        reviews.create(
+                            orderId = pending.orderId,
+                            rating = current.rating,
+                            tags = pending.tags.map { it.id }.filter { it in current.selectedTags },
+                            comment = current.comment.trim().ifEmpty { null },
+                        )
+                    ensureActive()
+                    when (result) {
+                        is ApiResult.Success -> {
+                            mutableState.value = ReviewUiState()
+                        }
 
-                    is ApiResult.Failure -> {
-                        configService.reportUpgrade(result.error)
-                        val error = ReviewSubmitError(result.error.detail())
-                        mutableState.update { it.copy(submitting = false, error = error) }
+                        is ApiResult.Failure -> {
+                            configService.reportUpgrade(result.error)
+                            val error = ReviewSubmitError(result.error.detail())
+                            mutableState.update { it.copy(submitting = false, error = error) }
+                        }
                     }
                 }
-            }
         }
 
         /**
