@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.addresses
 import androidx.lifecycle.SavedStateHandle
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.AppError
+import com.tindivo.customer.feature.checkout.sessionJwt
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -278,5 +279,46 @@ internal class AddressFormViewModelTest : AddressHarness() {
             vm.confirmDelete()
             assertEquals(3, server.requestCount)
             assertEquals(FormOutcome.LoggedOut, vm.state.value.outcome)
+        }
+
+    @Test
+    fun `si el token ya es de otra cuenta guardar no manda nada y el formulario se cierra`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList(address()))
+            val vm = viewModel(id = ID_A)
+            vm.ready()
+            vm.onReference("Otra referencia mas clara")
+
+            tokens.token = sessionJwt("user-2")
+            vm.save()
+
+            assertEquals(FormOutcome.LoggedOut, vm.state.value.outcome)
+            assertEquals(2, server.requestCount)
+        }
+
+    @Test
+    fun `con un guardado retenido y la sesion en otra cuenta la repeticion tras el 401 con el token nuevo no sale`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList(address()))
+            val body = """{"type":"about:blank","title":"x","status":401,"code":"unauthorized"}"""
+            server.enqueue(response(401, body, delayMillis = 400))
+            val vm = viewModel(id = ID_A, io = Dispatchers.IO)
+            vm.ready()
+            vm.onReference("Otra referencia mas clara")
+            tokens.onRefresh = sessionJwt("user-2")
+            vm.save()
+            assertTrue(vm.state.value.saving)
+
+            tokens.token = sessionJwt("user-2")
+            store.switchTo("user-2")
+            withContext(Dispatchers.IO) { delay(700) }
+
+            assertEquals(FormOutcome.LoggedOut, vm.state.value.outcome)
+            assertEquals(3, server.requestCount)
+            server.takeRequest()
+            server.takeRequest()
+            assertEquals("Bearer ${sessionJwt("user-1")}", server.takeRequest().headers["Authorization"])
         }
 }

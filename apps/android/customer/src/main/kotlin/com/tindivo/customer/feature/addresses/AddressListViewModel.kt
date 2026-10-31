@@ -2,11 +2,13 @@ package com.tindivo.customer.feature.addresses
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tindivo.core.network.AccountMismatchException
 import com.tindivo.core.network.AddressRepository
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequest
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,6 +57,9 @@ internal class AddressListViewModel
 
         private var job: Job? = null
 
+        /** La cuenta con la que se abrió la pantalla: cada llamada va atada a ella y, sin cuenta, no se llama. */
+        private val accountId: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+
         init {
             val watch = SessionWatch()
             viewModelScope.launch {
@@ -71,20 +76,26 @@ internal class AddressListViewModel
         /** Vuelve a pedir la libreta. Con una llamada en curso o la sesión cerrada, no lanza otra. */
         fun refresh() {
             if (job?.isActive == true || _state.value is AddressListUiState.LoggedOut) return
+            val account = accountId
+            if (account == null) {
+                _state.value = AddressListUiState.LoggedOut
+                return
+            }
             _state.value = AddressListUiState.Loading
-            job = viewModelScope.launch { load() }
+            job = viewModelScope.launch { load(account) }
         }
 
         /** Pide al servidor que [id] sea la predeterminada; él despeja la anterior. Un segundo toque mientras tanto no hace nada. */
         fun makeDefault(id: UUID) {
             val current = _state.value as? AddressListUiState.Loaded ?: return
+            val account = accountId ?: return
             if (job?.isActive == true || current.items.firstOrNull { it.id == id }?.isDefault != false) return
             _state.value = current.copy(busy = true, actionFailed = null)
             job =
                 viewModelScope.launch {
-                    when (val result = addresses.update(id, UpdateCustomerAddressRequest(isDefault = true))) {
+                    when (val result = addresses.update(id, UpdateCustomerAddressRequest(isDefault = true), account)) {
                         is ApiResult.Success -> {
-                            load()
+                            load(account)
                         }
 
                         is ApiResult.Failure -> {
@@ -95,8 +106,8 @@ internal class AddressListViewModel
                 }
         }
 
-        private suspend fun load() {
-            when (val result = addresses.list()) {
+        private suspend fun load(account: String) {
+            when (val result = addresses.list(account)) {
                 is ApiResult.Success -> {
                     val items = result.data.items.map { it.toUi() }
                     settle(if (items.isEmpty()) AddressListUiState.Empty else AddressListUiState.Loaded(items))
@@ -111,6 +122,11 @@ internal class AddressListViewModel
         /** Avisa de un 426 y cierra la sesión ante un 401; devuelve el error si la pantalla debe mostrarlo. */
         private suspend fun onFailure(error: AppError): AppError? {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
+            if (error is AppError.Network && error.cause is AccountMismatchException) {
+                // La sesión ya es de otra cuenta: no salió nada. Se cierra sin cerrar la sesión nueva.
+                _state.value = AddressListUiState.LoggedOut
+                return null
+            }
             if (!error.isUnauthorized()) return error
             withContext(NonCancellable) { sessionStore.signOut() }
             _state.value = AddressListUiState.LoggedOut

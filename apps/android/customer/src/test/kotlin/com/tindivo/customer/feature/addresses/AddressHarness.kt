@@ -1,12 +1,15 @@
 package com.tindivo.customer.feature.addresses
 
 import com.tindivo.core.network.AddressRepository
+import com.tindivo.core.network.BearerAuthInterceptor
 import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.checkout.SessionTokens
+import com.tindivo.customer.feature.checkout.sessionJwt
 import com.tindivo.customer.session.FakeSessionStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +32,9 @@ internal abstract class AddressHarness {
     protected val server = MockWebServer()
     protected val dispatcher = UnconfinedTestDispatcher()
     protected val store = FakeSessionStore()
+
+    /** El token que lleva cada petición: el de la cuenta de la sesión (`user-1`) hasta que la prueba lo cambie. */
+    protected val tokens = SessionTokens(token = sessionJwt("user-1"))
     private lateinit var baseUrl: String
     protected lateinit var configService: ConfigService
 
@@ -48,7 +54,11 @@ internal abstract class AddressHarness {
     }
 
     private fun client() =
-        createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = RetryInterceptor(sleeper = { _, _ -> }))
+        createOkHttpClient(
+            ClientInfo("customer", "0.1.0", "1"),
+            retry = RetryInterceptor(sleeper = { _, _ -> }),
+            auth = BearerAuthInterceptor(server.url("/"), tokens),
+        )
 
     protected fun addressRepo(io: CoroutineDispatcher = dispatcher) = AddressRepository(baseUrl, client(), io)
 

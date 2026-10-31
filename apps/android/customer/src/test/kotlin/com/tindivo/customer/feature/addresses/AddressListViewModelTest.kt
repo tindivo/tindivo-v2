@@ -1,6 +1,7 @@
 package com.tindivo.customer.feature.addresses
 
 import com.tindivo.core.network.AppError
+import com.tindivo.customer.feature.checkout.sessionJwt
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -130,5 +131,19 @@ internal class AddressListViewModelTest : AddressHarness() {
             store.switchTo("user-2")
 
             assertEquals(AddressListUiState.LoggedOut, vm.state.value)
+        }
+
+    @Test
+    fun `si el token ya es de otra cuenta hacer predeterminada no manda nada y la lista se cierra`() =
+        runTest {
+            server.enqueue(addressList(address(), address(ID_B, isDefault = false)))
+            val vm = viewModel()
+            vm.settled()
+
+            tokens.token = sessionJwt("user-2")
+            vm.makeDefault(UUID.fromString(ID_B))
+
+            assertEquals(AddressListUiState.LoggedOut, vm.state.value)
+            assertEquals(1, server.requestCount)
         }
 }

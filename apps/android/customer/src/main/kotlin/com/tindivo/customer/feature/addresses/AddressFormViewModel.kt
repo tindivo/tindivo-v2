@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.addresses
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tindivo.core.network.AccountMismatchException
 import com.tindivo.core.network.AddressRepository
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
@@ -12,6 +13,7 @@ import com.tindivo.core.network.generated.model.CreateOrderRequestCoordinates
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequest
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequestCoordinates
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -72,6 +74,9 @@ internal class AddressFormViewModel
 
         private var job: Job? = null
 
+        /** La cuenta con la que se abrió la pantalla: cada llamada va atada a ella y, sin cuenta, no se llama. */
+        private val accountId: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+
         private val loggedOut get() = _state.value.outcome == FormOutcome.LoggedOut
 
         /** El punto con el que se abrió: solo si cambia (o no estaba confirmado) viaja al guardar. */
@@ -93,8 +98,9 @@ internal class AddressFormViewModel
 
         fun load() {
             if (job?.isActive == true || loggedOut) return
+            val account = accountId ?: return endSession()
             _state.update { it.copy(loading = true, loadError = null) }
-            job = viewModelScope.launch { loadAll() }
+            job = viewModelScope.launch { loadAll(account) }
         }
 
         fun onLabel(value: String) = edit { it.copy(label = value) }
@@ -121,10 +127,12 @@ internal class AddressFormViewModel
             val s = _state.value
             val point = s.point
             if (!s.canSave || point == null || job?.isActive == true || loggedOut) return
+            val account = accountId ?: return endSession()
             _state.update { it.copy(saving = true, saveError = null) }
             job =
                 viewModelScope.launch {
-                    val result = if (editingId == null) create(s, point) else update(editingId, s, point)
+                    val result =
+                        if (editingId == null) create(s, point, account) else update(editingId, s, point, account)
                     when (result) {
                         is ApiResult.Success -> settle { it.copy(saving = false, outcome = FormOutcome.Saved) }
                         is ApiResult.Failure -> onActionFailure(result.error)
@@ -136,10 +144,11 @@ internal class AddressFormViewModel
         fun confirmDelete() {
             val id = editingId ?: return
             if (!_state.value.confirmingDelete || job?.isActive == true || loggedOut) return
+            val account = accountId ?: return endSession()
             _state.update { it.copy(deleting = true, saveError = null) }
             job =
                 viewModelScope.launch {
-                    when (val result = addresses.delete(id)) {
+                    when (val result = addresses.delete(id, account)) {
                         is ApiResult.Success -> {
                             settle { it.copy(deleting = false, outcome = FormOutcome.Deleted) }
                         }
@@ -159,6 +168,7 @@ internal class AddressFormViewModel
         private suspend fun create(
             s: AddressFormState,
             point: GeoPoint,
+            account: String,
         ): ApiResult<*> =
             addresses.create(
                 CreateCustomerAddressRequest(
@@ -173,12 +183,14 @@ internal class AddressFormViewModel
                     // Solo si la persona lo prendió: sin `isDefault` decide el servidor (la primera queda predeterminada).
                     isDefault = if (s.makeDefault) true else null,
                 ),
+                account,
             )
 
         private suspend fun update(
             id: UUID,
             s: AddressFormState,
             point: GeoPoint,
+            account: String,
         ): ApiResult<*> {
             val lat = point.lat.toWireCoordinate()
             val lng = point.lng.toWireCoordinate()
@@ -196,13 +208,14 @@ internal class AddressFormViewModel
                     coordinates = if (moved) UpdateCustomerAddressRequestCoordinates(lat, lng) else null,
                     isDefault = if (s.makeDefault) true else null,
                 ),
+                account,
             )
         }
 
-        private suspend fun loadAll() {
+        private suspend fun loadAll(account: String) {
             // Sin la zona de la configuración se usa la de respaldo (la misma que la web).
             val area = CoverageArea.from((catalog.publicConfig() as? ApiResult.Success)?.data)
-            when (val result = addresses.list()) {
+            when (val result = addresses.list(account)) {
                 is ApiResult.Failure -> {
                     onLoadFailure(result.error)
                 }
@@ -257,9 +270,19 @@ internal class AddressFormViewModel
             _state.update { if (it.outcome == FormOutcome.LoggedOut) it else change(it) }
         }
 
+        /** No hay cuenta con la que hablar con el servidor: el formulario se cierra como si la sesión hubiera terminado. */
+        private fun endSession() {
+            _state.update { it.copy(saving = false, deleting = false, outcome = FormOutcome.LoggedOut) }
+        }
+
         /** Avisa de un 426 y cierra la sesión ante un 401. Devuelve `true` si la sesión terminó. */
         private suspend fun handleSession(error: AppError): Boolean {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
+            if (error is AppError.Network && error.cause is AccountMismatchException) {
+                // La sesión ya es de otra cuenta: no salió nada. Se cierra sin cerrar la sesión nueva.
+                endSession()
+                return true
+            }
             if (!error.isUnauthorized()) return false
             withContext(NonCancellable) { sessionStore.signOut() }
             _state.update { it.copy(saving = false, deleting = false, outcome = FormOutcome.LoggedOut) }
