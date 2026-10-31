@@ -43,6 +43,8 @@ import com.tindivo.customer.feature.orders.OrdersRoute
 import com.tindivo.customer.feature.phone.PHONE_CHANGED_KEY
 import com.tindivo.customer.feature.phone.PhoneVerifyDestination
 import com.tindivo.customer.feature.phone.PhoneVerifyRoute
+import com.tindivo.customer.feature.reviews.ReviewHost
+import com.tindivo.customer.feature.reviews.rememberReviewController
 import com.tindivo.customer.feature.signin.SignInDestination
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
@@ -107,6 +109,8 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                             null
                         },
                 )
+                // «¿Cómo estuvo tu pedido?»: sale sola si hay una reseña pendiente. Sin sesión no consulta nada.
+                ReviewHost(rememberReviewController(autoPrompt = true))
             }
             composable<BusinessRoute> {
                 BusinessDestination(
@@ -158,11 +162,23 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                     onExplore = { navController.popBackStack(CatalogHomeRoute, inclusive = false) },
                 )
             }
-            composable<OrderDetailRoute> { OrderDetailDestination(onBack = { navController.popBackStack() }) }
+            composable<OrderDetailRoute> { OrderDetailWithReview(onBack = { navController.popBackStack() }) }
             if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
             composable<UpdateRoute> { UpdateScreen() }
         }
     }
+}
+
+/** En el detalle la reseña no sale sola: «Calificar» aparece si este pedido es el pendiente. */
+@Composable
+private fun OrderDetailWithReview(onBack: () -> Unit) {
+    val review = rememberReviewController(autoPrompt = false)
+    OrderDetailDestination(
+        onBack = onBack,
+        canRate = { id -> review.state.pending?.orderId == id },
+        onRate = review.openForm,
+    )
+    ReviewHost(review)
 }
 
 @Composable

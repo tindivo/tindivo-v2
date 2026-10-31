@@ -4,6 +4,7 @@ import com.tindivo.core.network.BearerAuthInterceptor
 import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.CustomerRepository
+import com.tindivo.core.network.ReviewRepository
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.BuildConfig
@@ -58,4 +59,11 @@ object NetworkModule {
         client: OkHttpClient,
         @IoDispatcher io: CoroutineDispatcher,
     ): CustomerRepository = CustomerRepository(BuildConfig.API_BASE_URL, client, io)
+
+    @Provides
+    @Singleton
+    fun provideReviewRepository(
+        client: OkHttpClient,
+        @IoDispatcher io: CoroutineDispatcher,
+    ): ReviewRepository = ReviewRepository(BuildConfig.API_BASE_URL, client, io)
 }
