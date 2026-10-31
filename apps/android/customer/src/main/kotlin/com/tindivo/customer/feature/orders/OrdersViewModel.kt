@@ -82,10 +82,13 @@ internal class OrdersViewModel
             loadJob = viewModelScope.launch { onFirstPage(customer.orders(null)) }
         }
 
-        /** Pide la página siguiente. Sin `nextCursor`, o con una petición en curso, no hace nada. */
+        /**
+         * Pide la página siguiente. Sin `nextCursor`, o con una petición de más en curso, no hace nada. Lo decide el
+         * estado y no `loadJob`: la carga anterior publica `Loaded` y termina después, y en ese hueco un toque se perdía.
+         */
         fun loadMore() {
             val current = _state.value as? OrdersUiState.Loaded ?: return
-            if (!current.canLoadMore || loadJob?.isActive == true) return
+            if (!current.canLoadMore || current.loadingMore) return
             _state.value = current.copy(loadingMore = true, loadMoreFailed = false)
             val cursor = nextCursor
             loadJob = viewModelScope.launch { onNextPage(current, customer.orders(cursor)) }

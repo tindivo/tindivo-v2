@@ -843,9 +843,19 @@ describe('quote: lo que la creación rechazaría, la cotización también', () =
 
   it('un plato fuera de su franja horaria: 422', async () => {
     const c = await crearCliente()
+    // Una franja de un minuto 12 horas después de la hora de Lima: fija a las 03:00, la CI que corría a esa hora
+    // encontraba el plato dentro de su franja y la cotización respondía 200.
+    const horaLima = Number(
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Lima',
+        hour: '2-digit',
+        hourCycle: 'h23',
+      }).format(new Date()),
+    )
+    const hora = String((horaLima + 12) % 24).padStart(2, '0')
     await db
       .from('menu_items')
-      .update({ available_from: '03:00', available_to: '03:01' })
+      .update({ available_from: `${hora}:00`, available_to: `${hora}:01` })
       .eq('id', FIXTURES.ITEM_MEDIO_ID)
     try {
       const r = await pedir(postQuote, {

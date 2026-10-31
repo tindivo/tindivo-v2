@@ -110,8 +110,8 @@ const val DEFAULT_RETENTION_LIMIT_MS = 6 * MILLIS_PER_DAY
  * Esto SE APARTA DE LA WEB a propósito: allí un rechazo o un `idempotency_conflict` regeneran la clave y reintentan
  * solos, y eso puede duplicar un pedido que sí se creó.
  *
- * El cableado real de [lookup] es pendiente (endpoint `GET /customer/orders/attempts/{key}` en otro PR); mientras, en
- * la app va [NotImplementedAttemptLookup], que responde `unknown`: lo seguro es no reenviar.
+ * En la app, [lookup] es [ApiAttemptLookup] (`GET /customer/orders/attempts/{key}`): ante cualquier duda responde
+ * `unknown`, y lo seguro es no reenviar.
  *
  * @param clock milisegundos desde la época; se inyecta para fijar el tiempo en las pruebas.
  * @param newKey de dónde sale una clave nueva; se inyecta para fijarla en las pruebas.
@@ -239,7 +239,7 @@ class OrderAttemptLedger(
         val now = clock()
         val sentAt = existing.sentAtEpochMs
         if (sentAt != null && now - sentAt > retentionLimitMs) return Gate.Stop(PlaceResult.NeedsReconciliation)
-        return when (val found = lookup.lookup(key)) {
+        return when (val found = lookup.lookup(key, accountId)) {
             is LookupResult.Created -> {
                 forget(accountId, key)
                 Gate.Stop(PlaceResult.AlreadyCreated(found.order))
@@ -289,7 +289,7 @@ class OrderAttemptLedger(
         key: UUID,
         error: AppError,
     ): PlaceResult<Nothing> =
-        when (val found = lookup.lookup(key)) {
+        when (val found = lookup.lookup(key, accountId)) {
             is LookupResult.Created -> {
                 forget(accountId, key)
                 PlaceResult.AlreadyCreated(found.order)

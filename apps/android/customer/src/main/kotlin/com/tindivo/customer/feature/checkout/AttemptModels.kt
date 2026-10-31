@@ -67,17 +67,16 @@ sealed interface LookupResult {
     data object Unknown : LookupResult
 }
 
-/** Consulta si una clave ya creó su pedido. */
-interface AttemptLookup {
-    suspend fun lookup(key: UUID): LookupResult
-}
-
 /**
- * PENDIENTE: el endpoint `GET /customer/orders/attempts/{key}` llega en otro PR. Mientras tanto responde
- * [LookupResult.Unknown], que es lo seguro: [OrderAttemptLedger] no reenvía ningún intento incierto.
+ * Consulta si una clave ya creó su pedido. El servidor responde por la cuenta de la sesión, así que la respuesta solo
+ * vale para [accountId] si la consulta salió con la sesión de esa cuenta: si no, la implementación devuelve
+ * [LookupResult.Unknown].
  */
-object NotImplementedAttemptLookup : AttemptLookup {
-    override suspend fun lookup(key: UUID): LookupResult = LookupResult.Unknown
+interface AttemptLookup {
+    suspend fun lookup(
+        key: UUID,
+        accountId: String,
+    ): LookupResult
 }
 
 /** Lo que pasó al intentar crear el pedido. */

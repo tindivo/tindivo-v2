@@ -55,9 +55,14 @@ abstract class LedgerTestBase {
         var next: LookupResult = LookupResult.Unknown,
     ) : AttemptLookup {
         val asked = mutableListOf<UUID>()
+        val askedFor = mutableListOf<String>()
 
-        override suspend fun lookup(key: UUID): LookupResult {
+        override suspend fun lookup(
+            key: UUID,
+            accountId: String,
+        ): LookupResult {
             asked += key
+            askedFor += accountId
             return next
         }
     }

@@ -43,8 +43,15 @@ class LedgerDataStoreTest {
     private val cart =
         Cart("n", "P", listOf(CartLine("plato", "Lomo", BigDecimal("12.50"), emptyList(), null, 1, null)))
 
+    private object UnknownLookup : AttemptLookup {
+        override suspend fun lookup(
+            key: UUID,
+            accountId: String,
+        ): LookupResult = LookupResult.Unknown
+    }
+
     private fun ledger(store: LedgerStore) =
-        OrderAttemptLedger(store, NotImplementedAttemptLookup, clock = {
+        OrderAttemptLedger(store, UnknownLookup, clock = {
             1L
         }, newKey = { UUID(0L, 7L) })
 
