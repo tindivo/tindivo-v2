@@ -22,7 +22,12 @@ import javax.inject.Inject
 data class AccountProfileUi(
     val fullName: String,
     val phoneVerified: Boolean,
-)
+    val phone: String? = null,
+) {
+    /** El teléfono es un dato personal: no sale en un log. */
+    override fun toString(): String =
+        "AccountProfileUi(fullName=$fullName, phoneVerified=$phoneVerified, phone=${if (phone == null) "null" else "***"})"
+}
 
 sealed interface AccountUiState {
     data object Loading : AccountUiState
@@ -94,4 +99,4 @@ private fun AppError.isUnauthorized(): Boolean =
 private const val HTTP_UNAUTHORIZED = 401
 
 private fun GetCustomerProfile200ResponseData.toUi() =
-    AccountProfileUi(fullName = fullName, phoneVerified = phoneVerified)
+    AccountProfileUi(fullName = fullName, phoneVerified = phoneVerified, phone = phone)

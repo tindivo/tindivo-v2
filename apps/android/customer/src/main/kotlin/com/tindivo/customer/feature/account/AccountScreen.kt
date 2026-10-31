@@ -35,9 +35,19 @@ import com.tindivo.customer.R
 fun AccountDestination(
     onLeave: () -> Unit,
     onOpenOrders: () -> Unit,
+    onVerifyPhone: () -> Unit,
+    phoneChanged: Boolean,
+    onPhoneChangeHandled: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    // Volvió del flujo del teléfono: se pide el perfil otra vez para ver el número nuevo.
+    LaunchedEffect(phoneChanged) {
+        if (phoneChanged) {
+            viewModel.load()
+            onPhoneChangeHandled()
+        }
+    }
     LaunchedEffect(state) {
         if (state is AccountUiState.LoggedOut) onLeave()
     }
@@ -45,6 +55,7 @@ fun AccountDestination(
         state = state,
         onRetry = viewModel::load,
         onOpenOrders = onOpenOrders,
+        onVerifyPhone = onVerifyPhone,
         onSignOut = viewModel::signOut,
         onBack = onLeave,
     )
@@ -55,6 +66,7 @@ fun AccountScreen(
     state: AccountUiState,
     onRetry: () -> Unit,
     onOpenOrders: () -> Unit,
+    onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -81,7 +93,12 @@ fun AccountScreen(
                 }
 
                 is AccountUiState.Loaded -> {
-                    Profile(profile = state.profile, onOpenOrders = onOpenOrders, onSignOut = onSignOut)
+                    Profile(
+                        profile = state.profile,
+                        onOpenOrders = onOpenOrders,
+                        onVerifyPhone = onVerifyPhone,
+                        onSignOut = onSignOut,
+                    )
                 }
             }
         }
@@ -125,6 +142,7 @@ private fun Failure(
 private fun Profile(
     profile: AccountProfileUi,
     onOpenOrders: () -> Unit,
+    onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -136,6 +154,21 @@ private fun Profile(
                 ),
             style = MaterialTheme.typography.bodyLarge,
         )
+        if (profile.phoneVerified && profile.phone != null) {
+            Text(text = profile.phone, style = MaterialTheme.typography.bodyLarge)
+        }
+        OutlinedButton(
+            onClick = onVerifyPhone,
+            modifier = Modifier.heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        ) {
+            Text(
+                text =
+                    stringResource(
+                        if (profile.phoneVerified) R.string.account_phone_change else R.string.account_phone_verify,
+                    ),
+            )
+        }
         Button(
             onClick = onOpenOrders,
             modifier = Modifier.heightIn(min = 48.dp),
@@ -161,6 +194,7 @@ private fun AccountPreview() {
             state = AccountUiState.Loaded(AccountProfileUi("Rosa Quispe", phoneVerified = false)),
             onRetry = {},
             onOpenOrders = {},
+            onVerifyPhone = {},
             onSignOut = {},
             onBack = {},
         )

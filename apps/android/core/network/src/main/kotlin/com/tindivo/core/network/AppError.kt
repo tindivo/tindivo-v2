@@ -1,6 +1,8 @@
 package com.tindivo.core.network
 
 import java.io.IOException
+import java.time.Instant
+import java.util.UUID
 
 /**
  * Códigos de negocio del contrato (`packages/contracts/src/errors.ts`, `API_ERROR_CODES`). El OpenAPI no los declara
@@ -42,11 +44,18 @@ sealed interface AppError {
         val cause: IOException,
     ) : AppError
 
-    /** Un `code` del contrato que esta versión de la app conoce. */
+    /**
+     * Un `code` del contrato que esta versión de la app conoce.
+     *
+     * @param transfer solo en el 409 del teléfono (D-63): el número está verificado en otra cuenta y se puede trasladar.
+     * @param fieldMessage el mensaje del primer campo inválido de `errors` (422), tal cual lo manda el servidor.
+     */
     data class Known(
         val code: ApiErrorCode,
         val status: Int,
         val detail: String?,
+        val transfer: TransferOffer? = null,
+        val fieldMessage: String? = null,
     ) : AppError
 
     /** Un `code` que esta versión no conoce, o una respuesta que no se pudo leer (CLI-2): la UI muestra un genérico. */
@@ -54,6 +63,17 @@ sealed interface AppError {
         val code: String?,
         val detail: String?,
     ) : AppError
+}
+
+/**
+ * La oferta de trasladar un número verificado en otra cuenta (`transfer` del 409, D-63). El [challengeId] es de un solo
+ * uso y vence en [expiresAt]; `toString` no lo muestra para que no acabe en un log.
+ */
+data class TransferOffer(
+    val challengeId: UUID,
+    val expiresAt: Instant,
+) {
+    override fun toString(): String = "TransferOffer(challengeId=***, expiresAt=$expiresAt)"
 }
 
 /** Resultado de una llamada: el modelo generado o el error ya traducido. */
