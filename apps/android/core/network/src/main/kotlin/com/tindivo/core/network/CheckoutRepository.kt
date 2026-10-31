@@ -46,12 +46,16 @@ class CheckoutRepository(
      * parámetro obligatorio de la operación (el contrato la declara en la ruta), así que no hace falta un interceptor
      * por petición. Con ella, [RetryInterceptor] puede repetir el `POST` ante un error de red, un 5xx o un 429 sin
      * duplicar el pedido; sin ella no reintenta nada.
+     *
+     * Solo sale con el token de [accountId] ([boundTo]): si la sesión cambió de cuenta, no se envía nada y vuelve un
+     * [AppError.Network] con [AccountMismatchException].
      */
     suspend fun createOrder(
         request: CreateOrderRequest,
         idempotencyKey: UUID,
+        accountId: String,
     ): ApiResult<CreateOrder201ResponseData> =
-        apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
+        apiCall(client.boundTo(accountId), ioDispatcher, { OrdersApi(baseUrl, it) }) {
             it.createOrderWithHttpInfo(idempotencyKey, request, null, null, null, null)
         }.map { it.data }
 
@@ -59,9 +63,15 @@ class CheckoutRepository(
      * `GET /customer/orders/attempts/{key}`: si esa `Idempotency-Key` ya creó un pedido. `state` llega como texto
      * (`created`, `not_found`, `unknown`) y el contrato avisa de que puede llegar un valor nuevo: quien lo lea debe
      * tratar lo que no conoce como desconocido.
+     *
+     * El servidor responde por la cuenta del token, así que la consulta solo sale con el de [accountId] ([boundTo]): un
+     * `not_found` de otra cuenta no dice nada de este intento.
      */
-    suspend fun attempt(idempotencyKey: UUID): ApiResult<GetOrderAttempt200ResponseData> =
-        apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
+    suspend fun attempt(
+        idempotencyKey: UUID,
+        accountId: String,
+    ): ApiResult<GetOrderAttempt200ResponseData> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { OrdersApi(baseUrl, it) }) {
             it.getOrderAttemptWithHttpInfo(idempotencyKey, null, null, null, null)
         }.map { it.data }
 }

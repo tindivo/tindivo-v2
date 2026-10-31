@@ -239,7 +239,7 @@ class OrderAttemptLedger(
         val now = clock()
         val sentAt = existing.sentAtEpochMs
         if (sentAt != null && now - sentAt > retentionLimitMs) return Gate.Stop(PlaceResult.NeedsReconciliation)
-        return when (val found = lookup.lookup(key)) {
+        return when (val found = lookup.lookup(key, accountId)) {
             is LookupResult.Created -> {
                 forget(accountId, key)
                 Gate.Stop(PlaceResult.AlreadyCreated(found.order))
@@ -289,7 +289,7 @@ class OrderAttemptLedger(
         key: UUID,
         error: AppError,
     ): PlaceResult<Nothing> =
-        when (val found = lookup.lookup(key)) {
+        when (val found = lookup.lookup(key, accountId)) {
             is LookupResult.Created -> {
                 forget(accountId, key)
                 PlaceResult.AlreadyCreated(found.order)

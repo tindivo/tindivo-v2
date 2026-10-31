@@ -18,10 +18,17 @@ import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CheckoutRepositoryTest : HttpClientTestBase() {
+    private val tokens = SwitchableTokens(token = testJwt(ACCOUNT))
+
     private fun checkout() =
         CheckoutRepository(
             baseUrl = server.url("/api/v1").toString().trimEnd('/'),
-            client = realClient(),
+            client =
+                createOkHttpClient(
+                    info,
+                    RetryInterceptor(sleeper = { _, _ -> }),
+                    auth = BearerAuthInterceptor(server.url("/"), tokens),
+                ),
             ioDispatcher = UnconfinedTestDispatcher(),
         )
 
@@ -133,7 +140,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(201, CREATED))
 
-            val data = (checkout().createOrder(orderRequest(), KEY) as ApiResult.Success).data
+            val data = (checkout().createOrder(orderRequest(), KEY, ACCOUNT) as ApiResult.Success).data
 
             assertEquals("ABCD2345", data.shortId)
             assertEquals(BigDecimal("48.50"), data.total)
@@ -149,7 +156,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(201, CREATED))
 
-            checkout().createOrder(orderRequest(cashPayingWith = BigDecimal("50.00")), KEY)
+            checkout().createOrder(orderRequest(cashPayingWith = BigDecimal("50.00")), KEY, ACCOUNT)
 
             val body = checkNotNull(server.takeRequest().body).utf8()
             assertTrue(body, body.contains(""""cashPayingWith":50.00"""))
@@ -162,7 +169,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(problem(409, "idempotency_conflict"))
 
-            val error = (checkout().createOrder(orderRequest(), KEY) as ApiResult.Failure).error
+            val error = (checkout().createOrder(orderRequest(), KEY, ACCOUNT) as ApiResult.Failure).error
 
             assertEquals(ApiErrorCode.IdempotencyConflict, (error as AppError.Known).code)
             assertEquals(409, error.status)
@@ -179,7 +186,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
                 ),
             )
 
-            val error = (checkout().createOrder(orderRequest(), KEY) as ApiResult.Failure).error
+            val error = (checkout().createOrder(orderRequest(), KEY, ACCOUNT) as ApiResult.Failure).error
 
             assertEquals(ApiErrorCode.ValidationError, (error as AppError.Known).code)
             assertEquals("Falta el teléfono", error.detail)
@@ -191,7 +198,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
             server.enqueue(problem(503, "internal_error"))
             server.enqueue(json(201, CREATED))
 
-            val result = checkout().createOrder(orderRequest(), KEY)
+            val result = checkout().createOrder(orderRequest(), KEY, ACCOUNT)
 
             assertTrue(result is ApiResult.Success)
             assertEquals(2, server.requestCount)
@@ -220,7 +227,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(200, attemptBody("created", ORDER_JSON)))
 
-            val data = (checkout().attempt(KEY) as ApiResult.Success).data
+            val data = (checkout().attempt(KEY, ACCOUNT) as ApiResult.Success).data
 
             assertEquals("created", data.state)
             assertEquals("ABCD2345", data.order?.shortId)
@@ -234,7 +241,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(200, attemptBody("created", "null")))
 
-            val data = (checkout().attempt(KEY) as ApiResult.Success).data
+            val data = (checkout().attempt(KEY, ACCOUNT) as ApiResult.Success).data
 
             assertEquals("created", data.state)
             assertEquals(null, data.order)
@@ -245,7 +252,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(200, attemptBody("not_found", "null")))
 
-            assertEquals("not_found", (checkout().attempt(KEY) as ApiResult.Success).data.state)
+            assertEquals("not_found", (checkout().attempt(KEY, ACCOUNT) as ApiResult.Success).data.state)
         }
 
     @Test
@@ -253,13 +260,37 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(200, attemptBody("pending_x", "null")))
 
-            assertEquals("pending_x", (checkout().attempt(KEY) as ApiResult.Success).data.state)
+            assertEquals("pending_x", (checkout().attempt(KEY, ACCOUNT) as ApiResult.Success).data.state)
+        }
+
+    @Test
+    fun `createOrder con la sesion de otra cuenta no envia nada`() =
+        runTest {
+            tokens.token = testJwt(OTHER_ACCOUNT)
+
+            val error = (checkout().createOrder(orderRequest(), KEY, ACCOUNT) as ApiResult.Failure).error
+
+            assertTrue((error as AppError.Network).cause is AccountMismatchException)
+            assertEquals(0, server.requestCount)
+        }
+
+    @Test
+    fun `attempt con la sesion de otra cuenta no consulta nada`() =
+        runTest {
+            tokens.token = testJwt(OTHER_ACCOUNT)
+
+            val error = (checkout().attempt(KEY, ACCOUNT) as ApiResult.Failure).error
+
+            assertTrue((error as AppError.Network).cause is AccountMismatchException)
+            assertEquals(0, server.requestCount)
         }
 
     private companion object {
         val BUSINESS_ID: UUID = UUID.fromString("6b2a737a-018f-4c2d-9a11-6f0d3c1e8a02")
         val ITEM_ID: UUID = UUID.fromString("7c2a737a-018f-4c2d-9a11-6f0d3c1e8a03")
         val KEY: UUID = UUID.fromString("8d2a737a-018f-4c2d-9a11-6f0d3c1e8a04")
+        const val ACCOUNT = "6f1c3a52-9d0e-4c1b-8a77-2f4e5d6c7b8a"
+        const val OTHER_ACCOUNT = "0b9e8d7c-6a5f-4e3d-9c2b-1a0f9e8d7c6b"
 
         const val ORDER_JSON = """{"id":"9e2a737a-018f-4c2d-9a11-6f0d3c1e8a05","shortId":"ABCD2345"}"""
 

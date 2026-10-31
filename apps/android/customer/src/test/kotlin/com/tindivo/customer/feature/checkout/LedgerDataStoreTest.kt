@@ -44,7 +44,10 @@ class LedgerDataStoreTest {
         Cart("n", "P", listOf(CartLine("plato", "Lomo", BigDecimal("12.50"), emptyList(), null, 1, null)))
 
     private object UnknownLookup : AttemptLookup {
-        override suspend fun lookup(key: UUID): LookupResult = LookupResult.Unknown
+        override suspend fun lookup(
+            key: UUID,
+            accountId: String,
+        ): LookupResult = LookupResult.Unknown
     }
 
     private fun ledger(store: LedgerStore) =
