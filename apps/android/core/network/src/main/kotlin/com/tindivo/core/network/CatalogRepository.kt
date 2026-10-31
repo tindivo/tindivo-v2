@@ -3,6 +3,7 @@ package com.tindivo.core.network
 import com.tindivo.core.network.generated.api.PublicApi
 import com.tindivo.core.network.generated.infrastructure.ApiResponse
 import com.tindivo.core.network.generated.model.GetBusiness200ResponseData
+import com.tindivo.core.network.generated.model.GetPublicConfig200ResponseData
 import com.tindivo.core.network.generated.model.ListBusinesses200ResponseDataInner
 import kotlinx.coroutines.CoroutineDispatcher
 import okhttp3.OkHttpClient
@@ -28,6 +29,10 @@ class CatalogRepository(
     /** `GET /public/businesses/{id}`: el negocio, su carta y su horario. [idOrSlug] acepta el uuid o el slug. */
     suspend fun business(idOrSlug: String): ApiResult<GetBusiness200ResponseData> =
         call { it.getBusinessWithHttpInfo(idOrSlug, null, null, null, null) }.map { it.data }
+
+    /** `GET /public/config`: la zona de reparto (polígono o centro y radio) y los parámetros públicos. Sin sesión. */
+    suspend fun publicConfig(): ApiResult<GetPublicConfig200ResponseData> =
+        call { it.getPublicConfigWithHttpInfo(null, null, null, null) }.map { it.data }
 
     private suspend fun <T : Any> call(request: (PublicApi) -> ApiResponse<T?>): ApiResult<T> =
         apiCall(client, ioDispatcher, { PublicApi(baseUrl, it) }, request)

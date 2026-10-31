@@ -20,6 +20,10 @@ android {
         versionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(1)
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // La clave del SDK de Maps NUNCA va en el repo: sale de la propiedad Gradle o de la variable de entorno
+        // MAPS_API_KEY. Sin ella (la CI) queda vacía y el mapa sale en blanco, que es lo esperado.
+        manifestPlaceholders["mapsApiKey"] =
+            providers.gradleProperty("MAPS_API_KEY").orElse(providers.environmentVariable("MAPS_API_KEY")).getOrElse("")
     }
 
     // :core:network compila a bytecode 21: un módulo Android solo puede resolverlo si declara ese mismo objetivo.
@@ -104,6 +108,9 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.tink.android)
+
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
 
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)

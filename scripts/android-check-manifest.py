@@ -17,9 +17,11 @@ root = ET.parse(path).getroot()
 app = root.find("application")
 errors: list[str] = []
 
-# Permisos: INTERNET y el permiso de firma que androidx.core declara para sus receptores no exportados.
+# Permisos: INTERNET, ACCESS_NETWORK_STATE (permiso normal que pide play-services-maps; decisión de Jesús 2026-10-31)
+# y el permiso de firma que androidx.core declara para sus receptores no exportados.
 allowed_permissions = {
     "android.permission.INTERNET",
+    "android.permission.ACCESS_NETWORK_STATE",
     f"{app_id}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
 }
 requested = {e.get(f"{A}name") for e in root.iter("uses-permission")}
