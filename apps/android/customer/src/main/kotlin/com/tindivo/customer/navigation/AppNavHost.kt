@@ -32,6 +32,7 @@ import androidx.navigation.toRoute
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.account.AccountDestination
+import com.tindivo.customer.feature.addresses.ADDRESSES_CHANGED_KEY
 import com.tindivo.customer.feature.addresses.AddressFormDestination
 import com.tindivo.customer.feature.addresses.AddressFormRoute
 import com.tindivo.customer.feature.addresses.AddressesDestination
@@ -159,8 +160,15 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 )
             }
             composable<AddressesRoute> { entry ->
+                val changed =
+                    entry.savedStateHandle
+                        .getStateFlow(ADDRESSES_CHANGED_KEY, false)
+                        .collectAsStateWithLifecycle()
+                        .value
                 AddressesDestination(
                     pick = entry.toRoute<AddressesRoute>().pick,
+                    changed = changed,
+                    onChangeHandled = { entry.savedStateHandle[ADDRESSES_CHANGED_KEY] = false },
                     onBack = { navController.popBackStack() },
                     onAdd = { navController.navigate(AddressFormRoute()) },
                     onEdit = { id -> navController.navigate(AddressFormRoute(id)) },
@@ -171,7 +179,14 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                     },
                 )
             }
-            composable<AddressFormRoute> { AddressFormDestination(onDone = { navController.popBackStack() }) }
+            composable<AddressFormRoute> {
+                AddressFormDestination(
+                    onDone = { navController.popBackStack() },
+                    onChanged = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set(ADDRESSES_CHANGED_KEY, true)
+                    },
+                )
+            }
             composable<OrdersRoute> {
                 OrdersDestination(
                     onBack = { navController.popBackStack() },

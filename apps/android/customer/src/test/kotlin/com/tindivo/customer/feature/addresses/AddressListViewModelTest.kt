@@ -146,4 +146,20 @@ internal class AddressListViewModelTest : AddressHarness() {
             assertEquals(AddressListUiState.LoggedOut, vm.state.value)
             assertEquals(1, server.requestCount)
         }
+
+    @Test
+    fun `tras crear editar o borrar en el formulario la libreta vuelve a pedirse y muestra lo nuevo`() =
+        runTest {
+            server.enqueue(addressList(address()))
+            val vm = viewModel()
+            assertEquals(1, (vm.settled() as AddressListUiState.Loaded).items.size)
+            server.enqueue(addressList(address(), address(ID_B, isDefault = false)))
+
+            // Es lo que la pantalla llama al recibir ADDRESSES_CHANGED_KEY de la entrada del formulario.
+            vm.refresh()
+
+            val loaded = vm.state.first { it is AddressListUiState.Loaded && it.items.size == 2 }
+            assertEquals(2, (loaded as AddressListUiState.Loaded).items.size)
+            assertEquals(2, server.requestCount)
+        }
 }

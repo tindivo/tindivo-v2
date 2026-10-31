@@ -51,9 +51,18 @@ internal fun AddressesDestination(
     onAdd: () -> Unit,
     onEdit: (id: String) -> Unit,
     onPicked: (id: String) -> Unit,
+    changed: Boolean,
+    onChangeHandled: () -> Unit,
     viewModel: AddressListViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    // Volvió del formulario tras guardar o borrar: la libreta que se tenía ya no es la del servidor.
+    LaunchedEffect(changed) {
+        if (changed) {
+            viewModel.refresh()
+            onChangeHandled()
+        }
+    }
     LaunchedEffect(state) {
         if (state is AddressListUiState.LoggedOut) onBack()
     }

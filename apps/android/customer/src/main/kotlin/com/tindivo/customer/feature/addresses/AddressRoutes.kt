@@ -22,3 +22,9 @@ data class AddressFormRoute(
  * entrada de la pila (`previousBackStackEntry` al salir del selector) y lo consume.
  */
 const val PICKED_ADDRESS_KEY = "picked_address_id"
+
+/**
+ * La clave con la que el formulario avisa a la libreta de que creó, editó o borró una dirección: la libreta la lee del
+ * `savedStateHandle` de su propia entrada, vuelve a pedir la lista y la consume (como `PHONE_CHANGED_KEY`).
+ */
+const val ADDRESSES_CHANGED_KEY = "addresses_changed"

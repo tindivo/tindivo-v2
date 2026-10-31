@@ -43,10 +43,12 @@ import com.tindivo.customer.R
 @Composable
 internal fun AddressFormDestination(
     onDone: () -> Unit,
+    onChanged: () -> Unit,
     viewModel: AddressFormViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     LaunchedEffect(state.outcome) {
+        if (state.outcome == FormOutcome.Saved || state.outcome == FormOutcome.Deleted) onChanged()
         if (state.outcome != null) onDone()
     }
     AddressFormScreen(
