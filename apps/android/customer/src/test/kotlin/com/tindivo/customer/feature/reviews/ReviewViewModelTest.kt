@@ -422,7 +422,8 @@ class ReviewViewModelTest {
             assertTrue(seen.toString(), seen.none { it.pending?.orderId == ORDER_ID })
             val prompts = seen.filter { it.step == ReviewStep.Prompt }
             assertTrue(seen.toString(), prompts.all { it.pending?.orderId == ORDER_B_ID })
-            assertEquals(ORDER_B_ID, viewModel.state.value.pending?.orderId)
+            val state = viewModel.state.value
+            assertEquals(ORDER_B_ID, state.pending?.orderId)
         }
 
     @Test
