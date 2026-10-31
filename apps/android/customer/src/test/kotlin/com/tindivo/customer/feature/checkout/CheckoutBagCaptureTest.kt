@@ -72,7 +72,13 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
             .jsonObject
             .getValue("items")
             .jsonArray
-            .map { it.jsonObject.getValue("quantity").jsonPrimitive.content.toInt() }
+            .map { item ->
+                item.jsonObject
+                    .getValue("quantity")
+                    .jsonPrimitive
+                    .content
+                    .toInt()
+            }
 
     @Test
     fun `si la bolsa cambia mientras se recotiza no sale el pedido y se pide confirmar de nuevo`() =

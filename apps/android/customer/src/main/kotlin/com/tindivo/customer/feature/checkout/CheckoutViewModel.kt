@@ -206,8 +206,11 @@ class CheckoutViewModel
             when {
                 // La bolsa cambio mientras se recotizaba: el total mostrado no es el de lo que se enviaria.
                 cart?.fingerprint() != bag?.fingerprint() -> stop(CheckoutMessage.OptionsChanged)
+
                 shown == null || fresh.total.compareTo(shown) != 0 -> stop(CheckoutMessage.TotalChanged(fresh.total))
+
                 next.pay != before.pay || !ready -> stop(CheckoutMessage.OptionsChanged)
+
                 else -> place(account, bag, next, fresh)
             }
         }
