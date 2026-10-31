@@ -57,6 +57,7 @@ class PhoneRepositoryTest : HttpClientTestBase() {
             assertEquals("/api/v1/customer/phone/send-code", sent.url.encodedPath)
             assertEquals("android", sent.headers["X-Tindivo-Platform"])
             assertTrue(checkNotNull(sent.body).utf8().contains(""""phone":"+51987654321""""))
+            assertNull(sent.headers["Idempotency-Key"])
         }
 
     @Test
@@ -85,6 +86,7 @@ class PhoneRepositoryTest : HttpClientTestBase() {
                 ).data
 
             assertTrue(data.verified)
+            assertEquals("+51987654321", data.phone)
             val sent = server.takeRequest()
             assertEquals("/api/v1/customer/phone/verify", sent.url.encodedPath)
             val body = checkNotNull(sent.body).utf8()
