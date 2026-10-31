@@ -62,7 +62,7 @@ fun businessJson(
     "logo_url":null,"banner_url":null,"tagline":null,"categoria":null,"primary_capability":"catalog_full",
     "estimated_eta_min":25,"estimated_eta_max":40,"coordinates_lat":null,"coordinates_lng":null,"address":null,
     "accepts_web_pickup":$pickup,"accepts_web_delivery":$delivery,"whatsapp_number":null},
-    "categories":[],"schedule":[]}}"""
+    "categories":[],"schedule":[],"opening_confirmed":null}}"""
 
 fun ordersJson(intent: String?) =
     if (intent == null) {

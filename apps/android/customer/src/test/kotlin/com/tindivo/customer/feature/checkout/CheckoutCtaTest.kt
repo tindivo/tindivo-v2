@@ -60,7 +60,7 @@ class CheckoutCtaTest {
         assertEquals(Cta.NeedName, ready().copy(name = "  ").cta)
         assertEquals(Cta.NeedAddress, ready().copy(selectedAddressId = null).cta)
         assertEquals(Cta.NeedFixAddress, ready().copy(addresses = listOf(home.copy(line = "Jr"))).cta)
-        assertEquals(Cta.NeedReference, ready().copy(addresses = listOf(home.copy(reference = "cerca"))).cta)
+        assertEquals(Cta.NeedReference, ready().copy(addresses = listOf(home.copy(reference = "cerc"))).cta)
         assertEquals(Cta.NeedPin, ready().copy(addresses = listOf(home.copy(lat = null, lng = null))).cta)
         assertEquals(Cta.NeedPhone, ready().copy(phoneVerified = false).cta)
         assertEquals(Cta.Calculating, ready().copy(quoteStatus = QuoteStatus.Loading).cta)
