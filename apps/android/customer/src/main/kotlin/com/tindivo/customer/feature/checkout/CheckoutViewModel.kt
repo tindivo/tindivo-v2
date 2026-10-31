@@ -179,11 +179,13 @@ class CheckoutViewModel
         fun confirm() {
             val current = mutableState.value
             if (current.phase != CheckoutPhase.Form || current.sending || !current.cta.canConfirm) return
+            // La cuenta se captura UNA vez aqui y firma el pedido hasta el POST: la sesion no se vuelve a leer.
+            val account = accountId
             mutableState.update { it.copy(sending = true, message = null) }
-            viewModelScope.launch { submit() }
+            viewModelScope.launch { submit(account) }
         }
 
-        private suspend fun submit() {
+        private suspend fun submit(account: String?) {
             quoteJob?.cancel()
             val shown = mutableState.value.quote?.total
             val outcome = fetchQuote()
@@ -199,24 +201,24 @@ class CheckoutViewModel
             when {
                 shown == null || fresh.total.compareTo(shown) != 0 -> stop(CheckoutMessage.TotalChanged(fresh.total))
                 next.pay != before.pay || !ready -> stop(CheckoutMessage.OptionsChanged)
-                else -> place(next, fresh)
+                else -> place(account, next, fresh)
             }
         }
 
         private fun stop(message: CheckoutMessage) = mutableState.update { it.copy(sending = false, message = message) }
 
         private suspend fun place(
+            account: String?,
             form: CheckoutUiState,
             quote: QuoteView,
         ) {
-            val account = accountId
             val current = cart
             val request = if (current == null) null else buildOrderRequest(form, current, quote)
             if (account == null || current == null || request == null) {
                 stop(CheckoutMessage.Generic)
                 return
             }
-            when (val result = ledger.place(account, current) { key -> checkout.createOrder(request, key) }) {
+            when (val result = ledger.place(account, current) { key -> checkout.createOrder(request, key, account) }) {
                 is PlaceResult.Created -> {
                     opened(result.data.id.toString())
                 }

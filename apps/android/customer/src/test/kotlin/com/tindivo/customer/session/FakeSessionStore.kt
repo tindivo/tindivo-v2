@@ -31,6 +31,11 @@ class FakeSessionStore(
         return signInResult
     }
 
+    /** La sesión pasa a otra cuenta sin salir (lo que un cambio de cuenta hace a mitad de una petición). */
+    fun switchTo(userId: String) {
+        mutableState.value = SessionState.SignedIn(userId)
+    }
+
     override suspend fun signOut() {
         signOutCalls++
         mutableState.value = SessionState.SignedOut

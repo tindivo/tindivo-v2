@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.checkout
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.tindivo.core.network.AddressRepository
+import com.tindivo.core.network.BearerAuthInterceptor
 import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.core.network.ClientInfo
@@ -47,6 +48,9 @@ abstract class CheckoutHarness {
     protected val server = MockWebServer()
     protected val dispatcher = StandardTestDispatcher()
     protected val session = FakeSessionStore()
+
+    /** El token que lleva cada petición: el de la cuenta de [session]; una prueba lo cambia para simular otra cuenta. */
+    protected val tokens = SessionTokens(token = sessionJwt("user-1"))
     protected val requests = CopyOnWriteArrayList<RecordedRequest>()
 
     /** `METHOD /ruta` → respuesta. Cada prueba puede cambiar una; el resto es el camino feliz. */
@@ -65,7 +69,11 @@ abstract class CheckoutHarness {
         server.start()
         val baseUrl = server.url("/api/v1").toString().trimEnd('/')
         val client =
-            createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = RetryInterceptor(sleeper = { _, _ -> }))
+            createOkHttpClient(
+                ClientInfo("customer", "0.1.0", "1"),
+                retry = RetryInterceptor(sleeper = { _, _ -> }),
+                auth = BearerAuthInterceptor(server.url("/"), tokens),
+            )
         checkout = CheckoutRepository(baseUrl, client, dispatcher)
         loader =
             CheckoutLoader(
