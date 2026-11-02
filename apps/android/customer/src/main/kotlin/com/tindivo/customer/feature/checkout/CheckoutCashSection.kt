@@ -30,7 +30,7 @@ internal fun CashSelector(
     choice: CashChoice,
     onChoice: (CashChoice) -> Unit,
 ) {
-    val check = checkCash(choice.payingWith(total), total, rules)
+    val check = checkCash(choice.payingWith(total), total, rules, exact = choice is CashChoice.Exact)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(

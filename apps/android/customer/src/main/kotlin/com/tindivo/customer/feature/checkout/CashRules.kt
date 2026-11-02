@@ -10,7 +10,7 @@ import java.math.RoundingMode
  *
  * @param maxBill billete más grande con el que se puede pagar.
  * @param maxChange vuelto que el negocio tiene esta noche; `0.00` = solo pago exacto.
- * @param step múltiplo en que se declara el billete (`0.50`). El pago exacto no tiene por qué serlo.
+ * @param step múltiplo en que se declara el billete (`0.50`). Solo «Exacto» queda libre de él: manda el total tal cual.
  */
 data class CashRules(
     val maxBill: BigDecimal,
@@ -67,7 +67,7 @@ sealed interface CashCheck {
         val maxBill: BigDecimal,
     ) : CashCheck
 
-    /** Ni es el total exacto ni un múltiplo de [step]. */
+    /** No es un múltiplo de [step] (y no se eligió «Exacto»). */
     data class NotMultiple(
         val step: BigDecimal,
     ) : CashCheck
@@ -92,26 +92,22 @@ fun maxDeclarable(
 ): BigDecimal = rules.maxBill.min(total + rules.maxChange)
 
 /**
- * Comprueba [paying] contra [total] (envío incluido, el de la cotización) y [rules]. El total exacto siempre se acepta
- * si cabe en el billete máximo; cualquier otro monto tiene que ser múltiplo de [CashRules.step].
+ * Comprueba [paying] contra [total] (envío incluido, el de la cotización) y [rules]. Solo la opción «Exacto»
+ * ([exact]) queda libre del múltiplo: manda el total tal cual. Todo lo demás, incluido escribir en «Otro» un monto
+ * igual al total, tiene que ser múltiplo de [CashRules.step]. Nada se redondea.
  */
 fun checkCash(
     paying: BigDecimal?,
     total: BigDecimal,
     rules: CashRules,
+    exact: Boolean = false,
 ): CashCheck {
     val outcome =
         when {
             paying == null || paying.signum() <= 0 -> CashCheck.Missing(maxDeclarable(total, rules))
-
             paying < total -> CashCheck.BelowTotal(total)
-
             paying > rules.maxBill -> CashCheck.AboveMaxBill(rules.maxBill)
-
-            paying.compareTo(
-                total,
-            ) != 0 && paying.remainder(rules.step).signum() != 0 -> CashCheck.NotMultiple(rules.step)
-
+            !exact && paying.remainder(rules.step).signum() != 0 -> CashCheck.NotMultiple(rules.step)
             else -> null
         }
     return outcome ?: changeCheck(checkNotNull(paying), total, rules)
@@ -159,7 +155,7 @@ fun cashChips(
     total: BigDecimal,
     rules: CashRules,
 ): List<CashChip> {
-    val exact = CashChip(total, exact = true, check = checkCash(total, total, rules))
+    val exact = CashChip(total, exact = true, check = checkCash(total, total, rules, exact = true))
     val bills =
         QUICK_BILLS.filter { it > total }.map {
             CashChip(

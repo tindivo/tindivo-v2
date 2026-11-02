@@ -163,5 +163,6 @@ private fun cashOk(
     quote: QuoteView,
 ): Boolean {
     val rules = quote.cash ?: return false
-    return checkCash(state.cash.payingWith(quote.total), quote.total, rules) is CashCheck.Ok
+    val exact = state.cash is CashChoice.Exact
+    return checkCash(state.cash.payingWith(quote.total), quote.total, rules, exact) is CashCheck.Ok
 }

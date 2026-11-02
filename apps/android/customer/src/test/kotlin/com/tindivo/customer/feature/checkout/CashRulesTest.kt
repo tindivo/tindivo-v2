@@ -58,10 +58,14 @@ class CashRulesTest {
     }
 
     @Test
-    fun `el total exacto vale aunque no sea multiplo del billete`() {
+    fun `solo la opcion exacto vale aunque el total no sea multiplo del billete`() {
         val total = d("12.30")
-        assertEquals(CashCheck.Ok(d("12.30"), d("0.00")), checkCash(d("12.30"), total, rules))
+        assertEquals(CashCheck.Ok(d("12.30"), d("0.00")), checkCash(d("12.30"), total, rules, exact = true))
+        // «Otro» con el mismo monto no es «Exacto»: tiene que ser múltiplo y nunca se redondea.
+        assertEquals(CashCheck.NotMultiple(d("0.50")), checkCash(d("12.30"), total, rules))
         assertEquals(CashCheck.NotMultiple(d("0.50")), checkCash(d("12.40"), total, rules))
+        assertEquals(CashCheck.Ok(d("12.50"), d("0.20")), checkCash(d("12.50"), total, rules))
+        assertTrue(cashChips(total, rules).first { it.exact }.enabled)
     }
 
     @Test
