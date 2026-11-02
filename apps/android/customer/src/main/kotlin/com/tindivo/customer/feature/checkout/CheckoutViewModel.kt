@@ -76,6 +76,11 @@ class CheckoutViewModel
                     accountId = session.userId
                     // De una cuenta a otra sin pasar por la salida: lo de la anterior no se queda ni se publica.
                     if (previous != null && previous != session.userId) clearAccountState(signedOut = false)
+                    // Entró alguien con la bolsa vacía: ya no hay que pedirle que entre.
+                    val empty = cart?.isEmpty() != false
+                    if (empty && mutableState.value.phase == CheckoutPhase.SignInRequired) {
+                        mutableState.update { it.copy(phase = CheckoutPhase.EmptyBag) }
+                    }
                     startIfReady()
                 }
             }
@@ -179,7 +184,11 @@ class CheckoutViewModel
                 }
         }
 
+        /** Mientras se envía, lo que se cotizó y se compara es lo que sale: el formulario no se edita. */
+        private fun locked() = mutableState.value.sending
+
         fun setMethod(method: DeliveryChoice) {
+            if (locked()) return
             val current = mutableState.value
             val allowed = if (method == DeliveryChoice.Pickup) current.acceptsPickup else current.acceptsDelivery
             if (!allowed || current.method == method) return
@@ -188,21 +197,28 @@ class CheckoutViewModel
         }
 
         fun setPickupWhen(choice: PickupWhen) {
+            if (locked()) return
             edit { copy(pickupWhen = choice) }
             requote(debounced = true)
         }
 
         fun selectAddress(id: String) {
+            if (locked()) return
             edit { copy(selectedAddressId = id) }
             requote(debounced = true)
         }
 
-        fun setName(text: String) = edit { copy(name = text.take(MAX_NAME_LENGTH)) }
+        fun setName(text: String) {
+            if (!locked()) edit { copy(name = text.take(MAX_NAME_LENGTH)) }
+        }
 
-        fun setNote(text: String) = edit { copy(note = text.take(MAX_DRIVER_NOTE_LENGTH)) }
+        fun setNote(text: String) {
+            if (!locked()) edit { copy(note = text.take(MAX_DRIVER_NOTE_LENGTH)) }
+        }
 
         /** Solo se puede elegir lo que la cotización marca como disponible. */
         fun selectPay(method: PayMethod) {
+            if (locked()) return
             val allowed =
                 mutableState.value.quote
                     ?.options
@@ -210,9 +226,13 @@ class CheckoutViewModel
             if (allowed) edit { copy(pay = method, cash = if (method == PayMethod.Cash) cash else CashChoice.None) }
         }
 
-        fun selectCash(choice: CashChoice) = edit { copy(cash = choice) }
+        fun selectCash(choice: CashChoice) {
+            if (!locked()) edit { copy(cash = choice) }
+        }
 
-        fun retryQuote() = requote(debounced = false)
+        fun retryQuote() {
+            if (!locked()) requote(debounced = false)
+        }
 
         private inline fun edit(change: CheckoutUiState.() -> CheckoutUiState) =
             mutableState.update { it.change().copy(message = null) }

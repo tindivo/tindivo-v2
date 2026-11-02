@@ -397,6 +397,21 @@ class CheckoutViewModelTest : CheckoutHarness() {
         }
 
     @Test
+    fun `con la bolsa vacia, al entrar una cuenta tras cerrar la sesion deja de pedir que entre`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            session.signOut()
+            advanceUntilIdle()
+            assertEquals(CheckoutPhase.SignInRequired, vm.state.value.phase)
+
+            session.switchTo("user-1")
+            advanceUntilIdle()
+
+            assertEquals(CheckoutPhase.EmptyBag, vm.state.value.phase)
+            assertTrue(requests.isEmpty())
+        }
+
+    @Test
     fun `si no carga el perfil ofrece reintentar`() =
         runTest(dispatcher) {
             handlers["GET /customer/profile"] = { reply(500, problem(500, "internal_error", "x")) }
