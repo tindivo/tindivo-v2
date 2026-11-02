@@ -209,9 +209,9 @@ internal class AddressListViewModelTest : AddressHarness() {
     fun `un aviso de cambio con la lectura retenida hace otra lectura y no deja la lista vieja`() =
         runTest {
             script(
-                Step(addressList(address())),
+                Step(addressList(address(), address(ID_B, isDefault = false))),
                 Step(response(200, """{"data":${address(ID_B)}}""")),
-                Step(addressList(address(), address(ID_B, isDefault = false)), gated = true),
+                Step(addressList(address(line = OLD_LINE), address(ID_B, isDefault = false)), gated = true),
                 Step(addressList(address(ID_B), address(ID_A, isDefault = false), address(ID_C, isDefault = false))),
             )
             val vm = viewModel(Dispatchers.IO)
@@ -226,15 +226,15 @@ internal class AddressListViewModelTest : AddressHarness() {
             val last = vm.state.first { it.ids() == listOf(ID_B, ID_A, ID_C) }
             assertTrue(last is AddressListUiState.Loaded && !last.busy)
             assertEquals(4, server.requestCount)
-            // Ningún estado publicado quedó con la lista vieja de dos direcciones.
-            assertTrue(seen.none { it.ids()?.size == 2 })
+            // Ningún estado publicado mostró la lista vieja (la lectura retenida).
+            assertTrue(seen.none { it is AddressListUiState.Loaded && it.items.any { item -> item.line == OLD_LINE } })
         }
 
     @Test
     fun `si la lectura retenida falla pero hubo aviso de cambio se lee de nuevo y no se muestra el error`() =
         runTest {
             script(
-                Step(addressList(address())),
+                Step(addressList(address(), address(ID_B, isDefault = false))),
                 Step(response(200, """{"data":${address(ID_B)}}""")),
                 Step(problem(409, "conflict"), gated = true),
                 Step(addressList(address(ID_B), address(ID_A, isDefault = false))),
@@ -257,7 +257,7 @@ internal class AddressListViewModelTest : AddressHarness() {
     fun `si hacer predeterminada falla y hubo aviso de cambio la lista se lee de nuevo`() =
         runTest {
             script(
-                Step(addressList(address())),
+                Step(addressList(address(), address(ID_B, isDefault = false))),
                 Step(problem(409, "conflict"), gated = true),
                 Step(addressList(address(ID_B), address(ID_A, isDefault = false))),
             )
@@ -275,5 +275,6 @@ internal class AddressListViewModelTest : AddressHarness() {
 
     private companion object {
         const val WAIT_SECONDS = 10L
+        const val OLD_LINE = "Lista vieja"
     }
 }
