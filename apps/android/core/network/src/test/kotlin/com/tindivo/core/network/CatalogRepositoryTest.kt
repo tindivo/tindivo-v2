@@ -186,6 +186,27 @@ class CatalogRepositoryTest {
             }
         }
 
+    @Test
+    fun `publicConfig decodifica el poligono de cobertura y el centro con radio`() =
+        runTest {
+            server.enqueue(
+                json(
+                    200,
+                    """{"data":{"coverage":{"centerLat":-9.1547,"centerLng":-78.5042,"radiusKm":3},
+                    "coveragePolygon":[{"lat":-9.15,"lng":-78.51},{"lat":-9.15,"lng":-78.49},{"lat":-9.16,"lng":-78.50}],
+                    "locationValidation":null,"deliveryBands":null,"prepayThreshold":null,"maxCashBill":null,
+                    "maxChange":null,"prepayTimers":null}}""",
+                ),
+            )
+
+            val config = (repository.publicConfig() as ApiResult.Success).data
+
+            assertEquals(0, BigDecimal("3").compareTo(config.coverage?.radiusKm))
+            assertEquals(3, config.coveragePolygon?.size)
+            assertEquals(0, BigDecimal("-9.15").compareTo(config.coveragePolygon?.get(0)?.lat))
+            assertEquals("/api/v1/public/config", server.takeRequest().url.encodedPath)
+        }
+
     private companion object {
         const val THUMB_URL = "https://x.supabase.co/storage/v1/object/public/menu-items/b/items/i.1-t"
 

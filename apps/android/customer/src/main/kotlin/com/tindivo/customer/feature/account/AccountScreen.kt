@@ -35,6 +35,7 @@ import com.tindivo.customer.R
 fun AccountDestination(
     onLeave: () -> Unit,
     onOpenOrders: () -> Unit,
+    onOpenAddresses: () -> Unit,
     onVerifyPhone: () -> Unit,
     phoneChanged: Boolean,
     onPhoneChangeHandled: () -> Unit,
@@ -55,6 +56,7 @@ fun AccountDestination(
         state = state,
         onRetry = viewModel::load,
         onOpenOrders = onOpenOrders,
+        onOpenAddresses = onOpenAddresses,
         onVerifyPhone = onVerifyPhone,
         onSignOut = viewModel::signOut,
         onBack = onLeave,
@@ -66,6 +68,7 @@ fun AccountScreen(
     state: AccountUiState,
     onRetry: () -> Unit,
     onOpenOrders: () -> Unit,
+    onOpenAddresses: () -> Unit,
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
@@ -96,6 +99,7 @@ fun AccountScreen(
                     Profile(
                         profile = state.profile,
                         onOpenOrders = onOpenOrders,
+                        onOpenAddresses = onOpenAddresses,
                         onVerifyPhone = onVerifyPhone,
                         onSignOut = onSignOut,
                     )
@@ -142,6 +146,7 @@ private fun Failure(
 private fun Profile(
     profile: AccountProfileUi,
     onOpenOrders: () -> Unit,
+    onOpenAddresses: () -> Unit,
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
 ) {
@@ -177,6 +182,13 @@ private fun Profile(
             Text(text = stringResource(R.string.account_orders))
         }
         OutlinedButton(
+            onClick = onOpenAddresses,
+            modifier = Modifier.heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        ) {
+            Text(text = stringResource(R.string.account_addresses))
+        }
+        OutlinedButton(
             onClick = onSignOut,
             modifier = Modifier.heightIn(min = 48.dp),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
@@ -194,6 +206,7 @@ private fun AccountPreview() {
             state = AccountUiState.Loaded(AccountProfileUi("Rosa Quispe", phoneVerified = false)),
             onRetry = {},
             onOpenOrders = {},
+            onOpenAddresses = {},
             onVerifyPhone = {},
             onSignOut = {},
             onBack = {},

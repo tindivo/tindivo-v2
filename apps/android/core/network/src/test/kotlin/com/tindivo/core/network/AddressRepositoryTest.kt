@@ -14,10 +14,17 @@ import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AddressRepositoryTest : HttpClientTestBase() {
+    private val tokens = SwitchableTokens(token = testJwt(ACCOUNT))
+
     private fun addresses() =
         AddressRepository(
             baseUrl = server.url("/api/v1").toString().trimEnd('/'),
-            client = realClient(),
+            client =
+                createOkHttpClient(
+                    info,
+                    RetryInterceptor(sleeper = { _, _ -> }),
+                    auth = BearerAuthInterceptor(server.url("/"), tokens),
+                ),
             ioDispatcher = UnconfinedTestDispatcher(),
         )
 
@@ -46,7 +53,7 @@ class AddressRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(200, """{"data":{"items":[$ADDRESS]}}"""))
 
-            val items = (addresses().list() as ApiResult.Success).data.items
+            val items = (addresses().list(ACCOUNT) as ApiResult.Success).data.items
 
             assertEquals(1, items.size)
             assertEquals("Casa", items[0].label)
@@ -66,6 +73,7 @@ class AddressRepositoryTest : HttpClientTestBase() {
                 (
                     addresses().create(
                         CreateCustomerAddressRequest(reference = "Frente al parque"),
+                        ACCOUNT,
                     ) as ApiResult.Success
                 ).data
 
@@ -81,7 +89,8 @@ class AddressRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(problem(422, "validation_error"))
 
-            val error = (addresses().create(CreateCustomerAddressRequest(reference = "x")) as ApiResult.Failure).error
+            val result = addresses().create(CreateCustomerAddressRequest(reference = "x"), ACCOUNT)
+            val error = (result as ApiResult.Failure).error
 
             assertEquals(ApiErrorCode.ValidationError, (error as AppError.Known).code)
         }
@@ -92,7 +101,7 @@ class AddressRepositoryTest : HttpClientTestBase() {
             server.enqueue(problem(503, "internal_error"))
             server.enqueue(json(201, """{"data":$ADDRESS}"""))
 
-            val result = addresses().create(CreateCustomerAddressRequest(reference = "Frente al parque"))
+            val result = addresses().create(CreateCustomerAddressRequest(reference = "Frente al parque"), ACCOUNT)
 
             assertTrue(result is ApiResult.Failure)
             assertEquals(1, server.requestCount)
@@ -104,7 +113,7 @@ class AddressRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(200, """{"data":$ADDRESS}"""))
 
-            val result = addresses().update(ID, UpdateCustomerAddressRequest(label = "Trabajo"))
+            val result = addresses().update(ID, UpdateCustomerAddressRequest(label = "Trabajo"), ACCOUNT)
 
             assertTrue(result is ApiResult.Success)
             val sent = server.takeRequest()
@@ -118,7 +127,8 @@ class AddressRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(problem(404, "not_found"))
 
-            val error = (addresses().update(ID, UpdateCustomerAddressRequest(label = "x")) as ApiResult.Failure).error
+            val result = addresses().update(ID, UpdateCustomerAddressRequest(label = "x"), ACCOUNT)
+            val error = (result as ApiResult.Failure).error
 
             assertEquals(ApiErrorCode.NotFound, (error as AppError.Known).code)
         }
@@ -128,7 +138,7 @@ class AddressRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(MockResponse.Builder().code(204).build())
 
-            val result = addresses().delete(ID)
+            val result = addresses().delete(ID, ACCOUNT)
 
             assertTrue(result is ApiResult.Success)
             val sent = server.takeRequest()
@@ -141,13 +151,48 @@ class AddressRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(problem(404, "not_found"))
 
-            val error = (addresses().delete(ID) as ApiResult.Failure).error
+            val error = (addresses().delete(ID, ACCOUNT) as ApiResult.Failure).error
 
             assertEquals(ApiErrorCode.NotFound, (error as AppError.Known).code)
         }
 
+    @Test
+    fun `cada operacion con el token de otra cuenta no envia nada`() =
+        runTest {
+            tokens.token = testJwt(OTHER_ACCOUNT)
+            val repo = addresses()
+
+            val results =
+                listOf(
+                    repo.list(ACCOUNT),
+                    repo.create(CreateCustomerAddressRequest(reference = "Frente al parque"), ACCOUNT),
+                    repo.update(ID, UpdateCustomerAddressRequest(label = "Trabajo"), ACCOUNT),
+                    repo.delete(ID, ACCOUNT),
+                )
+
+            for (result in results) {
+                val error = (result as ApiResult.Failure).error
+                assertTrue(error is AppError.Network && error.cause is AccountMismatchException)
+            }
+            assertEquals(0, server.requestCount)
+        }
+
+    @Test
+    fun `un 401 con refresco a otra cuenta no repite la peticion con el token nuevo`() =
+        runTest {
+            tokens.onRefresh = testJwt(OTHER_ACCOUNT)
+            server.enqueue(problem(401, "unauthorized"))
+
+            val result = addresses().update(ID, UpdateCustomerAddressRequest(label = "Trabajo"), ACCOUNT)
+
+            assertTrue((result as ApiResult.Failure).error is AppError.Network)
+            assertEquals(1, server.requestCount)
+        }
+
     private companion object {
         val ID: UUID = UUID.fromString("9e2a737a-018f-4c2d-9a11-6f0d3c1e8a05")
+        const val ACCOUNT = "6f1c3a52-9d0e-4c1b-8a77-2f4e5d6c7b8a"
+        const val OTHER_ACCOUNT = "0b9e8d7c-6a5f-4e3d-9c2b-1a0f9e8d7c6b"
 
         const val ADDRESS = """
             {"id":"9e2a737a-018f-4c2d-9a11-6f0d3c1e8a05","label":"Casa","line":"Jr. Lima 123",

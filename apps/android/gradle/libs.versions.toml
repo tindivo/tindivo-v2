@@ -34,6 +34,11 @@ androidxTestExtJunit = "1.2.1"
 credentials = "1.6.0"
 googleid = "1.2.1"
 tink = "1.23.0"
+# Mapa de Google (D-54, KT-16): el formulario de direcciones. play-services-maps 20.1.0 (2026-10-13) y maps-compose 9.0.1
+# (2026-10-08) tienen más de dos semanas; maps-compose 9.0.1 se compila contra Compose BOM 2026.09.00 y Kotlin 2.4.20, los
+# mismos de aquí.
+playServicesMaps = "20.1.0"
+mapsCompose = "9.0.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -65,6 +70,8 @@ androidx-credentials = { module = "androidx.credentials:credentials", version.re
 androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
+play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
