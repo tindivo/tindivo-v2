@@ -105,7 +105,7 @@ internal class ReviewViewModel
                             tags = pending.tags.map { it.id }.filter { it in current.selectedTags },
                             comment = current.comment.trim().ifEmpty { null },
                         )
-                    if (started != generation) return@launch
+                    if (!isCurrent(started, accountId)) return@launch
                     when (result) {
                         is ApiResult.Success -> {
                             mutableState.value = ReviewUiState()
@@ -161,6 +161,16 @@ internal class ReviewViewModel
             }
         }
 
+        /**
+         * Sigue siendo la misma cuenta: la generación no cambió Y la sesión vigente, leída ahora, es la de [accountId].
+         * La generación sola no basta: solo cambia cuando el colector procesa la sesión, y la continuación de una
+         * respuesta ya terminada puede correr antes que el colector.
+         */
+        private fun isCurrent(
+            started: Int,
+            accountId: String,
+        ) = started == generation && (sessionStore.state.value as? SessionState.SignedIn)?.userId == accountId
+
         private fun clearAccountState() {
             generation++
             loadJob?.cancel()
@@ -176,7 +186,7 @@ internal class ReviewViewModel
             accountId: String,
         ) {
             val result = reviews.pending(accountId)
-            if (started != generation) return
+            if (!isCurrent(started, accountId)) return
             when (result) {
                 is ApiResult.Success -> {
                     val pending = result.data?.toUi()

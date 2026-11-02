@@ -21,8 +21,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
@@ -37,7 +41,9 @@ import org.junit.Before
 import org.junit.Test
 import java.util.Collections
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.CoroutineContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReviewViewModelTest {
@@ -524,6 +530,133 @@ class ReviewViewModelTest {
                     ?.orderId,
             )
         }
+
+    /**
+     * Un `io` que avisa cuando termina cada bloque. Con el Main de la prueba en un `StandardTestDispatcher`, al bajar
+     * el cerrojo la respuesta ya completó y la reanudación del ViewModel está ENCOLADA en Main, sin ejecutarse: es el
+     * momento exacto en que el vector de CAX-001 puede intercalar un cambio de sesión.
+     */
+    private class LatchIo : CoroutineDispatcher() {
+        @Volatile private var latch = CountDownLatch(1)
+
+        fun arm() {
+            latch = CountDownLatch(1)
+        }
+
+        fun awaitDone() = assertTrue("la llamada no terminó", latch.await(5, TimeUnit.SECONDS))
+
+        override fun dispatch(
+            context: CoroutineContext,
+            block: Runnable,
+        ) {
+            val current = latch
+            Dispatchers.IO.dispatch(context) {
+                block.run()
+                current.countDown()
+            }
+        }
+    }
+
+    /** Con Main controlado: crea el ViewModel de A y deja su consulta terminada con la reanudación pendiente. */
+    private fun controlledMain(body: suspend TestScope.(LatchIo) -> Unit) {
+        Dispatchers.setMain(StandardTestDispatcher())
+        runTest {
+            val io = LatchIo()
+            body(this, io)
+        }
+    }
+
+    /** Lo que publica el ViewModel desde AHORA (el primer valor es el estado vigente, que se descarta). */
+    private fun TestScope.publicationsFromNow(viewModel: ReviewViewModel): List<ReviewUiState> {
+        val seen = Collections.synchronizedList(mutableListOf<ReviewUiState>())
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect { seen += it } }
+        return seen
+    }
+
+    @Test
+    fun `la consulta de A ya terminada no publica si la sesion pasa a B antes que el colector`() =
+        controlledMain { io ->
+            server.enqueue(ok(PENDING))
+            server.enqueue(ok(PENDING_B))
+            val viewModel = viewModel(io)
+            runCurrent()
+            io.awaitDone()
+
+            switchToAccountB()
+            val seen = publicationsFromNow(viewModel)
+            advanceUntilIdle()
+
+            assertTrue(seen.toString(), seen.drop(1).none { it.pending?.orderId == ORDER_ID })
+        }
+
+    @Test
+    fun `la consulta de A ya terminada no publica si la sesion se cierra antes que el colector`() =
+        controlledMain { io ->
+            server.enqueue(ok(PENDING))
+            val viewModel = viewModel(io)
+            runCurrent()
+            io.awaitDone()
+
+            store.signOut()
+            val seen = publicationsFromNow(viewModel)
+            advanceUntilIdle()
+
+            assertTrue(seen.toString(), seen.none { it.pending != null })
+            assertEquals(ReviewUiState(), viewModel.state.value)
+        }
+
+    @Test
+    fun `el fallo del envio de A ya terminado no se publica si la sesion pasa a B antes que el colector`() =
+        controlledMain { io ->
+            val viewModel = openedFormOfA(io)
+            server.enqueue(problem(409, "conflict", "Ya calificaste este pedido"))
+            server.enqueue(ok(PENDING_B))
+            io.arm()
+            viewModel.submit()
+            runCurrent()
+            io.awaitDone()
+
+            switchToAccountB()
+            val seen = publicationsFromNow(viewModel)
+            advanceUntilIdle()
+
+            assertTrue(seen.toString(), seen.drop(1).none { it.error != null || it.pending?.orderId == ORDER_ID })
+        }
+
+    @Test
+    fun `el exito del envio de A ya terminado no se publica si la sesion pasa a B antes que el colector`() =
+        controlledMain { io ->
+            val viewModel = openedFormOfA(io)
+            server.enqueue(ok(CREATED))
+            server.enqueue(ok(PENDING_B))
+            io.arm()
+            viewModel.submit()
+            runCurrent()
+            io.awaitDone()
+
+            switchToAccountB()
+            val seen = publicationsFromNow(viewModel)
+            advanceUntilIdle()
+
+            assertTrue(seen.toString(), seen.drop(1).none { it.error != null || it.pending?.orderId == ORDER_ID })
+        }
+
+    /** A con el pendiente cargado, el detalle abierto y la nota puesta; deja el cerrojo armado para el envío. */
+    private suspend fun TestScope.openedFormOfA(io: LatchIo): ReviewViewModel {
+        server.enqueue(ok(PENDING))
+        val viewModel = viewModel(io)
+        runCurrent()
+        io.awaitDone()
+        runCurrent()
+        assertEquals(
+            ORDER_ID,
+            viewModel.state.value.pending
+                ?.orderId,
+        )
+        viewModel.openForm()
+        viewModel.onRating(4)
+        return viewModel
+    }
 
     private fun assertNextAccountUntouched(
         viewModel: ReviewViewModel,
