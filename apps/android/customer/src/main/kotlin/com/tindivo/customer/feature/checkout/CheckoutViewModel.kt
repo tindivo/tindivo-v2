@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.CheckoutRepository
+import com.tindivo.core.network.generated.model.CreateOrder201ResponseData
+import com.tindivo.core.network.generated.model.CreateOrderRequest
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartStore
 import com.tindivo.customer.feature.cart.ReserveResult
@@ -340,35 +342,7 @@ class CheckoutViewModel
                 stop(CheckoutMessage.Generic)
                 return
             }
-            val result =
-                try {
-                    when (cartStore.reserve(account, current.fingerprint())) {
-                        ReserveResult.Foreign -> {
-                            cartStore.discardForeign(account)
-                            if (isCurrent(started, account)) {
-                                mutableState.update { it.copy(sending = false, phase = CheckoutPhase.EmptyBag) }
-                            }
-                            return
-                        }
-
-                        ReserveResult.Changed -> {
-                            if (isCurrent(started, account)) stop(CheckoutMessage.OptionsChanged)
-                            return
-                        }
-
-                        ReserveResult.Reserved -> {
-                            Unit
-                        }
-                    }
-                    // La bolsa se consume DENTRO del libro, antes de olvidar el intento; el envío no se cancela.
-                    ledger.place(account, current, cartStore::consume) { key ->
-                        checkout.createOrder(request, key, account)
-                    }
-                } catch (ignored: IOException) {
-                    // No consta qué pasó con el pedido ni con la bolsa: el siguiente intento consulta antes de enviar.
-                    if (isCurrent(started, account)) stop(CheckoutMessage.StillProcessing)
-                    return
-                }
+            val result = reserveAndSend(started, account, current, request) ?: return
             // El pedido de la cuenta que salió existe y el libro ya consumió su bolsa; esta pantalla (ya de otra
             // cuenta, o de nadie) no navega a él ni muestra nada suyo.
             if (!isCurrent(started, account)) return
@@ -400,6 +374,56 @@ class CheckoutViewModel
                 }
             }
         }
+
+        /**
+         * Reserva la bolsa y envía el pedido. `null` si no se envió nada y el estado ya quedó puesto: la bolsa era de
+         * otra cuenta (se descarta), cambió, o no consta qué pasó con el pedido o con la bolsa (el siguiente intento
+         * consulta antes de enviar).
+         */
+        private suspend fun reserveAndSend(
+            started: Int,
+            account: String,
+            current: Cart,
+            request: CreateOrderRequest,
+        ): PlaceResult<CreateOrder201ResponseData>? =
+            try {
+                // La bolsa se consume DENTRO del libro, antes de olvidar el intento; el envío no se cancela.
+                if (reserve(started, account, current)) {
+                    ledger.place(account, current, cartStore::consume) { key ->
+                        checkout.createOrder(request, key, account)
+                    }
+                } else {
+                    null
+                }
+            } catch (ignored: IOException) {
+                if (isCurrent(started, account)) stop(CheckoutMessage.StillProcessing)
+                null
+            }
+
+        /** La bolsa con la que otra cuenta intentó enviar no se envía ni se enseña: se descarta. */
+        private suspend fun reserve(
+            started: Int,
+            account: String,
+            current: Cart,
+        ): Boolean =
+            when (cartStore.reserve(account, current.fingerprint())) {
+                ReserveResult.Foreign -> {
+                    cartStore.discardForeign(account)
+                    if (isCurrent(started, account)) {
+                        mutableState.update { it.copy(sending = false, phase = CheckoutPhase.EmptyBag) }
+                    }
+                    false
+                }
+
+                ReserveResult.Changed -> {
+                    if (isCurrent(started, account)) stop(CheckoutMessage.OptionsChanged)
+                    false
+                }
+
+                ReserveResult.Reserved -> {
+                    true
+                }
+            }
 
         private fun failed(result: PlaceResult.Failed) {
             mutableState.update { it.withRejection(result.error) }
