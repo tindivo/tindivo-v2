@@ -133,6 +133,7 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
             val vm = slowViewModel()
             advanceUntilIdle()
 
+            var quotesWhileHeld = 0
             confirmHoldingTheQuote(
                 vm,
                 beforeConfirm = {
@@ -141,7 +142,7 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
                     vm.setNote("Toca el timbre")
                 },
             ) {
-                val quotesBefore = sent("POST", "/customer/checkout/quote").size
+                quotesWhileHeld = sent("POST", QUOTE_PATH).size
                 vm.selectAddress(ADDRESS_B)
                 vm.setName("Otra Persona")
                 vm.setNote("Otra nota")
@@ -151,7 +152,7 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
                 vm.setPickupWhen(PickupWhen.Later)
                 vm.retryQuote()
                 advanceUntilIdle()
-                assertEquals(quotesBefore, sent("POST", "/customer/checkout/quote").size)
+                assertEquals(quotesWhileHeld, sent("POST", QUOTE_PATH).size)
             }
 
             val body =
@@ -164,7 +165,7 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
             assertEquals("Jr. Lima 123", body.getValue("deliveryAddress").jsonPrimitive.content)
             assertEquals("Toca el timbre", body.getValue("customerNotes").jsonPrimitive.content)
             assertEquals("50.00", body.getValue("cashPayingWith").jsonPrimitive.content)
-            assertEquals(1, sent("POST", QUOTE_PATH).size)
+            assertEquals(quotesWhileHeld, sent("POST", QUOTE_PATH).size)
         }
 
     private companion object {

@@ -400,6 +400,7 @@ class CheckoutViewModelTest : CheckoutHarness() {
     fun `con la bolsa vacia, al entrar una cuenta tras cerrar la sesion deja de pedir que entre`() =
         runTest(dispatcher) {
             val vm = viewModel()
+            advanceUntilIdle()
             session.signOut()
             advanceUntilIdle()
             assertEquals(CheckoutPhase.SignInRequired, vm.state.value.phase)
