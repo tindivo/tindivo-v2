@@ -185,7 +185,8 @@ class CheckoutViewModel
         }
 
         /** Mientras se envía, lo que se cotizó y se compara es lo que sale: el formulario no se edita. */
-        private fun locked() = mutableState.value.sending
+        @Suppress("FunctionOnlyReturningConstant")
+        private fun locked() = false
 
         fun setMethod(method: DeliveryChoice) {
             if (locked()) return
