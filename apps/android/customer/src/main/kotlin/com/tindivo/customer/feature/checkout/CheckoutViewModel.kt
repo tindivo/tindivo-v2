@@ -54,7 +54,6 @@ class CheckoutViewModel
         private var generation = 0
         private var quoteJob: Job? = null
         private var loadJob: Job? = null
-        private var submitJob: Job? = null
 
         init {
             viewModelScope.launch { sessionStore.state.collect { onSession(it) } }
@@ -92,15 +91,17 @@ class CheckoutViewModel
             account: String,
         ) = started == generation && (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
 
-        /** Cancela lo que está en vuelo y deja solo las líneas de la bolsa, que son del dispositivo. */
+        /**
+         * Cancela la carga y la cotización (no crean nada) y deja solo las líneas de la bolsa, que son del dispositivo.
+         * El envío NO se cancela: si el POST ya salió, el pedido existe y hay que dejar que termine para vaciar la
+         * bolsa; su resultado no se publica porque [isCurrent] ya no se cumple.
+         */
         private fun clearAccountState(signedOut: Boolean) {
             generation++
             quoteJob?.cancel()
             quoteJob = null
             loadJob?.cancel()
             loadJob = null
-            submitJob?.cancel()
-            submitJob = null
             lastIntent = null
             loadedFor = null
             val empty = cart?.isEmpty() != false
@@ -246,7 +247,7 @@ class CheckoutViewModel
             val bag = cart
             val started = generation
             mutableState.update { it.copy(sending = true, message = null) }
-            submitJob = viewModelScope.launch { submit(started, account, bag) }
+            viewModelScope.launch { submit(started, account, bag) }
         }
 
         private suspend fun submit(
@@ -254,9 +255,9 @@ class CheckoutViewModel
             account: String?,
             bag: Cart?,
         ) {
-            quoteJob?.cancel()
+            if (started == generation) quoteJob?.cancel()
             if (account == null) {
-                stop(CheckoutMessage.Generic)
+                if (started == generation) stop(CheckoutMessage.Generic)
                 return
             }
             val shown = mutableState.value.quote?.total
@@ -365,10 +366,9 @@ class CheckoutViewModel
             val started = generation
             if (account == null || !mutableState.value.reconcileSeen || mutableState.value.sending) return
             mutableState.update { it.copy(phase = CheckoutPhase.Form, sending = true, message = null) }
-            submitJob =
-                viewModelScope.launch {
-                    ledger.acknowledgeReconciled(account)
-                    submit(started, account, bag)
-                }
+            viewModelScope.launch {
+                ledger.acknowledgeReconciled(account)
+                submit(started, account, bag)
+            }
         }
     }

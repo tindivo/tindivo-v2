@@ -19,6 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
 import java.util.Collections
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -239,6 +240,50 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
             assertTrue(sent("POST", "/customer/orders").isEmpty())
             assertFalse(viewModel.state.value.sending)
         }
+
+    @Test
+    fun `el POST de A retenido no se cancela si la sesion pasa a B y la bolsa queda vaciada`() =
+        runTest(dispatcher) {
+            postHeldWhileSessionChanges { switchToB() }
+        }
+
+    @Test
+    fun `el POST de A retenido no se cancela si la sesion se cierra y la bolsa queda vaciada`() =
+        runTest(dispatcher) {
+            postHeldWhileSessionChanges { session.signOut() }
+        }
+
+    /**
+     * El POST de A ya llegó al servidor y está retenido cuando la sesión cambia: el envío no debe cancelarse, porque
+     * el pedido se crea igual y la bolsa del dispositivo tiene que vaciarse para que nadie la reenvíe.
+     */
+    private suspend fun TestScope.postHeldWhileSessionChanges(change: suspend () -> Unit) {
+        val arrived = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        handlers["POST /customer/orders"] = {
+            arrived.countDown()
+            release.await(WAIT_SECONDS, TimeUnit.SECONDS)
+            reply(201, CREATED_JSON)
+        }
+        val viewModel = formOfA()
+        viewModel.confirm()
+        untilCallDone() // la recotización de confirmar
+        runCurrent() // el POST sale y queda retenido en el servidor
+        assertTrue("el POST no llegó", arrived.await(WAIT_SECONDS, TimeUnit.SECONDS))
+
+        val seen = publicationsFromNow(viewModel)
+        change()
+        runCurrent() // el colector procesa el cambio de sesión
+        release.countDown()
+        settle()
+
+        assertEquals(1, sent("POST", "/customer/orders").size)
+        val leaked = seen.drop(1).filter { it.createdOrderId != null || it.phase == CheckoutPhase.Opening }
+        assertTrue(leaked.toString(), leaked.isEmpty())
+        assertFalse(viewModel.state.value.sending)
+        assertNull(viewModel.state.value.createdOrderId)
+        assertTrue(cartStore.cart.first()?.isEmpty() != false)
+    }
 
     /** Un despachador de las llamadas bloqueantes: como el de la prueba, o en hilos reales cuando se le pide. */
     private class ControlledIo(
