@@ -11,10 +11,12 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.RecordedRequest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
@@ -47,6 +49,13 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
         handlers["POST /customer/checkout/quote"] = { request ->
             reply(200, quoteJson(total = if (isB(request)) QUOTE_B else quoteTotal))
         }
+    }
+
+    /** Nada de este test sigue en un hilo real cuando termina: el arreglo de Main de la clase base va después. */
+    @After
+    fun drainIo() {
+        io.awaitIdle()
+        io.controlled = false
     }
 
     private fun isB(request: RecordedRequest) = request.headers["Authorization"]?.endsWith(sessionJwt("user-2")) == true
@@ -87,6 +96,20 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
         return viewModel
     }
 
+    /** Deja correr Main hasta que el servidor recibió [method] [path] y espera a que terminen las llamadas en vuelo. */
+    private fun TestScope.untilSent(
+        method: String,
+        path: String,
+    ) {
+        repeat(MAX_SPINS) {
+            runCurrent()
+            io.awaitIdle()
+            if (sent(method, path).isNotEmpty()) return
+            Thread.yield()
+        }
+        fail("el servidor no recibió $method $path")
+    }
+
     /** Deja correr Main hasta la siguiente llamada real y espera a que termine, sin ejecutar su reanudación. */
     private fun TestScope.untilCallDone() {
         runCurrent()
@@ -109,7 +132,7 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
             fillCart()
             io.controlled = true
             val viewModel = viewModel()
-            untilCallDone()
+            untilSent("GET", "/customer/profile")
 
             switchToB()
             val seen = publicationsFromNow(viewModel)
@@ -130,7 +153,7 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
             fillCart()
             io.controlled = true
             val viewModel = viewModel()
-            untilCallDone()
+            untilSent("GET", "/customer/profile")
 
             session.signOut()
             val seen = publicationsFromNow(viewModel)
@@ -333,6 +356,7 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
 
     private companion object {
         const val WAIT_SECONDS = 5L
+        const val MAX_SPINS = 1000
         const val NAME_A = "Rosa Quispe"
         const val PHONE_A = "999888777"
         const val NAME_B = "Berta Rojas"
