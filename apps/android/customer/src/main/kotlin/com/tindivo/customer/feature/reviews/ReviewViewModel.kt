@@ -105,7 +105,7 @@ internal class ReviewViewModel
                             tags = pending.tags.map { it.id }.filter { it in current.selectedTags },
                             comment = current.comment.trim().ifEmpty { null },
                         )
-                    if (!isCurrent(started, accountId)) return@launch
+                    if (started != generation) return@launch
                     when (result) {
                         is ApiResult.Success -> {
                             mutableState.value = ReviewUiState()
@@ -186,7 +186,7 @@ internal class ReviewViewModel
             accountId: String,
         ) {
             val result = reviews.pending(accountId)
-            if (!isCurrent(started, accountId)) return
+            if (started != generation) return
             when (result) {
                 is ApiResult.Success -> {
                     val pending = result.data?.toUi()
