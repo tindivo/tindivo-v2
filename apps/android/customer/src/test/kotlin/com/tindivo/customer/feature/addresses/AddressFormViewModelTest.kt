@@ -270,6 +270,11 @@ internal class AddressFormViewModelTest : AddressHarness() {
             vm.onReference("Otra referencia mas clara")
             vm.save()
             assertTrue(vm.state.value.saving)
+            // El guardado ya llegó al servidor, retenido: si la sesión cambiara antes, la cancelación ganaría la carrera
+            // y la cuenta de peticiones no probaría nada.
+            server.takeRequest()
+            server.takeRequest()
+            server.takeRequest()
 
             store.switchTo("user-2")
             withContext(Dispatchers.IO) { delay(700) }
