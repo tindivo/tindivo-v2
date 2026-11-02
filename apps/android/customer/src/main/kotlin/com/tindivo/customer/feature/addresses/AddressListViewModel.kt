@@ -57,6 +57,11 @@ internal class AddressListViewModel
 
         private var job: Job? = null
 
+        /** Llegó un aviso de que la libreta cambió mientras había una llamada en curso: lo que ella traiga ya es viejo. */
+        private var stale = false
+
+        private val loggedOut get() = _state.value is AddressListUiState.LoggedOut
+
         /** La cuenta con la que se abrió la pantalla: cada llamada va atada a ella y, sin cuenta, no se llama. */
         private val accountId: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
 
@@ -73,9 +78,16 @@ internal class AddressListViewModel
             refresh()
         }
 
-        /** Vuelve a pedir la libreta. Con una llamada en curso o la sesión cerrada, no lanza otra. */
+        /**
+         * Vuelve a pedir la libreta. Con una llamada en curso no lanza otra: recuerda que lo que traiga ya es viejo y,
+         * al terminar, lee de nuevo. Con la sesión cerrada no hace nada.
+         */
         fun refresh() {
-            if (job?.isActive == true || _state.value is AddressListUiState.LoggedOut) return
+            if (loggedOut) return
+            if (job?.isActive == true) {
+                stale = true
+                return
+            }
             val account = accountId
             if (account == null) {
                 _state.value = AddressListUiState.LoggedOut
@@ -101,13 +113,26 @@ internal class AddressListViewModel
                         is ApiResult.Failure -> {
                             // El servidor es la verdad: tras un fallo no se adivina quién quedó predeterminada.
                             onFailure(result.error)?.let { settle(current.copy(busy = false, actionFailed = it)) }
+                            // Si la libreta cambió mientras tanto, se lee la nueva en vez de dejar la de antes.
+                            if (stale && !loggedOut) load(account)
                         }
                     }
                 }
         }
 
+        /**
+         * Lee la libreta y la publica. Si mientras tanto llegó un aviso de cambio ([stale]), lo leído ya es viejo, sea
+         * una lista o un error: no se publica y se vuelve a leer, hasta que una lectura termine sin avisos nuevos.
+         */
         private suspend fun load(account: String) {
-            when (val result = addresses.list(account)) {
+            if (loggedOut) return
+            stale = false
+            var result = addresses.list(account)
+            while (stale && !loggedOut) {
+                stale = false
+                result = addresses.list(account)
+            }
+            when (result) {
                 is ApiResult.Success -> {
                     val items = result.data.items.map { it.toUi() }
                     settle(if (items.isEmpty()) AddressListUiState.Empty else AddressListUiState.Loaded(items))
