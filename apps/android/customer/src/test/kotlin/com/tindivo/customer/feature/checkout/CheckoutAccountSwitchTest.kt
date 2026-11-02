@@ -179,11 +179,11 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
                 seen.drop(1).none { it.createdOrderId != null || it.phase == CheckoutPhase.Opening },
             )
             val state = viewModel.state.value
-            assertFalse(state.sending)
-            assertNull(state.createdOrderId)
-            assertNull(state.message)
-            assertEquals(CheckoutPhase.EmptyBag, state.phase)
-            assertTrue(cartStore.cart.first()?.isEmpty() != false)
+            assertFalse("sending: $state", state.sending)
+            assertNull("createdOrderId: $state", state.createdOrderId)
+            assertNull("message: $state", state.message)
+            assertEquals("fase: $state", CheckoutPhase.EmptyBag, state.phase)
+            assertTrue("bolsa: ${cartStore.cart.first()}", cartStore.cart.first()?.isEmpty() != false)
         }
 
     @Test

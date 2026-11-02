@@ -122,6 +122,12 @@ class CheckoutViewModel
             cart = current
             if (current == null || current.isEmpty()) {
                 if (mutableState.value.phase != CheckoutPhase.Opening) {
+                    // Sin bolsa no hay nada que cargar ni cotizar: lo que esté en vuelo sería de una bolsa que ya no existe.
+                    loadJob?.cancel()
+                    loadJob = null
+                    quoteJob?.cancel()
+                    quoteJob = null
+                    loadedFor = null
                     mutableState.update { it.copy(phase = CheckoutPhase.EmptyBag) }
                 }
                 return
