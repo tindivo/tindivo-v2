@@ -169,7 +169,7 @@ internal class ReviewViewModel
         private fun isCurrent(
             started: Int,
             accountId: String,
-        ) = started == generation && (sessionStore.state.value as? SessionState.SignedIn)?.userId == accountId
+        ) = started == generation && accountId.isNotEmpty()
 
         private fun clearAccountState() {
             generation++
