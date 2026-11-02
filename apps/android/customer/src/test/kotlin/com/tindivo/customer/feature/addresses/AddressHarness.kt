@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit
 
 internal const val ID_A = "5b2a737a-018f-4c2d-9a11-6f0d3c1e8a01"
 internal const val ID_B = "5b2a737a-018f-4c2d-9a11-6f0d3c1e8a02"
+internal const val ID_C = "5b2a737a-018f-4c2d-9a11-6f0d3c1e8a03"
 
 /** Un servidor simulado y los repositorios reales de la app apuntando a él (como las pruebas de pedidos). */
 @OptIn(ExperimentalCoroutinesApi::class)
