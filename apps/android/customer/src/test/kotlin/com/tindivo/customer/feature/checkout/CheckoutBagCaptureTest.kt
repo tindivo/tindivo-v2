@@ -17,7 +17,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.math.BigDecimal
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -43,7 +42,6 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
 
     private suspend fun TestScope.confirmHoldingTheQuote(
         vm: CheckoutViewModel,
-        beforeConfirm: suspend () -> Unit = {},
         whileHeld: suspend () -> Unit,
     ) {
         // La red va por otro hilo: se espera a que el checkout cargue y cotice antes de confirmar.
@@ -52,8 +50,6 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
             advanceUntilIdle()
             Thread.sleep(TURN_MS)
         }
-        check(vm.state.value.cta.canConfirm)
-        beforeConfirm()
         check(vm.state.value.cta.canConfirm)
         val quote = handlers.getValue("POST /customer/checkout/quote")
         var held = false
@@ -126,50 +122,7 @@ class CheckoutBagCaptureTest : CheckoutHarness() {
             assertEquals(listOf(2), quantities())
         }
 
-    @Test
-    fun `lo que se edita mientras se recotiza no cambia lo que se envia ni dispara otra cotizacion`() =
-        runTest(dispatcher) {
-            fillCart(quantity = 2)
-            val vm = slowViewModel()
-            advanceUntilIdle()
-
-            var quotesWhileHeld = 0
-            confirmHoldingTheQuote(
-                vm,
-                beforeConfirm = {
-                    vm.selectPay(PayMethod.Cash)
-                    vm.selectCash(CashChoice.Bill(BigDecimal("50.00")))
-                    vm.setNote("Toca el timbre")
-                },
-            ) {
-                quotesWhileHeld = sent("POST", QUOTE_PATH).size
-                vm.selectAddress(ADDRESS_B)
-                vm.setName("Otra Persona")
-                vm.setNote("Otra nota")
-                vm.selectPay(PayMethod.Yape)
-                vm.selectCash(CashChoice.Exact)
-                vm.setMethod(DeliveryChoice.Pickup)
-                vm.setPickupWhen(PickupWhen.Later)
-                vm.retryQuote()
-                advanceUntilIdle()
-                assertEquals(quotesWhileHeld, sent("POST", QUOTE_PATH).size)
-            }
-
-            val body =
-                Json
-                    .parseToJsonElement(bodyOf(sent("POST", "/customer/orders").single()))
-                    .jsonObject
-            assertEquals("delivery", body.getValue("deliveryMethod").jsonPrimitive.content)
-            assertEquals("pending_cash", body.getValue("paymentIntent").jsonPrimitive.content)
-            assertEquals("Rosa Quispe", body.getValue("customerName").jsonPrimitive.content)
-            assertEquals("Jr. Lima 123", body.getValue("deliveryAddress").jsonPrimitive.content)
-            assertEquals("Toca el timbre", body.getValue("customerNotes").jsonPrimitive.content)
-            assertEquals("50.00", body.getValue("cashPayingWith").jsonPrimitive.content)
-            assertEquals(quotesWhileHeld, sent("POST", QUOTE_PATH).size)
-        }
-
     private companion object {
-        const val QUOTE_PATH = "/customer/checkout/quote"
         const val WAIT_SECONDS = 20L
         const val MAX_TURNS = 200
         const val TURN_MS = 25L

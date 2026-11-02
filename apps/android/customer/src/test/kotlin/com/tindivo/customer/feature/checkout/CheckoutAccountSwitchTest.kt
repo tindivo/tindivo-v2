@@ -10,6 +10,9 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import mockwebserver3.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -276,6 +279,52 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
             postHeldWhileSessionChanges { session.signOut() }
         }
 
+    @Test
+    fun `lo que se edita mientras se recotiza no cambia lo que se envia ni dispara otra cotizacion`() =
+        runTest(dispatcher) {
+            fillCart()
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            viewModel.selectPay(PayMethod.Cash)
+            viewModel.selectCash(CashChoice.Bill(BigDecimal("50.00")))
+            viewModel.setNote("Toca el timbre")
+            assertTrue(viewModel.state.value.cta.canConfirm)
+            val arrived = CountDownLatch(1)
+            val release = CountDownLatch(1)
+            val quote = handlers.getValue("POST /customer/checkout/quote")
+            handlers["POST /customer/checkout/quote"] = { request ->
+                arrived.countDown()
+                release.await(WAIT_SECONDS, TimeUnit.SECONDS)
+                quote(request)
+            }
+            io.controlled = true
+
+            viewModel.confirm() // la recotización final queda retenida en el servidor
+            runCurrent()
+            assertTrue("la cotización no llegó", arrived.await(WAIT_SECONDS, TimeUnit.SECONDS))
+            val quotesWhileHeld = sent("POST", QUOTE_PATH).size
+            viewModel.selectAddress(ADDRESS_B)
+            viewModel.setName("Otra Persona")
+            viewModel.setNote("Otra nota")
+            viewModel.selectPay(PayMethod.Yape)
+            viewModel.selectCash(CashChoice.Exact)
+            viewModel.setMethod(DeliveryChoice.Pickup)
+            viewModel.setPickupWhen(PickupWhen.Later)
+            viewModel.retryQuote()
+            runCurrent()
+            release.countDown()
+            settle()
+
+            assertEquals(quotesWhileHeld, sent("POST", QUOTE_PATH).size)
+            val body = Json.parseToJsonElement(bodyOf(sent("POST", "/customer/orders").single())).jsonObject
+            assertEquals("delivery", body.getValue("deliveryMethod").jsonPrimitive.content)
+            assertEquals("pending_cash", body.getValue("paymentIntent").jsonPrimitive.content)
+            assertEquals("Rosa Quispe", body.getValue("customerName").jsonPrimitive.content)
+            assertEquals("Jr. Lima 123", body.getValue("deliveryAddress").jsonPrimitive.content)
+            assertEquals("Toca el timbre", body.getValue("customerNotes").jsonPrimitive.content)
+            assertEquals("50.00", body.getValue("cashPayingWith").jsonPrimitive.content)
+        }
+
     /**
      * El POST de A ya llegó al servidor y está retenido cuando la sesión cambia: el envío no debe cancelarse, porque
      * el pedido se crea igual y la bolsa del dispositivo tiene que vaciarse para que nadie la reenvíe.
@@ -363,6 +412,7 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
         const val PHONE_B = "911222333"
         const val ADDRESS_C = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
         const val ADDRESS_D = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+        const val QUOTE_PATH = "/customer/checkout/quote"
         const val QUOTE_A_NEW = "35.00"
         const val QUOTE_B = "41.00"
     }
