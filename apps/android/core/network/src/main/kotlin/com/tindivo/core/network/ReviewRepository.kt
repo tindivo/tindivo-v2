@@ -24,24 +24,27 @@ class ReviewRepository(
 ) {
     /**
      * `GET /customer/reviews/pending`: el pedido por el que preguntar «¿cómo estuvo?», o `null` si no hay nada que
-     * preguntar. Uno solo, nunca una cola.
+     * preguntar. Uno solo, nunca una cola. Solo sale con el token de [accountId] ([boundTo]); si la sesión cambió de
+     * cuenta, no se envía nada y vuelve un [AppError.Network] con [AccountMismatchException].
      */
-    suspend fun pending(): ApiResult<GetCustomerPendingReview200ResponseData?> =
-        apiCall(client, ioDispatcher, { ReviewsApi(baseUrl, it) }) {
+    suspend fun pending(accountId: String): ApiResult<GetCustomerPendingReview200ResponseData?> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { ReviewsApi(baseUrl, it) }) {
             it.getCustomerPendingReviewWithHttpInfo(null, null, null, null)
         }.map { it.data }
 
     /**
      * `POST /customer/orders/{id}/review`: califica un pedido entregado. [comment] `null` = sin comentario. Ya
-     * calificado, no entregado o fuera de plazo llega como 409; uno ajeno, como 404.
+     * calificado, no entregado o fuera de plazo llega como 409; uno ajeno, como 404. Solo sale con el token de
+     * [accountId] ([boundTo]): si la sesión cambió de cuenta, no se envía nada y vuelve [AccountMismatchException].
      */
     suspend fun create(
+        accountId: String,
         orderId: UUID,
         rating: Int,
         tags: List<String>,
         comment: String?,
     ): ApiResult<CreateCustomerReview200ResponseData> =
-        apiCall(client, ioDispatcher, { ReviewsApi(baseUrl, it) }) {
+        apiCall(client.boundTo(accountId), ioDispatcher, { ReviewsApi(baseUrl, it) }) {
             it.createCustomerReviewWithHttpInfo(
                 orderId,
                 CreateCustomerReviewRequest(rating = rating, tags = tags, comment = comment),
@@ -52,9 +55,15 @@ class ReviewRepository(
             )
         }.map { it.data }
 
-    /** `POST /customer/orders/{id}/review/dismiss`: apaga la pregunta (204, idempotente). No impide calificar después. */
-    suspend fun dismiss(orderId: UUID): ApiResult<Unit> =
-        apiCall(client, ioDispatcher, { ReviewsApi(baseUrl, it) }) {
+    /**
+     * `POST /customer/orders/{id}/review/dismiss`: apaga la pregunta (204, idempotente). No impide calificar después.
+     * Solo sale con el token de [accountId] ([boundTo]), como [create].
+     */
+    suspend fun dismiss(
+        accountId: String,
+        orderId: UUID,
+    ): ApiResult<Unit> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { ReviewsApi(baseUrl, it) }) {
             it.dismissCustomerReviewWithHttpInfo(orderId, null, null, null, null).orUnit()
         }
 }

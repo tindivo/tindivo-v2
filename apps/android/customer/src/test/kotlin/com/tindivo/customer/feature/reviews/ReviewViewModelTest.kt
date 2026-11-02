@@ -1,5 +1,7 @@
 package com.tindivo.customer.feature.reviews
 
+import com.tindivo.core.network.AccessTokenSource
+import com.tindivo.core.network.BearerAuthInterceptor
 import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.ReviewRepository
@@ -7,8 +9,10 @@ import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.config.ConfigState
+import com.tindivo.customer.feature.checkout.sessionJwt
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.SessionState
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,8 +62,25 @@ class ReviewViewModelTest {
         Dispatchers.resetMain()
     }
 
+    /** El token que la app tendría: el de la cuenta de la sesión en este instante; [gate] retiene la lectura. */
+    private val tokens =
+        object : AccessTokenSource {
+            @Volatile var gate: CompletableDeferred<Unit>? = null
+
+            override suspend fun accessToken(): String? {
+                gate?.await()
+                return (store.state.value as? SessionState.SignedIn)?.let { sessionJwt(it.userId) }
+            }
+
+            override suspend fun refresh(): String? = accessToken()
+        }
+
     private fun client() =
-        createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = RetryInterceptor(sleeper = { _, _ -> }))
+        createOkHttpClient(
+            ClientInfo("customer", "0.1.0", "1"),
+            retry = RetryInterceptor(sleeper = { _, _ -> }),
+            auth = BearerAuthInterceptor(server.url("/"), tokens),
+        )
 
     private fun viewModel(io: CoroutineDispatcher = dispatcher) =
         ReviewViewModel(ReviewRepository(baseUrl, client(), io), store, configService)
@@ -477,6 +498,31 @@ class ReviewViewModelTest {
             letLateResponsesArrive()
 
             assertNextAccountUntouched(viewModel, seen)
+        }
+
+    @Test
+    fun `Ahora no de una cuenta que se fue no manda nada con el token de la siguiente`() =
+        runTest {
+            val viewModel = pendingViewModel(Dispatchers.IO)
+            viewModel.enableAutoPrompt()
+            server.takeRequest()
+            val gate = CompletableDeferred<Unit>()
+            tokens.gate = gate
+            server.enqueue(ok(PENDING_B))
+
+            viewModel.dismiss()
+            switchToAccountB()
+            gate.complete(Unit)
+            viewModel.state.first { it.pending?.orderId == ORDER_B_ID }
+            letLateResponsesArrive()
+
+            assertEquals(2, server.requestCount)
+            assertEquals("/api/v1/customer/reviews/pending", server.takeRequest().url.encodedPath)
+            assertEquals(
+                ORDER_B_ID,
+                viewModel.state.value.pending
+                    ?.orderId,
+            )
         }
 
     private fun assertNextAccountUntouched(

@@ -90,7 +90,8 @@ internal class ReviewViewModel
         fun submit() {
             val current = mutableState.value
             val pending = current.pending
-            if (pending == null || !current.canSubmit) return
+            val accountId = loadedFor
+            if (pending == null || accountId == null || !current.canSubmit) return
             // `submitting` se fija antes de lanzar nada: un doble toque ve ya el estado nuevo.
             mutableState.update { it.copy(submitting = true, error = null) }
             val started = generation
@@ -98,6 +99,7 @@ internal class ReviewViewModel
                 viewModelScope.launch {
                     val result =
                         reviews.create(
+                            accountId = accountId,
                             orderId = pending.orderId,
                             rating = current.rating,
                             tags = pending.tags.map { it.id }.filter { it in current.selectedTags },
@@ -129,7 +131,10 @@ internal class ReviewViewModel
             mutableState.update {
                 it.copy(step = ReviewStep.Hidden, rating = 0, selectedTags = emptySet(), comment = "", error = null)
             }
-            if (pending != null) viewModelScope.launch { reviews.dismiss(pending.orderId) }
+            val accountId = loadedFor
+            if (pending != null && accountId != null) {
+                viewModelScope.launch { reviews.dismiss(accountId, pending.orderId) }
+            }
         }
 
         private fun onSession(session: SessionState) {
@@ -140,7 +145,7 @@ internal class ReviewViewModel
                         clearAccountState()
                         loadedFor = session.userId
                         val started = generation
-                        loadJob = viewModelScope.launch { load(started) }
+                        loadJob = viewModelScope.launch { load(started, session.userId) }
                     }
                 }
 
@@ -166,8 +171,11 @@ internal class ReviewViewModel
             mutableState.value = ReviewUiState()
         }
 
-        private suspend fun load(started: Int) {
-            val result = reviews.pending()
+        private suspend fun load(
+            started: Int,
+            accountId: String,
+        ) {
+            val result = reviews.pending(accountId)
             if (started != generation) return
             when (result) {
                 is ApiResult.Success -> {
