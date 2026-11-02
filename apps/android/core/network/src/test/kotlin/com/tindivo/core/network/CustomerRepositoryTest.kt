@@ -184,7 +184,55 @@ class CustomerRepositoryTest {
             assertTrue((repository().order(ORDER_ID) as ApiResult.Failure).error is AppError.Unknown)
         }
 
+    private fun accountRepository(tokens: SwitchableTokens) =
+        CustomerRepository(
+            baseUrl = baseUrl,
+            client = createOkHttpClient(info, retry = noSleep, auth = BearerAuthInterceptor(server.url("/"), tokens)),
+            ioDispatcher = UnconfinedTestDispatcher(),
+        )
+
+    @Test
+    fun `profile de una cuenta con la sesion de otra no consulta nada`() =
+        runTest {
+            val tokens = SwitchableTokens(token = testJwt(OTHER_ACCOUNT))
+
+            val error = (accountRepository(tokens).profile(ACCOUNT) as ApiResult.Failure).error
+
+            assertTrue((error as AppError.Network).cause is AccountMismatchException)
+            assertEquals(0, server.requestCount)
+        }
+
+    @Test
+    fun `orders de una cuenta con la sesion de otra no consulta nada`() =
+        runTest {
+            val tokens = SwitchableTokens(token = testJwt(OTHER_ACCOUNT))
+
+            val error = (accountRepository(tokens).orders(null, ACCOUNT) as ApiResult.Failure).error
+
+            assertTrue((error as AppError.Network).cause is AccountMismatchException)
+            assertEquals(0, server.requestCount)
+        }
+
+    @Test
+    fun `profile y orders con la cuenta correcta salen con su token`() =
+        runTest {
+            server.enqueue(json(200, PROFILE))
+            server.enqueue(json(200, ORDERS_PAGE))
+            val repository = accountRepository(SwitchableTokens(token = testJwt(ACCOUNT)))
+
+            assertTrue(repository.profile(ACCOUNT) is ApiResult.Success)
+            assertTrue(repository.orders("cursor-2", ACCOUNT) is ApiResult.Success)
+
+            assertEquals("Bearer ${testJwt(ACCOUNT)}", server.takeRequest().headers["Authorization"])
+            val second = server.takeRequest()
+            assertEquals("Bearer ${testJwt(ACCOUNT)}", second.headers["Authorization"])
+            assertEquals("cursor-2", second.url.queryParameter("cursor"))
+        }
+
     private companion object {
+        const val ACCOUNT = "6f1c3a52-9d0e-4c1b-8a77-2f4e5d6c7b8a"
+        const val OTHER_ACCOUNT = "0b9e8d7c-6a5f-4e3d-9c2b-1a0f9e8d7c6b"
+
         val ORDER_ID: UUID = UUID.fromString("5b2a737a-018f-4c2d-9a11-6f0d3c1e8a01")
 
         const val ORDERS_PAGE = """

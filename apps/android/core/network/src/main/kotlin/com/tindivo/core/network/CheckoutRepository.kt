@@ -29,9 +29,16 @@ class CheckoutRepository(
     private val client: OkHttpClient,
     private val ioDispatcher: CoroutineDispatcher,
 ) {
-    /** `POST /customer/checkout/quote`: lo que cuesta la bolsa según el servidor (subtotal, envío, total, vuelto máximo). */
-    suspend fun quote(request: QuoteCheckoutRequest): ApiResult<QuoteCheckout200ResponseData> =
-        apiCall(client, ioDispatcher, { CustomerApi(baseUrl, it) }) {
+    /**
+     * `POST /customer/checkout/quote`: lo que cuesta la bolsa según el servidor (subtotal, envío, total, vuelto máximo
+     * y qué métodos de pago admite esta cuenta). Solo sale con el token de [accountId] ([boundTo]): si la sesión
+     * cambió de cuenta, no se envía nada y vuelve un [AppError.Network] con [AccountMismatchException].
+     */
+    suspend fun quote(
+        request: QuoteCheckoutRequest,
+        accountId: String,
+    ): ApiResult<QuoteCheckout200ResponseData> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { CustomerApi(baseUrl, it) }) {
             it.quoteCheckoutWithHttpInfo(request, null, null, null, null)
         }.map { it.data }
 

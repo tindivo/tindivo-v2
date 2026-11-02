@@ -30,11 +30,32 @@ class CustomerRepository(
         }.map { it.data }
 
     /**
+     * `GET /customer/profile` solo con el token de [accountId] ([boundTo]): si la sesión cambió de cuenta, no se envía
+     * nada y vuelve un [AppError.Network] con [AccountMismatchException].
+     */
+    suspend fun profile(accountId: String): ApiResult<GetCustomerProfile200ResponseData> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { CustomerApi(baseUrl, it) }) {
+            it.getCustomerProfileWithHttpInfo(null, null, null, null)
+        }.map { it.data }
+
+    /**
      * `GET /customer/orders`: una página del historial, la más reciente primero. [cursor] es el `nextCursor` de la
      * página anterior (`null` para la primera); cuando `nextCursor` llega `null` no hay más.
      */
     suspend fun orders(cursor: String?): ApiResult<ListCustomerOrders200ResponseData> =
         apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
+            it.listCustomerOrdersWithHttpInfo(PAGE_SIZE, cursor, null, null, null, null)
+        }.map { it.data }
+
+    /**
+     * `GET /customer/orders` solo con el token de [accountId] ([boundTo]): si la sesión cambió de cuenta, no se envía
+     * nada y vuelve un [AppError.Network] con [AccountMismatchException].
+     */
+    suspend fun orders(
+        cursor: String?,
+        accountId: String,
+    ): ApiResult<ListCustomerOrders200ResponseData> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { OrdersApi(baseUrl, it) }) {
             it.listCustomerOrdersWithHttpInfo(PAGE_SIZE, cursor, null, null, null, null)
         }.map { it.data }
 
