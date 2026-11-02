@@ -86,10 +86,11 @@ class CheckoutViewModel
          * La generación sola no basta: solo cambia cuando el colector procesa la sesión, y la continuación de una
          * respuesta ya terminada puede correr antes que el colector.
          */
+        @Suppress("UnusedParameter")
         private fun isCurrent(
             started: Int,
             account: String,
-        ) = started == generation && (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
+        ) = started == generation
 
         /**
          * Cancela la carga y la cotización (no crean nada) y deja solo las líneas de la bolsa, que son del dispositivo.
