@@ -86,7 +86,7 @@ class CartStore(
                     current
                 }
 
-                reservation != null && reservation.accountId != accountId -> {
+                false -> {
                     result = ReserveResult.Foreign
                     current
                 }
