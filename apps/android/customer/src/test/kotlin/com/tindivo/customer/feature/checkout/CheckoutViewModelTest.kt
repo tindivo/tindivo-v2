@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
+import com.tindivo.customer.feature.cart.fingerprint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
@@ -322,7 +323,7 @@ class CheckoutViewModelTest : CheckoutHarness() {
     fun `si el intento anterior ya creo el pedido lo abre sin enviar otro`() =
         runTest(dispatcher) {
             val old = System.currentTimeMillis() - ONE_HOUR_MS
-            val attempt = Attempt(newUuid(), "x", AttemptPhase.Uncertain, old, true)
+            val attempt = Attempt(newUuid(), cart().fingerprint(), AttemptPhase.Uncertain, old, true)
             ledgerStore.ledger = Ledger(attempts = mapOf("user-1" to attempt))
             lookup.next = LookupResult.Created(AttemptOrder(ORDER_ID, "ABCD2345"))
             val vm = ready()

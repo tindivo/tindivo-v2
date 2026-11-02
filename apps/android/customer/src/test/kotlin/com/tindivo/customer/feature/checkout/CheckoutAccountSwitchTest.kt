@@ -234,11 +234,20 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
             settle()
 
             assertTrue(seen.toString(), seen.drop(1).none { it.message != null || isFromA(it) })
+            // La bolsa con la que A intentó enviar no pasa a B: B no ve formulario sobre ella.
             val state = viewModel.state.value
             assertNull(state.message)
             assertFalse(state.sending)
-            assertEquals(CheckoutPhase.Form, state.phase)
-            assertEquals(NAME_B, state.name)
+            assertEquals(CheckoutPhase.EmptyBag, state.phase)
+            assertNull(cartStore.cart.first())
+
+            // B llena su propia bolsa y su formulario sale limpio, sin el rechazo de A.
+            fillCart()
+            settle()
+            val own = viewModel.state.value
+            assertEquals(CheckoutPhase.Form, own.phase)
+            assertEquals(NAME_B, own.name)
+            assertNull(own.message)
         }
 
     @Test
