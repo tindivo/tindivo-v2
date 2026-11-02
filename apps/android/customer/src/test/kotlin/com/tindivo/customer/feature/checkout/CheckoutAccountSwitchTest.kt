@@ -115,7 +115,7 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
      * publicar con la sesión ya en B pero la generación sin cambiar. Cambiar la sesión directamente desde la prueba
      * dejaría al colector delante y [CheckoutViewModel] vería la generación nueva aunque `isCurrent` no mirase la sesión.
      */
-    private fun TestScope.sessionChangesBeforeTheCollector(change: () -> Unit) {
+    private fun TestScope.sessionChangesBeforeTheCollector(change: suspend () -> Unit) {
         launch { change() }
     }
 
