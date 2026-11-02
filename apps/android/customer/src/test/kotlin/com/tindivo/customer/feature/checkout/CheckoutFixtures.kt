@@ -36,10 +36,11 @@ fun profileJson(
     blocked: Boolean = false,
     verified: Boolean = true,
     phone: String? = "999888777",
+    fullName: String = "Rosa Quispe",
 ): String {
     val phoneJson = if (phone == null) "null" else "\"$phone\""
     val at = if (verified) "\"$STAMP\"" else "null"
-    return """{"data":{"fullName":"Rosa Quispe","phone":$phoneJson,"phoneVerified":$verified,
+    return """{"data":{"fullName":"$fullName","phone":$phoneJson,"phoneVerified":$verified,
         "phoneVerifiedAt":$at,"contraentregaBlocked":false,"blockedUntil":null,"blocked":$blocked}}"""
 }
 

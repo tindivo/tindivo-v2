@@ -33,7 +33,8 @@ sealed interface LoadOutcome {
 /**
  * Lee en paralelo lo que pinta el checkout. El perfil y las direcciones son imprescindibles: sin ellos no se sabe a
  * quién se entrega ni si está bloqueado. El negocio (recojo, tiempo de llegada) y el último pedido solo mejoran la
- * pantalla: si fallan, el checkout sigue sin ellos (sin recojo y sin pago por defecto).
+ * pantalla: si fallan, el checkout sigue sin ellos (sin recojo y sin pago por defecto). Perfil, direcciones y último
+ * pedido son de la cuenta: salen con su token ([accountId]) o no salen.
  */
 class CheckoutLoader
     @Inject
@@ -42,12 +43,15 @@ class CheckoutLoader
         private val addresses: AddressRepository,
         private val catalog: CatalogRepository,
     ) {
-        suspend fun load(businessId: String): LoadOutcome =
+        suspend fun load(
+            accountId: String,
+            businessId: String,
+        ): LoadOutcome =
             coroutineScope {
-                val profile = async { customer.profile() }
-                val saved = async { addresses.list() }
+                val profile = async { customer.profile(accountId) }
+                val saved = async { addresses.list(accountId) }
                 val business = async { catalog.business(businessId) }
-                val orders = async { customer.orders(null) }
+                val orders = async { customer.orders(null, accountId) }
                 val profileResult = profile.await()
                 val savedResult = saved.await()
                 when {

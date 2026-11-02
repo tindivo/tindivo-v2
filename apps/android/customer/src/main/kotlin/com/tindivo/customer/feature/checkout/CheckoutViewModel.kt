@@ -10,11 +10,13 @@ import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import javax.inject.Inject
 
@@ -43,7 +45,16 @@ class CheckoutViewModel
         private var lastIntent: String? = null
         private var loadedFor: String? = null
         private var lastFingerprint: String? = null
+
+        /**
+         * Cambia con cada cierre o cambio de cuenta. La carga, las cotizaciones y el envío anotan la que vieron al
+         * empezar y, antes de publicar cualquier resultado, comprueban que sigue siendo la misma cuenta: si no, lo
+         * descartan.
+         */
+        private var generation = 0
         private var quoteJob: Job? = null
+        private var loadJob: Job? = null
+        private var submitJob: Job? = null
 
         init {
             viewModelScope.launch { sessionStore.state.collect { onSession(it) } }
@@ -58,16 +69,51 @@ class CheckoutViewModel
 
                 SessionState.SignedOut -> {
                     accountId = null
-                    loadedFor = null
-                    if (mutableState.value.phase != CheckoutPhase.Opening) {
-                        mutableState.update { it.copy(phase = CheckoutPhase.SignInRequired) }
-                    }
+                    clearAccountState(signedOut = true)
                 }
 
                 is SessionState.SignedIn -> {
+                    val previous = accountId
                     accountId = session.userId
+                    // De una cuenta a otra sin pasar por la salida: lo de la anterior no se queda ni se publica.
+                    if (previous != null && previous != session.userId) clearAccountState(signedOut = false)
                     startIfReady()
                 }
+            }
+        }
+
+        /**
+         * Sigue siendo la misma cuenta: la generación no cambió Y la sesión vigente, leída ahora, es la de [account].
+         * La generación sola no basta: solo cambia cuando el colector procesa la sesión, y la continuación de una
+         * respuesta ya terminada puede correr antes que el colector.
+         */
+        private fun isCurrent(
+            started: Int,
+            account: String,
+        ) = started == generation && (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
+
+        /** Cancela lo que está en vuelo y deja solo las líneas de la bolsa, que son del dispositivo. */
+        private fun clearAccountState(signedOut: Boolean) {
+            generation++
+            quoteJob?.cancel()
+            quoteJob = null
+            loadJob?.cancel()
+            loadJob = null
+            submitJob?.cancel()
+            submitJob = null
+            lastIntent = null
+            loadedFor = null
+            val empty = cart?.isEmpty() != false
+            mutableState.update {
+                CheckoutUiState(
+                    phase =
+                        when {
+                            signedOut -> CheckoutPhase.SignInRequired
+                            empty -> CheckoutPhase.EmptyBag
+                            else -> CheckoutPhase.Loading
+                        },
+                    lines = if (empty) emptyList() else it.lines,
+                )
             }
         }
 
@@ -91,30 +137,39 @@ class CheckoutViewModel
             val current = cart
             if (account == null || current == null || current.isEmpty() || loadedFor == account) return
             loadedFor = account
-            load(current)
+            load(current, account)
         }
 
         /** Vuelve a leer perfil, direcciones y negocio (después de un fallo). */
         fun retryLoad() {
             val current = cart ?: return
-            load(current)
+            val account = accountId ?: return
+            load(current, account)
         }
 
-        private fun load(current: Cart) {
+        private fun load(
+            current: Cart,
+            account: String,
+        ) {
             mutableState.update { it.copy(phase = CheckoutPhase.Loading) }
-            viewModelScope.launch {
-                when (val outcome = loader.load(current.businessId)) {
-                    is LoadOutcome.Failed -> {
-                        mutableState.update { it.copy(phase = CheckoutPhase.LoadFailed) }
-                    }
+            val started = generation
+            loadJob?.cancel()
+            loadJob =
+                viewModelScope.launch {
+                    val outcome = loader.load(account, current.businessId)
+                    if (!isCurrent(started, account)) return@launch
+                    when (outcome) {
+                        is LoadOutcome.Failed -> {
+                            mutableState.update { it.copy(phase = CheckoutPhase.LoadFailed) }
+                        }
 
-                    is LoadOutcome.Loaded -> {
-                        lastIntent = outcome.data.lastIntent
-                        mutableState.update { it.withLoaded(outcome.data, current) }
-                        if (mutableState.value.phase == CheckoutPhase.Form) requote(debounced = false)
+                        is LoadOutcome.Loaded -> {
+                            lastIntent = outcome.data.lastIntent
+                            mutableState.update { it.withLoaded(outcome.data, current) }
+                            if (mutableState.value.phase == CheckoutPhase.Form) requote(debounced = false)
+                        }
                     }
                 }
-            }
         }
 
         fun setMethod(method: DeliveryChoice) {
@@ -157,19 +212,25 @@ class CheckoutViewModel
 
         private fun requote(debounced: Boolean) {
             quoteJob?.cancel()
+            val account = accountId ?: return
             mutableState.update { it.copy(quoteStatus = QuoteStatus.Loading) }
+            val started = generation
             quoteJob =
                 viewModelScope.launch {
                     if (debounced) debounce.await()
-                    val outcome = fetchQuote(cart)
+                    val outcome = fetchQuote(cart, account)
+                    if (!isCurrent(started, account)) return@launch
                     mutableState.update { it.withQuote(outcome, lastIntent) }
                 }
         }
 
-        private suspend fun fetchQuote(bag: Cart?): QuoteOutcome {
+        private suspend fun fetchQuote(
+            bag: Cart?,
+            account: String,
+        ): QuoteOutcome {
             val current = bag ?: return QuoteOutcome.Failed
             val request = buildQuoteRequest(mutableState.value, current) ?: return QuoteOutcome.Invalid
-            return when (val result = checkout.quote(request)) {
+            return when (val result = checkout.quote(request, account)) {
                 is ApiResult.Failure -> QuoteOutcome.Failed
                 is ApiResult.Success -> result.data.toQuoteViewOrNull()?.let(QuoteOutcome::Ok) ?: QuoteOutcome.Invalid
             }
@@ -183,17 +244,24 @@ class CheckoutViewModel
             val account = accountId
             // La bolsa tambien se captura UNA vez: es la que se cotiza, la que se compara y la que se envia.
             val bag = cart
+            val started = generation
             mutableState.update { it.copy(sending = true, message = null) }
-            viewModelScope.launch { submit(account, bag) }
+            submitJob = viewModelScope.launch { submit(started, account, bag) }
         }
 
         private suspend fun submit(
+            started: Int,
             account: String?,
             bag: Cart?,
         ) {
             quoteJob?.cancel()
+            if (account == null) {
+                stop(CheckoutMessage.Generic)
+                return
+            }
             val shown = mutableState.value.quote?.total
-            val outcome = fetchQuote(bag)
+            val outcome = fetchQuote(bag, account)
+            if (!isCurrent(started, account)) return
             val fresh = (outcome as? QuoteOutcome.Ok)?.view
             if (fresh == null) {
                 mutableState.update { it.withQuote(outcome, lastIntent).copy(sending = false) }
@@ -211,24 +279,32 @@ class CheckoutViewModel
 
                 next.pay != before.pay || !ready -> stop(CheckoutMessage.OptionsChanged)
 
-                else -> place(account, bag, next, fresh)
+                else -> place(started, account, bag, next, fresh)
             }
         }
 
         private fun stop(message: CheckoutMessage) = mutableState.update { it.copy(sending = false, message = message) }
 
         private suspend fun place(
-            account: String?,
+            started: Int,
+            account: String,
             current: Cart?,
             form: CheckoutUiState,
             quote: QuoteView,
         ) {
             val request = if (current == null) null else buildOrderRequest(form, current, quote)
-            if (account == null || current == null || request == null) {
+            if (current == null || request == null) {
                 stop(CheckoutMessage.Generic)
                 return
             }
-            when (val result = ledger.place(account, current) { key -> checkout.createOrder(request, key, account) }) {
+            val result = ledger.place(account, current) { key -> checkout.createOrder(request, key, account) }
+            if (!isCurrent(started, account)) {
+                // El pedido de la cuenta que salió existe y su bolsa es del dispositivo: se vacía para que nadie la
+                // reenvíe, pero esta pantalla (ya de otra cuenta, o de nadie) no navega a él ni muestra nada suyo.
+                if (result is PlaceResult.Created || result is PlaceResult.AlreadyCreated) clearBag()
+                return
+            }
+            when (result) {
                 is PlaceResult.Created -> {
                     opened(result.data.id.toString())
                 }
@@ -266,8 +342,13 @@ class CheckoutViewModel
         // El pedido existe: la fase cambia ANTES de vaciar la bolsa para que el aviso de «bolsa vacía» no parpadee.
         private suspend fun opened(orderId: String) {
             mutableState.update { it.copy(phase = CheckoutPhase.Opening, createdOrderId = orderId, sending = false) }
+            clearBag()
+        }
+
+        // No se cancela a medias: el pedido ya está creado y la bolsa no debe poder reenviarse.
+        private suspend fun clearBag() {
             try {
-                cartStore.clear()
+                withContext(NonCancellable) { cartStore.clear() }
             } catch (ignored: IOException) {
                 // El pedido ya está creado; si la bolsa no se pudo vaciar, se vacía la próxima vez que se abra.
             }
@@ -281,11 +362,13 @@ class CheckoutViewModel
             val account = accountId
             // La bolsa tambien se captura UNA vez: es la que se cotiza, la que se compara y la que se envia.
             val bag = cart
+            val started = generation
             if (account == null || !mutableState.value.reconcileSeen || mutableState.value.sending) return
             mutableState.update { it.copy(phase = CheckoutPhase.Form, sending = true, message = null) }
-            viewModelScope.launch {
-                ledger.acknowledgeReconciled(account)
-                submit(account, bag)
-            }
+            submitJob =
+                viewModelScope.launch {
+                    ledger.acknowledgeReconciled(account)
+                    submit(started, account, bag)
+                }
         }
     }

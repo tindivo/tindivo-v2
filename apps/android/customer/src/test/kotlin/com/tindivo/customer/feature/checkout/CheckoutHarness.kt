@@ -16,6 +16,7 @@ import com.tindivo.customer.feature.cart.CartSerializer
 import com.tindivo.customer.feature.cart.CartSnapshot
 import com.tindivo.customer.feature.cart.CartStore
 import com.tindivo.customer.session.FakeSessionStore
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,20 +68,7 @@ abstract class CheckoutHarness {
         Dispatchers.setMain(dispatcher)
         server.dispatcher = routing()
         server.start()
-        val baseUrl = server.url("/api/v1").toString().trimEnd('/')
-        val client =
-            createOkHttpClient(
-                ClientInfo("customer", "0.1.0", "1"),
-                retry = RetryInterceptor(sleeper = { _, _ -> }),
-                auth = BearerAuthInterceptor(server.url("/"), tokens),
-            )
-        checkout = CheckoutRepository(baseUrl, client, dispatcher)
-        loader =
-            CheckoutLoader(
-                CustomerRepository(baseUrl, client, dispatcher),
-                AddressRepository(baseUrl, client, dispatcher),
-                CatalogRepository(baseUrl, client, dispatcher),
-            )
+        wire(dispatcher)
         cartStore =
             CartStore(
                 DataStoreFactory.create(
@@ -91,6 +79,28 @@ abstract class CheckoutHarness {
                 ),
             )
         happyPath()
+    }
+
+    /**
+     * Arma los repositorios sobre [io], el despachador de las llamadas bloqueantes. Por defecto es el de la prueba;
+     * una prueba que necesita ver una respuesta ya terminada con su reanudación aún pendiente le pasa uno propio y lo
+     * llama antes de [viewModel].
+     */
+    protected fun wire(io: CoroutineDispatcher) {
+        val baseUrl = server.url("/api/v1").toString().trimEnd('/')
+        val client =
+            createOkHttpClient(
+                ClientInfo("customer", "0.1.0", "1"),
+                retry = RetryInterceptor(sleeper = { _, _ -> }),
+                auth = BearerAuthInterceptor(server.url("/"), tokens),
+            )
+        checkout = CheckoutRepository(baseUrl, client, io)
+        loader =
+            CheckoutLoader(
+                CustomerRepository(baseUrl, client, io),
+                AddressRepository(baseUrl, client, io),
+                CatalogRepository(baseUrl, client, io),
+            )
     }
 
     @After
