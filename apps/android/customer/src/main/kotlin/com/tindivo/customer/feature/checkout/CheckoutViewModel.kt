@@ -54,6 +54,7 @@ class CheckoutViewModel
         private var generation = 0
         private var quoteJob: Job? = null
         private var loadJob: Job? = null
+        private var submitJob: Job? = null
 
         init {
             viewModelScope.launch { sessionStore.state.collect { onSession(it) } }
@@ -102,6 +103,8 @@ class CheckoutViewModel
             quoteJob = null
             loadJob?.cancel()
             loadJob = null
+            submitJob?.cancel()
+            submitJob = null
             lastIntent = null
             loadedFor = null
             val empty = cart?.isEmpty() != false
@@ -253,7 +256,7 @@ class CheckoutViewModel
             val bag = cart
             val started = generation
             mutableState.update { it.copy(sending = true, message = null) }
-            viewModelScope.launch { submit(started, account, bag) }
+            submitJob = viewModelScope.launch { submit(started, account, bag) }
         }
 
         private suspend fun submit(
