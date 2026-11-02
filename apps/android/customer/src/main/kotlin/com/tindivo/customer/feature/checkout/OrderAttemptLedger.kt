@@ -342,8 +342,8 @@ class OrderAttemptLedger(
         fingerprint: String,
         onCreated: suspend (String) -> Unit,
     ) = withContext(NonCancellable) {
-        onCreated(fingerprint)
         forget(accountId, key)
+        onCreated(fingerprint)
     }
 
     private suspend fun forget(

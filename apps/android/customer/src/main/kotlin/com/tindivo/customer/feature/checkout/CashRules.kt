@@ -107,7 +107,7 @@ fun checkCash(
             paying == null || paying.signum() <= 0 -> CashCheck.Missing(maxDeclarable(total, rules))
             paying < total -> CashCheck.BelowTotal(total)
             paying > rules.maxBill -> CashCheck.AboveMaxBill(rules.maxBill)
-            !exact && paying.remainder(rules.step).signum() != 0 -> CashCheck.NotMultiple(rules.step)
+            !exact && paying.compareTo(total) != 0 && paying.remainder(rules.step).signum() != 0 -> CashCheck.NotMultiple(rules.step)
             else -> null
         }
     return outcome ?: changeCheck(checkNotNull(paying), total, rules)
