@@ -1,7 +1,5 @@
 package com.tindivo.customer.feature.checkout
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -26,9 +24,6 @@ import java.math.BigDecimal
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Un cambio de cuenta o un cierre de sesión no deja nada de A en el checkout ni publica resultados de A. Cada prueba
@@ -113,6 +108,17 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
         fail("el servidor no recibió $method $path")
     }
 
+    /**
+     * Cambia la sesión desde una tarea de Main encolada DETRÁS de la reanudación pendiente de la carga. La carga lee en
+     * paralelo y su resultado vuelve a la corrutina que la pidió con un salto más de despachador: ejecutar el cambio
+     * justo en esa tarea deja ese salto encolado ANTES del colector de la sesión, es decir, la carga de A llega a
+     * publicar con la sesión ya en B pero la generación sin cambiar. Cambiar la sesión directamente desde la prueba
+     * dejaría al colector delante y [CheckoutViewModel] vería la generación nueva aunque `isCurrent` no mirase la sesión.
+     */
+    private fun TestScope.sessionChangesBeforeTheCollector(change: () -> Unit) {
+        launch { change() }
+    }
+
     /** Deja correr Main hasta la siguiente llamada real y espera a que termine, sin ejecutar su reanudación. */
     private fun TestScope.untilCallDone() {
         runCurrent()
@@ -137,7 +143,7 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
             val viewModel = viewModel()
             untilSent("GET", "/customer/profile")
 
-            switchToB()
+            sessionChangesBeforeTheCollector { switchToB() }
             val seen = publicationsFromNow(viewModel)
             settle()
 
@@ -158,7 +164,7 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
             val viewModel = viewModel()
             untilSent("GET", "/customer/profile")
 
-            session.signOut()
+            sessionChangesBeforeTheCollector { session.signOut() }
             val seen = publicationsFromNow(viewModel)
             settle()
 
@@ -355,52 +361,6 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
         assertFalse(viewModel.state.value.sending)
         assertNull(viewModel.state.value.createdOrderId)
         assertTrue(cartStore.cart.first()?.isEmpty() != false)
-    }
-
-    /** Un despachador de las llamadas bloqueantes: como el de la prueba, o en hilos reales cuando se le pide. */
-    private class ControlledIo(
-        private val main: CoroutineDispatcher,
-    ) : CoroutineDispatcher() {
-        @Volatile var controlled = false
-        private val lock = ReentrantLock()
-        private val idle = lock.newCondition()
-        private var inFlight = 0
-
-        override fun dispatch(
-            context: CoroutineContext,
-            block: Runnable,
-        ) {
-            if (!controlled) {
-                main.dispatch(context, block)
-                return
-            }
-            lock.withLock { inFlight++ }
-            Dispatchers.IO.dispatch(context) {
-                try {
-                    block.run()
-                } finally {
-                    lock.withLock {
-                        inFlight--
-                        idle.signalAll()
-                    }
-                }
-            }
-        }
-
-        /** Espera a que no quede ninguna llamada en vuelo; `true` si tuvo que esperar a alguna. */
-        fun awaitIdle(): Boolean {
-            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS)
-            var waited = false
-            lock.withLock {
-                while (inFlight > 0) {
-                    waited = true
-                    val left = deadline - System.nanoTime()
-                    assertTrue("una llamada no terminó", left > 0)
-                    idle.awaitNanos(left)
-                }
-            }
-            return waited
-        }
     }
 
     private companion object {

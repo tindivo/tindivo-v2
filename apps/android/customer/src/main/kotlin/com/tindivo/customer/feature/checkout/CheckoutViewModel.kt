@@ -6,17 +6,17 @@ import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartStore
+import com.tindivo.customer.feature.cart.ReserveResult
+import com.tindivo.customer.feature.cart.fingerprint
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.IOException
 import javax.inject.Inject
 
@@ -133,7 +133,8 @@ class CheckoutViewModel
                     quoteJob?.cancel()
                     quoteJob = null
                     loadedFor = null
-                    mutableState.update { it.copy(phase = CheckoutPhase.EmptyBag) }
+                    // Al enviar, la bolsa se vacía dentro del libro ANTES de abrir el pedido: no debe parpadear.
+                    if (!mutableState.value.sending) mutableState.update { it.copy(phase = CheckoutPhase.EmptyBag) }
                 }
                 return
             }
@@ -168,6 +169,21 @@ class CheckoutViewModel
             loadJob?.cancel()
             loadJob =
                 viewModelScope.launch {
+                    // Una bolsa con la que otra cuenta intentó enviar no se le enseña a esta: nunca un formulario sobre ella.
+                    if (!isCurrent(started, account)) return@launch
+                    val discarded =
+                        try {
+                            cartStore.discardForeign(account)
+                        } catch (ignored: IOException) {
+                            null
+                        }
+                    if (discarded == true) return@launch // el colector de la bolsa pasa a «bolsa vacía»
+                    if (discarded == null) {
+                        if (isCurrent(started, account)) {
+                            mutableState.update { it.copy(phase = CheckoutPhase.LoadFailed) }
+                        }
+                        return@launch
+                    }
                     val outcome = loader.load(account, current.businessId)
                     if (!isCurrent(started, account)) return@launch
                     when (outcome) {
@@ -324,13 +340,38 @@ class CheckoutViewModel
                 stop(CheckoutMessage.Generic)
                 return
             }
-            val result = ledger.place(account, current) { key -> checkout.createOrder(request, key, account) }
-            if (!isCurrent(started, account)) {
-                // El pedido de la cuenta que salió existe y su bolsa es del dispositivo: se vacía para que nadie la
-                // reenvíe, pero esta pantalla (ya de otra cuenta, o de nadie) no navega a él ni muestra nada suyo.
-                if (result is PlaceResult.Created || result is PlaceResult.AlreadyCreated) clearBag()
-                return
-            }
+            val result =
+                try {
+                    when (cartStore.reserve(account, current.fingerprint())) {
+                        ReserveResult.Foreign -> {
+                            cartStore.discardForeign(account)
+                            if (isCurrent(started, account)) {
+                                mutableState.update { it.copy(sending = false, phase = CheckoutPhase.EmptyBag) }
+                            }
+                            return
+                        }
+
+                        ReserveResult.Changed -> {
+                            if (isCurrent(started, account)) stop(CheckoutMessage.OptionsChanged)
+                            return
+                        }
+
+                        ReserveResult.Reserved -> {
+                            Unit
+                        }
+                    }
+                    // La bolsa se consume DENTRO del libro, antes de olvidar el intento; el envío no se cancela.
+                    ledger.place(account, current, cartStore::consume) { key ->
+                        checkout.createOrder(request, key, account)
+                    }
+                } catch (ignored: IOException) {
+                    // No consta qué pasó con el pedido ni con la bolsa: el siguiente intento consulta antes de enviar.
+                    if (isCurrent(started, account)) stop(CheckoutMessage.StillProcessing)
+                    return
+                }
+            // El pedido de la cuenta que salió existe y el libro ya consumió su bolsa; esta pantalla (ya de otra
+            // cuenta, o de nadie) no navega a él ni muestra nada suyo.
+            if (!isCurrent(started, account)) return
             when (result) {
                 is PlaceResult.Created -> {
                     opened(result.data.id.toString())
@@ -366,19 +407,9 @@ class CheckoutViewModel
             if (rejected && mutableState.value.phase == CheckoutPhase.Form) requote(debounced = false)
         }
 
-        // El pedido existe: la fase cambia ANTES de vaciar la bolsa para que el aviso de «bolsa vacía» no parpadee.
-        private suspend fun opened(orderId: String) {
+        // El pedido existe y el libro ya vació la bolsa (con `sending` aún activo, así que no parpadeó «bolsa vacía»).
+        private fun opened(orderId: String) {
             mutableState.update { it.copy(phase = CheckoutPhase.Opening, createdOrderId = orderId, sending = false) }
-            clearBag()
-        }
-
-        // No se cancela a medias: el pedido ya está creado y la bolsa no debe poder reenviarse.
-        private suspend fun clearBag() {
-            try {
-                withContext(NonCancellable) { cartStore.clear() }
-            } catch (ignored: IOException) {
-                // El pedido ya está creado; si la bolsa no se pudo vaciar, se vacía la próxima vez que se abra.
-            }
         }
 
         /** La persona abrió «Mis pedidos» desde la vista de reconciliación. */

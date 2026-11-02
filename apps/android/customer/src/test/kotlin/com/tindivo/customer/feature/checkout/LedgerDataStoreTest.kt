@@ -62,7 +62,7 @@ class LedgerDataStoreTest {
     ) {
         var sent = false
         val result =
-            ledger(store).place(account, cart) {
+            ledger(store).place(account, cart, {}) {
                 sent = true
                 ApiResult.Success("no debe enviarse")
             }

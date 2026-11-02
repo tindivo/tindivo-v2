@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.tindivo.core.network.AddressRepository
@@ -34,6 +35,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.io.IOException
 import java.math.BigDecimal
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -58,6 +60,7 @@ abstract class CheckoutHarness {
     protected val handlers = mutableMapOf<String, (RecordedRequest) -> MockResponse>()
     protected val ledgerStore = MemoryLedgerStore()
     protected val lookup = FakeAttemptLookup()
+    protected lateinit var cartDisk: FlakyCartData
     protected lateinit var cartStore: CartStore
     protected lateinit var checkout: CheckoutRepository
     protected lateinit var loader: CheckoutLoader
@@ -69,8 +72,8 @@ abstract class CheckoutHarness {
         server.dispatcher = routing()
         server.start()
         wire(dispatcher)
-        cartStore =
-            CartStore(
+        cartDisk =
+            FlakyCartData(
                 DataStoreFactory.create(
                     serializer = CartSerializer,
                     corruptionHandler = ReplaceFileCorruptionHandler<CartSnapshot?>(produceNewData = { null }),
@@ -78,6 +81,7 @@ abstract class CheckoutHarness {
                     produceFile = { File(folder.root, "tindivo_cart.json") },
                 ),
             )
+        cartStore = CartStore(cartDisk)
         happyPath()
     }
 
@@ -158,6 +162,7 @@ abstract class CheckoutHarness {
 
     protected fun cart(quantity: Int = 2) = Cart(BUSINESS_ID, "Pollería Don Lucho", listOf(line(quantity)))
 
+    /** Cada llamada arma un libro nuevo sobre el mismo almacén: así se simula reabrir la pantalla o la app. */
     protected fun viewModel(): CheckoutViewModel =
         CheckoutViewModel(
             loader = loader,
@@ -183,4 +188,23 @@ abstract class CheckoutHarness {
             detail: String,
         ) = """{"type":"about:blank","title":"x","status":$status,"code":"$code","detail":"$detail"}"""
     }
+}
+
+/**
+ * El DataStore real de la bolsa, que puede fallar al VACIARLA (como un disco lleno o una escritura interrumpida):
+ * con [failClears] activo, toda escritura que dejaría «sin bolsa» lanza [IOException] y no cambia nada.
+ */
+class FlakyCartData(
+    private val delegate: DataStore<CartSnapshot?>,
+) : DataStore<CartSnapshot?> {
+    @Volatile var failClears = false
+
+    override val data = delegate.data
+
+    override suspend fun updateData(transform: suspend (t: CartSnapshot?) -> CartSnapshot?): CartSnapshot? =
+        delegate.updateData { current ->
+            val next = transform(current)
+            if (failClears && next == null) throw IOException("no se pudo vaciar la bolsa")
+            next
+        }
 }

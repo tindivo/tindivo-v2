@@ -4,8 +4,11 @@ import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.feature.cart.Cart
+import com.tindivo.customer.feature.cart.fingerprint
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -64,13 +67,6 @@ private const val TOO_MANY_REQUESTS = 429
 private val UNDECIDED_STATUSES = setOf(REQUEST_TIMEOUT, TOO_MANY_REQUESTS)
 private val CLIENT_ERRORS = FIRST_CLIENT_ERROR..LAST_CLIENT_ERROR
 
-/**
- * La huella de la bolsa: negocio y, por plato, su firma y su cantidad (sin importar el orden). Los precios no entran:
- * el servidor cobra con los suyos.
- */
-fun Cart.fingerprint(): String =
-    businessId.lowercase() + "#" + lines.map { "${it.signature}*${it.quantity}" }.sorted().joinToString(";")
-
 private const val MILLIS_PER_MINUTE = 60_000L
 private const val MILLIS_PER_DAY = 86_400_000L
 
@@ -107,6 +103,12 @@ const val DEFAULT_RETENTION_LIMIT_MS = 6 * MILLIS_PER_DAY
  *   una clave nueva sin un `created`, y solo la UI la llama, tras enseñar «Mis pedidos» y obtener una confirmación
  *   explícita de la persona.
  *
+ * - **El pedido creado se consume antes de olvidarse.** Cuando se sabe que el pedido existe (201, `created` de la
+ *   consulta o `created` tras un `idempotency_conflict`), `place` llama a `onCreated` con la huella de la bolsa de
+ *   ESE intento y solo después olvida el intento, ambos sin poder cancelarse. Si `onCreated` lanza `IOException`, el
+ *   intento NO se olvida y la excepción sale de `place`: el siguiente `place` consulta, recibe `created` y reintenta
+ *   `onCreated`. Así nunca queda una bolsa viva sin constancia de que ya generó un pedido.
+ *
  * Esto SE APARTA DE LA WEB a propósito: allí un rechazo o un `idempotency_conflict` regeneran la clave y reintentan
  * solos, y eso puede duplicar un pedido que sí se creó.
  *
@@ -133,18 +135,22 @@ class OrderAttemptLedger(
      *
      * Una llamada mientras otra de la misma cuenta está en curso no espera: devuelve [PlaceResult.Busy] sin leer, sin
      * enviar y sin tocar el registro. Un pedido nuevo después de un [PlaceResult.Created] es una decisión nueva de la UI.
+     *
+     * [onCreated] recibe la huella de la bolsa del intento que creó el pedido y corre ANTES de olvidarlo (ver arriba).
+     * Puede lanzar [java.io.IOException]: en ese caso el intento queda guardado y la excepción sale de aquí.
      */
     suspend fun <T> place(
         accountId: String,
         cart: Cart,
+        onCreated: suspend (String) -> Unit,
         send: suspend (UUID) -> ApiResult<T>,
     ): PlaceResult<T> {
         val lock = accountLocks.getOrPut(accountId) { Mutex() }
         if (!lock.tryLock()) return PlaceResult.Busy
         try {
-            return when (val gate = prepare(accountId, cart)) {
+            return when (val gate = prepare(accountId, cart, onCreated)) {
                 is Gate.Stop -> gate.result
-                is Gate.Send -> settle(accountId, gate.key, send(gate.key))
+                is Gate.Send -> settle(accountId, gate.key, send(gate.key), cart.fingerprint(), onCreated)
             }
         } finally {
             lock.unlock()
@@ -177,6 +183,7 @@ class OrderAttemptLedger(
     private suspend fun prepare(
         accountId: String,
         cart: Cart,
+        onCreated: suspend (String) -> Unit,
     ): Gate {
         val ledger = store.read()
         val existing = ledger.attempts[accountId]
@@ -200,7 +207,7 @@ class OrderAttemptLedger(
             }
 
             else -> {
-                reconcile(accountId, key, existing, cart)
+                reconcile(accountId, key, existing, cart, onCreated)
             }
         }
     }
@@ -235,13 +242,15 @@ class OrderAttemptLedger(
         key: UUID,
         existing: Attempt,
         cart: Cart,
+        onCreated: suspend (String) -> Unit,
     ): Gate {
         val now = clock()
         val sentAt = existing.sentAtEpochMs
         if (sentAt != null && now - sentAt > retentionLimitMs) return Gate.Stop(PlaceResult.NeedsReconciliation)
         return when (val found = lookup.lookup(key, accountId)) {
             is LookupResult.Created -> {
-                forget(accountId, key)
+                // La huella guardada: el intento pudo ser de una bolsa anterior a la que se pasa ahora.
+                consumeAndForget(accountId, key, existing.cartFingerprint, onCreated)
                 Gate.Stop(PlaceResult.AlreadyCreated(found.order))
             }
 
@@ -260,9 +269,11 @@ class OrderAttemptLedger(
         accountId: String,
         key: UUID,
         result: ApiResult<T>,
+        fingerprint: String,
+        onCreated: suspend (String) -> Unit,
     ): PlaceResult<T> {
         if (result is ApiResult.Success) {
-            forget(accountId, key)
+            consumeAndForget(accountId, key, fingerprint, onCreated)
             return PlaceResult.Created(result.data)
         }
         val error = (result as ApiResult.Failure).error
@@ -273,7 +284,7 @@ class OrderAttemptLedger(
             }
 
             AttemptOutcome.KeyConflict -> {
-                settleConflict(accountId, key, error)
+                settleConflict(accountId, key, error, fingerprint, onCreated)
             }
 
             AttemptOutcome.Unknown, AttemptOutcome.Created -> {
@@ -288,10 +299,12 @@ class OrderAttemptLedger(
         accountId: String,
         key: UUID,
         error: AppError,
+        fingerprint: String,
+        onCreated: suspend (String) -> Unit,
     ): PlaceResult<Nothing> =
         when (val found = lookup.lookup(key, accountId)) {
             is LookupResult.Created -> {
-                forget(accountId, key)
+                consumeAndForget(accountId, key, fingerprint, onCreated)
                 PlaceResult.AlreadyCreated(found.order)
             }
 
@@ -319,6 +332,18 @@ class OrderAttemptLedger(
             val next = current.copy(phase = AttemptPhase.Uncertain, lastResponseDefinitive = definitive)
             ledger.copy(attempts = ledger.attempts + (accountId to next))
         }
+    }
+
+    // El pedido existe: consumir la bolsa y olvidar el intento no se corta a medias. Si consumir falla, el intento
+    // queda guardado y el siguiente `place` lo recupera por la consulta.
+    private suspend fun consumeAndForget(
+        accountId: String,
+        key: UUID,
+        fingerprint: String,
+        onCreated: suspend (String) -> Unit,
+    ) = withContext(NonCancellable) {
+        onCreated(fingerprint)
+        forget(accountId, key)
     }
 
     private suspend fun forget(

@@ -5,6 +5,7 @@ import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartLine
+import com.tindivo.customer.feature.cart.fingerprint
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -29,8 +30,8 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
             val l = ledger()
             val sender = Sender(ok, ok)
 
-            val first = l.place(A, cart(), sender::send)
-            val second = l.place(A, cart(), sender::send)
+            val first = l.place(A, cart(), {}, sender::send)
+            val second = l.place(A, cart(), {}, sender::send)
 
             assertEquals(PlaceResult.Created("ok"), first)
             assertEquals(PlaceResult.Created("ok"), second)
@@ -43,7 +44,7 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
         runTest {
             val l = ledger()
             val gate = CompletableDeferred<ApiResult<String>>()
-            val job = launch { l.place(A, cart()) { gate.await() } }
+            val job = launch { l.place(A, cart(), {}) { gate.await() } }
             runCurrent()
 
             val attempt = checkNotNull(store.ledger.attempts[A])
@@ -58,7 +59,7 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
         runTest {
             val l = ledger()
 
-            val result = l.place(A, cart(), Sender(known(ApiErrorCode.ValidationError, 422))::send)
+            val result = l.place(A, cart(), {}, Sender(known(ApiErrorCode.ValidationError, 422))::send)
 
             assertTrue(result is PlaceResult.Failed)
             val attempt = checkNotNull(store.ledger.attempts[A])
@@ -81,7 +82,7 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
                 )
             responses.forEach { response ->
                 store.ledger = Ledger()
-                ledger().place(A, cart(), Sender(response)::send)
+                ledger().place(A, cart(), {}, Sender(response)::send)
 
                 val attempt = checkNotNull(store.ledger.attempts[A])
                 assertEquals(response.toString(), AttemptPhase.Uncertain, attempt.phase)
@@ -107,11 +108,11 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
     @Test
     fun `lookup created devuelve AlreadyCreated sin enviar y borra la entrada`() =
         runTest {
-            ledger().place(A, cart(), Sender(network)::send)
+            ledger().place(A, cart(), {}, Sender(network)::send)
             lookup.next = LookupResult.Created(order)
             val sender = Sender()
 
-            val result = ledger().place(A, cart(), sender::send)
+            val result = ledger().place(A, cart(), {}, sender::send)
 
             assertEquals(PlaceResult.AlreadyCreated(order), result)
             assertTrue(sender.keys.isEmpty())
@@ -121,12 +122,12 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
     @Test
     fun `not_found dentro de la ventana y sin respuesta definitiva es StillProcessing`() =
         runTest {
-            ledger().place(A, cart(), Sender(network)::send)
+            ledger().place(A, cart(), {}, Sender(network)::send)
             lookup.next = LookupResult.NotFound
             now += WINDOW - 1
             val sender = Sender()
 
-            val result = ledger().place(A, cart(), sender::send)
+            val result = ledger().place(A, cart(), {}, sender::send)
 
             assertEquals(PlaceResult.StillProcessing, result)
             assertTrue(sender.keys.isEmpty())
@@ -136,12 +137,12 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
     @Test
     fun `not_found pasada la ventana reenvia con la misma clave`() =
         runTest {
-            ledger().place(A, cart(), Sender(network)::send)
+            ledger().place(A, cart(), {}, Sender(network)::send)
             lookup.next = LookupResult.NotFound
             now += WINDOW + 1
             val sender = Sender(ok)
 
-            val result = ledger().place(A, cart(), sender::send)
+            val result = ledger().place(A, cart(), {}, sender::send)
 
             assertEquals(PlaceResult.Created("ok"), result)
             assertEquals(listOf(key(1)), sender.keys)
@@ -151,12 +152,12 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
     @Test
     fun `not_found tras una respuesta definitiva reenvia sin esperar la ventana`() =
         runTest {
-            ledger().place(A, cart(), Sender(known(ApiErrorCode.ValidationError, 422))::send)
+            ledger().place(A, cart(), {}, Sender(known(ApiErrorCode.ValidationError, 422))::send)
             lookup.next = LookupResult.NotFound
             now += 1
             val sender = Sender(ok)
 
-            val result = ledger().place(A, cart(), sender::send)
+            val result = ledger().place(A, cart(), {}, sender::send)
 
             assertEquals(PlaceResult.Created("ok"), result)
             assertEquals(listOf(key(1)), sender.keys)
@@ -165,12 +166,12 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
     @Test
     fun `lookup unknown devuelve NeedsReconciliation sin enviar y conserva todo`() =
         runTest {
-            ledger().place(A, cart(), Sender(network)::send)
+            ledger().place(A, cart(), {}, Sender(network)::send)
             lookup.next = LookupResult.Unknown
             now += WINDOW + 1
             val sender = Sender()
 
-            val result = ledger().place(A, cart(), sender::send)
+            val result = ledger().place(A, cart(), {}, sender::send)
 
             assertEquals(PlaceResult.NeedsReconciliation, result)
             assertTrue(sender.keys.isEmpty())
@@ -180,12 +181,12 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
     @Test
     fun `pasados 6 dias la consulta ya no prueba nada y no se consulta ni se envia`() =
         runTest {
-            ledger().place(A, cart(), Sender(network)::send)
+            ledger().place(A, cart(), {}, Sender(network)::send)
             lookup.next = LookupResult.NotFound
             now += RETENTION + 1
             val sender = Sender()
 
-            val result = ledger().place(A, cart(), sender::send)
+            val result = ledger().place(A, cart(), {}, sender::send)
 
             assertEquals(PlaceResult.NeedsReconciliation, result)
             assertTrue(sender.keys.isEmpty())
@@ -199,7 +200,7 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
             lookup.next = LookupResult.Created(order)
             val sender = Sender(known(ApiErrorCode.IdempotencyConflict, 409))
 
-            val result = ledger().place(A, cart(), sender::send)
+            val result = ledger().place(A, cart(), {}, sender::send)
 
             assertEquals(PlaceResult.AlreadyCreated(order), result)
             assertEquals(listOf(key(1)), sender.keys)
@@ -213,7 +214,7 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
         runTest {
             lookup.next = LookupResult.Unknown
 
-            val result = ledger().place(A, cart(), Sender(known(ApiErrorCode.IdempotencyConflict, 409))::send)
+            val result = ledger().place(A, cart(), {}, Sender(known(ApiErrorCode.IdempotencyConflict, 409))::send)
 
             assertEquals(PlaceResult.NeedsReconciliation, result)
             assertEquals(key(1).toString(), storedKey(A))
@@ -223,11 +224,11 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
     fun `acknowledgeReconciled olvida el intento y el siguiente place crea otra clave`() =
         runTest {
             val l = ledger()
-            l.place(A, cart(), Sender(network)::send)
+            l.place(A, cart(), {}, Sender(network)::send)
 
             l.acknowledgeReconciled(A)
             val sender = Sender(ok)
-            l.place(A, cart(), sender::send)
+            l.place(A, cart(), {}, sender::send)
 
             assertEquals(listOf(key(2)), sender.keys)
         }
