@@ -406,7 +406,7 @@ class CheckoutViewModel
         ): PlaceResult<CreateOrder201ResponseData>? =
             try {
                 // La bolsa se consume DENTRO del libro, antes de olvidar el intento; el envío no se cancela.
-                if (reserve(started, account, current) && isCurrent(started, account)) {
+                if (reserve(started, account, current)) {
                     val consume: suspend (String) -> Unit = { fingerprint -> cartStore.consume(account, fingerprint) }
                     ledger.place(account, current, consume) { key -> checkout.createOrder(request, key, account) }
                 } else {
