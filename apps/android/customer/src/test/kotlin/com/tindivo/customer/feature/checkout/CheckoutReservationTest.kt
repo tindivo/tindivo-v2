@@ -311,6 +311,124 @@ class CheckoutReservationTest : CheckoutHarness() {
             assertEquals(1, orders().size)
         }
 
+    // --- Formulario sin bolsa ---------------------------------------------------------------------------------
+
+    @Test
+    fun `si la bolsa se vacia durante el envio y este no abre el pedido el formulario pasa a bolsa vacia`() =
+        runTest(dispatcher) {
+            val vm = formOfA()
+            val quote = handlers.getValue("POST /customer/checkout/quote")
+            handlers["POST /customer/checkout/quote"] = { request ->
+                arrived.countDown()
+                release.await(WAIT_SECONDS, TimeUnit.SECONDS)
+                quote(request)
+            }
+            vm.confirm()
+            runCurrent() // la recotización final sale y queda retenida
+            assertTrue("la cotización no llegó", arrived.await(WAIT_SECONDS, TimeUnit.SECONDS))
+            val quotesBefore = sent("POST", "/customer/checkout/quote").size
+
+            cartStore.clear()
+            runCurrent()
+            release.countDown()
+            settle()
+
+            assertEquals(quotesBefore, sent("POST", "/customer/checkout/quote").size)
+            assertTrue(orders().isEmpty())
+            assertEquals(CheckoutPhase.EmptyBag, vm.state.value.phase)
+            assertFalse(vm.state.value.sending)
+        }
+
+    @Test
+    fun `si olvidar el intento falla tras consumir la bolsa el formulario pasa a bolsa vacia`() =
+        runTest(dispatcher) {
+            val vm = readyWithoutThreads()
+            ledgerStore.failForget = true
+
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            assertNull(cartStore.cart.first())
+            assertEquals(CheckoutPhase.EmptyBag, vm.state.value.phase)
+            assertFalse(vm.state.value.sending)
+            assertNull(vm.state.value.createdOrderId)
+        }
+
+    // --- La reserva sobrevive a editar y deshacer -------------------------------------------------------------
+
+    @Test
+    fun `si A reservo y la bolsa se edita y se deshace, B no la recibe ni la envia`() =
+        runTest(dispatcher) {
+            fillCart()
+            assertEquals(ReserveResult.Reserved, cartStore.reserve(USER_A, cart().fingerprint()))
+            val signature = checkNotNull(cartStore.cart.first()).lines.single().signature
+            cartStore.setQuantity(signature, 3)
+            cartStore.setQuantity(signature, 2)
+            switchToB()
+
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(CheckoutPhase.EmptyBag, vm.state.value.phase)
+            assertNull(cartStore.cart.first())
+            vm.confirm()
+            advanceUntilIdle()
+            assertTrue(orders().isEmpty())
+        }
+
+    @Test
+    fun `si A reservo y la bolsa se edita a otra version, B la recibe y la confirma con su token`() =
+        runTest(dispatcher) {
+            fillCart()
+            cartStore.reserve(USER_A, cart().fingerprint())
+            val signature = checkNotNull(cartStore.cart.first()).lines.single().signature
+            cartStore.setQuantity(signature, 3)
+            switchToB()
+
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(CheckoutPhase.Form, vm.state.value.phase)
+            assertTrue(vm.state.value.cta.canConfirm)
+            vm.confirm()
+            advanceUntilIdle()
+
+            val posts = orders()
+            assertEquals(1, posts.size)
+            assertTrue(posts.single().headers["Authorization"]?.endsWith(sessionJwt(USER_B)) == true)
+            assertEquals(listOf(3), quantitiesOf(posts.single()))
+        }
+
+    // --- consume mira la cuenta -------------------------------------------------------------------------------
+
+    @Test
+    fun `el pedido de A no vacia una bolsa identica que B armo desde cero tras descartar la de A`() =
+        runTest(dispatcher) {
+            val vm = formOfA()
+            confirmWithPostHeld(vm)
+            switchToB()
+            advanceUntilIdle()
+            assertNull(cartStore.cart.first())
+
+            fillCart() // B arma una bolsa idéntica a la de A, sin reserva
+
+            release.countDown()
+            settle()
+
+            assertEquals(1, orders().size)
+            assertEquals(2, checkNotNull(cartStore.cart.first()).count)
+            assertEquals(CheckoutPhase.Form, vm.state.value.phase)
+            vm.confirm()
+            settle()
+
+            val posts = orders()
+            assertEquals(2, posts.size)
+            assertTrue(posts.last().headers["Authorization"]?.endsWith(sessionJwt(USER_B)) == true)
+            assertNull(cartStore.cart.first())
+            assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
+        }
+
     private companion object {
         const val WAIT_SECONDS = 5L
         const val USER_A = "user-1"

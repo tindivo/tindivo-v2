@@ -17,13 +17,18 @@ data class CartSnapshot(
     val businessId: String,
     val businessName: String,
     val lines: List<CartLineSnapshot>,
-    /** Con qué cuenta y qué huella se intentó enviar esta bolsa; `null` si nadie la intentó (o se editó después). */
+    /**
+     * Con qué cuenta y qué huella se intentó enviar esta bolsa; `null` si nadie la intentó. Editar la bolsa la
+     * conserva (deshacer una edición no la libera); solo vale mientras su huella sea la de la bolsa vigente.
+     */
     val reservation: CartReservation? = null,
 )
 
 /**
- * La bolsa con la que [accountId] intentó enviar un pedido ([fingerprint] es la huella de esa versión). Mientras
- * exista, la bolsa no pasa a otra cuenta. Editar la bolsa la borra: una bolsa editada es una versión nueva.
+ * La bolsa con la que [accountId] intentó enviar un pedido ([fingerprint] es la huella de esa versión). Mientras la
+ * bolsa vigente tenga esa huella, no pasa a otra cuenta. Si la bolsa se edita a otra versión la reserva queda sin
+ * efecto (otra cuenta puede reservar la versión nueva), pero sigue guardada: volver a la huella original la reactiva.
+ * [replace][CartStore.replace] y [clear][CartStore.clear] la pierden: es otra bolsa.
  */
 @Serializable
 data class CartReservation(

@@ -37,7 +37,7 @@ class CartStore(
             val outcome = addToCart(current?.toCartOrNull(), businessId, businessName, line)
             result = outcome
             when (outcome) {
-                is AddResult.Added -> outcome.cart.toSnapshot()
+                is AddResult.Added -> outcome.cart.toSnapshot()?.keepingReservationOf(current)
                 is AddResult.OtherBusiness, AddResult.Full -> current
             }
         }
@@ -57,11 +57,23 @@ class CartStore(
         signature: String,
         quantity: Int,
     ) {
-        store.updateData { current -> current?.toCartOrNull()?.setQuantity(signature, quantity)?.toSnapshot() }
+        store.updateData { current ->
+            current
+                ?.toCartOrNull()
+                ?.setQuantity(signature, quantity)
+                ?.toSnapshot()
+                ?.keepingReservationOf(current)
+        }
     }
 
     suspend fun remove(signature: String) {
-        store.updateData { current -> current?.toCartOrNull()?.removeLine(signature)?.toSnapshot() }
+        store.updateData { current ->
+            current
+                ?.toCartOrNull()
+                ?.removeLine(signature)
+                ?.toSnapshot()
+                ?.keepingReservationOf(current)
+        }
     }
 
     suspend fun clear() {
@@ -71,7 +83,9 @@ class CartStore(
     /**
      * Reserva la bolsa de huella [fingerprint] para [accountId] justo antes de enviar su pedido. Una bolsa con la que
      * una cuenta intentó enviar no pasa a otra: no hay «liberar», porque perderla cuesta volver a llenarla y un pedido
-     * duplicado cuesta dinero. Editar la bolsa borra la reserva.
+     * duplicado cuesta dinero. Editar la bolsa CONSERVA la reserva (deshacer una edición no libera la bolsa); solo
+     * [replace] y [clear] la pierden. Una reserva solo vale si su huella es la de la bolsa vigente: con otra huella (una
+     * versión nueva) se sobrescribe.
      */
     suspend fun reserve(
         accountId: String,
@@ -86,7 +100,7 @@ class CartStore(
                     current
                 }
 
-                reservation != null && reservation.accountId != accountId -> {
+                reservation != null && reservation.accountId != accountId && reservation.fingerprint == fingerprint -> {
                     result = ReserveResult.Foreign
                     current
                 }
@@ -100,17 +114,33 @@ class CartStore(
         return result
     }
 
-    /** Vacía la bolsa solo si la vigente es la de huella [fingerprint]: la que generó el pedido, no una editada después. */
-    suspend fun consume(fingerprint: String) {
-        store.updateData { current -> if (current?.toCartOrNull()?.fingerprint() == fingerprint) null else current }
+    /**
+     * Vacía la bolsa solo si la vigente es la de huella [fingerprint] Y está reservada por [accountId]: la que generó
+     * el pedido de esa cuenta, no una editada después ni una idéntica que armó otra cuenta.
+     */
+    suspend fun consume(
+        accountId: String,
+        fingerprint: String,
+    ) {
+        store.updateData { current ->
+            val own = current?.reservation?.accountId == accountId
+            if (own && current?.toCartOrNull()?.fingerprint() == fingerprint) null else current
+        }
     }
 
-    /** Si la bolsa está reservada por una cuenta distinta de [accountId], la vacía y devuelve `true`. */
+    /**
+     * Si la bolsa vigente está reservada por una cuenta distinta de [accountId] (y la reserva es de esta versión de la
+     * bolsa), la vacía y devuelve `true`.
+     */
     suspend fun discardForeign(accountId: String): Boolean {
         var discarded = false
         store.updateData { current ->
             val reservation = current?.reservation
-            if (reservation != null && reservation.accountId != accountId) {
+            val foreign =
+                reservation != null &&
+                    reservation.accountId != accountId &&
+                    reservation.fingerprint == current?.toCartOrNull()?.fingerprint()
+            if (foreign) {
                 discarded = true
                 null
             } else {
@@ -120,3 +150,6 @@ class CartStore(
         return discarded
     }
 }
+
+private fun CartSnapshot.keepingReservationOf(previous: CartSnapshot?): CartSnapshot =
+    copy(reservation = previous?.reservation)

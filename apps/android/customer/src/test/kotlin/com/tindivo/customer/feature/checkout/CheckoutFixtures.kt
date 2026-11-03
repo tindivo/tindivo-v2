@@ -1,14 +1,19 @@
 package com.tindivo.customer.feature.checkout
 
+import java.io.IOException
 import java.util.UUID
 
 /** Un almacén del libro en memoria (el real es DataStore). */
 class MemoryLedgerStore(
     var ledger: Ledger = Ledger(),
 ) : LedgerStore {
+    /** Con esto activo, la escritura que deja al registro sin intentos (olvidar uno) lanza [IOException]. */
+    @Volatile var failForget = false
+
     override suspend fun read() = ledger
 
     override suspend fun write(ledger: Ledger) {
+        if (failForget && ledger.attempts.isEmpty()) throw IOException("no se pudo olvidar el intento")
         this.ledger = ledger
     }
 }

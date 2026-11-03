@@ -291,7 +291,10 @@ class CheckoutViewModel
             val bag = cart
             val started = generation
             mutableState.update { it.copy(sending = true, message = null) }
-            viewModelScope.launch { submit(started, account, bag) }
+            viewModelScope.launch {
+                submit(started, account, bag)
+                emptyBagIfNothingLeft()
+            }
         }
 
         private suspend fun submit(
@@ -325,6 +328,20 @@ class CheckoutViewModel
                 next.pay != before.pay || !ready -> stop(CheckoutMessage.OptionsChanged)
 
                 else -> place(started, account, bag, next, fresh)
+            }
+        }
+
+        /**
+         * Al terminar un envío, sea cual sea la rama por la que salió: si el formulario sigue ahí pero la bolsa ya se
+         * vació (la consumió el libro, o la vació otro lado mientras `sending` frenaba el aviso), pasa a «bolsa vacía».
+         * Una bolsa vacía es del dispositivo, así que vale aunque la generación haya cambiado. No pisa `Opening` ni
+         * `Reconcile`.
+         */
+        private fun emptyBagIfNothingLeft() {
+            if (cart?.isEmpty() != false) {
+                mutableState.update {
+                    if (it.phase == CheckoutPhase.Form && !it.sending) it.copy(phase = CheckoutPhase.EmptyBag) else it
+                }
             }
         }
 
@@ -389,9 +406,8 @@ class CheckoutViewModel
             try {
                 // La bolsa se consume DENTRO del libro, antes de olvidar el intento; el envío no se cancela.
                 if (reserve(started, account, current)) {
-                    ledger.place(account, current, cartStore::consume) { key ->
-                        checkout.createOrder(request, key, account)
-                    }
+                    val consume: suspend (String) -> Unit = { fingerprint -> cartStore.consume(account, fingerprint) }
+                    ledger.place(account, current, consume) { key -> checkout.createOrder(request, key, account) }
                 } else {
                     null
                 }
@@ -450,6 +466,7 @@ class CheckoutViewModel
             viewModelScope.launch {
                 ledger.acknowledgeReconciled(account)
                 submit(started, account, bag)
+                emptyBagIfNothingLeft()
             }
         }
     }
