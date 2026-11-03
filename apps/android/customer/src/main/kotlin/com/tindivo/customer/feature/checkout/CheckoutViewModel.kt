@@ -96,7 +96,7 @@ class CheckoutViewModel
         private fun isCurrent(
             started: Int,
             account: String,
-        ) = started == generation && (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
+        ) = started == generation && account.isNotEmpty()
 
         /**
          * Cancela la carga y la cotización (no crean nada) y deja solo las líneas de la bolsa, que son del dispositivo.
