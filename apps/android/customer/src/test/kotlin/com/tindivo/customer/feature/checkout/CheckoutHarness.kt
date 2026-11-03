@@ -209,7 +209,17 @@ class FlakyCartData(
 
     @Volatile private var holdAfter: Gate? = null
 
+    @Volatile private var insideNext: (() -> Unit)? = null
+
     override val data = delegate.data
+
+    /**
+     * Corre [action] dentro de la próxima escritura, justo antes de su transform. Sirve para cambiar la sesión cuando
+     * el colector de la pantalla aún no pudo correr: quien pidió la escritura no se canceló y solo la vigencia lo frena.
+     */
+    fun runInsideNextWrite(action: () -> Unit) {
+        insideNext = action
+    }
 
     /** Retiene la próxima escritura ANTES de su transform, hasta que la prueba suelte la compuerta. */
     fun holdNextBeforeTransform(): Gate = Gate().also { holdBefore = it }
@@ -223,9 +233,12 @@ class FlakyCartData(
         val after = holdAfter
         holdBefore = null
         holdAfter = null
+        val inside = insideNext
+        insideNext = null
         before?.hold()
         val result =
             delegate.updateData { current ->
+                inside?.invoke()
                 val next = transform(current)
                 if (failClears && next == null) throw IOException("no se pudo vaciar la bolsa")
                 next

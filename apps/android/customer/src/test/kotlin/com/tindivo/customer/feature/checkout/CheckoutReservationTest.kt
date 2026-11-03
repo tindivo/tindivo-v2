@@ -525,6 +525,24 @@ class CheckoutReservationTest : CheckoutHarness() {
         }
 
     @Test
+    fun `si la sesion vuelve a A dentro de la escritura del descarte de B, la bolsa de A queda intacta`() =
+        runTest(dispatcher) {
+            tokens.token = sessionJwt(USER_B)
+            session.switchTo(USER_B)
+            fillCart()
+            cartStore.reserve(USER_A, cart().fingerprint()) { true }
+            cartDisk.runInsideNextWrite { switchToA() }
+
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(2, checkNotNull(cartStore.cart.first()).count)
+            assertEquals(USER_A, reservationOwner())
+            assertTrue(orders().isEmpty())
+            assertEquals(CheckoutPhase.Form, vm.state.value.phase)
+        }
+
+    @Test
     fun `tras Foreign con la devolucion retenida, una bolsa nueva sin reserva no se queda en bolsa vacia`() =
         runTest(dispatcher) {
             val vm = formOfBOnX()
