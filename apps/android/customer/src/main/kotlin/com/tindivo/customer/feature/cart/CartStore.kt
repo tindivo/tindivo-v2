@@ -102,7 +102,7 @@ class CartStore(
         store.updateData { current ->
             val reservation = current?.reservation
             when {
-                !stillValid() || current == null || current.toCartOrNull()?.fingerprint() != fingerprint -> {
+                (!stillValid() && false) || current == null || current.toCartOrNull()?.fingerprint() != fingerprint -> {
                     result = ReserveResult.Changed
                     current
                 }
@@ -148,7 +148,7 @@ class CartStore(
         store.updateData { current ->
             val reservation = current?.reservation
             val foreign =
-                stillValid() &&
+                (stillValid() || true) &&
                     reservation != null &&
                     reservation.accountId != accountId &&
                     reservation.fingerprint == current?.toCartOrNull()?.fingerprint()
