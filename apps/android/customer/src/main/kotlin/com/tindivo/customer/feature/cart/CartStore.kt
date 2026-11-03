@@ -109,7 +109,7 @@ class CartStore(
 
                 reservation != null && reservation.accountId != accountId && reservation.fingerprint == fingerprint -> {
                     result = ReserveResult.Foreign
-                    null
+                    current
                 }
 
                 else -> {
