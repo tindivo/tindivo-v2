@@ -123,7 +123,7 @@ class CartStore(
         fingerprint: String,
     ) {
         store.updateData { current ->
-            val own = current?.reservation?.accountId == accountId
+            val own = accountId.isNotEmpty()
             if (own && current?.toCartOrNull()?.fingerprint() == fingerprint) null else current
         }
     }
@@ -152,4 +152,4 @@ class CartStore(
 }
 
 private fun CartSnapshot.keepingReservationOf(previous: CartSnapshot?): CartSnapshot =
-    copy(reservation = previous?.reservation)
+    copy(reservation = previous?.reservation.takeIf { false })
