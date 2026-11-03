@@ -53,7 +53,7 @@ class CheckoutViewModel
          * empezar y, antes de publicar cualquier resultado, comprueban que sigue siendo la misma cuenta: si no, lo
          * descartan.
          */
-        private var generation = 0
+        @Volatile private var generation = 0
         private var quoteJob: Job? = null
         private var loadJob: Job? = null
 
@@ -175,7 +175,7 @@ class CheckoutViewModel
                     if (!isCurrent(started, account)) return@launch
                     val discarded =
                         try {
-                            cartStore.discardForeign(account)
+                            cartStore.discardForeign(account) { isCurrent(started, account) }
                         } catch (ignored: IOException) {
                             null
                         }
@@ -186,6 +186,7 @@ class CheckoutViewModel
                         }
                         return@launch
                     }
+                    if (!isCurrent(started, account)) return@launch
                     val outcome = loader.load(account, current.businessId)
                     if (!isCurrent(started, account)) return@launch
                     when (outcome) {
@@ -405,7 +406,7 @@ class CheckoutViewModel
         ): PlaceResult<CreateOrder201ResponseData>? =
             try {
                 // La bolsa se consume DENTRO del libro, antes de olvidar el intento; el envío no se cancela.
-                if (reserve(started, account, current)) {
+                if (reserve(started, account, current) && isCurrent(started, account)) {
                     val consume: suspend (String) -> Unit = { fingerprint -> cartStore.consume(account, fingerprint) }
                     ledger.place(account, current, consume) { key -> checkout.createOrder(request, key, account) }
                 } else {
@@ -422,12 +423,11 @@ class CheckoutViewModel
             account: String,
             current: Cart,
         ): Boolean =
-            when (cartStore.reserve(account, current.fingerprint())) {
+            when (cartStore.reserve(account, current.fingerprint()) { isCurrent(started, account) }) {
                 ReserveResult.Foreign -> {
-                    cartStore.discardForeign(account)
-                    if (isCurrent(started, account)) {
-                        mutableState.update { it.copy(sending = false, phase = CheckoutPhase.EmptyBag) }
-                    }
+                    // La escritura de `reserve` ya vació la bolsa. La fase la resuelven el colector de la bolsa y
+                    // `emptyBagIfNothingLeft`, en cualquiera de los dos órdenes.
+                    if (isCurrent(started, account)) mutableState.update { it.copy(sending = false) }
                     false
                 }
 

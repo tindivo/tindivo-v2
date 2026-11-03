@@ -60,10 +60,10 @@ class CartStoreReservationTest {
     fun `reserve sin bolsa o con otra huella da Changed y no escribe nada`() =
         runTest {
             val store = storeOn()
-            assertEquals(ReserveResult.Changed, store.reserve("a", fingerprint))
+            assertEquals(ReserveResult.Changed, store.reserve("a", fingerprint) { true })
 
             store.filled()
-            assertEquals(ReserveResult.Changed, store.reserve("a", cartOf(quantity = 2).fingerprint()))
+            assertEquals(ReserveResult.Changed, store.reserve("a", cartOf(quantity = 2).fingerprint()) { true })
             assertNull(storedReservation())
         }
 
@@ -73,22 +73,50 @@ class CartStoreReservationTest {
             val store = storeOn()
             store.filled()
 
-            assertEquals(ReserveResult.Reserved, store.reserve("a", fingerprint))
-            assertEquals(ReserveResult.Reserved, store.reserve("a", fingerprint))
+            assertEquals(ReserveResult.Reserved, store.reserve("a", fingerprint) { true })
+            assertEquals(ReserveResult.Reserved, store.reserve("a", fingerprint) { true })
             assertEquals(CartReservation("a", fingerprint), storedReservation())
         }
 
     @Test
-    fun `reserve con la bolsa reservada por otra cuenta da Foreign y no toca nada`() =
+    fun `reserve con la bolsa reservada por otra cuenta da Foreign y la deja vacia en la misma escritura`() =
         runTest {
             val store = storeOn()
             store.filled()
-            store.reserve("a", fingerprint)
+            store.reserve("a", fingerprint) { true }
 
-            assertEquals(ReserveResult.Foreign, store.reserve("b", fingerprint))
+            assertEquals(ReserveResult.Foreign, store.reserve("b", fingerprint) { true })
 
-            assertEquals(CartReservation("a", fingerprint), storedReservation())
+            assertNull(store.cart.first())
+            assertNull(storedSnapshot())
+        }
+
+    @Test
+    fun `reserve sin vigencia da Changed y no toca nada aunque la bolsa sea ajena o libre`() =
+        runTest {
+            val store = storeOn()
+            store.filled()
+            assertEquals(ReserveResult.Changed, store.reserve("b", fingerprint) { false })
+            assertNull(storedReservation())
+
+            store.reserve("a", fingerprint) { true }
+            assertEquals(ReserveResult.Changed, store.reserve("b", fingerprint) { false })
+
             assertEquals(1, checkNotNull(store.cart.first()).count)
+            assertEquals(CartReservation("a", fingerprint), storedReservation())
+        }
+
+    @Test
+    fun `discardForeign sin vigencia no toca nada y da false`() =
+        runTest {
+            val store = storeOn()
+            store.filled()
+            store.reserve("a", fingerprint) { true }
+
+            assertFalse(store.discardForeign("b") { false })
+
+            assertEquals(1, checkNotNull(store.cart.first()).count)
+            assertEquals(CartReservation("a", fingerprint), storedReservation())
         }
 
     @Test
@@ -96,7 +124,7 @@ class CartStoreReservationTest {
         runTest {
             val first = storeOn()
             first.filled()
-            first.reserve("a", fingerprint)
+            first.reserve("a", fingerprint) { true }
             assertTrue(file().readText().contains("\"reservation\""))
             val saved = checkNotNull(storedSnapshot())
 
@@ -105,8 +133,9 @@ class CartStoreReservationTest {
             copy.outputStream().use { CartSerializer.writeTo(saved, it) }
             val reopened = storeOn(copy)
 
-            assertEquals(ReserveResult.Foreign, reopened.reserve("b", fingerprint))
-            assertEquals(ReserveResult.Reserved, reopened.reserve("a", fingerprint))
+            assertEquals(ReserveResult.Reserved, reopened.reserve("a", fingerprint) { true })
+            assertEquals(ReserveResult.Foreign, reopened.reserve("b", fingerprint) { true })
+            assertNull(reopened.cart.first())
         }
 
     @Test
@@ -120,7 +149,7 @@ class CartStoreReservationTest {
             val store = storeOn()
 
             assertEquals(1, checkNotNull(store.cart.first()).count)
-            assertEquals(ReserveResult.Reserved, store.reserve("a", fingerprint))
+            assertEquals(ReserveResult.Reserved, store.reserve("a", fingerprint) { true })
             assertEquals(CartReservation("a", fingerprint), storedReservation())
         }
 
@@ -129,14 +158,14 @@ class CartStoreReservationTest {
         runTest {
             val store = storeOn()
             store.filled()
-            store.reserve("a", fingerprint)
+            store.reserve("a", fingerprint) { true }
             val signature = checkNotNull(store.cart.first()).lines.single().signature
 
             store.setQuantity(signature, 2)
             assertEquals(CartReservation("a", fingerprint), storedReservation())
             // La versión nueva no es ajena: B la puede reservar y no se le descarta.
-            assertFalse(store.discardForeign("b"))
-            assertEquals(ReserveResult.Reserved, store.reserve("b", cartOf(quantity = 2).fingerprint()))
+            assertFalse(store.discardForeign("b") { true })
+            assertEquals(ReserveResult.Reserved, store.reserve("b", cartOf(quantity = 2).fingerprint()) { true })
             assertEquals(CartReservation("b", cartOf(quantity = 2).fingerprint()), storedReservation())
         }
 
@@ -145,14 +174,13 @@ class CartStoreReservationTest {
         runTest {
             val store = storeOn()
             store.filled()
-            store.reserve("a", fingerprint)
+            store.reserve("a", fingerprint) { true }
             val signature = checkNotNull(store.cart.first()).lines.single().signature
 
             store.setQuantity(signature, 2)
             store.setQuantity(signature, 1)
 
-            assertEquals(ReserveResult.Foreign, store.reserve("b", fingerprint))
-            assertTrue(store.discardForeign("b"))
+            assertTrue(store.discardForeign("b") { true })
             assertNull(store.cart.first())
         }
 
@@ -161,14 +189,14 @@ class CartStoreReservationTest {
         runTest {
             val store = storeOn()
             store.filled()
-            store.reserve("a", fingerprint)
+            store.reserve("a", fingerprint) { true }
 
             store.add("n", "Pollería", line(itemId = "otro"))
             assertEquals(CartReservation("a", fingerprint), storedReservation())
             val other = checkNotNull(store.cart.first()).lines.first { it.itemId == "otro" }
             store.remove(other.signature)
 
-            assertEquals(ReserveResult.Foreign, store.reserve("b", fingerprint))
+            assertEquals(ReserveResult.Foreign, store.reserve("b", fingerprint) { true })
         }
 
     @Test
@@ -176,12 +204,12 @@ class CartStoreReservationTest {
         runTest {
             val store = storeOn()
             store.filled()
-            store.reserve("a", fingerprint)
+            store.reserve("a", fingerprint) { true }
 
             store.replace("n", "Pollería", line())
 
             assertNull(storedReservation())
-            assertEquals(ReserveResult.Reserved, store.reserve("b", fingerprint))
+            assertEquals(ReserveResult.Reserved, store.reserve("b", fingerprint) { true })
         }
 
     @Test
@@ -189,7 +217,7 @@ class CartStoreReservationTest {
         runTest {
             val store = storeOn()
             store.filled()
-            store.reserve("a", fingerprint)
+            store.reserve("a", fingerprint) { true }
 
             store.clear()
             store.filled()
@@ -202,7 +230,7 @@ class CartStoreReservationTest {
         runTest {
             val store = storeOn()
             store.filled()
-            store.reserve("a", fingerprint)
+            store.reserve("a", fingerprint) { true }
 
             store.consume("a", cartOf(quantity = 2).fingerprint())
             assertEquals(1, checkNotNull(store.cart.first()).count)
@@ -221,7 +249,7 @@ class CartStoreReservationTest {
             store.consume("a", fingerprint) // sin reserva
             assertEquals(1, checkNotNull(store.cart.first()).count)
 
-            store.reserve("a", fingerprint)
+            store.reserve("a", fingerprint) { true }
             store.consume("b", fingerprint) // reservada por otra cuenta
             assertEquals(1, checkNotNull(store.cart.first()).count)
             assertEquals(CartReservation("a", fingerprint), storedReservation())
@@ -242,10 +270,10 @@ class CartStoreReservationTest {
         runTest {
             val store = storeOn()
             store.filled()
-            assertFalse(store.discardForeign("a"))
+            assertFalse(store.discardForeign("a") { true })
 
-            store.reserve("a", fingerprint)
-            assertFalse(store.discardForeign("a"))
+            store.reserve("a", fingerprint) { true }
+            assertFalse(store.discardForeign("a") { true })
 
             assertEquals(1, checkNotNull(store.cart.first()).count)
             assertEquals(CartReservation("a", fingerprint), storedReservation())
@@ -256,9 +284,9 @@ class CartStoreReservationTest {
         runTest {
             val store = storeOn()
             store.filled()
-            store.reserve("a", fingerprint)
+            store.reserve("a", fingerprint) { true }
 
-            assertTrue(store.discardForeign("b"))
+            assertTrue(store.discardForeign("b") { true })
 
             assertNull(store.cart.first())
         }

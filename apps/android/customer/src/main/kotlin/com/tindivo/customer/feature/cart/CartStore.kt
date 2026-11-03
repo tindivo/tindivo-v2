@@ -86,23 +86,30 @@ class CartStore(
      * duplicado cuesta dinero. Editar la bolsa CONSERVA la reserva (deshacer una edición no libera la bolsa); solo
      * [replace] y [clear] la pierden. Una reserva solo vale si su huella es la de la bolsa vigente: con otra huella (una
      * versión nueva) se sobrescribe.
+     *
+     * Todo ocurre en UNA escritura. [stillValid] se evalúa DENTRO de ella, con el estado real de la bolsa, para que la
+     * continuación atrasada de una cuenta que ya no es la vigente no decida ni borre nada: sin vigencia, o sin bolsa
+     * o con otra huella, da [ReserveResult.Changed] y no toca nada. Con una reserva ajena de esta huella da
+     * [ReserveResult.Foreign] y la misma escritura VACÍA la bolsa: el descarte es esta escritura, no un paso posterior
+     * que pudiera caer sobre una bolsa nueva.
      */
     suspend fun reserve(
         accountId: String,
         fingerprint: String,
+        stillValid: () -> Boolean,
     ): ReserveResult {
         var result = ReserveResult.Changed
         store.updateData { current ->
             val reservation = current?.reservation
             when {
-                current == null || current.toCartOrNull()?.fingerprint() != fingerprint -> {
+                !stillValid() || current == null || current.toCartOrNull()?.fingerprint() != fingerprint -> {
                     result = ReserveResult.Changed
                     current
                 }
 
                 reservation != null && reservation.accountId != accountId && reservation.fingerprint == fingerprint -> {
                     result = ReserveResult.Foreign
-                    current
+                    null
                 }
 
                 else -> {
@@ -130,14 +137,19 @@ class CartStore(
 
     /**
      * Si la bolsa vigente está reservada por una cuenta distinta de [accountId] (y la reserva es de esta versión de la
-     * bolsa), la vacía y devuelve `true`.
+     * bolsa), la vacía y devuelve `true`. [stillValid] se evalúa dentro de la escritura: sin vigencia no toca nada y
+     * devuelve `false`.
      */
-    suspend fun discardForeign(accountId: String): Boolean {
+    suspend fun discardForeign(
+        accountId: String,
+        stillValid: () -> Boolean,
+    ): Boolean {
         var discarded = false
         store.updateData { current ->
             val reservation = current?.reservation
             val foreign =
-                reservation != null &&
+                stillValid() &&
+                    reservation != null &&
                     reservation.accountId != accountId &&
                     reservation.fingerprint == current?.toCartOrNull()?.fingerprint()
             if (foreign) {

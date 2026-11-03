@@ -60,6 +60,24 @@ class CheckoutReservationTest : CheckoutHarness() {
         session.switchTo(USER_B)
     }
 
+    private fun switchToA() {
+        tokens.token = sessionJwt(USER_A)
+        session.switchTo(USER_A)
+    }
+
+    /** B con formulario sobre la bolsa X; la sesión es la de B desde el principio. */
+    private suspend fun TestScope.formOfBOnX(): CheckoutViewModel {
+        tokens.token = sessionJwt(USER_B)
+        session.switchTo(USER_B)
+        return readyWithoutThreads()
+    }
+
+    private suspend fun reservationOwner() =
+        cartDisk.data
+            .first()
+            ?.reservation
+            ?.accountId
+
     private fun createdOrder() = LookupResult.Created(AttemptOrder(ORDER_ID, "ABCD2345"))
 
     /** Corre Main y espera a las llamadas reales que eso lance, hasta que no quede nada en vuelo ni pendiente. */
@@ -174,7 +192,7 @@ class CheckoutReservationTest : CheckoutHarness() {
             session.switchTo(USER_B)
             val vm = readyWithoutThreads()
 
-            assertEquals(ReserveResult.Reserved, cartStore.reserve(USER_A, cart().fingerprint()))
+            assertEquals(ReserveResult.Reserved, cartStore.reserve(USER_A, cart().fingerprint()) { true })
             vm.confirm()
             advanceUntilIdle()
 
@@ -361,7 +379,7 @@ class CheckoutReservationTest : CheckoutHarness() {
     fun `si A reservo y la bolsa se edita y se deshace, B no la recibe ni la envia`() =
         runTest(dispatcher) {
             fillCart()
-            assertEquals(ReserveResult.Reserved, cartStore.reserve(USER_A, cart().fingerprint()))
+            assertEquals(ReserveResult.Reserved, cartStore.reserve(USER_A, cart().fingerprint()) { true })
             val signature = checkNotNull(cartStore.cart.first()).lines.single().signature
             cartStore.setQuantity(signature, 3)
             cartStore.setQuantity(signature, 2)
@@ -381,7 +399,7 @@ class CheckoutReservationTest : CheckoutHarness() {
     fun `si A reservo y la bolsa se edita a otra version, B la recibe y la confirma con su token`() =
         runTest(dispatcher) {
             fillCart()
-            cartStore.reserve(USER_A, cart().fingerprint())
+            cartStore.reserve(USER_A, cart().fingerprint()) { true }
             val signature = checkNotNull(cartStore.cart.first()).lines.single().signature
             cartStore.setQuantity(signature, 3)
             switchToB()
@@ -427,6 +445,155 @@ class CheckoutReservationTest : CheckoutHarness() {
             assertTrue(posts.last().headers["Authorization"]?.endsWith(sessionJwt(USER_B)) == true)
             assertNull(cartStore.cart.first())
             assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
+        }
+
+    // --- Continuaciones atrasadas (CAX-004) -------------------------------------------------------------------
+
+    @Test
+    fun `con la devolucion de Foreign retenida, la bolsa nueva de A sobrevive con su reserva y no sale nada`() =
+        runTest(dispatcher) {
+            val vm = formOfBOnX()
+            cartStore.reserve(USER_A, cart().fingerprint()) { true }
+            val gate = cartDisk.holdNextAfterWrite()
+            vm.confirm()
+            advanceUntilIdle()
+            assertTrue("B no llegó a decidir", gate.reached.isCompleted)
+            assertNull("la misma escritura de Foreign vació la bolsa", cartStore.cart.first())
+
+            switchToA()
+            fillCart() // la bolsa nueva Y de A, idéntica a la de antes
+            cartStore.reserve(USER_A, cart().fingerprint()) { true }
+            gate.open()
+            advanceUntilIdle()
+
+            assertTrue(orders().isEmpty())
+            assertEquals(2, checkNotNull(cartStore.cart.first()).count)
+            assertEquals(USER_A, reservationOwner())
+            assertFalse(vm.state.value.sending)
+            assertNull(vm.state.value.message)
+            assertEquals(CheckoutPhase.Form, vm.state.value.phase)
+        }
+
+    @Test
+    fun `con el reserve de B retenido antes de escribir, la bolsa nueva de A sobrevive porque ya no hay vigencia`() =
+        runTest(dispatcher) {
+            val vm = formOfBOnX()
+            cartStore.reserve(USER_A, cart().fingerprint()) { true }
+            val gate = cartDisk.holdNextBeforeTransform()
+            vm.confirm()
+            advanceUntilIdle()
+            assertTrue("el reserve de B no llegó", gate.reached.isCompleted)
+
+            switchToA()
+            fillCart() // Y idéntica a X, sin reserva
+            cartStore.reserve(USER_A, cart().fingerprint()) { true }
+            gate.open()
+            advanceUntilIdle()
+
+            assertTrue(orders().isEmpty())
+            assertEquals(2, checkNotNull(cartStore.cart.first()).count)
+            assertEquals(USER_A, reservationOwner())
+            assertEquals(CheckoutPhase.Form, vm.state.value.phase)
+            assertFalse(vm.state.value.sending)
+        }
+
+    @Test
+    fun `con el descarte de la carga de B retenido, la sesion vuelve a A y la bolsa de A queda intacta`() =
+        runTest(dispatcher) {
+            tokens.token = sessionJwt(USER_B)
+            session.switchTo(USER_B)
+            fillCart()
+            cartStore.reserve(USER_A, cart().fingerprint()) { true }
+            val gate = cartDisk.holdNextBeforeTransform()
+            val vm = viewModel()
+            advanceUntilIdle()
+            assertTrue("la carga de B no llegó al descarte", gate.reached.isCompleted)
+
+            switchToA()
+            fillCart()
+            cartStore.reserve(USER_A, cart().fingerprint()) { true }
+            gate.open()
+            advanceUntilIdle()
+
+            assertEquals(2, checkNotNull(cartStore.cart.first()).count)
+            assertEquals(USER_A, reservationOwner())
+            assertTrue(orders().isEmpty())
+            val profiles = sent("GET", "/customer/profile")
+            assertTrue(profiles.isNotEmpty())
+            assertTrue(profiles.all { it.headers["Authorization"]?.endsWith(sessionJwt(USER_A)) == true })
+            assertEquals(CheckoutPhase.Form, vm.state.value.phase)
+        }
+
+    @Test
+    fun `tras Foreign con la devolucion retenida, una bolsa nueva sin reserva no se queda en bolsa vacia`() =
+        runTest(dispatcher) {
+            val vm = formOfBOnX()
+            cartStore.reserve(USER_A, cart().fingerprint()) { true }
+            val gate = cartDisk.holdNextAfterWrite()
+            vm.confirm()
+            advanceUntilIdle()
+            assertTrue(gate.reached.isCompleted)
+
+            fillCart(quantity = 3) // la versión nueva Y de B, sin reserva
+            gate.open()
+            advanceUntilIdle()
+
+            assertEquals(3, checkNotNull(cartStore.cart.first()).count)
+            assertNull(reservationOwner())
+            assertEquals(CheckoutPhase.Form, vm.state.value.phase)
+            assertFalse(vm.state.value.sending)
+            assertTrue(orders().isEmpty())
+        }
+
+    @Test
+    fun `si la sesion cambia en el hueco tras reservar, no sale el POST y el libro no registra nada`() =
+        runTest(dispatcher) {
+            val vm = formOfBOnX()
+            val gate = cartDisk.holdNextAfterWrite()
+            vm.confirm()
+            advanceUntilIdle()
+            assertTrue(gate.reached.isCompleted)
+            assertEquals(USER_B, reservationOwner())
+
+            switchToA()
+            advanceUntilIdle() // la carga de A descarta la bolsa reservada por B
+            gate.open()
+            advanceUntilIdle()
+
+            assertTrue(orders().isEmpty())
+            assertTrue("libro: ${ledgerStore.ledger}", ledgerStore.ledger.attempts.isEmpty())
+            assertNull(cartStore.cart.first())
+        }
+
+    @Test
+    fun `si falla la escritura de reserve sale StillProcessing, cero POST y la bolsa queda intacta`() =
+        runTest(dispatcher) {
+            val vm = readyWithoutThreads()
+            cartDisk.failWrites = true
+
+            vm.confirm()
+            advanceUntilIdle()
+            cartDisk.failWrites = false
+
+            assertEquals(CheckoutMessage.StillProcessing, vm.state.value.message)
+            assertFalse(vm.state.value.sending)
+            assertTrue(orders().isEmpty())
+            assertEquals(2, checkNotNull(cartStore.cart.first()).count)
+            assertNull(reservationOwner())
+        }
+
+    @Test
+    fun `si falla la escritura del descarte en la carga sale LoadFailed y no se pide nada`() =
+        runTest(dispatcher) {
+            fillCart()
+            cartDisk.failWrites = true
+
+            val vm = viewModel()
+            advanceUntilIdle()
+            cartDisk.failWrites = false
+
+            assertEquals(CheckoutPhase.LoadFailed, vm.state.value.phase)
+            assertTrue(requests.isEmpty())
         }
 
     private companion object {

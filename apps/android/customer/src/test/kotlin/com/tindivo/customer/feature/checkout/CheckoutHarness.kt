@@ -17,15 +17,18 @@ import com.tindivo.customer.feature.cart.CartSerializer
 import com.tindivo.customer.feature.cart.CartSnapshot
 import com.tindivo.customer.feature.cart.CartStore
 import com.tindivo.customer.session.FakeSessionStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -199,12 +202,51 @@ class FlakyCartData(
 ) : DataStore<CartSnapshot?> {
     @Volatile var failClears = false
 
+    /** Con esto activo, TODA escritura lanza [IOException] sin tocar nada. */
+    @Volatile var failWrites = false
+
+    @Volatile private var holdBefore: Gate? = null
+
+    @Volatile private var holdAfter: Gate? = null
+
     override val data = delegate.data
 
-    override suspend fun updateData(transform: suspend (t: CartSnapshot?) -> CartSnapshot?): CartSnapshot? =
-        delegate.updateData { current ->
-            val next = transform(current)
-            if (failClears && next == null) throw IOException("no se pudo vaciar la bolsa")
-            next
+    /** Retiene la próxima escritura ANTES de su transform, hasta que la prueba suelte la compuerta. */
+    fun holdNextBeforeTransform(): Gate = Gate().also { holdBefore = it }
+
+    /** Retiene la devolución de la próxima escritura DESPUÉS de aplicada, hasta que la prueba suelte la compuerta. */
+    fun holdNextAfterWrite(): Gate = Gate().also { holdAfter = it }
+
+    override suspend fun updateData(transform: suspend (t: CartSnapshot?) -> CartSnapshot?): CartSnapshot? {
+        if (failWrites) throw IOException("no se pudo escribir la bolsa")
+        val before = holdBefore
+        val after = holdAfter
+        holdBefore = null
+        holdAfter = null
+        before?.hold()
+        val result =
+            delegate.updateData { current ->
+                val next = transform(current)
+                if (failClears && next == null) throw IOException("no se pudo vaciar la bolsa")
+                next
+            }
+        after?.hold()
+        return result
+    }
+
+    /** Una compuerta de un solo uso: [reached] avisa que la escritura llegó; [release] la deja seguir. */
+    class Gate {
+        val reached = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+
+        // No cancelable: la escritura retenida ya está en la cola del almacén aunque quien la pidió se cancele.
+        internal suspend fun hold() {
+            reached.complete(Unit)
+            withContext(NonCancellable) { release.await() }
         }
+
+        fun open() {
+            release.complete(Unit)
+        }
+    }
 }
