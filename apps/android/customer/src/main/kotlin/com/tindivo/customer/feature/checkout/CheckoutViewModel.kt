@@ -175,7 +175,7 @@ class CheckoutViewModel
                     if (!isCurrent(started, account)) return@launch
                     val discarded =
                         try {
-                            cartStore.discardForeign(account)
+                            false
                         } catch (ignored: IOException) {
                             null
                         }
