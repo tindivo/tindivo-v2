@@ -10,6 +10,7 @@ import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.core.network.generated.model.CreateOrderRequest
 import com.tindivo.core.network.generated.model.CreateOrderRequestItemsInner
+import com.tindivo.customer.feature.cart.fingerprint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -112,7 +113,7 @@ class LedgerAccountSwitchTest : LedgerTestBase() {
             seedUncertainAttemptOfA()
             tokens.token = sessionJwt(B)
 
-            val result = realLedger().place(A, cart(), ::send)
+            val result = realLedger().place(A, cart(), {}, ::send)
 
             assertEquals(PlaceResult.NeedsReconciliation, result)
             assertEquals(0, server.requestCount)
@@ -126,7 +127,7 @@ class LedgerAccountSwitchTest : LedgerTestBase() {
             reply(401, """{"type":"about:blank","title":"x","status":401,"code":"unauthorized"}""")
             tokens.onRefresh = sessionJwt(B)
 
-            val result = realLedger().place(A, cart(), ::send)
+            val result = realLedger().place(A, cart(), {}, ::send)
 
             assertEquals(PlaceResult.NeedsReconciliation, result)
             assertEquals(1, server.requestCount)
@@ -146,7 +147,7 @@ class LedgerAccountSwitchTest : LedgerTestBase() {
             reply(200, """{"data":{"state":"not_found","order":null}}""")
             afterResponse = { tokens.token = sessionJwt(B) }
 
-            val result = realLedger().place(A, cart(), ::send)
+            val result = realLedger().place(A, cart(), {}, ::send)
 
             val error = ((result as PlaceResult.Failed).error as AppError.Network).cause
             assertTrue(error is AccountMismatchException)
@@ -165,7 +166,7 @@ class LedgerAccountSwitchTest : LedgerTestBase() {
                 """{"data":{"id":"9e2a737a-018f-4c2d-9a11-6f0d3c1e8a05","shortId":"ABCD2345","status":"pending","total":"25.00"}}""",
             )
 
-            val result = realLedger().place(A, cart(), ::send)
+            val result = realLedger().place(A, cart(), {}, ::send)
 
             assertTrue(result is PlaceResult.Created || result is PlaceResult.Failed)
             assertEquals(2, server.requestCount)

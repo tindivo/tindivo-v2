@@ -80,7 +80,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
                     items = listOf(QuoteCheckoutRequestItemsInner(menuItemId = ITEM_ID, quantity = 2)),
                 )
 
-            val data = (checkout().quote(request) as ApiResult.Success).data
+            val data = (checkout().quote(request, ACCOUNT) as ApiResult.Success).data
 
             assertEquals("48.50", data.total)
             assertEquals("3.50", data.deliveryFee)
@@ -103,6 +103,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
                 (
                     checkout().quote(
                         QuoteCheckoutRequest(BUSINESS_ID, QuoteCheckoutRequest.DeliveryMethod.pickup, emptyList()),
+                        ACCOUNT,
                     ) as ApiResult.Failure
                 ).error
 
@@ -215,6 +216,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
             val result =
                 checkout().quote(
                     QuoteCheckoutRequest(BUSINESS_ID, QuoteCheckoutRequest.DeliveryMethod.pickup, emptyList()),
+                    ACCOUNT,
                 )
 
             assertTrue(result is ApiResult.Failure)
@@ -280,6 +282,23 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
             tokens.token = testJwt(OTHER_ACCOUNT)
 
             val error = (checkout().attempt(KEY, ACCOUNT) as ApiResult.Failure).error
+
+            assertTrue((error as AppError.Network).cause is AccountMismatchException)
+            assertEquals(0, server.requestCount)
+        }
+
+    @Test
+    fun `quote con la sesion de otra cuenta no envia nada`() =
+        runTest {
+            tokens.token = testJwt(OTHER_ACCOUNT)
+
+            val error =
+                (
+                    checkout().quote(
+                        QuoteCheckoutRequest(BUSINESS_ID, QuoteCheckoutRequest.DeliveryMethod.pickup, emptyList()),
+                        ACCOUNT,
+                    ) as ApiResult.Failure
+                ).error
 
             assertTrue((error as AppError.Network).cause is AccountMismatchException)
             assertEquals(0, server.requestCount)

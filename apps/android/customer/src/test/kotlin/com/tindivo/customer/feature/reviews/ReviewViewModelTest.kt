@@ -43,6 +43,8 @@ import java.util.Collections
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.coroutines.CoroutineContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -52,6 +54,7 @@ class ReviewViewModelTest {
     private val store = FakeSessionStore()
     private lateinit var baseUrl: String
     private lateinit var configService: ConfigService
+    private var latchIo: LatchIo? = null
 
     @Before
     fun setUp() {
@@ -65,6 +68,9 @@ class ReviewViewModelTest {
     @After
     fun tearDown() {
         server.close()
+        // Un bloque de LatchIo que termine después de resetMain se reanudaría sobre un Main que ya no existe, y esa
+        // excepción se le cuelga a la siguiente prueba.
+        latchIo?.awaitIdle()
         Dispatchers.resetMain()
     }
 
@@ -538,6 +544,9 @@ class ReviewViewModelTest {
      */
     private class LatchIo : CoroutineDispatcher() {
         @Volatile private var latch = CountDownLatch(1)
+        private val lock = ReentrantLock()
+        private val idle = lock.newCondition()
+        private var inFlight = 0
 
         fun arm() {
             latch = CountDownLatch(1)
@@ -545,14 +554,34 @@ class ReviewViewModelTest {
 
         fun awaitDone() = assertTrue("la llamada no terminó", latch.await(5, TimeUnit.SECONDS))
 
+        /** Espera a que no quede ningún bloque en un hilo real. */
+        fun awaitIdle() {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+            lock.withLock {
+                while (inFlight > 0) {
+                    val left = deadline - System.nanoTime()
+                    assertTrue("una llamada no terminó", left > 0)
+                    idle.awaitNanos(left)
+                }
+            }
+        }
+
         override fun dispatch(
             context: CoroutineContext,
             block: Runnable,
         ) {
             val current = latch
+            lock.withLock { inFlight++ }
             Dispatchers.IO.dispatch(context) {
-                block.run()
-                current.countDown()
+                try {
+                    block.run()
+                    current.countDown()
+                } finally {
+                    lock.withLock {
+                        inFlight--
+                        idle.signalAll()
+                    }
+                }
             }
         }
     }
@@ -561,7 +590,7 @@ class ReviewViewModelTest {
     private fun controlledMain(body: suspend TestScope.(LatchIo) -> Unit) {
         Dispatchers.setMain(StandardTestDispatcher())
         runTest {
-            val io = LatchIo()
+            val io = LatchIo().also { latchIo = it }
             body(this, io)
         }
     }

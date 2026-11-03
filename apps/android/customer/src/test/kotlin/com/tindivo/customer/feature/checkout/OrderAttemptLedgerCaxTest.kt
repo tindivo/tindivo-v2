@@ -5,6 +5,7 @@ import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartLine
+import com.tindivo.customer.feature.cart.fingerprint
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -27,7 +28,7 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
     fun `CAX-001 un 401, 422 y 426 posteriores no cambian la clave de un pedido incierto`() =
         runTest {
             // El servidor creó el pedido con K1 y la respuesta se perdió.
-            ledger().place(A, cart(), Sender(network)::send)
+            ledger().place(A, cart(), {}, Sender(network)::send)
             lookup.next = LookupResult.NotFound
             now += WINDOW + 1
             val sender =
@@ -38,7 +39,7 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
                 )
             val l = ledger()
 
-            repeat(3) { l.place(A, cart(), sender::send) }
+            repeat(3) { l.place(A, cart(), {}, sender::send) }
 
             assertEquals(listOf(key(1), key(1), key(1)), sender.keys)
             assertEquals(key(1).toString(), storedKey(A))
@@ -46,7 +47,7 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
             // Reinicio: otro ledger sobre el mismo store. El servidor sí tiene el pedido.
             lookup.next = LookupResult.Created(order)
             val afterRestart = Sender()
-            val result = ledger().place(A, cart(), afterRestart::send)
+            val result = ledger().place(A, cart(), {}, afterRestart::send)
 
             assertEquals(PlaceResult.AlreadyCreated(order), result)
             assertTrue(afterRestart.keys.isEmpty())
@@ -65,14 +66,14 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
             var resultOfB: PlaceResult<String>? = null
             val jobA =
                 launch {
-                    l.place(A, cart()) {
+                    l.place(A, cart(), {}) {
                         sendsOfA++
                         gate.await()
                     }
                 }
             runCurrent()
             val ledgerWhileBusy = store.ledger
-            val jobB = launch { resultOfB = l.place(A, cart(), b::send) }
+            val jobB = launch { resultOfB = l.place(A, cart(), {}, b::send) }
             runCurrent()
 
             assertEquals(PlaceResult.Busy, resultOfB)
@@ -97,8 +98,8 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
             val first = Sender(ok)
             val second = Sender(ok)
 
-            l.place(A, cart(), first::send)
-            val result = l.place(A, cart(), second::send)
+            l.place(A, cart(), {}, first::send)
+            val result = l.place(A, cart(), {}, second::send)
 
             assertEquals(PlaceResult.Created("ok"), result)
             assertEquals(listOf(key(1)), first.keys)
@@ -110,11 +111,11 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
         runTest {
             val l = ledger()
             val gate = CompletableDeferred<ApiResult<String>>()
-            val jobA = launch { l.place(A, cart()) { gate.await() } }
+            val jobA = launch { l.place(A, cart(), {}) { gate.await() } }
             runCurrent()
             val other = Sender(ok)
 
-            val result = l.place(B, cart(), other::send)
+            val result = l.place(B, cart(), {}, other::send)
 
             assertEquals(PlaceResult.Created("ok"), result)
             assertEquals(1, other.keys.size)
@@ -126,11 +127,11 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
     fun `CAX-002 el fallo incierto de K2 sigue recuperable tras reiniciar`() =
         runTest {
             val l = ledger()
-            l.place(A, cart(), Sender(ok)::send)
-            l.place(A, cart(), Sender(network)::send)
+            l.place(A, cart(), {}, Sender(ok)::send)
+            l.place(A, cart(), {}, Sender(network)::send)
             lookup.next = LookupResult.Created(order)
 
-            val result = ledger().place(A, cart(), Sender()::send)
+            val result = ledger().place(A, cart(), {}, Sender()::send)
 
             assertEquals(PlaceResult.AlreadyCreated(order), result)
             assertEquals(2L, counter)
@@ -142,24 +143,24 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
     fun `CAX-003 la cuenta B no toca el intento incierto de A, con la misma bolsa o con otra`() =
         runTest {
             val l = ledger()
-            l.place(A, cart(), Sender(network)::send)
+            l.place(A, cart(), {}, Sender(network)::send)
             val keyOfA = storedKey(A)
 
             val sameCart = Sender(ok)
-            l.place(B, cart(), sameCart::send)
+            l.place(B, cart(), {}, sameCart::send)
             assertNotEquals(key(1), sameCart.keys.single())
             assertEquals(keyOfA, storedKey(A))
 
             val otherCart = Sender(known(ApiErrorCode.ValidationError, 422), ok)
-            l.place(B, cart("otro"), otherCart::send)
+            l.place(B, cart("otro"), {}, otherCart::send)
             assertEquals(keyOfA, storedKey(A))
             lookup.next = LookupResult.NotFound
-            l.place(B, cart("otro"), otherCart::send)
+            l.place(B, cart("otro"), {}, otherCart::send)
             assertEquals(keyOfA, storedKey(A))
 
             // Vuelve A: su clave es la suya, aunque el almacenamiento se reabra.
             lookup.next = LookupResult.Created(order)
-            val result = ledger().place(A, cart(), Sender()::send)
+            val result = ledger().place(A, cart(), {}, Sender()::send)
             assertEquals(PlaceResult.AlreadyCreated(order), result)
             assertTrue(lookup.asked.contains(key(1)))
         }
@@ -169,18 +170,18 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
     @Test
     fun `CAX-004 X con respuesta perdida, luego Y, luego X de nuevo, con reinicio, recupera K1`() =
         runTest {
-            ledger().place(A, cart("x"), Sender(network)::send)
+            ledger().place(A, cart("x"), {}, Sender(network)::send)
 
             // Y sin saber si X se creó: no se envía nada.
             lookup.next = LookupResult.Unknown
             val blocked = Sender()
-            assertEquals(PlaceResult.NeedsReconciliation, ledger().place(A, cart("y"), blocked::send))
+            assertEquals(PlaceResult.NeedsReconciliation, ledger().place(A, cart("y"), {}, blocked::send))
             assertTrue(blocked.keys.isEmpty())
             assertEquals(key(1).toString(), storedKey(A))
 
             // X de nuevo, tras reiniciar: el servidor la tiene.
             lookup.next = LookupResult.Created(order)
-            val result = ledger().place(A, cart("x"), Sender()::send)
+            val result = ledger().place(A, cart("x"), {}, Sender()::send)
             assertEquals(PlaceResult.AlreadyCreated(order), result)
             assertEquals(1L, counter)
         }
@@ -188,12 +189,12 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
     @Test
     fun `CAX-004 Y reutiliza K1 solo si consta que no creo nada`() =
         runTest {
-            ledger().place(A, cart("x"), Sender(network)::send)
+            ledger().place(A, cart("x"), {}, Sender(network)::send)
             lookup.next = LookupResult.NotFound
             now += WINDOW + 1
             val sender = Sender(known(ApiErrorCode.ValidationError, 422))
 
-            ledger().place(A, cart("y"), sender::send)
+            ledger().place(A, cart("y"), {}, sender::send)
 
             assertEquals(listOf(key(1)), sender.keys)
             assertEquals(key(1).toString(), storedKey(A))
@@ -213,8 +214,8 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
                 )
             val sender = Sender()
 
-            assertEquals(PlaceResult.NeedsReconciliation, ledger().place(B, cart(), sender::send))
-            assertEquals(PlaceResult.NeedsReconciliation, ledger().place(A, cart(), sender::send))
+            assertEquals(PlaceResult.NeedsReconciliation, ledger().place(B, cart(), {}, sender::send))
+            assertEquals(PlaceResult.NeedsReconciliation, ledger().place(A, cart(), {}, sender::send))
 
             assertTrue(sender.keys.isEmpty())
             assertEquals(0L, counter)
@@ -232,12 +233,12 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
                 )
             val l = ledger()
             val sender = Sender(ok)
-            l.place(B, cart(), sender::send)
+            l.place(B, cart(), {}, sender::send)
 
             l.acknowledgeReconciled(A)
 
-            assertEquals(PlaceResult.Created("ok"), l.place(A, cart(), sender::send))
-            assertEquals(PlaceResult.NeedsReconciliation, l.place(B, cart(), sender::send))
+            assertEquals(PlaceResult.Created("ok"), l.place(A, cart(), {}, sender::send))
+            assertEquals(PlaceResult.NeedsReconciliation, l.place(B, cart(), {}, sender::send))
             assertEquals(listOf(key(1)), sender.keys)
         }
 
@@ -251,7 +252,7 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
             val release = CompletableDeferred<Unit>()
             pausing.pauseNextRead = release
             var resultOfB: PlaceResult<String>? = null
-            val jobB = launch { resultOfB = l.place(B, cart(), sender::send) }
+            val jobB = launch { resultOfB = l.place(B, cart(), {}, sender::send) }
             runCurrent()
             assertTrue(pausing.paused)
 
@@ -273,13 +274,13 @@ class OrderAttemptLedgerCaxTest : LedgerTestBase() {
             val l = ledger()
             val sender = Sender(ok)
 
-            assertEquals(PlaceResult.NeedsReconciliation, l.place(A, cart(), sender::send))
-            assertEquals(PlaceResult.NeedsReconciliation, l.place(B, cart(), sender::send))
+            assertEquals(PlaceResult.NeedsReconciliation, l.place(A, cart(), {}, sender::send))
+            assertEquals(PlaceResult.NeedsReconciliation, l.place(B, cart(), {}, sender::send))
             assertTrue(sender.keys.isEmpty())
 
             l.acknowledgeReconciled(A)
-            assertEquals(PlaceResult.Created("ok"), l.place(A, cart(), sender::send))
-            assertEquals(PlaceResult.NeedsReconciliation, l.place(B, cart(), sender::send))
+            assertEquals(PlaceResult.Created("ok"), l.place(A, cart(), {}, sender::send))
+            assertEquals(PlaceResult.NeedsReconciliation, l.place(B, cart(), {}, sender::send))
             assertEquals(listOf(key(1)), sender.keys)
         }
 

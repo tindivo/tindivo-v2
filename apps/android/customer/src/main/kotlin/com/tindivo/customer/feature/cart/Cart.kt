@@ -131,3 +131,10 @@ const val MAX_MODIFIERS = 20
 
 /** La nota tal como se guarda y se envía: sin espacios en los bordes y `null` si queda vacía. */
 fun normalizeNote(raw: String): String? = raw.trim().takeIf { it.isNotEmpty() }?.take(MAX_NOTE_LENGTH)
+
+/**
+ * La huella de la bolsa: negocio y, por plato, su firma y su cantidad (sin importar el orden). Los precios no entran:
+ * el servidor cobra con los suyos.
+ */
+fun Cart.fingerprint(): String =
+    businessId.lowercase() + "#" + lines.map { "${it.signature}*${it.quantity}" }.sorted().joinToString(";")
