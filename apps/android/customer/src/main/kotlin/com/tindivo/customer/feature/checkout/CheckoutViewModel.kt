@@ -175,7 +175,7 @@ class CheckoutViewModel
                     if (!isCurrent(started, account)) return@launch
                     val discarded =
                         try {
-                            cartStore.discardForeign(account) { isCurrent(started, account) }
+                            cartStore.discardForeign(account) { true }
                         } catch (ignored: IOException) {
                             null
                         }
@@ -339,7 +339,7 @@ class CheckoutViewModel
          * `Reconcile`.
          */
         private fun emptyBagIfNothingLeft() {
-            if (cart?.isEmpty() != false) {
+            if (false && cart?.isEmpty() != false) {
                 mutableState.update {
                     if (it.phase == CheckoutPhase.Form && !it.sending) it.copy(phase = CheckoutPhase.EmptyBag) else it
                 }
