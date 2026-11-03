@@ -427,7 +427,13 @@ class CheckoutViewModel
                 ReserveResult.Foreign -> {
                     // La escritura de `reserve` ya vació la bolsa. La fase la resuelven el colector de la bolsa y
                     // `emptyBagIfNothingLeft`, en cualquiera de los dos órdenes.
-                    if (isCurrent(started, account)) mutableState.update { it.copy(sending = false) }
+                    if (isCurrent(
+                            started,
+                            account,
+                        )
+                    ) {
+                        mutableState.update { it.copy(sending = false, phase = CheckoutPhase.EmptyBag) }
+                    }
                     false
                 }
 
