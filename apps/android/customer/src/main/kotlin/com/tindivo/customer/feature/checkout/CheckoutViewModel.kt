@@ -3,9 +3,11 @@ package com.tindivo.customer.feature.checkout
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiResult
+import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.core.network.generated.model.CreateOrder201ResponseData
 import com.tindivo.core.network.generated.model.CreateOrderRequest
+import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartStore
 import com.tindivo.customer.feature.cart.ReserveResult
@@ -27,6 +29,11 @@ import javax.inject.Inject
  * la dirección o la bolsa, y otra vez justo antes de crear el pedido; si el total cambió, no crea nada y pide
  * confirmar de nuevo. El pedido sale por [OrderAttemptLedger], que decide si se envía, con qué clave y cuándo hay
  * que pedirle a la persona que revise «Mis pedidos».
+ *
+ * Un 426 (la app quedó por debajo de la versión mínima) en la carga, la cotización o la creación del pedido se avisa a
+ * [ConfigService], como en el resto de la app, y la navegación pasa a la pantalla de actualizar. Un 426 al crear no
+ * cambia nada en el libro: el intento conserva su clave como ante cualquier rechazo, así que el reintento tras
+ * actualizar consulta antes de enviar y reusa esa clave.
  */
 @HiltViewModel
 class CheckoutViewModel
@@ -38,6 +45,7 @@ class CheckoutViewModel
         private val ledger: OrderAttemptLedger,
         private val sessionStore: SessionStore,
         private val debounce: QuoteDebounce,
+        private val configService: ConfigService,
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(CheckoutUiState())
         val state: StateFlow<CheckoutUiState> = mutableState.asStateFlow()
@@ -303,6 +311,7 @@ class CheckoutViewModel
                     if (!isCurrent(started, account)) return@launch
                     when (outcome) {
                         is LoadOutcome.Failed -> {
+                            reportUpgrade(outcome.error)
                             mutableState.update { it.copy(phase = CheckoutPhase.LoadFailed) }
                         }
 
@@ -393,7 +402,7 @@ class CheckoutViewModel
             val current = bag ?: return QuoteOutcome.Failed
             val request = buildQuoteRequest(mutableState.value, current) ?: return QuoteOutcome.Invalid
             return when (val result = checkout.quote(request, account)) {
-                is ApiResult.Failure -> QuoteOutcome.Failed
+                is ApiResult.Failure -> QuoteOutcome.Failed.also { reportUpgrade(result.error) }
                 is ApiResult.Success -> result.data.toQuoteViewOrNull()?.let(QuoteOutcome::Ok) ?: QuoteOutcome.Invalid
             }
         }
@@ -462,6 +471,11 @@ class CheckoutViewModel
             }
         }
 
+        /** El aviso de actualizar no es de una cuenta: vale aunque la respuesta llegue tras cambiar de cuenta. */
+        private fun reportUpgrade(error: AppError) {
+            if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
+        }
+
         private fun stop(message: CheckoutMessage) = mutableState.update { it.copy(sending = false, message = message) }
 
         private suspend fun place(
@@ -524,7 +538,11 @@ class CheckoutViewModel
                 // La bolsa se consume DENTRO del libro, antes de olvidar el intento; el envío no se cancela.
                 if (reserve(started, account, current) && isCurrent(started, account)) {
                     val consume: suspend (String) -> Unit = { fingerprint -> cartStore.consume(account, fingerprint) }
-                    ledger.place(account, current, consume) { key -> checkout.createOrder(request, key, account) }
+                    ledger.place(account, current, consume) { key ->
+                        checkout.createOrder(request, key, account).also {
+                            if (it is ApiResult.Failure) reportUpgrade(it.error)
+                        }
+                    }
                 } else {
                     null
                 }
