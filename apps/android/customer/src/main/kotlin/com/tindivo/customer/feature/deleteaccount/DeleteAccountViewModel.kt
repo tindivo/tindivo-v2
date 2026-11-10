@@ -117,9 +117,28 @@ internal class DeleteAccountViewModel
 
         private var work: Job? = null
 
+        // La confirmación cuyo 204 dejó la pantalla en Deleted: el aviso «Tu cuenta fue borrada» va atado a ella.
+        @Volatile private var deletedBy: Confirmation? = null
+
         init {
             adoptOwnerIfSignedIn()
             viewModelScope.launch { sessionStore.state.collect(::onSession) }
+            viewModelScope.launch { sessionStore.signInGeneration.collect { onGeneration() } }
+        }
+
+        /**
+         * Al salir tras borrar: la generación de la sesión de quien borró, para que la portada muestre «Tu cuenta fue
+         * borrada» solo mientras siga siendo la misma; o `null` si desde la limpieza entró alguien (esa cuenta u otra).
+         * Entonces la pantalla pasa a [DeletePhase.Left] y se cierra sin aviso. Se comprueba aquí, al consumir el
+         * efecto, porque entre la limpieza y la navegación puede entrar alguien.
+         */
+        fun deletedNotice(): Long? {
+            val confirmation = deletedBy
+            if (_state.value.phase == DeletePhase.Deleted && confirmation != null && isClosedFor(confirmation)) {
+                return confirmation.generation
+            }
+            _state.update { if (it.phase == DeletePhase.Deleted) it.copy(phase = DeletePhase.Left) else it }
+            return null
         }
 
         fun onTyped(text: String) {
@@ -174,6 +193,17 @@ internal class DeleteAccountViewModel
             }
         }
 
+        // Alguien entró después del borrado (o del 401): el resultado ya no es para quien está; la pantalla se cierra
+        // sin decir nada. No hace falta ver cada cambio: basta con que la generación ya no sea la de la confirmación.
+        private fun onGeneration() {
+            val generation = sessionStore.signInGeneration.value
+            _state.update {
+                val finished = it.phase == DeletePhase.Deleted || it.phase == DeletePhase.Unconfirmed
+                val confirmed = deletedBy?.generation ?: ownerGeneration
+                if (finished && generation != confirmed) it.copy(phase = DeletePhase.Left, notice = null) else it
+            }
+        }
+
         private suspend fun settle(
             confirmation: Confirmation,
             result: ApiResult<Unit>,
@@ -183,7 +213,9 @@ internal class DeleteAccountViewModel
                 // 204: la cuenta ya no existe. Soltar lo local no se corta a medias.
                 val account = confirmation.account
                 val mine = withContext(NonCancellable) { cleanup.clean(account) { isStillOwners(confirmation) } }
+                if (mine) deletedBy = confirmation
                 _state.update { it.copy(typed = "", phase = if (mine) DeletePhase.Deleted else DeletePhase.Left) }
+                onGeneration()
                 return
             }
             if (error.isUnauthorized()) {
@@ -213,6 +245,12 @@ internal class DeleteAccountViewModel
                     it.copy(phase = DeletePhase.Left, notice = null)
                 }
             }
+        }
+
+        // La sesión de quien confirmó ya está cerrada y nadie entró desde entonces.
+        private fun isClosedFor(confirmation: Confirmation): Boolean {
+            val generation = sessionStore.signInGeneration.value
+            return generation == confirmation.generation && sessionStore.state.value is SessionState.SignedOut
         }
 
         // La sesión vigente es la de quien confirmó y nadie entró desde entonces.

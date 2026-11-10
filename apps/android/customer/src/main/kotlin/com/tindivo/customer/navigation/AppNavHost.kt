@@ -177,10 +177,11 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             composable<DeleteAccountRoute> {
                 DeleteAccountDestination(
                     onBack = { navController.popBackStack() },
-                    onDeleted = {
-                        // La portada es el inicio y siempre está debajo: llega a ella con «Tu cuenta fue borrada».
+                    onDeleted = { generation ->
+                        // La portada es el inicio y siempre está debajo: llega a ella con «Tu cuenta fue borrada», atado
+                        // a la generación de la sesión de quien borró (si entra alguien, el aviso ya no sale).
                         navController.popBackStack<CatalogHomeRoute>(inclusive = false)
-                        navController.currentBackStackEntry?.savedStateHandle?.set(ACCOUNT_DELETED_KEY, true)
+                        navController.currentBackStackEntry?.savedStateHandle?.set(ACCOUNT_DELETED_KEY, generation)
                     },
                     onOpenOrders = { navController.navigate(OrdersRoute) },
                 )
