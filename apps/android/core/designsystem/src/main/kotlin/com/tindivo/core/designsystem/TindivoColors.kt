@@ -12,30 +12,30 @@ import androidx.compose.ui.graphics.Color
  * están en [TindivoColors]: el naranja para texto y los pares de aviso, que Material 3 no tiene.
  */
 internal object Palette {
-    val Brand = Color(0xFFF97316)
-    val BrandDark = Color(0xFFC2410C)
-    val BrandDeep = Color(0xFF9A3412)
-    val BrandSoft = Color(0xFFFFF7ED)
+    val Brand = Color(color = 0xFFF97316)
+    val BrandDark = Color(color = 0xFFC2410C)
+    val BrandDeep = Color(color = 0xFF9A3412)
+    val BrandSoft = Color(color = 0xFFFFF7ED)
 
-    val Ink = Color(0xFF1A1614)
-    val InkMuted = Color(0xFF57534E)
-    val InkSubtle = Color(0xFFA8A29E)
+    val Ink = Color(color = 0xFF1A1614)
+    val InkMuted = Color(color = 0xFF57534E)
+    val InkSubtle = Color(color = 0xFFA8A29E)
 
-    val Surface = Color(0xFFFAF6F1)
-    val SurfaceLow = Color(0xFFF0EBE3)
-    val SurfaceMid = Color(0xFFF5F1EB)
-    val Card = Color(0xFFFFFFFF)
-    val Border = Color(0xFFEAE7E2)
+    val Surface = Color(color = 0xFFFAF6F1)
+    val SurfaceLow = Color(color = 0xFFF0EBE3)
+    val SurfaceMid = Color(color = 0xFFF5F1EB)
+    val Card = Color(color = 0xFFFFFFFF)
+    val Border = Color(color = 0xFFEAE7E2)
 
-    val Success = Color(0xFF15803D)
-    val SuccessSoft = Color(0xFFDCFCE7)
-    val SuccessDeep = Color(0xFF166534)
-    val Warning = Color(0xFFB45309)
-    val WarningSoft = Color(0xFFFEF3C7)
-    val WarningDeep = Color(0xFF92400E)
-    val Danger = Color(0xFFDC2626)
-    val DangerSoft = Color(0xFFFEE2E2)
-    val DangerDeep = Color(0xFF991B1B)
+    val Success = Color(color = 0xFF15803D)
+    val SuccessSoft = Color(color = 0xFFDCFCE7)
+    val SuccessDeep = Color(color = 0xFF166534)
+    val Warning = Color(color = 0xFFB45309)
+    val WarningSoft = Color(color = 0xFFFEF3C7)
+    val WarningDeep = Color(color = 0xFF92400E)
+    val Danger = Color(color = 0xFFDC2626)
+    val DangerSoft = Color(color = 0xFFFEE2E2)
+    val DangerDeep = Color(color = 0xFF991B1B)
 }
 
 /**
@@ -82,7 +82,7 @@ internal val TindivoLightColors: ColorScheme =
         surfaceContainerHighest = Palette.SurfaceLow,
         inverseSurface = Palette.Ink,
         inverseOnSurface = Palette.Surface,
-        inversePrimary = Color(0xFFFDBA74),
+        inversePrimary = Color(color = 0xFFFDBA74),
         scrim = Palette.Ink,
     )
 
