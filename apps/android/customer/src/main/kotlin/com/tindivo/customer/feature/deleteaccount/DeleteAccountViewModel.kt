@@ -73,6 +73,15 @@ internal data class DeleteAccountUiState(
 }
 
 /**
+ * Quién confirmó el borrado y con qué [SessionStore.signInGeneration]: si la generación cambió, alguien entró desde
+ * entonces (aunque el observador de la sesión no lo haya visto) y lo del aparato ya puede ser suyo.
+ */
+internal data class Confirmation(
+    val account: String,
+    val generation: Long,
+)
+
+/**
  * Borrar la cuenta (Google Play la exige dentro de la app). El `DELETE` sale solo para la cuenta que abrió la pantalla
  * ([owner]) y solo de un toque; con uno en curso los siguientes no hacen nada, y nunca se repite solo.
  *
@@ -81,6 +90,9 @@ internal data class DeleteAccountUiState(
  * «borrada». Un 401 no prueba que se borró (una cuenta viva cuyo refresco falló también lo recibe): se cierra la sesión
  * como ante cualquier 401, se conservan el intento de pedido y la bolsa, y se dice que no se pudo confirmar. Un corte o
  * un timeout tampoco prueban nada: se dice que no se pudo y se puede reintentar.
+ *
+ * «Nadie más entró» no se deduce de lo que vio el observador de la sesión (un `StateFlow` se salta estados): se
+ * compara la [SessionStore.signInGeneration] de la [Confirmation] con la vigente, en el momento de decidir.
  */
 @HiltViewModel
 internal class DeleteAccountViewModel
@@ -94,8 +106,11 @@ internal class DeleteAccountViewModel
         private val _state = MutableStateFlow(DeleteAccountUiState())
         val state: StateFlow<DeleteAccountUiState> = _state.asStateFlow()
 
-        // La primera cuenta con sesión que ve la pantalla: la única que se puede borrar desde aquí.
+        // La primera cuenta con sesión que ve la pantalla: la única que se puede borrar desde aquí, y la generación con
+        // la que se la vio.
         @Volatile private var owner: String? = null
+
+        @Volatile private var ownerGeneration = 0L
 
         // Se vio con sesión una cuenta distinta de [owner]: lo que haya en el aparato desde entonces puede ser suyo.
         @Volatile private var otherAccountSeen = false
@@ -103,6 +118,7 @@ internal class DeleteAccountViewModel
         private var work: Job? = null
 
         init {
+            adoptOwnerIfSignedIn()
             viewModelScope.launch { sessionStore.state.collect(::onSession) }
         }
 
@@ -115,12 +131,22 @@ internal class DeleteAccountViewModel
         fun delete() {
             val account = owner
             if (!_state.value.canDelete || work?.isActive == true || account == null) return
-            if (!isOwnerSignedIn(account)) {
+            val confirmation = Confirmation(account, ownerGeneration)
+            if (!isOwnerSignedIn(confirmation)) {
                 _state.update { it.copy(phase = DeletePhase.Left) }
                 return
             }
             _state.update { it.copy(phase = DeletePhase.Deleting, notice = null) }
-            work = viewModelScope.launch { settle(account, deleter.delete(account)) }
+            work = viewModelScope.launch { settle(confirmation, deleter.delete(account)) }
+        }
+
+        // Primero la generación y luego el estado (ver SessionStore.signInGeneration).
+        private fun adoptOwnerIfSignedIn() {
+            if (owner != null) return
+            val generation = sessionStore.signInGeneration.value
+            val current = sessionStore.state.value as? SessionState.SignedIn ?: return
+            ownerGeneration = generation
+            owner = current.userId
         }
 
         private fun onSession(session: SessionState) {
@@ -130,7 +156,7 @@ internal class DeleteAccountViewModel
                 }
 
                 is SessionState.SignedIn -> {
-                    if (owner == null) owner = session.userId
+                    adoptOwnerIfSignedIn()
                     if (session.userId != owner) otherAccountSeen = true
                 }
 
@@ -149,23 +175,24 @@ internal class DeleteAccountViewModel
         }
 
         private suspend fun settle(
-            account: String,
+            confirmation: Confirmation,
             result: ApiResult<Unit>,
         ) {
             val error = (result as? ApiResult.Failure)?.error
             if (error == null) {
                 // 204: la cuenta ya no existe. Soltar lo local no se corta a medias.
-                val mine = withContext(NonCancellable) { cleanup.clean(account) { isStillOwners(account) } }
+                val account = confirmation.account
+                val mine = withContext(NonCancellable) { cleanup.clean(account) { isStillOwners(confirmation) } }
                 _state.update { it.copy(typed = "", phase = if (mine) DeletePhase.Deleted else DeletePhase.Left) }
                 return
             }
             if (error.isUnauthorized()) {
-                unconfirmed(account)
+                unconfirmed(confirmation)
                 return
             }
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             _state.update {
-                if (isOwnerSignedIn(account)) {
+                if (isOwnerSignedIn(confirmation)) {
                     it.copy(phase = DeletePhase.Ready, notice = error.toNotice())
                 } else {
                     // La sesión ya no es la de la cuenta que confirmó: el aviso no es para quien está ahora.
@@ -177,10 +204,10 @@ internal class DeleteAccountViewModel
         // Un 401 sin confirmación: el cierre de sesión de siempre (si sigue la de esa cuenta; si el refresco falló, el
         // almacén ya la cerró) y nada más. El libro de intentos y la bolsa se quedan: si la cuenta sigue viva, al volver
         // a entrar el checkout aún puede reconciliar un pedido incierto.
-        private suspend fun unconfirmed(account: String) {
-            if (isOwnerSignedIn(account)) withContext(NonCancellable) { sessionStore.signOut() }
+        private suspend fun unconfirmed(confirmation: Confirmation) {
+            if (isOwnerSignedIn(confirmation)) withContext(NonCancellable) { sessionStore.signOut() }
             _state.update {
-                if (isStillOwners(account)) {
+                if (isStillOwners(confirmation)) {
                     it.copy(typed = "", phase = DeletePhase.Unconfirmed, notice = DeleteNotice.Unconfirmed)
                 } else {
                     it.copy(phase = DeletePhase.Left, notice = null)
@@ -188,14 +215,24 @@ internal class DeleteAccountViewModel
             }
         }
 
-        private fun isOwnerSignedIn(account: String): Boolean =
-            !otherAccountSeen && (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
-
-        // Lo del aparato sigue siendo de [account]: nadie más entró. Cerrada (por el 401 o por la limpieza) también vale.
-        private fun isStillOwners(account: String): Boolean {
+        // La sesión vigente es la de quien confirmó y nadie entró desde entonces.
+        private fun isOwnerSignedIn(confirmation: Confirmation): Boolean {
+            val generation = sessionStore.signInGeneration.value
             val session = sessionStore.state.value
-            val current = session is SessionState.SignedOut || (session as? SessionState.SignedIn)?.userId == account
-            return current && !otherAccountSeen
+            return !otherAccountSeen &&
+                generation == confirmation.generation &&
+                (session as? SessionState.SignedIn)?.userId == confirmation.account
+        }
+
+        // Lo del aparato sigue siendo de quien confirmó: nadie entró desde entonces (ni otra cuenta ni la misma otra
+        // vez). Cerrada (por el 401 o por la limpieza) también vale. Se evalúa en el momento de decidir, también DENTRO
+        // de la escritura de la bolsa.
+        private fun isStillOwners(confirmation: Confirmation): Boolean {
+            val generation = sessionStore.signInGeneration.value
+            val session = sessionStore.state.value
+            val current =
+                session is SessionState.SignedOut || (session as? SessionState.SignedIn)?.userId == confirmation.account
+            return !otherAccountSeen && generation == confirmation.generation && current
         }
     }
 
