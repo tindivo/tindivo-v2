@@ -159,7 +159,9 @@ internal class AddressFormViewModel
                             settle { it.copy(saving = false, outcome = saved) }
                         }
 
-                        is ApiResult.Failure -> onActionFailure(result.error)
+                        is ApiResult.Failure -> {
+                            onActionFailure(result.error)
+                        }
                     }
                 }
         }
