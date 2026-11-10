@@ -48,14 +48,15 @@ import com.tindivo.customer.R
 @Composable
 internal fun DeleteAccountDestination(
     onBack: () -> Unit,
-    onDeleted: () -> Unit,
+    onDeleted: (generation: Long) -> Unit,
     onOpenOrders: () -> Unit,
     viewModel: DeleteAccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     LaunchedEffect(state.phase) {
         when (state.phase) {
-            DeletePhase.Deleted -> onDeleted()
+            // Si alguien entró desde la limpieza, no hay aviso: el ViewModel pasa a Left y esto vuelve atrás.
+            DeletePhase.Deleted -> viewModel.deletedNotice()?.let(onDeleted)
             DeletePhase.Left -> onBack()
             DeletePhase.Ready, DeletePhase.Deleting, DeletePhase.Unconfirmed -> Unit
         }
