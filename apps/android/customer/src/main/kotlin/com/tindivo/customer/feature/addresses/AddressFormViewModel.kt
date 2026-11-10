@@ -9,6 +9,7 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.generated.model.CreateCustomerAddressRequest
 import com.tindivo.core.network.generated.model.CreateOrderRequestCoordinates
+import com.tindivo.core.network.generated.model.ListCustomerAddresses200ResponseDataItemsInner
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequest
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequestCoordinates
 import com.tindivo.customer.config.ConfigService
@@ -30,7 +31,16 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /** Cómo terminó el formulario; la pantalla vuelve atrás al verlo. */
-internal enum class FormOutcome { Saved, Deleted, LoggedOut }
+internal sealed interface FormOutcome {
+    /** Guardó. [id] es el de la dirección que devolvió el servidor: la nueva, en un alta. */
+    data class Saved(
+        val id: String,
+    ) : FormOutcome
+
+    data object Deleted : FormOutcome
+
+    data object LoggedOut : FormOutcome
+}
 
 internal data class AddressFormState(
     val loading: Boolean = true,
@@ -144,7 +154,11 @@ internal class AddressFormViewModel
                     val result =
                         if (editingId == null) create(s, point, account) else update(editingId, s, point, account)
                     when (result) {
-                        is ApiResult.Success -> settle { it.copy(saving = false, outcome = FormOutcome.Saved) }
+                        is ApiResult.Success -> {
+                            val saved = FormOutcome.Saved(result.data.id.toString())
+                            settle { it.copy(saving = false, outcome = saved) }
+                        }
+
                         is ApiResult.Failure -> onActionFailure(result.error)
                     }
                 }
@@ -179,7 +193,7 @@ internal class AddressFormViewModel
             s: AddressFormState,
             point: GeoPoint,
             account: String,
-        ): ApiResult<*> =
+        ): ApiResult<ListCustomerAddresses200ResponseDataItemsInner> =
             addresses.create(
                 CreateCustomerAddressRequest(
                     reference = s.reference.trim(),
@@ -201,7 +215,7 @@ internal class AddressFormViewModel
             s: AddressFormState,
             point: GeoPoint,
             account: String,
-        ): ApiResult<*> {
+        ): ApiResult<ListCustomerAddresses200ResponseDataItemsInner> {
             val lat = point.lat.toWireCoordinate()
             val lng = point.lng.toWireCoordinate()
             val before = originalPoint

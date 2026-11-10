@@ -47,14 +47,15 @@ internal class AddressFormViewModelTest : AddressHarness() {
         runTest {
             server.enqueue(configOk())
             server.enqueue(addressList())
-            server.enqueue(response(201, """{"data":${address()}}"""))
+            server.enqueue(response(201, """{"data":${address(id = ID_C)}}"""))
             val vm = viewModel()
             assertTrue(vm.ready().hideDefaultSwitch)
 
             vm.fillValid()
             vm.save()
 
-            assertEquals(FormOutcome.Saved, vm.state.value.outcome)
+            // El id lo pone el servidor: es el que la hoja del checkout usa para elegir la nueva.
+            assertEquals(FormOutcome.Saved(ID_C), vm.state.value.outcome)
             server.takeRequest()
             server.takeRequest()
             val post = server.takeRequest()
@@ -159,7 +160,7 @@ internal class AddressFormViewModelTest : AddressHarness() {
             vm.onPointChosen(inside)
             vm.save()
 
-            assertEquals(FormOutcome.Saved, vm.state.value.outcome)
+            assertEquals(FormOutcome.Saved(ID_A), vm.state.value.outcome)
             server.takeRequest()
             server.takeRequest()
             val patch = server.takeRequest()
