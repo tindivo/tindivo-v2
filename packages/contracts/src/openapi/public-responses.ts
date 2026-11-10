@@ -454,6 +454,14 @@ export const PublicConfigSchema = z.object({
     })
     .nullable()
     .meta({ description: 'Plazos del prepago (`app_settings.timers`); null si falta alguno' }),
+  supportWhatsapp: z
+    .string()
+    .regex(/^\d{9,15}$/)
+    .nullable()
+    .meta({
+      description:
+        'WhatsApp de soporte (`app_settings.support_whatsapp`), solo dígitos con el código de país, para `https://wa.me/<número>`; null si falta o no es un número',
+    }),
 })
 
 /** GET /public/landmarks */

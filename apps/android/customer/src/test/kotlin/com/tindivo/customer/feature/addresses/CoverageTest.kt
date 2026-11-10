@@ -81,7 +81,7 @@ class CoverageTest {
         fun config(
             polygon: List<GetCourierTracking200ResponseOriginCoordinates>?,
             circle: GetPublicConfig200ResponseDataCoverage?,
-        ) = GetPublicConfig200ResponseData(circle, polygon, null, null, null, null, null, null)
+        ) = GetPublicConfig200ResponseData(circle, polygon, null, null, null, null, null, null, null)
         val ring =
             square.map {
                 GetCourierTracking200ResponseOriginCoordinates(BigDecimal.valueOf(it.lat), BigDecimal.valueOf(it.lng))

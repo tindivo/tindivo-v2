@@ -12155,7 +12155,7 @@
     "/public/config": {
       "get": {
         "operationId": "getPublicConfig",
-        "summary": "Cobertura, bandas de envío, umbral de prepago y topes de efectivo",
+        "summary": "Cobertura, bandas de envío, umbral de prepago, topes de efectivo y WhatsApp de soporte",
         "tags": [
           "public"
         ],
@@ -12294,6 +12294,12 @@
                             "paymentMinutes"
                           ],
                           "additionalProperties": false
+                        },
+                        "supportWhatsapp": {
+                          "nullable": true,
+                          "description": "WhatsApp de soporte (`app_settings.support_whatsapp`), solo dígitos con el código de país, para `https://wa.me/<número>`; null si falta o no es un número",
+                          "type": "string",
+                          "pattern": "^\\d{9,15}$"
                         }
                       },
                       "required": [
@@ -12304,7 +12310,8 @@
                         "prepayThreshold",
                         "maxCashBill",
                         "maxChange",
-                        "prepayTimers"
+                        "prepayTimers",
+                        "supportWhatsapp"
                       ],
                       "additionalProperties": false
                     }
