@@ -2,17 +2,33 @@ package com.tindivo.core.designsystem
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+
+private fun geist(weight: FontWeight) =
+    Font(
+        resId = R.font.geist,
+        weight = weight,
+        variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
+    )
 
 /**
  * La familia de la marca. El manual pide Geist para todo (p. 16).
  *
- * PILOTO: hoy apunta a la del sistema; el lote del tema la cambia por Geist (res/font) si cabe en el techo de peso
- * (D-57). Todo el resto del archivo no cambia con eso.
+ * Es un solo TTF variable (`res/font/geist.ttf`, eje de peso de 400 a 700, recortado a latín: ver
+ * `core/designsystem/fonts/README.md`); cada peso de la escala es una posición de ese eje. Un peso fuera de 400–700
+ * exige regenerar la fuente.
  */
-internal val TindivoFontFamily: FontFamily = FontFamily.Default
+internal val TindivoFontFamily: FontFamily =
+    FontFamily(
+        geist(FontWeight.Normal),
+        geist(FontWeight.Medium),
+        geist(FontWeight.SemiBold),
+        geist(FontWeight.Bold),
+    )
 
 private fun style(
     size: Int,
