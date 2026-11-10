@@ -162,6 +162,15 @@
     <string name="address_form_saving">Guardando…</string>
     <string name="address_form_deleting">Eliminando…</string>
     <string name="address_form_not_found">Esa dirección ya no existe.</string>
+    <!-- «Usar mi ubicación»: los textos de la web (apps/customer/lib/geolocation.ts), con «permiso» en vez de «navegador». -->
+    <string name="address_form_use_location">Usar mi ubicación</string>
+    <string name="address_form_locating">Buscando tu ubicación…</string>
+    <string name="address_form_locate_denied">Activa el permiso de ubicación para usar esta función. También puedes mover el pin manualmente.</string>
+    <string name="address_form_locate_denied_forever">El permiso de ubicación está desactivado. Actívalo en Ajustes o mueve el pin manualmente.</string>
+    <string name="address_form_locate_settings">Abrir Ajustes</string>
+    <string name="address_form_locate_off">La ubicación de tu celular está apagada. Actívala o mueve el pin manualmente.</string>
+    <string name="address_form_locate_no_fix">No pudimos obtener tu ubicación a tiempo. Intenta de nuevo o mueve el pin.</string>
+    <string name="address_form_locate_unavailable">Tu dispositivo no permite geolocalización. Mueve el pin manualmente.</string>
 
     <string name="orders_title">Historial de pedidos</string>
     <string name="orders_back">Volver</string>
