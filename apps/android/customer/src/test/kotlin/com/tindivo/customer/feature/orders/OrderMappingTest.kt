@@ -186,18 +186,18 @@ class OrderMappingTest {
     }
 
     @Test
-    fun `el pago se ofrece en la app solo en prepago esperando pago y la apelacion sigue en la web`() {
+    fun `el pago se ofrece en la app solo en prepago esperando pago y la apelacion va a soporte`() {
         val awaiting = detail(status = "awaiting_payment", paymentIntent = "prepaid").toDetailUi()
         assertTrue(awaiting?.awaitingPrepayment == true)
-        assertFalse(awaiting?.webAppealNotice == true)
+        assertFalse(awaiting?.appealViaSupport == true)
         assertTrue(
-            detail(status = "cancelled", cancelReason = "proof_rejected_final").toDetailUi()?.webAppealNotice == true,
+            detail(status = "cancelled", cancelReason = "proof_rejected_final").toDetailUi()?.appealViaSupport == true,
         )
         assertFalse(detail(status = "awaiting_payment").toDetailUi()?.awaitingPrepayment == true)
-        assertFalse(detail(status = "awaiting_payment").toDetailUi()?.webAppealNotice == true)
+        assertFalse(detail(status = "awaiting_payment").toDetailUi()?.appealViaSupport == true)
         assertFalse(detail(status = "validando", paymentIntent = "prepaid").toDetailUi()?.awaitingPrepayment == true)
         assertFalse(detail(status = "preparing", paymentIntent = "prepaid").toDetailUi()?.awaitingPrepayment == true)
-        assertFalse(detail(status = "preparing", paymentIntent = "prepaid").toDetailUi()?.webAppealNotice == true)
+        assertFalse(detail(status = "preparing", paymentIntent = "prepaid").toDetailUi()?.appealViaSupport == true)
     }
 
     @Test
@@ -301,5 +301,38 @@ class OrderMappingTest {
     @Test
     fun `una fecha de entrega ilegible en el historial deja la pagina en null`() {
         assertNull(page(listItem(deliveredAt = "ayer")).toPageUi(now))
+    }
+
+    @Test
+    fun `cancelar se ofrece donde lo permite cancel_customer_order`() {
+        fun offer(
+            status: String,
+            intent: String,
+            proofAttempt: Int = 0,
+            verifiedAt: String? = null,
+        ) = detail(status = status, paymentIntent = intent, proofAttempt = proofAttempt, paymentVerifiedAt = verifiedAt)
+            .toDetailUi()
+            ?.cancel
+
+        assertEquals(CancelOffer.PayOnDelivery, offer("pending_acceptance", "pending_cash"))
+        assertEquals(CancelOffer.PayOnDelivery, offer("validando", "pending_cash"))
+        assertEquals(CancelOffer.PayOnDelivery, offer("validando", "pending_yape"))
+        assertEquals(CancelOffer.None, offer("confirmed", "pending_cash"))
+        assertEquals(CancelOffer.None, offer("preparing", "pending_cash"))
+        assertEquals(CancelOffer.Prepaid, offer("pending_acceptance", "prepaid"))
+        assertEquals(CancelOffer.None, offer("awaiting_payment", "prepaid"))
+        assertEquals(CancelOffer.None, offer("validando", "prepaid", proofAttempt = 1))
+        assertEquals(CancelOffer.None, offer("cancelled", "pending_cash"))
+        assertEquals(CancelOffer.None, offer("delivered", "pending_cash"))
+    }
+
+    @Test
+    fun `un prepago con comprobante o pago verificado nunca ofrece cancelar sin costo`() {
+        val withProof = detail(status = "pending_acceptance", paymentIntent = "prepaid", proofAttempt = 1)
+        val verified =
+            detail(status = "pending_acceptance", paymentIntent = "prepaid", paymentVerifiedAt = "2026-10-26T15:10:00Z")
+
+        assertEquals(CancelOffer.ViaSupport, withProof.toDetailUi()?.cancel)
+        assertEquals(CancelOffer.ViaSupport, verified.toDetailUi()?.cancel)
     }
 }

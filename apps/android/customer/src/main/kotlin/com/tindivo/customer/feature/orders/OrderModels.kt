@@ -131,8 +131,33 @@ internal data class OrderDetailUi(
     val reference: String?,
     val customerNotes: String?,
     val driver: DriverUi?,
-    /** `true` si para apelar un comprobante rechazado hay que abrir el pedido en la web (la app aún no apela). */
-    val webAppealNotice: Boolean,
+    /**
+     * Comprobante rechazado del todo (`proof_rejected_final`): la app no apela; el detalle manda a WhatsApp de soporte
+     * con el código del pedido (decisión de Jesús, 2026-11-10).
+     */
+    val appealViaSupport: Boolean,
     /** Prepago esperando el pago: el detalle muestra «Paga tu pedido» para subir el comprobante. */
     val awaitingPrepayment: Boolean = false,
+    /** Si el detalle ofrece cancelar y con qué aviso ([cancelOfferOf]). */
+    val cancel: CancelOffer = CancelOffer.None,
 )
+
+/**
+ * Si el detalle ofrece cancelar, y con qué aviso de dinero. Dice lo mismo que `isCancellable` de la web y que la RPC
+ * `cancel_customer_order` (0169); de todos modos manda el servidor, que puede responder que ya no se puede.
+ */
+internal enum class CancelOffer {
+    None,
+
+    /** Paga al recibir (`validando` o `pending_acceptance`): «No se te cobrará nada». */
+    PayOnDelivery,
+
+    /** Prepago antes de que el negocio acepte y sin pago a la vista: «Todavía no has pagado nada…». */
+    Prepaid,
+
+    /**
+     * Prepago en la ventana, pero con comprobante enviado o pago verificado: pudo haber dinero de por medio, así que la
+     * app nunca dice «sin costo» ni «no se te cobrará»; para cancelar, WhatsApp de soporte.
+     */
+    ViaSupport,
+}

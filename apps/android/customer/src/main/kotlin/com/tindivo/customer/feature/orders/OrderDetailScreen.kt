@@ -152,7 +152,7 @@ private fun OrderBody(
         ) {
             SentNotice()
         }
-        if (order.webAppealNotice) {
+        if (order.appealViaSupport) {
             Text(
                 text = stringResource(R.string.order_web_payment_notice),
                 style = MaterialTheme.typography.bodyMedium,
@@ -211,7 +211,7 @@ private fun OrderDetailPreview() {
             reference = "Frente al parque",
             customerNotes = "Tocar el timbre",
             driver = DriverUi(name = "Luis", atDoor = false, whatsappLink = null),
-            webAppealNotice = false,
+            appealViaSupport = false,
         )
     TindivoTheme {
         OrderDetailScreen(
