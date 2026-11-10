@@ -35,4 +35,11 @@ interface SessionStore : AccessTokenSource {
 
     /** Cierra la sesión: intenta revocarla en el servidor y, falle o no, borra lo guardado en el aparato. */
     suspend fun signOut()
+
+    /**
+     * Como [signOut], pero solo si la sesión vigente sigue siendo la de [accountId]: la comprobación y el cierre van de
+     * una vez, sin que un cambio de cuenta pueda colarse entre ambos. Es el cierre ante un 401 de una llamada de
+     * [accountId]: si para entonces la sesión ya es de otra cuenta, esa no se toca. Devuelve si cerró.
+     */
+    suspend fun signOutIf(accountId: String): Boolean
 }

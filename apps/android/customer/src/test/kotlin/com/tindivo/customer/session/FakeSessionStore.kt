@@ -40,4 +40,14 @@ class FakeSessionStore(
         signOutCalls++
         mutableState.value = SessionState.SignedOut
     }
+
+    /** Las cuentas con que se pidió [signOutIf], cerrara o no. */
+    val signOutIfCalls = mutableListOf<String>()
+
+    override suspend fun signOutIf(accountId: String): Boolean {
+        signOutIfCalls += accountId
+        if ((mutableState.value as? SessionState.SignedIn)?.userId != accountId) return false
+        signOut()
+        return true
+    }
 }

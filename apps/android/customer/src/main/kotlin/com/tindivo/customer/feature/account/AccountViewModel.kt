@@ -13,10 +13,12 @@ import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /** Lo que dice el servidor del cliente, sin guardar nada por su cuenta: la app no asume nada de una cuenta nueva. */
@@ -78,11 +80,12 @@ class AccountViewModel
         fun load() {
             if (loadJob?.isActive == true) return
             _state.value = AccountUiState.Loading
+            val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId
             loadJob =
                 viewModelScope.launch {
                     when (val result = customer.profile()) {
                         is ApiResult.Success -> _state.value = AccountUiState.Loaded(result.data.toUi())
-                        is ApiResult.Failure -> onFailure(result.error)
+                        is ApiResult.Failure -> onFailure(result.error, account)
                     }
                 }
         }
@@ -98,11 +101,15 @@ class AccountViewModel
             viewModelScope.launch { sessionStore.signOut() }
         }
 
-        private suspend fun onFailure(error: AppError) {
+        private suspend fun onFailure(
+            error: AppError,
+            account: String?,
+        ) {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             if (error.isUnauthorized()) {
-                // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también.
-                sessionStore.signOut()
+                // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también, pero solo
+                // si sigue siendo la de la carga (un 401 de A no cierra la sesión de B).
+                if (account != null) withContext(NonCancellable) { sessionStore.signOutIf(account) }
                 _state.value = AccountUiState.LoggedOut
             } else if (error.isProfileMissing()) {
                 _state.value = AccountUiState.ProfileMissing(openNow = !profilePromptOpened)

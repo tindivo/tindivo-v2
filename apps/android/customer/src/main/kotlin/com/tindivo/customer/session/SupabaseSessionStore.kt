@@ -106,6 +106,24 @@ internal class SupabaseSessionStore(
         }
     }
 
+    // Bajo el mismo candado que entrar y refrescar: entre leer de quién es la sesión y cerrarla no cabe otra cuenta. Se
+    // completa aunque se cancele quien llamó, como signOut.
+    override suspend fun signOutIf(accountId: String): Boolean =
+        withContext(NonCancellable) {
+            mutex.withLock {
+                restoreOnce()
+                val owner = current?.userId
+                if (owner == null || !owner.equals(accountId, ignoreCase = true)) return@withLock false
+                try {
+                    backend.signOut()
+                } catch (_: Exception) {
+                    // Sin red o sesión ya revocada: igual se cierra en el aparato.
+                }
+                drop()
+                true
+            }
+        }
+
     private suspend fun restoreOnce() {
         if (restored) return
         val snapshot =

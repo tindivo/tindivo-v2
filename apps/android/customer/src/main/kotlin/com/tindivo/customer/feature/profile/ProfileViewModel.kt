@@ -160,8 +160,9 @@ internal class ProfileViewModel
                 }
 
                 error.isUnauthorized() -> {
-                    // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra, si aún es la suya.
-                    if (isCurrent(account)) withContext(NonCancellable) { sessionStore.signOut() }
+                    // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra, si aún es la suya
+                    // (comprobado y cerrado de una vez en el almacén: un 401 de A no cierra la sesión de B).
+                    withContext(NonCancellable) { sessionStore.signOutIf(account) }
                     endSession()
                 }
 

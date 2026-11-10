@@ -295,8 +295,9 @@ internal class PhoneVerifyViewModel
                 return
             }
             if (error.isUnauthorized()) {
-                // El servidor no reconoce la sesión: se cierra aquí también. El cierre cancela esta misma llamada.
-                withContext(NonCancellable) { sessionStore.signOut() }
+                // El servidor no reconoce la sesión: se cierra aquí también, pero solo si sigue siendo la de esta
+                // pantalla (un 401 de A no cierra la sesión de B). El cierre cancela esta misma llamada.
+                withContext(NonCancellable) { sessionStore.signOutIf(account) }
                 endSession()
                 return
             }

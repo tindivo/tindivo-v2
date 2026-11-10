@@ -160,7 +160,7 @@ internal class AddressFormViewModel
                         }
 
                         is ApiResult.Failure -> {
-                            onActionFailure(result.error)
+                            onActionFailure(result.error, account)
                         }
                     }
                 }
@@ -184,7 +184,7 @@ internal class AddressFormViewModel
                             if (result.error.isNotFound()) {
                                 settle { it.copy(deleting = false, outcome = FormOutcome.Deleted) }
                             } else {
-                                onActionFailure(result.error)
+                                onActionFailure(result.error, account)
                             }
                         }
                     }
@@ -243,7 +243,7 @@ internal class AddressFormViewModel
             val area = CoverageArea.from((catalog.publicConfig() as? ApiResult.Success)?.data)
             when (val result = addresses.list(account)) {
                 is ApiResult.Failure -> {
-                    onLoadFailure(result.error)
+                    onLoadFailure(result.error, account)
                 }
 
                 is ApiResult.Success -> {
@@ -251,7 +251,7 @@ internal class AddressFormViewModel
                     val current = editingId?.let { id -> items.firstOrNull { it.id == id } }
                     if (editingId != null && current == null) {
                         // La borraron en otro teléfono: se muestra como no encontrada.
-                        onLoadFailure(AppError.Unknown(code = "not_found", detail = null))
+                        onLoadFailure(AppError.Unknown(code = "not_found", detail = null), account)
                     } else {
                         applyLoaded(area, items.isEmpty(), current)
                     }
@@ -281,13 +281,19 @@ internal class AddressFormViewModel
             }
         }
 
-        private suspend fun onLoadFailure(error: AppError) {
-            if (handleSession(error)) return
+        private suspend fun onLoadFailure(
+            error: AppError,
+            account: String,
+        ) {
+            if (handleSession(error, account)) return
             settle { it.copy(loading = false, loadError = error) }
         }
 
-        private suspend fun onActionFailure(error: AppError) {
-            if (handleSession(error)) return
+        private suspend fun onActionFailure(
+            error: AppError,
+            account: String,
+        ) {
+            if (handleSession(error, account)) return
             settle { it.copy(saving = false, deleting = false, confirmingDelete = false, saveError = error) }
         }
 
@@ -301,8 +307,14 @@ internal class AddressFormViewModel
             _state.update { it.copy(saving = false, deleting = false, outcome = FormOutcome.LoggedOut) }
         }
 
-        /** Avisa de un 426 y cierra la sesión ante un 401. Devuelve `true` si la sesión terminó. */
-        private suspend fun handleSession(error: AppError): Boolean {
+        /**
+         * Avisa de un 426 y, ante un 401 de una llamada de [account], cierra la sesión solo si sigue siendo la de esa
+         * cuenta: si ya es de otra, esa no se toca. Devuelve `true` si la sesión de esta pantalla terminó.
+         */
+        private suspend fun handleSession(
+            error: AppError,
+            account: String,
+        ): Boolean {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             if (error is AppError.Network && error.cause is AccountMismatchException) {
                 // La sesión ya es de otra cuenta: no salió nada. Se cierra sin cerrar la sesión nueva.
@@ -310,7 +322,7 @@ internal class AddressFormViewModel
                 return true
             }
             if (!error.isUnauthorized()) return false
-            withContext(NonCancellable) { sessionStore.signOut() }
+            withContext(NonCancellable) { sessionStore.signOutIf(account) }
             _state.update { it.copy(saving = false, deleting = false, outcome = FormOutcome.LoggedOut) }
             return true
         }
