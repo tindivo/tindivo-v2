@@ -146,7 +146,9 @@ private fun OrderBody(
         }
         if (order.awaitingPrepayment) {
             PrepaySection(state = prepay, amount = order.total, actions = prepayActions)
-        } else if (prepay.send is SendState.Sent && order.headline == OrderHeadline.Progress(OrderHero.VerifyingProof)) {
+        } else if (prepay.send is SendState.Sent &&
+            order.headline == OrderHeadline.Progress(OrderHero.VerifyingProof)
+        ) {
             SentNotice()
         }
         if (order.webAppealNotice) {
