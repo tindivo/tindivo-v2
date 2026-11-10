@@ -102,11 +102,25 @@ internal fun PhoneVerifyScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.semantics { heading() },
             )
-            when (state.step) {
-                PhoneStep.Number -> NumberStep(state, actions)
-                PhoneStep.Code -> CodeStep(state, actions)
-                PhoneStep.Done -> DoneStep(state, actions)
-            }
+            PhoneVerifyContent(state, actions)
+        }
+    }
+}
+
+/**
+ * Los pasos del SMS sin marco (número, código, listo) y el aviso de traslado. Lo usan la pantalla de Mi cuenta y la
+ * hoja del checkout, cada una con su título y su forma de cerrar.
+ */
+@Composable
+internal fun PhoneVerifyContent(
+    state: PhoneUiState,
+    actions: PhoneActions,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        when (state.step) {
+            PhoneStep.Number -> NumberStep(state, actions)
+            PhoneStep.Code -> CodeStep(state, actions)
+            PhoneStep.Done -> DoneStep(state, actions)
         }
     }
     if (state.transfer != null) TransferDialog(sending = state.sending, actions = actions)

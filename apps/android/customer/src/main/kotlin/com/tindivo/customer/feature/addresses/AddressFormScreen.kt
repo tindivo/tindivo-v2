@@ -89,7 +89,7 @@ internal fun AddressFormScreen(
     actions: AddressFormActions,
 ) {
     Scaffold(
-        bottomBar = { if (!state.loading && state.loadError == null) SaveBar(state, actions.onSave) },
+        bottomBar = { if (state.showsSaveBar) SaveBar(state, actions.onSave) },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -111,12 +111,27 @@ internal fun AddressFormScreen(
                     Text(text = stringResource(R.string.address_form_cancel))
                 }
             }
-            when {
-                state.loading -> Loading()
-                state.loadError != null -> LoadFailure(state.loadError, actions.onRetry)
-                else -> FormBody(state, actions)
-            }
+            AddressFormContent(state, actions)
         }
+    }
+}
+
+/** Con el formulario ya cargado, el botón fijo de guardar va abajo, fuera del scroll. */
+internal val AddressFormState.showsSaveBar: Boolean get() = !loading && loadError == null
+
+/**
+ * El cuerpo del formulario sin marco: cargando, el fallo de carga o los campos con el mapa. Lo usan la pantalla de Mi
+ * cuenta y la hoja del checkout, cada una con su título, su forma de cerrar y su [SaveBar].
+ */
+@Composable
+internal fun AddressFormContent(
+    state: AddressFormState,
+    actions: AddressFormActions,
+) {
+    when {
+        state.loading -> Loading()
+        state.loadError != null -> LoadFailure(state.loadError, actions.onRetry)
+        else -> FormBody(state, actions)
     }
 }
 

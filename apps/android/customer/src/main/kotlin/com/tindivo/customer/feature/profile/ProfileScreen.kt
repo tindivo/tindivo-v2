@@ -87,12 +87,27 @@ internal fun ProfileScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.semantics { heading() },
             )
-            Text(text = stringResource(R.string.profile_support), style = MaterialTheme.typography.bodyLarge)
-            NameField(state = state, onName = onName, onSave = onSave)
-            TermsNotice()
-            state.saveError?.let { SaveErrorText(it) }
-            ContinueButton(state = state, onSave = onSave)
+            ProfileContent(state = state, onName = onName, onSave = onSave)
         }
+    }
+}
+
+/**
+ * El nombre, los términos y «Continuar», sin marco. Lo usan la pantalla de «Completa tu perfil» y la hoja del
+ * checkout, cada una con su título y su forma de cerrar.
+ */
+@Composable
+internal fun ProfileContent(
+    state: ProfileUiState,
+    onName: (String) -> Unit,
+    onSave: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(text = stringResource(R.string.profile_support), style = MaterialTheme.typography.bodyLarge)
+        NameField(state = state, onName = onName, onSave = onSave)
+        TermsNotice()
+        state.saveError?.let { SaveErrorText(it) }
+        ContinueButton(state = state, onSave = onSave)
     }
 }
 
