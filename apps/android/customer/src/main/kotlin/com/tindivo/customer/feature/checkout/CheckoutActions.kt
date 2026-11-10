@@ -12,4 +12,6 @@ class CheckoutActions(
     val onOpenOrders: () -> Unit,
     val onSignIn: () -> Unit,
     val onSeeBusinesses: () -> Unit,
+    /** Abre «Completa tu perfil»; al volver con el perfil creado, el checkout se recarga. */
+    val onCompleteProfile: () -> Unit,
 )

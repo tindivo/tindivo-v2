@@ -1,30 +1,15 @@
 package com.tindivo.customer.navigation
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -32,8 +17,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.tindivo.customer.BuildConfig
-import com.tindivo.customer.R
 import com.tindivo.customer.feature.account.AccountDestination
+import com.tindivo.customer.feature.account.ProfileLink
 import com.tindivo.customer.feature.addresses.ADDRESSES_CHANGED_KEY
 import com.tindivo.customer.feature.addresses.AddressFormDestination
 import com.tindivo.customer.feature.addresses.AddressFormRoute
@@ -54,6 +39,9 @@ import com.tindivo.customer.feature.orders.OrdersRoute
 import com.tindivo.customer.feature.phone.PHONE_CHANGED_KEY
 import com.tindivo.customer.feature.phone.PhoneVerifyDestination
 import com.tindivo.customer.feature.phone.PhoneVerifyRoute
+import com.tindivo.customer.feature.profile.PROFILE_COMPLETED_KEY
+import com.tindivo.customer.feature.profile.ProfileRoute
+import com.tindivo.customer.feature.profile.profileDestination
 import com.tindivo.customer.feature.reviews.ReviewHost
 import com.tindivo.customer.feature.reviews.rememberReviewController
 import com.tindivo.customer.feature.signin.SignInDestination
@@ -147,7 +135,16 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 )
             }
             checkoutDestination(navController)
-            composable<SignInRoute> { SignInDestination(onBack = { navController.popBackStack() }) }
+            composable<SignInRoute> {
+                SignInDestination(
+                    onBack = { navController.popBackStack() },
+                    // Cuenta sin perfil: el nombre reemplaza a la entrada y, al terminar, se vuelve a donde estaba.
+                    onNeedsProfile = {
+                        navController.navigate(ProfileRoute) { popUpTo<SignInRoute> { inclusive = true } }
+                    },
+                )
+            }
+            profileDestination(navController)
             composable<AccountRoute> { entry ->
                 // El flujo del teléfono avisa por aquí que cambió el número; no lleva ningún dato sensible.
                 val phoneChanged =
@@ -162,6 +159,12 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                     onVerifyPhone = { navController.navigate(PhoneVerifyRoute) },
                     phoneChanged = phoneChanged,
                     onPhoneChangeHandled = { entry.savedStateHandle[PHONE_CHANGED_KEY] = false },
+                    profile =
+                        ProfileLink(
+                            completed = entry.profileCompleted(),
+                            onCompletedHandled = { entry.savedStateHandle[PROFILE_COMPLETED_KEY] = false },
+                            onOpen = { navController.navigate(ProfileRoute) },
+                        ),
                 )
             }
             composable<PhoneVerifyRoute> {
@@ -217,8 +220,10 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
 
 /** El checkout. Sale de aquí hacia Mi cuenta por un solo punto ([CheckoutActions.onOpenAccount]). */
 private fun NavGraphBuilder.checkoutDestination(navController: NavHostController) {
-    composable<CheckoutRoute> {
+    composable<CheckoutRoute> { entry ->
         CheckoutDestination(
+            profileCompleted = entry.profileCompleted(),
+            onProfileCompletedHandled = { entry.savedStateHandle[PROFILE_COMPLETED_KEY] = false },
             actions =
                 CheckoutActions(
                     onBack = { navController.popBackStack() },
@@ -234,10 +239,16 @@ private fun NavGraphBuilder.checkoutDestination(navController: NavHostController
                     onOpenOrders = { navController.navigate(OrdersRoute) },
                     onSignIn = { navController.navigate(SignInRoute) },
                     onSeeBusinesses = { navController.popBackStack<CatalogHomeRoute>(inclusive = false) },
+                    onCompleteProfile = { navController.navigate(ProfileRoute) },
                 ),
         )
     }
 }
+
+/** «Completa tu perfil» volvió a esta pantalla con el perfil creado (un booleano; nada sensible). */
+@Composable
+private fun NavBackStackEntry.profileCompleted(): Boolean =
+    savedStateHandle.getStateFlow(PROFILE_COMPLETED_KEY, false).collectAsStateWithLifecycle().value
 
 /** En el detalle la reseña no sale sola: «Calificar» aparece si este pedido es el pendiente. */
 @Composable
@@ -249,32 +260,4 @@ private fun OrderDetailWithReview(onBack: () -> Unit) {
         onRate = review.openForm,
     )
     ReviewHost(review)
-}
-
-@Composable
-private fun OsNotice(onDismiss: () -> Unit) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(text = stringResource(R.string.os_notice_title), style = MaterialTheme.typography.titleSmall)
-            Text(text = stringResource(R.string.os_notice_message), style = MaterialTheme.typography.bodyMedium)
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.heightIn(min = 48.dp).align(Alignment.End),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                Text(text = stringResource(R.string.os_notice_dismiss))
-            }
-        }
-    }
 }

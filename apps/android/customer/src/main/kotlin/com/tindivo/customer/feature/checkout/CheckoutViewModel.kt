@@ -194,6 +194,10 @@ class CheckoutViewModel
                             mutableState.update { it.copy(phase = CheckoutPhase.LoadFailed) }
                         }
 
+                        LoadOutcome.ProfileMissing -> {
+                            mutableState.update { it.copy(phase = CheckoutPhase.ProfileRequired) }
+                        }
+
                         is LoadOutcome.Loaded -> {
                             lastIntent = outcome.data.lastIntent
                             mutableState.update { it.withLoaded(outcome.data, current) }

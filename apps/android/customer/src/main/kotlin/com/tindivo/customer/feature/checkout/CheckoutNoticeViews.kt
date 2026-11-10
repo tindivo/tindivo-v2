@@ -39,6 +39,15 @@ internal fun LoadFailedView(
 }
 
 @Composable
+internal fun ProfileRequiredView(actions: CheckoutActions) {
+    CheckoutFrame(actions.onBack) {
+        Text(stringResource(R.string.checkout_profile_title), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.checkout_profile_message))
+        BigButton(R.string.profile_complete, actions.onCompleteProfile)
+    }
+}
+
+@Composable
 internal fun EmptyBagView(actions: CheckoutActions) {
     CheckoutFrame(actions.onBack) {
         Text(stringResource(R.string.cart_empty), style = MaterialTheme.typography.titleMedium)

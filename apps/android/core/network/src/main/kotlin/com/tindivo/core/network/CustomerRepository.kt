@@ -50,7 +50,13 @@ class CustomerRepository(
         accountId: String,
     ): ApiResult<GetCustomerProfile200ResponseData> =
         apiCall(client.boundTo(accountId), ioDispatcher, { CustomerApi(baseUrl, it) }) {
-            it.updateCustomerProfileWithHttpInfo(UpdateCustomerProfileRequest(fullName = fullName), null, null, null, null)
+            it.updateCustomerProfileWithHttpInfo(
+                UpdateCustomerProfileRequest(fullName = fullName),
+                null,
+                null,
+                null,
+                null,
+            )
         }.map { it.data }
 
     /**

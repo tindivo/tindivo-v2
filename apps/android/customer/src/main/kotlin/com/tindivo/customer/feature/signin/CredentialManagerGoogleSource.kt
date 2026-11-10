@@ -24,7 +24,9 @@ class CredentialManagerGoogleSource(
         return try {
             val credential = CredentialManager.create(context).getCredential(context, request).credential
             if (credential is CustomCredential && credential.type in GOOGLE_TYPES) {
-                GoogleIdResult.Token(GoogleIdTokenCredential.createFrom(credential.data).idToken)
+                val google = GoogleIdTokenCredential.createFrom(credential.data)
+                // El nombre visible solo es una sugerencia para «¿Cómo te llamas?»: se queda en memoria (GoogleNameHint).
+                GoogleIdResult.Token(google.idToken, google.displayName)
             } else {
                 GoogleIdResult.Failed
             }

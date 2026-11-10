@@ -143,6 +143,37 @@ class AccountViewModelTest {
             assertEquals(AccountUiState.LoggedOut, viewModel.state.value)
         }
 
+    @Test
+    fun `sin perfil no es un error, abre completar el perfil una sola vez y al volver con el perfil carga la cuenta`() =
+        runTest {
+            server.enqueue(response(404, PROFILE_MISSING))
+            server.enqueue(response(404, PROFILE_MISSING))
+            server.enqueue(response(200, profile(verified = false)))
+            val viewModel = AccountViewModel(customer, store, configService)
+
+            assertEquals(AccountUiState.ProfileMissing(openNow = true), viewModel.settled())
+            viewModel.onProfilePromptOpened()
+            assertEquals(AccountUiState.ProfileMissing(openNow = false), viewModel.state.value)
+
+            // Volvió sin completarlo: se queda el botón, la pantalla no se vuelve a abrir sola.
+            viewModel.load()
+            assertEquals(AccountUiState.ProfileMissing(openNow = false), viewModel.settled())
+
+            viewModel.load()
+            assertTrue(viewModel.settled() is AccountUiState.Loaded)
+            assertEquals(0, store.signOutCalls)
+        }
+
+    @Test
+    fun `otro 404 sigue siendo un fallo`() =
+        runTest {
+            server.enqueue(response(404, NOT_FOUND))
+
+            val state = AccountViewModel(customer, store, configService).settled()
+
+            assertTrue(state is AccountUiState.Failed)
+        }
+
     private fun profile(verified: Boolean) =
         "{\"data\":{\"fullName\":\"Rosa Quispe\",\"phone\":\"+51987654321\",\"phoneVerified\":$verified," +
             "\"phoneVerifiedAt\":null,\"contraentregaBlocked\":false,\"blockedUntil\":null,\"blocked\":false}}"
@@ -150,6 +181,11 @@ class AccountViewModelTest {
     private companion object {
         const val UNAUTHORIZED =
             "{\"type\":\"about:blank\",\"title\":\"No autorizado\",\"status\":401,\"code\":\"unauthorized\"}"
+        const val PROFILE_MISSING =
+            "{\"type\":\"about:blank\",\"title\":\"No encontrado\",\"status\":404,\"code\":\"not_found\"," +
+                "\"detail\":\"customer_profile_not_found\"}"
+        const val NOT_FOUND =
+            "{\"type\":\"about:blank\",\"title\":\"No encontrado\",\"status\":404,\"code\":\"not_found\"}"
         const val FORBIDDEN =
             "{\"type\":\"about:blank\",\"title\":\"Prohibido\",\"status\":403,\"code\":\"forbidden\"}"
     }

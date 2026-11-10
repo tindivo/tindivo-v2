@@ -7,6 +7,7 @@ import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.GetBusiness200ResponseDataBusiness
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
+import com.tindivo.core.network.isProfileMissing
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
@@ -28,6 +29,9 @@ sealed interface LoadOutcome {
     data class Failed(
         val error: AppError,
     ) : LoadOutcome
+
+    /** La cuenta aún no tiene perfil (404 `customer_profile_not_found`): falta el nombre, no es un fallo de carga. */
+    data object ProfileMissing : LoadOutcome
 }
 
 /**
@@ -55,6 +59,10 @@ class CheckoutLoader
                 val profileResult = profile.await()
                 val savedResult = saved.await()
                 when {
+                    profileResult is ApiResult.Failure && profileResult.error.isProfileMissing() -> {
+                        LoadOutcome.ProfileMissing
+                    }
+
                     profileResult is ApiResult.Failure -> {
                         LoadOutcome.Failed(profileResult.error)
                     }

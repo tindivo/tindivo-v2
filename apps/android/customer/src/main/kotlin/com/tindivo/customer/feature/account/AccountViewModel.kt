@@ -7,6 +7,7 @@ import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
+import com.tindivo.core.network.isProfileMissing
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
@@ -40,6 +41,14 @@ sealed interface AccountUiState {
         val error: AppError,
     ) : AccountUiState
 
+    /**
+     * La cuenta aún no tiene perfil (404 `customer_profile_not_found`): no es un error, falta el nombre. [openNow] es
+     * `true` solo la primera vez, para abrir «Completa tu perfil» sola; si la persona vuelve sin completarlo, ve el botón.
+     */
+    data class ProfileMissing(
+        val openNow: Boolean,
+    ) : AccountUiState
+
     /** La sesión se cerró (la persona salió, o el servidor ya no la reconoce): la pantalla vuelve al inicio. */
     data object LoggedOut : AccountUiState
 }
@@ -56,6 +65,7 @@ class AccountViewModel
         val state: StateFlow<AccountUiState> = _state.asStateFlow()
 
         private var loadJob: Job? = null
+        private var profilePromptOpened = false
 
         init {
             viewModelScope.launch {
@@ -77,6 +87,13 @@ class AccountViewModel
                 }
         }
 
+        /** La pantalla ya abrió «Completa tu perfil» sola: no la vuelve a abrir. */
+        fun onProfilePromptOpened() {
+            profilePromptOpened = true
+            val current = _state.value
+            if (current is AccountUiState.ProfileMissing) _state.value = current.copy(openNow = false)
+        }
+
         fun signOut() {
             viewModelScope.launch { sessionStore.signOut() }
         }
@@ -87,6 +104,8 @@ class AccountViewModel
                 // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también.
                 sessionStore.signOut()
                 _state.value = AccountUiState.LoggedOut
+            } else if (error.isProfileMissing()) {
+                _state.value = AccountUiState.ProfileMissing(openNow = !profilePromptOpened)
             } else {
                 _state.value = AccountUiState.Failed(error)
             }

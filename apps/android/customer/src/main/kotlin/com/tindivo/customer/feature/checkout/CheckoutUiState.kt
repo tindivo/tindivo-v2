@@ -6,6 +6,9 @@ enum class CheckoutPhase {
     Loading,
     SignInRequired,
     LoadFailed,
+
+    /** La cuenta aún no tiene perfil: falta el nombre antes de poder pedir. */
+    ProfileRequired,
     Form,
     Blocked,
     Reconcile,

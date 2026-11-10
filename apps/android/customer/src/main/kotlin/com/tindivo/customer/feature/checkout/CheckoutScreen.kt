@@ -30,9 +30,18 @@ import com.tindivo.customer.R
 @Composable
 fun CheckoutDestination(
     actions: CheckoutActions,
+    profileCompleted: Boolean = false,
+    onProfileCompletedHandled: () -> Unit = {},
     viewModel: CheckoutViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    // Volvió de «Completa tu perfil» con el perfil ya creado: se vuelve a cargar el checkout.
+    LaunchedEffect(profileCompleted) {
+        if (profileCompleted) {
+            viewModel.retryLoad()
+            onProfileCompletedHandled()
+        }
+    }
     CheckoutScreen(state = state, actions = actions, form = CheckoutFormActions.of(viewModel))
 }
 
@@ -51,6 +60,7 @@ fun CheckoutScreen(
         CheckoutPhase.Opening -> CheckoutFrame(actions.onBack) { Text(stringResource(R.string.checkout_opening)) }
         CheckoutPhase.SignInRequired -> SignInRequiredView(actions)
         CheckoutPhase.LoadFailed -> LoadFailedView(actions, form.onRetryLoad)
+        CheckoutPhase.ProfileRequired -> ProfileRequiredView(actions)
         CheckoutPhase.EmptyBag -> EmptyBagView(actions)
         CheckoutPhase.Blocked -> BlockedView(state.blockedDetail, actions)
         CheckoutPhase.Reconcile -> ReconcileView(state, actions, form)

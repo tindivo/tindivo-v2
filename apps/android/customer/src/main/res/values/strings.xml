@@ -427,4 +427,23 @@
     <string name="phone_transfer_message">Si lo usas aquí, la otra cuenta pierde la verificación y recibe un aviso. No se mueven pedidos ni datos.</string>
     <string name="phone_transfer_confirm">Usar en esta cuenta</string>
     <string name="phone_transfer_cancel">Cancelar</string>
+    <!-- Completa tu perfil: la cuenta nueva que entra con Google aún no tiene nombre. -->
+    <string name="profile_back">Volver</string>
+    <string name="profile_title">¿Cómo te llamas?</string>
+    <string name="profile_support">Así te llamarán el negocio y el motorizado cuando llegue tu pedido.</string>
+    <string name="profile_name_label">Tu nombre</string>
+    <string name="profile_name_hint">Mínimo 2 letras · %1$d/%2$d</string>
+    <string name="profile_name_error">Escribe tu nombre, solo con letras</string>
+    <string name="profile_terms">Al continuar aceptas los Términos y la Política de privacidad de Tindivo.</string>
+    <string name="profile_terms_link">Términos</string>
+    <string name="profile_privacy_link">Política de privacidad</string>
+    <string name="profile_continue">Continuar</string>
+    <string name="profile_saving">Guardando</string>
+    <string name="profile_error_network">No pudimos guardar. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="profile_error_generic">No pudimos guardar tu nombre. Inténtalo de nuevo.</string>
+    <string name="profile_complete">Completa tu perfil</string>
+    <string name="account_profile_missing_title">Falta tu nombre</string>
+    <string name="account_profile_missing_message">Completa tu perfil para que el negocio y el motorizado sepan a quién entregar.</string>
+    <string name="checkout_profile_title">Falta tu nombre</string>
+    <string name="checkout_profile_message">Antes de pedir, dinos cómo te llamas para que el negocio y el motorizado sepan a quién entregar.</string>
 </resources>

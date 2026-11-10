@@ -39,9 +39,24 @@ fun AccountDestination(
     onVerifyPhone: () -> Unit,
     phoneChanged: Boolean,
     onPhoneChangeHandled: () -> Unit,
+    profile: ProfileLink,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    // Volvió de «Completa tu perfil» con el perfil ya creado: se carga la cuenta.
+    LaunchedEffect(profile.completed) {
+        if (profile.completed) {
+            viewModel.load()
+            profile.onCompletedHandled()
+        }
+    }
+    // Sin perfil, la primera vez se abre sola la pantalla del nombre, en vez de mostrar un error.
+    LaunchedEffect(state) {
+        if (state is AccountUiState.ProfileMissing && state.openNow) {
+            viewModel.onProfilePromptOpened()
+            profile.onOpen()
+        }
+    }
     // Volvió del flujo del teléfono: se pide el perfil otra vez para ver el número nuevo.
     LaunchedEffect(phoneChanged) {
         if (phoneChanged) {
@@ -60,8 +75,16 @@ fun AccountDestination(
         onVerifyPhone = onVerifyPhone,
         onSignOut = viewModel::signOut,
         onBack = onLeave,
+        onCompleteProfile = profile.onOpen,
     )
 }
+
+/** El enlace de la cuenta con «Completa tu perfil»: abrirla y enterarse de que volvió con el perfil creado. */
+class ProfileLink(
+    val completed: Boolean,
+    val onCompletedHandled: () -> Unit,
+    val onOpen: () -> Unit,
+)
 
 @Composable
 fun AccountScreen(
@@ -72,6 +95,7 @@ fun AccountScreen(
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
+    onCompleteProfile: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -93,6 +117,10 @@ fun AccountScreen(
 
                 is AccountUiState.Failed -> {
                     Failure(error = state.error, onRetry = onRetry)
+                }
+
+                is AccountUiState.ProfileMissing -> {
+                    ProfileMissing(onCompleteProfile = onCompleteProfile, onSignOut = onSignOut)
                 }
 
                 is AccountUiState.Loaded -> {
@@ -138,6 +166,34 @@ private fun Failure(
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
         ) {
             Text(text = stringResource(R.string.account_retry))
+        }
+    }
+}
+
+@Composable
+private fun ProfileMissing(
+    onCompleteProfile: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(text = stringResource(R.string.account_profile_missing_title), style = MaterialTheme.typography.titleLarge)
+        Text(
+            text = stringResource(R.string.account_profile_missing_message),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Button(
+            onClick = onCompleteProfile,
+            modifier = Modifier.heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        ) {
+            Text(text = stringResource(R.string.profile_complete))
+        }
+        OutlinedButton(
+            onClick = onSignOut,
+            modifier = Modifier.heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        ) {
+            Text(text = stringResource(R.string.account_sign_out))
         }
     }
 }
