@@ -109,6 +109,8 @@ private fun ByteArray.walkHeader(onSegment: (marker: Int, start: Int, length: In
  * JPEG bien formado: quien llama no sube nada (falla cerrado).
  */
 internal fun stripJpegMetadata(jpeg: ByteArray): ByteArray? {
+    // Se valida antes de copiar nada: con menos de dos bytes, copiar el SOI lanzaría en vez de devolver `null`.
+    if (!jpeg.startsAsJpeg()) return null
     val out = ByteArrayOutputStream(jpeg.size)
     out.write(jpeg, 0, 2)
     val sos =
