@@ -84,14 +84,19 @@ internal class PrepayViewModel
             accountId?.let(::startLoad)
         }
 
-        /** La foto elegida en el selector; `null` es que se cerró sin elegir. */
+        /**
+         * La foto elegida en el selector; `null` es que se cerró sin elegir. Mientras se envía o ya enviado no cambia
+         * nada: un comprobante enviado no se reemplaza; solo se sube otro si el pedido vuelve a esperar pago ([load]).
+         */
         fun onPhotoPicked(photo: String?) {
-            if (photo == null || ended || mutableState.value.send is SendState.Sending) return
+            val send = mutableState.value.send
+            val locked = send is SendState.Sending || send is SendState.Sent
+            if (photo == null || ended || locked) return
             sender.forget()
             mutableState.update { it.copy(photo = photo, send = SendState.Idle) }
         }
 
-        /** Envía el comprobante. Un segundo toque mientras envía no hace nada. */
+        /** Envía el comprobante. Un toque mientras envía, o ya enviado, no hace nada ([PrepayUiState.canSend]). */
         fun send() {
             val current = mutableState.value
             val photo = current.photo
