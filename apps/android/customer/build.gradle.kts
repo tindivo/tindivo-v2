@@ -42,7 +42,7 @@ android {
             // pone Jesús; vacío, la app no ofrece el inicio de sesión.
             buildConfigField("String", "SUPABASE_URL", "\"https://jgziumvrtogguljhpdos.supabase.co\"")
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_PXkU-RVUbJmzcg2uJRoHXA_nl02PVBd\"")
-            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"484245553841-rj0glhkf7f1h76tpa1k0a7vacpilb6o7.apps.googleusercontent.com\"")
             // La web pública, para abrir Términos y Privacidad. Staging no tiene web propia: los textos legales son los
             // mismos, así que va la de producción (decisión pendiente si algún día hay una web de staging).
             buildConfigField("String", "WEB_BASE_URL", "\"https://www.tindivo.com\"")
