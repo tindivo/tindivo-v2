@@ -135,6 +135,35 @@ class ProofSenderStorageTest {
             repeat(2) { assertEquals("POST", server.takeRequest().method) }
         }
 
+    @Test
+    fun `un 503 con Retry-After 0 del Storage no repite el PUT ni confirma`() =
+        runTest {
+            server.enqueue(json(uploadUrl("$STORAGE$PREFIX$PATH?token=tok")))
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(503)
+                    .addHeader("Retry-After", "0")
+                    .build(),
+            )
+            // Lo que contestaría un PUT repetido a escondidas y su confirmación: nunca deben pedirse.
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .body("""{"Key":"x"}""")
+                    .build(),
+            )
+            server.enqueue(json("""{"data":{"ok":true}}"""))
+
+            val step = sender().deliver(PREPAY_ACCOUNT, ORDER_ID, PHOTO) { true }
+
+            assertEquals(SendStep.Stopped(SendProblem.Generic), step)
+            assertEquals(2, server.requestCount)
+            assertEquals("POST", server.takeRequest().method)
+            assertEquals("PUT", server.takeRequest().method)
+        }
+
     /** Desvía cualquier petición (de cualquier host y esquema) al servidor falso, sin tocar nada más. */
     private fun anyHostToServer(client: OkHttpClient): OkHttpClient =
         client

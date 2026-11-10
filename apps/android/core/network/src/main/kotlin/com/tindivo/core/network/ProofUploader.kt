@@ -7,12 +7,15 @@ import kotlinx.coroutines.coroutineScope
 import okhttp3.Authenticator
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody
+import okio.BufferedSink
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Una URL firmada de subida a `payment-proofs` que ya pasó la validación de [parse]. Es una credencial: quien la tiene
@@ -69,7 +72,8 @@ sealed interface UploadOutcome {
 /**
  * Sube los bytes del comprobante con un `PUT` a la URL firmada. Usa su propio cliente ([createStorageUploadClient]),
  * nunca el de la API: así no salen hacia Storage ni el `Authorization: Bearer` de la sesión ni las cabeceras
- * `X-Tindivo-*`, no se reintenta nada por su cuenta y no se sigue una redirección a otro host.
+ * `X-Tindivo-*`, no se reintenta nada por su cuenta y no se sigue una redirección a otro host. El cuerpo es de un solo
+ * envío ([OneShotBody]): OkHttp tampoco lo repite ante un 503 con `Retry-After: 0`.
  *
  * @param client el de [createStorageUploadClient]; las pruebas le añaden solo el desvío al servidor falso.
  * @param ioDispatcher el de las llamadas bloqueantes; se inyecta (KT-4), nunca va fijo aquí.
@@ -86,7 +90,7 @@ class ProofUploader(
             Request
                 .Builder()
                 .url(target.url)
-                .put(jpeg.toRequestBody(JPEG))
+                .put(OneShotBody(jpeg, JPEG))
                 // Storage no sobrescribe con una URL firmada; se dice igual, por si cambia su valor por defecto.
                 .header("x-upsert", "false")
                 .build()
@@ -114,6 +118,31 @@ class ProofUploader(
 
     private companion object {
         val JPEG = "image/jpeg".toMediaType()
+    }
+}
+
+/**
+ * Los bytes del comprobante como un cuerpo de UN SOLO envío. OkHttp no repite una petición cuyo cuerpo es de un solo
+ * envío (`isOneShot`), y es la única forma de frenar el seguimiento del 503 con `Retry-After: 0` de su
+ * `RetryAndFollowUpInterceptor` (OkHttp 5.5.0), que no se desactiva con ninguna opción del cliente: sin esto, un 503 así
+ * hacía salir otro PUT con la misma URL firmada sin que nadie tocara nada (CAX-001). Si algo intentara escribirlo una
+ * segunda vez, falla en vez de enviarlo.
+ */
+private class OneShotBody(
+    private val bytes: ByteArray,
+    private val type: MediaType,
+) : RequestBody() {
+    private val written = AtomicBoolean(false)
+
+    override fun contentType(): MediaType = type
+
+    override fun contentLength(): Long = bytes.size.toLong()
+
+    override fun isOneShot(): Boolean = true
+
+    override fun writeTo(sink: BufferedSink) {
+        if (!written.compareAndSet(false, true)) throw IOException("one-shot body already sent")
+        sink.write(bytes)
     }
 }
 
