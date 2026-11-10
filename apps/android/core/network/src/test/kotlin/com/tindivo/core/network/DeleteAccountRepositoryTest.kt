@@ -146,7 +146,13 @@ class DeleteAccountRepositoryTest {
     fun `un 5xx no se reintenta, ni siquiera con Retry-After`() =
         runTest {
             repeat(3) {
-                server.enqueue(MockResponse.Builder().code(503).addHeader("Retry-After", "0").build())
+                server.enqueue(
+                    MockResponse
+                        .Builder()
+                        .code(503)
+                        .addHeader("Retry-After", "0")
+                        .build(),
+                )
             }
 
             val result = repository().deleteAccount(ACCOUNT)

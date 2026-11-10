@@ -40,6 +40,7 @@ fun AccountDestination(
     phoneChanged: Boolean,
     onPhoneChangeHandled: () -> Unit,
     profile: ProfileLink,
+    onDeleteAccount: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
@@ -76,6 +77,7 @@ fun AccountDestination(
         onSignOut = viewModel::signOut,
         onBack = onLeave,
         onCompleteProfile = profile.onOpen,
+        onDeleteAccount = onDeleteAccount,
     )
 }
 
@@ -96,6 +98,7 @@ fun AccountScreen(
     onSignOut: () -> Unit,
     onBack: () -> Unit,
     onCompleteProfile: () -> Unit = {},
+    onDeleteAccount: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -130,6 +133,7 @@ fun AccountScreen(
                         onOpenAddresses = onOpenAddresses,
                         onVerifyPhone = onVerifyPhone,
                         onSignOut = onSignOut,
+                        onDeleteAccount = onDeleteAccount,
                     )
                 }
             }
@@ -205,6 +209,7 @@ private fun Profile(
     onOpenAddresses: () -> Unit,
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(text = profile.fullName, style = MaterialTheme.typography.titleLarge)
@@ -250,6 +255,10 @@ private fun Profile(
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
         ) {
             Text(text = stringResource(R.string.account_sign_out))
+        }
+        // Discreto a propósito, pero siempre a la vista: Google Play exige poder borrar la cuenta dentro de la app.
+        TextButton(onClick = onDeleteAccount, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(text = stringResource(R.string.account_delete), color = MaterialTheme.colorScheme.error)
         }
     }
 }

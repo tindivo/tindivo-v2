@@ -174,4 +174,17 @@ class CartStoreTest {
 
             assertNull(store().cart.first())
         }
+
+    @Test
+    fun `clearIf vacia la bolsa solo si la condicion se cumple dentro de la escritura`() =
+        runTest {
+            val store = store()
+            store.add("n", "Pollería", line())
+
+            assertEquals(false, store.clearIf { false })
+            assertEquals(1, checkNotNull(store.cart.first()).lines.size)
+
+            assertTrue(store.clearIf { true })
+            assertNull(store.cart.first())
+        }
 }

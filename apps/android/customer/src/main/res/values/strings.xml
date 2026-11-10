@@ -454,4 +454,31 @@
     <string name="checkout_sheet_profile_title">Completa tu perfil</string>
     <string name="checkout_sheet_add_new">Agregar nueva</string>
     <string name="checkout_sheet_close">Cerrar</string>
+    <!-- Borrar mi cuenta: los mismos textos que la web /borrar-cuenta (apps/customer/app/borrar-cuenta/page.tsx). -->
+    <string name="account_delete">Borrar mi cuenta</string>
+    <string name="delete_account_title">Borrar mi cuenta</string>
+    <string name="delete_account_back">Volver</string>
+    <string name="delete_account_scope">Tindivo · San Jacinto, Áncash · Ley N.° 29733 (Perú)</string>
+    <string name="delete_account_bullet">• %1$s</string>
+    <string name="delete_account_removed_title">Qué se elimina</string>
+    <string name="delete_account_removed_login">Tu cuenta y tu inicio de sesión (Google, Apple o correo).</string>
+    <string name="delete_account_removed_profile">Tu perfil: nombre, teléfono y correo.</string>
+    <string name="delete_account_removed_addresses">Tus direcciones guardadas y tu ubicación en el mapa.</string>
+    <string name="delete_account_removed_notices">Tus avisos en el celular, tus avisos de seguridad y tu aceptación de términos.</string>
+    <string name="delete_account_removed_promos">Tus canjes de promociones.</string>
+    <string name="delete_account_kept_title">Qué se conserva, y sin tu nombre</string>
+    <string name="delete_account_kept_body">Los pedidos que ya hiciste se quedan porque son la caja de cada negocio. Pierden todo lo que te identifica: tu nombre, tu teléfono, la dirección, la referencia, la ubicación y tus notas. Solo quedan el importe, el estado y las fechas. También se conservan, por seguridad contra fraudes, los reportes de pedidos no recibidos ligados a un número de teléfono, y el directorio de direcciones que usa la cajera para reconocer vecinos. Si tu número estaba bloqueado o solo podía pagar por adelantado, esa restricción se queda con el número hasta su fecha, aunque otra cuenta lo verifique después. Las reseñas se quedan sin tu nombre. Las fotos de comprobantes de pago se guardan con el pedido anonimizado el tiempo que su negocio las necesite para su caja; el plazo exacto está en la política de privacidad.</string>
+    <string name="delete_account_time_title">Cuánto tarda</string>
+    <string name="delete_account_time_body">Es inmediato: al confirmar, tu cuenta deja de existir y no se puede recuperar. Si quieres volver a usar Tindivo, tendrás que crear una cuenta nueva.</string>
+    <string name="delete_account_not_yet_title">Cuándo no se puede todavía</string>
+    <string name="delete_account_not_yet_body">Si tienes un pedido en curso, o una apelación o devolución sin resolver, tienes que esperar a que termine. Si tu cuenta también es de un negocio o de un motorizado, la cierra el equipo de soporte.</string>
+    <string name="delete_account_confirm_prompt">Esto no se puede deshacer. Para confirmar, escribe %1$s.</string>
+    <string name="delete_account_confirm_label">Escribe %1$s para confirmar</string>
+    <string name="delete_account_confirm_button">Borrar mi cuenta definitivamente</string>
+    <string name="delete_account_deleting">Borrando…</string>
+    <string name="delete_account_failed">No pudimos borrar tu cuenta. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="delete_account_see_orders">Ver mis pedidos</string>
+    <string name="delete_account_done_title">Tu cuenta fue borrada</string>
+    <string name="delete_account_done_message">Listo: tu cuenta se borró y tus pedidos quedaron sin tu nombre. Gracias por haber usado Tindivo.</string>
+    <string name="delete_account_done_ok">Entendido</string>
 </resources>
