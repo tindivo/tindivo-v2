@@ -379,6 +379,79 @@ class PhoneVerifyViewModelTest {
         }
 
     @Test
+    fun `al cerrar la hoja no quedan el numero, el codigo ni el permiso de traslado`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(409, CONFLICT_TRANSFER))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertNotNull(viewModel.state.value.transfer)
+
+            viewModel.discardInput()
+
+            val state = viewModel.state.value
+            assertEquals(PhoneUiState(), state)
+            assertEquals("", state.phone)
+            assertEquals("", state.code)
+            assertNull(state.transfer)
+            assertNull(state.verifiedPhone)
+            assertEquals(0, store.signOutCalls)
+            assertEquals(2, server.requestCount)
+        }
+
+    @Test
+    fun `al cerrar la hoja ya verificada no queda el numero verificado`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+
+            viewModel.discardInput()
+
+            assertEquals(PhoneUiState(), viewModel.state.value)
+        }
+
+    @Test
+    fun `un verify en vuelo cancelado al cerrar la hoja no publica nada despues`() =
+        runTest {
+            val viewModel = viewModel(Dispatchers.IO)
+            server.enqueue(response(200, SENT))
+            viewModel.onPhoneChanged("987654321")
+            viewModel.sendCode()
+            viewModel.state.first { !it.sending }
+            server.enqueue(response(200, VERIFIED, delayMillis = 300))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertTrue(viewModel.state.value.sending)
+
+            viewModel.discardInput()
+
+            assertEquals(PhoneUiState(), viewModel.state.value)
+            Thread.sleep(500)
+            assertEquals(PhoneUiState(), viewModel.state.value)
+            assertEquals(0, store.signOutCalls)
+            // No es un cierre de sesión: la instancia sigue aceptando lo que se escriba.
+            viewModel.onPhoneChanged("912345678")
+            assertEquals("912345678", viewModel.state.value.phone)
+        }
+
+    @Test
+    fun `cerrar la hoja con la sesion cerrada no reabre nada`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            store.signOut()
+
+            viewModel.discardInput()
+
+            assertEquals(PhoneUiState(loggedOut = true), viewModel.state.value)
+        }
+
+    @Test
     fun `un 401 cierra la sesion`() =
         runTest {
             server.enqueue(response(401, UNAUTHORIZED))

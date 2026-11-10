@@ -15,6 +15,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -22,6 +23,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -316,6 +318,60 @@ class ProfileViewModelTest {
             assertEquals("", state.name)
             assertFalse(state.nameError)
             assertFalse(state.canSave)
+        }
+
+    @Test
+    fun `al cerrar la hoja no queda el nombre escrito`() =
+        runTest(dispatcher) {
+            gateway.nameResult = ApiResult.Failure(AppError.Known(ApiErrorCode.ValidationError, 422, null))
+            val viewModel = saving()
+            advanceUntilIdle()
+            assertTrue(viewModel.state.value.rejected)
+
+            viewModel.discardInput()
+
+            assertEquals(ProfileUiState(), viewModel.state.value)
+            assertEquals(0, store.signOutCalls)
+        }
+
+    @Test
+    fun `un guardado en vuelo cancelado al cerrar la hoja no publica nada despues`() =
+        runTest(dispatcher) {
+            gateway.nameGate = CompletableDeferred()
+            // El nombre responde aunque lo cancelen: lo único que frena la publicación es el propio ViewModel.
+            val stubborn =
+                object : ProfileGateway by gateway {
+                    override suspend fun saveName(
+                        fullName: String,
+                        accountId: String,
+                    ): ApiResult<Unit> = withContext(NonCancellable) { gateway.saveName(fullName, accountId) }
+                }
+            val viewModel = ProfileViewModel(stubborn, store, configService, hint)
+            runCurrent()
+            viewModel.onName("Rosa Quispe")
+            viewModel.save()
+            runCurrent()
+            assertEquals("name:Rosa Quispe:$ACCOUNT", gateway.calls.last())
+
+            viewModel.discardInput()
+            gateway.nameGate?.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(ProfileUiState(), viewModel.state.value)
+            assertNull(viewModel.state.value.outcome)
+            assertEquals(0, store.signOutCalls)
+        }
+
+    @Test
+    fun `cerrar la hoja ya terminada no reabre la pantalla`() =
+        runTest(dispatcher) {
+            val viewModel = saving()
+            advanceUntilIdle()
+            assertEquals(ProfileOutcome.Saved, viewModel.state.value.outcome)
+
+            viewModel.discardInput()
+
+            assertEquals(ProfileUiState(outcome = ProfileOutcome.Saved), viewModel.state.value)
         }
 
     @Test

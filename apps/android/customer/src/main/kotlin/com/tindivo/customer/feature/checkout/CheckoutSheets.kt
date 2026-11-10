@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -22,8 +23,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -164,6 +167,7 @@ private fun PhoneSheet(
     actions: CheckoutSheetActions,
 ) {
     val viewModel = hiltViewModel<PhoneVerifyViewModel>(key = key)
+    DiscardOnLeave(viewModel::discardInput)
     val phone = viewModel.state.collectAsStateWithLifecycle().value
     LaunchedEffect(phone.step, phone.loggedOut) {
         when {
@@ -201,6 +205,7 @@ private fun ProfileSheet(
     actions: CheckoutSheetActions,
 ) {
     val viewModel = hiltViewModel<ProfileViewModel>(key = key)
+    DiscardOnLeave(viewModel::discardInput)
     val profile = viewModel.state.collectAsStateWithLifecycle().value
     LaunchedEffect(profile.outcome) {
         when (profile.outcome) {
@@ -213,6 +218,20 @@ private fun ProfileSheet(
         ScrollingBody {
             ProfileContent(state = profile, onName = viewModel::onName, onSave = viewModel::save)
         }
+    }
+}
+
+/**
+ * El ViewModel de la hoja vive en el del checkout hasta que el checkout sale de la pila: al salir la hoja de la
+ * composición, [discard] borra lo escrito (datos personales). Girar la pantalla no cuenta: rehace la composición con el
+ * mismo ViewModel y la hoja sigue abierta con lo que tenía.
+ */
+@Composable
+private fun DiscardOnLeave(discard: () -> Unit) {
+    val activity = LocalActivity.current
+    val latest = rememberUpdatedState(discard)
+    DisposableEffect(Unit) {
+        onDispose { if (activity?.isChangingConfigurations != true) latest.value() }
     }
 }
 

@@ -12,10 +12,12 @@ import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -132,6 +134,16 @@ internal class ProfileViewModel
                 }
         }
 
+        /**
+         * La hoja del checkout se cerró: el nombre escrito (dato personal) no se queda en memoria mientras el checkout
+         * siga abierto. Cancela el guardado en vuelo de esta apertura, que ya no publica nada; no cierra la sesión ni
+         * llama al servidor. Conserva [ProfileUiState.outcome]: lo que ya terminó no se reabre.
+         */
+        fun discardInput() {
+            job?.cancel()
+            _state.update { ProfileUiState(outcome = it.outcome) }
+        }
+
         /** Sigue siendo la cuenta de la pantalla: no terminó Y la sesión vigente, leída ahora, es la de [account]. */
         private fun isCurrent(account: String) =
             !ended && (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
@@ -171,8 +183,9 @@ internal class ProfileViewModel
             }
         }
 
-        /** Una respuesta que llega después de cerrar la pantalla no la reabre. */
-        private fun settle(change: (ProfileUiState) -> ProfileUiState) {
+        /** Lo que llega tras cerrar la pantalla, o de un guardado cancelado al cerrar la hoja, no se publica. */
+        private suspend fun settle(change: (ProfileUiState) -> ProfileUiState) {
+            if (!currentCoroutineContext().isActive) return
             _state.update { if (it.outcome != null || ended) it else change(it) }
         }
 

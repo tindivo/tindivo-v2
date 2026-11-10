@@ -16,11 +16,13 @@ import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Clock
@@ -183,6 +185,20 @@ internal class PhoneVerifyViewModel
             _state.update { PhoneUiState(phone = it.phone) }
         }
 
+        /**
+         * La hoja del checkout se cerró: el número, el código, el permiso de traslado y el número verificado no se
+         * quedan en memoria mientras el checkout siga abierto. Cancela la llamada en vuelo de esta apertura, que ya no
+         * publica nada; no cierra la sesión ni llama al servidor (lo que ya salió, salió). Con la sesión cerrada el
+         * estado ya está vacío.
+         */
+        fun discardInput() {
+            if (closed) return
+            work?.cancel()
+            ticker?.cancel()
+            resendAt = Instant.EPOCH
+            _state.value = PhoneUiState()
+        }
+
         private suspend fun sendAndAdvance(phone: String) {
             when (val result = phones.sendCode(SendPhoneCodeRequest(phone = phone))) {
                 is ApiResult.Success -> {
@@ -201,7 +217,7 @@ internal class PhoneVerifyViewModel
             }
         }
 
-        private fun finish(phone: String) {
+        private suspend fun finish(phone: String) {
             ticker?.cancel()
             settle {
                 PhoneUiState(step = PhoneStep.Done, phone = it.phone, verifiedPhone = phone)
@@ -258,9 +274,9 @@ internal class PhoneVerifyViewModel
             _state.update { if (it.loggedOut) it else it.copy(error = error) }
         }
 
-        /** Lo que llega después de cerrar la sesión no se publica. */
-        private fun settle(next: (PhoneUiState) -> PhoneUiState) {
-            if (closed) return
+        /** Lo que llega después de cerrar la sesión, o de una llamada cancelada al cerrar la hoja, no se publica. */
+        private suspend fun settle(next: (PhoneUiState) -> PhoneUiState) {
+            if (closed || !currentCoroutineContext().isActive) return
             _state.update { if (it.loggedOut) it else next(it).copy(sending = false) }
         }
 
