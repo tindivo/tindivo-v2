@@ -105,6 +105,10 @@ internal data class PrepayUiState(
                 send !is SendState.Sending &&
                 send !is SendState.Sent &&
                 countdown != PrepayCountdown.Expired
+
+    /** Se ofrece elegir la captura y enviarla: ni ya enviada (no se reemplaza) ni con el plazo vencido. */
+    val showsProofPicker: Boolean
+        get() = send !is SendState.Sent && countdown != PrepayCountdown.Expired
 }
 
 /** Lo que la sección puede pedirle a su ViewModel. */
