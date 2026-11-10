@@ -10,6 +10,14 @@ class FakeSessionStore(
 ) : SessionStore {
     private val mutableState = MutableStateFlow(initial)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    private val signIns = MutableStateFlow(0L)
+    override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
+
+    // Como el almacén real: primero el estado, después la generación.
+    private fun enter(userId: String) {
+        mutableState.value = SessionState.SignedIn(userId)
+        signIns.value += 1
+    }
 
     var signInResult: SignInResult = SignInResult.Success
     val signInCalls = mutableListOf<Pair<String, String>>()
@@ -27,13 +35,13 @@ class FakeSessionStore(
         rawNonce: String,
     ): SignInResult {
         signInCalls += idToken to rawNonce
-        if (signInResult == SignInResult.Success) mutableState.value = SessionState.SignedIn(signInUserId)
+        if (signInResult == SignInResult.Success) enter(signInUserId)
         return signInResult
     }
 
-    /** Un cambio directo de cuenta, sin pasar por SignedOut. */
+    /** Una entrada de [userId] (cuenta como entrada en [signInGeneration]), sin pasar por SignedOut. */
     fun switchTo(userId: String) {
-        mutableState.value = SessionState.SignedIn(userId)
+        enter(userId)
     }
 
     /** La sesión se cierra sola (un refresco que falla), sin que nadie llame a [signOut]. */

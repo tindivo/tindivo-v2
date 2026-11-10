@@ -27,6 +27,16 @@ sealed interface SignInResult {
 interface SessionStore : AccessTokenSource {
     val state: StateFlow<SessionState>
 
+    /**
+     * Cuántas veces se entró a una cuenta (la que sea, también la misma otra vez) desde que arrancó el proceso. Sube
+     * justo DESPUÉS de que [state] muestre la cuenta que entró; restaurar al arrancar, refrescar y cerrar no la mueven.
+     *
+     * Sirve para saber, sin depender de haber visto cada valor de [state] (un `StateFlow` se salta los intermedios: A →
+     * B → A puede verse como A sin cambios), si alguien entró desde un momento dado: se guarda su valor y se compara
+     * después. Para que la comparación valga, se lee primero esta generación y luego [state].
+     */
+    val signInGeneration: StateFlow<Long>
+
     /** Entra con el ID token de Google. [rawNonce] es el nonce en crudo; Google recibió su SHA-256. */
     suspend fun signInWithGoogle(
         idToken: String,

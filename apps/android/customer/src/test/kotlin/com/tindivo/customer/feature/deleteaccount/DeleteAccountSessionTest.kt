@@ -128,6 +128,78 @@ internal class DeleteAccountSessionTest : DeleteAccountHarness() {
         }
 
     @Test
+    fun `A, B y otra vez A sin que el colector vea a B - 204 no vacia la bolsa ni toca lo de B y no dice borrada`() =
+        runTest {
+            fillCart()
+            // Las dos entradas seguidas, sin suspender entre ellas: el colector (un StateFlow) solo puede ver A.
+            duringRequest = {
+                session.switchTo(B)
+                session.switchTo(A)
+            }
+            val vm = viewModel()
+
+            confirmAndDelete(vm)
+            answer(deleted)
+
+            assertEquals(DeletePhase.Left, vm.state.value.phase)
+            assertNotNull(cart())
+            assertEquals(setOf(B), ledgerStore.ledger.attempts.keys)
+            assertEquals(B_KEY, ledgerStore.ledger.attempts[B]?.key)
+            assertEquals(setOf(B), ledgerStore.ledger.acknowledged)
+        }
+
+    @Test
+    fun `B entra y cierra sin que el colector vea a B - 204 no vacia la bolsa y no dice borrada`() =
+        runTest {
+            fillCart()
+            duringRequest = {
+                session.switchTo(B)
+                session.switchToSignedOut()
+            }
+            val vm = viewModel()
+
+            confirmAndDelete(vm)
+            answer(deleted)
+
+            assertEquals(DeletePhase.Left, vm.state.value.phase)
+            assertEquals(SessionState.SignedOut, session.state.value)
+            assertNotNull(cart())
+            assertEquals(setOf(B), ledgerStore.ledger.attempts.keys)
+        }
+
+    @Test
+    fun `B entra y cierra justo antes de soltar la sesion de A - la bolsa se queda`() =
+        runTest {
+            fillCart()
+            val vm = viewModel()
+            session.beforeSignOutLocally = {
+                session.switchTo(B)
+                session.switchToSignedOut()
+            }
+
+            confirmAndDelete(vm)
+            answer(deleted)
+
+            assertEquals(DeletePhase.Left, vm.state.value.phase)
+            assertNotNull(cart())
+        }
+
+    @Test
+    fun `A, B y otra vez A antes de confirmar sin que el colector lo vea - no sale nada`() =
+        runTest {
+            val vm = viewModel()
+            vm.onTyped(CONFIRM_WORD)
+
+            session.switchTo(B)
+            session.switchTo(A)
+            vm.delete()
+            runCurrent()
+
+            assertTrue(calls.isEmpty())
+            assertEquals(DeletePhase.Left, vm.state.value.phase)
+        }
+
+    @Test
     fun `un 409 que vuelve con B dentro no muestra el motivo de A a B`() =
         runTest {
             duringRequest = { session.switchTo(B) }
