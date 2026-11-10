@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
@@ -271,8 +272,9 @@ private fun Chip(
 ) {
     Surface(
         shape = CircleShape,
-        color =
-            if (warning) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        color = if (warning) TindivoColors.warningContainer else MaterialTheme.colorScheme.secondaryContainer,
+        contentColor =
+            if (warning) TindivoColors.onWarningContainer else MaterialTheme.colorScheme.onSecondaryContainer,
     ) {
         Text(
             text = text,
