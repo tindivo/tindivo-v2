@@ -33,14 +33,6 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.tindivo.customer.R
 
-/** Lo que la sección puede pedirle a su ViewModel. */
-internal data class PrepayActions(
-    val load: () -> Unit = {},
-    val retryInfo: () -> Unit = {},
-    val onPhotoPicked: (String?) -> Unit = {},
-    val send: () -> Unit = {},
-)
-
 /**
  * «Paga tu pedido»: cuánto y a quién pagar, el tiempo que queda y la subida de la captura. [amount] es el total del
  * pedido tal como lo mandó el servidor, ya con «S/»: la app no calcula ningún importe.
@@ -73,7 +65,10 @@ internal fun PrepaySection(
 
                 // El detalle se vuelve a consultar solo y dirá en qué quedó el pedido.
                 PrepayInfoState.NotAwaiting -> {
-                    Text(text = stringResource(R.string.prepay_not_awaiting), style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = stringResource(R.string.prepay_not_awaiting),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
                 }
 
                 is PrepayInfoState.Ready -> {

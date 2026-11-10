@@ -82,7 +82,11 @@ private fun PayeeDetails(payee: PrepayPayee) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = payee.accountNumber, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             payee.accountName?.let {
-                Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         CopyNumberButton(number = payee.accountNumber)

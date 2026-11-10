@@ -57,7 +57,13 @@ class PrepayRepositoryTest {
         runTest {
             server.enqueue(json(200, INFO))
             server.enqueue(json(200, UPLOAD_URL))
-            server.enqueue(MockResponse.Builder().code(200).body("""{"Key":"x"}""").build())
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .body("""{"Key":"x"}""")
+                    .build(),
+            )
             server.enqueue(json(200, """{"data":{"ok":true}}"""))
             val repository = repository()
 
@@ -190,7 +196,7 @@ class PrepayRepositoryTest {
         val ORDER: UUID = UUID.fromString("5b2a737a-018f-4c2d-9a11-6f0d3c1e8a01")
         val PATH = "$ACCOUNT/$ORDER/attempt-1-1731250000000.jpg"
         val PHOTO = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 1, 2, 3, 0xFF.toByte(), 0xD9.toByte())
-        val INFO =
+        const val INFO =
             """{"data":{"businessName":"Pollería Rosa","yapeNumber":"987654321","qrUrl":null,""" +
                 """"paymentQr":{"slot":1,"wallet":"yape","accountNumber":"987654321","accountName":"Rosa P.",""" +
                 """"qrUrl":null,"isDefault":true},"total":43.5,"status":"awaiting_payment","hasProof":false,""" +
