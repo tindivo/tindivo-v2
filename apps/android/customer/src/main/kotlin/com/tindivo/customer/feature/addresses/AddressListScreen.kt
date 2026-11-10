@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -266,7 +266,7 @@ private fun AddressCard(
 
 @Composable
 private fun Badge(text: String) {
-    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
+    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
