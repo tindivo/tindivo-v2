@@ -46,6 +46,10 @@ import com.tindivo.customer.feature.catalog.business.BusinessRoute
 import com.tindivo.customer.feature.catalog.home.CatalogHomeDestination
 import com.tindivo.customer.feature.checkout.CheckoutActions
 import com.tindivo.customer.feature.checkout.CheckoutDestination
+import com.tindivo.customer.feature.deleteaccount.ACCOUNT_DELETED_KEY
+import com.tindivo.customer.feature.deleteaccount.AccountDeletedNotice
+import com.tindivo.customer.feature.deleteaccount.DeleteAccountDestination
+import com.tindivo.customer.feature.deleteaccount.DeleteAccountRoute
 import com.tindivo.customer.feature.diagnostics.DiagnosticsDestination
 import com.tindivo.customer.feature.orders.OrderDetailDestination
 import com.tindivo.customer.feature.orders.OrderDetailRoute
@@ -110,7 +114,7 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             startDestination = CatalogHomeRoute,
             modifier = contentModifier,
         ) {
-            composable<CatalogHomeRoute> {
+            composable<CatalogHomeRoute> { entry ->
                 CatalogHomeDestination(
                     onOpenBusiness = { id -> navController.navigate(BusinessRoute(id)) },
                     onOpenAccount = { signedIn ->
@@ -126,6 +130,7 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 )
                 // «¿Cómo estuvo tu pedido?»: sale sola si hay una reseña pendiente. Sin sesión no consulta nada.
                 ReviewHost(rememberReviewController(autoPrompt = true))
+                AccountDeletedNotice(entry.savedStateHandle)
             }
             composable<BusinessRoute> {
                 BusinessDestination(
@@ -162,6 +167,18 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                     onVerifyPhone = { navController.navigate(PhoneVerifyRoute) },
                     phoneChanged = phoneChanged,
                     onPhoneChangeHandled = { entry.savedStateHandle[PHONE_CHANGED_KEY] = false },
+                    onDeleteAccount = { navController.navigate(DeleteAccountRoute) },
+                )
+            }
+            composable<DeleteAccountRoute> {
+                DeleteAccountDestination(
+                    onBack = { navController.popBackStack() },
+                    onDeleted = {
+                        // La portada es el inicio y siempre está debajo: llega a ella con «Tu cuenta fue borrada».
+                        navController.popBackStack<CatalogHomeRoute>(inclusive = false)
+                        navController.currentBackStackEntry?.savedStateHandle?.set(ACCOUNT_DELETED_KEY, true)
+                    },
+                    onOpenOrders = { navController.navigate(OrdersRoute) },
                 )
             }
             composable<PhoneVerifyRoute> {

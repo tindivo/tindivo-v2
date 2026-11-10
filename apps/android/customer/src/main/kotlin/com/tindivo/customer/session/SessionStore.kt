@@ -35,4 +35,11 @@ interface SessionStore : AccessTokenSource {
 
     /** Cierra la sesión: intenta revocarla en el servidor y, falle o no, borra lo guardado en el aparato. */
     suspend fun signOut()
+
+    /**
+     * Cierra en el aparato la sesión de [accountId] sin llamar a Auth (la cuenta ya no existe en el servidor, así que
+     * no hay nada que revocar). Si la sesión vigente es de otra cuenta, o no hay ninguna, no toca nada y devuelve
+     * `false`. Comprobar la cuenta y cerrar es un solo paso: una entrada de otra cuenta no puede colarse en medio.
+     */
+    suspend fun signOutLocally(accountId: String): Boolean
 }

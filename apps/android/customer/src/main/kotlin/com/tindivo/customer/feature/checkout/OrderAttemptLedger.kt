@@ -170,6 +170,16 @@ class OrderAttemptLedger(
         }
     }
 
+    /**
+     * La cuenta [accountId] se borró en el servidor: su intento ya no se puede consultar ni reenviar. Quita su entrada
+     * y su confirmación, sin tocar las de otras cuentas. Espera a un `place` de esa cuenta que siga en curso.
+     */
+    suspend fun forgetAccount(accountId: String) {
+        accountLocks.getOrPut(accountId) { Mutex() }.withLock {
+            update { it.copy(attempts = it.attempts - accountId, acknowledged = it.acknowledged - accountId) }
+        }
+    }
+
     private sealed interface Gate {
         data class Send(
             val key: UUID,
