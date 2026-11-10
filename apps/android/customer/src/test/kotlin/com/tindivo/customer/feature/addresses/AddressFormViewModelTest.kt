@@ -30,6 +30,7 @@ internal class AddressFormViewModelTest : AddressHarness() {
         catalogRepo(io),
         store,
         configService,
+        FakeLocationSource(),
     )
 
     private suspend fun AddressFormViewModel.ready(): AddressFormState = state.first { !it.loading }
