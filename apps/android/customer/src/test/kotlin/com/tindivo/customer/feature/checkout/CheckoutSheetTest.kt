@@ -1,10 +1,13 @@
 package com.tindivo.customer.feature.checkout
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SheetValue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -267,6 +270,15 @@ class CheckoutSheetTest : CheckoutHarness() {
             assertEquals(quotesBefore + 1, quotes().size)
             assertTrue(lastQuote().contains("-9.3333333"))
         }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun `con un guardado o un codigo en vuelo la hoja no se esconde, pero sigue pudiendo abrirse`() {
+        assertFalse(sheetMayMoveTo(SheetValue.Hidden, busy = true))
+        assertTrue(sheetMayMoveTo(SheetValue.Expanded, busy = true))
+        assertTrue(sheetMayMoveTo(SheetValue.Hidden, busy = false))
+        assertTrue(sheetMayMoveTo(SheetValue.Expanded, busy = false))
+    }
 
     private companion object {
         const val ADDRESS_C = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"

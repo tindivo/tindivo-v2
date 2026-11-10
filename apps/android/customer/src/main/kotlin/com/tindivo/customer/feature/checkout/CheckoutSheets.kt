@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,12 +20,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -111,7 +114,8 @@ private fun ChooseAddressSheet(
 
 /**
  * Alta o corrección de una dirección, con el mapa dentro: abre a altura completa y sin arrastre, para que mover el
- * mapa no mueva la hoja. Se cierra con «Cerrar» o con atrás.
+ * mapa no mueva la hoja. Se cierra con «Cerrar» o con atrás, salvo mientras guarda o borra: lo que el servidor
+ * responda tiene que llegar al checkout.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +139,7 @@ private fun AddressSheet(
         }
     }
     val title = if (editingId == null) R.string.checkout_sheet_add_title else R.string.checkout_sheet_edit_title
-    SheetFrame(title = stringResource(title), onClose = actions.onClose, holdsMap = true) {
+    SheetFrame(title = stringResource(title), onClose = actions.onClose, busy = form.busy, holdsMap = true) {
         Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             AddressFormContent(
                 state = form,
@@ -151,7 +155,7 @@ private fun AddressSheet(
                         onCancelDelete = viewModel::cancelDelete,
                         onConfirmDelete = viewModel::confirmDelete,
                         onRetry = viewModel::load,
-                        onCancel = actions.onClose,
+                        onCancel = { if (!form.busy) actions.onClose() },
                     ),
             )
         }
@@ -175,7 +179,11 @@ private fun PhoneSheet(
             phone.step == PhoneStep.Done -> actions.onPhoneVerified()
         }
     }
-    SheetFrame(title = stringResource(R.string.checkout_sheet_phone_title), onClose = actions.onClose) {
+    SheetFrame(
+        title = stringResource(R.string.checkout_sheet_phone_title),
+        onClose = actions.onClose,
+        busy = phone.sending,
+    ) {
         ScrollingBody {
             PhoneVerifyContent(
                 state = phone,
@@ -189,7 +197,7 @@ private fun PhoneSheet(
                         onChangeNumber = viewModel::changeNumber,
                         onConfirmTransfer = viewModel::confirmTransfer,
                         onDismissTransfer = viewModel::dismissTransfer,
-                        onBack = actions.onClose,
+                        onBack = { if (!phone.sending) actions.onClose() },
                         onDone = actions.onPhoneVerified,
                     ),
             )
@@ -214,7 +222,11 @@ private fun ProfileSheet(
             null -> Unit
         }
     }
-    SheetFrame(title = stringResource(R.string.checkout_sheet_profile_title), onClose = actions.onClose) {
+    SheetFrame(
+        title = stringResource(R.string.checkout_sheet_profile_title),
+        onClose = actions.onClose,
+        busy = profile.saving,
+    ) {
         ScrollingBody {
             ProfileContent(state = profile, onName = viewModel::onName, onSave = viewModel::save)
         }
@@ -249,7 +261,18 @@ private fun ColumnScope.ScrollingBody(content: @Composable () -> Unit) {
 }
 
 /**
- * El marco común: título (encabezado para TalkBack) y «Cerrar» de 48 dp. Atrás y tocar fuera también cierran. Con
+ * La hoja puede esconderse salvo que [busy]: con un guardado, un borrado o un código en vuelo, la respuesta tiene que
+ * llegar al checkout, así que ni arrastrar, ni tocar fuera, ni atrás la cierran.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+internal fun sheetMayMoveTo(
+    target: SheetValue,
+    busy: Boolean,
+): Boolean = target != SheetValue.Hidden || !busy
+
+/**
+ * El marco común: título (encabezado para TalkBack) y «Cerrar» de 48 dp. Atrás, arrastrar y tocar fuera también
+ * cierran, salvo con [busy] (ver [sheetMayMoveTo]): entonces «Cerrar» queda deshabilitado y atrás no hace nada. Con
  * [holdsMap] la hoja ocupa toda la altura, no se arrastra ni muestra el asa: el gesto es del mapa.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -257,22 +280,29 @@ private fun ColumnScope.ScrollingBody(content: @Composable () -> Unit) {
 private fun SheetFrame(
     title: String,
     onClose: () -> Unit,
+    busy: Boolean = false,
     holdsMap: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val busyNow = rememberUpdatedState(busy)
+    // Estable entre recomposiciones: el estado de la hoja se recuerda con esta función como clave.
+    val mayMove = remember { { target: SheetValue -> sheetMayMoveTo(target, busyNow.value) } }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = mayMove)
     val scope = rememberCoroutineScope()
-    val close: () -> Unit = { scope.launch { sheetState.hide() }.invokeOnCompletion { onClose() } }
+    val close: () -> Unit = {
+        if (!busyNow.value) scope.launch { sheetState.hide() }.invokeOnCompletion { onClose() }
+    }
     ModalBottomSheet(
-        onDismissRequest = onClose,
+        onDismissRequest = { if (!busyNow.value) onClose() },
         sheetState = sheetState,
         sheetGesturesEnabled = !holdsMap,
         dragHandle = if (holdsMap) null else ({ BottomSheetDefaults.DragHandle() }),
     ) {
+        BackHandler(enabled = busy) {}
         Column(
             modifier = (if (holdsMap) Modifier.fillMaxSize() else Modifier.fillMaxWidth()).imePadding(),
         ) {
-            SheetHeader(title = title, onClose = close, topPadding = if (holdsMap) 16.dp else 0.dp)
+            SheetHeader(title = title, onClose = close, enabled = !busy, topPadding = if (holdsMap) 16.dp else 0.dp)
             content()
         }
     }
@@ -282,6 +312,7 @@ private fun SheetFrame(
 private fun SheetHeader(
     title: String,
     onClose: () -> Unit,
+    enabled: Boolean,
     topPadding: Dp,
 ) {
     Row(
@@ -293,7 +324,7 @@ private fun SheetHeader(
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.weight(1f).semantics { heading() },
         )
-        IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = onClose, enabled = enabled, modifier = Modifier.size(48.dp)) {
             Icon(TindivoIcons.Close, contentDescription = stringResource(R.string.checkout_sheet_close))
         }
     }
