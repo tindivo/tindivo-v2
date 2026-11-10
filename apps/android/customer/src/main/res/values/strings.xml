@@ -228,7 +228,7 @@
     <string name="order_cancel_delivery_no_show_body">El motorizado llegó a la dirección y no logró encontrarte. El pedido volvió al restaurante. Escríbenos por WhatsApp y lo vemos contigo.</string>
     <string name="order_cancel_generic_title">Tu pedido fue cancelado</string>
     <string name="order_cancel_generic_body">Tu pedido fue cancelado. Si tienes dudas, escríbenos por WhatsApp.</string>
-    <string name="order_web_payment_notice">Para pagar o apelar, abre tu pedido en la web de Tindivo.</string>
+    <string name="order_web_payment_notice">Para apelar, abre tu pedido en la web de Tindivo.</string>
 
     <string name="order_driver_label">Tu motorizado</string>
     <string name="order_driver_at_door">Ya está en tu domicilio y no logra ubicarte.</string>
@@ -482,4 +482,44 @@
     <string name="delete_account_done_title">Tu cuenta fue borrada</string>
     <string name="delete_account_done_message">Listo: tu cuenta se borró y tus pedidos quedaron sin tu nombre. Gracias por haber usado Tindivo.</string>
     <string name="delete_account_done_ok">Entendido</string>
+
+    <!-- Pago adelantado: «Paga tu pedido» en el detalle (textos de la web, apps/customer/components/prepay-proof-section.tsx). -->
+    <string name="prepay_title">Paga tu pedido</string>
+    <string name="prepay_confirmed">%1$s confirmó tu pedido. Ahora te toca pagar para que entre a cocina.</string>
+    <string name="prepay_last_try">Tu comprobante no fue válido. Revisa e intenta de nuevo. Te queda 1 intento.</string>
+    <plurals name="prepay_time_left">
+        <item quantity="one">Te queda %d min para pagar</item>
+        <item quantity="other">Te quedan %d min para pagar</item>
+    </plurals>
+    <string name="prepay_expired_title">Se acabó el tiempo para pagar</string>
+    <string name="prepay_expired_body">Estamos revisando en qué quedó tu pedido.</string>
+    <string name="prepay_amount_label">Transfiere exacto</string>
+    <string name="prepay_wallet_yape">Yape</string>
+    <string name="prepay_wallet_plin">Plin</string>
+    <string name="prepay_wallet_any">Yape o Plin</string>
+    <string name="prepay_wallet_of_business">%1$s del restaurante</string>
+    <string name="prepay_copy">Copiar</string>
+    <string name="prepay_copied">Copiado</string>
+    <string name="prepay_copy_description">Copiar el número %1$s</string>
+    <string name="prepay_qr_description">Código QR de %1$s. Toca para agrandarlo.</string>
+    <string name="prepay_qr_hint">o escanea con %1$s · toca para agrandar</string>
+    <string name="prepay_no_qr">Esta cuenta no tiene QR: transfiere al número desde %1$s.</string>
+    <string name="prepay_no_account">Todavía no vemos a qué número pagar. Vuelve a abrir tu pedido en un momento.</string>
+    <string name="prepay_close">Cerrar</string>
+    <string name="prepay_upload">Ya pagué · Subir captura</string>
+    <string name="prepay_upload_hint">Que se vea tu nombre y la hora del pago.</string>
+    <string name="prepay_preview_title">Tu captura</string>
+    <string name="prepay_preview_description">Vista previa de tu captura de pago</string>
+    <string name="prepay_change">Cambiar</string>
+    <string name="prepay_send">Enviar comprobante</string>
+    <string name="prepay_sending">Subiendo…</string>
+    <string name="prepay_sent">Recibimos tu comprobante. El negocio lo está revisando.</string>
+    <string name="prepay_retry">Reintentar</string>
+    <string name="prepay_pick_other">Elegir otra captura</string>
+    <string name="prepay_info_error">No pudimos cargar los datos para pagar.</string>
+    <string name="prepay_not_awaiting">Tu pedido ya no está esperando el pago. Estamos actualizando su estado.</string>
+    <string name="prepay_error_offline">No pudimos enviarlo: revisa tu conexión. Tu captura sigue aquí.</string>
+    <string name="prepay_error_unreadable">No pudimos leer esa imagen. Elige otra captura.</string>
+    <string name="prepay_error_too_large">La imagen es demasiado pesada. Elige otra captura.</string>
+    <string name="prepay_error_generic">No pudimos enviar tu comprobante. Inténtalo de nuevo.</string>
 </resources>

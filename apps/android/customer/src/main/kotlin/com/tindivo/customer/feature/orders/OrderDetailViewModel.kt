@@ -202,7 +202,7 @@ internal class OrderDetailViewModel
     }
 
 /** Un uuid en su forma canónica; cualquier otra cosa es un pedido que no existe, sin tocar la red. */
-private fun parseOrderId(raw: String?): UUID? =
+internal fun parseOrderId(raw: String?): UUID? =
     raw?.let { text ->
         try {
             UUID.fromString(text).takeIf { it.toString().equals(text, ignoreCase = true) }

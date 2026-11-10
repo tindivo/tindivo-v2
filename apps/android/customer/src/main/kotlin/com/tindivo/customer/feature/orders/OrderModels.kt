@@ -131,6 +131,8 @@ internal data class OrderDetailUi(
     val reference: String?,
     val customerNotes: String?,
     val driver: DriverUi?,
-    /** `true` si para pagar o apelar hay que abrir el pedido en la web (la app aún no sube comprobantes). */
-    val webPaymentNotice: Boolean,
+    /** `true` si para apelar un comprobante rechazado hay que abrir el pedido en la web (la app aún no apela). */
+    val webAppealNotice: Boolean,
+    /** Prepago esperando el pago: el detalle muestra «Paga tu pedido» para subir el comprobante. */
+    val awaitingPrepayment: Boolean = false,
 )
