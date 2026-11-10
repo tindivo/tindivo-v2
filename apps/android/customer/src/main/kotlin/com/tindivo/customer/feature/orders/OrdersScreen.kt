@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import java.util.UUID
@@ -142,7 +143,7 @@ private fun OrderCard(
                 Text(
                     text = stringResource(order.phase.labelRes(order.isPickup)),
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = TindivoColors.brandText,
                 )
             }
             Text(text = order.itemsSummary, style = MaterialTheme.typography.bodyMedium, maxLines = 2)

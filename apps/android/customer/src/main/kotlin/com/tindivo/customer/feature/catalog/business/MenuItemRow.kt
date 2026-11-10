@@ -3,7 +3,6 @@ package com.tindivo.customer.feature.catalog.business
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -116,11 +113,10 @@ internal fun MenuItemRow(
  */
 @Composable
 private fun DishImage(imageUrl: String?) {
-    val dark = isSystemInDarkTheme()
-    val background = if (dark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF4F4F2)
-    val tint = if (dark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF2E3236)
+    val background = MaterialTheme.colorScheme.surfaceVariant
+    val tint = MaterialTheme.colorScheme.onSurfaceVariant
     Box(
-        modifier = Modifier.size(92.dp).clip(RoundedCornerShape(12.dp)).background(background),
+        modifier = Modifier.size(92.dp).clip(MaterialTheme.shapes.small).background(background),
         contentAlignment = Alignment.Center,
     ) {
         Image(
