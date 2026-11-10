@@ -1,7 +1,9 @@
 package com.tindivo.customer
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.Lifecycle
@@ -21,7 +23,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // La app solo tiene tema claro: iconos oscuros en las dos barras aunque el teléfono esté en modo oscuro (por
+        // defecto enableEdgeToEdge los pone claros y desaparecen sobre el crema).
+        val lightBars = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = lightBars, navigationBarStyle = lightBars)
         // CLI-4: STARTED = la app en primer plano; cubre abrirla y volver a ella.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) { configService.refresh() }
