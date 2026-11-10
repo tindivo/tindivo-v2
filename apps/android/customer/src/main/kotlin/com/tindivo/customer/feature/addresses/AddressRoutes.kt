@@ -11,7 +11,7 @@ data class AddressesRoute(
     val pick: Boolean = false,
 )
 
-/** El formulario de alta ([id] nulo) o de edición. [id] es el uuid de la dirección; el ViewModel lo lee bajo "id". */
+/** El formulario de alta ([id] nulo) o de edición. [id] es el uuid de la dirección; llega al ViewModel al crearlo. */
 @Serializable
 data class AddressFormRoute(
     val id: String? = null,

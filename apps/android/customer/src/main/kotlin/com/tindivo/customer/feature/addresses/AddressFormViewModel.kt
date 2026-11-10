@@ -1,6 +1,5 @@
 package com.tindivo.customer.feature.addresses
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.AccountMismatchException
@@ -16,6 +15,9 @@ import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SessionWatch
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -26,7 +28,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
-import javax.inject.Inject
 
 /** Cómo terminó el formulario; la pantalla vuelve atrás al verlo. */
 internal enum class FormOutcome { Saved, Deleted, LoggedOut }
@@ -56,19 +57,28 @@ internal data class AddressFormState(
     val canSave: Boolean get() = !loading && loadError == null && !busy && missing == null
 }
 
-/** El formulario de alta y edición. El servidor decide la predeterminada; aquí solo se le pide `isDefault: true`. */
-@HiltViewModel
+/**
+ * El formulario de alta y edición. El servidor decide la predeterminada; aquí solo se le pide `isDefault: true`.
+ * Qué dirección se edita llega al crearlo ([Factory]): la ruta de Mi cuenta y la hoja del checkout pasan el mismo dato.
+ */
+@HiltViewModel(assistedFactory = AddressFormViewModel.Factory::class)
 internal class AddressFormViewModel
-    @Inject
+    @AssistedInject
     constructor(
-        savedState: SavedStateHandle,
+        /** El uuid de la dirección que se edita; nulo = alta. */
+        @Assisted editingAddressId: String?,
         private val addresses: AddressRepository,
         private val catalog: CatalogRepository,
         private val sessionStore: SessionStore,
         private val configService: ConfigService,
     ) : ViewModel() {
+        @AssistedFactory
+        interface Factory {
+            fun create(editingAddressId: String?): AddressFormViewModel
+        }
+
         private val editingId: UUID? =
-            savedState.get<String>("id")?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            editingAddressId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
         private val _state = MutableStateFlow(AddressFormState(editingId = editingId))
         val state: StateFlow<AddressFormState> = _state.asStateFlow()
 

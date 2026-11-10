@@ -1,6 +1,5 @@
 package com.tindivo.customer.feature.addresses
 
-import androidx.lifecycle.SavedStateHandle
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.feature.checkout.sessionJwt
@@ -26,7 +25,7 @@ internal class AddressFormViewModelTest : AddressHarness() {
         id: String? = null,
         io: CoroutineDispatcher = dispatcher,
     ) = AddressFormViewModel(
-        SavedStateHandle(if (id == null) emptyMap() else mapOf("id" to id)),
+        id,
         addressRepo(io),
         catalogRepo(io),
         store,

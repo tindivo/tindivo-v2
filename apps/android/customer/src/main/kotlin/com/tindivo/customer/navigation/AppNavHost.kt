@@ -22,6 +22,7 @@ import com.tindivo.customer.feature.account.ProfileLink
 import com.tindivo.customer.feature.addresses.ADDRESSES_CHANGED_KEY
 import com.tindivo.customer.feature.addresses.AddressFormDestination
 import com.tindivo.customer.feature.addresses.AddressFormRoute
+import com.tindivo.customer.feature.addresses.AddressFormViewModel
 import com.tindivo.customer.feature.addresses.AddressesDestination
 import com.tindivo.customer.feature.addresses.AddressesRoute
 import com.tindivo.customer.feature.addresses.PICKED_ADDRESS_KEY
@@ -196,8 +197,13 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                     },
                 )
             }
-            composable<AddressFormRoute> {
+            composable<AddressFormRoute> { entry ->
+                val editingId = entry.toRoute<AddressFormRoute>().id
                 AddressFormDestination(
+                    viewModel =
+                        hiltViewModel<AddressFormViewModel, AddressFormViewModel.Factory>(
+                            creationCallback = { factory -> factory.create(editingId) },
+                        ),
                     onDone = { navController.popBackStack() },
                     onChanged = {
                         navController.previousBackStackEntry?.savedStateHandle?.set(ADDRESSES_CHANGED_KEY, true)
