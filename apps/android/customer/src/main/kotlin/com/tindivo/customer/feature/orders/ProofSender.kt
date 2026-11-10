@@ -23,11 +23,16 @@ internal sealed interface SendStep {
     ) : SendStep
 }
 
-/** Una foto ya subida a Storage y todavía sin confirmar: el reintento la confirma sin volver a subirla. */
-private data class PendingConfirmation(
+/**
+ * Una foto ya subida a Storage y todavía sin confirmar: el reintento la confirma sin volver a subirla. `toString` no
+ * muestra ni el `Uri` de la foto ni la ruta del bucket (CAX-003).
+ */
+internal data class PendingConfirmation(
     val photo: String,
     val path: String,
-)
+) {
+    override fun toString(): String = "PendingConfirmation($REDACTED)"
+}
 
 /**
  * El envío del comprobante, en este orden y sin saltarse ninguno: recodificar la foto, pedir la URL firmada, subirla
@@ -80,13 +85,16 @@ internal class ProofSender(
         }
     }
 
-    private sealed interface UploadResult
+    internal sealed interface UploadResult
 
-    private data class Uploaded(
+    /** El PUT salió bien; [path] es la ruta del bucket que se confirma. `toString` no la muestra (CAX-003). */
+    internal data class Uploaded(
         val path: String,
-    ) : UploadResult
+    ) : UploadResult {
+        override fun toString(): String = "Uploaded($REDACTED)"
+    }
 
-    private data class Halted(
+    internal data class Halted(
         val step: SendStep,
     ) : UploadResult
 
