@@ -25,7 +25,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import java.util.UUID
@@ -36,11 +35,16 @@ internal fun OrderDetailDestination(
     onBack: () -> Unit,
     canRate: (UUID) -> Boolean = { false },
     onRate: () -> Unit = {},
+    onBackToMenu: () -> Unit = onBack,
     viewModel: OrderDetailViewModel = hiltViewModel(),
     prepayViewModel: PrepayViewModel = hiltViewModel(),
+    cancelViewModel: CancelOrderViewModel = hiltViewModel(),
+    supportViewModel: SupportViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val prepay = prepayViewModel.state.collectAsStateWithLifecycle().value
+    val cancel = cancelViewModel.state.collectAsStateWithLifecycle().value
+    val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
     LaunchedEffect(state) {
         if (state is OrderDetailUiState.LoggedOut) onBack()
@@ -48,6 +52,10 @@ internal fun OrderDetailDestination(
     // El comprobante llegó, o el servidor dijo que el pedido cambió: el detalle se vuelve a consultar.
     LaunchedEffect(prepay.refreshRequests) {
         if (prepay.refreshRequests > 0) viewModel.retry()
+    }
+    // Se canceló, o el servidor dijo que ya no se podía (o no se sabe): el detalle se vuelve a consultar.
+    LaunchedEffect(cancel.refreshRequests) {
+        if (cancel.refreshRequests > 0) viewModel.retry()
     }
     OrderDetailScreen(
         state = state,
@@ -71,6 +79,18 @@ internal fun OrderDetailDestination(
                 onPhotoPicked = prepayViewModel::onPhotoPicked,
                 send = prepayViewModel::send,
             ),
+        cancel =
+            CancelSection(
+                state = cancel,
+                actions =
+                    CancelActions(
+                        askToConfirm = cancelViewModel::askToConfirm,
+                        dismiss = cancelViewModel::dismiss,
+                        confirm = cancelViewModel::confirm,
+                    ),
+            ),
+        supportNumber = supportNumber,
+        onBackToMenu = onBackToMenu,
     )
 }
 
@@ -84,6 +104,9 @@ internal fun OrderDetailScreen(
     onRate: () -> Unit = {},
     prepay: PrepayUiState = PrepayUiState(),
     prepayActions: PrepayActions = PrepayActions(),
+    cancel: CancelSection = CancelSection(),
+    supportNumber: String? = null,
+    onBackToMenu: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
@@ -105,14 +128,28 @@ internal fun OrderDetailScreen(
                 }
 
                 is OrderDetailUiState.Loaded -> {
-                    OrderBody(
-                        order = state.order,
-                        onOpenLink = onOpenLink,
-                        showRate = state.order.phase is OrderPhase.Delivered && canRate(state.order.id),
-                        onRate = onRate,
-                        prepay = prepay,
-                        prepayActions = prepayActions,
-                    )
+                    val order = state.order
+                    val supportLink = orderSupportLink(supportNumber, order.shortId)
+                    if (order.phase is OrderPhase.Cancelled) {
+                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                            OrderTitle(order = order)
+                            CancelledBody(
+                                order = order,
+                                supportLink = supportLink,
+                                onOpenLink = onOpenLink,
+                                onBackToMenu = onBackToMenu,
+                            )
+                        }
+                    } else {
+                        OrderBody(
+                            order = order,
+                            onOpenLink = onOpenLink,
+                            onRate = onRate.takeIf { order.phase is OrderPhase.Delivered && canRate(order.id) },
+                            prepay = PrepayParts(prepay, prepayActions),
+                            cancel = cancel,
+                            supportLink = supportLink,
+                        )
+                    }
                 }
             }
         }
@@ -123,13 +160,13 @@ internal fun OrderDetailScreen(
 private fun OrderBody(
     order: OrderDetailUi,
     onOpenLink: (String) -> Unit,
-    showRate: Boolean,
-    onRate: () -> Unit,
-    prepay: PrepayUiState,
-    prepayActions: PrepayActions,
+    onRate: (() -> Unit)?,
+    prepay: PrepayParts,
+    cancel: CancelSection,
+    supportLink: String?,
 ) {
     LaunchedEffect(order.awaitingPrepayment) {
-        if (order.awaitingPrepayment) prepayActions.load()
+        if (order.awaitingPrepayment) prepay.actions.load()
     }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
@@ -137,7 +174,9 @@ private fun OrderBody(
     ) {
         OrderTitle(order = order)
         OrderHeadlineBlock(headline = order.headline)
-        if (showRate) {
+        CancelRow(offer = order.cancel, section = cancel, supportLink = supportLink, onOpenLink = onOpenLink)
+        cancel.state.problem?.let { CancelProblemText(problem = it) }
+        if (onRate != null) {
             Button(onClick = onRate, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                 Text(text = stringResource(R.string.review_rate))
             }
@@ -146,25 +185,25 @@ private fun OrderBody(
             OrderSteps(phase = order.phase, isPickup = order.isPickup)
         }
         if (order.awaitingPrepayment) {
-            PrepaySection(state = prepay, amount = order.total, actions = prepayActions)
-        } else if (prepay.send is SendState.Sent &&
+            PrepaySection(state = prepay.state, amount = order.total, actions = prepay.actions)
+        } else if (prepay.state.send is SendState.Sent &&
             order.headline == OrderHeadline.Progress(OrderHero.VerifyingProof)
         ) {
             SentNotice()
-        }
-        if (order.appealViaSupport) {
-            Text(
-                text = stringResource(R.string.order_web_payment_notice),
-                style = MaterialTheme.typography.bodyMedium,
-                color = TindivoColors.onWarningContainer,
-            )
         }
         order.driver?.let { DriverBlock(driver = it, onOpenLink = onOpenLink) }
         OrderLines(lines = order.lines)
         OrderTotals(order = order)
         OrderDelivery(order = order)
+        SupportLink(link = supportLink, onOpenLink = onOpenLink)
     }
 }
+
+/** La sección de pago del detalle: lo que se ve y qué hace. */
+private data class PrepayParts(
+    val state: PrepayUiState,
+    val actions: PrepayActions,
+)
 
 @Composable
 private fun OrderTitle(order: OrderDetailUi) {

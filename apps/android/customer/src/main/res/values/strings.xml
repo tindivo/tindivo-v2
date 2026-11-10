@@ -228,7 +228,26 @@
     <string name="order_cancel_delivery_no_show_body">El motorizado llegó a la dirección y no logró encontrarte. El pedido volvió al restaurante. Escríbenos por WhatsApp y lo vemos contigo.</string>
     <string name="order_cancel_generic_title">Tu pedido fue cancelado</string>
     <string name="order_cancel_generic_body">Tu pedido fue cancelado. Si tienes dudas, escríbenos por WhatsApp.</string>
-    <string name="order_web_payment_notice">Para apelar, abre tu pedido en la web de Tindivo.</string>
+
+    <!-- Cancelar desde el detalle: los textos de tracking-cancel-row.tsx de la web. -->
+    <string name="order_cancel_row_title">Estamos confirmando tu pedido</string>
+    <string name="order_cancel_row_sub">Hasta entonces puedes cancelar sin costo</string>
+    <string name="order_cancel_action">Cancelar</string>
+    <string name="order_cancel_dialog_title">¿Cancelar tu pedido?</string>
+    <string name="order_cancel_dialog_body_prepaid">Esta acción no se puede deshacer. Todavía no has pagado nada, así que no se te cobrará.</string>
+    <string name="order_cancel_dialog_body_on_delivery">Esta acción no se puede deshacer. No se te cobrará nada.</string>
+    <string name="order_cancel_confirm">Sí, cancelar pedido</string>
+    <string name="order_cancel_confirming">Cancelando…</string>
+    <string name="order_cancel_keep">No, mantener pedido</string>
+    <!-- El motivo con el que cancel_customer_order rechaza un prepago con dinero de por medio (0169). -->
+    <string name="order_cancel_via_support">Ya enviaste tu pago, así que este pedido no se cancela desde la app; escríbenos por soporte</string>
+    <string name="order_cancel_not_cancellable">Tu pedido ya no se puede cancelar.</string>
+    <string name="order_cancel_failed">No se pudo cancelar</string>
+
+    <!-- Soporte por WhatsApp: support-link.tsx, cancelled-view.tsx y el historial de la web. -->
+    <string name="order_support_link">¿Algún problema? Escríbenos</string>
+    <string name="order_support_whatsapp">Escribir por WhatsApp</string>
+    <string name="order_back_to_menu">Volver al menú</string>
 
     <string name="order_driver_label">Tu motorizado</string>
     <string name="order_driver_at_door">Ya está en tu domicilio y no logra ubicarte.</string>

@@ -235,7 +235,13 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                     onExplore = { navController.popBackStack(CatalogHomeRoute, inclusive = false) },
                 )
             }
-            composable<OrderDetailRoute> { OrderDetailWithReview(onBack = { navController.popBackStack() }) }
+            composable<OrderDetailRoute> {
+                OrderDetailWithReview(
+                    onBack = { navController.popBackStack() },
+                    // «Volver al menú» de un pedido cancelado: la portada siempre está debajo.
+                    onBackToMenu = { navController.popBackStack<CatalogHomeRoute>(inclusive = false) },
+                )
+            }
             if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
             composable<UpdateRoute> { UpdateScreen() }
         }
@@ -273,10 +279,14 @@ private fun NavBackStackEntry.profileCompleted(): Boolean =
 
 /** En el detalle la reseña no sale sola: «Calificar» aparece si este pedido es el pendiente. */
 @Composable
-private fun OrderDetailWithReview(onBack: () -> Unit) {
+private fun OrderDetailWithReview(
+    onBack: () -> Unit,
+    onBackToMenu: () -> Unit,
+) {
     val review = rememberReviewController(autoPrompt = false)
     OrderDetailDestination(
         onBack = onBack,
+        onBackToMenu = onBackToMenu,
         canRate = { id -> review.state.pending?.orderId == id },
         onRate = review.openForm,
     )
