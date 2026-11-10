@@ -123,7 +123,11 @@ fun AccountScreen(
                 }
 
                 is AccountUiState.ProfileMissing -> {
-                    ProfileMissing(onCompleteProfile = onCompleteProfile, onSignOut = onSignOut)
+                    ProfileMissing(
+                        onCompleteProfile = onCompleteProfile,
+                        onSignOut = onSignOut,
+                        onDeleteAccount = onDeleteAccount,
+                    )
                 }
 
                 is AccountUiState.Loaded -> {
@@ -178,6 +182,7 @@ private fun Failure(
 private fun ProfileMissing(
     onCompleteProfile: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(text = stringResource(R.string.account_profile_missing_title), style = MaterialTheme.typography.titleLarge)
@@ -199,6 +204,8 @@ private fun ProfileMissing(
         ) {
             Text(text = stringResource(R.string.account_sign_out))
         }
+        // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
+        DeleteAccountButton(onDeleteAccount = onDeleteAccount)
     }
 }
 
@@ -256,10 +263,15 @@ private fun Profile(
         ) {
             Text(text = stringResource(R.string.account_sign_out))
         }
-        // Discreto a propósito, pero siempre a la vista: Google Play exige poder borrar la cuenta dentro de la app.
-        TextButton(onClick = onDeleteAccount, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(text = stringResource(R.string.account_delete), color = MaterialTheme.colorScheme.error)
-        }
+        DeleteAccountButton(onDeleteAccount = onDeleteAccount)
+    }
+}
+
+/** Discreto a propósito, pero siempre a la vista: Google Play exige poder borrar la cuenta dentro de la app. */
+@Composable
+private fun DeleteAccountButton(onDeleteAccount: () -> Unit) {
+    TextButton(onClick = onDeleteAccount, modifier = Modifier.heightIn(min = 48.dp)) {
+        Text(text = stringResource(R.string.account_delete), color = MaterialTheme.colorScheme.error)
     }
 }
 
