@@ -16,6 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -35,7 +39,8 @@ fun CheckoutDestination(
     viewModel: CheckoutViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
-    // Volvió de «Completa tu perfil» con el perfil ya creado: se vuelve a cargar el checkout.
+    // Volvió de la pantalla «Completa tu perfil» con el perfil ya creado (se llega a ella al entrar con una cuenta
+    // nueva desde el checkout): se vuelve a cargar. Desde el propio checkout el perfil se completa en una hoja.
     LaunchedEffect(profileCompleted) {
         if (profileCompleted) {
             viewModel.retryLoad()
@@ -55,17 +60,25 @@ fun CheckoutScreen(
     LaunchedEffect(state.createdOrderId) {
         state.createdOrderId?.let(actions.onOrderOpened)
     }
+    // Cada apertura de una hoja lleva su número: es la clave del ViewModel de la hoja, así que reabrirla no hereda el
+    // estado de la vez anterior. Sobrevive a girar la pantalla, igual que el ViewModel de la hoja abierta.
+    var openings by rememberSaveable { mutableIntStateOf(0) }
+    val openSheet: (CheckoutSheet) -> Unit = { sheet ->
+        openings++
+        form.sheets.onOpen(sheet)
+    }
     when (state.phase) {
         CheckoutPhase.Loading -> CheckoutFrame(actions.onBack) { Text(stringResource(R.string.checkout_loading)) }
         CheckoutPhase.Opening -> CheckoutFrame(actions.onBack) { Text(stringResource(R.string.checkout_opening)) }
         CheckoutPhase.SignInRequired -> SignInRequiredView(actions)
         CheckoutPhase.LoadFailed -> LoadFailedView(actions, form.onRetryLoad)
-        CheckoutPhase.ProfileRequired -> ProfileRequiredView(actions)
+        CheckoutPhase.ProfileRequired -> ProfileRequiredView(actions) { openSheet(CheckoutSheet.CompleteProfile) }
         CheckoutPhase.EmptyBag -> EmptyBagView(actions)
         CheckoutPhase.Blocked -> BlockedView(state.blockedDetail, actions)
         CheckoutPhase.Reconcile -> ReconcileView(state, actions, form)
-        CheckoutPhase.Form -> CheckoutForm(state, actions, form)
+        CheckoutPhase.Form -> CheckoutForm(state, actions, form, openSheet)
     }
+    CheckoutSheetHost(state = state, actions = form.sheets, openSheet = openSheet, opening = openings)
 }
 
 /** Marco con barra superior y contenido centrado, para los estados que no son el formulario. */
@@ -114,6 +127,7 @@ private fun CheckoutForm(
     state: CheckoutUiState,
     actions: CheckoutActions,
     form: CheckoutFormActions,
+    openSheet: (CheckoutSheet) -> Unit,
 ) {
     val minutes = state.etaMin
     val maxMinutes = state.etaMax
@@ -126,7 +140,7 @@ private fun CheckoutForm(
     val subtitle = listOfNotNull(state.businessName.takeIf { it.isNotBlank() }, eta).joinToString(" · ")
     Scaffold(
         topBar = { CheckoutTopBar(subtitle = subtitle.takeIf { it.isNotEmpty() }, onBack = actions.onBack) },
-        bottomBar = { CheckoutBottomBar(state = state, actions = actions, form = form) },
+        bottomBar = { CheckoutBottomBar(state = state, form = form, openSheet = openSheet) },
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -140,7 +154,7 @@ private fun CheckoutForm(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             bagSection(state, actions.onBack)
-            deliverySection(state, actions, form)
+            deliverySection(state, form, openSheet)
             paymentSection(state, form)
             totalsSection(state)
         }

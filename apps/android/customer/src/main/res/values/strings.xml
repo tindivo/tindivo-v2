@@ -317,12 +317,12 @@
     <string name="checkout_address_no_reference">Falta la referencia</string>
     <string name="checkout_address_no_location">Sin ubicación</string>
     <string name="checkout_address_unconfirmed">El punto del mapa no está confirmado</string>
-    <string name="checkout_address_fix">Completar en Mi cuenta</string>
+    <string name="checkout_address_fix">Corregir</string>
     <string name="checkout_contact_title">Contacto</string>
     <string name="checkout_name_label">Tu nombre</string>
     <string name="checkout_phone">Celular: %1$s</string>
     <string name="checkout_phone_missing">Sin teléfono verificado</string>
-    <string name="checkout_phone_verify">Verificar en Mi cuenta</string>
+    <string name="checkout_phone_verify">Verificar celular</string>
     <string name="checkout_note_label">Nota para el motorizado · opcional</string>
     <string name="checkout_note_hint">Ej. Toca el timbre dos veces; el perro ladra pero no muerde</string>
     <string name="checkout_note_support">La verá solo el motorizado, al salir a tu dirección.</string>
@@ -446,4 +446,12 @@
     <string name="account_profile_missing_message">Completa tu perfil para que el negocio y el motorizado sepan a quién entregar.</string>
     <string name="checkout_profile_title">Falta tu nombre</string>
     <string name="checkout_profile_message">Antes de pedir, dinos cómo te llamas para que el negocio y el motorizado sepan a quién entregar.</string>
+    <!-- Las hojas del checkout: lo que falta se resuelve encima, sin salir. -->
+    <string name="checkout_sheet_choose_title">Elige tu dirección</string>
+    <string name="checkout_sheet_add_title">Nueva dirección</string>
+    <string name="checkout_sheet_edit_title">Corrige tu dirección</string>
+    <string name="checkout_sheet_phone_title">Verifica tu celular</string>
+    <string name="checkout_sheet_profile_title">Completa tu perfil</string>
+    <string name="checkout_sheet_add_new">Agregar nueva</string>
+    <string name="checkout_sheet_close">Cerrar</string>
 </resources>

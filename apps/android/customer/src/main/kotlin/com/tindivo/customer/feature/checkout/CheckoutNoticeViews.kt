@@ -39,11 +39,14 @@ internal fun LoadFailedView(
 }
 
 @Composable
-internal fun ProfileRequiredView(actions: CheckoutActions) {
+internal fun ProfileRequiredView(
+    actions: CheckoutActions,
+    onComplete: () -> Unit,
+) {
     CheckoutFrame(actions.onBack) {
         Text(stringResource(R.string.checkout_profile_title), style = MaterialTheme.typography.titleLarge)
         Text(stringResource(R.string.checkout_profile_message))
-        BigButton(R.string.profile_complete, actions.onCompleteProfile)
+        BigButton(R.string.profile_complete, onComplete)
     }
 }
 

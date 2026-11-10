@@ -1,17 +1,13 @@
 package com.tindivo.customer.feature.checkout
 
 /**
- * Lo que el checkout le pide a la navegación. [onOpenAccount] es el ÚNICO punto de salida hacia Mi cuenta (agregar o
- * completar una dirección, verificar el celular): cuando lleguen las pantallas de direcciones y de verificación, se
- * recablea aquí y en ningún otro sitio.
+ * Lo que el checkout le pide a la navegación. Lo que falta para pedir (dirección, celular, nombre) ya no sale de aquí:
+ * se resuelve en hojas encima del checkout ([CheckoutSheet]).
  */
 class CheckoutActions(
     val onBack: () -> Unit,
     val onOrderOpened: (orderId: String) -> Unit,
-    val onOpenAccount: () -> Unit,
     val onOpenOrders: () -> Unit,
     val onSignIn: () -> Unit,
     val onSeeBusinesses: () -> Unit,
-    /** Abre «Completa tu perfil»; al volver con el perfil creado, el checkout se recarga. */
-    val onCompleteProfile: () -> Unit,
 )

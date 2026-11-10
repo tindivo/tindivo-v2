@@ -14,6 +14,7 @@ class CheckoutFormActions(
     val onConfirm: () -> Unit,
     val onOrdersOpened: () -> Unit,
     val onAcknowledge: () -> Unit,
+    val sheets: CheckoutSheetActions,
 ) {
     companion object {
         fun of(viewModel: CheckoutViewModel) =
@@ -30,6 +31,31 @@ class CheckoutFormActions(
                 onConfirm = viewModel::confirm,
                 onOrdersOpened = viewModel::ordersOpened,
                 onAcknowledge = viewModel::acknowledgeAndRetry,
+                sheets = CheckoutSheetActions.of(viewModel),
+            )
+    }
+}
+
+/** Abrir y cerrar las hojas del checkout, y lo que cada una devuelve al terminar. */
+class CheckoutSheetActions(
+    val onOpen: (CheckoutSheet) -> Unit,
+    val onClose: () -> Unit,
+    val onPickAddress: (String) -> Unit,
+    val onAddressSaved: (String) -> Unit,
+    val onAddressDeleted: () -> Unit,
+    val onPhoneVerified: () -> Unit,
+    val onProfileCompleted: () -> Unit,
+) {
+    companion object {
+        fun of(viewModel: CheckoutViewModel) =
+            CheckoutSheetActions(
+                onOpen = viewModel::openSheet,
+                onClose = viewModel::closeSheet,
+                onPickAddress = viewModel::pickAddress,
+                onAddressSaved = viewModel::onAddressSaved,
+                onAddressDeleted = viewModel::onAddressDeleted,
+                onPhoneVerified = viewModel::onPhoneVerified,
+                onProfileCompleted = viewModel::onProfileCompleted,
             )
     }
 }

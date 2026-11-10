@@ -26,8 +26,8 @@ import com.tindivo.customer.R
 @Composable
 internal fun CheckoutBottomBar(
     state: CheckoutUiState,
-    actions: CheckoutActions,
     form: CheckoutFormActions,
+    openSheet: (CheckoutSheet) -> Unit,
 ) {
     val cta = state.cta
     Surface(shadowElevation = 8.dp) {
@@ -44,7 +44,7 @@ internal fun CheckoutBottomBar(
                 )
             }
             Button(
-                onClick = { onCta(cta, actions, form) },
+                onClick = { onCta(cta, state.selectedAddressId, form, openSheet) },
                 enabled = cta != Cta.Sending,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             ) {
@@ -61,14 +61,17 @@ internal fun CheckoutBottomBar(
     }
 }
 
+/** Lo que falta se resuelve en su hoja ([sheet]); el resto del botón confirma o vuelve a cotizar. */
 private fun onCta(
     cta: Cta,
-    actions: CheckoutActions,
+    selectedAddressId: String?,
     form: CheckoutFormActions,
+    openSheet: (CheckoutSheet) -> Unit,
 ) {
+    val sheet = cta.sheet(selectedAddressId)
     when {
         cta.canConfirm -> form.onConfirm()
-        cta.sheet(null) != null -> actions.onOpenAccount()
+        sheet != null -> openSheet(sheet)
         cta == Cta.QuoteProblem -> form.onRetryQuote()
     }
 }

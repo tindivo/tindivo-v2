@@ -224,7 +224,7 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
     }
 }
 
-/** El checkout. Sale de aquí hacia Mi cuenta por un solo punto ([CheckoutActions.onOpenAccount]). */
+/** El checkout. Lo que falta para pedir (dirección, celular, nombre) se resuelve en hojas encima, sin salir de aquí. */
 private fun NavGraphBuilder.checkoutDestination(navController: NavHostController) {
     composable<CheckoutRoute> { entry ->
         CheckoutDestination(
@@ -240,12 +240,9 @@ private fun NavGraphBuilder.checkoutDestination(navController: NavHostController
                             launchSingleTop = true
                         }
                     },
-                    // Punto único hacia Mi cuenta (direcciones, verificar el celular): se recablea aquí cuando lleguen.
-                    onOpenAccount = { navController.navigate(AccountRoute) },
                     onOpenOrders = { navController.navigate(OrdersRoute) },
                     onSignIn = { navController.navigate(SignInRoute) },
                     onSeeBusinesses = { navController.popBackStack<CatalogHomeRoute>(inclusive = false) },
-                    onCompleteProfile = { navController.navigate(ProfileRoute) },
                 ),
         )
     }
