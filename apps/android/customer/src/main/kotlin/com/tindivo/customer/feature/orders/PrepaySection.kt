@@ -99,7 +99,7 @@ private fun ReadyContent(
     PrepayPayeeCard(amount = amount, payee = details.payee)
     if (state.send is SendState.Sent) {
         SentNotice()
-    } else if (state.countdown != PrepayCountdown.Expired) {
+    } else if (state.showsProofPicker) {
         ProofPicker(state = state, actions = actions)
     }
 }
