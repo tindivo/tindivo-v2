@@ -36,6 +36,11 @@ class FakeSessionStore(
         mutableState.value = SessionState.SignedIn(userId)
     }
 
+    /** La sesión se cierra sola (un refresco que falla), sin que nadie llame a [signOut]. */
+    fun switchToSignedOut() {
+        mutableState.value = SessionState.SignedOut
+    }
+
     override suspend fun signOut() {
         signOutCalls++
         mutableState.value = SessionState.SignedOut
@@ -49,5 +54,19 @@ class FakeSessionStore(
         if ((mutableState.value as? SessionState.SignedIn)?.userId != accountId) return false
         signOut()
         return true
+    }
+
+    /** Las cuentas que se pidió cerrar en el aparato, cerradas o no. */
+    val signOutLocallyCalls = mutableListOf<String>()
+
+    /** Corre dentro de [signOutLocally], antes de comprobar la cuenta: la prueba cambia la sesión ahí. */
+    var beforeSignOutLocally: () -> Unit = {}
+
+    override suspend fun signOutLocally(accountId: String): Boolean {
+        signOutLocallyCalls += accountId
+        beforeSignOutLocally()
+        val mine = (mutableState.value as? SessionState.SignedIn)?.userId == accountId
+        if (mine) mutableState.value = SessionState.SignedOut
+        return mine
     }
 }

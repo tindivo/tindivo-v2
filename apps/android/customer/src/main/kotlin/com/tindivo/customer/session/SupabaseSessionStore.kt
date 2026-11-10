@@ -124,6 +124,20 @@ internal class SupabaseSessionStore(
             }
         }
 
+    // Mismo criterio que signOut: no se corta a medias. Sin llamada a Auth: solo el candado, la comprobación y drop().
+    override suspend fun signOutLocally(accountId: String): Boolean =
+        withContext(NonCancellable) {
+            mutex.withLock {
+                restoreOnce()
+                if (current?.userId == accountId) {
+                    drop()
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+
     private suspend fun restoreOnce() {
         if (restored) return
         val snapshot =

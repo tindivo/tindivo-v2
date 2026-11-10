@@ -42,4 +42,11 @@ interface SessionStore : AccessTokenSource {
      * [accountId]: si para entonces la sesión ya es de otra cuenta, esa no se toca. Devuelve si cerró.
      */
     suspend fun signOutIf(accountId: String): Boolean
+
+    /**
+     * Cierra en el aparato la sesión de [accountId] sin llamar a Auth (la cuenta ya no existe en el servidor, así que
+     * no hay nada que revocar). Si la sesión vigente es de otra cuenta, o no hay ninguna, no toca nada y devuelve
+     * `false`. Comprobar la cuenta y cerrar es un solo paso: una entrada de otra cuenta no puede colarse en medio.
+     */
+    suspend fun signOutLocally(accountId: String): Boolean
 }
