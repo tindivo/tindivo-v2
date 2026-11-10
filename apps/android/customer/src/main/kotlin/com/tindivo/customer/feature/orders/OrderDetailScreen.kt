@@ -25,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import java.util.UUID
@@ -155,7 +156,7 @@ private fun OrderBody(
             Text(
                 text = stringResource(R.string.order_web_payment_notice),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.tertiary,
+                color = TindivoColors.onWarningContainer,
             )
         }
         order.driver?.let { DriverBlock(driver = it, onOpenLink = onOpenLink) }
