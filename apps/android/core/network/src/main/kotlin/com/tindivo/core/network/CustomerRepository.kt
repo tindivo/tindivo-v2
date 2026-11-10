@@ -4,6 +4,7 @@ import com.tindivo.core.network.generated.api.CustomerApi
 import com.tindivo.core.network.generated.api.OrdersApi
 import com.tindivo.core.network.generated.infrastructure.Success
 import com.tindivo.core.network.generated.model.AcceptTermsRequest
+import com.tindivo.core.network.generated.model.CancelOrder200ResponseData
 import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseData
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
@@ -129,6 +130,23 @@ class CustomerRepository(
     suspend fun order(id: UUID): ApiResult<GetCustomerOrder200ResponseData> =
         apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
             it.getCustomerOrderWithHttpInfo(id, null, null, null, null)
+        }.map { it.data }
+
+    /**
+     * `POST /customer/orders/{id}/cancel`: cancela un pedido propio mientras el negocio no lo acepta. La ventana la
+     * decide el servidor (`cancel_customer_order`, bajo `FOR UPDATE`): fuera de ella responde 409 con
+     * `order_not_cancellable` y el motivo en `detail`; uno ajeno o inexistente, 404.
+     *
+     * Solo sale con el token de [accountId] ([boundTo]), en cada intento real: si la sesión cambió de cuenta, no se
+     * envía nada y vuelve un [AppError.Network] con [AccountMismatchException]. [RetryInterceptor] no repite este `POST`
+     * (no lleva `Idempotency-Key`): un corte vuelve tal cual y quien llama vuelve a consultar el pedido.
+     */
+    suspend fun cancelOrder(
+        id: UUID,
+        accountId: String,
+    ): ApiResult<CancelOrder200ResponseData> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { OrdersApi(baseUrl, it) }) {
+            it.cancelOrderWithHttpInfo(id, null, null, null, null)
         }.map { it.data }
 
     private companion object {

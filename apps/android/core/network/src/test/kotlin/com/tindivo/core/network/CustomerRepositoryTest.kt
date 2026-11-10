@@ -229,7 +229,71 @@ class CustomerRepositoryTest {
             assertEquals("cursor-2", second.url.queryParameter("cursor"))
         }
 
+    @Test
+    fun `cancelOrder con 200 manda un POST a la ruta del pedido con el token de la cuenta`() =
+        runTest {
+            server.enqueue(json(200, CANCELLED))
+            val repository = accountRepository(SwitchableTokens(token = testJwt(ACCOUNT)))
+
+            val data = (repository.cancelOrder(ORDER_ID, ACCOUNT) as ApiResult.Success).data
+
+            assertEquals("cancelled", data.status)
+            assertEquals("customer_cancelled", data.cancelReason)
+            val request = server.takeRequest()
+            assertEquals("POST", request.method)
+            assertEquals("/api/v1/customer/orders/$ORDER_ID/cancel", request.url.encodedPath)
+            assertEquals("Bearer ${testJwt(ACCOUNT)}", request.headers["Authorization"])
+        }
+
+    @Test
+    fun `cancelOrder con 409 devuelve order_not_cancellable con el motivo del servidor`() =
+        runTest {
+            server.enqueue(json(409, NOT_CANCELLABLE, "application/problem+json"))
+            val repository = accountRepository(SwitchableTokens(token = testJwt(ACCOUNT)))
+
+            val error = (repository.cancelOrder(ORDER_ID, ACCOUNT) as ApiResult.Failure).error as AppError.Known
+
+            assertEquals(ApiErrorCode.OrderNotCancellable, error.code)
+            assertEquals(409, error.status)
+            assertEquals("Tu pedido ya fue aceptado por el restaurante y no puede cancelarse", error.detail)
+            assertEquals(1, server.requestCount)
+        }
+
+    @Test
+    fun `cancelOrder de una cuenta con la sesion de otra no envia nada`() =
+        runTest {
+            val tokens = SwitchableTokens(token = testJwt(OTHER_ACCOUNT))
+
+            val error = (accountRepository(tokens).cancelOrder(ORDER_ID, ACCOUNT) as ApiResult.Failure).error
+
+            assertTrue((error as AppError.Network).cause is AccountMismatchException)
+            assertEquals(0, server.requestCount)
+        }
+
+    @Test
+    fun `cancelOrder no se repite ante un 503`() =
+        runTest {
+            server.enqueue(json(503, INTERNAL, "application/problem+json"))
+            server.enqueue(json(200, CANCELLED))
+            val repository = accountRepository(SwitchableTokens(token = testJwt(ACCOUNT)))
+
+            assertTrue(repository.cancelOrder(ORDER_ID, ACCOUNT) is ApiResult.Failure)
+            assertEquals(1, server.requestCount)
+        }
+
     private companion object {
+        const val CANCELLED = """
+            {"data":{"id":"5b2a737a-018f-4c2d-9a11-6f0d3c1e8a01","status":"cancelled",
+             "cancelReason":"customer_cancelled"}}
+        """
+
+        const val NOT_CANCELLABLE = """
+            {"type":"about:blank","title":"No se puede cancelar","status":409,"code":"order_not_cancellable",
+             "detail":"Tu pedido ya fue aceptado por el restaurante y no puede cancelarse"}
+        """
+
+        const val INTERNAL = """{"type":"about:blank","title":"Error","status":503,"code":"internal_error"}"""
+
         const val ACCOUNT = "6f1c3a52-9d0e-4c1b-8a77-2f4e5d6c7b8a"
         const val OTHER_ACCOUNT = "0b9e8d7c-6a5f-4e3d-9c2b-1a0f9e8d7c6b"
 
