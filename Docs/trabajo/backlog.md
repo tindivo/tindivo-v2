@@ -16,6 +16,7 @@
 | 9 | **Libro de Reclamaciones** (Ley 29571): de Tindivo hacia el consumidor, formulario público sin sesión, copia por correo con Resend tras `RESEND_API_KEY`, datos del proveedor en `app_settings` | Obligación legal; en stand by hasta tener RUC (de persona natural con negocio basta) | Acordado 2026-08-16 |
 | 10 | **Avisos al cliente y tarjeta del motorizado**: dos propuestas de diseño publicadas en canvas, sin implementar | Retomarlas si se trabaja esa parte | Claude, sep 2026 |
 | 11 | **Decidir quién cubre un faltante de efectivo** (motorizado, negocio o Tindivo) | Nunca ha pasado en 340 rendiciones; se decide el día que ocurra | Squash del canon, 2026-10-10 |
+| 12 | **Anuncios pagados en la app del cliente:** los negocios pagan por aparecer destacados (portada, búsqueda, mapa), con la marca «Anuncio» visible y el cobro registrado como deuda del negocio | Una vía de ingreso aparte de la comisión por pedido. Toca dinero (invariante 9 y Codex) y se cruza con los bloques de inicio (D-52), con [`campanas/propuesta.md`](campanas/propuesta.md) y con la fila de publicidad del backlog viejo (más abajo). Falta decidir qué se vende, cómo se cobra y si entra antes o después de publicar | Jesús, 2026-11-10 |
 
 ## Del backlog viejo (fusionado el 2026-10-10)
 
