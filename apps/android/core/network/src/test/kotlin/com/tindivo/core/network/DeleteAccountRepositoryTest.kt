@@ -67,6 +67,20 @@ class DeleteAccountRepositoryTest {
         }
 
     @Test
+    fun `otro 2xx que no es 204 no confirma el borrado`() =
+        runTest {
+            server.enqueue(MockResponse(code = 200))
+            server.enqueue(MockResponse(code = 202))
+
+            val first = repository().deleteAccount(ACCOUNT)
+            val second = repository().deleteAccount(ACCOUNT)
+
+            assertEquals(ApiResult.Failure(AppError.Unknown(code = null, detail = "HTTP 200")), first)
+            assertEquals(ApiResult.Failure(AppError.Unknown(code = null, detail = "HTTP 202")), second)
+            assertEquals(2, server.requestCount)
+        }
+
+    @Test
     fun `409 trae el motivo del servidor tal cual en detail`() =
         runTest {
             server.enqueue(problem(409, "conflict", MOTIVO))

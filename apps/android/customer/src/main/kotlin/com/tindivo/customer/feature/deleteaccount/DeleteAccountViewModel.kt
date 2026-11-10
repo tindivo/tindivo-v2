@@ -39,6 +39,12 @@ internal enum class DeletePhase {
 
     /** La sesión con la que se abrió terminó (se cerró o es otra cuenta): se sale sin decir «borrada». */
     Left,
+
+    /**
+     * Volvió un 401: la sesión se cerró, pero eso no prueba que la cuenta se borró (también lo da una cuenta viva cuyo
+     * refresco falló). No se soltó nada de ella; la pantalla lo dice y solo deja volver.
+     */
+    Unconfirmed,
 }
 
 /** Lo que la pantalla le dice a la persona cuando no se pudo borrar. */
@@ -51,6 +57,9 @@ internal sealed interface DeleteNotice {
 
     /** Sin conexión, un 5xx o una respuesta que no se entiende: no se sabe si se borró; se puede volver a intentar. */
     data object Failed : DeleteNotice
+
+    /** Un 401: no se pudo confirmar que se borró. La sesión ya está cerrada; al volver a entrar se ve qué pasó. */
+    data object Unconfirmed : DeleteNotice
 }
 
 internal data class DeleteAccountUiState(
@@ -67,10 +76,11 @@ internal data class DeleteAccountUiState(
  * Borrar la cuenta (Google Play la exige dentro de la app). El `DELETE` sale solo para la cuenta que abrió la pantalla
  * ([owner]) y solo de un toque; con uno en curso los siguientes no hacen nada, y nunca se repite solo.
  *
- * El resultado se aplica a esa cuenta aunque la sesión haya cambiado mientras tanto: 204 o 401 (la identidad ya no
- * existe) sueltan lo local de ella ([DeletedAccountCleanup]); si otra cuenta entró, no se toca nada suyo y la pantalla
- * se cierra sin decir «borrada». Un corte o un timeout no prueban nada: se dice que no se pudo y, al reintentar, un 401
- * significa que el primer intento sí la borró.
+ * El resultado se aplica a esa cuenta aunque la sesión haya cambiado mientras tanto: solo un 204 suelta lo local de
+ * ella ([DeletedAccountCleanup]); si otra cuenta entró, no se toca nada suyo y la pantalla se cierra sin decir
+ * «borrada». Un 401 no prueba que se borró (una cuenta viva cuyo refresco falló también lo recibe): se cierra la sesión
+ * como ante cualquier 401, se conservan el intento de pedido y la bolsa, y se dice que no se pudo confirmar. Un corte o
+ * un timeout tampoco prueban nada: se dice que no se pudo y se puede reintentar.
  */
 @HiltViewModel
 internal class DeleteAccountViewModel
@@ -129,8 +139,13 @@ internal class DeleteAccountViewModel
                 }
             }
             // Con un borrado en curso, lo decide su resultado; sin él, una sesión que terminó cierra la pantalla.
+            // «No pudimos confirmar» es para la cuenta que confirmó: si entra otra, la pantalla se cierra sin decirlo.
             val ended = session is SessionState.SignedOut || otherAccountSeen
-            if (ended) _state.update { if (it.phase == DeletePhase.Ready) it.copy(phase = DeletePhase.Left) else it }
+            _state.update {
+                val leaves =
+                    (ended && it.phase == DeletePhase.Ready) || (otherAccountSeen && it.phase == DeletePhase.Unconfirmed)
+                if (leaves) it.copy(phase = DeletePhase.Left, notice = null) else it
+            }
         }
 
         private suspend fun settle(
@@ -138,10 +153,14 @@ internal class DeleteAccountViewModel
             result: ApiResult<Unit>,
         ) {
             val error = (result as? ApiResult.Failure)?.error
-            if (error == null || error.isUnauthorized()) {
-                // 204, o 401 tras el refresco: la cuenta ya no existe. Soltar lo local no se corta a medias.
+            if (error == null) {
+                // 204: la cuenta ya no existe. Soltar lo local no se corta a medias.
                 val mine = withContext(NonCancellable) { cleanup.clean(account) { isStillOwners(account) } }
                 _state.update { it.copy(typed = "", phase = if (mine) DeletePhase.Deleted else DeletePhase.Left) }
+                return
+            }
+            if (error.isUnauthorized()) {
+                unconfirmed(account)
                 return
             }
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
@@ -150,6 +169,20 @@ internal class DeleteAccountViewModel
                     it.copy(phase = DeletePhase.Ready, notice = error.toNotice())
                 } else {
                     // La sesión ya no es la de la cuenta que confirmó: el aviso no es para quien está ahora.
+                    it.copy(phase = DeletePhase.Left, notice = null)
+                }
+            }
+        }
+
+        // Un 401 sin confirmación: el cierre de sesión de siempre (si sigue la de esa cuenta; si el refresco falló, el
+        // almacén ya la cerró) y nada más. El libro de intentos y la bolsa se quedan: si la cuenta sigue viva, al volver
+        // a entrar el checkout aún puede reconciliar un pedido incierto.
+        private suspend fun unconfirmed(account: String) {
+            if (isOwnerSignedIn(account)) withContext(NonCancellable) { sessionStore.signOut() }
+            _state.update {
+                if (isStillOwners(account)) {
+                    it.copy(typed = "", phase = DeletePhase.Unconfirmed, notice = DeleteNotice.Unconfirmed)
+                } else {
                     it.copy(phase = DeletePhase.Left, notice = null)
                 }
             }

@@ -95,8 +95,10 @@ class CustomerRepository(
         }.map { it.data }
 
     /**
-     * `DELETE /customer/account`: borra la cuenta del token, y solo esa (el servidor no recibe ningún id). 204 = borrada;
-     * 409 con el motivo en `detail` = no se puede ahora; 401 tras el refresco = la identidad ya no existe.
+     * `DELETE /customer/account`: borra la cuenta del token, y solo esa (el servidor no recibe ningún id). Solo un 204
+     * confirma que se borró; otro 2xx llega como [AppError.Unknown] (no se sabe qué pasó). 409 con el motivo en
+     * `detail` = no se puede ahora. Un 401 no prueba nada: también lo da una cuenta viva cuya sesión no se pudo
+     * refrescar (sin red, revocada).
      *
      * Solo sale con el token de [accountId] ([boundTo]), en cada intento real (también el que repite
      * [BearerAuthInterceptor] tras un 401): si la sesión cambió de cuenta, no se envía nada y vuelve un
@@ -105,9 +107,22 @@ class CustomerRepository(
      */
     suspend fun deleteAccount(accountId: String): ApiResult<Unit> =
         apiCall(client.boundTo(accountId), ioDispatcher, { CustomerApi(baseUrl, it) }) {
-            // Un 204 no trae cuerpo y el cliente generado lo entrega como `null`: aquí es un éxito con Unit.
+            // Un 204 no trae cuerpo y el cliente generado lo entrega como `null`: aquí es un éxito con Unit. Otro 2xx no
+            // es la respuesta documentada: sin dato, `apiCall` lo entrega como ilegible.
             val response = it.deleteCustomerAccountWithHttpInfo(null, null, null, null)
-            if (response is Success) Success(Unit, response.statusCode, response.headers) else response
+            when {
+                response is Success && response.statusCode == HTTP_NO_CONTENT -> {
+                    Success(Unit, response.statusCode, response.headers)
+                }
+
+                response is Success -> {
+                    Success(null, response.statusCode, response.headers)
+                }
+
+                else -> {
+                    response
+                }
+            }
         }
 
     /** `GET /customer/orders/{id}`: el detalle de un pedido del cliente. Uno ajeno o inexistente llega como 404. */
@@ -134,4 +149,5 @@ fun AppError.isProfileMissing(): Boolean =
         detail == PROFILE_NOT_FOUND_DETAIL
 
 private const val HTTP_NOT_FOUND = 404
+private const val HTTP_NO_CONTENT = 204
 private const val PROFILE_NOT_FOUND_DETAIL = "customer_profile_not_found"
