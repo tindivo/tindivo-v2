@@ -86,5 +86,4 @@ internal class AndroidProofImageEncoder
             decoded.recycle()
             return if (written) finishProofJpeg(out.toByteArray()) else EncodedProof.Unreadable
         }
-
     }

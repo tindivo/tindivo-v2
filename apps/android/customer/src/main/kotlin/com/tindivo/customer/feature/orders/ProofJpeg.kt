@@ -64,8 +64,14 @@ private const val BITS_PER_BYTE = 8
 private const val SEGMENT_HEADER = 4
 private const val MIN_SEGMENT_LENGTH = 2
 
+private const val SOF_FIRST = 0xC0
+private const val SOF_LAST = 0xCF
+private const val DHT = 0xC4
+private const val JPG = 0xC8
+private const val DAC = 0xCC
+
 /** Los SOF que llevan dimensiones (todos los C0–CF salvo DHT C4, JPG C8 y DAC CC). */
-private val FRAME_MARKERS = setOf(0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF)
+private val FRAME_MARKERS = (SOF_FIRST..SOF_LAST).toSet() - setOf(DHT, JPG, DAC)
 
 private fun ByteArray.u8(index: Int): Int = this[index].toInt() and BYTE_MASK
 
@@ -84,13 +90,21 @@ private fun ByteArray.walkHeader(onSegment: (marker: Int, start: Int, length: In
     while (sos == null && index + 1 < size && u8(index) == MARKER) {
         val marker = u8(index + 1)
         when {
-            marker == MARKER -> index++ // relleno entre segmentos
+            marker == MARKER -> {
+                index++ // relleno entre segmentos
+            }
 
-            marker == TEM || marker in RST_FIRST..RST_LAST -> index += 2
+            marker == TEM || marker in RST_FIRST..RST_LAST -> {
+                index += 2
+            }
 
-            marker == SOS -> sos = index
+            marker == SOS -> {
+                sos = index
+            }
 
-            marker == EOI || marker == SOI || index + SEGMENT_HEADER > size -> return null
+            marker == EOI || marker == SOI || index + SEGMENT_HEADER > size -> {
+                return null
+            }
 
             else -> {
                 val length = u16(index + 2)

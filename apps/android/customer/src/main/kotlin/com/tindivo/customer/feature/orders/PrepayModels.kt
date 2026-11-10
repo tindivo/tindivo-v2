@@ -107,6 +107,14 @@ internal data class PrepayUiState(
                 countdown != PrepayCountdown.Expired
 }
 
+/** Lo que la sección puede pedirle a su ViewModel. */
+internal data class PrepayActions(
+    val load: () -> Unit = {},
+    val retryInfo: () -> Unit = {},
+    val onPhotoPicked: (String?) -> Unit = {},
+    val send: () -> Unit = {},
+)
+
 private const val AWAITING_PAYMENT = "awaiting_payment"
 private const val MILLIS_PER_MINUTE = 60_000L
 

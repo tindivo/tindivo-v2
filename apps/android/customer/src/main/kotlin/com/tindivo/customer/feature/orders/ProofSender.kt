@@ -122,9 +122,13 @@ internal class ProofSender(
             }
 
             // Sin saber si llegó: el reintento pide otra URL (la firmada es de un solo uso) y sube de nuevo.
-            is UploadOutcome.Network -> Halted(SendStep.Stopped(SendProblem.Offline))
+            is UploadOutcome.Network -> {
+                Halted(SendStep.Stopped(SendProblem.Offline))
+            }
 
-            is UploadOutcome.Rejected -> Halted(SendStep.Stopped(SendProblem.Generic))
+            is UploadOutcome.Rejected -> {
+                Halted(SendStep.Stopped(SendProblem.Generic))
+            }
         }
     }
 

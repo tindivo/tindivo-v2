@@ -29,7 +29,8 @@ class ProofUploaderTest {
         server.close()
     }
 
-    private fun uploader() = ProofUploader(routedToServer(createStorageUploadClient(), server), UnconfinedTestDispatcher())
+    private fun uploader() =
+        ProofUploader(routedToServer(createStorageUploadClient(), server), UnconfinedTestDispatcher())
 
     private fun target(raw: String = "$ORIGIN$PREFIX$PATH?token=tok") = StorageUploadTarget.parse(raw, PATH, origin)
 

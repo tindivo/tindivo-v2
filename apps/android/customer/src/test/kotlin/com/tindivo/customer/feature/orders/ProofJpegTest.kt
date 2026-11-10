@@ -169,7 +169,8 @@ class ProofJpegTest {
     private fun insertAfterSoi(
         jpeg: ByteArray,
         vararg segments: ByteArray,
-    ): ByteArray = jpeg.copyOfRange(0, 2) + segments.fold(ByteArray(0)) { acc, s -> acc + s } + jpeg.copyOfRange(2, jpeg.size)
+    ): ByteArray =
+        jpeg.copyOfRange(0, 2) + segments.fold(ByteArray(0)) { acc, s -> acc + s } + jpeg.copyOfRange(2, jpeg.size)
 
     private fun bytes(vararg values: Int): ByteArray = ByteArray(values.size) { values[it].toByte() }
 
