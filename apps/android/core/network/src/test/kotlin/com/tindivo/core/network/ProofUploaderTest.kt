@@ -102,6 +102,26 @@ class ProofUploaderTest {
         }
 
     @Test
+    fun `un 503 con Retry-After 0 no repite el PUT`() =
+        runTest {
+            // OkHttp repite por su cuenta un 503 con `Retry-After: 0` si el cuerpo se puede volver a enviar (CAX-001).
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(503)
+                    .addHeader("Retry-After", "0")
+                    .build(),
+            )
+            server.enqueue(MockResponse.Builder().code(200).build())
+
+            val outcome = uploader().upload(checkNotNull(target()), PHOTO)
+
+            assertEquals(UploadOutcome.Rejected(503), outcome)
+            // El 200 que quedó en cola nunca se pidió: salió un solo PUT.
+            assertEquals(1, server.requestCount)
+        }
+
+    @Test
     fun `el PUT no lleva token, cabeceras de la app ni cookies`() =
         runTest {
             server.enqueue(MockResponse.Builder().code(200).build())
