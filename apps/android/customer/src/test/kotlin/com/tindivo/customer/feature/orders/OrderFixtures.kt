@@ -9,7 +9,7 @@ import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseDat
 import java.util.UUID
 
 internal val ORDER_ID: UUID = UUID.fromString("5b2a737a-018f-4c2d-9a11-6f0d3c1e8a01")
-private val BUSINESS_ID: UUID = UUID.fromString("6b2a737a-018f-4c2d-9a11-6f0d3c1e8a02")
+internal val BUSINESS_ID: UUID = UUID.fromString("6b2a737a-018f-4c2d-9a11-6f0d3c1e8a02")
 
 internal fun listItem(
     status: String = "preparing",
@@ -20,14 +20,17 @@ internal fun listItem(
     businessName: String? = "Pollería Rosa",
     amount: String = "45.00",
     deliveredAt: String? = null,
+    paymentIntent: String = "pending_cash",
+    cancelReason: String? = null,
+    id: UUID = ORDER_ID,
 ) = ListCustomerOrders200ResponseDataItemsInner(
-    id = ORDER_ID,
+    id = id,
     shortId = "ABCD2345",
     orderNumber = 12,
     status = status,
     deliveryMethod = "delivery",
-    paymentIntent = "pending_cash",
-    cancelReason = null,
+    paymentIntent = paymentIntent,
+    cancelReason = cancelReason,
     businessId = BUSINESS_ID,
     businessName = businessName,
     amount = amount,

@@ -248,6 +248,8 @@
     <string name="order_support_link">¿Algún problema? Escríbenos</string>
     <string name="order_support_whatsapp">Escribir por WhatsApp</string>
     <string name="order_back_to_menu">Volver al menú</string>
+    <string name="order_support_cancelled">¿Problema con este pedido?</string>
+    <string name="order_reorder">Volver a pedir</string>
 
     <string name="order_driver_label">Tu motorizado</string>
     <string name="order_driver_at_door">Ya está en tu domicilio y no logra ubicarte.</string>

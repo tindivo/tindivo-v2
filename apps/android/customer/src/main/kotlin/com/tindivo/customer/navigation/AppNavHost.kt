@@ -233,6 +233,7 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                     onBack = { navController.popBackStack() },
                     onOpenOrder = { id -> navController.navigate(OrderDetailRoute(id)) },
                     onExplore = { navController.popBackStack(CatalogHomeRoute, inclusive = false) },
+                    onReorder = { businessId -> navController.navigate(BusinessRoute(businessId)) },
                 )
             }
             composable<OrderDetailRoute> {

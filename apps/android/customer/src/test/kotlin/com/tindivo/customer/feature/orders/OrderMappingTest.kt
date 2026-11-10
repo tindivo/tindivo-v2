@@ -304,6 +304,32 @@ class OrderMappingTest {
     }
 
     @Test
+    fun `volver a pedir abre el negocio del pedido salvo con el comprobante rechazado del todo`() {
+        fun card(
+            status: String,
+            reason: String? = null,
+        ) = page(listItem(status = status, cancelReason = reason)).toPageUi(now)?.items?.single()
+
+        assertEquals(BUSINESS_ID, card("delivered")?.businessId)
+        assertTrue(card("delivered")?.reorderable == true)
+        assertTrue(card("preparing")?.reorderable == true)
+        assertTrue(card("cancelled", "customer_cancelled")?.reorderable == true)
+        assertFalse(card("cancelled", "proof_rejected_final")?.reorderable == true)
+    }
+
+    @Test
+    fun `falta tu pago solo en un prepago esperando el pago`() {
+        fun awaiting(
+            status: String,
+            intent: String,
+        ) = page(listItem(status = status, paymentIntent = intent)).toPageUi(now)?.items?.single()?.awaitingPayment
+
+        assertEquals(true, awaiting("awaiting_payment", "prepaid"))
+        assertEquals(false, awaiting("awaiting_payment", "pending_cash"))
+        assertEquals(false, awaiting("pending_acceptance", "prepaid"))
+    }
+
+    @Test
     fun `cancelar se ofrece donde lo permite cancel_customer_order`() {
         fun offer(
             status: String,
