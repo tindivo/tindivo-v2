@@ -2,6 +2,7 @@ package com.tindivo.core.network
 
 import com.tindivo.core.network.generated.api.CustomerApi
 import com.tindivo.core.network.generated.api.OrdersApi
+import com.tindivo.core.network.generated.infrastructure.Success
 import com.tindivo.core.network.generated.model.AcceptTermsRequest
 import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseData
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
@@ -92,6 +93,22 @@ class CustomerRepository(
         apiCall(client.boundTo(accountId), ioDispatcher, { OrdersApi(baseUrl, it) }) {
             it.listCustomerOrdersWithHttpInfo(PAGE_SIZE, cursor, null, null, null, null)
         }.map { it.data }
+
+    /**
+     * `DELETE /customer/account`: borra la cuenta del token, y solo esa (el servidor no recibe ningún id). 204 = borrada;
+     * 409 con el motivo en `detail` = no se puede ahora; 401 tras el refresco = la identidad ya no existe.
+     *
+     * Solo sale con el token de [accountId] ([boundTo]), en cada intento real (también el que repite
+     * [BearerAuthInterceptor] tras un 401): si la sesión cambió de cuenta, no se envía nada y vuelve un
+     * [AppError.Network] con [AccountMismatchException]. [RetryInterceptor] no repite un `DELETE`: un corte o un 5xx
+     * vuelven tal cual, y quien llama decide si se vuelve a intentar.
+     */
+    suspend fun deleteAccount(accountId: String): ApiResult<Unit> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { CustomerApi(baseUrl, it) }) {
+            // Un 204 no trae cuerpo y el cliente generado lo entrega como `null`: aquí es un éxito con Unit.
+            val response = it.deleteCustomerAccountWithHttpInfo(null, null, null, null)
+            if (response is Success) Success(Unit, response.statusCode, response.headers) else response
+        }
 
     /** `GET /customer/orders/{id}`: el detalle de un pedido del cliente. Uno ajeno o inexistente llega como 404. */
     suspend fun order(id: UUID): ApiResult<GetCustomerOrder200ResponseData> =
