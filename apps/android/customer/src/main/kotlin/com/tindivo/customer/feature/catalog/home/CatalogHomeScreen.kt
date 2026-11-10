@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -175,7 +175,6 @@ private fun BusinessList(
 }
 
 private val LOGO_SIZE = 72.dp
-private val LOGO_SHAPE = RoundedCornerShape(16.dp)
 private const val CLOSED_ALPHA = 0.45f
 
 /** Gris para el logo de un negocio cerrado: es la señal grande de «hoy no»; el chip la confirma. */
@@ -238,7 +237,7 @@ private fun BusinessCard(
 @Composable
 private fun BusinessLogo(business: BusinessCardUi) {
     val tone = if (business.closed) Modifier.alpha(CLOSED_ALPHA) else Modifier
-    val logoModifier = Modifier.size(LOGO_SIZE).clip(LOGO_SHAPE).then(tone)
+    val logoModifier = Modifier.size(LOGO_SIZE).clip(MaterialTheme.shapes.medium).then(tone)
     if (business.logoUrl != null) {
         // Decorativo a propósito: el nombre está al lado, y un contentDescription lo haría sonar dos veces.
         AsyncImage(
@@ -271,7 +270,7 @@ private fun Chip(
     warning: Boolean,
 ) {
     Surface(
-        shape = RoundedCornerShape(50),
+        shape = CircleShape,
         color =
             if (warning) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer,
     ) {

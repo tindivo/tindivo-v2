@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +49,7 @@ internal fun BusinessHeader(business: BusinessDetailUi) {
 
 @Composable
 private fun BusinessLogo(business: BusinessDetailUi) {
-    val logoModifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp))
+    val logoModifier = Modifier.size(56.dp).clip(MaterialTheme.shapes.small)
     if (business.logoUrl != null) {
         // Decorativo a propósito: el nombre está al lado, y un contentDescription lo haría sonar dos veces.
         AsyncImage(
