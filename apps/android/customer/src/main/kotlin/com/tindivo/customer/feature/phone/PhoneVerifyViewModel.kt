@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.phone
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tindivo.core.network.AccountMismatchException
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
@@ -11,8 +12,8 @@ import com.tindivo.core.network.generated.model.SendPhoneCodeRequest
 import com.tindivo.core.network.generated.model.TransferCustomerPhoneRequest
 import com.tindivo.core.network.generated.model.VerifyPhoneCodeRequest
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
-import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -79,6 +80,10 @@ internal data class PhoneUiState(
  * Verificar el teléfono por SMS (D-22) y trasladarlo si está en otra cuenta (D-63). Ningún POST se repite solo: cada
  * llamada sale de un toque, y con una en curso los toques siguientes no hacen nada. Al cerrarse la sesión se cancela
  * lo que haya en vuelo, se borra el estado (código y permiso de traslado incluidos) y no se vuelve a llamar.
+ *
+ * Todo va atado a la cuenta con la que se abrió la pantalla: cada llamada sale solo con su token (`boundTo` en
+ * [PhoneRepository]), así que el número y el código de esa cuenta nunca se verifican ni se trasladan con el token de
+ * otra. Un resultado que llega cuando la sesión vigente ya no es esa cuenta no se publica.
  */
 @HiltViewModel
 internal class PhoneVerifyViewModel
@@ -92,6 +97,9 @@ internal class PhoneVerifyViewModel
         private val _state = MutableStateFlow(PhoneUiState())
         val state: StateFlow<PhoneUiState> = _state.asStateFlow()
 
+        /** La cuenta con la que se abrió la pantalla; sin cuenta, la pantalla nace cerrada y no llama. */
+        private val accountId: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+
         private var work: Job? = null
         private var ticker: Job? = null
         private var resendAt: Instant = Instant.EPOCH
@@ -100,8 +108,13 @@ internal class PhoneVerifyViewModel
         private var closed = false
 
         init {
-            val watch = SessionWatch()
-            viewModelScope.launch { sessionStore.state.collect { if (watch.ended(it)) endSession() } }
+            if (accountId == null) endSession()
+            viewModelScope.launch {
+                sessionStore.state.collect { session ->
+                    val foreign = session is SessionState.SignedIn && session.userId != accountId
+                    if (session is SessionState.SignedOut || foreign) endSession()
+                }
+            }
         }
 
         fun onPhoneChanged(text: String) {
@@ -122,14 +135,14 @@ internal class PhoneVerifyViewModel
                 fail(PhoneError.InvalidNumber)
                 return
             }
-            launchCall { sendAndAdvance(phone) }
+            launchCall { sendAndAdvance(phone, it) }
         }
 
         /** «Reenviar código»: solo cuando pasaron los 60 s. */
         fun resend() {
             val current = _state.value
             if (closed || current.step != PhoneStep.Code || clock.instant().isBefore(resendAt)) return
-            launchCall { sendAndAdvance(current.phone) }
+            launchCall { sendAndAdvance(current.phone, it) }
         }
 
         fun verify() {
@@ -139,10 +152,11 @@ internal class PhoneVerifyViewModel
                 fail(PhoneError.InvalidCode)
                 return
             }
-            launchCall {
-                when (val result = phones.verify(VerifyPhoneCodeRequest(phone = current.phone, code = current.code))) {
-                    is ApiResult.Success -> finish(result.data.phone)
-                    is ApiResult.Failure -> onFailure(result.error, offersTransfer = true)
+            launchCall { account ->
+                val request = VerifyPhoneCodeRequest(phone = current.phone, code = current.code)
+                when (val result = phones.verify(request, account)) {
+                    is ApiResult.Success -> finish(result.data.phone, account)
+                    is ApiResult.Failure -> onFailure(result.error, account, offersTransfer = true)
                 }
             }
         }
@@ -163,10 +177,11 @@ internal class PhoneVerifyViewModel
                 }
                 return
             }
-            launchCall {
-                when (val result = phones.transfer(TransferCustomerPhoneRequest(challengeId = offer.challengeId))) {
-                    is ApiResult.Success -> finish(result.data.phone)
-                    is ApiResult.Failure -> onFailure(result.error, offersTransfer = false)
+            launchCall { account ->
+                val request = TransferCustomerPhoneRequest(challengeId = offer.challengeId)
+                when (val result = phones.transfer(request, account)) {
+                    is ApiResult.Success -> finish(result.data.phone, account)
+                    is ApiResult.Failure -> onFailure(result.error, account, offersTransfer = false)
                 }
             }
         }
@@ -199,27 +214,33 @@ internal class PhoneVerifyViewModel
             _state.value = PhoneUiState()
         }
 
-        private suspend fun sendAndAdvance(phone: String) {
-            when (val result = phones.sendCode(SendPhoneCodeRequest(phone = phone))) {
+        private suspend fun sendAndAdvance(
+            phone: String,
+            account: String,
+        ) {
+            when (val result = phones.sendCode(SendPhoneCodeRequest(phone = phone), account)) {
                 is ApiResult.Success -> {
                     if (result.data.verified == true) {
                         // Simulacro local: el número ya quedó verificado y no hay código que pedir.
-                        finish("$PREFIX$phone")
-                    } else {
-                        settle { it.copy(step = PhoneStep.Code, code = "", transfer = null) }
+                        finish("$PREFIX$phone", account)
+                    } else if (settle(account) { it.copy(step = PhoneStep.Code, code = "", transfer = null) }) {
                         startCountdown()
                     }
                 }
 
                 is ApiResult.Failure -> {
-                    onFailure(result.error, offersTransfer = true)
+                    onFailure(result.error, account, offersTransfer = true)
                 }
             }
         }
 
-        private suspend fun finish(phone: String) {
+        private suspend fun finish(
+            phone: String,
+            account: String,
+        ) {
+            if (!isCurrent(account)) return endSession()
             ticker?.cancel()
-            settle {
+            settle(account) {
                 PhoneUiState(step = PhoneStep.Done, phone = it.phone, verifiedPhone = phone)
             }
         }
@@ -245,19 +266,34 @@ internal class PhoneVerifyViewModel
             return if (millis <= 0) 0 else ((millis + MILLIS_PER_SECOND - 1) / MILLIS_PER_SECOND).toInt()
         }
 
-        /** Una sola llamada a la vez: con otra en curso, o con la sesión cerrada, el toque no hace nada. */
-        private fun launchCall(block: suspend () -> Unit) {
+        /**
+         * Una sola llamada a la vez: con otra en curso, o con la sesión cerrada, el toque no hace nada. [block] recibe la
+         * cuenta de la pantalla; si la sesión vigente ya es otra, no se llama y la pantalla se cierra.
+         */
+        private fun launchCall(block: suspend (account: String) -> Unit) {
             val current = _state.value
             if (closed || current.sending || current.loggedOut) return
+            val account = accountId ?: return endSession()
+            if (!isCurrent(account)) return endSession()
             _state.update { it.copy(sending = true, error = null) }
-            work = viewModelScope.launch { block() }
+            work = viewModelScope.launch { block(account) }
         }
+
+        /** Sigue siendo la cuenta de la pantalla: no se cerró Y la sesión vigente, leída ahora, es la de [account]. */
+        private fun isCurrent(account: String) =
+            !closed && (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
 
         private suspend fun onFailure(
             error: AppError,
+            account: String,
             offersTransfer: Boolean,
         ) {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
+            if (error is AppError.Network && error.cause is AccountMismatchException) {
+                // La sesión ya es de otra cuenta: no salió nada. Se cierra la pantalla sin tocar la sesión nueva.
+                endSession()
+                return
+            }
             if (error.isUnauthorized()) {
                 // El servidor no reconoce la sesión: se cierra aquí también. El cierre cancela esta misma llamada.
                 withContext(NonCancellable) { sessionStore.signOut() }
@@ -265,7 +301,7 @@ internal class PhoneVerifyViewModel
                 return
             }
             val offer = if (offersTransfer) (error as? AppError.Known)?.takeIf { it.isConflict() }?.transfer else null
-            settle { it.copy(error = if (offer == null) error.toPhoneError() else null, transfer = offer) }
+            settle(account) { it.copy(error = if (offer == null) error.toPhoneError() else null, transfer = offer) }
         }
 
         /** Un error de validación local; con la sesión cerrada no toca el estado. */
@@ -274,10 +310,21 @@ internal class PhoneVerifyViewModel
             _state.update { if (it.loggedOut) it else it.copy(error = error) }
         }
 
-        /** Lo que llega después de cerrar la sesión, o de una llamada cancelada al cerrar la hoja, no se publica. */
-        private suspend fun settle(next: (PhoneUiState) -> PhoneUiState) {
-            if (closed || !currentCoroutineContext().isActive) return
+        /**
+         * Lo que llega después de cerrar la sesión, con la sesión ya en otra cuenta, o de una llamada cancelada al cerrar
+         * la hoja, no se publica. Devuelve si se publicó.
+         */
+        private suspend fun settle(
+            account: String,
+            next: (PhoneUiState) -> PhoneUiState,
+        ): Boolean {
+            if (closed || !currentCoroutineContext().isActive) return false
+            if (!isCurrent(account)) {
+                endSession()
+                return false
+            }
             _state.update { if (it.loggedOut) it else next(it).copy(sending = false) }
+            return true
         }
 
         private fun endSession() {

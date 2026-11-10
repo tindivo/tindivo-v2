@@ -1,12 +1,15 @@
 package com.tindivo.customer.feature.phone
 
+import com.tindivo.core.network.BearerAuthInterceptor
 import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.PhoneRepository
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.checkout.sessionJwt
 import com.tindivo.customer.session.FakeSessionStore
+import com.tindivo.customer.session.GatedTokens
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +50,7 @@ class PhoneVerifyViewModelTest {
     private val server = MockWebServer()
     private val dispatcher = UnconfinedTestDispatcher()
     private val store = FakeSessionStore()
+    private val tokens = GatedTokens(sessionJwt("user-1"))
     private val clock = MutableClock(Instant.parse("2026-10-30T15:00:00Z"))
     private lateinit var baseUrl: String
     private lateinit var configService: ConfigService
@@ -66,8 +70,13 @@ class PhoneVerifyViewModelTest {
         Dispatchers.resetMain()
     }
 
+    // El cliente real con el autenticador real: cada llamada del celular va atada a la cuenta (`boundTo`).
     private fun client() =
-        createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = RetryInterceptor(sleeper = { _, _ -> }))
+        createOkHttpClient(
+            ClientInfo("customer", "0.1.0", "1"),
+            retry = RetryInterceptor(sleeper = { _, _ -> }),
+            auth = BearerAuthInterceptor(server.url("/"), tokens),
+        )
 
     private fun viewModel(io: CoroutineDispatcher = dispatcher) =
         PhoneVerifyViewModel(PhoneRepository(baseUrl, client(), io), store, configService, clock)
