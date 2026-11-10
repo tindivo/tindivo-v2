@@ -88,13 +88,10 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
         reference = if (pickup) null else deliveryReference,
         customerNotes = customerNotes,
         driver = driverOf(phase),
-        webPaymentNotice = needsWebPayment(),
+        webAppealNotice = cancelReason == "proof_rejected_final",
+        awaitingPrepayment = payment.prepaid && status == "awaiting_payment",
     )
 }
-
-/** Pagar un prepago o apelar un comprobante rechazado solo se puede en la web: la app aún no sube comprobantes. */
-private fun GetCustomerOrder200ResponseData.needsWebPayment(): Boolean =
-    (paymentIntent == PREPAID && status == "awaiting_payment") || cancelReason == "proof_rejected_final"
 
 private fun GetCustomerOrder200ResponseDataItemsInner.toLineUi(): OrderLineUi? {
     val lineText = apiMoneyTextOrNull(lineTotal)

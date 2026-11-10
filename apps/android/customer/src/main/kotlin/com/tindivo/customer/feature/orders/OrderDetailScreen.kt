@@ -36,11 +36,17 @@ internal fun OrderDetailDestination(
     canRate: (UUID) -> Boolean = { false },
     onRate: () -> Unit = {},
     viewModel: OrderDetailViewModel = hiltViewModel(),
+    prepayViewModel: PrepayViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val prepay = prepayViewModel.state.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
     LaunchedEffect(state) {
         if (state is OrderDetailUiState.LoggedOut) onBack()
+    }
+    // El comprobante llegó, o el servidor dijo que el pedido cambió: el detalle se vuelve a consultar.
+    LaunchedEffect(prepay.refreshRequests) {
+        if (prepay.refreshRequests > 0) viewModel.retry()
     }
     OrderDetailScreen(
         state = state,
@@ -56,6 +62,14 @@ internal fun OrderDetailDestination(
         onBack = onBack,
         canRate = canRate,
         onRate = onRate,
+        prepay = prepay,
+        prepayActions =
+            PrepayActions(
+                load = prepayViewModel::load,
+                retryInfo = prepayViewModel::load,
+                onPhotoPicked = prepayViewModel::onPhotoPicked,
+                send = prepayViewModel::send,
+            ),
     )
 }
 
@@ -67,6 +81,8 @@ internal fun OrderDetailScreen(
     onBack: () -> Unit,
     canRate: (UUID) -> Boolean = { false },
     onRate: () -> Unit = {},
+    prepay: PrepayUiState = PrepayUiState(),
+    prepayActions: PrepayActions = PrepayActions(),
 ) {
     Scaffold { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
@@ -93,6 +109,8 @@ internal fun OrderDetailScreen(
                         onOpenLink = onOpenLink,
                         showRate = state.order.phase is OrderPhase.Delivered && canRate(state.order.id),
                         onRate = onRate,
+                        prepay = prepay,
+                        prepayActions = prepayActions,
                     )
                 }
             }
@@ -106,7 +124,12 @@ private fun OrderBody(
     onOpenLink: (String) -> Unit,
     showRate: Boolean,
     onRate: () -> Unit,
+    prepay: PrepayUiState,
+    prepayActions: PrepayActions,
 ) {
+    LaunchedEffect(order.awaitingPrepayment) {
+        if (order.awaitingPrepayment) prepayActions.load()
+    }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -121,7 +144,12 @@ private fun OrderBody(
         if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
             OrderSteps(phase = order.phase, isPickup = order.isPickup)
         }
-        if (order.webPaymentNotice) {
+        if (order.awaitingPrepayment) {
+            PrepaySection(state = prepay, amount = order.total, actions = prepayActions)
+        } else if (prepay.send is SendState.Sent && order.headline == OrderHeadline.Progress(OrderHero.VerifyingProof)) {
+            SentNotice()
+        }
+        if (order.webAppealNotice) {
             Text(
                 text = stringResource(R.string.order_web_payment_notice),
                 style = MaterialTheme.typography.bodyMedium,
@@ -180,7 +208,7 @@ private fun OrderDetailPreview() {
             reference = "Frente al parque",
             customerNotes = "Tocar el timbre",
             driver = DriverUi(name = "Luis", atDoor = false, whatsappLink = null),
-            webPaymentNotice = false,
+            webAppealNotice = false,
         )
     TindivoTheme {
         OrderDetailScreen(
