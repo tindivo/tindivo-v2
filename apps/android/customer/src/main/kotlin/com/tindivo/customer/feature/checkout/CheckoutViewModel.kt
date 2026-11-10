@@ -56,6 +56,12 @@ class CheckoutViewModel
         @Volatile private var generation = 0
         private var quoteJob: Job? = null
         private var loadJob: Job? = null
+        private var addressRefresh: Job? = null
+        private var phoneRefresh: Job? = null
+
+        /** Con qué cuenta y en qué generación se abrió la hoja: el resultado de una hoja de otra cuenta no se aplica. */
+        private var sheetOwner: String? = null
+        private var sheetGeneration = -1
 
         init {
             viewModelScope.launch { sessionStore.state.collect { onSession(it) } }
@@ -105,6 +111,7 @@ class CheckoutViewModel
          */
         private fun clearAccountState(signedOut: Boolean) {
             generation++
+            cancelRefreshes()
             quoteJob?.cancel()
             quoteJob = null
             loadJob?.cancel()
@@ -135,8 +142,12 @@ class CheckoutViewModel
                     quoteJob?.cancel()
                     quoteJob = null
                     loadedFor = null
+                    cancelRefreshes()
                     // Al enviar, la bolsa se vacía dentro del libro ANTES de abrir el pedido: no debe parpadear.
-                    if (!mutableState.value.sending) mutableState.update { it.copy(phase = CheckoutPhase.EmptyBag) }
+                    // Sin bolsa tampoco queda hoja abierta: lo que traiga ya no tiene a qué aplicarse.
+                    if (!mutableState.value.sending) {
+                        mutableState.update { it.copy(phase = CheckoutPhase.EmptyBag, sheet = null) }
+                    }
                 }
                 return
             }
@@ -156,17 +167,118 @@ class CheckoutViewModel
         }
 
         /** Vuelve a leer perfil, direcciones y negocio (después de un fallo). */
-        fun retryLoad() {
+        fun retryLoad() = reload(prefer = null)
+
+        /** Como [retryLoad]; si la dirección [prefer] llega en la lista, queda elegida. */
+        private fun reload(prefer: String?) {
             val current = cart ?: return
             val account = accountId ?: return
-            load(current, account)
+            if (current.isEmpty()) return
+            load(current, account, prefer)
+        }
+
+        /** Abre una hoja encima del checkout. Mientras se envía no se abre ninguna: el formulario no se edita. */
+        fun openSheet(sheet: CheckoutSheet) {
+            val current = mutableState.value
+            val account = accountId
+            if (account == null || current.sending || current.phase != sheet.phase) return
+            sheetOwner = account
+            sheetGeneration = generation
+            mutableState.update { it.copy(sheet = sheet) }
+        }
+
+        /** Atrás, tocar fuera o «Cerrar»: la hoja se va sin aplicar nada. */
+        fun closeSheet() = mutableState.update { it.copy(sheet = null) }
+
+        /** Un toque en «Elige tu dirección»: se cierra la hoja y se cotiza con esa. */
+        fun pickAddress(id: String) {
+            if (takeSheet { it == CheckoutSheet.ChooseAddress }) selectAddress(id)
+        }
+
+        /** La hoja guardó la dirección [id]: se releen las direcciones; si era nueva, queda elegida. */
+        fun onAddressSaved(id: String) {
+            val added = mutableState.value.sheet == CheckoutSheet.AddAddress
+            if (takeSheet { it == CheckoutSheet.AddAddress || it is CheckoutSheet.EditAddress }) {
+                refreshAddresses(select = id.takeIf { added })
+            }
+        }
+
+        /** La hoja de corregir borró la dirección: se releen y, si era la elegida, pasa a la predeterminada. */
+        fun onAddressDeleted() {
+            if (takeSheet { it is CheckoutSheet.EditAddress }) refreshAddresses(select = null)
+        }
+
+        /** La hoja verificó el celular: se relee el perfil para que el botón avance. */
+        fun onPhoneVerified() {
+            if (takeSheet { it == CheckoutSheet.VerifyPhone }) refreshPhone()
+        }
+
+        /** La hoja creó el perfil: se carga el checkout, como al volver de «Completa tu perfil». */
+        fun onProfileCompleted() {
+            if (takeSheet { it == CheckoutSheet.CompleteProfile }) retryLoad()
+        }
+
+        /**
+         * Cierra la hoja abierta y dice si su resultado se aplica: tiene que ser la [expected], el checkout seguir en la
+         * fase en que se abrió y la sesión seguir siendo la cuenta que la abrió (leída ahora, como en [isCurrent]). Si
+         * la sesión cambió, la hoja se cierra igual y no se aplica nada a la cuenta nueva.
+         */
+        private fun takeSheet(expected: (CheckoutSheet) -> Boolean): Boolean {
+            val before = mutableState.value
+            val open = before.sheet ?: return false
+            val owner = sheetOwner
+            mutableState.update { it.copy(sheet = null) }
+            val sameAccount = owner != null && isCurrent(sheetGeneration, owner)
+            return expected(open) && sameAccount && before.phase == open.phase && !before.sending
+        }
+
+        /**
+         * Relee solo las direcciones (con el token de la cuenta) y recotiza, sin tocar lo demás del formulario. Si no se
+         * pudieron leer, recarga todo y la dirección [select] queda elegida si llega.
+         */
+        private fun refreshAddresses(select: String?) {
+            val account = accountId ?: return
+            val started = generation
+            addressRefresh?.cancel()
+            addressRefresh =
+                viewModelScope.launch {
+                    val fresh = loader.addresses(account)
+                    if (!isCurrent(started, account) || locked()) return@launch
+                    if (fresh == null) {
+                        reload(prefer = select)
+                    } else {
+                        mutableState.update { it.withAddresses(fresh, select) }
+                        if (!mutableState.value.isPickup) requote(debounced = false)
+                    }
+                }
+        }
+
+        /** Relee el perfil (con el token de la cuenta) para el teléfono; si no se pudo, recarga todo. */
+        private fun refreshPhone() {
+            val account = accountId ?: return
+            val started = generation
+            phoneRefresh?.cancel()
+            phoneRefresh =
+                viewModelScope.launch {
+                    val profile = loader.profile(account)
+                    if (!isCurrent(started, account) || locked()) return@launch
+                    if (profile == null) reload(prefer = null) else mutableState.update { it.withPhoneFrom(profile) }
+                }
+        }
+
+        private fun cancelRefreshes() {
+            addressRefresh?.cancel()
+            addressRefresh = null
+            phoneRefresh?.cancel()
+            phoneRefresh = null
         }
 
         private fun load(
             current: Cart,
             account: String,
+            prefer: String? = null,
         ) {
-            mutableState.update { it.copy(phase = CheckoutPhase.Loading) }
+            mutableState.update { it.copy(phase = CheckoutPhase.Loading, sheet = null) }
             val started = generation
             loadJob?.cancel()
             loadJob =
@@ -200,7 +312,7 @@ class CheckoutViewModel
 
                         is LoadOutcome.Loaded -> {
                             lastIntent = outcome.data.lastIntent
-                            mutableState.update { it.withLoaded(outcome.data, current) }
+                            mutableState.update { it.withLoaded(outcome.data, current).preferring(prefer) }
                             if (mutableState.value.phase == CheckoutPhase.Form) requote(debounced = false)
                         }
                     }

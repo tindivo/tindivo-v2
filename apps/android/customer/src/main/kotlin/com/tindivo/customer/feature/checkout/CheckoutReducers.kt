@@ -1,6 +1,7 @@
 package com.tindivo.customer.feature.checkout
 
 import com.tindivo.core.network.AppError
+import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
 import com.tindivo.customer.feature.cart.Cart
 
 /** Espera entre un cambio y la cotización siguiente. Se inyecta para probar sin esperar de verdad (KT-4). */
@@ -130,3 +131,27 @@ internal fun CheckoutUiState.withLoaded(
         message = null,
     )
 }
+
+/**
+ * Las direcciones leídas de nuevo después de usar la hoja. Queda elegida [select] (la recién creada) si está en la
+ * lista; si no, la que ya estaba elegida si sigue existiendo; si no, la predeterminada.
+ */
+internal fun CheckoutUiState.withAddresses(
+    fresh: List<AddressUi>,
+    select: String?,
+): CheckoutUiState {
+    fun present(id: String?) = id?.takeIf { wanted -> fresh.any { it.id == wanted } }
+    return copy(
+        addresses = fresh,
+        selectedAddressId = present(select) ?: present(selectedAddressId) ?: fresh.preferred()?.id,
+        message = null,
+    )
+}
+
+/** Tras una carga completa: si la dirección [prefer] (la recién creada) llegó en la lista, queda elegida. */
+internal fun CheckoutUiState.preferring(prefer: String?): CheckoutUiState =
+    if (prefer == null) this else withAddresses(addresses, prefer)
+
+/** El perfil leído de nuevo después de verificar el celular: solo cambia el teléfono; el nombre escrito se queda. */
+internal fun CheckoutUiState.withPhoneFrom(profile: GetCustomerProfile200ResponseData): CheckoutUiState =
+    copy(phone = profile.phone, phoneVerified = profile.phoneVerified && profile.phone != null)

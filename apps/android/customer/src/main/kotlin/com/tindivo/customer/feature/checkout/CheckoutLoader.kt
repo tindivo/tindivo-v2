@@ -47,6 +47,17 @@ class CheckoutLoader
         private val addresses: AddressRepository,
         private val catalog: CatalogRepository,
     ) {
+        /**
+         * Solo las direcciones, después de crear, corregir o borrar una desde la hoja; `null` si no se pudo leer. Sale
+         * con el token de [accountId] o no sale.
+         */
+        suspend fun addresses(accountId: String): List<AddressUi>? =
+            (addresses.list(accountId) as? ApiResult.Success)?.data?.items?.map { it.toAddressUi() }
+
+        /** Solo el perfil, después de verificar el celular desde la hoja; `null` si no se pudo leer. Atado a [accountId]. */
+        suspend fun profile(accountId: String): GetCustomerProfile200ResponseData? =
+            (customer.profile(accountId) as? ApiResult.Success)?.data
+
         suspend fun load(
             accountId: String,
             businessId: String,

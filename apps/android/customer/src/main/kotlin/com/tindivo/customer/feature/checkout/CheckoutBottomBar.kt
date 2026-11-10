@@ -68,7 +68,7 @@ private fun onCta(
 ) {
     when {
         cta.canConfirm -> form.onConfirm()
-        cta.opensAccount -> actions.onOpenAccount()
+        cta.sheet(null) != null -> actions.onOpenAccount()
         cta == Cta.QuoteProblem -> form.onRetryQuote()
     }
 }
