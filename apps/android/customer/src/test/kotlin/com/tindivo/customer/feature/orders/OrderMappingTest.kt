@@ -186,15 +186,18 @@ class OrderMappingTest {
     }
 
     @Test
-    fun `el aviso de pagar en la web solo en prepago esperando pago o comprobante rechazado`() {
+    fun `el pago se ofrece en la app solo en prepago esperando pago y la apelacion sigue en la web`() {
+        val awaiting = detail(status = "awaiting_payment", paymentIntent = "prepaid").toDetailUi()
+        assertTrue(awaiting?.awaitingPrepayment == true)
+        assertFalse(awaiting?.webAppealNotice == true)
         assertTrue(
-            detail(status = "awaiting_payment", paymentIntent = "prepaid").toDetailUi()?.webPaymentNotice == true,
+            detail(status = "cancelled", cancelReason = "proof_rejected_final").toDetailUi()?.webAppealNotice == true,
         )
-        assertTrue(
-            detail(status = "cancelled", cancelReason = "proof_rejected_final").toDetailUi()?.webPaymentNotice == true,
-        )
-        assertFalse(detail(status = "awaiting_payment").toDetailUi()?.webPaymentNotice == true)
-        assertFalse(detail(status = "preparing", paymentIntent = "prepaid").toDetailUi()?.webPaymentNotice == true)
+        assertFalse(detail(status = "awaiting_payment").toDetailUi()?.awaitingPrepayment == true)
+        assertFalse(detail(status = "awaiting_payment").toDetailUi()?.webAppealNotice == true)
+        assertFalse(detail(status = "validando", paymentIntent = "prepaid").toDetailUi()?.awaitingPrepayment == true)
+        assertFalse(detail(status = "preparing", paymentIntent = "prepaid").toDetailUi()?.awaitingPrepayment == true)
+        assertFalse(detail(status = "preparing", paymentIntent = "prepaid").toDetailUi()?.webAppealNotice == true)
     }
 
     @Test
