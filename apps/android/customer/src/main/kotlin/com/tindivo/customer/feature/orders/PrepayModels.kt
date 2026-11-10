@@ -87,7 +87,7 @@ internal sealed interface SendState {
 }
 
 /**
- * La sección «Paga tu pedido». [photo] es el `Uri` (en texto) de la foto elegida. [refreshRequests] sube cada vez que
+ * La sección «Paga tu pedido». [photo] es el `Uri` (en texto) de la foto elegida; `toString` no lo muestra. [refreshRequests] sube cada vez que
  * el detalle del pedido debe volver a consultarse (el comprobante llegó, o el servidor dijo que el estado cambió).
  */
 internal data class PrepayUiState(
@@ -109,7 +109,15 @@ internal data class PrepayUiState(
     /** Se ofrece elegir la captura y enviarla: ni ya enviada (no se reemplaza) ni con el plazo vencido. */
     val showsProofPicker: Boolean
         get() = send !is SendState.Sent && countdown != PrepayCountdown.Expired
+
+    /** Sin el `Uri` de la foto: dice si hay una elegida, no cuál (CAX-003). */
+    override fun toString(): String =
+        "PrepayUiState(info=$info, countdown=$countdown, photo=${photo?.let { REDACTED }}, send=$send, " +
+            "refreshRequests=$refreshRequests)"
 }
+
+/** Lo que se muestra en `toString` en lugar de un `Uri`, una ruta del bucket o una URL firmada. */
+internal const val REDACTED = "***"
 
 /** Lo que la sección puede pedirle a su ViewModel. */
 internal data class PrepayActions(
