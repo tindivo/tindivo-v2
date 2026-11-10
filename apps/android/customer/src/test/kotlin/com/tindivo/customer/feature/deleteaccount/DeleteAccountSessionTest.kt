@@ -86,8 +86,11 @@ internal class DeleteAccountSessionTest : DeleteAccountHarness() {
             answer(unauthorized)
 
             assertEquals(DeletePhase.Left, vm.state.value.phase)
+            assertNull(vm.state.value.notice)
             assertEquals(SessionState.SignedIn(B), session.state.value)
+            assertEquals(0, session.signOutCalls)
             assertNotNull(cart())
+            assertEquals(setOf(A, B), ledgerStore.ledger.attempts.keys)
         }
 
     @Test

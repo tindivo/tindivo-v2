@@ -477,6 +477,7 @@
     <string name="delete_account_confirm_button">Borrar mi cuenta definitivamente</string>
     <string name="delete_account_deleting">Borrando…</string>
     <string name="delete_account_failed">No pudimos borrar tu cuenta. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="delete_account_unconfirmed">No pudimos confirmar que tu cuenta se borró. Vuelve a entrar para revisarlo.</string>
     <string name="delete_account_see_orders">Ver mis pedidos</string>
     <string name="delete_account_done_title">Tu cuenta fue borrada</string>
     <string name="delete_account_done_message">Listo: tu cuenta se borró y tus pedidos quedaron sin tu nombre. Gracias por haber usado Tindivo.</string>

@@ -57,7 +57,7 @@ internal fun DeleteAccountDestination(
         when (state.phase) {
             DeletePhase.Deleted -> onDeleted()
             DeletePhase.Left -> onBack()
-            DeletePhase.Ready, DeletePhase.Deleting -> Unit
+            DeletePhase.Ready, DeletePhase.Deleting, DeletePhase.Unconfirmed -> Unit
         }
     }
     DeleteAccountScreen(
@@ -78,8 +78,9 @@ internal fun DeleteAccountScreen(
     onBack: () -> Unit,
     onOpenOrders: () -> Unit,
 ) {
-    // Con el borrado en curso, volver atrás no hace nada: la pantalla espera su resultado.
-    val busy = state.phase != DeletePhase.Ready
+    // Con el borrado en curso, volver atrás no hace nada: la pantalla espera su resultado. Tras «no pudimos confirmar»
+    // solo queda volver.
+    val busy = state.phase != DeletePhase.Ready && state.phase != DeletePhase.Unconfirmed
     BackHandler(enabled = busy) {}
     Scaffold(
         topBar = {
@@ -207,6 +208,7 @@ private fun Notice(
         when (notice) {
             is DeleteNotice.Blocked -> notice.detail ?: stringResource(R.string.delete_account_failed)
             DeleteNotice.Failed -> stringResource(R.string.delete_account_failed)
+            DeleteNotice.Unconfirmed -> stringResource(R.string.delete_account_unconfirmed)
         }
     Column(
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },

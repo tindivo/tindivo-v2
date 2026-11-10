@@ -101,7 +101,7 @@ internal class DeleteAccountViewModelTest : DeleteAccountHarness() {
         }
 
     @Test
-    fun `401 tras el refresco es ya borrada, con la misma limpieza`() =
+    fun `un 401 con la sesion aun abierta no es borrada - cierra la sesion y conserva el intento y la bolsa`() =
         runTest {
             fillCart()
             val vm = viewModel()
@@ -109,17 +109,22 @@ internal class DeleteAccountViewModelTest : DeleteAccountHarness() {
             confirmAndDelete(vm)
             answer(unauthorized)
 
-            assertEquals(DeletePhase.Deleted, vm.state.value.phase)
+            assertEquals(DeletePhase.Unconfirmed, vm.state.value.phase)
+            assertEquals(DeleteNotice.Unconfirmed, vm.state.value.notice)
+            // El cierre de sesión de cualquier 401, no el «local» del borrado.
+            assertEquals(1, session.signOutCalls)
+            assertTrue(session.signOutLocallyCalls.isEmpty())
             assertEquals(SessionState.SignedOut, session.state.value)
-            assertNull(cart())
-            assertEquals(setOf(B), ledgerStore.ledger.attempts.keys)
+            assertNotNull(cart())
+            assertEquals(setOf(A, B), ledgerStore.ledger.attempts.keys)
+            assertEquals(setOf(A, B), ledgerStore.ledger.acknowledged)
         }
 
     @Test
-    fun `401 con la sesion ya cerrada por el refresco fallido tambien es borrada`() =
+    fun `un 401 con la sesion ya cerrada por el refresco fallido tampoco es borrada`() =
         runTest {
             fillCart()
-            // El refresco tras el 401 falla (la identidad ya no existe) y el almacén cierra la sesión.
+            // El refresco tras el 401 falla (sin red o revocado) y el almacén cierra la sesión.
             duringRequest = { session.switchToSignedOut() }
             val vm = viewModel()
 
@@ -127,8 +132,11 @@ internal class DeleteAccountViewModelTest : DeleteAccountHarness() {
             assertEquals(DeletePhase.Deleting, vm.state.value.phase)
             answer(unauthorized)
 
-            assertEquals(DeletePhase.Deleted, vm.state.value.phase)
-            assertNull(cart())
+            assertEquals(DeletePhase.Unconfirmed, vm.state.value.phase)
+            assertEquals(DeleteNotice.Unconfirmed, vm.state.value.notice)
+            assertNotNull(cart())
+            assertEquals(setOf(A, B), ledgerStore.ledger.attempts.keys)
+            assertTrue(session.signOutLocallyCalls.isEmpty())
         }
 
     @Test
@@ -164,7 +172,7 @@ internal class DeleteAccountViewModelTest : DeleteAccountHarness() {
         }
 
     @Test
-    fun `un timeout no se da por bueno ni por malo, y al reintentar un 401 es que si se borro`() =
+    fun `un timeout no se da por bueno ni por malo, y un 401 al reintentar tampoco confirma el borrado`() =
         runTest {
             fillCart()
             val vm = viewModel()
@@ -180,9 +188,10 @@ internal class DeleteAccountViewModelTest : DeleteAccountHarness() {
             answer(unauthorized)
 
             assertEquals(listOf(A, A), calls)
-            assertEquals(DeletePhase.Deleted, vm.state.value.phase)
+            assertEquals(DeletePhase.Unconfirmed, vm.state.value.phase)
             assertEquals(SessionState.SignedOut, session.state.value)
-            assertNull(cart())
+            assertNotNull(cart())
+            assertEquals(setOf(A, B), ledgerStore.ledger.attempts.keys)
         }
 
     @Test

@@ -22,6 +22,7 @@ import com.tindivo.customer.feature.checkout.MemoryLedgerStore
 import com.tindivo.customer.feature.checkout.OrderAttemptLedger
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.SessionState
+import com.tindivo.customer.session.SessionStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -95,7 +96,7 @@ internal abstract class DeleteAccountHarness {
         Dispatchers.resetMain()
     }
 
-    private val deleter =
+    private val fakeDeleter =
         AccountDeleter { account ->
             calls += account
             duringRequest()
@@ -110,10 +111,13 @@ internal abstract class DeleteAccountHarness {
         runCurrent()
     }
 
-    protected fun TestScope.viewModel(): DeleteAccountViewModel {
+    /** [deleter] y [store] se cambian para probar con el repositorio y el almacén de sesión reales. */
+    protected fun TestScope.viewModel(
+        deleter: AccountDeleter = fakeDeleter,
+        store: SessionStore = session,
+    ): DeleteAccountViewModel {
         val ledger = OrderAttemptLedger(ledgerStore, FakeAttemptLookup())
-        val vm =
-            DeleteAccountViewModel(deleter, DeletedAccountCleanup(cartStore, ledger, session), session, configService)
+        val vm = DeleteAccountViewModel(deleter, DeletedAccountCleanup(cartStore, ledger, store), store, configService)
         runCurrent()
         return vm
     }
