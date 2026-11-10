@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.orders
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.config.ConfigService
@@ -32,6 +33,10 @@ import javax.inject.Inject
  * cancela lo que esté en vuelo, se olvida todo y el ViewModel no vuelve a pedir nada. Además, antes de cada paso y de
  * publicar se comprueba que la sesión vigente sigue siendo la del principio ([isCurrent]), y cada llamada a la API sale
  * atada a esa cuenta (`boundTo`): nada de una cuenta se confirma ni se muestra en otra.
+ *
+ * Si al pedir la URL o al confirmar el servidor dice que el pedido ya no espera el pago ([noLongerAwaitsPayment]), la
+ * oferta de pago se retira en el acto ([PrepayInfoState.NotAwaiting]: sin destinatario, importe, selector ni envío) y
+ * solo vuelve con un `prepay-info` pedido DESPUÉS que diga otra vez `awaiting_payment` (CAX-002).
  */
 @HiltViewModel
 internal class PrepayViewModel
@@ -53,6 +58,9 @@ internal class PrepayViewModel
         private var ended = false
         private var wanted = false
         private var generation = 0
+
+        /** Sube con cada `prepay-info` pedido y al retirar la oferta: una respuesta de antes ya no se aplica. */
+        private var infoRequest = 0
         private var paymentMinutes: Int? = null
         private var loadJob: Job? = null
         private var sendJob: Job? = null
@@ -76,8 +84,10 @@ internal class PrepayViewModel
         fun load() {
             if (ended || mutableState.value.send is SendState.Sending) return
             wanted = true
-            if (mutableState.value.send is SendState.Sent) {
-                // Un comprobante enviado que vuelve a esperar pago (lo rechazaron): se empieza de cero.
+            val current = mutableState.value
+            if (current.send is SendState.Sent || current.info is PrepayInfoState.NotAwaiting) {
+                // Un comprobante enviado que vuelve a esperar pago (lo rechazaron), o una oferta que se retiró: se
+                // empieza de cero, sin la foto ni el aviso de antes.
                 sender.forget()
                 mutableState.update { it.copy(photo = null, send = SendState.Idle) }
             }
@@ -117,12 +127,13 @@ internal class PrepayViewModel
             val id = orderId ?: return
             loadJob?.cancel()
             val started = generation
+            val request = ++infoRequest
             mutableState.update { it.copy(info = PrepayInfoState.Loading) }
             loadJob =
                 viewModelScope.launch {
                     val result = gateway.info(account, id)
                     val minutes = if (result is ApiResult.Success) cachedPaymentMinutes() else null
-                    if (!isCurrent(started, account)) return@launch
+                    if (!isCurrent(started, account) || request != infoRequest) return@launch
                     when (result) {
                         is ApiResult.Success -> {
                             val info = result.data.toPrepayState(minutes)
@@ -167,7 +178,7 @@ internal class PrepayViewModel
                 }
 
                 is SendStep.Stopped -> {
-                    fail(step.problem, refresh = false)
+                    fail(step.problem, refresh = false, withdraw = false)
                 }
 
                 is SendStep.ApiFailed -> {
@@ -190,15 +201,36 @@ internal class PrepayViewModel
                     else -> SendProblem.Generic
                 }
             // El servidor dijo que no (ya no espera pago, intentos agotados…): el detalle se vuelve a consultar.
-            fail(problem, refresh = known != null)
+            fail(problem, refresh = known != null, withdraw = error.noLongerAwaitsPayment())
         }
 
+        /**
+         * Publica el fallo. Con [withdraw], además retira la oferta de pago en la misma publicación: se olvida la foto y
+         * lo preparado, y se descarta cualquier `prepay-info` en vuelo, que es anterior a ese «ya no espera el pago».
+         */
         private fun fail(
             problem: SendProblem,
             refresh: Boolean,
+            withdraw: Boolean,
         ) {
+            if (withdraw) {
+                loadJob?.cancel()
+                infoRequest++
+                countdownJob?.cancel()
+                sender.forget()
+            }
             mutableState.update {
-                it.copy(
+                val offer =
+                    if (withdraw) {
+                        it.copy(
+                            info = PrepayInfoState.NotAwaiting,
+                            countdown = null,
+                            photo = null,
+                        )
+                    } else {
+                        it
+                    }
+                offer.copy(
                     send = SendState.Failed(problem),
                     refreshRequests = if (refresh) it.refreshRequests + 1 else it.refreshRequests,
                 )
@@ -241,3 +273,13 @@ internal class PrepayViewModel
             val CLIENT_ERRORS = 400..499
         }
     }
+
+private const val HTTP_CONFLICT = 409
+
+/**
+ * El servidor dice que el pedido ya no espera el comprobante: `invalid_state_transition` (409 en esta API, sea cual sea
+ * el estado HTTP con que llegue) o cualquier 409 de estas rutas. Ante la duda se retira la oferta: un `prepay-info` nuevo
+ * la devuelve si de verdad sigue esperando el pago.
+ */
+internal fun AppError.noLongerAwaitsPayment(): Boolean =
+    this is AppError.Known && (code == ApiErrorCode.InvalidStateTransition || status == HTTP_CONFLICT)
