@@ -85,6 +85,38 @@ class ProofJpegTest {
     }
 
     @Test
+    fun `de 0 a 3 bytes nada lanza y nada se sube`() {
+        val tiny =
+            listOf(
+                ByteArray(0),
+                bytes(0xFF),
+                bytes(0xFF, 0xD8),
+                bytes(0xFF, 0xD8, 0xFF),
+                bytes(0x00),
+                bytes(0xD8, 0xFF, 0xD8),
+            )
+
+        for (input in tiny) {
+            val label = input.joinToString(" ") { "%02X".format(it.toInt() and 0xFF) }
+            assertNull(label, stripJpegMetadata(input))
+            assertNull(label, jpegDimensions(input))
+            assertFalse(label, hasJpegMetadata(input))
+            assertEquals(label, EncodedProof.Unreadable, finishProofJpeg(input))
+        }
+    }
+
+    @Test
+    fun `una cabecera de 4 bytes sin SOF no se sube`() {
+        // SOI + SOS sin dimensiones, SOI + EOI, y un SOF cortado justo tras el marcador.
+        val headers =
+            listOf(bytes(0xFF, 0xD8, 0xFF, 0xDA), bytes(0xFF, 0xD8, 0xFF, 0xD9), bytes(0xFF, 0xD8, 0xFF, 0xC0))
+        for (input in headers) {
+            assertNull(jpegDimensions(input))
+            assertEquals(EncodedProof.Unreadable, finishProofJpeg(input))
+        }
+    }
+
+    @Test
     fun `la comprobacion final entrega un JPEG sin metadatos de hasta 1600 px`() {
         val ok = finishProofJpeg(insertAfterSoi(jpeg(1600, 1200), exifSegment()))
 
@@ -138,6 +170,8 @@ class ProofJpegTest {
         jpeg: ByteArray,
         vararg segments: ByteArray,
     ): ByteArray = jpeg.copyOfRange(0, 2) + segments.fold(ByteArray(0)) { acc, s -> acc + s } + jpeg.copyOfRange(2, jpeg.size)
+
+    private fun bytes(vararg values: Int): ByteArray = ByteArray(values.size) { values[it].toByte() }
 
     private fun ByteArray.containsAscii(text: String): Boolean = String(this, Charsets.ISO_8859_1).contains(text)
 
