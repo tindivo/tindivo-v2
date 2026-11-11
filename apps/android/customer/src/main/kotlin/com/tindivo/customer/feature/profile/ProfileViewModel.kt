@@ -7,6 +7,7 @@ import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,6 +38,8 @@ internal data class ProfileUiState(
     val rejected: Boolean = false,
     val saveError: ProfileSaveError? = null,
     val outcome: ProfileOutcome? = null,
+    /** El [outcome] guardado ya se entregó a la hoja del checkout ([ProfileViewModel.takeResult]). */
+    val delivered: Boolean = false,
 ) {
     val problem: NameProblem? get() = nameProblem(name)
 
@@ -51,7 +54,7 @@ internal data class ProfileUiState(
     /** El nombre es un dato personal: no sale en un log. */
     override fun toString(): String =
         "ProfileUiState(name=***, touched=$touched, saving=$saving, rejected=$rejected, saveError=$saveError, " +
-            "outcome=$outcome)"
+            "outcome=$outcome, delivered=$delivered)"
 }
 
 /**
@@ -140,23 +143,39 @@ internal class ProfileViewModel
         /**
          * La hoja del checkout se cerró: el nombre escrito (dato personal) no se queda en memoria mientras el checkout
          * siga abierto. Cancela el guardado en vuelo de esta apertura, que ya no publica nada; no cierra la sesión ni
-         * llama al servidor. Conserva [ProfileUiState.outcome]: lo que ya terminó no se reabre.
+         * llama al servidor. Conserva [ProfileUiState.outcome] y si ya se entregó: lo que ya terminó no se reabre ni se
+         * entrega otra vez.
          */
         fun discardInput() {
             job?.cancel()
-            _state.update { ProfileUiState(outcome = it.outcome) }
+            _state.update { ProfileUiState(outcome = it.outcome, delivered = it.delivered) }
         }
 
         /**
          * La hoja del checkout pide cerrarse (ya escondida, o con su «Cancelar»): se cierra solo si no hay un guardado
          * en curso, leído ahora en el estado y no en la última recomposición de la hoja. Si se cierra, esta apertura ya
-         * no empieza ninguna llamada: un toque que llegue tarde no manda nada cuyo resultado ya no llegaría al checkout
-         * (CAX-005). Devuelve si se puede cerrar.
+         * no empieza ninguna llamada: un toque que llegue tarde no manda nada cuyo resultado ya no llegaría al checkout.
+         * Y si el nombre ya se guardó sin que nadie lo entregara, va en [SheetClose.Close.pending], para que la hoja lo
+         * entregue antes de retirarse (CAX-005).
          */
-        fun closeIfIdle(): Boolean {
-            if (_state.value.saving) return false
+        fun closeIfIdle(): SheetClose<ProfileOutcome> {
+            if (_state.value.saving) return SheetClose.Busy
             released = true
-            return true
+            return SheetClose.Close(takeResult())
+        }
+
+        /**
+         * El nombre guardado ([ProfileOutcome.Saved]), una sola vez: lo recibe quien lo pida primero (el efecto de la
+         * hoja o su cierre) y queda marcado como entregado en el mismo cambio de estado. Si no, `null`.
+         */
+        fun takeResult(): ProfileOutcome? {
+            var taken: ProfileOutcome? = null
+            _state.update {
+                val ready = it.outcome == ProfileOutcome.Saved && !it.delivered
+                taken = if (ready) ProfileOutcome.Saved else null
+                if (ready) it.copy(delivered = true) else it
+            }
+            return taken
         }
 
         /** Sigue siendo la cuenta de la pantalla: no terminó Y la sesión vigente, leída ahora, es la de [account]. */

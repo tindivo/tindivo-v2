@@ -12,6 +12,7 @@ import com.tindivo.core.network.generated.model.SendPhoneCodeRequest
 import com.tindivo.core.network.generated.model.TransferCustomerPhoneRequest
 import com.tindivo.core.network.generated.model.VerifyPhoneCodeRequest
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -72,9 +73,15 @@ internal data class PhoneUiState(
     val resendSeconds: Int = 0,
     val verifiedPhone: String? = null,
     val loggedOut: Boolean = false,
+    /** La verificación ya se entregó a la hoja del checkout ([PhoneVerifyViewModel.takeResult]). */
+    val delivered: Boolean = false,
 ) {
-    override fun toString(): String = "PhoneUiState(step=$step, sending=$sending, loggedOut=$loggedOut)"
+    override fun toString(): String =
+        "PhoneUiState(step=$step, sending=$sending, loggedOut=$loggedOut, delivered=$delivered)"
 }
+
+/** Lo que la hoja del checkout recibe cuando el celular quedó verificado: no lleva el número (dato personal). */
+internal data object PhoneVerified
 
 /**
  * Verificar el teléfono por SMS (D-22) y trasladarlo si está en otra cuenta (D-63). Ningún POST se repite solo: cada
@@ -223,12 +230,27 @@ internal class PhoneVerifyViewModel
          * La hoja del checkout pide cerrarse (ya escondida, o con su «Cancelar»): se cierra solo si no hay un envío,
          * una verificación ni un traslado en curso, leído ahora en el estado y no en la última recomposición de la
          * hoja. Si se cierra, esta apertura ya no empieza ninguna llamada: un toque que llegue tarde no manda nada cuyo
-         * resultado ya no llegaría al checkout (CAX-005). Devuelve si se puede cerrar.
+         * resultado ya no llegaría al checkout. Y si el celular ya quedó verificado sin que nadie lo entregara, va en
+         * [SheetClose.Close.pending], para que la hoja lo entregue antes de retirarse (CAX-005).
          */
-        fun closeIfIdle(): Boolean {
-            if (_state.value.sending) return false
+        fun closeIfIdle(): SheetClose<PhoneVerified> {
+            if (_state.value.sending) return SheetClose.Busy
             released = true
-            return true
+            return SheetClose.Close(takeResult())
+        }
+
+        /**
+         * El celular ya verificado ([PhoneStep.Done]), una sola vez: lo recibe quien lo pida primero (el efecto de la
+         * hoja o su cierre) y queda marcado como entregado en el mismo cambio de estado. Si no, `null`.
+         */
+        fun takeResult(): PhoneVerified? {
+            var taken: PhoneVerified? = null
+            _state.update {
+                val ready = it.step == PhoneStep.Done && !it.delivered && !it.loggedOut
+                taken = if (ready) PhoneVerified else null
+                if (ready) it.copy(delivered = true) else it
+            }
+            return taken
         }
 
         private suspend fun sendAndAdvance(

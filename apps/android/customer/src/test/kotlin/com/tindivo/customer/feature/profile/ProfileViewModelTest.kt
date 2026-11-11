@@ -9,6 +9,7 @@ import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.config.ConfigState
+import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.CompletableDeferred
@@ -388,7 +389,7 @@ class ProfileViewModelTest {
             gateway.nameGate = CompletableDeferred()
             val viewModel = saving()
 
-            assertFalse(viewModel.closeIfIdle())
+            assertEquals(SheetClose.Busy, viewModel.closeIfIdle())
             gateway.nameGate?.complete(Unit)
             advanceUntilIdle()
 
@@ -401,13 +402,53 @@ class ProfileViewModelTest {
             val viewModel = opened()
             viewModel.onName("Rosa Quispe")
 
-            assertTrue(viewModel.closeIfIdle())
+            assertEquals(SheetClose.Close(null), viewModel.closeIfIdle())
             viewModel.save()
             advanceUntilIdle()
 
             assertTrue(gateway.calls.toString(), gateway.calls.none { it.startsWith("terms") || it.startsWith("name") })
             assertFalse(viewModel.state.value.saving)
             assertNull(viewModel.state.value.outcome)
+        }
+
+    // CAX-005, entrega: el nombre guardado sale una sola vez, por el efecto o por el cierre de la hoja.
+
+    @Test
+    fun `un nombre guardado que el efecto aun no entrego sale con el cierre y despues ya no sale`() =
+        runTest(dispatcher) {
+            val viewModel = saving()
+            advanceUntilIdle()
+            assertEquals(ProfileOutcome.Saved, viewModel.state.value.outcome)
+            assertFalse(viewModel.state.value.saving)
+
+            assertEquals(SheetClose.Close(ProfileOutcome.Saved), viewModel.closeIfIdle())
+            assertNull(viewModel.takeResult())
+            assertEquals(SheetClose.Close(null), viewModel.closeIfIdle())
+        }
+
+    @Test
+    fun `si el efecto entrego primero el nombre el cierre ya no lo entrega, ni tras borrar lo escrito`() =
+        runTest(dispatcher) {
+            val viewModel = saving()
+            advanceUntilIdle()
+
+            assertEquals(ProfileOutcome.Saved, viewModel.takeResult())
+            assertNull(viewModel.takeResult())
+            viewModel.discardInput()
+            assertNull(viewModel.takeResult())
+            assertEquals(SheetClose.Close(null), viewModel.closeIfIdle())
+        }
+
+    @Test
+    fun `sin guardar no hay nada que entregar y salir sin guardar tampoco se entrega`() =
+        runTest(dispatcher) {
+            val viewModel = opened()
+            assertNull(viewModel.takeResult())
+
+            store.signOut()
+            runCurrent()
+            assertEquals(ProfileOutcome.Left, viewModel.state.value.outcome)
+            assertNull(viewModel.takeResult())
         }
 
     private companion object {

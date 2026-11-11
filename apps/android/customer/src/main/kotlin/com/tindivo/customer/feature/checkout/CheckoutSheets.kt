@@ -41,6 +41,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.feature.addresses.AddressFormActions
 import com.tindivo.customer.feature.addresses.AddressFormContent
 import com.tindivo.customer.feature.addresses.AddressFormViewModel
@@ -49,6 +50,7 @@ import com.tindivo.customer.feature.addresses.SaveBar
 import com.tindivo.customer.feature.addresses.showsSaveBar
 import com.tindivo.customer.feature.phone.PhoneActions
 import com.tindivo.customer.feature.phone.PhoneStep
+import com.tindivo.customer.feature.phone.PhoneVerified
 import com.tindivo.customer.feature.phone.PhoneVerifyContent
 import com.tindivo.customer.feature.phone.PhoneVerifyViewModel
 import com.tindivo.customer.feature.profile.ProfileContent
@@ -130,12 +132,13 @@ private fun AddressSheet(
             creationCallback = { factory -> factory.create(editingId) },
         )
     val form = viewModel.state.collectAsStateWithLifecycle().value
+    val deliver: (FormOutcome) -> Unit = { deliverAddress(it, actions) }
+    // El guardado o el borrado sale por takeResult: una sola vez, aunque el cierre de la hoja llegue antes (CAX-005).
     LaunchedEffect(form.outcome) {
-        when (val outcome = form.outcome) {
-            is FormOutcome.Saved -> actions.onAddressSaved(outcome.id)
-            FormOutcome.Deleted -> actions.onAddressDeleted()
+        when (form.outcome) {
             FormOutcome.LoggedOut -> actions.onClose()
             null -> Unit
+            else -> viewModel.takeResult()?.let(deliver)
         }
     }
     val title = if (editingId == null) R.string.checkout_sheet_add_title else R.string.checkout_sheet_edit_title
@@ -143,7 +146,7 @@ private fun AddressSheet(
         title = stringResource(title),
         onClose = actions.onClose,
         busy = form.busy,
-        closeIfIdle = viewModel::closeIfIdle,
+        closeIfIdle = { viewModel.closeIfIdle().deliverPending(deliver) },
         holdsMap = true,
     ) {
         Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
@@ -161,11 +164,22 @@ private fun AddressSheet(
                         onCancelDelete = viewModel::cancelDelete,
                         onConfirmDelete = viewModel::confirmDelete,
                         onRetry = viewModel::load,
-                        onCancel = { if (viewModel.closeIfIdle()) actions.onClose() },
+                        onCancel = { if (viewModel.closeIfIdle().deliverPending(deliver)) actions.onClose() },
                     ),
             )
         }
         if (form.showsSaveBar) SaveBar(form, viewModel::save)
+    }
+}
+
+private fun deliverAddress(
+    outcome: FormOutcome,
+    actions: CheckoutSheetActions,
+) {
+    when (outcome) {
+        is FormOutcome.Saved -> actions.onAddressSaved(outcome.id)
+        FormOutcome.Deleted -> actions.onAddressDeleted()
+        FormOutcome.LoggedOut -> Unit
     }
 }
 
@@ -179,17 +193,20 @@ private fun PhoneSheet(
     val viewModel = hiltViewModel<PhoneVerifyViewModel>(key = key)
     DiscardOnLeave(viewModel::discardInput)
     val phone = viewModel.state.collectAsStateWithLifecycle().value
+    val deliver: (PhoneVerified) -> Unit = { actions.onPhoneVerified() }
+    // La verificación sale por takeResult: una sola vez, aunque el cierre de la hoja llegue antes (CAX-005).
     LaunchedEffect(phone.step, phone.loggedOut) {
         when {
             phone.loggedOut -> actions.onClose()
-            phone.step == PhoneStep.Done -> actions.onPhoneVerified()
+            phone.step == PhoneStep.Done -> viewModel.takeResult()?.let(deliver)
         }
     }
+    val closeNow: () -> Unit = { if (viewModel.closeIfIdle().deliverPending(deliver)) actions.onClose() }
     SheetFrame(
         title = stringResource(R.string.checkout_sheet_phone_title),
         onClose = actions.onClose,
         busy = phone.sending,
-        closeIfIdle = viewModel::closeIfIdle,
+        closeIfIdle = { viewModel.closeIfIdle().deliverPending(deliver) },
     ) {
         ScrollingBody {
             PhoneVerifyContent(
@@ -204,8 +221,9 @@ private fun PhoneSheet(
                         onChangeNumber = viewModel::changeNumber,
                         onConfirmTransfer = viewModel::confirmTransfer,
                         onDismissTransfer = viewModel::dismissTransfer,
-                        onBack = { if (viewModel.closeIfIdle()) actions.onClose() },
-                        onDone = actions.onPhoneVerified,
+                        onBack = closeNow,
+                        // «Cerrar» tras verificar: entrega la verificación si nadie la entregó y retira la hoja.
+                        onDone = closeNow,
                     ),
             )
         }
@@ -222,9 +240,11 @@ private fun ProfileSheet(
     val viewModel = hiltViewModel<ProfileViewModel>(key = key)
     DiscardOnLeave(viewModel::discardInput)
     val profile = viewModel.state.collectAsStateWithLifecycle().value
+    val deliver: (ProfileOutcome) -> Unit = { actions.onProfileCompleted() }
+    // El nombre guardado sale por takeResult: una sola vez, aunque el cierre de la hoja llegue antes (CAX-005).
     LaunchedEffect(profile.outcome) {
         when (profile.outcome) {
-            ProfileOutcome.Saved -> actions.onProfileCompleted()
+            ProfileOutcome.Saved -> viewModel.takeResult()?.let(deliver)
             ProfileOutcome.Left -> actions.onClose()
             null -> Unit
         }
@@ -233,7 +253,7 @@ private fun ProfileSheet(
         title = stringResource(R.string.checkout_sheet_profile_title),
         onClose = actions.onClose,
         busy = profile.saving,
-        closeIfIdle = viewModel::closeIfIdle,
+        closeIfIdle = { viewModel.closeIfIdle().deliverPending(deliver) },
     ) {
         ScrollingBody {
             ProfileContent(state = profile, onName = viewModel::onName, onSave = viewModel::save)
@@ -254,6 +274,23 @@ private fun DiscardOnLeave(discard: () -> Unit) {
         onDispose { if (activity?.isChangingConfigurations != true) latest.value() }
     }
 }
+
+/**
+ * Lo que la hoja hace con la respuesta de su ViewModel al pedir cerrarse: con [SheetClose.Busy] no se retira; con
+ * [SheetClose.Close] entrega PRIMERO el éxito que quedaba pendiente (si lo hay) y dice que ya se puede retirar. Así ni
+ * el orden entre el efecto y el cierre pierde el dato ni lo entrega dos veces (CAX-005).
+ */
+internal fun <T : Any> SheetClose<T>.deliverPending(deliver: (T) -> Unit): Boolean =
+    when (this) {
+        SheetClose.Busy -> {
+            false
+        }
+
+        is SheetClose.Close -> {
+            pending?.let(deliver)
+            true
+        }
+    }
 
 @Composable
 private fun ColumnScope.ScrollingBody(content: @Composable () -> Unit) {
@@ -285,8 +322,10 @@ internal fun sheetMayMoveTo(
  *
  * [busy] llega con la recomposición, un cuadro tarde: un guardado puede empezar mientras la hoja se esconde, o entre
  * el toque y la recomposición. Por eso la hoja, ya escondida, solo se retira si [closeIfIdle] (el ViewModel, leído en
- * ese momento) lo permite; si no, vuelve a mostrarse y lo que responda el servidor llega al checkout. Un cierre
- * cancelado (la hoja salió de la composición por otra causa) no retira nada (CAX-005).
+ * ese momento) lo permite; si no, vuelve a mostrarse y lo que responda el servidor llega al checkout. Si lo permite,
+ * [closeIfIdle] ya entregó el resultado que terminó durante el cierre y que el efecto de la hoja aún no había
+ * entregado ([deliverPending]): solo después se llama a [onClose]. Un cierre cancelado (la hoja salió de la
+ * composición por otra causa) no retira nada (CAX-005).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

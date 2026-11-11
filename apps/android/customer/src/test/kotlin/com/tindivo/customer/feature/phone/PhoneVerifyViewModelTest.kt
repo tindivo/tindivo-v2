@@ -7,6 +7,7 @@ import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.feature.checkout.HeldIo
 import com.tindivo.customer.feature.checkout.sessionJwt
 import com.tindivo.customer.session.FakeSessionStore
@@ -534,7 +535,7 @@ class PhoneVerifyViewModelTest {
                 viewModel.sendCode()
                 assertTrue(viewModel.state.value.sending)
 
-                assertFalse(viewModel.closeIfIdle())
+                assertEquals(SheetClose.Busy, viewModel.closeIfIdle())
                 io.release()
 
                 assertEquals(PhoneStep.Code, viewModel.state.first { !it.sending }.step)
@@ -550,12 +551,56 @@ class PhoneVerifyViewModelTest {
             viewModel.onCodeChanged("123456")
             clock.now = clock.now.plusSeconds(61)
 
-            assertTrue(viewModel.closeIfIdle())
+            assertEquals(SheetClose.Close(null), viewModel.closeIfIdle())
             viewModel.verify()
             viewModel.resend()
 
             assertEquals(1, server.requestCount)
             assertFalse(viewModel.state.value.sending)
+        }
+
+    // CAX-005, entrega: el celular verificado sale una sola vez, por el efecto o por el cierre de la hoja.
+
+    @Test
+    fun `una verificacion terminada que el efecto aun no entrego sale con el cierre y despues ya no sale`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+            assertFalse(viewModel.state.value.sending)
+
+            assertEquals(SheetClose.Close(PhoneVerified), viewModel.closeIfIdle())
+            assertNull(viewModel.takeResult())
+            assertEquals(SheetClose.Close(null), viewModel.closeIfIdle())
+        }
+
+    @Test
+    fun `si el efecto entrego primero la verificacion el cierre ya no la entrega`() =
+        runTest {
+            server.enqueue(response(200, """{"data":{"sent":true,"channel":"dev","verified":true}}"""))
+            val viewModel = viewModel()
+            viewModel.onPhoneChanged("987654321")
+            viewModel.sendCode()
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+
+            assertEquals(PhoneVerified, viewModel.takeResult())
+            assertNull(viewModel.takeResult())
+            assertEquals(SheetClose.Close(null), viewModel.closeIfIdle())
+        }
+
+    @Test
+    fun `sin verificar no hay nada que entregar y con la sesion cerrada tampoco`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            assertNull(viewModel.takeResult())
+
+            store.signOut()
+            assertTrue(viewModel.state.value.loggedOut)
+            assertNull(viewModel.takeResult())
         }
 
     private companion object {

@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.addresses
 
+import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.feature.checkout.HeldIo
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -7,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -53,7 +55,7 @@ internal class AddressFormSheetCloseTest : AddressHarness() {
                 vm.save()
                 assertTrue(vm.state.value.saving)
 
-                assertFalse(vm.closeIfIdle())
+                assertEquals(SheetClose.Busy, vm.closeIfIdle())
                 io.release()
 
                 assertEquals(FormOutcome.Saved(ID_C), vm.state.first { it.outcome != null }.outcome)
@@ -75,7 +77,7 @@ internal class AddressFormSheetCloseTest : AddressHarness() {
                 vm.confirmDelete()
                 assertTrue(vm.state.value.deleting)
 
-                assertFalse(vm.closeIfIdle())
+                assertEquals(SheetClose.Busy, vm.closeIfIdle())
                 io.release()
 
                 assertEquals(FormOutcome.Deleted, vm.state.first { it.outcome != null }.outcome)
@@ -92,12 +94,99 @@ internal class AddressFormSheetCloseTest : AddressHarness() {
             vm.onReference("Otra referencia mas clara")
             vm.askDelete()
 
-            assertTrue(vm.closeIfIdle())
+            assertEquals(SheetClose.Close(null), vm.closeIfIdle())
             vm.save()
             vm.confirmDelete()
 
             assertEquals(2, server.requestCount)
             assertFalse(vm.state.value.busy)
             assertNull(vm.state.value.outcome)
+        }
+
+    // CAX-005, entrega: el guardado o el borrado que terminó sale una sola vez, por el efecto o por el cierre.
+
+    @Test
+    fun `un guardado terminado que el efecto aun no entrego sale con el cierre y despues ya no sale`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList())
+            server.enqueue(response(201, """{"data":${address(id = ID_C)}}"""))
+            val vm = viewModel()
+            vm.ready()
+            vm.fillValid()
+            vm.save()
+            assertEquals(FormOutcome.Saved(ID_C), vm.state.value.outcome)
+            assertFalse(vm.state.value.saving)
+
+            assertEquals(SheetClose.Close(FormOutcome.Saved(ID_C)), vm.closeIfIdle())
+            assertNull(vm.takeResult())
+            assertEquals(SheetClose.Close(null), vm.closeIfIdle())
+        }
+
+    @Test
+    fun `un borrado terminado que el efecto aun no entrego sale con el cierre y despues ya no sale`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList(address(), address(ID_B, isDefault = false)))
+            server.enqueue(response(204))
+            val vm = viewModel(id = ID_B)
+            vm.ready()
+            vm.askDelete()
+            vm.confirmDelete()
+            assertEquals(FormOutcome.Deleted, vm.state.value.outcome)
+
+            assertEquals(SheetClose.Close(FormOutcome.Deleted), vm.closeIfIdle())
+            assertNull(vm.takeResult())
+        }
+
+    @Test
+    fun `si el efecto entrego primero el guardado el cierre ya no lo entrega`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList())
+            server.enqueue(response(201, """{"data":${address(id = ID_C)}}"""))
+            val vm = viewModel()
+            vm.ready()
+            vm.fillValid()
+            vm.save()
+
+            assertEquals(FormOutcome.Saved(ID_C), vm.takeResult())
+            assertNull(vm.takeResult())
+            assertEquals(SheetClose.Close(null), vm.closeIfIdle())
+        }
+
+    @Test
+    fun `sin nada terminado no hay nada que entregar y la sesion cerrada no se entrega`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList())
+            val vm = viewModel()
+            vm.ready()
+            assertNull(vm.takeResult())
+
+            store.signOut()
+            assertEquals(FormOutcome.LoggedOut, vm.state.value.outcome)
+            assertNull(vm.takeResult())
+            assertEquals(SheetClose.Close(null), vm.closeIfIdle())
+        }
+
+    @Test
+    fun `cerrada la hoja un reintento tardio de la carga no sale a la red`() =
+        runTest {
+            // La dirección que se corrige ya no está: la carga falla y queda el «Reintentar». Hay respuestas para un
+            // segundo intento: si saliera, se contaría.
+            server.enqueue(configOk())
+            server.enqueue(addressList(address()))
+            server.enqueue(configOk())
+            server.enqueue(addressList(address()))
+            val vm = viewModel(id = ID_C)
+            assertNotNull(vm.ready().loadError)
+            assertEquals(2, server.requestCount)
+
+            assertEquals(SheetClose.Close(null), vm.closeIfIdle())
+            vm.load()
+
+            assertEquals(2, server.requestCount)
+            assertFalse(vm.state.value.loading)
         }
 }

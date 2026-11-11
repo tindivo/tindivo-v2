@@ -13,6 +13,7 @@ import com.tindivo.core.network.generated.model.ListCustomerAddresses200Response
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequest
 import com.tindivo.core.network.generated.model.UpdateCustomerAddressRequestCoordinates
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SessionWatch
@@ -61,6 +62,8 @@ internal data class AddressFormState(
     val deleting: Boolean = false,
     val saveError: AppError? = null,
     val outcome: FormOutcome? = null,
+    /** El [outcome] de un guardado o un borrado ya se entregó a la hoja del checkout ([AddressFormViewModel.takeResult]). */
+    val delivered: Boolean = false,
 ) {
     val missing: MissingField? get() = missingField(point, line, reference, area)
     val busy: Boolean get() = saving || deleting
@@ -119,8 +122,9 @@ internal class AddressFormViewModel
             load()
         }
 
+        /** Carga (o reintenta cargar) el formulario. Con la hoja del checkout ya cerrada no llama (CAX-005). */
         fun load() {
-            if (job?.isActive == true || loggedOut) return
+            if (released || job?.isActive == true || loggedOut) return
             val account = accountId ?: return endSession()
             _state.update { it.copy(loading = true, loadError = null) }
             job = viewModelScope.launch { loadAll(account) }
@@ -200,12 +204,28 @@ internal class AddressFormViewModel
          * La hoja del checkout pide cerrarse (ya escondida, o con su «Cancelar»): se cierra solo si no hay un guardado
          * ni un borrado en curso, leído ahora en el estado y no en la última recomposición de la hoja. Si se cierra,
          * esta apertura ya no empieza ninguna llamada: un toque que llegue tarde no manda nada cuyo resultado ya no
-         * llegaría al checkout (CAX-005). Devuelve si se puede cerrar.
+         * llegaría al checkout. Y si un guardado o un borrado ya terminó sin que nadie lo entregara, va en
+         * [SheetClose.Close.pending], para que la hoja lo entregue antes de retirarse (CAX-005).
          */
-        fun closeIfIdle(): Boolean {
-            if (_state.value.busy) return false
+        fun closeIfIdle(): SheetClose<FormOutcome> {
+            if (_state.value.busy) return SheetClose.Busy
             released = true
-            return true
+            return SheetClose.Close(takeResult())
+        }
+
+        /**
+         * El guardado ([FormOutcome.Saved]) o el borrado ([FormOutcome.Deleted]) terminado, una sola vez: lo recibe
+         * quien lo pida primero (el efecto de la hoja o su cierre) y queda marcado como entregado en el mismo cambio de
+         * estado. Cualquier otro caso devuelve `null`.
+         */
+        fun takeResult(): FormOutcome? {
+            var taken: FormOutcome? = null
+            _state.update {
+                val outcome = it.outcome
+                taken = outcome.takeIf { o -> !it.delivered && (o is FormOutcome.Saved || o == FormOutcome.Deleted) }
+                if (taken == null) it else it.copy(delivered = true)
+            }
+            return taken
         }
 
         private suspend fun create(
