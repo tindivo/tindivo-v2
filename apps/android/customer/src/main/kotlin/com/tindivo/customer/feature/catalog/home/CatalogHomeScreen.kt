@@ -57,6 +57,7 @@ fun CatalogHomeDestination(
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
     onOpenAccount: (signedIn: Boolean) -> Unit,
+    onOpenCourier: () -> Unit,
     viewModel: CatalogHomeViewModel = hiltViewModel(),
     accountEntry: AccountEntryViewModel = hiltViewModel(),
 ) {
@@ -69,6 +70,7 @@ fun CatalogHomeDestination(
         onOpenDiagnostics = onOpenDiagnostics,
         signedIn = signedIn,
         onOpenAccount = { onOpenAccount(signedIn) },
+        onOpenCourier = onOpenCourier,
     )
 }
 
@@ -81,6 +83,7 @@ fun CatalogHomeScreen(
     onOpenDiagnostics: (() -> Unit)? = null,
     signedIn: Boolean = false,
     onOpenAccount: () -> Unit = {},
+    onOpenCourier: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -101,6 +104,7 @@ fun CatalogHomeScreen(
                             onOpenDiagnostics = onOpenDiagnostics,
                             signedIn = signedIn,
                             onOpenAccount = onOpenAccount,
+                            onOpenCourier = onOpenCourier,
                         )
                     }
                 }
@@ -116,6 +120,7 @@ private fun BusinessList(
     onOpenDiagnostics: (() -> Unit)?,
     signedIn: Boolean,
     onOpenAccount: () -> Unit,
+    onOpenCourier: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -139,6 +144,8 @@ private fun BusinessList(
                 }
             }
         }
+        // Primero qué se quiere hacer (llevar algo de un lugar a otro), después dónde comer (como la web).
+        item { CourierEntryCard(onClick = onOpenCourier) }
         state.refreshFailed?.let { error ->
             item { Text(text = errorMessage(error), color = MaterialTheme.colorScheme.error) }
         }
