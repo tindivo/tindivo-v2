@@ -181,6 +181,10 @@ class JpegStructureHandBuiltTest {
                 "vacía" to segment(DHT, ByteArray(0)),
             )
         for ((name, table) in invalid) assertRejected(name, afterSoi(table))
+        // Una DHT al final del archivo que declara más símbolos de los que trae: leerlos pasaría del final del arreglo.
+        // Tiene que rechazarse, no lanzar una excepción que nadie atrapa.
+        val pastTheEnd = SOI + segment(DHT, bytes(0x00, 0, 3) + ByteArray(HUFFMAN_LENGTHS - 2) + bytes(0))
+        assertRejected("tres símbolos declarados, uno presente, al final del archivo", pastTheEnd)
         // Control: DC y AC en un mismo segmento.
         assertAccepted("DC y AC", afterSoi(segment(DHT, dhtTable(0x00) + dhtTable(0x13))))
     }
