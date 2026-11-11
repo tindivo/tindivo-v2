@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.tindivo.customer.R
 
 /** Los dos permisos de ubicación en tiempo de uso: la persona puede dar solo el aproximado y también sirve. */
@@ -36,13 +37,16 @@ private val LOCATION_PERMISSIONS =
 /**
  * «Usar mi ubicación»: el permiso se pide SOLO al tocarlo (al abrir el formulario no se pide nada, a diferencia de la
  * web). Sin Google Play services no se muestra. Si la persona sale del formulario, la lectura en curso se cancela;
- * girar la pantalla no cuenta como salir.
+ * girar la pantalla no cuenta como salir. Lo mismo si la app pasa a segundo plano (Inicio, pantalla bloqueada) con el
+ * formulario aún compuesto: [onForegroundChanged] cancela la lectura y, al volver, no se pide otra sin un toque nuevo
+ * (CAX-001). Es el mismo composable en la pantalla de Mi cuenta y en la hoja del checkout.
  */
 @Composable
 internal fun UseMyLocation(
     state: AddressFormState,
     onPermission: (LocationPermission) -> Unit,
     onLeave: () -> Unit,
+    onForegroundChanged: (Boolean) -> Unit,
 ) {
     val locate = state.locate
     if (!locate.available) return
@@ -51,6 +55,17 @@ internal fun UseMyLocation(
     val leave = rememberUpdatedState(onLeave)
     DisposableEffect(Unit) {
         onDispose { if (activity?.isChangingConfigurations != true) leave.value() }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val foregroundChanged = rememberUpdatedState(onForegroundChanged)
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LocateForegroundObserver(
+                isChangingConfigurations = { activity?.isChangingConfigurations == true },
+                onForegroundChanged = { foregroundChanged.value(it) },
+            )
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->

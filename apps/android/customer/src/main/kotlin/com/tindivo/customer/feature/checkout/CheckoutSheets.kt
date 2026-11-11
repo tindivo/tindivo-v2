@@ -196,6 +196,7 @@ private fun AddressSheet(
                         onPointChosen = viewModel::onPointChosen,
                         onLocationPermission = viewModel::onLocationPermission,
                         onStopLocating = viewModel::stopLocating,
+                        onForegroundChanged = viewModel::onForegroundChanged,
                         onSave = viewModel::save,
                         onAskDelete = viewModel::askDelete,
                         onCancelDelete = viewModel::cancelDelete,

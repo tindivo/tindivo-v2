@@ -17,7 +17,7 @@ internal class AddressFormLocateTest : AddressHarness() {
     private val gps = GeoPoint(-9.15471234567, -78.50421234567)
     private val outside = GeoPoint(-9.0745, -78.5936)
 
-    private suspend fun ready(source: FakeLocationSource): AddressFormViewModel {
+    private suspend fun ready(source: LocationSource): AddressFormViewModel {
         server.enqueue(configOk())
         server.enqueue(addressList())
         val vm = AddressFormViewModel(null, addressRepo(), catalogRepo(), store, configService, source)
@@ -262,5 +262,90 @@ internal class AddressFormLocateTest : AddressHarness() {
             assertTrue(source.cancelled)
             assertEquals(FormOutcome.LoggedOut, vm.state.value.outcome)
             assertNull(vm.state.value.point)
+        }
+
+    @Test
+    fun `en segundo plano la lectura pendiente se cancela, no se aplica y al volver no se lee sola`() =
+        runTest {
+            val source = FakeLocationSource()
+            val vm = ready(source)
+            vm.onLocationPermission(LocationPermission.Granted)
+            assertTrue(vm.state.value.locate.locating)
+
+            // Inicio o pantalla bloqueada: el formulario sigue compuesto y el ViewModel vivo.
+            vm.onForegroundChanged(false)
+            assertFalse(vm.state.value.locate.locating)
+            source.pending.complete(LocationReading.Found(gps))
+            runCurrent()
+
+            assertTrue(source.cancelled)
+            assertNull(vm.state.value.point)
+            assertNull(vm.state.value.locate.located)
+
+            vm.onForegroundChanged(true)
+            runCurrent()
+
+            assertEquals(1, source.calls)
+            assertFalse(vm.state.value.locate.locating)
+            assertNull(vm.state.value.point)
+        }
+
+    @Test
+    fun `en segundo plano un permiso concedido no pide lectura`() =
+        runTest {
+            val source = FakeLocationSource(next = LocationReading.Found(gps))
+            val vm = ready(source)
+            vm.onForegroundChanged(false)
+
+            vm.onLocationPermission(LocationPermission.Granted)
+
+            assertEquals(0, source.calls)
+            assertFalse(vm.state.value.locate.locating)
+            assertNull(vm.state.value.point)
+        }
+
+    @Test
+    fun `de vuelta en primer plano un toque nuevo si lee y aplica el punto`() =
+        runTest {
+            val source = FakeLocationSource(next = LocationReading.Found(gps))
+            val vm = ready(source)
+            vm.onForegroundChanged(false)
+            vm.onForegroundChanged(true)
+
+            vm.onLocationPermission(LocationPermission.Granted)
+
+            val state = vm.state.value
+            assertEquals(1, source.calls)
+            assertEquals(gps, state.point)
+            assertEquals(gps, state.locate.located?.point)
+            assertFalse(state.locate.locating)
+        }
+
+    @Test
+    fun `una lectura que llega en el mismo instante en que la app sale a segundo plano no se aplica`() =
+        runTest {
+            lateinit var vm: AddressFormViewModel
+            // Un GPS que contesta sin suspender justo cuando la app deja de verse: la cancelación no llega a cortarlo.
+            val racing =
+                object : LocationSource {
+                    var calls = 0
+
+                    override fun isAvailable(): Boolean = true
+
+                    override suspend fun current(): LocationReading {
+                        calls++
+                        vm.onForegroundChanged(false)
+                        return LocationReading.Found(gps)
+                    }
+                }
+            vm = ready(racing)
+
+            vm.onLocationPermission(LocationPermission.Granted)
+            runCurrent()
+
+            assertEquals(1, racing.calls)
+            assertNull(vm.state.value.point)
+            assertNull(vm.state.value.locate.located)
+            assertFalse(vm.state.value.locate.locating)
         }
 }

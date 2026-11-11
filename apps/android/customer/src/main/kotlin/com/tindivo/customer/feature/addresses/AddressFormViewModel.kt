@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -105,6 +106,12 @@ internal class AddressFormViewModel
         private var job: Job? = null
         private var locateJob: Job? = null
 
+        /**
+         * El formulario está a la vista (la app en primer plano). Fuera de ella no se empieza ni se aplica ninguna
+         * lectura del GPS: la ubicación solo se pide con la persona mirando el formulario (CAX-001).
+         */
+        private var foreground = true
+
         /** La cuenta con la que se abrió la pantalla: cada llamada va atada a ella y, sin cuenta, no se llama. */
         private val accountId: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
 
@@ -163,7 +170,7 @@ internal class AddressFormViewModel
          */
         fun onLocationPermission(result: LocationPermission) {
             val s = _state.value
-            if (loggedOut || s.busy || !s.locate.available) return
+            if (!foreground || loggedOut || s.busy || !s.locate.available) return
             when (result) {
                 LocationPermission.Granted -> locate()
                 LocationPermission.Denied -> showLocateNotice(LocateNotice.Denied)
@@ -178,6 +185,16 @@ internal class AddressFormViewModel
             _state.update { if (it.locate.locating) it.copy(locate = it.locate.copy(locating = false)) else it }
         }
 
+        /**
+         * La app pasó a segundo plano ([visible] = `false`: Inicio, pantalla bloqueada, otra app encima) o volvió
+         * ([visible] = `true`). Al salir, la lectura en curso se cancela aunque el formulario siga compuesto y este
+         * ViewModel vivo; al volver no se pide nada: hace falta un toque nuevo en «Usar mi ubicación» (CAX-001).
+         */
+        fun onForegroundChanged(visible: Boolean) {
+            foreground = visible
+            if (!visible) stopLocating()
+        }
+
         private fun locate() {
             if (locateJob?.isActive == true) return
             _state.update { it.copy(locate = it.locate.copy(locating = true, notice = null)) }
@@ -185,6 +202,8 @@ internal class AddressFormViewModel
                 viewModelScope.launch {
                     // Si el GPS no contesta ni con su propio plazo, se deja de esperar: la persona sigue a mano.
                     val reading = withTimeoutOrNull(LOCATE_GIVE_UP_MS) { locations.current() } ?: LocationReading.NoFix
+                    // Una lectura que llega a la vez que la app sale a segundo plano (o ya cancelada) no se aplica.
+                    if (!foreground || !isActive) return@launch
                     settle { it.withReading(reading) }
                 }
         }
