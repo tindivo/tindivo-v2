@@ -139,7 +139,13 @@ private fun AddressSheet(
         }
     }
     val title = if (editingId == null) R.string.checkout_sheet_add_title else R.string.checkout_sheet_edit_title
-    SheetFrame(title = stringResource(title), onClose = actions.onClose, busy = form.busy, holdsMap = true) {
+    SheetFrame(
+        title = stringResource(title),
+        onClose = actions.onClose,
+        busy = form.busy,
+        closeIfIdle = viewModel::closeIfIdle,
+        holdsMap = true,
+    ) {
         Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             AddressFormContent(
                 state = form,
@@ -155,7 +161,7 @@ private fun AddressSheet(
                         onCancelDelete = viewModel::cancelDelete,
                         onConfirmDelete = viewModel::confirmDelete,
                         onRetry = viewModel::load,
-                        onCancel = { if (!form.busy) actions.onClose() },
+                        onCancel = { if (viewModel.closeIfIdle()) actions.onClose() },
                     ),
             )
         }
@@ -183,6 +189,7 @@ private fun PhoneSheet(
         title = stringResource(R.string.checkout_sheet_phone_title),
         onClose = actions.onClose,
         busy = phone.sending,
+        closeIfIdle = viewModel::closeIfIdle,
     ) {
         ScrollingBody {
             PhoneVerifyContent(
@@ -197,7 +204,7 @@ private fun PhoneSheet(
                         onChangeNumber = viewModel::changeNumber,
                         onConfirmTransfer = viewModel::confirmTransfer,
                         onDismissTransfer = viewModel::dismissTransfer,
-                        onBack = { if (!phone.sending) actions.onClose() },
+                        onBack = { if (viewModel.closeIfIdle()) actions.onClose() },
                         onDone = actions.onPhoneVerified,
                     ),
             )
@@ -226,6 +233,7 @@ private fun ProfileSheet(
         title = stringResource(R.string.checkout_sheet_profile_title),
         onClose = actions.onClose,
         busy = profile.saving,
+        closeIfIdle = viewModel::closeIfIdle,
     ) {
         ScrollingBody {
             ProfileContent(state = profile, onName = viewModel::onName, onSave = viewModel::save)
@@ -274,6 +282,11 @@ internal fun sheetMayMoveTo(
  * El marco común: título (encabezado para TalkBack) y «Cerrar» de 48 dp. Atrás, arrastrar y tocar fuera también
  * cierran, salvo con [busy] (ver [sheetMayMoveTo]): entonces «Cerrar» queda deshabilitado y atrás no hace nada. Con
  * [holdsMap] la hoja ocupa toda la altura, no se arrastra ni muestra el asa: el gesto es del mapa.
+ *
+ * [busy] llega con la recomposición, un cuadro tarde: un guardado puede empezar mientras la hoja se esconde, o entre
+ * el toque y la recomposición. Por eso la hoja, ya escondida, solo se retira si [closeIfIdle] (el ViewModel, leído en
+ * ese momento) lo permite; si no, vuelve a mostrarse y lo que responda el servidor llega al checkout. Un cierre
+ * cancelado (la hoja salió de la composición por otra causa) no retira nada (CAX-005).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -281,6 +294,7 @@ private fun SheetFrame(
     title: String,
     onClose: () -> Unit,
     busy: Boolean = false,
+    closeIfIdle: () -> Boolean = { true },
     holdsMap: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -289,11 +303,21 @@ private fun SheetFrame(
     val mayMove = remember { { target: SheetValue -> sheetMayMoveTo(target, busyNow.value) } }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = mayMove)
     val scope = rememberCoroutineScope()
+    val latestClose = rememberUpdatedState(onClose)
+    val latestCloseIfIdle = rememberUpdatedState(closeIfIdle)
+    val settle: () -> Unit = {
+        if (latestCloseIfIdle.value()) latestClose.value() else scope.launch { sheetState.show() }
+    }
     val close: () -> Unit = {
-        if (!busyNow.value) scope.launch { sheetState.hide() }.invokeOnCompletion { onClose() }
+        if (!busyNow.value) {
+            scope.launch {
+                sheetState.hide()
+                settle()
+            }
+        }
     }
     ModalBottomSheet(
-        onDismissRequest = { if (!busyNow.value) onClose() },
+        onDismissRequest = settle,
         sheetState = sheetState,
         sheetGesturesEnabled = !holdsMap,
         dragHandle = if (holdsMap) null else ({ BottomSheetDefaults.DragHandle() }),

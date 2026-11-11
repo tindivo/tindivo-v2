@@ -99,6 +99,9 @@ internal class AddressFormViewModel
 
         private val loggedOut get() = _state.value.outcome == FormOutcome.LoggedOut
 
+        // Irreversible: la hoja del checkout se cerró con el formulario libre; desde ahí no se guarda ni se borra.
+        private var released = false
+
         /** El punto con el que se abrió: solo si cambia (o no estaba confirmado) viaja al guardar. */
         private var originalPoint: GeoPoint? = null
         private var originalConfirmed = false
@@ -144,6 +147,7 @@ internal class AddressFormViewModel
 
         /** Guarda. Con un guardado en curso, o con algo por completar, no hace nada: un doble toque manda una sola vez. */
         fun save() {
+            if (released) return
             val s = _state.value
             val point = s.point
             if (!s.canSave || point == null || job?.isActive == true || loggedOut) return
@@ -169,6 +173,7 @@ internal class AddressFormViewModel
         /** Borra la dirección que se está editando, ya confirmado en la propia pantalla. */
         fun confirmDelete() {
             val id = editingId ?: return
+            if (released) return
             if (!_state.value.confirmingDelete || job?.isActive == true || loggedOut) return
             val account = accountId ?: return endSession()
             _state.update { it.copy(deleting = true, saveError = null) }
@@ -189,6 +194,18 @@ internal class AddressFormViewModel
                         }
                     }
                 }
+        }
+
+        /**
+         * La hoja del checkout pide cerrarse (ya escondida, o con su «Cancelar»): se cierra solo si no hay un guardado
+         * ni un borrado en curso, leído ahora en el estado y no en la última recomposición de la hoja. Si se cierra,
+         * esta apertura ya no empieza ninguna llamada: un toque que llegue tarde no manda nada cuyo resultado ya no
+         * llegaría al checkout (CAX-005). Devuelve si se puede cerrar.
+         */
+        fun closeIfIdle(): Boolean {
+            if (_state.value.busy) return false
+            released = true
+            return true
         }
 
         private suspend fun create(

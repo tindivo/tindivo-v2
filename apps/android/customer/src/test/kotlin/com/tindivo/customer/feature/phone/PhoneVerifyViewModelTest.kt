@@ -7,6 +7,7 @@ import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.checkout.HeldIo
 import com.tindivo.customer.feature.checkout.sessionJwt
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.GatedTokens
@@ -23,6 +24,7 @@ import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -516,6 +518,44 @@ class PhoneVerifyViewModelTest {
             assertEquals(PhoneStep.Number, viewModel.state.value.step)
             assertEquals("", viewModel.state.value.code)
             assertEquals("987654321", viewModel.state.value.phone)
+        }
+
+    // CAX-005: la hoja del checkout decide cerrarse con el estado del ViewModel en ese momento, no con el de la última
+    // recomposición. Con un envío que empezó durante la animación, no se cierra y el resultado llega.
+
+    @Test
+    fun `con un envio en curso la hoja del checkout no se cierra y el codigo llega`() =
+        runTest {
+            server.enqueue(response(200, SENT))
+            HeldIo().use { io ->
+                val viewModel = viewModel(io = io.dispatcher)
+                viewModel.onPhoneChanged("987654321")
+                io.hold()
+                viewModel.sendCode()
+                assertTrue(viewModel.state.value.sending)
+
+                assertFalse(viewModel.closeIfIdle())
+                io.release()
+
+                assertEquals(PhoneStep.Code, viewModel.state.first { !it.sending }.step)
+                assertEquals(1, server.requestCount)
+            }
+        }
+
+    @Test
+    fun `cerrada la hoja con la pantalla libre un toque tardio en verificar o reenviar no sale a la red`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            viewModel.onCodeChanged("123456")
+            clock.now = clock.now.plusSeconds(61)
+
+            assertTrue(viewModel.closeIfIdle())
+            viewModel.verify()
+            viewModel.resend()
+
+            assertEquals(1, server.requestCount)
+            assertFalse(viewModel.state.value.sending)
         }
 
     private companion object {

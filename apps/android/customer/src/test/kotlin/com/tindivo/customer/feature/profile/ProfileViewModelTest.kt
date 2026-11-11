@@ -379,6 +379,37 @@ class ProfileViewModelTest {
         assertFalse(ProfileUiState(name = "Rosa Quispe").toString().contains("Rosa"))
     }
 
+    // CAX-005: la hoja del checkout decide cerrarse con el estado del ViewModel en ese momento, no con el de la última
+    // recomposición. Con un guardado que empezó durante la animación, no se cierra y el resultado llega.
+
+    @Test
+    fun `con un guardado en curso la hoja del checkout no se cierra y el nombre llega`() =
+        runTest(dispatcher) {
+            gateway.nameGate = CompletableDeferred()
+            val viewModel = saving()
+
+            assertFalse(viewModel.closeIfIdle())
+            gateway.nameGate?.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(ProfileOutcome.Saved, viewModel.state.value.outcome)
+        }
+
+    @Test
+    fun `cerrada la hoja con la pantalla libre un toque tardio en guardar no llama`() =
+        runTest(dispatcher) {
+            val viewModel = opened()
+            viewModel.onName("Rosa Quispe")
+
+            assertTrue(viewModel.closeIfIdle())
+            viewModel.save()
+            advanceUntilIdle()
+
+            assertTrue(gateway.calls.toString(), gateway.calls.none { it.startsWith("terms") || it.startsWith("name") })
+            assertFalse(viewModel.state.value.saving)
+            assertNull(viewModel.state.value.outcome)
+        }
+
     private companion object {
         const val ACCOUNT = "user-1"
         const val OTHER_ACCOUNT = "user-2"

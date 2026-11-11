@@ -87,6 +87,9 @@ internal class ProfileViewModel
 
         @Volatile private var ended = accountId == null
 
+        // Irreversible: la hoja del checkout se cerró con la pantalla libre; desde ahí no se guarda el nombre.
+        private var released = false
+
         init {
             viewModelScope.launch {
                 sessionStore.state.collect { session ->
@@ -109,7 +112,7 @@ internal class ProfileViewModel
         /** Términos y luego el nombre. Con un guardado en curso no hace nada: un doble toque manda una sola vez. */
         fun save() {
             val current = _state.value
-            if (!current.canSave || job?.isActive == true) return
+            if (!current.canSave || job?.isActive == true || released) return
             val account = accountId ?: return endSession()
             val name = cleanName(current.name)
             _state.update { it.copy(saving = true, rejected = false, saveError = null) }
@@ -142,6 +145,18 @@ internal class ProfileViewModel
         fun discardInput() {
             job?.cancel()
             _state.update { ProfileUiState(outcome = it.outcome) }
+        }
+
+        /**
+         * La hoja del checkout pide cerrarse (ya escondida, o con su «Cancelar»): se cierra solo si no hay un guardado
+         * en curso, leído ahora en el estado y no en la última recomposición de la hoja. Si se cierra, esta apertura ya
+         * no empieza ninguna llamada: un toque que llegue tarde no manda nada cuyo resultado ya no llegaría al checkout
+         * (CAX-005). Devuelve si se puede cerrar.
+         */
+        fun closeIfIdle(): Boolean {
+            if (_state.value.saving) return false
+            released = true
+            return true
         }
 
         /** Sigue siendo la cuenta de la pantalla: no terminó Y la sesión vigente, leída ahora, es la de [account]. */

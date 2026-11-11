@@ -107,6 +107,11 @@ internal class PhoneVerifyViewModel
         // Irreversible: una vez cerrada la sesión, esta instancia no acepta acciones ni publica resultados.
         private var closed = false
 
+        // Irreversible: la hoja del checkout se cerró con la pantalla libre; desde ahí no sale ninguna llamada.
+        private var released = false
+
+        private val acceptsCalls get() = !closed && !released
+
         init {
             if (accountId == null) endSession()
             viewModelScope.launch {
@@ -214,6 +219,18 @@ internal class PhoneVerifyViewModel
             _state.value = PhoneUiState()
         }
 
+        /**
+         * La hoja del checkout pide cerrarse (ya escondida, o con su «Cancelar»): se cierra solo si no hay un envío,
+         * una verificación ni un traslado en curso, leído ahora en el estado y no en la última recomposición de la
+         * hoja. Si se cierra, esta apertura ya no empieza ninguna llamada: un toque que llegue tarde no manda nada cuyo
+         * resultado ya no llegaría al checkout (CAX-005). Devuelve si se puede cerrar.
+         */
+        fun closeIfIdle(): Boolean {
+            if (_state.value.sending) return false
+            released = true
+            return true
+        }
+
         private suspend fun sendAndAdvance(
             phone: String,
             account: String,
@@ -272,7 +289,7 @@ internal class PhoneVerifyViewModel
          */
         private fun launchCall(block: suspend (account: String) -> Unit) {
             val current = _state.value
-            if (closed || current.sending || current.loggedOut) return
+            if (!acceptsCalls || current.sending || current.loggedOut) return
             val account = accountId ?: return endSession()
             if (!isCurrent(account)) return endSession()
             _state.update { it.copy(sending = true, error = null) }
