@@ -216,7 +216,9 @@ internal class AddressFormViewModel
         /**
          * El guardado ([FormOutcome.Saved]) o el borrado ([FormOutcome.Deleted]) terminado, una sola vez: lo recibe
          * quien lo pida primero (el efecto de la hoja o su cierre) y queda marcado como entregado en el mismo cambio de
-         * estado. Cualquier otro caso devuelve `null`.
+         * estado. Cualquier otro caso devuelve `null`. Si entrega algo, esta apertura ya no empieza ninguna llamada, como
+         * tras [closeIfIdle]: un toque tardío en «Guardar» o en «Borrar», o un reintento de la carga, no sale a la red
+         * aunque la hoja aún no se haya retirado (CAX-005).
          */
         fun takeResult(): FormOutcome? {
             var taken: FormOutcome? = null
@@ -225,6 +227,7 @@ internal class AddressFormViewModel
                 taken = outcome.takeIf { o -> !it.delivered && (o is FormOutcome.Saved || o == FormOutcome.Deleted) }
                 if (taken == null) it else it.copy(delivered = true)
             }
+            if (taken != null) released = true
             return taken
         }
 

@@ -603,6 +603,36 @@ class PhoneVerifyViewModelTest {
             assertNull(viewModel.takeResult())
         }
 
+    // CAX-005, entrega por el efecto: la hoja aplica el celular y se retira sin pasar por closeIfIdle. Lo que llegue en
+    // ese intervalo ya no sale a la red. Hay una respuesta para una llamada de más: si saliera, se contaría.
+
+    @Test
+    fun `entregada la verificacion por el efecto un toque tardio en verificar, reenviar o enviar no sale a la red`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+            assertEquals(2, server.requestCount)
+            server.enqueue(response(200, SENT))
+
+            assertEquals(PhoneVerified, viewModel.takeResult())
+            clock.now = clock.now.plusSeconds(61)
+            viewModel.verify()
+            viewModel.resend()
+            // Desde el paso del número, «Enviar código» volvería a pedir uno.
+            viewModel.changeNumber()
+            viewModel.onPhoneChanged("987654321")
+            viewModel.sendCode()
+
+            assertEquals(2, server.requestCount)
+            assertFalse(viewModel.state.value.sending)
+            assertEquals(PhoneStep.Number, viewModel.state.value.step)
+            assertNull(viewModel.takeResult())
+        }
+
     private companion object {
         const val CHALLENGE = "7c2a737a-018f-4c2d-9a11-6f0d3c1e8a09"
         const val SENT = """{"data":{"sent":true,"channel":"sms"}}"""

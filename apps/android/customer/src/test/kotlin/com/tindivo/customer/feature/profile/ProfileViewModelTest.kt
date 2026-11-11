@@ -451,6 +451,27 @@ class ProfileViewModelTest {
             assertNull(viewModel.takeResult())
         }
 
+    // CAX-005, entrega por el efecto: la hoja aplica el nombre y se retira sin pasar por closeIfIdle. Un toque que
+    // llegue en ese intervalo ya no guarda el nombre otra vez.
+
+    @Test
+    fun `entregado el nombre por el efecto un toque tardio en guardar no vuelve a llamar`() =
+        runTest(dispatcher) {
+            val viewModel = saving()
+            advanceUntilIdle()
+            assertEquals(ProfileOutcome.Saved, viewModel.state.value.outcome)
+            assertEquals(listOf("terms:$TERMS_VERSION:$ACCOUNT", "name:Rosa Quispe:$ACCOUNT"), gateway.calls)
+
+            assertEquals(ProfileOutcome.Saved, viewModel.takeResult())
+            viewModel.onName("Rosa Quispe Mamani")
+            viewModel.save()
+            advanceUntilIdle()
+
+            assertEquals(listOf("terms:$TERMS_VERSION:$ACCOUNT", "name:Rosa Quispe:$ACCOUNT"), gateway.calls)
+            assertFalse(viewModel.state.value.saving)
+            assertNull(viewModel.takeResult())
+        }
+
     private companion object {
         const val ACCOUNT = "user-1"
         const val OTHER_ACCOUNT = "user-2"

@@ -166,7 +166,8 @@ internal class ProfileViewModel
 
         /**
          * El nombre guardado ([ProfileOutcome.Saved]), una sola vez: lo recibe quien lo pida primero (el efecto de la
-         * hoja o su cierre) y queda marcado como entregado en el mismo cambio de estado. Si no, `null`.
+         * hoja o su cierre) y queda marcado como entregado en el mismo cambio de estado. Si no, `null`. Si lo entrega,
+         * esta apertura ya no guarda el nombre, como tras [closeIfIdle], aunque la hoja aún no se haya retirado (CAX-005).
          */
         fun takeResult(): ProfileOutcome? {
             var taken: ProfileOutcome? = null
@@ -175,6 +176,7 @@ internal class ProfileViewModel
                 taken = if (ready) ProfileOutcome.Saved else null
                 if (ready) it.copy(delivered = true) else it
             }
+            if (taken != null) released = true
             return taken
         }
 

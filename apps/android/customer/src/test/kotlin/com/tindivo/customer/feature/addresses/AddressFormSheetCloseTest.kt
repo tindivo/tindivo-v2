@@ -189,4 +189,73 @@ internal class AddressFormSheetCloseTest : AddressHarness() {
             assertEquals(2, server.requestCount)
             assertFalse(vm.state.value.loading)
         }
+
+    // CAX-005, entrega por el efecto: la hoja aplica la dirección y se retira sin pasar por closeIfIdle. Lo que llegue
+    // en ese intervalo ya no sale a la red. Hay respuestas para una llamada de más: si saliera, se contaría.
+
+    @Test
+    fun `entregada el alta por el efecto un toque tardio en guardar no crea otra direccion`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList())
+            server.enqueue(response(201, """{"data":${address(id = ID_C)}}"""))
+            server.enqueue(response(201, """{"data":${address(id = ID_B)}}"""))
+            val vm = viewModel()
+            vm.ready()
+            vm.fillValid()
+            vm.save()
+            assertEquals(FormOutcome.Saved(ID_C), vm.state.value.outcome)
+            assertEquals(3, server.requestCount)
+
+            assertEquals(FormOutcome.Saved(ID_C), vm.takeResult())
+            vm.save()
+
+            assertEquals(3, server.requestCount)
+            assertFalse(vm.state.value.saving)
+            assertEquals(FormOutcome.Saved(ID_C), vm.state.value.outcome)
+            assertNull(vm.takeResult())
+        }
+
+    @Test
+    fun `entregada el alta por el efecto una carga tardia no sale a la red`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList())
+            server.enqueue(response(201, """{"data":${address(id = ID_C)}}"""))
+            server.enqueue(configOk())
+            server.enqueue(addressList(address(id = ID_C)))
+            val vm = viewModel()
+            vm.ready()
+            vm.fillValid()
+            vm.save()
+            assertEquals(FormOutcome.Saved(ID_C), vm.state.value.outcome)
+            assertEquals(3, server.requestCount)
+
+            assertEquals(FormOutcome.Saved(ID_C), vm.takeResult())
+            vm.load()
+
+            assertEquals(3, server.requestCount)
+            assertFalse(vm.state.value.loading)
+        }
+
+    @Test
+    fun `entregado el borrado por el efecto un toque tardio en borrar no manda otro`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList(address(), address(ID_B, isDefault = false)))
+            server.enqueue(response(204))
+            server.enqueue(response(204))
+            val vm = viewModel(id = ID_B)
+            vm.ready()
+            vm.askDelete()
+            vm.confirmDelete()
+            assertEquals(FormOutcome.Deleted, vm.state.value.outcome)
+            assertEquals(3, server.requestCount)
+
+            assertEquals(FormOutcome.Deleted, vm.takeResult())
+            vm.confirmDelete()
+
+            assertEquals(3, server.requestCount)
+            assertFalse(vm.state.value.deleting)
+        }
 }

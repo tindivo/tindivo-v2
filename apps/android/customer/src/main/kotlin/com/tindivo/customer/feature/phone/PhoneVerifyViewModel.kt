@@ -241,7 +241,9 @@ internal class PhoneVerifyViewModel
 
         /**
          * El celular ya verificado ([PhoneStep.Done]), una sola vez: lo recibe quien lo pida primero (el efecto de la
-         * hoja o su cierre) y queda marcado como entregado en el mismo cambio de estado. Si no, `null`.
+         * hoja o su cierre) y queda marcado como entregado en el mismo cambio de estado. Si no, `null`. Si lo entrega,
+         * esta apertura ya no empieza ninguna llamada, como tras [closeIfIdle], aunque la hoja aún no se haya retirado
+         * (CAX-005).
          */
         fun takeResult(): PhoneVerified? {
             var taken: PhoneVerified? = null
@@ -250,6 +252,7 @@ internal class PhoneVerifyViewModel
                 taken = if (ready) PhoneVerified else null
                 if (ready) it.copy(delivered = true) else it
             }
+            if (taken != null) released = true
             return taken
         }
 
