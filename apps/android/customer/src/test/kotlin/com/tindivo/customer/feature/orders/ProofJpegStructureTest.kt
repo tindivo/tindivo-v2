@@ -116,6 +116,44 @@ class ProofJpegStructureTest {
     }
 
     @Test
+    fun `un JPEG real con un DRI incompleto no se sube y con uno valido si`() {
+        val base = jpeg(200, 100)
+        // El contraejemplo de la auditoría (CAX-004): FF DD 00 02 justo después del SOI.
+        val incomplete = base.copyOfRange(0, 2) + bytes(0xFF, 0xDD, 0x00, 0x02) + base.copyOfRange(2, base.size)
+        assertNull(stripJpegMetadata(incomplete))
+        assertNull(jpegDimensions(incomplete))
+        assertEquals(EncodedProof.Unreadable, finishProofJpeg(incomplete))
+
+        val valid = base.copyOfRange(0, 2) + bytes(0xFF, 0xDD, 0x00, 0x04, 0x00, 0x10) + base.copyOfRange(2, base.size)
+        assertArrayEquals(valid, (finishProofJpeg(valid) as EncodedProof.Ready).jpeg)
+    }
+
+    @Test
+    fun `un JPEG real con una tabla, un SOF o un SOS fuera de su estructura no se sube`() {
+        val base = jpeg(200, 100)
+        val dqt = markers(base, 0xDB).first()
+        val dht = markers(base, 0xC4).first()
+        val sof = markers(base, 0xC0).first()
+        val sos = markers(base, SOS).first()
+        val rejected =
+            mapOf(
+                "DQT con Tq = 4" to base.patched(dqt + 4, 0x04),
+                "DQT con Pq = 1 sin sus 64 valores de más" to base.patched(dqt + 4, 0x10),
+                "DQT un byte más corta" to base.patched(dqt + 3, u16(base, dqt + 2) - 1),
+                "DHT con Th = 4" to base.patched(dht + 4, 0x04),
+                "DHT con una cuenta de más" to base.patched(dht + 5, (base[dht + 5].toInt() and 0xFF) + 1),
+                "SOF con H = 0" to base.patched(sof + 11, 0x01),
+                "SOF con Tq = 4" to base.patched(sof + 12, 0x04),
+                "SOS con Td = 4" to base.patched(sos + 6, 0x40),
+                "SOS básico con Se = 62" to base.patched(sos + 4 + 1 + 2 * (base[sos + 4].toInt() and 0xFF) + 1, 62),
+            )
+        for ((name, bytes) in rejected) {
+            assertNull(name, stripJpegMetadata(bytes))
+            assertEquals(name, EncodedProof.Unreadable, finishProofJpeg(bytes))
+        }
+    }
+
+    @Test
     fun `los JPEG reales que escribe un codificador siguen pasando y se decodifican`() {
         val samples =
             listOf(

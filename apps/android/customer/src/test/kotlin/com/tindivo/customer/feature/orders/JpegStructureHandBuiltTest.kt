@@ -126,6 +126,137 @@ class JpegStructureHandBuiltTest {
         for ((name, jpeg) in invalid) assertRejected(name, jpeg)
     }
 
+    @Test
+    fun `un DRI incompleto o con largo distinto de 4 no se sube`() {
+        // El contraejemplo de la auditoría: FF DD 00 02 justo después del SOI de un JPEG válido.
+        assertRejected("DRI de largo 2", afterSoi(bytes(0xFF, DRI, 0x00, 0x02)))
+        assertRejected("DRI de largo 3", afterSoi(bytes(0xFF, DRI, 0x00, 0x03, 0x10)))
+        assertRejected("DRI de largo 5", afterSoi(bytes(0xFF, DRI, 0x00, 0x05, 0x00, 0x10, 0x00)))
+        // También entre escaneos de un progresivo.
+        val parts = progressiveParts()
+        val afterFirstScan = PROGRESSIVE_FIRST_SCAN_END + 1
+        val incomplete = listOf(bytes(0xFF, DRI, 0x00, 0x02))
+        val dirty = (parts.subList(0, afterFirstScan) + incomplete + parts.subList(afterFirstScan, parts.size)).join()
+        assertRejected("DRI de largo 2 entre escaneos", dirty)
+    }
+
+    @Test
+    fun `un DRI valido se conserva tal cual`() {
+        val jpeg = afterSoi(bytes(0xFF, DRI, 0x00, 0x04, 0x00, 0x10))
+        assertAccepted("DRI 16", jpeg)
+        assertAccepted("DRI 0", afterSoi(bytes(0xFF, DRI, 0x00, 0x04, 0x00, 0x00)))
+    }
+
+    @Test
+    fun `una DQT cuyo largo no cuadra con sus tablas o con Pq o Tq fuera de rango no se sube`() {
+        val invalid =
+            mapOf(
+                "un byte de más" to segment(DQT, bytes(0x00) + ByteArray(QUANT_VALUES + 1) { 1 }),
+                "un byte de menos" to segment(DQT, bytes(0x00) + ByteArray(QUANT_VALUES - 1) { 1 }),
+                "16 bits con el largo de 8" to segment(DQT, bytes(0x10) + ByteArray(QUANT_VALUES) { 1 }),
+                "Pq = 2" to segment(DQT, bytes(0x20) + ByteArray(QUANT_VALUES * 3) { 1 }),
+                "Tq = 4" to segment(DQT, bytes(0x04) + ByteArray(QUANT_VALUES) { 1 }),
+                "vacía" to segment(DQT, ByteArray(0)),
+                "segunda tabla cortada" to segment(DQT, dqtTable(0) + bytes(0x01) + ByteArray(10) { 1 }),
+            )
+        for ((name, table) in invalid) assertRejected(name, afterSoi(table))
+        // Controles: una tabla de 16 bits y dos tablas en un mismo segmento sí cuadran.
+        assertAccepted("16 bits", afterSoi(segment(DQT, bytes(0x11) + ByteArray(QUANT_VALUES * 2) { 1 })))
+        assertAccepted("dos tablas", afterSoi(segment(DQT, dqtTable(1) + dqtTable(2))))
+    }
+
+    @Test
+    fun `una DHT cuyas cuentas no cuadran o con Tc o Th fuera de rango no se sube`() {
+        val lengths = ByteArray(HUFFMAN_LENGTHS - 1)
+        val invalid =
+            mapOf(
+                "cuentas que suman más que los símbolos" to segment(DHT, bytes(0x00, 2) + lengths + bytes(0x00)),
+                "un símbolo de más" to segment(DHT, bytes(0x00, 1) + lengths + bytes(0x00, 0x01)),
+                "Tc = 2" to segment(DHT, bytes(0x20, 1) + lengths + bytes(0x00)),
+                "Th = 4" to segment(DHT, bytes(0x04, 1) + lengths + bytes(0x00)),
+                "más de 256 símbolos" to
+                    segment(DHT, bytes(0x00) + ByteArray(HUFFMAN_LENGTHS) { 17 } + ByteArray(17 * HUFFMAN_LENGTHS)),
+                "cortada en sus cuentas" to segment(DHT, bytes(0x00, 1, 0, 0)),
+                "vacía" to segment(DHT, ByteArray(0)),
+            )
+        for ((name, table) in invalid) assertRejected(name, afterSoi(table))
+        // Controles: DC y AC en un mismo segmento, y una tabla con exactamente 256 símbolos.
+        assertAccepted("DC y AC", afterSoi(segment(DHT, dhtTable(0x00) + dhtTable(0x13))))
+        val full = bytes(0x10) + ByteArray(HUFFMAN_LENGTHS) { 16 } + ByteArray(MAX_SYMBOLS) { it.toByte() }
+        assertAccepted("256 símbolos", afterSoi(segment(DHT, full)))
+    }
+
+    @Test
+    fun `un SOF con muestreo, tabla o componentes incoherentes no se sube`() {
+        val invalid =
+            mapOf(
+                "H = 0" to frame(1, listOf(1, 0x01, 0)),
+                "V = 0" to frame(1, listOf(1, 0x10, 0)),
+                "H = 5" to frame(1, listOf(1, 0x51, 0)),
+                "V = 5" to frame(1, listOf(1, 0x15, 0)),
+                "Tq = 4" to frame(1, listOf(1, 0x11, 4)),
+                "Nf = 2 con un solo componente" to frame(2, listOf(1, 0x11, 0)),
+                "Nf = 1 con dos componentes" to frame(1, listOf(1, 0x11, 0, 2, 0x11, 0)),
+                "Nf = 0" to frame(0, emptyList()),
+            )
+        for ((name, sof) in invalid) assertRejected(name, withFrame(sof))
+        // Control: muestreo 2×2 en el primero y 1×1 en los demás, con tablas 0 y 1.
+        val yuv = frame(3, listOf(1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1))
+        assertAccepted("4:2:0", SOI + jfif() + dqt() + yuv + dht() + sos(1, 2, 3) + SCAN_DATA + EOI)
+    }
+
+    @Test
+    fun `un SOS con componentes, tablas o seleccion espectral incoherentes no se sube`() {
+        val invalid =
+            mapOf(
+                "Td = 4" to scan(1, listOf(1, 0x40), FULL_SPECTRUM),
+                "Ta = 4" to scan(1, listOf(1, 0x04), FULL_SPECTRUM),
+                "Ns = 0" to scan(0, emptyList(), FULL_SPECTRUM),
+                "Ns = 2 con un solo componente" to scan(2, listOf(1, 0x00), FULL_SPECTRUM),
+                "Ns = 1 con dos componentes" to scan(1, listOf(1, 0x00, 1, 0x00), FULL_SPECTRUM),
+                "componente que el SOF no tiene" to scan(1, listOf(9, 0x00), FULL_SPECTRUM),
+                "básico con Ss = 1" to scan(1, listOf(1, 0x00), listOf(1, 63, 0)),
+                "básico con Se = 62" to scan(1, listOf(1, 0x00), listOf(0, 62, 0)),
+                "básico con Al = 1" to scan(1, listOf(1, 0x00), listOf(0, 63, 0x01)),
+            )
+        for ((name, header) in invalid) assertRejected(name, withScan(header))
+        val progressiveInvalid =
+            mapOf(
+                "Se = 64" to scan(1, listOf(1, 0x00), listOf(1, 64, 0)),
+                "Ss mayor que Se" to scan(1, listOf(1, 0x00), listOf(5, 4, 0)),
+                "DC con AC (Ss = 0, Se = 63)" to scan(1, listOf(1, 0x00), FULL_SPECTRUM),
+                "AC de dos componentes" to scan(2, listOf(1, 0x00, 2, 0x00), AC_SCAN),
+                "Ah = 14" to scan(1, listOf(1, 0x00), listOf(1, 63, 0xE0)),
+                "Al = 14" to scan(1, listOf(1, 0x00), listOf(1, 63, 0x0E)),
+            )
+        for ((name, header) in progressiveInvalid) assertRejected("progresivo, $name", withProgressiveScan(header))
+        // Controles: un básico con las tablas 1 y un AC progresivo de aproximación sucesiva (Ah = 1, Al = 0).
+        assertAccepted("básico, tablas 1", withScan(scan(1, listOf(1, 0x11), FULL_SPECTRUM)))
+        assertAccepted("progresivo AC", withProgressiveScan(scan(1, listOf(1, 0x11), listOf(1, 63, 0x10))))
+    }
+
+    @Test
+    fun `un APP0 de cabecera que no es un JFIF completo y sin miniatura no se sube`() {
+        val invalid =
+            mapOf(
+                "otro identificador" to app0("JFXX", 1, 1, 0, 1, 1, 0, 0),
+                "versión 2" to app0("JFIF", 2, 1, 0, 1, 1, 0, 0),
+                "versión 1.03" to app0("JFIF", 1, 3, 0, 1, 1, 0, 0),
+                "unidades 3" to app0("JFIF", 1, 1, 3, 1, 1, 0, 0),
+                "densidad X cero" to app0("JFIF", 1, 1, 0, 0, 1, 0, 0),
+                "densidad Y cero" to app0("JFIF", 1, 1, 0, 1, 0, 0, 0),
+                "miniatura 1×1" to app0("JFIF", 1, 1, 0, 1, 1, 1, 1, bytes(0x10, 0x20, 0x30)),
+                "un byte de más" to app0("JFIF", 1, 1, 0, 1, 1, 0, 0, bytes(0x00)),
+                "cortado" to segment(APP0, "JFIF\u0000".toByteArray() + bytes(0x01, 0x01, 0x00)),
+            )
+        for ((name, header) in invalid) {
+            assertRejected(name, SOI + header + dqt() + sof(BASELINE, 1) + dht() + sos(1) + SCAN_DATA + EOI)
+        }
+        // Control: JFIF 1.02 en puntos por pulgada (72×72).
+        val dpi = app0("JFIF", 1, 2, 1, 72, 72, 0, 0)
+        assertAccepted("JFIF 1.02", SOI + dpi + dqt() + sof(BASELINE, 1) + dht() + sos(1) + SCAN_DATA + EOI)
+    }
+
     @Test(timeout = LINEAR_TIMEOUT_MS)
     fun `el recorrido de datos grandes es lineal`() {
         // 8 MB de datos con relleno y RST: un recorrido cuadrático no terminaría a tiempo.
@@ -145,6 +276,72 @@ class JpegStructureHandBuiltTest {
         assertEquals(name, EncodedProof.Unreadable, finishProofJpeg(jpeg))
     }
 
+    /** [jpeg] pasa entero, sin metadatos que quitar: se sube exactamente tal cual. */
+    private fun assertAccepted(
+        name: String,
+        jpeg: ByteArray,
+    ) {
+        assertArrayEquals(name, jpeg, stripJpegMetadata(jpeg))
+        assertEquals(name, PixelSize(WIDTH, HEIGHT), jpegDimensions(jpeg))
+        assertArrayEquals(name, jpeg, (finishProofJpeg(jpeg) as? EncodedProof.Ready)?.jpeg)
+    }
+
+    /** El JPEG básico con [segments] metidos justo después del SOI. */
+    private fun afterSoi(vararg segments: ByteArray): ByteArray {
+        val whole = baseline()
+        return SOI + segments.toList().join() + whole.copyOfRange(2, whole.size)
+    }
+
+    /** Una tabla de cuantización de 8 bits con el id [id]. */
+    private fun dqtTable(id: Int): ByteArray = bytes(id) + ByteArray(QUANT_VALUES) { 1 }
+
+    /** Una tabla Huffman [classAndId] (Tc/Th) con un solo código de 1 bit. */
+    private fun dhtTable(classAndId: Int): ByteArray =
+        bytes(classAndId, 1) + ByteArray(HUFFMAN_LENGTHS - 1) + bytes(0x00)
+
+    /** Un SOF básico de 8 bits que declara [declared] componentes y lleva los bytes [components] (id, H/V, Tq…). */
+    private fun frame(
+        declared: Int,
+        components: List<Int>,
+    ): ByteArray {
+        val header = bytes(8, HEIGHT shr 8, HEIGHT and 0xFF, WIDTH shr 8, WIDTH and 0xFF, declared)
+        return segment(BASELINE, header + components.toByteArrayOfInts())
+    }
+
+    private fun withFrame(sof: ByteArray): ByteArray = SOI + jfif() + dqt() + sof + dht() + sos(1) + SCAN_DATA + EOI
+
+    /** Una cabecera SOS que declara [declared] componentes, con los bytes [components] (id, Td/Ta…) y [spectral]. */
+    private fun scan(
+        declared: Int,
+        components: List<Int>,
+        spectral: List<Int>,
+    ): ByteArray = segment(SOS, bytes(declared) + components.toByteArrayOfInts() + spectral.toByteArrayOfInts())
+
+    private fun withScan(header: ByteArray): ByteArray =
+        SOI + jfif() + dqt() + sof(BASELINE, 1) + dht() + header + SCAN_DATA + EOI
+
+    /** Un progresivo de 3 componentes: su escaneo DC y luego [header] con sus datos. */
+    private fun withProgressiveScan(header: ByteArray): ByteArray =
+        SOI + jfif() + dqt() + sof(PROGRESSIVE, 3) + dht() + sos(1, 2, 3, spectral = DC_SCAN) + SCAN_DATA + header +
+            SCAN_DATA + EOI
+
+    /** Un APP0 con [id] de 4 letras y su `\0`, versión, unidades, densidades, miniatura y [extra] detrás. */
+    @Suppress("LongParameterList")
+    private fun app0(
+        id: String,
+        major: Int,
+        minor: Int,
+        units: Int,
+        xDensity: Int,
+        yDensity: Int,
+        thumbWidth: Int,
+        thumbHeight: Int,
+        extra: ByteArray = ByteArray(0),
+    ): ByteArray {
+        val fields = bytes(major, minor, units, 0, xDensity, 0, yDensity, thumbWidth, thumbHeight)
+        return segment(APP0, "$id\u0000".toByteArray() + fields + extra)
+    }
+
     /** SOI, JFIF, tablas, SOF básico de un componente y la cabecera de su único escaneo. */
     private fun head(): ByteArray = SOI + jfif() + dqt() + sof(BASELINE, 1) + dht() + sos(1)
 
@@ -152,8 +349,9 @@ class JpegStructureHandBuiltTest {
 
     /** El progresivo por partes: cabecera, un escaneo DC de los tres componentes y tres escaneos AC de uno. */
     private fun progressiveParts(): List<ByteArray> =
-        listOf(SOI, jfif(), dqt(), sof(PROGRESSIVE, 3), dht(), sos(1, 2, 3), SCAN_DATA) +
-            listOf(dht(), sos(1), SCAN_DATA, sos(2), SCAN_DATA, sos(3), SCAN_DATA, EOI)
+        listOf(SOI, jfif(), dqt(), sof(PROGRESSIVE, 3), dht(), sos(1, 2, 3, spectral = DC_SCAN), SCAN_DATA) +
+            listOf(dht(), sos(1, spectral = AC_SCAN), SCAN_DATA, sos(2, spectral = AC_SCAN), SCAN_DATA) +
+            listOf(sos(3, spectral = AC_SCAN), SCAN_DATA, EOI)
 
     private fun progressive(): ByteArray = progressiveParts().join()
 
@@ -176,9 +374,13 @@ class JpegStructureHandBuiltTest {
     /** Una tabla Huffman DC 0 con un solo código de 1 bit. */
     private fun dht(): ByteArray = segment(DHT, bytes(0x00, 1) + ByteArray(HUFFMAN_LENGTHS - 1) + bytes(0x00))
 
-    private fun sos(vararg components: Int): ByteArray {
+    /** Cabecera SOS de [components] con las tablas 0 y la selección [spectral] (Ss, Se, Ah/Al). */
+    private fun sos(
+        vararg components: Int,
+        spectral: List<Int> = FULL_SPECTRUM,
+    ): ByteArray {
         val selectors = components.flatMap { listOf(it, 0x00) }.toByteArrayOfInts()
-        return segment(SOS, bytes(components.size) + selectors + bytes(0x00, 0x3F, 0x00))
+        return segment(SOS, bytes(components.size) + selectors + spectral.toByteArrayOfInts())
     }
 
     private fun exif(): ByteArray =
@@ -205,7 +407,15 @@ class JpegStructureHandBuiltTest {
         const val PROGRESSIVE = 0xC2
         const val DHT = 0xC4
         const val DQT = 0xDB
+        const val DRI = 0xDD
         const val SOS = 0xDA
+        const val QUANT_VALUES = 64
+        const val MAX_SYMBOLS = 256
+        val FULL_SPECTRUM = listOf(0x00, 0x3F, 0x00)
+
+        /** Progresivo: primer escaneo DC (Ss = Se = 0, Al = 1) y escaneo AC (Ss = 1, Se = 63). */
+        val DC_SCAN = listOf(0x00, 0x00, 0x01)
+        val AC_SCAN = listOf(0x01, 0x3F, 0x00)
         const val APP0 = 0xE0
         const val APP15 = 0xEF
         const val COM = 0xFE
