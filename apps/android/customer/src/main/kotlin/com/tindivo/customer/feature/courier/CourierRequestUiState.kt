@@ -96,4 +96,7 @@ internal data class CourierRequestUiState(
         val myPhone = me.phone?.let(::normalizePePhoneInput).orEmpty()
         return myPhone.isNotEmpty() && point.phone == myPhone && point.name.trim() == me.fullName.trim()
     }
+
+    /** Sin el borrador, las direcciones ni los contactos: son datos personales y un log no los lleva. */
+    override fun toString(): String = "CourierRequestUiState(phase=$phase, sheet=$sheet, sending=$sending)"
 }

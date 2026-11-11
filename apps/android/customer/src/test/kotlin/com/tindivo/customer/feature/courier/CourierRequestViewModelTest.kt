@@ -92,6 +92,8 @@ class CourierRequestViewModelTest : CourierHarness() {
             val viewModel = viewModel()
 
             assertEquals(1, session.signOutCalls)
+            // Cierra solo la sesión de A, comprobado y cerrado de una vez en el almacén.
+            assertEquals(listOf(ACCOUNT_A), session.signOutIfCalls)
             assertEquals(RequestPhase.SignInRequired, viewModel.state.value.phase)
         }
 

@@ -74,7 +74,8 @@ internal fun CourierPhase.isLive(): Boolean = this is CourierPhase.Active
 
 /**
  * Una entrega en «Mis entregas». [feeText] es la tarifa del servidor ya formateada. [driverName] es el nombre del
- * motorizado asignado, si lo hay (sin teléfono).
+ * motorizado asignado, si lo hay (sin teléfono). Los rótulos de los extremos son nombres de personas o referencias de
+ * su casa: `toString` no los muestra, ni el nombre del motorizado ni lo que se lleva.
  */
 internal data class CourierCardUi(
     val id: UUID,
@@ -86,7 +87,9 @@ internal data class CourierCardUi(
     val feeText: String,
     val createdAt: Instant,
     val driverName: String? = null,
-)
+) {
+    override fun toString(): String = "CourierCardUi(shortId=$shortId, phase=$phase)"
+}
 
 /**
  * Un sitio y una persona que la cuenta ya usó en sus entregas (`frequentContacts`). Su celular es PII: se muestra en
@@ -109,7 +112,10 @@ internal data class CourierPageUi(
     val contacts: List<CourierContactUi>,
 )
 
-/** El seguimiento de una entrega (`GET /public/courier/{shortId}`): sin teléfonos. */
+/**
+ * El seguimiento de una entrega (`GET /public/courier/{shortId}`): sin teléfonos, pero con los nombres de quien entrega,
+ * quien recibe y el motorizado. `toString` no los muestra.
+ */
 internal data class CourierTrackingUi(
     val shortId: String,
     val phase: CourierPhase,
@@ -121,7 +127,9 @@ internal data class CourierTrackingUi(
     val driverName: String?,
     val acceptMinutes: Int,
     val acceptDeadline: Instant?,
-)
+) {
+    override fun toString(): String = "CourierTrackingUi(shortId=$shortId, phase=$phase)"
+}
 
 /** Lo que devuelve el alta: con qué ir al seguimiento. */
 internal data class CreatedCourier(

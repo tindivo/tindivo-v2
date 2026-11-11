@@ -5,20 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
-import com.tindivo.core.network.isProfileMissing
 import com.tindivo.customer.config.ConfigService
-import com.tindivo.customer.feature.addresses.CoverageArea
 import com.tindivo.customer.feature.addresses.GeoPoint
 import com.tindivo.customer.feature.addresses.toWireCoordinate
-import com.tindivo.customer.feature.checkout.AddressUi
 import com.tindivo.customer.feature.orders.isUnauthorized
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -107,18 +102,18 @@ internal class CourierRequestViewModel
             loadJob?.cancel()
             loadJob =
                 viewModelScope.launch {
-                    val outcome = loadAll(account)
+                    val outcome = gateway.loadForRequest(account)
                     if (!isCurrent(started, account)) return@launch
                     when (outcome) {
-                        is LoadResult.Ready -> {
+                        is CourierLoadResult.Ready -> {
                             mutableState.update { it.loaded(outcome) }
                         }
 
-                        is LoadResult.Failed -> {
+                        is CourierLoadResult.Failed -> {
                             onLoadFailed(outcome.error, started, account)
                         }
 
-                        LoadResult.ProfileMissing -> {
+                        CourierLoadResult.ProfileMissing -> {
                             mutableState.update {
                                 it.copy(
                                     phase = RequestPhase.ProfileRequired,
@@ -128,67 +123,6 @@ internal class CourierRequestViewModel
                     }
                 }
         }
-
-        private sealed interface LoadResult {
-            data class Ready(
-                val service: CourierServiceUi,
-                val requester: CourierRequester,
-                val addresses: List<AddressUi>,
-                val contacts: List<CourierContactUi>,
-                val area: CoverageArea,
-            ) : LoadResult
-
-            data class Failed(
-                val error: AppError,
-            ) : LoadResult
-
-            data object ProfileMissing : LoadResult
-        }
-
-        /** Estado del servicio y perfil son imprescindibles; direcciones y sitios anteriores solo ayudan. */
-        private suspend fun loadAll(account: String): LoadResult =
-            coroutineScope {
-                val status = async { gateway.status() }
-                val requester = async { gateway.requester(account) }
-                val addresses = async { gateway.addresses(account) }
-                val page = async { gateway.page(null, account) }
-                val area = async { gateway.coverage() }
-                val statusResult = status.await()
-                val requesterResult = requester.await()
-                when {
-                    requesterResult is ApiResult.Failure && requesterResult.error.isProfileMissing() -> {
-                        LoadResult.ProfileMissing
-                    }
-
-                    requesterResult is ApiResult.Failure -> {
-                        LoadResult.Failed(requesterResult.error)
-                    }
-
-                    statusResult is ApiResult.Failure -> {
-                        LoadResult.Failed(statusResult.error)
-                    }
-
-                    else -> {
-                        LoadResult.Ready(
-                            service = (statusResult as ApiResult.Success).data,
-                            requester = (requesterResult as ApiResult.Success).data,
-                            addresses = (addresses.await() as? ApiResult.Success)?.data.orEmpty(),
-                            contacts = (page.await() as? ApiResult.Success)?.data?.contacts.orEmpty(),
-                            area = area.await(),
-                        )
-                    }
-                }
-            }
-
-        private fun CourierRequestUiState.loaded(ready: LoadResult.Ready) =
-            copy(
-                phase = if (ready.service.canRequest) RequestPhase.Form else RequestPhase.Closed,
-                service = ready.service,
-                requester = ready.requester,
-                addresses = ready.addresses,
-                contacts = ready.contacts,
-                area = ready.area,
-            )
 
         private suspend fun onLoadFailed(
             error: AppError,
@@ -203,13 +137,16 @@ internal class CourierRequestViewModel
             }
         }
 
-        /** Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también. */
+        /**
+         * Pasó por el refresco y el servidor sigue sin reconocer la sesión de [account]: se cierra, si aún es la suya. La
+         * comprobación y el cierre van de una vez en el almacén ([SessionStore.signOutIf]): un 401 de A no cierra la
+         * sesión de B aunque B esté entrando en ese momento. El colector deja la pantalla en «inicia sesión».
+         */
         private suspend fun signOut(
             started: Int,
             account: String,
         ) {
-            // El colector de la sesión deja la pantalla en «inicia sesión» y borra lo de esta cuenta.
-            if (isCurrent(started, account)) withContext(NonCancellable) { sessionStore.signOut() }
+            if (isCurrent(started, account)) withContext(NonCancellable) { sessionStore.signOutIf(account) }
         }
 
         // --- Edición del borrador: mientras se envía, lo que sale es lo que se ve. ---
@@ -405,32 +342,11 @@ internal class CourierRequestViewModel
             started: Int,
             account: String,
         ) {
-            when (result) {
-                is CourierSendResult.Created -> {
-                    mutableState.update {
-                        it.copy(
-                            phase = RequestPhase.Created,
-                            created = result.data,
-                            sending = false,
-                        )
-                    }
-                }
-
-                CourierSendResult.AlreadyCreated -> {
-                    mutableState.update { it.copy(phase = RequestPhase.AlreadyCreated, sending = false) }
-                }
-
-                CourierSendResult.NeedsReview -> {
-                    mutableState.update { it.copy(phase = RequestPhase.Review, sending = false, reviewSeen = false) }
-                }
-
-                CourierSendResult.Busy -> {
-                    mutableState.update { it.copy(sending = false) }
-                }
-
-                is CourierSendResult.Failed -> {
-                    onRejected(result.error, started, account)
-                }
+            val next = mutableState.value.afterSent(result)
+            if (next != null) {
+                mutableState.value = next
+            } else if (result is CourierSendResult.Failed) {
+                onRejected(result.error, started, account)
             }
         }
 

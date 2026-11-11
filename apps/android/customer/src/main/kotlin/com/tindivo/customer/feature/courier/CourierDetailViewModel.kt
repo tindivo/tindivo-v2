@@ -310,12 +310,13 @@ internal class CourierDetailViewModel
 
         /**
          * Un 401 de [account]: la pantalla se cierra y, solo si la sesión sigue siendo esa cuenta, se cierra la sesión. Un
-         * 401 atrasado de la cuenta anterior nunca cierra la de otra.
+         * 401 atrasado de la cuenta anterior nunca cierra la de otra: el almacén comprueba y cierra de una vez
+         * ([SessionStore.signOutIf]), así que tampoco cuando la otra cuenta está entrando en ese momento.
          */
         private suspend fun signOutIfOwner(account: String) {
             val mine = isOwner(account)
             invalidate()
-            if (mine) withContext(NonCancellable) { sessionStore.signOut() }
+            if (mine) withContext(NonCancellable) { sessionStore.signOutIf(account) }
         }
 
         private fun invalidate() {
