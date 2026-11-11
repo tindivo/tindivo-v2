@@ -62,8 +62,10 @@ internal sealed interface CourierSendResult<out T> {
  *   incierta ([AttemptPhase.Uncertain]): el siguiente envío, con los datos que sean, sale con ella. Un 4xx final no
  *   prueba nada del primer envío: `RetryInterceptor` pudo repetir el `POST` por dentro tras un corte, y el registro
  *   solo ve la última respuesta.
- * - Pasados [retentionLimitMs] desde el último envío, el servidor pudo purgar la clave y la reproducción ya no prueba
- *   nada: [CourierSendResult.NeedsReview].
+ * - Pasados [retentionLimitMs] desde el PRIMER envío con la clave, el servidor pudo purgarla y la reproducción ya no
+ *   prueba nada: [CourierSendResult.NeedsReview]. Por eso aquí `sentAtEpochMs` es la hora de ese primer envío y un
+ *   reintento no la mueve: si la renovara, reintentos frecuentes harían parecer vigente una clave ya purgada. Una clave
+ *   nueva empieza su propia cuenta.
  * - Un archivo perdido (corrupto, de otra versión o con una clave ilegible) es [CourierSendResult.NeedsReview] para
  *   todas las cuentas hasta [acknowledge].
  *
@@ -127,7 +129,9 @@ internal class CourierAttempts(
                 else -> {
                     val key = existing?.key?.let(UUID::fromString) ?: newKey()
                     // `lastResponseDefinitive` no se usa aquí: ningún fallo olvida la clave, así que se guarda `false`.
-                    val attempt = Attempt(key.toString(), NO_FINGERPRINT, AttemptPhase.InFlight, now, false)
+                    // El origen de la retención es el primer envío con esta clave: reutilizarla no lo renueva.
+                    val firstSentAt = existing?.sentAtEpochMs ?: now
+                    val attempt = Attempt(key.toString(), NO_FINGERPRINT, AttemptPhase.InFlight, firstSentAt, false)
                     store.write(ledger.copy(attempts = ledger.attempts + (accountId to attempt)))
                     key
                 }

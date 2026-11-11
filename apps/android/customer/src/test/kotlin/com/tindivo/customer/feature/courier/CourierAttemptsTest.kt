@@ -197,6 +197,39 @@ class CourierAttemptsTest {
         }
 
     @Test
+    fun `la retencion se mide desde el primer envio, no desde el ultimo reintento (CAX-002)`() =
+        runTest {
+            val t0 = now
+            attempts.send(ACCOUNT, answer(ApiResult.Failure(network())))
+            now = t0 + 9_000L
+            attempts.send(ACCOUNT, answer(ApiResult.Failure(network())))
+            now = t0 + 18_000L
+
+            val result = attempts.send(ACCOUNT, answer(ApiResult.Success("creada")))
+
+            assertEquals(CourierSendResult.NeedsReview, result)
+            assertEquals(2, sent.size)
+            assertEquals(t0, store.ledger.attempts[ACCOUNT]?.sentAtEpochMs)
+        }
+
+    @Test
+    fun `con el registro reconstruido la retencion sigue contando desde el primer envio (CAX-002)`() =
+        runTest {
+            val t0 = now
+            attempts.send(ACCOUNT, answer(ApiResult.Failure(network())))
+            now = t0 + 9_000L
+            attempts.send(ACCOUNT, answer(ApiResult.Failure(network())))
+            now = t0 + 18_000L
+            // Otro proceso: un registro nuevo sobre el mismo archivo.
+            val rebuilt = CourierAttempts(store = store, clock = { now }, retentionLimitMs = 10_000L)
+
+            val result = rebuilt.send(ACCOUNT, answer(ApiResult.Success("creada")))
+
+            assertEquals(CourierSendResult.NeedsReview, result)
+            assertEquals(2, sent.size)
+        }
+
+    @Test
     fun `nada de la entrega se escribe en el registro`() =
         runTest {
             attempts.send(ACCOUNT, answer(ApiResult.Failure(network())))
