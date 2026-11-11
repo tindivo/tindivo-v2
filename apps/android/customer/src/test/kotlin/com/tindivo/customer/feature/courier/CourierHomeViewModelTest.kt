@@ -99,6 +99,7 @@ class CourierHomeViewModelTest : CourierHarness() {
             val viewModel = viewModel()
 
             assertEquals(1, session.signOutCalls)
+            assertEquals(listOf(ACCOUNT_A), session.signOutIfCalls)
             assertEquals(CourierListState.Hidden, viewModel.state.value.list)
             assertEquals(false, viewModel.state.value.signedIn)
         }

@@ -227,8 +227,9 @@ internal class CourierHomeViewModel
         ) {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             if (error.isUnauthorized()) {
+                // Solo si la sesión sigue siendo de [account], comprobado y cerrado de una vez (un 401 de A no cierra a B).
                 // El cierre lo publica el colector de la sesión: la lista se esconde.
-                if (isCurrent(started, account)) withContext(NonCancellable) { sessionStore.signOut() }
+                if (isCurrent(started, account)) withContext(NonCancellable) { sessionStore.signOutIf(account) }
                 return
             }
             mutableState.update { it.copy(list = shown(error)) }

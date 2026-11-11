@@ -142,6 +142,7 @@ class CourierDetailViewModelTest : CourierHarness() {
 
             assertEquals(CourierDetailUiState.LoggedOut, viewModel.state.value)
             assertEquals(1, session.signOutCalls)
+            assertEquals(listOf(ACCOUNT_A), session.signOutIfCalls)
         }
 
     @Test
