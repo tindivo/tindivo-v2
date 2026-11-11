@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 
@@ -259,5 +260,35 @@ internal class DeletedAccountCleanupFailureTest : DeleteAccountHarness() {
 
             assertNotNull(cart())
             assertEquals(emptyList<PendingCleanup>(), journal.entries)
+        }
+
+    @Test
+    fun `si B entra con la bolsa aun sin escribir y luego sale, al reabrir la bolsa no se vacia`() =
+        runTest {
+            val running = cleanup()
+            running.start()
+            fillCart()
+            val before = cartFingerprint()
+            cartData.failWrites = true
+            val vm = viewModel(cleanup = running)
+
+            confirmAndDelete(vm)
+            answer(deleted)
+            assertEquals(listOf(PendingCleanup(A, PendingCart(before))), journal.entries)
+
+            // Entra B con el disco aún fallando: el reintento de su entrada tampoco puede escribir la bolsa.
+            session.switchTo(B)
+            runCurrent()
+            // B sale y el disco vuelve; nadie más entra.
+            session.switchToSignedOut()
+            cartData.failWrites = false
+            runCurrent()
+
+            // Al reabrir sin sesión, la bolsa apuntada al borrar ya no vale: B entró después y pudo ser suya.
+            reopen()
+
+            assertNotNull(cart())
+            assertEquals(before, cartFingerprint())
+            assertTrue(journal.entries.none { it.accountId == A && it.cart != null })
         }
 }

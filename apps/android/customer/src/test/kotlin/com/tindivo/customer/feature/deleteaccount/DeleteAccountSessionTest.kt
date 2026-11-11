@@ -212,4 +212,57 @@ internal class DeleteAccountSessionTest : DeleteAccountHarness() {
             assertNull(vm.state.value.notice)
             assertEquals(SessionState.SignedIn(B), session.state.value)
         }
+
+    @Test
+    fun `tras un 401, si entra B, la pantalla se cierra sin el aviso de no pudimos confirmar`() =
+        runTest {
+            fillCart()
+            val vm = viewModel()
+
+            confirmAndDelete(vm)
+            answer(unauthorized)
+            assertEquals(DeletePhase.Unconfirmed, vm.state.value.phase)
+            assertEquals(DeleteNotice.Unconfirmed, vm.state.value.notice)
+            val bag = checkNotNull(cart())
+
+            session.switchTo(B)
+            runCurrent()
+
+            assertEquals(DeletePhase.Left, vm.state.value.phase)
+            assertNull(vm.state.value.notice)
+            // Lo de B intacto: su sesión, su intento de pedido y la bolsa.
+            assertEquals(SessionState.SignedIn(B), session.state.value)
+            assertEquals(1, session.signOutCalls)
+            assertTrue(session.signOutLocallyCalls.isEmpty())
+            assertEquals(bag, cart())
+            assertEquals(setOf(A, B), ledgerStore.ledger.attempts.keys)
+            assertEquals(B_KEY, ledgerStore.ledger.attempts[B]?.key)
+        }
+
+    @Test
+    fun `tras un 401, B entra y vuelve A sin que el colector vea a B - la pantalla se cierra sin aviso`() =
+        runTest {
+            fillCart()
+            val vm = viewModel()
+
+            confirmAndDelete(vm)
+            answer(unauthorized)
+            assertEquals(DeletePhase.Unconfirmed, vm.state.value.phase)
+            assertEquals(DeleteNotice.Unconfirmed, vm.state.value.notice)
+            val bag = checkNotNull(cart())
+
+            // Las dos entradas seguidas, sin suspender entre ellas: el colector de la sesión solo puede ver A.
+            session.switchTo(B)
+            session.switchTo(A)
+            runCurrent()
+
+            assertEquals(DeletePhase.Left, vm.state.value.phase)
+            assertNull(vm.state.value.notice)
+            assertEquals(SessionState.SignedIn(A), session.state.value)
+            assertEquals(1, session.signOutCalls)
+            assertTrue(session.signOutLocallyCalls.isEmpty())
+            assertEquals(bag, cart())
+            assertEquals(setOf(A, B), ledgerStore.ledger.attempts.keys)
+            assertEquals(B_KEY, ledgerStore.ledger.attempts[B]?.key)
+        }
 }
