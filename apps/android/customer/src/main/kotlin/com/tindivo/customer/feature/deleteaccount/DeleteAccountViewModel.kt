@@ -188,7 +188,8 @@ internal class DeleteAccountViewModel
             val ended = session is SessionState.SignedOut || otherAccountSeen
             _state.update {
                 val leaves =
-                    (ended && it.phase == DeletePhase.Ready) || (otherAccountSeen && it.phase == DeletePhase.Unconfirmed)
+                    (ended && it.phase == DeletePhase.Ready) ||
+                        (otherAccountSeen && it.phase == DeletePhase.Unconfirmed)
                 if (leaves) it.copy(phase = DeletePhase.Left, notice = null) else it
             }
         }
