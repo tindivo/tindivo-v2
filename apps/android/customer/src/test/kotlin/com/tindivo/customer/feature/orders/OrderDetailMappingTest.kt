@@ -31,6 +31,21 @@ class OrderDetailMappingTest {
     }
 
     @Test
+    fun `el toString del motorizado y del detalle no lleva su nombre ni su celular`() {
+        val driver = GetCustomerOrder200ResponseDataDriver(name = "Luis Quispe", phone = "+51 987-654-321")
+
+        val ui = detail(status = "picked_up", arrivedAtCustomerAt = "2026-10-26T15:20:00Z", driver = driver).toDetailUi()
+        val texts = listOf(ui?.driver.toString(), ui.toString())
+
+        assertTrue(ui?.driver?.whatsappLink.orEmpty().contains("51987654321"))
+        for (text in texts) {
+            for (marker in listOf("Luis", "Quispe", "987", "654", "321", "wa.me")) {
+                assertFalse("«$marker» en $text", text.contains(marker))
+            }
+        }
+    }
+
+    @Test
     fun `un telefono sin digitos no da enlace`() {
         assertNull(driverWhatsappLink("---", "X", "ABCD2345"))
     }

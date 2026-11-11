@@ -113,12 +113,15 @@ internal data class CashPaymentUi(
 /**
  * El motorizado. [name] solo llega cuando ya es asunto del cliente; [atDoor] es que llegó a la puerta y el pedido no
  * se ha entregado, y solo entonces puede haber [whatsappLink]. El teléfono no se guarda ni se muestra nunca como texto.
+ * Su `toString` no lleva el nombre ni el enlace (que trae el celular): el detalle del pedido que lo contiene tampoco.
  */
 internal data class DriverUi(
     val name: String?,
     val atDoor: Boolean,
     val whatsappLink: String?,
-)
+) {
+    override fun toString(): String = "DriverUi(atDoor=$atDoor)"
+}
 
 internal data class OrderDetailUi(
     val id: UUID,
