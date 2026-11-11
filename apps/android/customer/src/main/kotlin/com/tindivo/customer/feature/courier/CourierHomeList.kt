@@ -111,7 +111,13 @@ private fun CourierCard(
             )
             val fee = if (card.phase.wasFree()) stringResource(R.string.courier_free) else card.feeText
             Text(
-                text = stringResource(R.string.courier_card_meta, card.shortId, stringResource(card.phase.labelRes()), fee),
+                text =
+                    stringResource(
+                        R.string.courier_card_meta,
+                        card.shortId,
+                        stringResource(card.phase.labelRes()),
+                        fee,
+                    ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

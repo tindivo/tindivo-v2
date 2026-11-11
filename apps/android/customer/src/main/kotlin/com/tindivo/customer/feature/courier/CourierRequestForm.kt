@@ -25,38 +25,6 @@ import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import java.math.BigDecimal
 
-/** Lo que el formulario le pide al ViewModel. Se separa para poder pintar la pantalla sin él (vista previa). */
-internal class CourierFormActions(
-    val onRetry: () -> Unit,
-    val onOpenSheet: (CourierSheet) -> Unit,
-    val onReference: (CourierEnd, String) -> Unit,
-    val onPhone: (CourierEnd, String) -> Unit,
-    val onName: (CourierEnd, String) -> Unit,
-    val onToggleMe: (CourierEnd) -> Unit,
-    val onItem: (String) -> Unit,
-    val onPayer: (CourierPayer) -> Unit,
-    val onNote: (String) -> Unit,
-    val onReadyAndPaid: (Boolean) -> Unit,
-    val onSubmit: () -> Unit,
-) {
-    companion object {
-        fun of(viewModel: CourierRequestViewModel) =
-            CourierFormActions(
-                onRetry = viewModel::retry,
-                onOpenSheet = viewModel::openSheet,
-                onReference = viewModel::setReference,
-                onPhone = viewModel::setPhone,
-                onName = viewModel::setName,
-                onToggleMe = viewModel::toggleMe,
-                onItem = viewModel::setItem,
-                onPayer = viewModel::setPayer,
-                onNote = viewModel::setNote,
-                onReadyAndPaid = viewModel::setReadyAndPaid,
-                onSubmit = viewModel::submit,
-            )
-    }
-}
-
 /**
  * El formulario, en el orden de la web: de dónde, a dónde, qué llevamos, quién paga, indicaciones y la casilla de
  * «listo y pagado». Lo que falta para pedir se dice sobre el botón; dirección, celular y nombre se resuelven en hojas
@@ -159,7 +127,11 @@ private fun CourierRequestFormPreview() {
                     draft =
                         CourierDraft(
                             origin =
-                                CourierPointDraft(BigDecimal("-9.1"), BigDecimal("-78.1"), "Puerta azul frente al mercado"),
+                                CourierPointDraft(
+                                    BigDecimal("-9.1"),
+                                    BigDecimal("-78.1"),
+                                    "Puerta azul frente al mercado",
+                                ),
                         ),
                 ),
             onBack = {},

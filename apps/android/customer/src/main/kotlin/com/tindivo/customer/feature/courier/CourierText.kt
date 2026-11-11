@@ -33,13 +33,29 @@ internal fun factsText(service: CourierServiceUi): String {
  * fuera de horario, a qué hora abre. `null` si se puede pedir.
  */
 @Composable
-internal fun closedText(service: CourierServiceUi): String? {
-    if (service.canRequest) return null
-    service.pausedMessage?.let { return it }
-    if (!service.enabled) return stringResource(R.string.courier_disabled)
-    val opens = service.opensAt?.let(::hourLabelOf) ?: return stringResource(R.string.courier_closed_now)
-    return stringResource(R.string.courier_opens_at, opens.text, opens.meridiem)
-}
+internal fun closedText(service: CourierServiceUi): String? =
+    when {
+        service.canRequest -> {
+            null
+        }
+
+        service.pausedMessage != null -> {
+            service.pausedMessage
+        }
+
+        !service.enabled -> {
+            stringResource(R.string.courier_disabled)
+        }
+
+        else -> {
+            val opens = service.opensAt?.let(::hourLabelOf)
+            if (opens == null) {
+                stringResource(R.string.courier_closed_now)
+            } else {
+                stringResource(R.string.courier_opens_at, opens.text, opens.meridiem)
+            }
+        }
+    }
 
 /** La etiqueta corta de una entrega en «Mis entregas». */
 @StringRes
