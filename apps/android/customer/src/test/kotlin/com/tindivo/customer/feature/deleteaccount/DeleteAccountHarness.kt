@@ -54,8 +54,15 @@ internal abstract class DeleteAccountHarness {
     protected val dispatcher = StandardTestDispatcher()
     protected val session = FakeSessionStore(SessionState.SignedIn(A))
     protected val ledgerStore = MemoryLedgerStore()
+
+    /** El libro tal como lo ve la limpieza: [ledgerStore] con fallos de disco a pedido. */
+    protected val flakyLedger = FlakyLedgerStore(ledgerStore)
+
+    /** La bolsa en disco, con fallos a pedido; [cartStore] escribe aquí. */
+    protected lateinit var cartData: FlakyDataStore<CartSnapshot?>
     protected lateinit var cartStore: CartStore
     protected lateinit var configService: ConfigService
+    protected val journal = MemoryPendingCleanupJournal()
 
     /** Las cuentas con las que se llamó al borrado, en orden. */
     protected val calls = mutableListOf<String>()
@@ -67,8 +74,8 @@ internal abstract class DeleteAccountHarness {
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        cartStore =
-            CartStore(
+        cartData =
+            FlakyDataStore(
                 DataStoreFactory.create(
                     serializer = CartSerializer,
                     corruptionHandler = ReplaceFileCorruptionHandler<CartSnapshot?>(produceNewData = { null }),
@@ -76,6 +83,7 @@ internal abstract class DeleteAccountHarness {
                     produceFile = { File(folder.root, "tindivo_cart.json") },
                 ),
             )
+        cartStore = CartStore(cartData)
         // Nunca se llama: solo está para que el 426 tenga dónde avisarse.
         val unused =
             SystemRepository(
@@ -115,12 +123,25 @@ internal abstract class DeleteAccountHarness {
     protected fun TestScope.viewModel(
         deleter: AccountDeleter = fakeDeleter,
         store: SessionStore = session,
+        cleanup: DeletedAccountCleanup = cleanup(store),
     ): DeleteAccountViewModel {
-        val ledger = OrderAttemptLedger(ledgerStore, FakeAttemptLookup())
-        val vm = DeleteAccountViewModel(deleter, DeletedAccountCleanup(cartStore, ledger, store), store, configService)
+        val vm = DeleteAccountViewModel(deleter, cleanup, store, configService)
         runCurrent()
         return vm
     }
+
+    /**
+     * Una limpieza nueva, como la de un proceso recién arrancado: comparte con las demás solo lo que está «en disco»
+     * (la bolsa, el libro y [journal]).
+     */
+    protected fun TestScope.cleanup(store: SessionStore = session): DeletedAccountCleanup =
+        DeletedAccountCleanup(
+            cartStore,
+            OrderAttemptLedger(flakyLedger, FakeAttemptLookup()),
+            store,
+            journal,
+            backgroundScope,
+        )
 
     /** Escribe la palabra y toca «Borrar mi cuenta definitivamente». */
     protected fun TestScope.confirmAndDelete(vm: DeleteAccountViewModel) {
