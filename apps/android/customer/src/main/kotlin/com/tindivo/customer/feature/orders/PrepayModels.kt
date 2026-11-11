@@ -87,8 +87,9 @@ internal sealed interface SendState {
 }
 
 /**
- * La sección «Paga tu pedido». [photo] es el `Uri` (en texto) de la foto elegida; `toString` no lo muestra. [refreshRequests] sube cada vez que
- * el detalle del pedido debe volver a consultarse (el comprobante llegó, o el servidor dijo que el estado cambió).
+ * La sección «Paga tu pedido». [photo] es el `Uri` (en texto) de la foto elegida; `toString` no lo muestra.
+ * [refreshRequests] sube cada vez que el detalle del pedido debe volver a consultarse (el comprobante llegó, o el
+ * servidor dijo que el estado cambió).
  */
 internal data class PrepayUiState(
     val info: PrepayInfoState = PrepayInfoState.Idle,
