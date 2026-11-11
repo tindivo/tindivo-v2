@@ -126,4 +126,9 @@ dependencies {
 
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
+    // Pruebas de UI de Compose (aprobadas por Jesús el 2026-11-11, KT-16), con las versiones del mismo BOM. El manifiesto
+    // de prueba solo declara la actividad vacía donde se montan, y solo en debug.
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -83,6 +84,44 @@ internal fun CheckoutSheetHost(
     }
 }
 
+/**
+ * De dónde sale el ViewModel de cada hoja. En la app, de Hilt, guardado con la clave de la apertura; las pruebas de UI
+ * proveen otro con [LocalCheckoutSheetModels] para armarlos a mano con dobles de red. No cambia nada más.
+ */
+internal interface CheckoutSheetModels {
+    @Composable
+    fun address(
+        key: String,
+        editingId: String?,
+    ): AddressFormViewModel
+
+    @Composable
+    fun phone(key: String): PhoneVerifyViewModel
+
+    @Composable
+    fun profile(key: String): ProfileViewModel
+}
+
+private object HiltCheckoutSheetModels : CheckoutSheetModels {
+    @Composable
+    override fun address(
+        key: String,
+        editingId: String?,
+    ): AddressFormViewModel =
+        hiltViewModel<AddressFormViewModel, AddressFormViewModel.Factory>(
+            key = key,
+            creationCallback = { factory -> factory.create(editingId) },
+        )
+
+    @Composable
+    override fun phone(key: String): PhoneVerifyViewModel = hiltViewModel(key = key)
+
+    @Composable
+    override fun profile(key: String): ProfileViewModel = hiltViewModel(key = key)
+}
+
+internal val LocalCheckoutSheetModels = staticCompositionLocalOf<CheckoutSheetModels> { HiltCheckoutSheetModels }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChooseAddressSheet(
@@ -126,11 +165,7 @@ private fun AddressSheet(
     key: String,
     actions: CheckoutSheetActions,
 ) {
-    val viewModel =
-        hiltViewModel<AddressFormViewModel, AddressFormViewModel.Factory>(
-            key = key,
-            creationCallback = { factory -> factory.create(editingId) },
-        )
+    val viewModel = LocalCheckoutSheetModels.current.address(key, editingId)
     val form = viewModel.state.collectAsStateWithLifecycle().value
     val deliver: (FormOutcome) -> Unit = { deliverAddress(it, actions) }
     // El guardado o el borrado sale por takeResult: una sola vez, aunque el cierre de la hoja llegue antes (CAX-005).
@@ -190,7 +225,7 @@ private fun PhoneSheet(
     key: String,
     actions: CheckoutSheetActions,
 ) {
-    val viewModel = hiltViewModel<PhoneVerifyViewModel>(key = key)
+    val viewModel = LocalCheckoutSheetModels.current.phone(key)
     DiscardOnLeave(viewModel::discardInput)
     val phone = viewModel.state.collectAsStateWithLifecycle().value
     val deliver: (PhoneVerified) -> Unit = { actions.onPhoneVerified() }
@@ -237,7 +272,7 @@ private fun ProfileSheet(
     key: String,
     actions: CheckoutSheetActions,
 ) {
-    val viewModel = hiltViewModel<ProfileViewModel>(key = key)
+    val viewModel = LocalCheckoutSheetModels.current.profile(key)
     DiscardOnLeave(viewModel::discardInput)
     val profile = viewModel.state.collectAsStateWithLifecycle().value
     val deliver: (ProfileOutcome) -> Unit = { actions.onProfileCompleted() }
