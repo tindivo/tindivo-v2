@@ -30,17 +30,20 @@ terminal, igual que en los pedidos de restaurante.
   pensada para que Jesús cargue pedidos que le llegan por WhatsApp; hoy vacía).
 - El A y el B se marcan **en el mapa**, con una referencia escrita obligatoria. El origen puede ser un negocio del
   directorio (`directory_businesses`).
-- **La comida preparada no va por Entregas**: el formulario no ofrece «Comida». **Por qué:** un restaurante que quiere
-  entregas es un aliado por conseguir, y Entregas no debe hacerle la competencia a la comisión.
+- **La comida sí va por Entregas**: el formulario ofrece «Comida» entre las categorías (decisión de Jesús,
+  2026-11-11). Es lo que hace la web desde el 2026-10-01 (`70ee8761`) y la app Android. Sustituye la regla anterior
+  («la comida preparada no va», que recogía el ADR 0035), cuyo motivo era no competir con la comisión de los
+  restaurantes.
 
 ## Qué se lleva y qué no
 
 Regla central: **solo lo que ya está coordinado, pagado y listo, hasta 5 kg**. Se llevan productos de bodega ya
 pagados, medicinas comunes ya compradas **en su bolsa sellada** (decisión de Jesús), objetos pequeños que quepan en la
-mochila (45 × 45 × 45 cm) y sobres sencillos. La comida preparada no (ver arriba): la lista del 19-sep la permitía y
-el MVP del 30-sep la quitó del formulario. **No** se lleva dinero ni
+mochila (45 × 45 × 45 cm) y sobres sencillos, y también comida (ver arriba: la lista del 19-sep la permitía, el MVP
+del 30-sep la quitó y la web la devolvió el 1-oct). **No** se lleva dinero ni
 valores, documentos de identidad, medicinas con receta retenida, **alcohol**, animales ni nada peligroso, ni nada que
-el motorizado tenga que comprar. Lo frágil no se prohíbe: el cliente lo marca y el motorizado decide si puede llevarlo.
+el motorizado tenga que comprar. Lo frágil no se prohíbe ni se marca al pedir (decisión de Jesús, 2026-11-11): se le
+dice al motorizado cuando llega a recoger, y él decide si puede llevarlo. Las apps envían `isFragile = false`.
 (Versión 1.0 del 2026-09-19; los términos de responsabilidad, con tope de S/ 200, son un **borrador sin revisión
 legal**.)
 
