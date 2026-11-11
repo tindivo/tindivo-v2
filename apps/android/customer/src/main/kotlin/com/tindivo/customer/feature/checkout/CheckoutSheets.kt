@@ -119,7 +119,7 @@ private fun ChooseAddressSheet(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddressSheet(
+internal fun AddressSheet(
     editingId: String?,
     key: String,
     actions: CheckoutSheetActions,
@@ -166,7 +166,7 @@ private fun AddressSheet(
 /** Verificar el celular por SMS. Al quedar verificado, la hoja se cierra sola y el checkout relee el perfil. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PhoneSheet(
+internal fun PhoneSheet(
     key: String,
     actions: CheckoutSheetActions,
 ) {
@@ -208,7 +208,7 @@ private fun PhoneSheet(
 /** El nombre de una cuenta sin perfil. Al guardarlo, la hoja se cierra y el checkout se carga. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ProfileSheet(
+internal fun ProfileSheet(
     key: String,
     actions: CheckoutSheetActions,
 ) {
@@ -248,7 +248,7 @@ private fun DiscardOnLeave(discard: () -> Unit) {
 }
 
 @Composable
-private fun ColumnScope.ScrollingBody(content: @Composable () -> Unit) {
+internal fun ColumnScope.ScrollingBody(content: @Composable () -> Unit) {
     Box(
         modifier =
             Modifier
@@ -277,7 +277,7 @@ internal fun sheetMayMoveTo(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SheetFrame(
+internal fun SheetFrame(
     title: String,
     onClose: () -> Unit,
     busy: Boolean = false,
