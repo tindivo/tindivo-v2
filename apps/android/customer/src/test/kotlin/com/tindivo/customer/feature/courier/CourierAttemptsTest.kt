@@ -73,7 +73,7 @@ class CourierAttemptsTest {
         }
 
     @Test
-    fun `un rechazo definitivo de una clave sin cortes la olvida`() =
+    fun `un 409 conflict, que puede ser en proceso, conserva la clave`() =
         runTest {
             val closed = known(ApiErrorCode.Conflict, 409, "Atendemos de 6 a 11 pm, todos los días.")
             attempts.send(ACCOUNT, answer(ApiResult.Failure(closed)))
@@ -84,19 +84,21 @@ class CourierAttemptsTest {
         }
 
     @Test
-    fun `un 422 sin cortes antes olvida la clave pero tras un corte la conserva`() =
+    fun `un 4xx conserva la clave y el siguiente envio sale con la misma (CAX-001)`() =
         runTest {
+            // El 4xx final no prueba nada: RetryInterceptor pudo repetir por dentro un primer envío que sí creó.
             val invalid = known(ApiErrorCode.ValidationError, 422, "Datos inválidos")
-            attempts.send(ACCOUNT, answer(ApiResult.Failure(invalid)))
-            assertTrue(store.ledger.attempts.isEmpty())
+            val first = attempts.send(ACCOUNT, answer(ApiResult.Failure(invalid)))
+            assertTrue(first is CourierSendResult.Failed)
+            assertEquals(AttemptPhase.Uncertain, store.ledger.attempts[ACCOUNT]?.phase)
 
-            attempts.send(ACCOUNT, answer(ApiResult.Failure(network())))
-            attempts.send(ACCOUNT, answer(ApiResult.Failure(invalid)))
+            attempts.send(ACCOUNT, answer(ApiResult.Failure(known(ApiErrorCode.Unauthorized, 401))))
             attempts.send(ACCOUNT, answer(ApiResult.Success("creada")))
 
-            assertNotEquals(sent[0], sent[1])
-            assertEquals(sent[1], sent[2])
-            assertEquals(sent[2], sent[3])
+            assertEquals(3, sent.size)
+            assertEquals(1, sent.toSet().size)
+            // Solo el 201 la olvida.
+            assertTrue(store.ledger.attempts.isEmpty())
         }
 
     @Test

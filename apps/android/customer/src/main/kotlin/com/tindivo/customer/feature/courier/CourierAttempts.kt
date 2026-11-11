@@ -4,12 +4,10 @@ import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.feature.checkout.Attempt
-import com.tindivo.customer.feature.checkout.AttemptOutcome
 import com.tindivo.customer.feature.checkout.AttemptPhase
 import com.tindivo.customer.feature.checkout.DEFAULT_RETENTION_LIMIT_MS
 import com.tindivo.customer.feature.checkout.Ledger
 import com.tindivo.customer.feature.checkout.LedgerStore
-import com.tindivo.customer.feature.checkout.toAttemptOutcome
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,7 +25,10 @@ internal sealed interface CourierSendResult<out T> {
     /** 409 `idempotency_conflict`: un envío anterior con esta clave YA creó una entrega (con otros datos). */
     data object AlreadyCreated : CourierSendResult<Nothing>
 
-    /** El servidor contestó que no, o no se supo qué pasó. La clave se conserva para el reintento. */
+    /**
+     * El servidor contestó que no, o no se supo qué pasó. La clave se conserva para el reintento: ni un 4xx prueba que
+     * un envío anterior con ella (también uno que `RetryInterceptor` repitió por dentro) no creara nada.
+     */
     data class Failed(
         val error: AppError,
     ) : CourierSendResult<Nothing>
@@ -47,19 +48,20 @@ internal sealed interface CourierSendResult<out T> {
  * La clave de idempotencia de Tindivo Entregas (CLI-6), una por cuenta, guardada en disco (KT-9) con el mismo formato
  * que la del checkout ([LedgerStore]) pero en su propio archivo.
  *
- * La regla es la del checkout: **la clave solo cambia tras un «creado» confirmado**. Se apoya en cómo responde
- * `POST /customer/courier-orders`: la reproducción va ANTES de cualquier regla del servicio, así que con la misma clave
- * el servidor devuelve la entrega ya creada (mismo cuerpo) o un `idempotency_conflict` (otro cuerpo), y nunca crea una
- * segunda. Por eso aquí no hace falta la consulta de intentos del checkout: reutilizar la clave siempre es seguro.
+ * La regla: **la clave solo se olvida tras un 201, un `idempotency_conflict` o [acknowledge]**. Se apoya en cómo
+ * responde `POST /customer/courier-orders`: la reproducción va ANTES de cualquier regla del servicio, así que con la
+ * misma clave el servidor devuelve la entrega ya creada (mismo cuerpo) o un `idempotency_conflict` (otro cuerpo), y
+ * nunca crea una segunda. Un rechazo no deja la clave guardada en el servidor (se reclama en la misma transacción que
+ * crea, y el rechazo la deshace), así que reutilizarla tras un 4xx con otro cuerpo no da un `idempotency_conflict`
+ * falso. Por eso aquí no hace falta la consulta de intentos del checkout: reutilizar la clave siempre es seguro.
  *
  * - Antes de enviar se guarda [AttemptPhase.InFlight] con la hora. Si el proceso muere, al reabrir la clave sigue ahí
  *   y cuenta como incierta.
  * - Un 201 o un `idempotency_conflict` prueban que la entrega existe: la clave se olvida (sin poder cancelarse).
- * - Un rechazo (4xx) de una clave cuyos envíos recibieron TODOS una respuesta definitiva también la olvida: ningún
- *   envío con ella pudo crear nada (el servidor crea en la misma transacción que responde 201). En este registro,
- *   `lastResponseDefinitive` significa eso: «ningún envío con esta clave quedó sin respuesta».
- * - Un corte, un 5xx, un 409 `conflict` o una respuesta ilegible la conservan como incierta: el siguiente envío, con
- *   los datos que sean, sale con ella.
+ * - Cualquier otro resultado (corte, 5xx, 409 `conflict`, respuesta ilegible y también un 4xx) la conserva como
+ *   incierta ([AttemptPhase.Uncertain]): el siguiente envío, con los datos que sean, sale con ella. Un 4xx final no
+ *   prueba nada del primer envío: `RetryInterceptor` pudo repetir el `POST` por dentro tras un corte, y el registro
+ *   solo ve la última respuesta.
  * - Pasados [retentionLimitMs] desde el último envío, el servidor pudo purgar la clave y la reproducción ya no prueba
  *   nada: [CourierSendResult.NeedsReview].
  * - Un archivo perdido (corrupto, de otra versión o con una clave ilegible) es [CourierSendResult.NeedsReview] para
@@ -124,10 +126,8 @@ internal class CourierAttempts(
 
                 else -> {
                     val key = existing?.key?.let(UUID::fromString) ?: newKey()
-                    // Un `InFlight` que sigue ahí es un envío que nunca se cerró (el proceso murió): incierto.
-                    val answered =
-                        existing == null || (existing.phase != AttemptPhase.InFlight && existing.lastResponseDefinitive)
-                    val attempt = Attempt(key.toString(), NO_FINGERPRINT, AttemptPhase.InFlight, now, answered)
+                    // `lastResponseDefinitive` no se usa aquí: ningún fallo olvida la clave, así que se guarda `false`.
+                    val attempt = Attempt(key.toString(), NO_FINGERPRINT, AttemptPhase.InFlight, now, false)
                     store.write(ledger.copy(attempts = ledger.attempts + (accountId to attempt)))
                     key
                 }
@@ -148,35 +148,24 @@ internal class CourierAttempts(
             withContext(NonCancellable) { forget(accountId, key) }
             return CourierSendResult.AlreadyCreated
         }
-        val definitive = result.toAttemptOutcome() == AttemptOutcome.Rejected
-        withContext(NonCancellable) { closeFailed(accountId, key, definitive) }
+        withContext(NonCancellable) { keepUncertain(accountId, key) }
         return CourierSendResult.Failed(error)
     }
 
     /**
-     * Cierra un envío que no creó nada. Si este rechazo es definitivo y ningún envío anterior con la clave quedó sin
-     * respuesta, la clave se olvida; si no, queda incierta. Solo si la clave guardada sigue siendo la que se envió: una
-     * respuesta atrasada no cierra otro intento.
+     * Cierra un envío que falló sin probar que la entrega existe: la clave queda incierta para el reintento, sea cual sea
+     * el fallo. Solo si la clave guardada sigue siendo la que se envió: una respuesta atrasada no toca otro intento.
      */
-    private suspend fun closeFailed(
+    private suspend fun keepUncertain(
         accountId: String,
         key: UUID,
-        definitive: Boolean,
     ) = update { ledger ->
         val current = ledger.attempts[accountId]
-        when {
-            current?.key != key.toString() -> {
-                ledger
-            }
-
-            definitive && current.lastResponseDefinitive -> {
-                ledger.copy(attempts = ledger.attempts - accountId)
-            }
-
-            else -> {
-                val next = current.copy(phase = AttemptPhase.Uncertain, lastResponseDefinitive = false)
-                ledger.copy(attempts = ledger.attempts + (accountId to next))
-            }
+        if (current?.key != key.toString()) {
+            ledger
+        } else {
+            val next = current.copy(phase = AttemptPhase.Uncertain, lastResponseDefinitive = false)
+            ledger.copy(attempts = ledger.attempts + (accountId to next))
         }
     }
 
