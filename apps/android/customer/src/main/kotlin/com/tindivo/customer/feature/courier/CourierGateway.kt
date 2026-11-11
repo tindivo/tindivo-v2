@@ -66,15 +66,25 @@ internal interface CourierGateway {
 /** Una respuesta 2xx que no tiene la forma del contrato: un importe, una fecha o un precio que no se pueden leer. */
 internal fun unreadableCourierError(): AppError = AppError.Unknown(code = null, detail = "invalid courier data")
 
+/**
+ * El error sin su `detail` si es [AppError.Unknown]. Ahí `apiCall` copia el mensaje de la excepción de lectura, y el de
+ * kotlinx trae un trozo del JSON: nombres, celulares y referencias de la entrega (EVID-001). Se conserva el `code`.
+ * [AppError.Network] y [AppError.Known] no llevan el cuerpo y pasan tal cual.
+ */
+private fun <T> ApiResult<T>.withoutUnknownDetail(): ApiResult<T> {
+    val unknown = (this as? ApiResult.Failure)?.error as? AppError.Unknown ?: return this
+    return ApiResult.Failure(AppError.Unknown(code = unknown.code, detail = null))
+}
+
 private fun <T, R : Any> ApiResult<T>.mapOrUnreadable(transform: (T) -> R?): ApiResult<R> =
-    when (this) {
+    when (val result = withoutUnknownDetail()) {
         is ApiResult.Success -> {
-            transform(data)?.let { ApiResult.Success(it) }
+            transform(result.data)?.let { ApiResult.Success(it) }
                 ?: ApiResult.Failure(unreadableCourierError())
         }
 
         is ApiResult.Failure -> {
-            this
+            result
         }
     }
 
@@ -103,15 +113,16 @@ internal class RepositoryCourierGateway
             request: CreateCourierOrderRequest,
             key: UUID,
             accountId: String,
-        ): ApiResult<CreatedCourier> = courier.create(request, key, accountId).map { it.toCreated() }
+        ): ApiResult<CreatedCourier> =
+            courier.create(request, key, accountId).withoutUnknownDetail().map { it.toCreated() }
 
         override suspend fun cancel(
             id: UUID,
             accountId: String,
-        ): ApiResult<Unit> = courier.cancel(id, accountId).map { }
+        ): ApiResult<Unit> = courier.cancel(id, accountId).withoutUnknownDetail().map { }
 
         override suspend fun requester(accountId: String): ApiResult<CourierRequester> =
-            customer.profile(accountId).map {
+            customer.profile(accountId).withoutUnknownDetail().map {
                 CourierRequester(
                     fullName = it.fullName,
                     phone = it.phone,
@@ -120,7 +131,7 @@ internal class RepositoryCourierGateway
             }
 
         override suspend fun addresses(accountId: String): ApiResult<List<AddressUi>> =
-            addressRepository.list(accountId).map { page -> page.items.map { it.toAddressUi() } }
+            addressRepository.list(accountId).withoutUnknownDetail().map { page -> page.items.map { it.toAddressUi() } }
 
         override suspend fun coverage(): CoverageArea =
             CoverageArea.from((catalog.publicConfig() as? ApiResult.Success)?.data)
