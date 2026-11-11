@@ -68,12 +68,13 @@ internal fun unreadableCourierError(): AppError = AppError.Unknown(code = null, 
 
 /**
  * El error sin su `detail` si es [AppError.Unknown]. Ahí `apiCall` copia el mensaje de la excepción de lectura, y el de
- * kotlinx trae un trozo del JSON: nombres, celulares y referencias de la entrega (EVID-001). Se conserva el `code`.
- * [AppError.Network] y [AppError.Known] no llevan el cuerpo y pasan tal cual.
+ * kotlinx trae un trozo del JSON: nombres, celulares y referencias de la entrega (EVID-001). Se conservan el `code` y el
+ * `status`: un 409 ilegible sigue siendo un 409 (CAX-003). [AppError.Network] y [AppError.Known] no llevan el cuerpo y
+ * pasan tal cual.
  */
 private fun <T> ApiResult<T>.withoutUnknownDetail(): ApiResult<T> {
     val unknown = (this as? ApiResult.Failure)?.error as? AppError.Unknown ?: return this
-    return ApiResult.Failure(AppError.Unknown(code = unknown.code, detail = null))
+    return ApiResult.Failure(unknown.copy(detail = null))
 }
 
 private fun <T, R : Any> ApiResult<T>.mapOrUnreadable(transform: (T) -> R?): ApiResult<R> =

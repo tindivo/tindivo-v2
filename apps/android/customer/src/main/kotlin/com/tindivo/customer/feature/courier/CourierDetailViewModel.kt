@@ -44,6 +44,14 @@ private const val TICK_MILLIS = 1_000L
 private const val SECONDS_PER_MINUTE = 60L
 private const val HTTP_CONFLICT = 409
 
+/** El HTTP de la respuesta de error, se haya podido leer su cuerpo ([AppError.Known]) o no ([AppError.Unknown]). */
+private fun AppError.httpStatus(): Int? =
+    when (this) {
+        is AppError.Known -> status
+        is AppError.Unknown -> status
+        is AppError.Network, is AppError.UpgradeRequired -> null
+    }
+
 internal sealed interface CourierDetailUiState {
     data object Loading : CourierDetailUiState
 
@@ -328,8 +336,9 @@ internal class CourierDetailViewModel
                 return
             }
             // 409: el servidor dijo que ya no se puede (lo más probable, un motorizado la tomó). Con el seguimiento de
-            // antes en pantalla no se vuelve a ofrecer.
-            val refused = error is AppError.Known && error.status == HTTP_CONFLICT
+            // antes en pantalla no se vuelve a ofrecer. Vale también para un 409 con un cuerpo que no se pudo leer
+            // (CAX-003): el estado HTTP basta para no volver a enviar la cancelación.
+            val refused = error.httpStatus() == HTTP_CONFLICT
             mutableCancel.value = CancelUiState(message = error.toMessage(), locked = refused)
         }
 

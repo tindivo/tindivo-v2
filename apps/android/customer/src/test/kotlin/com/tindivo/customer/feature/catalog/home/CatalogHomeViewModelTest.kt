@@ -112,7 +112,7 @@ class CatalogHomeViewModelTest {
             val state = viewModel.settled() as CatalogHomeUiState.Loaded
 
             assertEquals(listOf("Don Lucho"), state.restaurants.map { it.name })
-            assertEquals(AppError.Unknown(code = "codigo_nuevo", detail = null), state.refreshFailed)
+            assertEquals(AppError.Unknown(code = "codigo_nuevo", detail = null, status = 409), state.refreshFailed)
         }
 
     @Test
