@@ -182,6 +182,7 @@ class PrepayOfferWithdrawnTest : PrepayHarness() {
         assertNull(label, state.photo)
         assertNull(label, state.countdown)
         assertFalse(label, state.canSend)
+        assertFalse(label, state.showsProofPicker)
     }
 
     private companion object {

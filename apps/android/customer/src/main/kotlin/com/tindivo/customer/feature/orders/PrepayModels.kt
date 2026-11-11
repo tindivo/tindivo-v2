@@ -107,9 +107,15 @@ internal data class PrepayUiState(
                 send !is SendState.Sent &&
                 countdown != PrepayCountdown.Expired
 
-    /** Se ofrece elegir la captura y enviarla: ni ya enviada (no se reemplaza) ni con el plazo vencido. */
+    /**
+     * Se ofrece elegir la captura y enviarla: solo con la oferta de pago a la vista (sin ella no hay nada que pagar,
+     * CAX-002), ni ya enviada (no se reemplaza) ni con el plazo vencido.
+     */
     val showsProofPicker: Boolean
-        get() = send !is SendState.Sent && countdown != PrepayCountdown.Expired
+        get() =
+            info is PrepayInfoState.Ready &&
+                send !is SendState.Sent &&
+                countdown != PrepayCountdown.Expired
 
     /** Sin el `Uri` de la foto: dice si hay una elegida, no cuál (CAX-003). */
     override fun toString(): String =

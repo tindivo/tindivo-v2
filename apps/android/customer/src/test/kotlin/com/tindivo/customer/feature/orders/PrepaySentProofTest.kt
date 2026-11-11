@@ -69,17 +69,31 @@ class PrepaySentProofTest : PrepayHarness() {
         val inTime = listOf(null, PrepayCountdown.Remaining(5))
         for (send in offered) {
             for (countdown in inTime) {
-                val state = PrepayUiState(photo = PHOTO_A, send = send, countdown = countdown)
+                val state = PrepayUiState(info = READY, photo = PHOTO_A, send = send, countdown = countdown)
                 assertTrue("$send, $countdown", state.showsProofPicker)
             }
         }
         for (countdown in inTime + PrepayCountdown.Expired) {
-            val sent = PrepayUiState(photo = PHOTO_A, send = SendState.Sent, countdown = countdown)
+            val sent = PrepayUiState(info = READY, photo = PHOTO_A, send = SendState.Sent, countdown = countdown)
             assertFalse("enviado, $countdown", sent.showsProofPicker)
         }
         for (send in offered) {
-            val expired = PrepayUiState(photo = PHOTO_A, send = send, countdown = PrepayCountdown.Expired)
+            val expired = PrepayUiState(info = READY, photo = PHOTO_A, send = send, countdown = PrepayCountdown.Expired)
             assertFalse("$send, vencido", expired.showsProofPicker)
         }
+    }
+
+    @Test
+    fun `sin la oferta de pago a la vista no se ofrece el selector de la captura`() {
+        val withoutOffer = listOf(PrepayInfoState.Idle, PrepayInfoState.Loading, PrepayInfoState.NotAwaiting)
+        for (info in withoutOffer) {
+            val state = PrepayUiState(info = info, photo = PHOTO_A, countdown = PrepayCountdown.Remaining(5))
+            assertFalse("$info", state.showsProofPicker)
+        }
+    }
+
+    private companion object {
+        val READY =
+            PrepayInfoState.Ready(PrepayDetails("Pollería Rosa", payee = null, lastTry = false, deadline = null))
     }
 }
