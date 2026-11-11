@@ -237,9 +237,12 @@ internal class DeleteAccountViewModel
 
         // Un 401 sin confirmación: el cierre de sesión de siempre (si sigue la de esa cuenta; si el refresco falló, el
         // almacén ya la cerró) y nada más. El libro de intentos y la bolsa se quedan: si la cuenta sigue viva, al volver
-        // a entrar el checkout aún puede reconciliar un pedido incierto.
+        // a entrar el checkout aún puede reconciliar un pedido incierto. El cierre es signOutIf: entre esta comprobación y
+        // el cierre hay suspensión (el candado del almacén), y si para entonces entró otra cuenta, esa no se toca.
         private suspend fun unconfirmed(confirmation: Confirmation) {
-            if (isOwnerSignedIn(confirmation)) withContext(NonCancellable) { sessionStore.signOut() }
+            if (isOwnerSignedIn(confirmation)) {
+                withContext(NonCancellable) { sessionStore.signOutIf(confirmation.account) }
+            }
             _state.update {
                 if (isStillOwners(confirmation)) {
                     it.copy(typed = "", phase = DeletePhase.Unconfirmed, notice = DeleteNotice.Unconfirmed)
