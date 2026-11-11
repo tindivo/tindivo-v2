@@ -51,6 +51,8 @@ class CourierDetailViewModelTest : CourierHarness() {
 
     private fun trackingCalls() = gateway.calls.filter { it.startsWith("tracking:") }
 
+    private fun cancelCalls() = gateway.calls.filter { it.startsWith("cancel:") }
+
     @Test
     fun `carga la entrega con la cuenta y vuelve a consultar cada 8 segundos mientras sigue viva`() =
         runTest {
@@ -236,6 +238,63 @@ class CourierDetailViewModelTest : CourierHarness() {
             // Ya la tomó un motorizado: no se puede volver a pedir cancelar.
             viewModel.askCancel()
             assertFalse(viewModel.cancel.value.confirming)
+        }
+
+    @Test
+    fun `tras un 409 con la recarga retenida no se puede volver a cancelar (CAX-003)`() =
+        runTest {
+            gateway.trackings += ApiResult.Success(tracking("requested"))
+            gateway.trackings += ApiResult.Success(tracking("accepted", driverName = "Luis"))
+            gateway.cancelResult =
+                ApiResult.Failure(known(ApiErrorCode.Conflict, 409, "Esta entrega ya no se puede cancelar."))
+            val viewModel = watched()
+            val reload = CompletableDeferred<Unit>()
+            gateway.trackingGate = reload
+
+            viewModel.askCancel()
+            viewModel.confirmCancel()
+            // La recarga sigue esperando: en pantalla, el seguimiento de antes («se puede cancelar»).
+            assertTrue(viewModel.shown().phase.isCancellable())
+            viewModel.askCancel()
+            viewModel.confirmCancel()
+
+            assertEquals("POST de cancelar", 1, cancelCalls().size)
+            assertFalse(viewModel.cancel.value.confirming)
+            assertTrue(viewModel.cancel.value.locked)
+
+            // Llega el seguimiento al día: ya no se puede cancelar y el bloqueo se suelta.
+            reload.complete(Unit)
+            assertEquals(CourierStep.Confirmed, (viewModel.shown().phase as CourierPhase.Active).step)
+            assertFalse(viewModel.cancel.value.locked)
+            assertEquals(1, cancelCalls().size)
+        }
+
+    @Test
+    fun `tras cancelar con la recarga pendiente no se vuelve a ofrecer cancelar (CAX-003)`() =
+        runTest {
+            gateway.trackings += ApiResult.Success(tracking("requested"))
+            gateway.trackings += ApiResult.Success(tracking("cancelled", cancelReason = "customer_cancelled"))
+            val viewModel = watched()
+            val reload = CompletableDeferred<Unit>()
+            gateway.trackingGate = reload
+
+            viewModel.askCancel()
+            viewModel.confirmCancel()
+            assertTrue(viewModel.shown().phase.isCancellable())
+            viewModel.askCancel()
+            viewModel.confirmCancel()
+            viewModel.dismissCancel()
+            viewModel.askCancel()
+            viewModel.confirmCancel()
+
+            assertEquals("POST de cancelar", 1, cancelCalls().size)
+            assertFalse(viewModel.cancel.value.confirming)
+            assertTrue(viewModel.cancel.value.locked)
+
+            reload.complete(Unit)
+            assertEquals(CourierPhase.Cancelled("customer_cancelled"), viewModel.shown().phase)
+            assertEquals(CancelUiState(), viewModel.cancel.value)
+            assertEquals(1, cancelCalls().size)
         }
 
     @Test

@@ -43,6 +43,7 @@ internal const val COURIER_POLL_MILLIS = 8_000L
 private const val STOP_TIMEOUT_MILLIS = 5_000L
 private const val TICK_MILLIS = 1_000L
 private const val SECONDS_PER_MINUTE = 60L
+private const val HTTP_CONFLICT = 409
 
 internal sealed interface CourierDetailUiState {
     data object Loading : CourierDetailUiState
@@ -61,11 +62,16 @@ internal sealed interface CourierDetailUiState {
     data object LoggedOut : CourierDetailUiState
 }
 
-/** Cancelar pide un segundo toque (web: un roce anulaba la solicitud). */
+/**
+ * Cancelar pide un segundo toque (web: un roce anulaba la solicitud). [locked]: ya se intentó cancelar y el servidor
+ * contestó (cancelada, o 409 porque ya no se puede); no se vuelve a ofrecer ni a enviar hasta que el seguimiento traiga
+ * un estado que ya no se puede cancelar. El seguimiento de antes, que todavía dice «se puede cancelar», no la reabre.
+ */
 internal data class CancelUiState(
     val confirming: Boolean = false,
     val cancelling: Boolean = false,
     val message: CourierMessage? = null,
+    val locked: Boolean = false,
 )
 
 private data class PollStep(
@@ -215,8 +221,11 @@ internal class CourierDetailViewModel
                     val loaded = CourierDetailUiState.Loaded(tracking)
                     val terminal = tracking.phase.isTerminal()
                     if (terminal) settled = loaded
-                    // Si cambió el estado, lo que se estaba confirmando ya no aplica.
-                    if (!tracking.phase.isCancellable()) mutableCancel.update { it.copy(confirming = false) }
+                    // Si cambió el estado, lo que se estaba confirmando ya no aplica, y el seguimiento ya refleja lo que
+                    // contestó el servidor al cancelar: se suelta el bloqueo. Un estado cancelable no lo suelta.
+                    if (!tracking.phase.isCancellable()) {
+                        mutableCancel.update { it.copy(confirming = false, locked = false) }
+                    }
                     PollStep(loaded, keepPolling = !terminal)
                 }
 
@@ -257,12 +266,14 @@ internal class CourierDetailViewModel
         /** «Cancelar solicitud»: pide confirmar. Solo mientras nadie la tomó, como en la web. */
         fun askCancel() {
             val shown = (state.value as? CourierDetailUiState.Loaded)?.tracking ?: return
-            if (!shown.phase.isCancellable() || mutableCancel.value.cancelling) return
+            val current = mutableCancel.value
+            if (!shown.phase.isCancellable() || current.cancelling || current.locked) return
             mutableCancel.value = CancelUiState(confirming = true)
         }
 
         fun dismissCancel() {
-            if (!mutableCancel.value.cancelling) mutableCancel.value = CancelUiState()
+            val current = mutableCancel.value
+            if (!current.cancelling) mutableCancel.value = CancelUiState(locked = current.locked)
         }
 
         /** «Sí, cancelar». Un segundo toque mientras se cancela no hace nada. El servidor decide si aún se puede. */
@@ -270,14 +281,16 @@ internal class CourierDetailViewModel
             val current = mutableCancel.value
             val account = owner.value
             val id = courierId
-            if (!current.confirming || current.cancelling || account == null || id == null || loggedOut.value) return
+            val blocked = !current.confirming || current.cancelling || current.locked
+            if (blocked || account == null || id == null || loggedOut.value) return
             mutableCancel.value = current.copy(cancelling = true, message = null)
             viewModelScope.launch {
                 val result = gateway.cancel(id, account)
                 if (loggedOut.value || !isOwner(account)) return@launch
                 when (result) {
                     is ApiResult.Success -> {
-                        mutableCancel.value = CancelUiState()
+                        // Cancelada: no se vuelve a ofrecer mientras el seguimiento no lo refleje.
+                        mutableCancel.value = CancelUiState(locked = true)
                     }
 
                     is ApiResult.Failure -> {
@@ -301,7 +314,10 @@ internal class CourierDetailViewModel
                 signOutIfOwner(account)
                 return
             }
-            mutableCancel.value = CancelUiState(message = error.toMessage())
+            // 409: el servidor dijo que ya no se puede (lo más probable, un motorizado la tomó). Con el seguimiento de
+            // antes en pantalla no se vuelve a ofrecer.
+            val refused = error is AppError.Known && error.status == HTTP_CONFLICT
+            mutableCancel.value = CancelUiState(message = error.toMessage(), locked = refused)
         }
 
         /** La sesión sigue siendo la cuenta con la que se abrió la pantalla. */

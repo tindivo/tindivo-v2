@@ -249,7 +249,10 @@ private fun Summary(tracking: CourierTrackingUi) {
     }
 }
 
-/** Cancelar pide un segundo toque; mientras cancela, el botón queda cargando y un toque más no envía otra vez. */
+/**
+ * Cancelar pide un segundo toque; mientras cancela, el botón queda cargando y un toque más no envía otra vez. Tras la
+ * respuesta del servidor ([CancelUiState.locked]) el botón no vuelve hasta que el seguimiento se ponga al día.
+ */
 @Composable
 private fun CancelBlock(
     cancel: CancelUiState,
@@ -275,7 +278,7 @@ private fun CancelBlock(
                 onClick = actions.onDismiss,
                 enabled = !cancel.cancelling,
             )
-        } else {
+        } else if (!cancel.locked) {
             TindivoSecondaryButton(text = stringResource(R.string.courier_cancel), onClick = actions.onAsk)
         }
     }
