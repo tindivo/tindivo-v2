@@ -28,9 +28,9 @@ data class AccountProfileUi(
     val phoneVerified: Boolean,
     val phone: String? = null,
 ) {
-    /** El teléfono es un dato personal: no sale en un log. */
+    /** El nombre y el teléfono son datos personales: no salen en un log. */
     override fun toString(): String =
-        "AccountProfileUi(fullName=$fullName, phoneVerified=$phoneVerified, phone=${if (phone == null) "null" else "***"})"
+        "AccountProfileUi(fullName=***, phoneVerified=$phoneVerified, phone=${if (phone == null) "null" else "***"})"
 }
 
 sealed interface AccountUiState {

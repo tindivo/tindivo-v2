@@ -84,6 +84,19 @@ data class CheckoutUiState(
     val selectedAddress: AddressUi? get() = addresses.firstOrNull { it.id == selectedAddressId }
     val isPickup: Boolean get() = method == DeliveryChoice.Pickup
     val cta: Cta get() = ctaOf(this)
+
+    /**
+     * El nombre, el celular, la nota y las direcciones son datos personales: no salen en un log. De las direcciones y
+     * las líneas de la bolsa (que llevan notas escritas) solo sale cuántas hay.
+     */
+    override fun toString(): String =
+        "CheckoutUiState(phase=$phase, businessName=$businessName, etaMin=$etaMin, etaMax=$etaMax, " +
+            "acceptsDelivery=$acceptsDelivery, acceptsPickup=$acceptsPickup, method=$method, pickupWhen=$pickupWhen, " +
+            "addresses=${addresses.size}, selectedAddressId=$selectedAddressId, name=***, " +
+            "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, note=***, " +
+            "lines=${lines.size}, pay=$pay, cash=$cash, quote=$quote, quoteStatus=$quoteStatus, sending=$sending, " +
+            "message=$message, blockedDetail=$blockedDetail, reconcileSeen=$reconcileSeen, " +
+            "createdOrderId=$createdOrderId, sheet=$sheet)"
 }
 
 /**

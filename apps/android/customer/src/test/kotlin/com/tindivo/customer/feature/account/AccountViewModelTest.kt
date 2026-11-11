@@ -71,11 +71,14 @@ class AccountViewModelTest {
     private suspend fun AccountViewModel.settled(): AccountUiState = state.first { it !is AccountUiState.Loading }
 
     @Test
-    fun `el telefono no sale en el toString del perfil ni del estado`() {
-        val profile = AccountProfileUi("Rosa Quispe", phoneVerified = true, phone = "+51987654321")
+    fun `ni el nombre ni el telefono salen en el toString del perfil ni del estado`() {
+        val profile = AccountProfileUi("Zoila Ccahuana Ttito", phoneVerified = true, phone = "+51987654321")
 
-        assertTrue(!profile.toString().contains("987654321"))
-        assertTrue(!AccountUiState.Loaded(profile).toString().contains("987654321"))
+        for (text in listOf(profile.toString(), AccountUiState.Loaded(profile).toString())) {
+            assertTrue(text, !text.contains("987654321"))
+            assertTrue(text, !text.contains("Zoila"))
+            assertTrue(text, !text.contains("Ccahuana"))
+        }
     }
 
     @Test
