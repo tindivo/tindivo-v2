@@ -57,6 +57,8 @@ internal data class CourierHomeUiState(
     val service: ServiceState = ServiceState.Loading,
     val signedIn: Boolean = false,
     val list: CourierListState = CourierListState.Hidden,
+    /** La cuenta de [list]: con ella se abre el seguimiento de una tarjeta. */
+    val accountId: String? = null,
 ) {
     /**
      * La entrega en curso de la cuenta (la más reciente que sigue viva), para el banner «Entrega en curso» y para que la
@@ -103,6 +105,7 @@ internal class CourierHomeViewModel
             mutableState.update {
                 it.copy(
                     signedIn = userId != null,
+                    accountId = userId,
                     list = if (userId == null) CourierListState.Hidden else CourierListState.Loading,
                 )
             }

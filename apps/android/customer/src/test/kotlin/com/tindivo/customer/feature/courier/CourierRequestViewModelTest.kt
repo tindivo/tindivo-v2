@@ -178,6 +178,8 @@ class CourierRequestViewModelTest : CourierHarness() {
 
             assertEquals(RequestPhase.Created, viewModel.state.value.phase)
             assertEquals(CREATED, viewModel.state.value.created)
+            // El seguimiento se abre con la cuenta que la creó.
+            assertEquals(ACCOUNT_A, viewModel.state.value.createdFor)
             val sent = gateway.sentRequests.single()
             assertEquals("Quien entrega", sent.origin.contactName)
             assertEquals("912000111", sent.origin.contactPhone)

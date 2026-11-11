@@ -64,6 +64,8 @@ internal fun CourierHomeScreen(
     onLoadMore: () -> Unit,
 ) {
     val title = if (listOnly) R.string.courier_my_title else R.string.courier_entry_title
+    // Las tarjetas son de la cuenta de la lista: el seguimiento se abre atado a ella.
+    val open: (CourierCardUi) -> Unit = { card -> state.accountId?.let { actions.onOpen(card, it) } }
     Scaffold(topBar = { CourierTopBar(title = stringResource(title), onBack = actions.onBack) }) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -78,7 +80,7 @@ internal fun CourierHomeScreen(
         ) {
             if (!listOnly) {
                 item { ServiceCard(state, actions, onRetry) }
-                state.active?.let { active -> item { ActiveBanner(active) { actions.onOpen(active) } } }
+                state.active?.let { active -> item { ActiveBanner(active) { open(active) } } }
                 if (state.signedIn) {
                     item {
                         Text(
@@ -92,7 +94,7 @@ internal fun CourierHomeScreen(
                     }
                 }
             }
-            myDeliveries(state.list, actions.onOpen, onRetry, onLoadMore)
+            myDeliveries(state.list, open, onRetry, onLoadMore)
         }
     }
 }
@@ -218,7 +220,7 @@ private fun CourierHomePreview() {
                     list = CourierListState.Loaded(listOf(card), canLoadMore = false),
                 ),
             listOnly = false,
-            actions = CourierHomeActions({}, {}, {}, {}),
+            actions = CourierHomeActions({}, {}, {}, { _, _ -> }),
             onRetry = {},
             onLoadMore = {},
         )

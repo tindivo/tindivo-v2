@@ -29,9 +29,11 @@ class CourierDetailViewModelTest : CourierHarness() {
         }
     private val clock = VirtualClock(START) { dispatcher.scheduler.currentTime }
 
-    private fun viewModel() =
+    private fun viewModel(routeAccount: String = ACCOUNT_A) =
         CourierDetailViewModel(
-            SavedStateHandle(mapOf("id" to COURIER_ID.toString(), "shortId" to "AB23CD45")),
+            SavedStateHandle(
+                mapOf("id" to COURIER_ID.toString(), "shortId" to "AB23CD45", "accountId" to routeAccount),
+            ),
             gateway,
             session,
             config,
@@ -39,8 +41,8 @@ class CourierDetailViewModelTest : CourierHarness() {
             clock,
         )
 
-    private fun TestScope.watched(): CourierDetailViewModel {
-        val viewModel = viewModel()
+    private fun TestScope.watched(routeAccount: String = ACCOUNT_A): CourierDetailViewModel {
+        val viewModel = viewModel(routeAccount)
         backgroundScope.launch(dispatcher) { viewModel.state.collect {} }
         backgroundScope.launch(dispatcher) { viewModel.countdown.collect {} }
         return viewModel
@@ -175,6 +177,33 @@ class CourierDetailViewModelTest : CourierHarness() {
             viewModel.askCancel()
             viewModel.confirmCancel()
             assertEquals(1, gateway.calls.count { it.startsWith("tracking:") || it.startsWith("cancel:") })
+        }
+
+    @Test
+    fun `la ruta de A reconstruida con la sesion de B no consulta nada y se cierra (CAX-004)`() =
+        runTest {
+            gateway.trackings += ApiResult.Success(tracking("requested", driverName = "De A"))
+            session.switchTo(ACCOUNT_B)
+
+            val viewModel = watched(routeAccount = ACCOUNT_A)
+            viewModel.retry()
+            viewModel.askCancel()
+            viewModel.confirmCancel()
+
+            assertEquals(CourierDetailUiState.LoggedOut, viewModel.state.value)
+            assertEquals(emptyList<String>(), gateway.calls)
+            assertEquals(0, session.signOutCalls)
+        }
+
+    @Test
+    fun `la ruta de A con la sesion de A consulta con la cuenta de A (CAX-004)`() =
+        runTest {
+            gateway.trackings += ApiResult.Success(tracking("requested"))
+
+            val viewModel = watched(routeAccount = ACCOUNT_A)
+
+            assertEquals(CourierPhase.Active(CourierStep.Requested, CourierHeadline.Searching), viewModel.shown().phase)
+            assertEquals(listOf("tracking:AB23CD45:$ACCOUNT_A"), trackingCalls())
         }
 
     @Test

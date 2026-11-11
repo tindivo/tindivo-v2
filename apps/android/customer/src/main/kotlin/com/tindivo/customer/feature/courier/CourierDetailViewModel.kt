@@ -13,7 +13,6 @@ import com.tindivo.customer.feature.orders.keepsShownOrders
 import com.tindivo.customer.feature.orders.parseOrderId
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
-import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
@@ -82,11 +81,13 @@ private data class PollStep(
 /**
  * El seguimiento de una entrega de la cuenta. Mientras la pantalla está visible y la entrega no es terminal, la vuelve
  * a consultar cada [COURIER_POLL_MILLIS] (Android no tiene el Realtime de la web: va por sondeo, como el detalle de
- * pedido). Todo sale atado a la cuenta con la que se abrió; si la sesión termina o cambia de cuenta, se cancela la
- * consulta en curso, se olvida lo leído y la pantalla queda en [CourierDetailUiState.LoggedOut].
+ * pedido). Todo sale atado a la cuenta de la ruta ([CourierDetailRoute.accountId]), la que abrió la pantalla, y no a la
+ * sesión del momento de crear el ViewModel: al reconstruirlo con la sesión de otra cuenta no se consulta nada. Si la
+ * sesión no es esa cuenta (cerrada, de otra, o una ruta sin cuenta), se cancela la consulta en curso, se olvida lo leído
+ * y la pantalla queda en [CourierDetailUiState.LoggedOut].
  *
- * La ruta trae el `id` (para cancelar) y el `shortId` (para el seguimiento). El `shortId` no se valida: es un dato que
- * ya existe en la base (AGENTS.md 1, nunca al rehidratar).
+ * La ruta trae el `id` (para cancelar), el `shortId` (para el seguimiento) y la cuenta. El `shortId` no se valida: es un
+ * dato que ya existe en la base (AGENTS.md 1, nunca al rehidratar).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -103,7 +104,10 @@ internal class CourierDetailViewModel
         private val courierId: UUID? = parseOrderId(savedStateHandle.get<String>("id"))
         private val shortId: String? = savedStateHandle.get<String>("shortId")?.takeIf { it.isNotBlank() }
 
-        /** La cuenta con la que se abrió la pantalla: la primera con sesión que se vio. Hasta saberla, se espera. */
+        /** La cuenta de la ruta: la única con la que esta pantalla consulta y cancela. */
+        private val routeAccount: String? = savedStateHandle.get<String>("accountId")?.takeIf { it.isNotBlank() }
+
+        /** [routeAccount] en cuanto la sesión confirma que es esa cuenta. Hasta entonces, se espera. */
         private val owner = MutableStateFlow<String?>(null)
 
         private var lastTracking: CourierTrackingUi? = null
@@ -144,13 +148,22 @@ internal class CourierDetailViewModel
                 )
 
         init {
-            val watch = SessionWatch()
             viewModelScope.launch {
                 sessionStore.state.collect { session ->
-                    if (watch.ended(session)) {
-                        invalidate()
-                    } else if (session is SessionState.SignedIn && owner.value == null) {
-                        owner.value = session.userId
+                    when {
+                        // Todavía no se leyó la sesión guardada: se espera sin consultar.
+                        session == SessionState.Unknown -> {
+                            Unit
+                        }
+
+                        session is SessionState.SignedIn && session.userId == routeAccount -> {
+                            if (owner.value == null) owner.value = session.userId
+                        }
+
+                        // Cerrada, de otra cuenta, o una ruta sin cuenta: la pantalla se cierra y sigue cerrada.
+                        else -> {
+                            invalidate()
+                        }
                     }
                 }
             }

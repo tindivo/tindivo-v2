@@ -29,7 +29,9 @@ internal fun NavGraphBuilder.courierDestinations(navController: NavHostControlle
                     onBack = { navController.popBackStack() },
                     onRequest = { navController.navigate(CourierRequestRoute) { launchSingleTop = true } },
                     onSignIn = { navController.navigate(SignInRoute) },
-                    onOpen = { card -> navController.navigate(CourierDetailRoute(card.id.toString(), card.shortId)) },
+                    onOpen = { card, accountId ->
+                        navController.navigate(CourierDetailRoute(card.id.toString(), card.shortId, accountId))
+                    },
                 ),
         )
     }
@@ -45,8 +47,8 @@ internal fun NavGraphBuilder.courierDestinations(navController: NavHostControlle
                     onBack = { navController.popBackStack() },
                     onSignIn = { navController.navigate(SignInRoute) },
                     // La entrega existe: la solicitud sale de la pila para que «atrás» no vuelva a un formulario enviado.
-                    onCreated = { created ->
-                        navController.navigate(CourierDetailRoute(created.id.toString(), created.shortId)) {
+                    onCreated = { created, accountId ->
+                        navController.navigate(CourierDetailRoute(created.id.toString(), created.shortId, accountId)) {
                             popUpTo<CourierRequestRoute> { inclusive = true }
                             launchSingleTop = true
                         }

@@ -39,8 +39,8 @@ import com.tindivo.customer.R
 internal class CourierRequestNav(
     val onBack: () -> Unit,
     val onSignIn: () -> Unit,
-    /** La entrega existe: se abre su seguimiento y la solicitud sale de la pila. */
-    val onCreated: (CreatedCourier) -> Unit,
+    /** La entrega existe: se abre su seguimiento, con la cuenta que la creó, y la solicitud sale de la pila. */
+    val onCreated: (created: CreatedCourier, accountId: String) -> Unit,
     /** «Mis entregas» encima de la solicitud, para revisar sin perder lo escrito. */
     val onOpenMine: () -> Unit,
 )
@@ -67,7 +67,9 @@ internal fun CourierRequestDestination(
     // Una vez por entrega creada: la navegación reemplaza la solicitud, así que «atrás» no vuelve a un formulario ya
     // enviado.
     LaunchedEffect(state.created) {
-        state.created?.let(nav.onCreated)
+        val created = state.created
+        val account = state.createdFor
+        if (created != null && account != null) nav.onCreated(created, account)
     }
     // Cada apertura de una hoja lleva su número: es la clave del ViewModel de la hoja, así que reabrirla no hereda el
     // estado de la vez anterior (como en el checkout).

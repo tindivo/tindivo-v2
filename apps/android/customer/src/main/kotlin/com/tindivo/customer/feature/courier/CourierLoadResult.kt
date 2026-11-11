@@ -81,9 +81,15 @@ internal fun CourierRequestUiState.loaded(ready: CourierLoadResult.Ready) =
  * El estado tras un envío que terminó con [result], salvo un rechazo ([CourierSendResult.Failed]), que pide revisar la
  * sesión y el 426 antes y lo resuelve el ViewModel: entonces devuelve `null`.
  */
-internal fun CourierRequestUiState.afterSent(result: CourierSendResult<CreatedCourier>): CourierRequestUiState? =
+internal fun CourierRequestUiState.afterSent(
+    result: CourierSendResult<CreatedCourier>,
+    account: String,
+): CourierRequestUiState? =
     when (result) {
-        is CourierSendResult.Created -> copy(phase = RequestPhase.Created, created = result.data, sending = false)
+        is CourierSendResult.Created -> {
+            copy(phase = RequestPhase.Created, created = result.data, createdFor = account, sending = false)
+        }
+
         CourierSendResult.AlreadyCreated -> copy(phase = RequestPhase.AlreadyCreated, sending = false)
         CourierSendResult.NeedsReview -> copy(phase = RequestPhase.Review, sending = false, reviewSeen = false)
         CourierSendResult.Busy -> copy(sending = false)

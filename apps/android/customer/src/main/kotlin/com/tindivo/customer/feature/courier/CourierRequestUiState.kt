@@ -81,6 +81,8 @@ internal data class CourierRequestUiState(
     val sending: Boolean = false,
     val message: CourierMessage? = null,
     val created: CreatedCourier? = null,
+    /** La cuenta con la que se creó [created]: con ella se abre su seguimiento. */
+    val createdFor: String? = null,
     /** La persona ya abrió «Mis entregas» desde la revisión: puede confirmar y volver a pedir. */
     val reviewSeen: Boolean = false,
 ) {

@@ -49,6 +49,8 @@ class CourierHomeViewModelTest : CourierHarness() {
                     ?.shortId,
             )
             assertEquals(listOf("page:null:$ACCOUNT_A"), pageCalls())
+            // La lista es de A: con A se abre su seguimiento.
+            assertEquals(ACCOUNT_A, viewModel.state.value.accountId)
         }
 
     @Test
@@ -137,6 +139,7 @@ class CourierHomeViewModelTest : CourierHarness() {
             assertEquals(listOf("DEB23456"), list.items.map { it.shortId })
             assertNull(viewModel.state.value.active)
             assertEquals(listOf("page:null:$ACCOUNT_A", "page:null:$ACCOUNT_B"), pageCalls())
+            assertEquals(ACCOUNT_B, viewModel.state.value.accountId)
         }
 
     @Test

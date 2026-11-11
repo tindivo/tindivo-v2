@@ -16,11 +16,14 @@ data class CourierHomeRoute(
 data object CourierRequestRoute
 
 /**
- * El seguimiento de una entrega de la cuenta. `CourierDetailViewModel` lee [id] (para cancelar) bajo la clave "id" y
- * [shortId] (para consultar) bajo "shortId".
+ * El seguimiento de una entrega de la cuenta [accountId], la que tenía la sesión al abrirlo. `CourierDetailViewModel`
+ * lee [id] (para cancelar) bajo la clave "id", [shortId] (para consultar) bajo "shortId" y [accountId] bajo
+ * "accountId". La cuenta viaja en la ruta porque el seguimiento es una consulta pública: al reconstruir la pantalla (por
+ * ejemplo, al restaurar la navegación) con la sesión de otra cuenta, no consulta ni muestra nada y se cierra.
  */
 @Serializable
 data class CourierDetailRoute(
     val id: String,
     val shortId: String,
+    val accountId: String,
 )

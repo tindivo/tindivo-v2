@@ -5,5 +5,6 @@ internal class CourierHomeActions(
     val onBack: () -> Unit,
     val onRequest: () -> Unit,
     val onSignIn: () -> Unit,
-    val onOpen: (CourierCardUi) -> Unit,
+    /** Abre el seguimiento de la tarjeta, con la cuenta a la que pertenece la lista. */
+    val onOpen: (card: CourierCardUi, accountId: String) -> Unit,
 )

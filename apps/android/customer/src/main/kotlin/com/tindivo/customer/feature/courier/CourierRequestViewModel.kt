@@ -342,7 +342,7 @@ internal class CourierRequestViewModel
             started: Int,
             account: String,
         ) {
-            val next = mutableState.value.afterSent(result)
+            val next = mutableState.value.afterSent(result, account)
             if (next != null) {
                 mutableState.value = next
             } else if (result is CourierSendResult.Failed) {
