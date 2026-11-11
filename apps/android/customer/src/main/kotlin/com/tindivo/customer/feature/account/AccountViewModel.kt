@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tindivo.core.network.AccountMismatchException
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
@@ -55,6 +56,11 @@ sealed interface AccountUiState {
     data object LoggedOut : AccountUiState
 }
 
+/**
+ * «Mi cuenta». Todo va atado a la cuenta con la que se abrió la pantalla: el perfil se pide solo con su token
+ * (`boundTo` en [CustomerRepository]) y un resultado que llega cuando la sesión vigente ya no es esa cuenta no se
+ * publica. Un cierre o un cambio directo a otra cuenta terminan la pantalla para siempre: no vuelve a cargar.
+ */
 @HiltViewModel
 class AccountViewModel
     @Inject
@@ -69,21 +75,48 @@ class AccountViewModel
         private var loadJob: Job? = null
         private var profilePromptOpened = false
 
+        /** La cuenta de la pantalla: la de la sesión al abrirla, o la primera que entre si aún no se sabía. */
+        private var owner: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+
+        // Irreversible: cerrada la sesión o cambiada de cuenta, esta instancia no carga ni publica nada más.
+        private var ended = false
+
         init {
-            viewModelScope.launch {
-                sessionStore.state.collect { if (it is SessionState.SignedOut) _state.value = AccountUiState.LoggedOut }
-            }
+            viewModelScope.launch { sessionStore.state.collect(::onSession) }
             load()
         }
 
-        /** Vuelve a pedir el perfil. Si ya hay una carga en curso, no lanza otra. */
+        private fun onSession(session: SessionState) {
+            when (session) {
+                SessionState.Unknown -> {
+                    Unit
+                }
+
+                SessionState.SignedOut -> {
+                    end()
+                }
+
+                is SessionState.SignedIn -> {
+                    if (owner == null && !ended) {
+                        owner = session.userId
+                        load()
+                    } else if (session.userId != owner) {
+                        end()
+                    }
+                }
+            }
+        }
+
+        /** Vuelve a pedir el perfil. Si ya hay una carga en curso, o la pantalla terminó, no lanza otra. */
         fun load() {
-            if (loadJob?.isActive == true) return
+            val account = owner
+            if (ended || account == null || loadJob?.isActive == true) return
             _state.value = AccountUiState.Loading
-            val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId
             loadJob =
                 viewModelScope.launch {
-                    when (val result = customer.profile()) {
+                    val result = customer.profile(account)
+                    if (!isCurrent(account)) return@launch end()
+                    when (result) {
                         is ApiResult.Success -> _state.value = AccountUiState.Loaded(result.data.toUi())
                         is ApiResult.Failure -> onFailure(result.error, account)
                     }
@@ -97,24 +130,47 @@ class AccountViewModel
             if (current is AccountUiState.ProfileMissing) _state.value = current.copy(openNow = false)
         }
 
+        /** «Cerrar sesión»: cierra la de esta pantalla; si la sesión ya es de otra cuenta, esa no se toca. */
         fun signOut() {
-            viewModelScope.launch { sessionStore.signOut() }
+            val account = owner ?: return
+            viewModelScope.launch { sessionStore.signOutIf(account) }
+        }
+
+        /** Sigue siendo la cuenta de la pantalla: no terminó Y la sesión vigente, leída ahora, es la de [account]. */
+        private fun isCurrent(account: String) =
+            !ended && (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
+
+        private fun end() {
+            ended = true
+            loadJob?.cancel()
+            _state.value = AccountUiState.LoggedOut
         }
 
         private suspend fun onFailure(
             error: AppError,
-            account: String?,
+            account: String,
         ) {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
-            if (error.isUnauthorized()) {
-                // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también, pero solo
-                // si sigue siendo la de la carga (un 401 de A no cierra la sesión de B).
-                if (account != null) withContext(NonCancellable) { sessionStore.signOutIf(account) }
-                _state.value = AccountUiState.LoggedOut
-            } else if (error.isProfileMissing()) {
-                _state.value = AccountUiState.ProfileMissing(openNow = !profilePromptOpened)
-            } else {
-                _state.value = AccountUiState.Failed(error)
+            when {
+                // La sesión ya es de otra cuenta: no salió nada. Se cierra la pantalla sin tocar la sesión nueva.
+                error is AppError.Network && error.cause is AccountMismatchException -> {
+                    end()
+                }
+
+                error.isUnauthorized() -> {
+                    // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también, pero
+                    // solo si sigue siendo la de la carga (un 401 de A no cierra la sesión de B).
+                    withContext(NonCancellable) { sessionStore.signOutIf(account) }
+                    end()
+                }
+
+                error.isProfileMissing() -> {
+                    _state.value = AccountUiState.ProfileMissing(openNow = !profilePromptOpened)
+                }
+
+                else -> {
+                    _state.value = AccountUiState.Failed(error)
+                }
             }
         }
     }

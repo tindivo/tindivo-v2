@@ -172,7 +172,9 @@ class LateUnauthorizedTest {
             switchToBAfterTheResponse()
 
             assertBStillSignedIn()
-            assertEquals(listOf(ACCOUNT_A), store.signOutIfCalls)
+            // CAX-003: antes de mirar el error, la pantalla ve que la sesión ya es de otra cuenta y termina; ni siquiera
+            // pide cerrar la de A.
+            assertEquals(emptyList<String>(), store.signOutIfCalls)
             assertEquals(AccountUiState.LoggedOut, viewModel.state.value)
         }
 

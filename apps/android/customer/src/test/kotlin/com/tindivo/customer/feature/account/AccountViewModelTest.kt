@@ -1,12 +1,15 @@
 package com.tindivo.customer.feature.account
 
+import com.tindivo.core.network.BearerAuthInterceptor
 import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.checkout.sessionJwt
 import com.tindivo.customer.session.FakeSessionStore
+import com.tindivo.customer.session.GatedTokens
 import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,8 +40,13 @@ class AccountViewModelTest {
         Dispatchers.setMain(dispatcher)
         server.start()
         val baseUrl = server.url("/api/v1").toString().trimEnd('/')
+        // El autenticador real: el perfil sale atado a la cuenta de la pantalla (`boundTo`).
         val client =
-            createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = RetryInterceptor(sleeper = { _, _ -> }))
+            createOkHttpClient(
+                ClientInfo("customer", "0.1.0", "1"),
+                retry = RetryInterceptor(sleeper = { _, _ -> }),
+                auth = BearerAuthInterceptor(server.url("/"), GatedTokens(sessionJwt("user-1"))),
+            )
         customer = CustomerRepository(baseUrl, client, dispatcher)
         configService =
             ConfigService(SystemRepository(baseUrl, client, dispatcher), "0.1.0", CoroutineScope(dispatcher))
