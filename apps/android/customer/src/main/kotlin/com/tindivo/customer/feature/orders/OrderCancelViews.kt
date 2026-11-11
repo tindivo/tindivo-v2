@@ -54,7 +54,10 @@ internal fun CancelRow(
 
         CancelOffer.ViaSupport -> {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = stringResource(R.string.order_cancel_via_support), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = stringResource(R.string.order_cancel_via_support),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
                 SupportLink(link = supportLink, onOpenLink = onOpenLink)
             }
         }
@@ -121,11 +124,17 @@ private fun CancelDialog(
                 modifier = Modifier.heightIn(min = 48.dp),
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
             ) {
-                Text(stringResource(if (cancelling) R.string.order_cancel_confirming else R.string.order_cancel_confirm))
+                Text(
+                    stringResource(if (cancelling) R.string.order_cancel_confirming else R.string.order_cancel_confirm),
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = section.actions.dismiss, enabled = !cancelling, modifier = Modifier.heightIn(min = 48.dp)) {
+            TextButton(
+                onClick = section.actions.dismiss,
+                enabled = !cancelling,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
                 Text(stringResource(R.string.order_cancel_keep))
             }
         },

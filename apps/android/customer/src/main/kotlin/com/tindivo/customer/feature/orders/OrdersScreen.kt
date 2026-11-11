@@ -104,9 +104,18 @@ internal fun OrdersScreen(
                 modifier = Modifier.padding(bottom = 8.dp).semantics { heading() },
             )
             when (state) {
-                OrdersUiState.Loading, OrdersUiState.LoggedOut -> OrdersLoading()
-                OrdersUiState.Empty -> EmptyOrders(onExplore = onExplore)
-                is OrdersUiState.Failed -> OrdersFailure(error = state.error, onRetry = onRetry)
+                OrdersUiState.Loading, OrdersUiState.LoggedOut -> {
+                    OrdersLoading()
+                }
+
+                OrdersUiState.Empty -> {
+                    EmptyOrders(onExplore = onExplore)
+                }
+
+                is OrdersUiState.Failed -> {
+                    OrdersFailure(error = state.error, onRetry = onRetry)
+                }
+
                 is OrdersUiState.Loaded -> {
                     OrdersList(
                         state = state,

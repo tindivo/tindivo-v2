@@ -127,7 +127,8 @@ internal class CancelOrderViewModel
             val account = accountId
             val id = orderId
             val current = mutableState.value
-            if (ended || !current.confirming || current.cancelling || account == null || id == null) return
+            if (ended || !current.confirming || current.cancelling) return
+            if (account == null || id == null) return
             // `cancelling` se fija antes de lanzar nada: un doble toque ya ve el estado nuevo.
             mutableState.update { it.copy(cancelling = true, problem = null) }
             val started = generation
@@ -185,7 +186,10 @@ internal class CancelOrderViewModel
         }
     }
 
-private val NOT_CANCELLABLE_STATUSES = setOf(404, 409, 422)
+private const val STATUS_NOT_FOUND = 404
+private const val STATUS_CONFLICT = 409
+private const val STATUS_UNPROCESSABLE = 422
+private val NOT_CANCELLABLE_STATUSES = setOf(STATUS_NOT_FOUND, STATUS_CONFLICT, STATUS_UNPROCESSABLE)
 
 /** El aviso de un fallo al cancelar. Solo se usa el `detail` del 409 de la RPC, que viene en español para el cliente. */
 internal fun problemOf(error: AppError): CancelProblem =
