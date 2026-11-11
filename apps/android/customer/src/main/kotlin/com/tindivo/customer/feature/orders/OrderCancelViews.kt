@@ -83,7 +83,7 @@ internal fun CancelRow(
                     }
                     TextButton(
                         onClick = section.actions.askToConfirm,
-                        enabled = !section.state.cancelling,
+                        enabled = !section.state.cancelling && !section.state.settled,
                         modifier = Modifier.heightIn(min = 48.dp),
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     ) {

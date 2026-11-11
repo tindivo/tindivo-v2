@@ -95,7 +95,7 @@ class CancelOrderViewModelTest {
             canceller.answer(ApiResult.Success(Unit))
 
             assertEquals(listOf("user-1" to ORDER_ID), canceller.calls)
-            assertEquals(CancelUiState(refreshRequests = 1), viewModel.state.value)
+            assertEquals(CancelUiState(refreshRequests = 1, settled = true), viewModel.state.value)
         }
 
     @Test
@@ -138,7 +138,7 @@ class CancelOrderViewModelTest {
             canceller.answer(known(409, ApiErrorCode.OrderNotCancellable, motivo))
 
             assertEquals(
-                CancelUiState(problem = CancelProblem.NotCancellable(motivo), refreshRequests = 1),
+                CancelUiState(problem = CancelProblem.NotCancellable(motivo), refreshRequests = 1, settled = true),
                 viewModel.state.value,
             )
         }
@@ -230,6 +230,56 @@ class CancelOrderViewModelTest {
 
             assertEquals(0, store.signOutCalls)
             assertEquals(SessionState.SignedIn("user-b"), store.state.value)
+        }
+
+    @Test
+    fun `tras cancelar, con el detalle de antes a la vista, no se vuelve a ofrecer ni sale otro POST`() =
+        runTest {
+            val viewModel = viewModel(FakeSessionStore())
+
+            viewModel.askToConfirm()
+            viewModel.confirm()
+            canceller.answer(ApiResult.Success(Unit))
+            // La recarga del detalle no llegó (o falló): la fila de cancelar sigue a la vista. Se vuelve a tocar.
+            viewModel.askToConfirm()
+            viewModel.confirm()
+
+            assertEquals(1, canceller.calls.size)
+            assertFalse(viewModel.state.value.confirming)
+            assertTrue(viewModel.state.value.settled)
+        }
+
+    @Test
+    fun `tras un ya no se puede, con el detalle de antes a la vista, no sale otro POST`() =
+        runTest {
+            val viewModel = viewModel(FakeSessionStore())
+
+            viewModel.askToConfirm()
+            viewModel.confirm()
+            canceller.answer(known(409, ApiErrorCode.OrderNotCancellable, "Ya fue aceptado"))
+            viewModel.askToConfirm()
+            viewModel.confirm()
+
+            assertEquals(1, canceller.calls.size)
+            assertFalse(viewModel.state.value.confirming)
+        }
+
+    @Test
+    fun `sin conexion o con un error generico se puede volver a intentar y decide el servidor`() =
+        runTest {
+            val viewModel = viewModel(FakeSessionStore())
+
+            viewModel.askToConfirm()
+            viewModel.confirm()
+            canceller.answer(ApiResult.Failure(AppError.Network(IOException("sin red"))))
+            viewModel.askToConfirm()
+            viewModel.confirm()
+            canceller.answer(known(500, ApiErrorCode.InternalError))
+            viewModel.askToConfirm()
+            viewModel.confirm()
+
+            assertEquals(3, canceller.calls.size)
+            assertFalse(viewModel.state.value.settled)
         }
 
     @Test

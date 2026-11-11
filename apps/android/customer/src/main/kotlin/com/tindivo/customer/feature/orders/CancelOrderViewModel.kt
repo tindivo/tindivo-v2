@@ -62,12 +62,17 @@ internal sealed interface CancelProblem {
 /**
  * [confirming]: el diálogo «¿Cancelar tu pedido?» está abierto. [cancelling]: la petición está en vuelo. Cada vez que
  * [refreshRequests] sube, el detalle se vuelve a consultar (cancelado, o el servidor dijo que cambió).
+ *
+ * [settled]: el servidor ya contestó que se canceló o que no se puede cancelar. Un pedido no vuelve a ser cancelable,
+ * así que en esta pantalla no se vuelve a ofrecer, aunque el detalle de antes siga a la vista mientras se recarga o si
+ * la recarga falla: no sale un segundo `POST` de cancelar.
  */
 internal data class CancelUiState(
     val confirming: Boolean = false,
     val cancelling: Boolean = false,
     val problem: CancelProblem? = null,
     val refreshRequests: Int = 0,
+    val settled: Boolean = false,
 )
 
 /**
@@ -112,7 +117,8 @@ internal class CancelOrderViewModel
 
         /** Abre «¿Cancelar tu pedido?». Borra el aviso del intento anterior. */
         fun askToConfirm() {
-            if (ended || mutableState.value.cancelling) return
+            val current = mutableState.value
+            if (ended || current.cancelling || current.settled) return
             mutableState.update { it.copy(confirming = true, problem = null) }
         }
 
@@ -127,7 +133,7 @@ internal class CancelOrderViewModel
             val account = accountId
             val id = orderId
             val current = mutableState.value
-            if (ended || !current.confirming || current.cancelling) return
+            if (ended || !current.confirming || current.cancelling || current.settled) return
             if (account == null || id == null) return
             // `cancelling` se fija antes de lanzar nada: un doble toque ya ve el estado nuevo.
             mutableState.update { it.copy(cancelling = true, problem = null) }
@@ -154,14 +160,20 @@ internal class CancelOrderViewModel
             finish(problemOf(error))
         }
 
-        /** Cierra el diálogo y pide volver a consultar el pedido: cancelado, ya no cancelable o sin saber. */
+        /**
+         * Cierra el diálogo y pide volver a consultar el pedido: cancelado, ya no cancelable o sin saber. Si el servidor
+         * contestó que se canceló o que ya no se puede, queda [CancelUiState.settled]. Sin conexión o con otro error no:
+         * se puede volver a intentar y el servidor decide.
+         */
         private fun finish(problem: CancelProblem?) {
+            val settled = problem == null || problem is CancelProblem.NotCancellable
             mutableState.update {
                 it.copy(
                     confirming = false,
                     cancelling = false,
                     problem = problem,
                     refreshRequests = it.refreshRequests + 1,
+                    settled = it.settled || settled,
                 )
             }
         }
