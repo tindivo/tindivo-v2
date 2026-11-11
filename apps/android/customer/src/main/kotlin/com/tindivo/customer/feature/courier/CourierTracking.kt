@@ -66,9 +66,20 @@ internal fun Tracking(
         PhaseNote(tracking, countdown)
         Summary(tracking)
         when {
-            tracking.phase.isCancellable() -> CancelBlock(cancel, actions)
-            tracking.phase is CourierPhase.Delivered -> RequestAgain(R.string.courier_reorder, nav.onRequestAgain)
-            tracking.phase is CourierPhase.Cancelled -> RequestAgain(R.string.courier_reorder_cancelled, nav.onRequestAgain)
+            tracking.phase.isCancellable() -> {
+                CancelBlock(cancel, actions)
+            }
+
+            tracking.phase is CourierPhase.Delivered -> {
+                RequestAgain(R.string.courier_reorder, nav.onRequestAgain)
+            }
+
+            tracking.phase is CourierPhase.Cancelled -> {
+                RequestAgain(
+                    R.string.courier_reorder_cancelled,
+                    nav.onRequestAgain,
+                )
+            }
         }
     }
 }
@@ -88,7 +99,12 @@ private fun Steps(phase: CourierPhase) {
             val done = step.ordinal <= reached
             val description =
                 stringResource(if (done) R.string.courier_step_done else R.string.courier_step_pending, label)
-            Column(modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = description }) {
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .semantics(mergeDescendants = true) { contentDescription = description },
+            ) {
                 LinearProgressIndicator(
                     progress = { if (done) 1f else 0f },
                     modifier = Modifier.fillMaxWidth(),
@@ -98,7 +114,8 @@ private fun Steps(phase: CourierPhase) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (done) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color =
+                        if (done) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = TindivoSpacing.hairline),
                 )
             }

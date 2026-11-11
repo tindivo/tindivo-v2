@@ -77,7 +77,13 @@ internal fun CourierRequestDestination(
         openings++
         form.onOpenSheet(sheet)
     }
-    CourierRequestScreen(state = state, nav = nav, form = form, openSheet = openSheet, review = ReviewActions.of(viewModel))
+    CourierRequestScreen(
+        state = state,
+        nav = nav,
+        form = form,
+        openSheet = openSheet,
+        review = ReviewActions.of(viewModel),
+    )
     CourierSheetHost(state = state, viewModel = viewModel, openSheet = openSheet, opening = openings)
 }
 
@@ -87,7 +93,8 @@ internal class ReviewActions(
     val onConfirm: () -> Unit,
 ) {
     companion object {
-        fun of(viewModel: CourierRequestViewModel) = ReviewActions(viewModel::reviewOpened, viewModel::acknowledgeReview)
+        fun of(viewModel: CourierRequestViewModel) =
+            ReviewActions(viewModel::reviewOpened, viewModel::acknowledgeReview)
     }
 }
 

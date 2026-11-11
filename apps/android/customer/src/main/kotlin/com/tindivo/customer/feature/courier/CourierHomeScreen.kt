@@ -34,14 +34,6 @@ import com.tindivo.customer.R
 import java.time.Instant
 import java.util.UUID
 
-/** Lo que la portada de Entregas le pide a la navegación. */
-internal class CourierHomeActions(
-    val onBack: () -> Unit,
-    val onRequest: () -> Unit,
-    val onSignIn: () -> Unit,
-    val onOpen: (CourierCardUi) -> Unit,
-)
-
 /** Une el ViewModel con la pantalla. Al volver a ella se relee el estado y la primera página (pudo cambiar todo). */
 @Composable
 internal fun CourierHomeDestination(

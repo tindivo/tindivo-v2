@@ -109,7 +109,11 @@ private fun ChoosePointSheet(
                 Modifier
                     .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState())
-                    .padding(start = TindivoSpacing.screen, end = TindivoSpacing.screen, bottom = TindivoSpacing.screen),
+                    .padding(
+                        start = TindivoSpacing.screen,
+                        end = TindivoSpacing.screen,
+                        bottom = TindivoSpacing.screen,
+                    ),
         ) {
             TindivoTextButton(
                 text = stringResource(R.string.courier_sheet_pin),

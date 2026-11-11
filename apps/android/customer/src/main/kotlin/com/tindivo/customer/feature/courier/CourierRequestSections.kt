@@ -57,7 +57,10 @@ internal fun PointSection(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = stringResource(if (origin) R.string.courier_origin_title else R.string.courier_destination_title),
+                    text =
+                        stringResource(
+                            if (origin) R.string.courier_origin_title else R.string.courier_destination_title,
+                        ),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f).semantics { heading() },
@@ -79,7 +82,9 @@ internal fun PointSection(
             } else {
                 TindivoSecondaryButton(
                     text =
-                        stringResource(if (origin) R.string.courier_choose_origin else R.string.courier_choose_destination),
+                        stringResource(
+                            if (origin) R.string.courier_choose_origin else R.string.courier_choose_destination,
+                        ),
                     onClick = { openSheet(CourierSheet.ChoosePoint(end)) },
                 )
             }
@@ -109,7 +114,13 @@ private fun ContactFields(
         label = {
             Text(
                 stringResource(
-                    if (end == CourierEnd.Origin) R.string.courier_origin_name_hint else R.string.courier_destination_name_hint,
+                    if (end ==
+                        CourierEnd.Origin
+                    ) {
+                        R.string.courier_origin_name_hint
+                    } else {
+                        R.string.courier_destination_name_hint
+                    },
                 ),
             )
         },
