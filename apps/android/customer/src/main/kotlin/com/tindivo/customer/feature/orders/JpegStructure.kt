@@ -47,6 +47,12 @@ private const val MAX_QUANT_PRECISION = 1
 private const val HUFFMAN_LENGTHS = 16
 private const val MAX_HUFFMAN_SYMBOLS = 256
 private const val MAX_HUFFMAN_CLASS = 1
+private const val HUFFMAN_DC = 0
+
+// Símbolos que admite JPEG de 8 bits (T.81 F.1.2): DC, la categoría SSSS de 0 a 11; AC, RRRRSSSS con SSSS de 0 a 10
+// (SSSS = 0 es EOB, EOBn o ZRL).
+private const val MAX_DC_CATEGORY = 11
+private const val MAX_AC_SIZE = 10
 
 // SOF: FF Cn, longitud(2), precisión(1), alto(2), ancho(2), componentes(1) y 3 bytes por componente: id, H/V y Tq.
 private const val SOF_PRECISION = 4
@@ -101,6 +107,28 @@ private fun malformed(): Nothing = throw MalformedJpeg()
 private fun ensure(condition: Boolean) {
     if (!condition) malformed()
 }
+
+/**
+ * Las cuentas por largo ([counts][0] = códigos de 1 bit) caben en un código de Huffman como lo arma JPEG (T.81 C.2): los
+ * códigos se reparten en orden y, tras cada largo, el siguiente libre tiene que seguir por debajo de 2^largo. Así se
+ * rechazan las tablas con más códigos de los que caben y la que gastaría el código de todo unos, igual que libjpeg
+ * (`jpeg_make_d_derived_tbl`).
+ */
+private fun fitsHuffmanCode(counts: IntArray): Boolean {
+    var next = 0L
+    for (length in 1..counts.size) {
+        next += counts[length - 1]
+        if (next >= 1L shl length) return false
+        next = next shl 1
+    }
+    return true
+}
+
+/** El símbolo existe en una tabla de esa clase con 8 bits (T.81 F.1.2): DC, categoría ≤ 11; AC, tamaño SSSS ≤ 10. */
+private fun isHuffmanSymbol(
+    tableClass: Int,
+    symbol: Int,
+): Boolean = if (tableClass == HUFFMAN_DC) symbol <= MAX_DC_CATEGORY else (symbol and NIBBLE_MASK) <= MAX_AC_SIZE
 
 /** El JPEG recorrido entero: [clean] sin metadatos y el tamaño que declara su SOF. */
 private class JpegParts(
@@ -229,7 +257,9 @@ private class JpegReader(
 
     /**
      * DHT: una o más tablas, cada una con Tc de 0 o 1 (DC o AC), Th de 0 a 3, sus 16 cuentas y tantos símbolos como
-     * sumen, como mucho 256; el largo es exactamente 2 + Σ(1 + 16 + Σcuentas) (T.81 B.2.4.2).
+     * sumen, como mucho 256; el largo es exactamente 2 + Σ(1 + 16 + Σcuentas) (T.81 B.2.4.2). Además, las cuentas tienen
+     * que caber en un código de Huffman ([fitsHuffmanCode]) y cada símbolo tiene que existir en su clase
+     * ([isHuffmanSymbol]).
      */
     private fun readHuffman() {
         val length = segmentLength()
@@ -238,10 +268,15 @@ private class JpegReader(
         ensure(at < end)
         while (at < end) {
             ensure(at + 1 + HUFFMAN_LENGTHS <= end)
-            ensure(bytes.high(at) <= MAX_HUFFMAN_CLASS && bytes.low(at) <= MAX_TABLE_ID)
-            val symbols = (1..HUFFMAN_LENGTHS).sumOf { bytes.u8(at + it) }
-            ensure(symbols <= MAX_HUFFMAN_SYMBOLS)
-            at += 1 + HUFFMAN_LENGTHS + symbols
+            val tableClass = bytes.high(at)
+            ensure(tableClass <= MAX_HUFFMAN_CLASS && bytes.low(at) <= MAX_TABLE_ID)
+            val counts = IntArray(HUFFMAN_LENGTHS) { bytes.u8(at + 1 + it) }
+            val symbols = counts.sum()
+            ensure(symbols <= MAX_HUFFMAN_SYMBOLS && fitsHuffmanCode(counts))
+            val first = at + 1 + HUFFMAN_LENGTHS
+            ensure(first + symbols <= end)
+            ensure((first until first + symbols).all { isHuffmanSymbol(tableClass, bytes.u8(it)) })
+            at = first + symbols
         }
         ensure(at == end)
         keep(length)

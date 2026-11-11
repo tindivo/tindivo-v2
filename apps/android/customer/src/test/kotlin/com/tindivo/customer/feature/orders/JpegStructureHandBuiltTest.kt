@@ -170,7 +170,8 @@ class JpegStructureHandBuiltTest {
         val lengths = ByteArray(HUFFMAN_LENGTHS - 1)
         val invalid =
             mapOf(
-                "cuentas que suman más que los símbolos" to segment(DHT, bytes(0x00, 2) + lengths + bytes(0x00)),
+                "cuentas que suman más que los símbolos" to
+                    segment(DHT, bytes(0x00, 0, 2) + ByteArray(HUFFMAN_LENGTHS - 2) + bytes(0x00)),
                 "un símbolo de más" to segment(DHT, bytes(0x00, 1) + lengths + bytes(0x00, 0x01)),
                 "Tc = 2" to segment(DHT, bytes(0x20, 1) + lengths + bytes(0x00)),
                 "Th = 4" to segment(DHT, bytes(0x04, 1) + lengths + bytes(0x00)),
@@ -180,10 +181,52 @@ class JpegStructureHandBuiltTest {
                 "vacía" to segment(DHT, ByteArray(0)),
             )
         for ((name, table) in invalid) assertRejected(name, afterSoi(table))
-        // Controles: DC y AC en un mismo segmento, y una tabla con exactamente 256 símbolos.
+        // Control: DC y AC en un mismo segmento.
         assertAccepted("DC y AC", afterSoi(segment(DHT, dhtTable(0x00) + dhtTable(0x13))))
-        val full = bytes(0x10) + ByteArray(HUFFMAN_LENGTHS) { 16 } + ByteArray(MAX_SYMBOLS) { it.toByte() }
-        assertAccepted("256 símbolos", afterSoi(segment(DHT, full)))
+    }
+
+    @Test
+    fun `una DHT que no cabe en un codigo de Huffman o con simbolos que no existen no se sube`() {
+        val lengths = ByteArray(HUFFMAN_LENGTHS - 1)
+        val invalid =
+            mapOf(
+                // El control de 256 símbolos de la R3 (CAX-004): 16 códigos de un bit, y solo existen 0 y 1.
+                "16 códigos de 1 bit" to
+                    segment(
+                        DHT,
+                        bytes(0x10) + ByteArray(HUFFMAN_LENGTHS) { 16 } + ByteArray(MAX_SYMBOLS) { it.toByte() },
+                    ),
+                "dos códigos de 1 bit (gasta el de todo unos)" to segment(DHT, bytes(0x00, 2) + lengths + bytes(0, 1)),
+                "cinco códigos de 2 bits" to
+                    segment(DHT, bytes(0x00, 0, 5) + ByteArray(HUFFMAN_LENGTHS - 2) + bytes(0, 1, 2, 3, 4)),
+                "DC con categoría 12" to segment(DHT, bytes(0x00, 1) + lengths + bytes(12)),
+                "AC con tamaño 11" to segment(DHT, bytes(0x10, 1) + lengths + bytes(0x0B)),
+            )
+        for ((name, table) in invalid) assertRejected(name, afterSoi(table))
+        // Controles: las tablas de luminancia del anexo K de T.81 (las de los codificadores) y tres códigos de 2 bits.
+        assertAccepted(
+            "DC del anexo K",
+            afterSoi(
+                segment(
+                    DHT,
+                    bytes(0x00) + ANNEX_K_DC_COUNTS + ByteArray(12) { it.toByte() },
+                ),
+            ),
+        )
+        val acSymbols = bytes(0x00, 0xF0) + ByteArray(16 * 10) { (((it / 10) shl 4) or (it % 10 + 1)).toByte() }
+        assertAccepted(
+            "AC del anexo K, 162 símbolos",
+            afterSoi(segment(DHT, bytes(0x10) + ANNEX_K_AC_COUNTS + acSymbols)),
+        )
+        assertAccepted(
+            "tres códigos de 2 bits",
+            afterSoi(
+                segment(
+                    DHT,
+                    bytes(0x00, 0, 3) + ByteArray(14) + bytes(0, 1, 2),
+                ),
+            ),
+        )
     }
 
     @Test
@@ -432,6 +475,10 @@ class JpegStructureHandBuiltTest {
         const val LINEAR_TIMEOUT_MS = 10_000L
 
         fun bytes(vararg values: Int): ByteArray = ByteArray(values.size) { values[it].toByte() }
+
+        /** Cuentas por largo de las tablas de luminancia de T.81 anexo K (K.3): DC con 12 símbolos y AC con 162. */
+        val ANNEX_K_DC_COUNTS = bytes(0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0)
+        val ANNEX_K_AC_COUNTS = bytes(0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 0x7D)
 
         val SOI = bytes(0xFF, 0xD8)
         val EOI = bytes(0xFF, 0xD9)
