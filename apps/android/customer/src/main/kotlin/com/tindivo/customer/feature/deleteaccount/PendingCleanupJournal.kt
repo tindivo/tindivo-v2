@@ -10,8 +10,9 @@ import java.io.InputStream
 import java.io.OutputStream
 
 /**
- * Una cuenta borrada en el servidor (204) cuya limpieza en el aparato no terminó. [cart] es la bolsa que falta vaciar,
- * solo si nadie entró desde entonces; `null` = la bolsa ya no se toca.
+ * Una cuenta borrada en el servidor (204) cuya limpieza en el aparato no terminó: se retoman solo las etapas de la
+ * cuenta. [cart] ya no se escribe (siempre `null`); se conserva para leer sin error lo que escribió una versión
+ * anterior, y esa bolsa se ignora: tras reabrir la app la bolsa no se toca.
  */
 @Serializable
 data class PendingCleanup(
@@ -19,10 +20,7 @@ data class PendingCleanup(
     val cart: PendingCart? = null,
 )
 
-/**
- * La bolsa que había al borrar: [fingerprint] es su huella, y solo esa se vacía (no una cambiada después). `null` = no
- * se pudo leer al borrar: se vacía la que haya.
- */
+/** Formato de una versión anterior: la bolsa que había al borrar ([fingerprint], su huella). Se lee y se ignora. */
 @Serializable
 data class PendingCart(
     val fingerprint: String? = null,
@@ -61,7 +59,7 @@ class DataStorePendingCleanupJournal(
 /**
  * Lee y escribe el registro como JSON en `tindivo_deleted_accounts.json`. Un archivo ilegible es [CorruptionException]
  * y el manejador lo reemplaza por «nada pendiente»: lo que se pierde es solo lo de cuentas que ya no existen (su
- * intento de pedido, que ya nadie puede usar) y, como mucho, una bolsa sin vaciar.
+ * intento de pedido, que ya nadie puede usar).
  */
 object PendingCleanupSerializer : Serializer<PendingCleanupSnapshot> {
     private val json =

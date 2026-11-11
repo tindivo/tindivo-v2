@@ -33,6 +33,25 @@ class PendingCleanupSerializerTest {
         }
 
     @Test
+    fun `un registro escrito por la version anterior, con su bolsa, se lee sin error`() =
+        runTest {
+            val old =
+                """{"version":1,"pending":[{"accountId":"a","cart":{"fingerprint":"huella"}},
+                {"accountId":"b","cart":{"fingerprint":null}},{"accountId":"c","cart":null}]}""".toByteArray()
+
+            val read = PendingCleanupSerializer.readFrom(ByteArrayInputStream(old))
+
+            assertEquals(
+                listOf(
+                    PendingCleanup("a", PendingCart("huella")),
+                    PendingCleanup("b", PendingCart(fingerprint = null)),
+                    PendingCleanup("c", cart = null),
+                ),
+                read.pending,
+            )
+        }
+
+    @Test
     fun `una version desconocida o un archivo roto es corrupcion`() {
         val unknown = """{"version":2,"pending":[]}""".toByteArray()
         val broken = """{"version":1,"pending":[{"accountId":""".toByteArray()

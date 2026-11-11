@@ -16,8 +16,8 @@ import java.io.IOException
 
 /**
  * CAX-004: tras un 204, un fallo de disco en una etapa de la limpieza (libro, bolsa, sesión) no corta las demás ni sale
- * como excepción; lo que falta queda apuntado y se retoma al reabrir la app (o al entrar alguien) sin tocar la bolsa de
- * una cuenta que entró después.
+ * como excepción; lo que falta de la cuenta queda apuntado y se retoma al reabrir la app (o al entrar alguien).
+ * CAX-005: la bolsa solo se vacía en el proceso que confirmó el borrado; tras reabrir, la bolsa no se toca.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DeletedAccountCleanupFailureTest : DeleteAccountHarness() {
@@ -94,7 +94,25 @@ internal class DeletedAccountCleanupFailureTest : DeleteAccountHarness() {
         }
 
     @Test
-    fun `bolsa sin escribir - la sesion y el intento igual se sueltan, y la bolsa se vacia al reabrir`() =
+    fun `un 204 sin que nadie entre vacia la bolsa en el mismo proceso`() =
+        runTest {
+            val running = cleanup()
+            running.start()
+            fillCart()
+            val vm = viewModel(cleanup = running)
+
+            confirmAndDelete(vm)
+            answer(deleted)
+
+            assertEquals(DeletePhase.Deleted, vm.state.value.phase)
+            assertEquals(SessionState.SignedOut, session.state.value)
+            assertNull(cart())
+            assertEquals(setOf(B), ledgerStore.ledger.attempts.keys)
+            assertEquals(emptyList<PendingCleanup>(), journal.entries)
+        }
+
+    @Test
+    fun `bolsa sin escribir - la sesion y el intento igual se sueltan, y al reabrir la bolsa se conserva`() =
         runTest {
             fillCart()
             val before = cartFingerprint()
@@ -108,19 +126,23 @@ internal class DeletedAccountCleanupFailureTest : DeleteAccountHarness() {
             assertEquals(SessionState.SignedOut, session.state.value)
             assertEquals(setOf(B), ledgerStore.ledger.attempts.keys)
             assertNotNull(cart())
-            assertEquals(listOf(PendingCleanup(A, PendingCart(before))), journal.entries)
+            // Se apunta solo la cuenta: la bolsa no se retoma en otro proceso.
+            assertEquals(listOf(PendingCleanup(A)), journal.entries)
 
             cartData.failWrites = false
-            reopen()
+            val restarted = FakeSessionStore(SessionState.SignedOut)
+            reopen(restarted)
 
-            assertNull(cart())
+            assertEquals(before, cartFingerprint())
+            assertEquals(listOf(A), restarted.signOutLocallyCalls)
             assertEquals(emptyList<PendingCleanup>(), journal.entries)
         }
 
     @Test
-    fun `si la bolsa no se puede leer ni escribir, al reabrir se vacia la que haya`() =
+    fun `si la bolsa no se puede leer ni escribir, al reabrir se conserva y la cuenta se termina de soltar`() =
         runTest {
             fillCart()
+            val before = cartFingerprint()
             cartData.failReads = true
             cartData.failWrites = true
             val vm = viewModel()
@@ -131,13 +153,76 @@ internal class DeletedAccountCleanupFailureTest : DeleteAccountHarness() {
             assertEquals(DeletePhase.Deleted, vm.state.value.phase)
             assertEquals(SessionState.SignedOut, session.state.value)
             assertEquals(setOf(B), ledgerStore.ledger.attempts.keys)
-            assertEquals(listOf(PendingCleanup(A, PendingCart(fingerprint = null))), journal.entries)
+            assertEquals(listOf(PendingCleanup(A)), journal.entries)
 
             cartData.failReads = false
             cartData.failWrites = false
-            reopen()
+            val restarted = FakeSessionStore(SessionState.SignedOut)
+            reopen(restarted)
 
-            assertNull(cart())
+            assertEquals(before, cartFingerprint())
+            assertEquals(listOf(A), restarted.signOutLocallyCalls)
+            assertEquals(emptyList<PendingCleanup>(), journal.entries)
+        }
+
+    @Test
+    fun `CAX-005 - registro de A sin borrar tras entrar B, al reiniciar sin sesion la bolsa sobrevive`() =
+        runTest {
+            val running = cleanup()
+            running.start()
+            fillCart()
+            val before = cartFingerprint()
+            // (1) 204 de A con la escritura de la bolsa fallando: el registro guarda a A.
+            cartData.failWrites = true
+            val vm = viewModel(cleanup = running)
+            confirmAndDelete(vm)
+            answer(deleted)
+            assertNotNull(cart())
+            assertEquals(listOf(A), journal.entries.map { it.accountId })
+
+            // (2) El registro deja de poder escribirse y entra B.
+            journal.fail = true
+            session.switchTo(B)
+            // (3) La reanudación de su entrada avanza; quitar el registro de A también falla.
+            runCurrent()
+            assertEquals(listOf(A), journal.entries.map { it.accountId })
+            assertEquals(SessionState.SignedIn(B), session.state.value)
+
+            // (4) B sale; el registro y la bolsa vuelven a poder escribirse.
+            session.switchToSignedOut()
+            journal.fail = false
+            cartData.failWrites = false
+            runCurrent()
+
+            // (5) Reinicio: limpieza nueva, sin sesión, con la misma bolsa.
+            val restarted = FakeSessionStore(SessionState.SignedOut)
+            reopen(restarted)
+
+            assertNotNull(cart())
+            assertEquals(before, cartFingerprint())
+            // Lo de B en el libro sigue intacto; lo de A se terminó de soltar.
+            assertEquals(setOf(B), ledgerStore.ledger.attempts.keys)
+            assertEquals(setOf(B), ledgerStore.ledger.acknowledged)
+            assertEquals(listOf(A), restarted.signOutLocallyCalls)
+            assertEquals(emptyList<PendingCleanup>(), journal.entries)
+        }
+
+    @Test
+    fun `CAX-005 - registro viejo de A con bolsa, al reiniciar sin sesion la bolsa sobrevive`() =
+        runTest {
+            fillCart()
+            val before = cartFingerprint()
+            // El proceso murió antes de guardar que B entró: el registro (formato anterior) aún trae la bolsa de A.
+            journal.entries = listOf(PendingCleanup(A, PendingCart(before)))
+            val restarted = FakeSessionStore(SessionState.SignedOut)
+
+            reopen(restarted)
+
+            assertNotNull(cart())
+            assertEquals(before, cartFingerprint())
+            assertEquals(setOf(B), ledgerStore.ledger.attempts.keys)
+            assertEquals(SessionState.SignedOut, restarted.state.value)
+            assertEquals(listOf(A), restarted.signOutLocallyCalls)
             assertEquals(emptyList<PendingCleanup>(), journal.entries)
         }
 
@@ -197,7 +282,7 @@ internal class DeletedAccountCleanupFailureTest : DeleteAccountHarness() {
 
             confirmAndDelete(vm)
             answer(deleted)
-            assertEquals(listOf(PendingCleanup(A, PendingCart(cartFingerprint()))), journal.entries)
+            assertEquals(listOf(PendingCleanup(A)), journal.entries)
 
             // El disco vuelve y entra B: el reintento que dispara su entrada ya no vacía la bolsa (puede ser suya).
             cartData.failWrites = false
@@ -274,7 +359,7 @@ internal class DeletedAccountCleanupFailureTest : DeleteAccountHarness() {
 
             confirmAndDelete(vm)
             answer(deleted)
-            assertEquals(listOf(PendingCleanup(A, PendingCart(before))), journal.entries)
+            assertEquals(listOf(PendingCleanup(A)), journal.entries)
 
             // Entra B con el disco aún fallando: el reintento de su entrada tampoco puede escribir la bolsa.
             session.switchTo(B)

@@ -48,11 +48,12 @@ enum class CleanupOutcome {
  *   confirmó el borrado ([SessionStore.signInGeneration]), comprobado DENTRO de la escritura, y solo si es la misma
  *   bolsa que había al borrar (su huella).
  *
- * Antes de empezar se apunta en [journal] la cuenta y la bolsa por vaciar. Si una etapa falla, las demás se intentan
- * igual, nada sale como excepción y la cuenta queda pendiente: [start] la retoma al arrancar la app y cada vez que
- * alguien entra. Las dos primeras etapas son solo de esa cuenta y se repiten sin riesgo. La bolsa pendiente se olvida
- * en cuanto alguien entra (ya puede ser suya); tras reabrir la app solo se vacía si nadie entró desde que arrancó, no
- * hay sesión de otra cuenta y es la misma bolsa de entonces (o, si entonces no se pudo leer, la que haya).
+ * Antes de empezar se apunta en [journal] la cuenta (solo la cuenta, nunca la bolsa). Si una etapa falla, las demás se
+ * intentan igual, nada sale como excepción y la cuenta queda pendiente: [start] la retoma al arrancar la app y cada vez
+ * que alguien entra. Las dos primeras etapas son solo de esa cuenta y se repiten sin riesgo. La bolsa se intenta vaciar
+ * solo en el mismo proceso que confirmó el borrado, con la condición de arriba; si ahí falla, se conserva: no hay forma
+ * durable de demostrar que nadie entró entre un proceso y otro, así que tras reabrir la app la bolsa no se toca (un
+ * registro escrito por una versión anterior con su bolsa se retoma igual, sin ella).
  *
  * Lo demás que depende de la cuenta vive en memoria (ViewModels) y se suelta al ver la sesión cerrada.
  */
@@ -66,7 +67,7 @@ class DeletedAccountCleanup
         private val journal: PendingCleanupJournal,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
-        // Cuenta borrada → bolsa por vaciar (o null). Solo se toca con [mutex].
+        // Cuenta borrada → bolsa por vaciar en este proceso (o null). Solo se toca con [mutex].
         private val pending = mutableMapOf<String, CartTarget?>()
         private val mutex = Mutex()
         private var journalLoaded = false
@@ -96,10 +97,10 @@ class DeletedAccountCleanup
                             else -> CartTarget(read.getOrNull(), generation)
                         }
                     pending[accountId] = target
+                    // Sin la bolsa: la bolsa no se retoma en otro proceso (ver la clase).
                     attempt {
                         journal.update { entries ->
-                            entries.filter { it.accountId != accountId } +
-                                PendingCleanup(accountId, target?.let { PendingCart(it.fingerprint) })
+                            entries.filter { it.accountId != accountId } + PendingCleanup(accountId)
                         }
                     }
                     val done = runStages(accountId)
@@ -112,59 +113,41 @@ class DeletedAccountCleanup
             }
 
         /**
-         * Retoma lo pendiente al arrancar (cuando ya se leyó la sesión guardada) y cada vez que alguien entra. Antes de
-         * retomar tras una entrada, olvida las bolsas pendientes: ya pueden ser de quien entró.
+         * Retoma lo pendiente al arrancar (cuando ya se leyó la sesión guardada) y cada vez que alguien entra. Una bolsa
+         * apuntada en este proceso no se vacía tras una entrada: su condición ([isDeviceOf]) ya no se cumple.
          */
         fun start() {
             scope.launch {
-                // Primero la generación y luego el estado (ver SessionStore.signInGeneration): si alguien entra mientras
-                // se espera la sesión guardada, la generación de arranque ya no coincide y su bolsa no se toca.
                 var seen = sessionStore.signInGeneration.value
                 sessionStore.state.first { it != SessionState.Unknown }
-                resume(atStart = seen)
+                resume()
                 sessionStore.signInGeneration.collect { generation ->
                     if (generation != seen) {
                         seen = generation
-                        forgetCarts()
-                        resume(atStart = null)
+                        resume()
                     }
                 }
             }
         }
 
-        /**
-         * Lo que [start] hace en cada paso. [atStart] es la generación al arrancar, antes de que nadie entre; `null`
-         * tras una entrada: entonces lo guardado de un proceso anterior se retoma sin su bolsa.
-         */
-        internal suspend fun resume(atStart: Long?) {
+        /** Lo que [start] hace en cada paso. */
+        internal suspend fun resume() {
             withContext(NonCancellable) {
                 mutex.withLock {
-                    loadJournal(atStart)
+                    loadJournal()
                     pending.keys.toList().forEach { runStages(it) }
                 }
             }
         }
 
-        // Lo guardado de un proceso anterior. Su bolsa solo vale al arrancar y mientras nadie entre desde [atStart].
-        private suspend fun loadJournal(atStart: Long?) {
+        // Lo guardado de un proceso anterior: solo las etapas de la cuenta. Su bolsa, si la trae (versión anterior), se
+        // ignora: nada durable prueba que nadie entró desde entonces.
+        private suspend fun loadJournal() {
             if (journalLoaded) return
             val stored = attempt { journal.read() }.getOrNull() ?: return
             journalLoaded = true
             stored.forEach { entry ->
-                if (entry.accountId !in pending) {
-                    val cart = entry.cart
-                    pending[entry.accountId] =
-                        if (cart != null && atStart != null) CartTarget(cart.fingerprint, atStart) else null
-                }
-            }
-        }
-
-        private suspend fun forgetCarts() {
-            withContext(NonCancellable) {
-                mutex.withLock {
-                    pending.keys.toList().forEach { pending[it] = null }
-                    attempt { journal.update { entries -> entries.map { it.copy(cart = null) } } }
-                }
+                if (entry.accountId !in pending) pending[entry.accountId] = null
             }
         }
 
@@ -184,8 +167,6 @@ class DeletedAccountCleanup
             if (done) {
                 pending.remove(accountId)
                 attempt { journal.update { entries -> entries.filter { it.accountId != accountId } } }
-            } else if (cartDone && target != null) {
-                attempt { journal.update { entries -> entries.map { it.withoutCartOf(accountId) } } }
             }
             return done
         }
@@ -202,9 +183,6 @@ class DeletedAccountCleanup
             return current == generation && owned
         }
     }
-
-private fun PendingCleanup.withoutCartOf(accountId: String): PendingCleanup =
-    if (this.accountId == accountId) copy(cart = null) else this
 
 // Un fallo de disco (o cualquier otro) de una etapa se queda en el resultado: no corta las demás ni sale como
 // excepción. La cancelación sí se propaga (KT-5).
