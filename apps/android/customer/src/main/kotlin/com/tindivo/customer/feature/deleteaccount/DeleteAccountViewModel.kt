@@ -210,9 +210,10 @@ internal class DeleteAccountViewModel
         ) {
             val error = (result as? ApiResult.Failure)?.error
             if (error == null) {
-                // 204: la cuenta ya no existe. Soltar lo local no se corta a medias.
-                val account = confirmation.account
-                val mine = withContext(NonCancellable) { cleanup.clean(account) { isStillOwners(confirmation) } }
+                // 204: la cuenta ya no existe. Soltar lo local no se corta a medias ni lanza; si una etapa falla, queda
+                // pendiente y se retoma al siguiente arranque o entrada (la cuenta igual ya no existe: se dice borrada).
+                val outcome = cleanup.clean(confirmation.account, confirmation.generation)
+                val mine = outcome != CleanupOutcome.NotMine && isStillOwners(confirmation)
                 if (mine) deletedBy = confirmation
                 _state.update { it.copy(typed = "", phase = if (mine) DeletePhase.Deleted else DeletePhase.Left) }
                 onGeneration()

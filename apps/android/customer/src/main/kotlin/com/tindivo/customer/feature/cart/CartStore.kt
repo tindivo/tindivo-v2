@@ -81,13 +81,17 @@ class CartStore(
     }
 
     /**
-     * Vacía la bolsa solo si [stillValid] se cumple DENTRO de la escritura (con el estado real, no con uno leído antes).
-     * Devuelve si la vació.
+     * Vacía la bolsa solo si [stillValid] se cumple DENTRO de la escritura (con el estado real, no con uno leído antes)
+     * y, con [fingerprint], solo si la vigente es la bolsa de esa huella (no una cambiada después). Devuelve si la vació.
      */
-    suspend fun clearIf(stillValid: () -> Boolean): Boolean {
+    suspend fun clearIf(
+        fingerprint: String? = null,
+        stillValid: () -> Boolean,
+    ): Boolean {
         var cleared = false
         store.updateData { current ->
-            if (stillValid()) {
+            val same = fingerprint == null || current?.toCartOrNull()?.fingerprint() == fingerprint
+            if (same && stillValid()) {
                 cleared = true
                 null
             } else {
