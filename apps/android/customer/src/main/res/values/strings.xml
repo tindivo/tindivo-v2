@@ -646,4 +646,29 @@
     <string name="courier_reason_other">Esta entrega se canceló.</string>
     <string name="courier_nothing_charged">No se cobró nada.</string>
     <string name="courier_delivered_text">Tu entrega llegó.</string>
+
+    <!-- Pantallas de Entregas: portada, solicitud y seguimiento (textos de la web cuando los hay). -->
+    <string name="courier_entry_card_cta">Llevar algo de un lugar a otro</string>
+    <string name="courier_active_title">Entrega en curso</string>
+    <string name="courier_loading_list">Cargando tus entregas</string>
+    <string name="courier_loading_request">Preparando tu solicitud</string>
+    <string name="courier_loading_detail">Cargando tu entrega</string>
+    <string name="courier_my_empty_body">Cuando pidas una, aquí verás cómo va.</string>
+    <string name="courier_list_failed">No pudimos cargar tus entregas.</string>
+    <string name="courier_detail_failed">No pudimos cargar tu entrega.</string>
+    <string name="courier_sheet_pin">Marcar en el mapa</string>
+    <string name="courier_pin_confirm_origin">Confirmar recojo</string>
+    <string name="courier_pin_confirm_destination">Confirmar entrega</string>
+    <string name="courier_pin_reference_origin">Ej: puerta azul, frente al mercado</string>
+    <string name="courier_pin_reference_destination">Ej: casa celeste, segundo piso</string>
+    <string name="courier_pin_hint">Ayuda al motorizado: color de la puerta o algo cercano.</string>
+    <string name="courier_pin_move">Mueve el mapa hasta la puerta</string>
+    <string name="courier_pin_inside">Dentro de la zona de reparto</string>
+    <string name="courier_pin_outside">Esta ubicación está fuera de la zona de reparto de San Jacinto</string>
+    <string name="courier_countdown">Se cancela sola en %1$s</string>
+    <string name="courier_countdown_expired">Se acabó el tiempo</string>
+    <string name="courier_reorder">Pedir otra entrega</string>
+    <string name="courier_reorder_cancelled">Volver a pedir</string>
+    <string name="courier_step_done">%1$s: hecho</string>
+    <string name="courier_step_pending">%1$s: pendiente</string>
 </resources>
