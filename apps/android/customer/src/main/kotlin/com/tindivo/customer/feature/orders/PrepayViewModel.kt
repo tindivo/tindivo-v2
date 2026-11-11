@@ -119,7 +119,7 @@ internal class PrepayViewModel
             sendJob =
                 viewModelScope.launch {
                     val step = sender.deliver(account, id, photo) { isCurrent(started, account) }
-                    if (isCurrent(started, account)) publish(step)
+                    if (isCurrent(started, account)) publish(step, account)
                 }
         }
 
@@ -142,7 +142,7 @@ internal class PrepayViewModel
                         }
 
                         is ApiResult.Failure -> {
-                            if (handleSessionErrors(result.error)) return@launch
+                            if (handleSessionErrors(result.error, account)) return@launch
                             mutableState.update { it.copy(info = PrepayInfoState.Failed(result.error)) }
                         }
                     }
@@ -171,7 +171,10 @@ internal class PrepayViewModel
                 }
         }
 
-        private suspend fun publish(step: SendStep) {
+        private suspend fun publish(
+            step: SendStep,
+            account: String,
+        ) {
             when (step) {
                 SendStep.Done -> {
                     mutableState.update { it.copy(send = SendState.Sent, refreshRequests = it.refreshRequests + 1) }
@@ -182,7 +185,7 @@ internal class PrepayViewModel
                 }
 
                 is SendStep.ApiFailed -> {
-                    failApi(step.error)
+                    failApi(step.error, account)
                 }
 
                 SendStep.Abandoned -> {
@@ -191,8 +194,11 @@ internal class PrepayViewModel
             }
         }
 
-        private suspend fun failApi(error: AppError) {
-            if (handleSessionErrors(error)) return
+        private suspend fun failApi(
+            error: AppError,
+            account: String,
+        ) {
+            if (handleSessionErrors(error, account)) return
             val known = (error as? AppError.Known)?.takeIf { it.status in CLIENT_ERRORS }
             val problem =
                 when {
@@ -237,13 +243,20 @@ internal class PrepayViewModel
             }
         }
 
-        /** El 426 y el 401 siguen el flujo de toda la app. `true` si fue un 401: la sesión se cierra y no hay más. */
-        private suspend fun handleSessionErrors(error: AppError): Boolean {
+        /**
+         * El 426 y el 401 siguen el flujo de toda la app. `true` si fue un 401: la sesión de [account] (la que hizo la
+         * petición) se cierra y no hay más. El cierre es `signOutIf`: espera el candado del almacén, y si mientras tanto
+         * entró otra cuenta, esa no se toca.
+         */
+        private suspend fun handleSessionErrors(
+            error: AppError,
+            account: String,
+        ): Boolean {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             if (!error.isUnauthorized()) return false
             end()
             // El cierre cancela esta misma corrutina: que no corte a medias el borrado de la sesión.
-            withContext(NonCancellable) { sessionStore.signOut() }
+            withContext(NonCancellable) { sessionStore.signOutIf(account) }
             return true
         }
 
