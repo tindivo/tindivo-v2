@@ -34,7 +34,7 @@ enum class CleanupOutcome {
     /** Alguien entró entretanto: no se tocó nada que pudiera ser suyo. */
     NotMine,
 
-    /** Una etapa falló (disco): lo que falta queda guardado y se retoma al siguiente arranque o entrada. */
+    /** Una etapa falló (disco): lo que falta queda apuntado y se retoma al siguiente arranque o entrada. */
     Pending,
 }
 
@@ -45,13 +45,14 @@ enum class CleanupOutcome {
  *   siempre;
  * - la sesión ([SessionStore.signOutLocally]): solo si sigue siendo la de esa cuenta, sin llamar a Auth;
  * - la bolsa ([CartStore.clearIf]): es del aparato, no de una cuenta; se vacía solo si nadie entró desde que se
- *   confirmó el borrado ([SessionStore.signInGeneration]), comprobado DENTRO de la escritura.
+ *   confirmó el borrado ([SessionStore.signInGeneration]), comprobado DENTRO de la escritura, y solo si es la misma
+ *   bolsa que había al borrar (su huella).
  *
- * Antes de empezar se apunta en [journal] (la cuenta y la huella de la bolsa que había). Si una etapa falla, las demás
- * se intentan igual, nada se escapa como excepción y la cuenta queda pendiente: [start] la retoma al arrancar la app y
- * cada vez que alguien entra. Las dos primeras etapas son solo de esa cuenta y se repiten sin riesgo; la bolsa se
- * suelta en cuanto alguien entra (podría ser ya suya), y tras reabrir la app solo se vacía si es la misma bolsa de
- * entonces y no hay sesión.
+ * Antes de empezar se apunta en [journal] la cuenta y la bolsa por vaciar. Si una etapa falla, las demás se intentan
+ * igual, nada sale como excepción y la cuenta queda pendiente: [start] la retoma al arrancar la app y cada vez que
+ * alguien entra. Las dos primeras etapas son solo de esa cuenta y se repiten sin riesgo. La bolsa pendiente se olvida
+ * en cuanto alguien entra (ya puede ser suya); tras reabrir la app solo se vacía si nadie entró desde que arrancó, no
+ * hay sesión de otra cuenta y es la misma bolsa de entonces (o, si entonces no se pudo leer, la que haya).
  *
  * Lo demás que depende de la cuenta vive en memoria (ViewModels) y se suelta al ver la sesión cerrada.
  */
@@ -70,7 +71,7 @@ class DeletedAccountCleanup
         private val mutex = Mutex()
         private var journalLoaded = false
 
-        /** La bolsa de huella [fingerprint] (o cualquiera, si `null`), mientras la generación siga en [generation]. */
+        /** La bolsa de huella [fingerprint] (o la que haya, si `null`), mientras la generación siga en [generation]. */
         private data class CartTarget(
             val fingerprint: String?,
             val generation: Long,
@@ -86,8 +87,7 @@ class DeletedAccountCleanup
         ): CleanupOutcome =
             withContext(NonCancellable) {
                 mutex.withLock {
-                    // Si no se pudo leer la bolsa, se intenta vaciar la que haya, pero esa etapa no se retoma tras reabrir
-                    // la app: sin huella no se puede saber si es la misma.
+                    // Si no se pudo leer la bolsa, se vacía la que haya (con la misma condición de que nadie entró).
                     val read = attempt { cartStore.cart.first()?.fingerprint() }
                     val target =
                         when {
@@ -98,7 +98,8 @@ class DeletedAccountCleanup
                     pending[accountId] = target
                     attempt {
                         journal.update { entries ->
-                            entries.filter { it.accountId != accountId } + PendingCleanup(accountId, target?.fingerprint)
+                            entries.filter { it.accountId != accountId } +
+                                PendingCleanup(accountId, target?.let { PendingCart(it.fingerprint) })
                         }
                     }
                     val done = runStages(accountId)
@@ -112,12 +113,14 @@ class DeletedAccountCleanup
 
         /**
          * Retoma lo pendiente al arrancar (cuando ya se leyó la sesión guardada) y cada vez que alguien entra. Antes de
-         * retomar tras una entrada, suelta las bolsas pendientes: ya pueden ser de quien entró.
+         * retomar tras una entrada, olvida las bolsas pendientes: ya pueden ser de quien entró.
          */
         fun start() {
             scope.launch {
-                sessionStore.state.first { it != SessionState.Unknown }
+                // Primero la generación y luego el estado (ver SessionStore.signInGeneration): si alguien entra mientras
+                // se espera la sesión guardada, la generación de arranque ya no coincide y su bolsa no se toca.
                 var seen = sessionStore.signInGeneration.value
+                sessionStore.state.first { it != SessionState.Unknown }
                 resume(atStart = seen)
                 sessionStore.signInGeneration.collect { generation ->
                     if (generation != seen) {
@@ -149,9 +152,9 @@ class DeletedAccountCleanup
             journalLoaded = true
             stored.forEach { entry ->
                 if (entry.accountId !in pending) {
-                    val fingerprint = entry.cartFingerprint
+                    val cart = entry.cart
                     pending[entry.accountId] =
-                        if (fingerprint != null && atStart != null) CartTarget(fingerprint, atStart) else null
+                        if (cart != null && atStart != null) CartTarget(cart.fingerprint, atStart) else null
                 }
             }
         }
@@ -160,7 +163,7 @@ class DeletedAccountCleanup
             withContext(NonCancellable) {
                 mutex.withLock {
                     pending.keys.toList().forEach { pending[it] = null }
-                    attempt { journal.update { entries -> entries.map { it.copy(cartFingerprint = null) } } }
+                    attempt { journal.update { entries -> entries.map { it.copy(cart = null) } } }
                 }
             }
         }
@@ -200,8 +203,8 @@ class DeletedAccountCleanup
         }
     }
 
-private fun PendingCleanup.withoutCartOf(accountId: String) =
-    if (this.accountId == accountId) copy(cartFingerprint = null) else this
+private fun PendingCleanup.withoutCartOf(accountId: String): PendingCleanup =
+    if (this.accountId == accountId) copy(cart = null) else this
 
 // Un fallo de disco (o cualquier otro) de una etapa se queda en el resultado: no corta las demás ni sale como
 // excepción. La cancelación sí se propaga (KT-5).

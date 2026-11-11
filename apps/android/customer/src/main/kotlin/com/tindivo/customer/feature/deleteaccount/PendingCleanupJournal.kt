@@ -10,14 +10,22 @@ import java.io.InputStream
 import java.io.OutputStream
 
 /**
- * Una cuenta borrada en el servidor (204) cuya limpieza en el aparato no terminó. [cartFingerprint] es la huella de la
- * bolsa que había al borrar y que falta vaciar: solo esa, y solo si nadie entró desde entonces; `null` = la bolsa ya no
- * se toca.
+ * Una cuenta borrada en el servidor (204) cuya limpieza en el aparato no terminó. [cart] es la bolsa que falta vaciar,
+ * solo si nadie entró desde entonces; `null` = la bolsa ya no se toca.
  */
 @Serializable
 data class PendingCleanup(
     val accountId: String,
-    val cartFingerprint: String? = null,
+    val cart: PendingCart? = null,
+)
+
+/**
+ * La bolsa que había al borrar: [fingerprint] es su huella, y solo esa se vacía (no una cambiada después). `null` = no
+ * se pudo leer al borrar: se vacía la que haya.
+ */
+@Serializable
+data class PendingCart(
+    val fingerprint: String? = null,
 )
 
 /** El formato en disco de [PendingCleanupJournal]. */
@@ -64,15 +72,19 @@ object PendingCleanupSerializer : Serializer<PendingCleanupSnapshot> {
 
     override val defaultValue: PendingCleanupSnapshot = PendingCleanupSnapshot()
 
-    override suspend fun readFrom(input: InputStream): PendingCleanupSnapshot =
-        try {
-            json.decodeFromString(PendingCleanupSnapshot.serializer(), input.readBytes().decodeToString()).also {
-                if (it.version != PENDING_CLEANUP_VERSION) throw CorruptionException("Versión ${it.version} desconocida")
+    override suspend fun readFrom(input: InputStream): PendingCleanupSnapshot {
+        val snapshot =
+            try {
+                json.decodeFromString(PendingCleanupSnapshot.serializer(), input.readBytes().decodeToString())
+            } catch (e: IllegalArgumentException) {
+                // SerializationException hereda de IllegalArgumentException.
+                throw CorruptionException("El registro de cuentas borradas no se pudo leer", e)
             }
-        } catch (e: IllegalArgumentException) {
-            // SerializationException hereda de IllegalArgumentException.
-            throw CorruptionException("El registro de cuentas borradas no se pudo leer", e)
+        if (snapshot.version != PENDING_CLEANUP_VERSION) {
+            throw CorruptionException("Versión ${snapshot.version} desconocida")
         }
+        return snapshot
+    }
 
     override suspend fun writeTo(
         t: PendingCleanupSnapshot,
