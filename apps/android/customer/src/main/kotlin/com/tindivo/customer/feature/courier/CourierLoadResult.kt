@@ -90,8 +90,19 @@ internal fun CourierRequestUiState.afterSent(
             copy(phase = RequestPhase.Created, created = result.data, createdFor = account, sending = false)
         }
 
-        CourierSendResult.AlreadyCreated -> copy(phase = RequestPhase.AlreadyCreated, sending = false)
-        CourierSendResult.NeedsReview -> copy(phase = RequestPhase.Review, sending = false, reviewSeen = false)
-        CourierSendResult.Busy -> copy(sending = false)
-        is CourierSendResult.Failed -> null
+        CourierSendResult.AlreadyCreated -> {
+            copy(phase = RequestPhase.AlreadyCreated, sending = false)
+        }
+
+        CourierSendResult.NeedsReview -> {
+            copy(phase = RequestPhase.Review, sending = false, reviewSeen = false)
+        }
+
+        CourierSendResult.Busy -> {
+            copy(sending = false)
+        }
+
+        is CourierSendResult.Failed -> {
+            null
+        }
     }
