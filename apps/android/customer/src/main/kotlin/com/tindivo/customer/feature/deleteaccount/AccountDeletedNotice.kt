@@ -6,7 +6,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -92,14 +93,38 @@ internal fun AccountDeletedNotice(
 ) {
     val stored = handle.getStateFlow<Long?>(ACCOUNT_DELETED_KEY, null).collectAsStateWithLifecycle().value ?: return
     val changes = viewModel.changes.collectAsStateWithLifecycle().value
-    val visibility = remember(stored, changes) { viewModel.visibility(stored) }
-    LaunchedEffect(stored, visibility) {
-        if (visibility == DeletedNoticeVisibility.Stale) handle[ACCOUNT_DELETED_KEY] = null
-    }
-    if (visibility != DeletedNoticeVisibility.Show) return
     val dismiss = { handle[ACCOUNT_DELETED_KEY] = null }
+    AccountDeletedNoticeContent(
+        stored = stored,
+        changes = changes,
+        visibility = { viewModel.visibility(stored) },
+        onStale = dismiss,
+        onDismiss = dismiss,
+    )
+}
+
+/**
+ * [AccountDeletedNotice] sin estado. [changes] (lo último observado de la sesión, que puede ir atrasado) solo sirve para
+ * volver a componer y para volver a lanzar el descarte; la decisión se pide a [visibility] en CADA composición y nunca
+ * se recuerda: un [changes] atrasado no puede reutilizar un «mostrar» ya decidido (CAX-003). Si es
+ * [DeletedNoticeVisibility.Stale], llama a [onStale].
+ */
+@Composable
+internal fun AccountDeletedNoticeContent(
+    stored: Long,
+    changes: Any?,
+    visibility: () -> DeletedNoticeVisibility,
+    onStale: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val decision = visibility()
+    val currentOnStale by rememberUpdatedState(onStale)
+    LaunchedEffect(stored, decision, changes) {
+        if (decision == DeletedNoticeVisibility.Stale) currentOnStale()
+    }
+    if (decision != DeletedNoticeVisibility.Show) return
     AlertDialog(
-        onDismissRequest = dismiss,
+        onDismissRequest = onDismiss,
         title = {
             Text(
                 text = stringResource(R.string.delete_account_done_title),
@@ -113,7 +138,7 @@ internal fun AccountDeletedNotice(
             )
         },
         confirmButton = {
-            TextButton(onClick = dismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(text = stringResource(R.string.delete_account_done_ok))
             }
         },
