@@ -144,17 +144,21 @@ internal class CancelOrderViewModel
                     if (!isCurrent(started, account)) return@launch
                     when (result) {
                         is ApiResult.Success -> finish(problem = null)
-                        is ApiResult.Failure -> fail(result.error)
+                        is ApiResult.Failure -> fail(result.error, account)
                     }
                 }
         }
 
-        private suspend fun fail(error: AppError) {
+        private suspend fun fail(
+            error: AppError,
+            account: String,
+        ) {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             if (error.isUnauthorized()) {
                 end()
-                // El cierre cancela esta misma corrutina: que no corte a medias el borrado de la sesión.
-                withContext(NonCancellable) { sessionStore.signOut() }
+                // El cierre cancela esta misma corrutina: que no corte a medias el borrado de la sesión. Es `signOutIf`:
+                // espera el candado del almacén y, si mientras tanto entró otra cuenta, no la cierra.
+                withContext(NonCancellable) { sessionStore.signOutIf(account) }
                 return
             }
             finish(problemOf(error))

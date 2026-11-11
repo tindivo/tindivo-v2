@@ -181,6 +181,8 @@ class CancelOrderViewModelTest {
             viewModel.askToConfirm()
             viewModel.confirm()
 
+            // Se cierra con la cuenta que hizo la petición (signOutIf), no con un cierre a ciegas de quien esté dentro.
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
             assertEquals(1, store.signOutCalls)
             assertEquals(CancelUiState(), viewModel.state.value)
             assertEquals(1, canceller.calls.size)
