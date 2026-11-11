@@ -25,6 +25,9 @@ internal class SheetTestSession(
     private val mutable = MutableStateFlow<SessionState>(SessionState.SignedIn(userId))
     override val state: StateFlow<SessionState> = mutable.asStateFlow()
 
+    /** Una sola entrada, la de la apertura: la prueba no vuelve a entrar. */
+    override val signInGeneration: StateFlow<Long> = MutableStateFlow(1L).asStateFlow()
+
     override suspend fun accessToken(): String? = null
 
     override suspend fun refresh(): String? = null
@@ -41,6 +44,12 @@ internal class SheetTestSession(
     override suspend fun signOutIf(accountId: String): Boolean {
         if ((mutable.value as? SessionState.SignedIn)?.userId != accountId) return false
         signOut()
+        return true
+    }
+
+    override suspend fun signOutLocally(accountId: String): Boolean {
+        if ((mutable.value as? SessionState.SignedIn)?.userId != accountId) return false
+        mutable.value = SessionState.SignedOut
         return true
     }
 }
