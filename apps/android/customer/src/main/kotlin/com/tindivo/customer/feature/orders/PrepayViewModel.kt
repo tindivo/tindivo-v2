@@ -30,9 +30,11 @@ import javax.inject.Inject
  * regresiva contra el [clock] inyectado y envía el comprobante con [ProofSender] (URL firmada → PUT → confirmar).
  *
  * La sesión se vigila como en el resto de pantallas de la cuenta ([SessionWatch]): si se cierra o cambia de cuenta, se
- * cancela lo que esté en vuelo, se olvida todo y el ViewModel no vuelve a pedir nada. Además, antes de cada paso y de
- * publicar se comprueba que la sesión vigente sigue siendo la del principio ([isCurrent]), y cada llamada a la API sale
- * atada a esa cuenta (`boundTo`): nada de una cuenta se confirma ni se muestra en otra.
+ * cancela lo que esté en vuelo, se olvida todo y el ViewModel no vuelve a pedir nada. La sesión del principio es la
+ * cuenta Y la generación de entradas con que se adoptó ([SessionStore.signInGeneration]): si alguien entra después,
+ * aunque sea la misma cuenta (A → B → A, o cerrar y volver a entrar), también termina (CAX-006). Antes de cada paso y de
+ * publicar se comprueba que la sesión vigente sigue siendo esa ([isCurrent]), y cada llamada a la API sale atada a esa
+ * cuenta (`boundTo`): nada de una cuenta se confirma ni se muestra en otra.
  *
  * Si al pedir la URL o al confirmar el servidor dice que el pedido ya no espera el pago ([noLongerAwaitsPayment]), la
  * oferta de pago se retira en el acto ([PrepayInfoState.NotAwaiting]: sin destinatario, importe, selector ni envío) y
@@ -55,6 +57,12 @@ internal class PrepayViewModel
         val state: StateFlow<PrepayUiState> = mutableState.asStateFlow()
 
         private var accountId: String? = null
+
+        /**
+         * La [SessionStore.signInGeneration] con la que se adoptó [accountId], leída antes que la sesión. Si la vigente
+         * ya es otra, alguien entró desde entonces (otra cuenta o la misma otra vez) y lo de antes no sigue (CAX-006).
+         */
+        private var accountSignIns: Long? = null
         private var ended = false
         private var wanted = false
         private var generation = 0
@@ -70,13 +78,17 @@ internal class PrepayViewModel
             val watch = SessionWatch()
             viewModelScope.launch {
                 sessionStore.state.collect { session ->
-                    if (watch.ended(session)) {
+                    if (watch.ended(session) || enteredSinceAdopted()) {
                         end()
                     } else if (session is SessionState.SignedIn && accountId == null) {
-                        accountId = session.userId
-                        if (wanted) startLoad(session.userId)
+                        adopt(session.userId)
                     }
                 }
+            }
+            // A → B → A, o cerrar y volver a entrar con A, sin que corra el colector de arriba: `StateFlow` le deja ver
+            // solo la A final, igual a la de antes, y no emite. La generación de entradas sí cambió, y eso basta.
+            viewModelScope.launch {
+                sessionStore.signInGeneration.collect { if (!ended && enteredSinceAdopted()) end() }
             }
         }
 
@@ -113,9 +125,10 @@ internal class PrepayViewModel
             val account = accountId
             val id = orderId
             if (ended || !current.canSend || photo == null || account == null || id == null) return
+            val started = generation
+            if (!isCurrent(started, account)) return
             // `Sending` se fija antes de lanzar nada: un doble toque ya ve el estado nuevo.
             mutableState.update { it.copy(send = SendState.Sending) }
-            val started = generation
             sendJob =
                 viewModelScope.launch {
                     val step = sender.deliver(account, id, photo) { isCurrent(started, account) }
@@ -123,10 +136,27 @@ internal class PrepayViewModel
                 }
         }
 
+        // Primero la generación y luego la sesión (ver SessionStore.signInGeneration). Si la sesión ya no es la que vio
+        // el colector, no se adopta: su siguiente valor terminará el ViewModel.
+        private fun adopt(account: String) {
+            val signIns = sessionStore.signInGeneration.value
+            if ((sessionStore.state.value as? SessionState.SignedIn)?.userId != account) return
+            accountSignIns = signIns
+            accountId = account
+            if (wanted) startLoad(account)
+        }
+
+        /** Alguien entró (otra cuenta o la misma otra vez) desde que se adoptó la cuenta. */
+        private fun enteredSinceAdopted(): Boolean {
+            val adopted = accountSignIns ?: return false
+            return sessionStore.signInGeneration.value != adopted
+        }
+
         private fun startLoad(account: String) {
             val id = orderId ?: return
-            loadJob?.cancel()
             val started = generation
+            if (!isCurrent(started, account)) return
+            loadJob?.cancel()
             val request = ++infoRequest
             mutableState.update { it.copy(info = PrepayInfoState.Loading) }
             loadJob =
@@ -261,15 +291,23 @@ internal class PrepayViewModel
         }
 
         /**
-         * Sigue siendo la misma cuenta: la generación no cambió Y la sesión vigente, leída ahora, es la de [account].
-         * La generación sola no basta: la continuación de una respuesta puede correr antes que el colector de la sesión.
+         * Sigue siendo la misma sesión: el ViewModel no terminó desde [started], nadie entró desde que se adoptó la
+         * cuenta ([SessionStore.signInGeneration], leída antes que la sesión) Y la sesión vigente, leída ahora, es la de
+         * [account]. Se lee aquí y no se espera al colector: la continuación de una respuesta puede correr antes que él,
+         * y tras A → B → A el colector de la sesión puede no enterarse nunca (CAX-006). Si ya no es la misma, termina
+         * en el acto ([end]): estado vacío, sin foto ni ruta, y nada en vuelo.
          */
         private fun isCurrent(
             started: Int,
             account: String,
-        ) = !ended &&
-            started == generation &&
-            (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
+        ): Boolean {
+            if (ended || started != generation) return false
+            val signIns = sessionStore.signInGeneration.value
+            val session = sessionStore.state.value
+            val same = signIns == accountSignIns && (session as? SessionState.SignedIn)?.userId == account
+            if (!same) end()
+            return same
+        }
 
         private fun end() {
             ended = true
