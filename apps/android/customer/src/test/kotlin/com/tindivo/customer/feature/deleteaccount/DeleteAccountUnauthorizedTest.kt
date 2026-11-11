@@ -55,9 +55,16 @@ internal class DeleteAccountUnauthorizedTest : DeleteAccountHarness() {
 
     private fun TestScope.realDeleter(store: SessionStore): AccountDeleter {
         val client =
-            createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), auth = BearerAuthInterceptor(server.url("/"), store))
+            createOkHttpClient(
+                ClientInfo("customer", "0.1.0", "1"),
+                auth = BearerAuthInterceptor(server.url("/"), store),
+            )
         val repository =
-            CustomerRepository(server.url("/api/v1").toString().trimEnd('/'), client, UnconfinedTestDispatcher(testScheduler))
+            CustomerRepository(
+                server.url("/api/v1").toString().trimEnd('/'),
+                client,
+                UnconfinedTestDispatcher(testScheduler),
+            )
         return AccountDeleter(repository::deleteAccount)
     }
 
@@ -149,7 +156,6 @@ internal class DeleteAccountUnauthorizedTest : DeleteAccountHarness() {
             assertEquals(setOf(B), ledgerStore.ledger.attempts.keys)
             assertEquals(0, backend.signOutCalls)
         }
-
 }
 
 /** Un JWT con `sub` = [sub]: la app solo lee el `sub` para atar la petición a la cuenta. */
