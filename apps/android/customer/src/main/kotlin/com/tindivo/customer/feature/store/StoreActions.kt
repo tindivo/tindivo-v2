@@ -22,3 +22,11 @@ internal data class StoreFilterSheetActions(
     val onApply: () -> Unit,
     val onDismiss: () -> Unit,
 )
+
+/** Lo que el detalle le pide a la navegación. */
+internal data class StoreDetailNav(
+    val onBack: () -> Unit,
+    val onOpenProduct: (slug: String) -> Unit,
+    /** «Ver parecidos»: la lista filtrada por [category] (`null` = toda). */
+    val onSeeSimilar: (category: String?) -> Unit,
+)

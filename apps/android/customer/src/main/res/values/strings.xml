@@ -568,4 +568,43 @@
         <item quantity="one">Ver %d artículo</item>
         <item quantity="other">Ver %d artículos</item>
     </plurals>
+    <!-- Tindivo Store: detalle -->
+    <string name="store_detail_loading">Cargando la pieza</string>
+    <string name="store_detail_error_title">No pudimos cargar esta pieza</string>
+    <string name="store_detail_unique">Pieza única</string>
+    <string name="store_detail_negotiable">Acepta ofertas</string>
+    <string name="store_detail_reserved_title">Otra persona lo pidió.</string>
+    <string name="store_detail_reserved_body">Si no se concreta, vuelve a estar disponible.</string>
+    <string name="store_detail_sold_title">Ya encontró dueño.</string>
+    <string name="store_detail_sold_body">Mira artículos parecidos.</string>
+    <string name="store_condition_new_with_tag">Nuevo con etiqueta</string>
+    <string name="store_condition_new_unused">Nuevo sin uso</string>
+    <string name="store_condition_used_label">Usado</string>
+    <string name="store_audience_women">Dama</string>
+    <string name="store_audience_men">Caballero</string>
+    <string name="store_audience_kids">Niños</string>
+    <string name="store_audience_unisex">Unisex</string>
+    <string name="store_size">Talla %1$s</string>
+    <string name="store_score_title">Estado %1$d/10 · %2$s</string>
+    <string name="store_score_10">Impecable</string>
+    <string name="store_score_8">Muy buen estado</string>
+    <string name="store_score_6">Buen estado, con uso</string>
+    <string name="store_score_low">Con detalles visibles (ver fotos)</string>
+    <string name="store_delivery_title">Te lo llevamos en San Jacinto desde %1$s</string>
+    <string name="store_delivery_body">%1$s–%2$s según distancia · Pagas al recibir: efectivo o Yape</string>
+    <string name="store_related">También te puede gustar</string>
+    <string name="store_ref">Ref. %1$s</string>
+    <string name="store_want">Lo quiero — pedir por WhatsApp</string>
+    <string name="store_want_hint">Revísalo antes de pagar · Si no es como en las fotos, no pagas nada</string>
+    <string name="store_reserved_label">RESERVADO</string>
+    <string name="store_notify">Avísame si se libera</string>
+    <string name="store_sold_label">VENDIDO</string>
+    <string name="store_see_similar">Ver parecidos</string>
+    <string name="store_not_found_title">Esta pieza ya no está disponible</string>
+    <string name="store_not_found_body">Puede que ya se haya vendido o que la hayamos retirado. Mira otras piezas en la tienda.</string>
+    <string name="store_not_found_back">Volver a la tienda</string>
+    <string name="store_gallery_counter">%1$d/%2$d</string>
+    <string name="store_gallery_photo">%1$s, foto %2$d de %3$d</string>
+    <string name="store_gallery_open">Ampliar foto %1$d de %2$d</string>
+    <string name="store_viewer_close">Cerrar</string>
 </resources>
