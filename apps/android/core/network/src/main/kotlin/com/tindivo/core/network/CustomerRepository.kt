@@ -133,6 +133,18 @@ class CustomerRepository(
         }.map { it.data }
 
     /**
+     * `GET /customer/orders/{id}` solo con el token de [accountId] ([boundTo]): si la sesión cambió de cuenta, no se
+     * envía nada y vuelve un [AppError.Network] con [AccountMismatchException].
+     */
+    suspend fun order(
+        id: UUID,
+        accountId: String,
+    ): ApiResult<GetCustomerOrder200ResponseData> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { OrdersApi(baseUrl, it) }) {
+            it.getCustomerOrderWithHttpInfo(id, null, null, null, null)
+        }.map { it.data }
+
+    /**
      * `POST /customer/orders/{id}/cancel`: cancela un pedido propio mientras el negocio no lo acepta. La ventana la
      * decide el servidor (`cancel_customer_order`, bajo `FOR UPDATE`): fuera de ella responde 409 con
      * `order_not_cancellable` y el motivo en `detail`; uno ajeno o inexistente, 404.
