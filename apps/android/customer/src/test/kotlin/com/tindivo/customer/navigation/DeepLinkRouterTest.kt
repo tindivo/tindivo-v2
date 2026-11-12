@@ -11,6 +11,26 @@ class DeepLinkRouterTest {
         assertEquals(DeepLinkTarget.Order("AB2C3D4E"), DeepLinkRouter.route("/pedido/AB2C3D4E"))
         assertEquals(DeepLinkTarget.Account, DeepLinkRouter.route("/cuenta"))
         assertEquals(DeepLinkTarget.Home, DeepLinkRouter.route("/"))
+        assertEquals(DeepLinkTarget.Courier("AB2C3D4E"), DeepLinkRouter.route("/entregas/AB2C3D4E"))
+    }
+
+    @Test
+    fun `una entrega se normaliza igual que un pedido y no se confunde con el`() {
+        assertEquals(DeepLinkTarget.Courier("AB2C3D4E"), DeepLinkRouter.route("/entregas/ab2c3d4e"))
+        assertEquals(DeepLinkTarget.Courier("AB2C3D4E"), DeepLinkRouter.route("/entregas/AB2C3D4E/?from=push#top"))
+        assertEquals(DeepLinkTarget.Order("AB2C3D4E"), DeepLinkRouter.route("/pedido/AB2C3D4E"))
+        val home =
+            listOf(
+                "/entregas",
+                "/entregas/",
+                "/entregas/AB",
+                "/entregas/AB2C-3D4E",
+                "/entregas/AB2C3D4E/extra",
+                "/entregas/" + "A".repeat(17),
+            )
+        for (path in home) {
+            assertEquals(path, DeepLinkTarget.Home, DeepLinkRouter.route(path))
+        }
     }
 
     @Test
@@ -25,8 +45,6 @@ class DeepLinkRouterTest {
     fun `una ruta que la app no conoce, o un codigo sin forma de codigo, lleva al inicio`() {
         val home =
             listOf(
-                // Entregas aún no existe en la app Android: su aviso abre el inicio.
-                "/entregas/AB2C3D4E",
                 "/pedido",
                 "/pedido/",
                 "/pedido/AB2C3D4E/extra",

@@ -21,6 +21,14 @@ fun interface OrderLookup {
     ): String?
 }
 
+/** Busca el uuid de una entrega de [accountId] por su código corto; `null` si no está o no se pudo saber. */
+fun interface CourierLookup {
+    suspend fun idOf(
+        shortId: String,
+        accountId: String,
+    ): String?
+}
+
 /** La pantalla a la que lleva un aviso tocado, ya resuelta. */
 sealed interface DeepLinkNavigation {
     data object Home : DeepLinkNavigation
@@ -32,12 +40,23 @@ sealed interface DeepLinkNavigation {
     data class OrderDetail(
         val orderId: String,
     ) : DeepLinkNavigation
+
+    /** «Mis entregas», cuando la entrega del aviso no aparece. */
+    data object CourierList : DeepLinkNavigation
+
+    /** El seguimiento de la entrega [id]/[shortId] de la cuenta [accountId], la que tenía la sesión al resolverlo. */
+    data class CourierDetail(
+        val id: String,
+        val shortId: String,
+        val accountId: String,
+    ) : DeepLinkNavigation
 }
 
 /**
  * Convierte el destino de un aviso tocado en una pantalla. Lo que necesita la cuenta (un pedido, «Mi cuenta») sin
  * sesión lleva al inicio. Un pedido se busca por su código corto en la primera página de «Mis pedidos» de la cuenta
- * vigente (un aviso es de un pedido reciente); si no aparece, o no se pudo buscar, se abre «Mis pedidos».
+ * vigente (un aviso es de un pedido reciente); si no aparece, o no se pudo buscar, se abre «Mis pedidos». Una entrega, igual
+ * con «Mis entregas».
  */
 @HiltViewModel
 class DeepLinkViewModel
@@ -46,6 +65,7 @@ class DeepLinkViewModel
         private val inbox: DeepLinkInbox,
         private val sessionStore: SessionStore,
         private val orders: OrderLookup,
+        private val couriers: CourierLookup,
     ) : ViewModel() {
         private val mutableNavigation = MutableStateFlow<DeepLinkNavigation?>(null)
         val navigation: StateFlow<DeepLinkNavigation?> = mutableNavigation.asStateFlow()
@@ -75,6 +95,21 @@ class DeepLinkViewModel
                 DeepLinkTarget.Home -> DeepLinkNavigation.Home
                 DeepLinkTarget.Account -> DeepLinkNavigation.Account
                 is DeepLinkTarget.Order -> resolveOrder(target.shortId, account)
+                is DeepLinkTarget.Courier -> resolveCourier(target.shortId, account)
+            }
+        }
+
+        private suspend fun resolveCourier(
+            shortId: String,
+            account: String,
+        ): DeepLinkNavigation {
+            val id = couriers.idOf(shortId, account)
+            // Igual que un pedido: si la sesión cambió mientras se buscaba, la entrega no es de la cuenta vigente.
+            val stillCurrent = (sessionStore.state.value as? SessionState.SignedIn)?.userId == account
+            return when {
+                !stillCurrent -> DeepLinkNavigation.Home
+                id == null -> DeepLinkNavigation.CourierList
+                else -> DeepLinkNavigation.CourierDetail(id, shortId, account)
             }
         }
 

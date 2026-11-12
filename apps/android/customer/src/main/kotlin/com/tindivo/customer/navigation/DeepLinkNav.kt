@@ -1,16 +1,37 @@
 package com.tindivo.customer.navigation
 
 import androidx.navigation.NavHostController
+import com.tindivo.customer.feature.courier.CourierDetailRoute
+import com.tindivo.customer.feature.courier.CourierHomeRoute
 import com.tindivo.customer.feature.orders.OrderDetailRoute
 import com.tindivo.customer.feature.orders.OrdersRoute
 
 /** Abre la pantalla de un aviso tocado encima de la portada, que siempre queda debajo para volver con «atrás». */
 internal fun NavHostController.openDeepLink(target: DeepLinkNavigation) {
     when (target) {
-        DeepLinkNavigation.Home -> popBackStack<CatalogHomeRoute>(inclusive = false)
-        DeepLinkNavigation.Account -> navigateOverHome(AccountRoute)
-        DeepLinkNavigation.Orders -> navigateOverHome(OrdersRoute)
-        is DeepLinkNavigation.OrderDetail -> navigateOverHome(OrderDetailRoute(target.orderId))
+        DeepLinkNavigation.Home -> {
+            popBackStack<CatalogHomeRoute>(inclusive = false)
+        }
+
+        DeepLinkNavigation.Account -> {
+            navigateOverHome(AccountRoute)
+        }
+
+        DeepLinkNavigation.Orders -> {
+            navigateOverHome(OrdersRoute)
+        }
+
+        is DeepLinkNavigation.OrderDetail -> {
+            navigateOverHome(OrderDetailRoute(target.orderId))
+        }
+
+        DeepLinkNavigation.CourierList -> {
+            navigateOverHome(CourierHomeRoute(listOnly = true))
+        }
+
+        is DeepLinkNavigation.CourierDetail -> {
+            navigateOverHome(CourierDetailRoute(target.id, target.shortId, target.accountId))
+        }
     }
 }
 

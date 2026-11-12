@@ -11,6 +11,11 @@ sealed interface DeepLinkTarget {
     data class Order(
         val shortId: String,
     ) : DeepLinkTarget
+
+    /** El seguimiento de una entrega de Tindivo Entregas por su código corto (`/entregas/AB2C3D4E`). */
+    data class Courier(
+        val shortId: String,
+    ) : DeepLinkTarget
 }
 
 /**
@@ -41,6 +46,10 @@ object DeepLinkRouter {
 
             segments.size == 2 && segments[0] == "pedido" && SHORT_ID.matches(segments[1]) -> {
                 DeepLinkTarget.Order(segments[1].uppercase())
+            }
+
+            segments.size == 2 && segments[0] == "entregas" && SHORT_ID.matches(segments[1]) -> {
+                DeepLinkTarget.Courier(segments[1].uppercase())
             }
 
             else -> {
