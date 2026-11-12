@@ -523,6 +523,8 @@
     <string name="prepay_error_too_large">La imagen es demasiado pesada. Elige otra captura.</string>
     <string name="prepay_error_generic">No pudimos enviar tu comprobante. Inténtalo de nuevo.</string>
     <!-- Tindivo Store: lista -->
+    <string name="store_entry_title">Tindivo Store</string>
+    <string name="store_entry_card_cta">Piezas únicas de segunda mano en San Jacinto. Las pides por WhatsApp →</string>
     <string name="store_title">Tindivo Store</string>
     <string name="store_subtitle">Piezas únicas de segunda mano. Las pides por WhatsApp y pagas al recibir.</string>
     <string name="store_back">Volver</string>

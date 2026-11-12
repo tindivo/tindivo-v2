@@ -57,6 +57,7 @@ fun CatalogHomeDestination(
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
     onOpenAccount: (signedIn: Boolean) -> Unit,
+    onOpenStore: () -> Unit,
     viewModel: CatalogHomeViewModel = hiltViewModel(),
     accountEntry: AccountEntryViewModel = hiltViewModel(),
 ) {
@@ -69,6 +70,7 @@ fun CatalogHomeDestination(
         onOpenDiagnostics = onOpenDiagnostics,
         signedIn = signedIn,
         onOpenAccount = { onOpenAccount(signedIn) },
+        onOpenStore = onOpenStore,
     )
 }
 
@@ -81,6 +83,7 @@ fun CatalogHomeScreen(
     onOpenDiagnostics: (() -> Unit)? = null,
     signedIn: Boolean = false,
     onOpenAccount: () -> Unit = {},
+    onOpenStore: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -101,6 +104,7 @@ fun CatalogHomeScreen(
                             onOpenDiagnostics = onOpenDiagnostics,
                             signedIn = signedIn,
                             onOpenAccount = onOpenAccount,
+                            onOpenStore = onOpenStore,
                         )
                     }
                 }
@@ -116,6 +120,7 @@ private fun BusinessList(
     onOpenDiagnostics: (() -> Unit)?,
     signedIn: Boolean,
     onOpenAccount: () -> Unit,
+    onOpenStore: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -139,6 +144,8 @@ private fun BusinessList(
                 }
             }
         }
+        // Store va antes de los negocios: es otra cosa que se puede hacer, no un negocio más.
+        item { StoreEntryCard(onClick = onOpenStore) }
         state.refreshFailed?.let { error ->
             item { Text(text = errorMessage(error), color = MaterialTheme.colorScheme.error) }
         }

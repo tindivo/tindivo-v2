@@ -50,6 +50,7 @@ import com.tindivo.customer.feature.profile.profileDestination
 import com.tindivo.customer.feature.reviews.ReviewHost
 import com.tindivo.customer.feature.reviews.rememberReviewController
 import com.tindivo.customer.feature.signin.SignInDestination
+import com.tindivo.customer.feature.store.StoreListRoute
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
 
@@ -106,6 +107,7 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             composable<CatalogHomeRoute> { entry ->
                 CatalogHomeDestination(
                     onOpenBusiness = { id -> navController.navigate(BusinessRoute(id)) },
+                    onOpenStore = { navController.navigate(StoreListRoute()) { launchSingleTop = true } },
                     onOpenAccount = { signedIn ->
                         navController.navigate(if (signedIn) AccountRoute else SignInRoute)
                     },
@@ -141,6 +143,7 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 )
             }
             checkoutDestination(navController)
+            storeDestinations(navController)
             composable<SignInRoute> {
                 SignInDestination(
                     onBack = { navController.popBackStack() },
