@@ -215,7 +215,9 @@ describe('send-push · orden del seguimiento (seq) y destinatario (install)', ()
   it('stateSeq: milisegundos del updated_at; lo que no es fecha no da versión', () => {
     expect(stateSeq(T1)).toBe(Date.parse(T1))
     expect(stateSeq(T2)).toBe(Date.parse(T1) + 300_250)
-    for (const malo of [undefined, null, 5, '', 'ayer', {}]) expect(stateSeq(malo)).toBeUndefined()
+    for (const malo of [undefined, null, 5, '', 'ayer', {}, '5', '1 Jan 2030', '0000-01-01T00:00:00Z']) {
+      expect(stateSeq(malo), String(malo)).toBeUndefined()
+    }
   })
 
   it('el estado posterior tiene seq mayor; una entrega soltada (vuelve al paso 1) la tiene mayor aunque el paso baje', () => {
@@ -232,6 +234,13 @@ describe('send-push · orden del seguimiento (seq) y destinatario (install)', ()
       terminal: true,
       seq: stateSeq(T2),
     })
+  })
+
+  it('un updated_at dado pero ilegible no manda aviso de seguimiento: la app lo descartaria sin version (CAX-003)', () => {
+    for (const malo of [null, '', 'ayer', '5', 42]) {
+      expect(orderProgress('preparing', 'delivery', malo), String(malo)).toBeNull()
+      expect(courierProgress('accepted', malo), String(malo)).toBeNull()
+    }
   })
 
   it('sin updated_at el paso viaja igual, sin seq', () => {

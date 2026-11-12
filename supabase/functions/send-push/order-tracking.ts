@@ -129,20 +129,30 @@ export type TrackingProgress = {
   seq?: number
 }
 
+/** Una fecha ISO 8601 con hora y zona (la forma en que PostgREST entrega `timestamptz`). */
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}(:?\d{2})?)$/
+
 /**
- * La versión (`seq`) de un estado a partir de `updated_at`. `undefined` si no es una fecha: sin
- * versión el aviso viaja igual, pero la app no puede ordenarlo.
+ * La versión (`seq`) de un estado a partir de `updated_at`. `undefined` si no es una fecha ISO válida y posterior a la
+ * época: `Date.parse` acepta textos como `"5"` o `"1 Jan"` que no son instantes de la base, y una versión inventada
+ * podría colar un estado viejo como si fuera nuevo.
  */
 export function stateSeq(updatedAt: unknown): number | undefined {
-  if (typeof updatedAt !== 'string') return undefined
+  if (typeof updatedAt !== 'string' || !ISO_INSTANT.test(updatedAt)) return undefined
   const ms = Date.parse(updatedAt)
   return Number.isFinite(ms) && ms > 0 ? Math.trunc(ms) : undefined
 }
 
+/**
+ * Pone la versión al paso. Si quien llama dio un `updated_at` pero no es una fecha válida, NO hay aviso de seguimiento:
+ * la app descarta todo aviso de seguimiento sin versión (no puede ordenarlo y podría retroceder la barra), así que se
+ * calla en vez de mandar uno que se va a ignorar. Sin `updatedAt` (`undefined`) el paso viaja sin versión, como antes.
+ */
 const withSeq = (progress: TrackingProgress | null, updatedAt: unknown): TrackingProgress | null => {
   if (!progress) return null
+  if (updatedAt === undefined) return progress
   const seq = stateSeq(updatedAt)
-  return seq === undefined ? progress : { ...progress, seq }
+  return seq === undefined ? null : { ...progress, seq }
 }
 
 /** Pedido a domicilio: Recibido → Preparando → Listo → En camino → Entregado. */

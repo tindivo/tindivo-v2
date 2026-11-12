@@ -181,4 +181,67 @@ class TrackingReconcilerTest {
             )
             assertTrue(notifications.removes.isEmpty())
         }
+
+    @Test
+    fun `A a B y otra vez A durante la consulta no aplica nada, es otra sesion`() =
+        runTest {
+            notifications.visible[order] = step(2, 5)
+            snapshot =
+                TrackingSnapshot(orders = mapOf("AB2C3D4E" to TrackingStatus.Finished), couriers = emptyMap())
+            duringQuery = {
+                session.switchTo("B")
+                session.switchTo("A")
+            }
+
+            reconciler().reconcile()
+
+            assertTrue(notifications.removes.isEmpty())
+        }
+
+    // CAX-003: lo terminal que llega por REST se anota, y un push activo anterior pero con version mayor no lo revive.
+    @Test
+    fun `un terminal leido por la consulta no lo revive un aviso activo tardio, con version mayor (CAX-003)`() =
+        runTest {
+            assertTrue(rig.presenter.onPush(pushFor(order, step(3, 5), seq = 1_000_000_000_000)))
+            snapshot =
+                TrackingSnapshot(orders = mapOf("AB2C3D4E" to TrackingStatus.Finished), couriers = emptyMap())
+
+            reconciler().reconcile()
+            assertEquals(listOf(order), notifications.removes)
+
+            val shownBefore = notifications.shows.size
+            assertEquals(false, rig.presenter.onPush(pushFor(order, step(4, 5), seq = 2_000_000_000_000)))
+            assertEquals(shownBefore, notifications.shows.size)
+            assertTrue(notifications.visible.isEmpty())
+        }
+
+    @Test
+    fun `que no aparezca entre los recientes no cuenta como terminado, un aviso activo posterior si se pinta`() =
+        runTest {
+            assertTrue(rig.presenter.onPush(pushFor(order, step(3, 5), seq = 1_000_000_000_000)))
+            snapshot = TrackingSnapshot(orders = emptyMap(), couriers = emptyMap())
+
+            reconciler().reconcile()
+            assertEquals(listOf(order), notifications.removes)
+
+            assertTrue(rig.presenter.onPush(pushFor(order, step(4, 5), seq = 2_000_000_000_000)))
+        }
+
+    @Test
+    fun `el paso 4 leido por la consulta no lo retrocede un aviso viejo del paso 3 (CAX-003)`() =
+        runTest {
+            assertTrue(rig.presenter.onPush(pushFor(order, step(2, 5), seq = 1_000_000_000_000)))
+            snapshot =
+                TrackingSnapshot(
+                    orders = mapOf("AB2C3D4E" to TrackingStatus.Active(TrackingKind.Delivery, step(4, 5))),
+                    couriers = emptyMap(),
+                )
+
+            reconciler().reconcile()
+            assertEquals(step(4, 5), notifications.visible[order])
+
+            assertEquals(false, rig.presenter.onPush(pushFor(order, step(3, 5), seq = 2_000_000_000_000)))
+            assertEquals(step(4, 5), notifications.visible[order])
+            assertTrue(rig.presenter.onPush(pushFor(order, step(5, 5), seq = 3_000_000_000_000, terminal = true)))
+        }
 }

@@ -175,3 +175,31 @@ class PresenterRig(
     val ledger = TrackingLedger(marks)
     val presenter = TrackingPresenter(session, installations, ledger, notifications)
 }
+
+/** La identidad de la instalación con una compuerta: [current] lee el valor y, si hay [gate], espera ahí (ya leído). */
+class GatedInstallations(
+    private val inner: PushInstallationStore,
+) : PushInstallationStore by inner {
+    var gate: CompletableDeferred<Unit>? = null
+    val reading = CompletableDeferred<Unit>()
+
+    override suspend fun current(): PushInstallation? {
+        val value = inner.current()
+        reading.complete(Unit)
+        gate?.await()
+        return value
+    }
+}
+
+/** Un DataStore al que se le puede cortar la escritura (el disco lleno o dañado): [updateData] lanza [IOException]. */
+class FlakyDataStore<T>(
+    private val inner: DataStore<T>,
+) : DataStore<T> {
+    var failWrites = false
+    override val data: Flow<T> = inner.data
+
+    override suspend fun updateData(transform: suspend (t: T) -> T): T {
+        if (failWrites) throw IOException("disco lleno")
+        return inner.updateData(transform)
+    }
+}

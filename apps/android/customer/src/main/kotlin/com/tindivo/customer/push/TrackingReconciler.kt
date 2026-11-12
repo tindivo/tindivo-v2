@@ -59,13 +59,15 @@ class TrackingReconciler(
     private val mutex = Mutex()
 
     suspend fun reconcile() {
+        // La generación se lee antes que la cuenta (ver `SessionStore.signInGeneration`).
+        val generation = sessionStore.signInGeneration.value
         val account = currentAccount() ?: return
         mutex.withLock {
             val seenVersion = presenter.version()
             val shown = presenter.shown()
             if (shown.isEmpty()) return
             val snapshot = source.snapshot(account)
-            presenter.apply(account, seenVersion, planReconciliation(shown, snapshot), ::payloadFor)
+            presenter.apply(account, generation, seenVersion, planReconciliation(shown, snapshot), ::payloadFor)
         }
     }
 

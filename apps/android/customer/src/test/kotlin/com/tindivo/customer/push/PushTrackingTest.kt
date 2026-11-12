@@ -165,8 +165,8 @@ class PushTrackingTest {
         assertEquals(
             listOf(
                 ReconcileAction.Update(order, step(3, 5), onTheWay),
-                ReconcileAction.Remove(gone),
-                ReconcileAction.Remove(courier),
+                ReconcileAction.Remove(gone, finished = false),
+                ReconcileAction.Remove(courier, finished = true),
             ),
             plan,
         )

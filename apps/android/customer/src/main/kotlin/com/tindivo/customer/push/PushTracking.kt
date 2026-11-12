@@ -194,6 +194,8 @@ data class TrackingSnapshot(
 sealed interface ReconcileAction {
     data class Remove(
         val key: TrackingKey,
+        /** `true` si el servidor lo da por terminado (entregado o cancelado); `false` si solo no está entre los recientes. */
+        val finished: Boolean = false,
     ) : ReconcileAction
 
     /** Poner al día en silencio: [expected] es lo que se mostraba al planearlo. */
@@ -216,8 +218,12 @@ fun planReconciliation(
     shown.mapNotNull { item ->
         val source = (if (item.key.courier) snapshot.couriers else snapshot.orders) ?: return@mapNotNull null
         when (val status = source[item.key.shortId]) {
-            null, TrackingStatus.Finished -> {
-                ReconcileAction.Remove(item.key)
+            null -> {
+                ReconcileAction.Remove(item.key, finished = false)
+            }
+
+            TrackingStatus.Finished -> {
+                ReconcileAction.Remove(item.key, finished = true)
             }
 
             TrackingStatus.Unknown -> {

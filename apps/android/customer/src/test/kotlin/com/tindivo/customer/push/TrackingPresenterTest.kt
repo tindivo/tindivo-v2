@@ -2,8 +2,11 @@ package com.tindivo.customer.push
 
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.SessionState
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -177,18 +180,156 @@ class TrackingPresenterTest {
         runTest {
             registrar()
             val seen = rig.presenter.version()
+            val generation = session.signInGeneration.value
             rig.notifications.visible[order] = TrackingProgress.of(2, 5)
             rig.presenter.onPush(payload(installId(), seq = 1_000_000_000_000, step = 3))
             val remove = listOf<ReconcileAction>(ReconcileAction.Remove(order))
 
-            rig.presenter.apply("A", seen, remove) { _, _ -> error("no debe pintar") }
+            rig.presenter.apply("A", generation, seen, remove) { _, _ -> error("no debe pintar") }
             assertTrue(rig.notifications.removes.isEmpty())
 
             val now = rig.presenter.version()
-            rig.presenter.apply("B", now, remove) { _, _ -> error("no debe pintar") }
+            rig.presenter.apply("B", generation, now, remove) { _, _ -> error("no debe pintar") }
             assertTrue(rig.notifications.removes.isEmpty())
 
-            rig.presenter.apply("A", now, remove) { _, _ -> error("no debe pintar") }
+            rig.presenter.apply("A", generation, now, remove) { _, _ -> error("no debe pintar") }
             assertEquals(listOf(order), rig.notifications.removes)
+        }
+
+    /** Una puerta cuya lectura de la instalacion se puede detener a mitad: es la suspension que Codex senalo. */
+    private class GatedRig(
+        session: FakeSessionStore,
+    ) {
+        val gated = GatedInstallations(DataStorePushInstallationStore(MemoryDataStore(PushInstallationSnapshot())))
+        val rig = PresenterRig(session, installations = gated)
+    }
+
+    private fun payloadOf(
+        install: String,
+        seq: Long?,
+        step: Int = 2,
+        terminal: Boolean = false,
+    ) = payload(install, seq, step, terminal)
+
+    // CAX-001
+    @Test
+    fun `si la sesion se cierra mientras se lee la instalacion, no se pinta nada (CAX-001)`() =
+        runTest {
+            val g = GatedRig(session)
+            val install =
+                g.gated
+                    .bindTo("A")
+                    .installId
+                    .toString()
+            g.gated.gate = CompletableDeferred()
+
+            val pushing =
+                launch(start = CoroutineStart.UNDISPATCHED) {
+                    assertFalse(g.rig.presenter.onPush(payloadOf(install, seq = 1_000_000_000_000)))
+                }
+            g.gated.reading.await()
+            session.switchToSignedOut()
+            session.switchTo("B")
+            g.gated.gate?.complete(Unit)
+            pushing.join()
+
+            assertTrue(
+                g.rig.notifications.shows
+                    .isEmpty(),
+            )
+            assertTrue(
+                g.rig.marks.saved
+                    .isEmpty(),
+            )
+        }
+
+    @Test
+    fun `A a B y otra vez A durante la lectura tampoco pinta, es otra sesion (CAX-001)`() =
+        runTest {
+            val g = GatedRig(session)
+            val install =
+                g.gated
+                    .bindTo("A")
+                    .installId
+                    .toString()
+            g.gated.gate = CompletableDeferred()
+
+            val pushing =
+                launch(start = CoroutineStart.UNDISPATCHED) {
+                    assertFalse(g.rig.presenter.onPush(payloadOf(install, seq = 1_000_000_000_000)))
+                }
+            g.gated.reading.await()
+            session.switchTo("B")
+            session.switchTo("A")
+            g.gated.gate?.complete(Unit)
+            pushing.join()
+
+            assertTrue(
+                g.rig.notifications.shows
+                    .isEmpty(),
+            )
+        }
+
+    @Test
+    fun `sin cambio de sesion durante la lectura el aviso se pinta`() =
+        runTest {
+            val g = GatedRig(session)
+            val install =
+                g.gated
+                    .bindTo("A")
+                    .installId
+                    .toString()
+            g.gated.gate = CompletableDeferred()
+
+            val pushing =
+                launch(start = CoroutineStart.UNDISPATCHED) {
+                    assertTrue(g.rig.presenter.onPush(payloadOf(install, seq = 1_000_000_000_000)))
+                }
+            g.gated.reading.await()
+            g.gated.gate?.complete(Unit)
+            pushing.join()
+
+            assertEquals(1, g.rig.notifications.shows.size)
+        }
+
+    // CAX-003
+    @Test
+    fun `un aviso de seguimiento sin version o con una invalida no se pinta (CAX-003)`() =
+        runTest {
+            registrar()
+
+            assertFalse(rig.presenter.onPush(payload(installId(), seq = null)))
+            assertFalse(rig.presenter.onPush(payload(installId(), seq = 0)))
+            assertFalse(rig.presenter.onPush(payload(installId(), seq = -1)))
+
+            assertTrue(rig.notifications.shows.isEmpty())
+        }
+
+    @Test
+    fun `dos estados distintos con la misma version se ordenan por el estado (CAX-003)`() =
+        runTest {
+            registrar()
+            val install = installId()
+
+            assertTrue(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, step = 4)))
+            assertFalse(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, step = 3)))
+            assertTrue(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, terminal = true)))
+            assertFalse(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, step = 4)))
+        }
+
+    @Test
+    fun `si cerrar sesion no puede guardar la identidad, la bandeja y las marcas se limpian igual (CAX-010)`() =
+        runTest {
+            rig.presenter.onPush(payload("x", seq = 1_000_000_000_000))
+            val clearsBefore = rig.notifications.clears
+
+            val failure =
+                runCatching {
+                    rig.presenter.closeAccount { throw java.io.IOException("disco lleno") }
+                }.exceptionOrNull()
+
+            assertTrue(failure is java.io.IOException)
+            assertEquals(clearsBefore + 1, rig.notifications.clears)
+            assertTrue(rig.marks.saved.isEmpty())
         }
 }
