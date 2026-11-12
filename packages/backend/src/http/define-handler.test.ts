@@ -40,6 +40,12 @@ function makeDeps(options: { roles?: Actor['roles']; ids?: string[] } = {}) {
         throw new Error('no se usa en estas pruebas')
       },
     },
+    dataRetention: {
+      purgeBatch: async () => 0,
+      listDueFileRows: async () => [],
+      precheckFileRow: async () => 'not_found',
+      finishFileRow: async () => 'not_found',
+    },
     retention: {
       listDueAccounts: async () => [],
       precheck: async () => 'ok',

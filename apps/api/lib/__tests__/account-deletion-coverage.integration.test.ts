@@ -8,7 +8,7 @@
  *     decida qué se hace con ella.
  *  2. COBERTURA real: se llenan todas, se borra, y ninguna conserva su valor.
  *  3. CARRERA: crear un pedido (restaurante o Entregas) sobre la lápida se rechaza.
- *  4. RESEÑAS: la reseña queda sin autor.
+ *  4. RESEÑAS: la reseña queda sin autor y sin comentario (0284).
  *  5. NOTAS Y LOGS: notas libres y datos de los logs, redactados.
  */
 import { execFile } from 'node:child_process'
@@ -299,6 +299,7 @@ const ANONIMIZADAS = new Set([
   'domain_events.metadata',
   'domain_events.last_error', // texto de error del despacho: puede arrastrar el payload
   'courier_orders.utm_source', // texto libre de hasta 60 (contrato de Entregas)
+  'order_reviews.comment', // 0284: el comentario se va con la cuenta; quedan nota y etiquetas
 ])
 
 /**
@@ -318,7 +319,6 @@ const CONSERVADAS_COLUMNA = new Set([
   'orders.risk_flags', // banderas booleanas de antifraude
   'orders.client_platform', // ios | android | web con CHECK: la plataforma, no la persona (D-33)
   'order_reviews.tags', // etiquetas predefinidas
-  'order_reviews.comment', // la nota de la reseña, sin autor (expediente §8)
   'customer_order_items.item_name_snapshot', // nombre del plato
   'customer_order_item_modifiers.group_name_snapshot',
   'customer_order_item_modifiers.option_name_snapshot',
@@ -477,8 +477,8 @@ describe('nada nuevo se escribe sobre la lápida', () => {
 })
 
 // ── 4. Reseñas ───────────────────────────────────────────────────────────────
-describe('la reseña se queda sin autor', () => {
-  it('conserva la nota y el comentario, y deja customer_user_id en NULL', async () => {
+describe('la reseña se queda sin autor y sin comentario (0284)', () => {
+  it('conserva la nota y las etiquetas; customer_user_id y comment quedan en NULL', async () => {
     const c = await crearCliente()
     const seed = await pedidoCompleto(c)
     const { error } = await db.from('order_reviews').insert({
@@ -486,16 +486,17 @@ describe('la reseña se queda sin autor', () => {
       business_id: seed.businessId,
       customer_user_id: c.userId,
       rating: 4,
+      tags: ['rico'],
       comment: 'Muy rico',
     })
     expect(error).toBeNull()
     expect((await borrar(c.token)).status).toBe(204)
     const { data } = await db
       .from('order_reviews')
-      .select('customer_user_id,rating,comment')
+      .select('customer_user_id,rating,tags,comment')
       .eq('order_id', seed.orderId)
       .single()
-    expect(data).toEqual({ customer_user_id: null, rating: 4, comment: 'Muy rico' })
+    expect(data).toEqual({ customer_user_id: null, rating: 4, tags: ['rico'], comment: null })
   })
 })
 
