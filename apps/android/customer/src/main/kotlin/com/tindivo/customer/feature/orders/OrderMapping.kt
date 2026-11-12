@@ -16,6 +16,7 @@ private const val PICKUP = "pickup"
 private const val PENDING_CASH = "pending_cash"
 private const val PREPAID = "prepaid"
 private const val ITEM_SEPARATOR = " · "
+private const val PROOF_REJECTED_FINAL = "proof_rejected_final"
 
 /** Todos los elementos mapeados, o `null` si alguno no se pudo leer. */
 private fun <T, R : Any> List<T>.mapAllOrNull(transform: (T) -> R?): List<R>? {
@@ -53,6 +54,9 @@ private fun ListCustomerOrders200ResponseDataItemsInner.toCardUi(now: Instant): 
         itemsSummary = items.joinToString(ITEM_SEPARATOR) { "${it.quantity}× ${it.name}" },
         createdAt = relativeDate(created, now),
         total = totalText,
+        businessId = businessId,
+        reorderable = cancelReason != PROOF_REJECTED_FINAL,
+        awaitingPayment = paymentIntent == PREPAID && status == "awaiting_payment",
     )
 }
 
@@ -88,8 +92,9 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
         reference = if (pickup) null else deliveryReference,
         customerNotes = customerNotes,
         driver = driverOf(phase),
-        webAppealNotice = cancelReason == "proof_rejected_final",
+        appealViaSupport = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPrepayment = payment.prepaid && status == "awaiting_payment",
+        cancel = cancelOfferOf(status, payment),
     )
 }
 

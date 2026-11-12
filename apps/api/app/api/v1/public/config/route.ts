@@ -2,6 +2,7 @@ import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
 import { toMoneyText } from '@/lib/mappers/money-text'
+import { toWhatsappDigits } from '@/lib/mappers/whatsapp-digits'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,7 @@ const PUBLIC_KEYS = [
   'max_cash_bill',
   'max_change',
   'timers',
+  'support_whatsapp',
 ] as const
 
 type Obj = Record<string, unknown>
@@ -51,7 +53,7 @@ function numbers<K extends string>(v: unknown, keys: readonly K[]): Record<K, nu
 
 /**
  * GET /public/config: cobertura, bandas de envío, umbral de prepago, topes de
- * efectivo y plazos del prepago. Sin sesión. NO es `GET /config` (compatibilidad de versión, MV3).
+ * efectivo, plazos del prepago y el WhatsApp de soporte. Sin sesión. NO es `GET /config` (compatibilidad de versión, MV3).
  * Un bloque ausente o malformado sale `null`: la app decide su respaldo.
  */
 export async function GET(req: Request): Promise<Response> {
@@ -93,6 +95,8 @@ export async function GET(req: Request): Promise<Response> {
         maxCashBill: toMoneyText(s.max_cash_bill),
         maxChange: toMoneyText(s.max_change),
         prepayTimers,
+        // Solo dígitos, para `https://wa.me/<número>`; `null` si falta o no tiene forma de número.
+        supportWhatsapp: toWhatsappDigits(s.support_whatsapp),
       },
       { headers: { ...corsHeaders(req), 'Cache-Control': CACHE } },
     )

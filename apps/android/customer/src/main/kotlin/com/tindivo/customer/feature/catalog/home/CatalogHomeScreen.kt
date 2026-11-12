@@ -57,6 +57,7 @@ fun CatalogHomeDestination(
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
     onOpenAccount: (signedIn: Boolean) -> Unit,
+    onOpenCourier: () -> Unit,
     onOpenStore: () -> Unit,
     viewModel: CatalogHomeViewModel = hiltViewModel(),
     accountEntry: AccountEntryViewModel = hiltViewModel(),
@@ -70,6 +71,7 @@ fun CatalogHomeDestination(
         onOpenDiagnostics = onOpenDiagnostics,
         signedIn = signedIn,
         onOpenAccount = { onOpenAccount(signedIn) },
+        onOpenCourier = onOpenCourier,
         onOpenStore = onOpenStore,
     )
 }
@@ -83,6 +85,7 @@ fun CatalogHomeScreen(
     onOpenDiagnostics: (() -> Unit)? = null,
     signedIn: Boolean = false,
     onOpenAccount: () -> Unit = {},
+    onOpenCourier: () -> Unit = {},
     onOpenStore: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
@@ -104,6 +107,7 @@ fun CatalogHomeScreen(
                             onOpenDiagnostics = onOpenDiagnostics,
                             signedIn = signedIn,
                             onOpenAccount = onOpenAccount,
+                            onOpenCourier = onOpenCourier,
                             onOpenStore = onOpenStore,
                         )
                     }
@@ -120,6 +124,7 @@ private fun BusinessList(
     onOpenDiagnostics: (() -> Unit)?,
     signedIn: Boolean,
     onOpenAccount: () -> Unit,
+    onOpenCourier: () -> Unit,
     onOpenStore: () -> Unit,
 ) {
     LazyColumn(
@@ -144,6 +149,8 @@ private fun BusinessList(
                 }
             }
         }
+        // Primero qué se quiere hacer (llevar algo de un lugar a otro), después dónde comer (como la web).
+        item { CourierEntryCard(onClick = onOpenCourier) }
         // Store va antes de los negocios: es otra cosa que se puede hacer, no un negocio más.
         item { StoreEntryCard(onClick = onOpenStore) }
         state.refreshFailed?.let { error ->

@@ -58,10 +58,17 @@ sealed interface AppError {
         val fieldMessage: String? = null,
     ) : AppError
 
-    /** Un `code` que esta versión no conoce, o una respuesta que no se pudo leer (CLI-2): la UI muestra un genérico. */
+    /**
+     * Un `code` que esta versión no conoce, o una respuesta que no se pudo leer (CLI-2): la UI muestra un genérico.
+     *
+     * @param status el HTTP de la respuesta de error (4xx o 5xx), si la hubo, aunque su cuerpo fuera ilegible: un 409
+     *   sin `ProblemDetails` sigue siendo un 409. `null` cuando lo decide `apiCall` sin respuesta de error, como un 2xx
+     *   ilegible o una redirección que no se sigue.
+     */
     data class Unknown(
         val code: String?,
         val detail: String?,
+        val status: Int? = null,
     ) : AppError
 }
 

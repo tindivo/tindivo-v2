@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.CameraMoveStartedReason
@@ -37,6 +38,8 @@ private val ZONE_FILL = Color(ZONE_FILL_ARGB)
  * suyo cuenta (cuando el mapa se mueve por otra causa no se toma como elección). Sin [point] el pin sale atenuado:
  * nadie ha marcado nada todavía.
  *
+ * [located] es la última lectura de «Usar mi ubicación»: al cambiar, la cámara va hasta ese punto.
+ *
  * Es lo único de la feature que toca el SDK de Maps, y solo se compone al abrir el formulario: es la carga diferida
  * de D-54. Sin clave de Google (la CI) el mapa sale vacío, y es lo esperado.
  */
@@ -44,6 +47,7 @@ private val ZONE_FILL = Color(ZONE_FILL_ARGB)
 internal fun AddressMap(
     area: CoverageArea,
     point: GeoPoint?,
+    located: Located?,
     onPointChosen: (GeoPoint) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -62,6 +66,12 @@ internal fun AddressMap(
                     },
                 )
         }
+    // El GPS dio un punto: el mapa va hasta él. No es un gesto, así que no vuelve como elección; el punto ya lo tiene el
+    // formulario y la persona puede seguir ajustándolo.
+    LaunchedEffect(located) {
+        val target = located?.point ?: return@LaunchedEffect
+        camera.animate(CameraUpdateFactory.newLatLngZoom(LatLng(target.lat, target.lng), POINT_ZOOM))
+    }
     LaunchedEffect(camera) {
         snapshotFlow { camera.isMoving }.collect { moving ->
             if (!moving && camera.cameraMoveStartedReason == CameraMoveStartedReason.GESTURE) {
