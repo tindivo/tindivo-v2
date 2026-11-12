@@ -24,6 +24,7 @@ import com.tindivo.customer.feature.profile.FakeProfileGateway
 import com.tindivo.customer.feature.profile.GoogleNameHint
 import com.tindivo.customer.feature.profile.ProfileOutcome
 import com.tindivo.customer.feature.profile.ProfileViewModel
+import com.tindivo.customer.push.NoPushSignOut
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.GatedTokens
 import com.tindivo.customer.session.SessionState
@@ -166,7 +167,8 @@ class LateUnauthorizedTest {
     fun `un 401 tardio de Mi cuenta de A no cierra la sesion de B`() =
         runTest(main) {
             server.enqueue(problem(HTTP_UNAUTHORIZED))
-            val viewModel = AccountViewModel(CustomerRepository(baseUrl, client(), io), store, configService)
+            val viewModel =
+                AccountViewModel(CustomerRepository(baseUrl, client(), io), store, configService, NoPushSignOut)
             runCurrent()
 
             switchToBAfterTheResponse()
