@@ -163,7 +163,9 @@ internal class StoreListViewModel
             filters: StoreFilters,
             data: StoreListUi,
         ) {
-            _state.update { it.copy(content = StoreListContent.Loaded(data), busy = false, refreshFailed = null) }
+            _state.update {
+                it.copy(content = StoreListContent.Loaded(data, filters), busy = false, refreshFailed = null)
+            }
             val query = filters.query.trim()
             if (query.length >= SEARCH_EVENT_MIN && query != lastTrackedQuery) {
                 lastTrackedQuery = query
@@ -205,8 +207,10 @@ internal class StoreListViewModel
         }
 
         /**
-         * Cuántas piezas daría el borrador. Si coincide con lo que ya se ve (el orden no cuenta), es lo que ya se ve;
-         * si no, se pregunta a la API con el borrador, como la web: es el número real y no una suposición.
+         * Cuántas piezas daría el borrador. Si lo que se ve se cargó con esos mismos filtros (el orden no cuenta), es
+         * lo que ya se ve; si no, se pregunta a la API con el borrador, como la web: es el número real y no una
+         * suposición. Se compara con los filtros de la carga que trajo lo que se ve ([StoreListContent.Loaded.filters]),
+         * no con los últimos pedidos: si esa petición falló, la lista sigue siendo la de antes.
          */
         private fun refreshCount() {
             val sheet = _state.value.sheet ?: return
@@ -214,7 +218,7 @@ internal class StoreListViewModel
             countJob?.cancel()
             val current = _state.value
             val loaded = current.content as? StoreListContent.Loaded
-            if (loaded != null && !current.busy && current.filters.copy(order = StoreOrder.Recent) == target) {
+            if (loaded != null && !current.busy && loaded.filters.copy(order = StoreOrder.Recent) == target) {
                 _state.update { it.copy(sheet = it.sheet?.copy(count = loaded.data.products.size)) }
                 return
             }

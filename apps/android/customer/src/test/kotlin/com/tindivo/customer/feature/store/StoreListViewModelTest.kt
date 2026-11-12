@@ -251,4 +251,40 @@ class StoreListViewModelTest : StoreHarness() {
 
             assertEquals(Type.nav_out, sender.types().last())
         }
+
+    @Test
+    fun `si la carga de otra categoria falla la hoja no cuenta la lista vieja como suya`() =
+        runTest {
+            val ten = (1..10).map { cardUi("a-$it") }
+            var b: ApiResult<StoreListUi> = ApiResult.Failure(network())
+            gateway.list = { filters -> if (filters.category == "b") b else ApiResult.Success(listUi(products = ten)) }
+            val viewModel = viewModel(category = "a")
+            assertEquals(10, viewModel.loaded.products.size)
+
+            viewModel.selectCategory("b")
+            // Se sigue viendo A, pero los filtros pedidos ya son los de B.
+            assertEquals("b", viewModel.state.value.filters.category)
+            assertEquals(10, viewModel.loaded.products.size)
+
+            // B sigue sin responder: el conteo queda desconocido, nunca «Ver 10 artículos».
+            gateway.listCalls.clear()
+            viewModel.openFilters()
+            assertEquals(listOf(StoreFilters(category = "b")), gateway.listCalls)
+            assertNull(
+                viewModel.state.value.sheet
+                    ?.count,
+            )
+            viewModel.dismissFilters()
+
+            // B ya responde con 3: la hoja muestra 3.
+            b = ApiResult.Success(listUi(products = listOf(cardUi("b-1"), cardUi("b-2"), cardUi("b-3"))))
+            gateway.listCalls.clear()
+            viewModel.openFilters()
+            assertEquals(listOf(StoreFilters(category = "b")), gateway.listCalls)
+            assertEquals(
+                3,
+                viewModel.state.value.sheet
+                    ?.count,
+            )
+        }
 }

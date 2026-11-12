@@ -11,8 +11,10 @@ internal sealed interface StoreListContent {
         val error: AppError,
     ) : StoreListContent
 
+    /** [data] es lo que devolvió la API para [filters]: los filtros de esa carga, no los de la última pedida. */
     data class Loaded(
         val data: StoreListUi,
+        val filters: StoreFilters,
     ) : StoreListContent
 }
 
@@ -28,7 +30,8 @@ internal data class StoreFilterSheet(
 
 /**
  * La pantalla de la lista. [query] es lo que hay escrito en el buscador ahora; [filters] es lo que pidió la última
- * carga (con la búsqueda ya pasada por el debounce). [busy] es una recarga con la lista anterior aún a la vista;
+ * carga (con la búsqueda ya pasada por el debounce); si esa carga falló, lo que se ve es de una anterior y lleva sus
+ * propios filtros ([StoreListContent.Loaded.filters]). [busy] es una recarga con la lista anterior aún a la vista;
  * [refreshFailed], el error de una recarga que no borró esa lista.
  */
 internal data class StoreListUiState(
