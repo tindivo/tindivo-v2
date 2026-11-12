@@ -27,8 +27,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 
 /** Cómo terminó el formulario; la pantalla vuelve atrás al verlo. */
@@ -64,6 +66,8 @@ internal data class AddressFormState(
     val outcome: FormOutcome? = null,
     /** El [outcome] de un guardado o un borrado ya se entregó a la hoja del checkout ([AddressFormViewModel.takeResult]). */
     val delivered: Boolean = false,
+    /** «Usar mi ubicación»: si hay GPS, si está buscando y qué pasó la última vez. */
+    val locate: LocateState = LocateState(),
 ) {
     val missing: MissingField? get() = missingField(point, line, reference, area)
     val busy: Boolean get() = saving || deleting
@@ -84,6 +88,7 @@ internal class AddressFormViewModel
         private val catalog: CatalogRepository,
         private val sessionStore: SessionStore,
         private val configService: ConfigService,
+        private val locations: LocationSource,
     ) : ViewModel() {
         @AssistedFactory
         interface Factory {
@@ -92,10 +97,20 @@ internal class AddressFormViewModel
 
         private val editingId: UUID? =
             editingAddressId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-        private val _state = MutableStateFlow(AddressFormState(editingId = editingId))
+        private val _state =
+            MutableStateFlow(
+                AddressFormState(editingId = editingId, locate = LocateState(available = locations.isAvailable())),
+            )
         val state: StateFlow<AddressFormState> = _state.asStateFlow()
 
         private var job: Job? = null
+        private var locateJob: Job? = null
+
+        /**
+         * El formulario está a la vista (la app en primer plano). Fuera de ella no se empieza ni se aplica ninguna
+         * lectura del GPS: la ubicación solo se pide con la persona mirando el formulario (CAX-001).
+         */
+        private var foreground = true
 
         /** La cuenta con la que se abrió la pantalla: cada llamada va atada a ella y, sin cuenta, no se llama. */
         private val accountId: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
@@ -115,6 +130,7 @@ internal class AddressFormViewModel
                 sessionStore.state.collect {
                     if (watch.ended(it)) {
                         job?.cancel()
+                        locateJob?.cancel()
                         _state.update { s -> s.copy(outcome = FormOutcome.LoggedOut) }
                     }
                 }
@@ -138,8 +154,62 @@ internal class AddressFormViewModel
 
         fun onMakeDefault(value: Boolean) = edit { it.copy(makeDefault = value) }
 
-        /** El mapa dejó de moverse por un gesto de la persona: ese es el punto que eligió. */
-        fun onPointChosen(point: GeoPoint) = edit { it.copy(point = point) }
+        /**
+         * El mapa dejó de moverse por un gesto de la persona: ese es el punto que eligió. Manda sobre el GPS: una lectura
+         * que aún estaba en curso se cancela y no lo pisa.
+         */
+        fun onPointChosen(point: GeoPoint) {
+            if (_state.value.busy) return
+            stopLocating()
+            edit { it.copy(point = point, locate = it.locate.copy(notice = null, located = null)) }
+        }
+
+        /**
+         * «Usar mi ubicación», ya resuelto el permiso por la pantalla. Con permiso (preciso o aproximado) se pide UNA
+         * lectura; sin él, se dice y la persona sigue a mano. El permiso solo se pide al tocar el botón.
+         */
+        fun onLocationPermission(result: LocationPermission) {
+            val s = _state.value
+            if (!foreground || loggedOut || s.busy || !s.locate.available) return
+            when (result) {
+                LocationPermission.Granted -> locate()
+                LocationPermission.Denied -> showLocateNotice(LocateNotice.Denied)
+                LocationPermission.DeniedForever -> showLocateNotice(LocateNotice.DeniedForever)
+            }
+        }
+
+        /** La persona salió del formulario (o cerró la hoja): la lectura en curso se cancela. */
+        fun stopLocating() {
+            locateJob?.cancel()
+            locateJob = null
+            _state.update { if (it.locate.locating) it.copy(locate = it.locate.copy(locating = false)) else it }
+        }
+
+        /**
+         * La app pasó a segundo plano ([visible] = `false`: Inicio, pantalla bloqueada, otra app encima) o volvió
+         * ([visible] = `true`). Al salir, la lectura en curso se cancela aunque el formulario siga compuesto y este
+         * ViewModel vivo; al volver no se pide nada: hace falta un toque nuevo en «Usar mi ubicación» (CAX-001).
+         */
+        fun onForegroundChanged(visible: Boolean) {
+            foreground = visible
+            if (!visible) stopLocating()
+        }
+
+        private fun locate() {
+            if (locateJob?.isActive == true) return
+            _state.update { it.copy(locate = it.locate.copy(locating = true, notice = null)) }
+            locateJob =
+                viewModelScope.launch {
+                    // Si el GPS no contesta ni con su propio plazo, se deja de esperar: la persona sigue a mano.
+                    val reading = withTimeoutOrNull(LOCATE_GIVE_UP_MS) { locations.current() } ?: LocationReading.NoFix
+                    // Una lectura que llega a la vez que la app sale a segundo plano (o ya cancelada) no se aplica.
+                    if (!foreground || !isActive) return@launch
+                    settle { it.withReading(reading) }
+                }
+        }
+
+        private fun showLocateNotice(notice: LocateNotice) =
+            _state.update { it.copy(locate = it.locate.copy(notice = notice)) }
 
         fun askDelete() = edit { if (it.editingId != null) it.copy(confirmingDelete = true) else it }
 
@@ -156,6 +226,8 @@ internal class AddressFormViewModel
             val point = s.point
             if (!s.canSave || point == null || job?.isActive == true || loggedOut) return
             val account = accountId ?: return endSession()
+            // Lo que se guarda es el punto de ahora: una lectura del GPS que llegue después no lo cambia.
+            stopLocating()
             _state.update { it.copy(saving = true, saveError = null) }
             job =
                 viewModelScope.launch {
