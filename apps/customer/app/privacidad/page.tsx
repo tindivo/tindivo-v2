@@ -580,6 +580,12 @@ export default function PrivacidadPage() {
                 'Limitar solicitudes y manejar los temporizadores de los pedidos.',
                 'Los países donde estos proveedores tienen sus servidores.',
               ),
+              row(
+                'fuentes',
+                'Google Fonts',
+                'Cargar los íconos de la web. Al abrir cualquier página de la web, tu navegador pide ese archivo a Google, que recibe los datos técnicos de la solicitud, como tu dirección IP y el navegador que usas.',
+                ABROAD,
+              ),
             ]}
           />
           <p>
@@ -640,31 +646,33 @@ export default function PrivacidadPage() {
                 'comprobantes',
                 'Fotos y capturas de comprobantes subidas por el cliente',
                 <>
-                  Se conservan mientras existe la cuenta. Tras borrarla, se eliminan a los{' '}
-                  <B>90 días contados desde el borrado de la cuenta</B>, no desde la fecha del pago,
-                  junto con sus referencias en pedidos y reportes, salvo que un caso pendiente
-                  requiera revisarlas antes.
+                  Se conservan mientras existe la cuenta. Tras borrarla, el plazo es de{' '}
+                  <B>90 días contados desde el borrado de la cuenta</B>, no desde la fecha del pago.
+                  Un proceso automático diario elimina del almacenamiento las imágenes que ya
+                  cumplieron ese plazo, junto con sus referencias en pedidos y reportes. Si la
+                  referencia de una imagen no tiene el formato esperado, ese proceso no la elimina
+                  sola: queda pendiente de revisión manual y puede conservarse más tiempo.
                 </>,
               ),
               row(
                 'resenas',
                 'Calificación y comentario de reseñas',
-                'Se conservan después del borrado, sin el vínculo de autor con la cuenta. El comentario no se borra ni se limpia automáticamente de los datos personales que hayas escrito dentro. Se conservan mientras sean necesarios para conocer la opinión sobre el servicio; revisamos periódicamente si siguen siéndolo.',
+                'Se conservan después del borrado, sin el vínculo de autor con la cuenta. El comentario no se borra ni se limpia automáticamente de los datos personales que hayas escrito dentro. Se conservan mientras sean necesarios para conocer la opinión sobre el servicio. Hoy no tienen un plazo final de eliminación: puedes pedir su supresión como se explica en «Tus derechos sobre tus datos».',
               ),
               row(
                 'directorio',
                 'Directorio de la cajera',
-                'Se conserva después del borrado. Puede contener nombre, teléfono, dirección y referencias. Se conserva mientras sea necesario para reconocer a clientes y atender pedidos; revisamos periódicamente si sigue siéndolo.',
+                'Se conserva después del borrado. Puede contener nombre, teléfono, dirección y referencias. Se conserva mientras sea necesario para reconocer a clientes y atender pedidos. Hoy no tiene un plazo final de eliminación: puedes pedir su supresión como se explica en «Tus derechos sobre tus datos».',
               ),
               row(
                 'antifraude',
                 'Reportes, incidencias y antecedentes antifraude ligados al teléfono',
-                'Se conservan después del borrado mientras sean necesarios para prevenir el uso indebido y atender incidencias; revisamos periódicamente si siguen siéndolo.',
+                'Se conservan después del borrado mientras sean necesarios para prevenir el uso indebido y atender incidencias. Hoy no tienen un plazo final de eliminación: puedes pedir su supresión como se explica en «Tus derechos sobre tus datos».',
               ),
               row(
                 'asignaciones',
                 'Historial de asignación del teléfono y registros de restricciones',
-                'Se conservan después del borrado mientras sean necesarios para prevenir el uso indebido; revisamos periódicamente si siguen siéndolo. Que una restricción termine no significa que se elimine su registro.',
+                'Se conservan después del borrado mientras sean necesarios para prevenir el uso indebido. Hoy no tienen un plazo final de eliminación: puedes pedir su supresión como se explica en «Tus derechos sobre tus datos». Que una restricción termine no significa que se elimine su registro.',
               ),
               row(
                 'bloqueos',
@@ -679,17 +687,17 @@ export default function PrivacidadPage() {
               row(
                 'caja',
                 'Registros de caja y reclamos económicos del negocio',
-                'No se eliminan mediante el borrado de la cuenta. Pueden incluir descripciones o notas, y comprobantes de devolución subidos por el negocio o la administración. Se conservan mientras sean necesarios para la caja del negocio y la atención de reclamos; revisamos periódicamente si siguen siéndolo.',
+                'No se eliminan mediante el borrado de la cuenta. Pueden incluir descripciones o notas, y comprobantes de devolución subidos por el negocio o la administración. Se conservan mientras sean necesarios para la caja del negocio y la atención de reclamos. Hoy no tienen un plazo final de eliminación: puedes pedir su supresión como se explica en «Tus derechos sobre tus datos».',
               ),
               row(
                 'tecnicos',
                 'Eventos de Store, analítica de la web y otros registros técnicos',
-                'Se conservan mientras sean necesarios para medir el uso y mantener el servicio; revisamos periódicamente si siguen siéndolo.',
+                'Se conservan mientras sean necesarios para medir el uso y mantener el servicio. Hoy no tienen un plazo final de eliminación: puedes pedir su supresión como se explica en «Tus derechos sobre tus datos».',
               ),
               row(
                 'solicitudes',
                 'Solicitudes de soporte y de derechos sobre datos personales',
-                'Se conservan mientras sean necesarias para atenderlas y dejar constancia de la respuesta; revisamos periódicamente si siguen siéndolo.',
+                'Se conservan mientras sean necesarias para atenderlas y dejar constancia de la respuesta. Hoy no tienen un plazo final de eliminación: puedes pedir su supresión como se explica en «Tus derechos sobre tus datos».',
               ),
             ]}
           />
