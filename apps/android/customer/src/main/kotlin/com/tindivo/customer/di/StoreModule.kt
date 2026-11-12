@@ -5,6 +5,7 @@ import com.tindivo.core.network.StoreRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.feature.store.RepositoryStoreGateway
+import com.tindivo.customer.feature.store.StoreEventSender
 import com.tindivo.customer.feature.store.StoreGateway
 import com.tindivo.customer.feature.store.StoreWebBaseUrl
 import dagger.Binds
@@ -28,6 +29,9 @@ internal object StoreModule {
         clientInfo: ClientInfo,
         @IoDispatcher io: CoroutineDispatcher,
     ): StoreRepository = StoreRepository(BuildConfig.API_BASE_URL, createOkHttpClient(clientInfo), io)
+
+    @Provides
+    fun provideStoreEventSender(repository: StoreRepository): StoreEventSender = StoreEventSender(repository::track)
 
     @Provides
     @StoreWebBaseUrl
