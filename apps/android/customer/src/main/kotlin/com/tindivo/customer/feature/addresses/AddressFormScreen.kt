@@ -59,6 +59,9 @@ internal fun AddressFormDestination(
                 onReference = viewModel::onReference,
                 onMakeDefault = viewModel::onMakeDefault,
                 onPointChosen = viewModel::onPointChosen,
+                onLocationPermission = viewModel::onLocationPermission,
+                onStopLocating = viewModel::stopLocating,
+                onForegroundChanged = viewModel::onForegroundChanged,
                 onSave = viewModel::save,
                 onAskDelete = viewModel::askDelete,
                 onCancelDelete = viewModel::cancelDelete,
@@ -75,6 +78,12 @@ internal class AddressFormActions(
     val onReference: (String) -> Unit,
     val onMakeDefault: (Boolean) -> Unit,
     val onPointChosen: (GeoPoint) -> Unit,
+    /** «Usar mi ubicación», con el permiso ya resuelto por la pantalla. */
+    val onLocationPermission: (LocationPermission) -> Unit,
+    /** El formulario sale de la pantalla: se cancela la lectura del GPS en curso. */
+    val onStopLocating: () -> Unit,
+    /** La app pasa a segundo plano (`false`) o vuelve (`true`): fuera de la vista no se lee el GPS (CAX-001). */
+    val onForegroundChanged: (Boolean) -> Unit,
     val onSave: () -> Unit,
     val onAskDelete: () -> Unit,
     val onCancelDelete: () -> Unit,
@@ -181,9 +190,11 @@ private fun FormBody(
         AddressMap(
             area = state.area,
             point = state.point,
+            located = state.locate.located,
             onPointChosen = actions.onPointChosen,
             modifier = Modifier.fillMaxWidth().height(260.dp).semantics { contentDescription = mapDescription },
         )
+        UseMyLocation(state, actions.onLocationPermission, actions.onStopLocating, actions.onForegroundChanged)
         MapStatus(state)
         OutlinedTextField(
             value = state.line,
@@ -326,7 +337,7 @@ private fun AddressFormPreview() {
         AddressFormScreen(
             state = AddressFormState(loading = false, line = "Jr. Sucre 412", reference = "Frente a la bodega"),
             actions =
-                AddressFormActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}),
+                AddressFormActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}),
         )
     }
 }

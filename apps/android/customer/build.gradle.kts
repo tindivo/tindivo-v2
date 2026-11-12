@@ -130,6 +130,7 @@ dependencies {
 
     implementation(libs.play.services.maps)
     implementation(libs.maps.compose)
+    implementation(libs.play.services.location)
 
     // Solo Messaging (KT-10): sin el plugin google-services ni Analytics.
     implementation(platform(libs.firebase.bom))

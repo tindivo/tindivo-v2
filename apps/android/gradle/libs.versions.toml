@@ -42,6 +42,10 @@ mapsCompose = "9.0.1"
 # Avisos nativos (KT-10, KT-16: Firebase Messaging está en la lista inicial). BoM 35.1.0, publicado el 2026-10-21 (más
 # de dos semanas): fija firebase-messaging 26.0.1. Solo Messaging: nada de Analytics ni Crashlytics.
 firebaseBom = "35.1.0"
+# «Usar mi ubicación» (KT-16, Jesús, 2026-11-10): Fused Location Provider, gratis y sin clave. play-services-location
+# 21.4.0 es la última publicada (maven-metadata de Google: 2026-06-25), con más de dos semanas; pide play-services-base y
+# -basement 18.9.0, la misma basement que ya trae play-services-maps.
+playServicesLocation = "21.4.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -81,6 +85,7 @@ play-services-maps = { module = "com.google.android.gms:play-services-maps", ver
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

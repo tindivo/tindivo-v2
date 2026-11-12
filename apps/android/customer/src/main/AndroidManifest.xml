@@ -6,6 +6,11 @@
     <!-- Android 13+: los avisos del pedido. Se pide después de crear un pedido, nunca al abrir la app (PushPermissionPrompt). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- «Usar mi ubicación» del formulario de dirección: una lectura al tocar el botón, en primer plano. Se piden las
+         dos para que la persona pueda dar solo la aproximada. Sin ACCESS_BACKGROUND_LOCATION: nunca en segundo plano. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <!-- androidx.credentials los pide para las llaves de acceso (passkeys) con huella. Aquí solo se entra con el ID
          token de Google, que no usa la biometría de la app: se quitan del manifiesto fusionado. -->
     <uses-permission

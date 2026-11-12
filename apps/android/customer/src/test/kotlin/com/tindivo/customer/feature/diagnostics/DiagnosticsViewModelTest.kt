@@ -115,7 +115,10 @@ class DiagnosticsViewModelTest {
 
             val state = DiagnosticsViewModel(repository, configService).settled()
 
-            assertEquals(DiagnosticsUiState.Failed(AppError.Unknown(code = "codigo_nuevo", detail = null)), state)
+            assertEquals(
+                DiagnosticsUiState.Failed(AppError.Unknown(code = "codigo_nuevo", detail = null, status = 409)),
+                state,
+            )
         }
 
     @Test

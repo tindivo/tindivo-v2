@@ -45,6 +45,15 @@ class OrderDisplayTest {
     }
 
     @Test
+    fun `los importes invalidos de EVID-001 dan null, sin redondear ni pasar por Double`() {
+        // Texto, exponente, negativo, tres decimales, NaN y vacío: ninguno tiene la forma `^\d+\.\d{2}$`.
+        for (bad in listOf("abc", "1e3", "-1.00", "1.005", "NaN", "")) {
+            assertNull(bad, apiMoneyTextOrNull(bad))
+            assertFalse(bad, apiMoneyIsPositive(bad))
+        }
+    }
+
+    @Test
     fun `apiMoneyIsPositive solo con un importe legible mayor que cero`() {
         assertTrue(apiMoneyIsPositive("0.01"))
         assertFalse(apiMoneyIsPositive("0.00"))

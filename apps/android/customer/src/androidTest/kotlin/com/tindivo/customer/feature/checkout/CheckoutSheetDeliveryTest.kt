@@ -283,7 +283,7 @@ class CheckoutSheetDeliveryTest {
         val customer = CustomerRepository(TEST_BASE_URL, api.client, io)
         models =
             ManualSheetModels(
-                newAddress = { id -> AddressFormViewModel(id, addresses, catalog, session, config) },
+                newAddress = { id -> AddressFormViewModel(id, addresses, catalog, session, config, NoLocation) },
                 newPhone = {
                     val phones = PhoneRepository(TEST_BASE_URL, api.client, io)
                     PhoneVerifyViewModel(phones, session, config, Clock.systemUTC())
@@ -301,6 +301,7 @@ class CheckoutSheetDeliveryTest {
                         checkout = CheckoutRepository(TEST_BASE_URL, api.client, io),
                         cartStore = cartStore,
                         ledger = OrderAttemptLedger(SheetTestLedgerStore(), NoAttempts),
+                        configService = config,
                         sessionStore = session,
                         debounce = QuoteDebounce { },
                     )

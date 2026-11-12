@@ -32,7 +32,7 @@ internal fun toAppError(
         }
 
         problem == null -> {
-            AppError.Unknown(code = null, detail = "HTTP $status")
+            AppError.Unknown(code = null, detail = "HTTP $status", status = status)
         }
 
         else -> {
@@ -45,7 +45,7 @@ internal fun toAppError(
                     fieldMessage = problem.errors?.firstOrNull()?.message,
                 )
             }
-                ?: AppError.Unknown(code = code, detail = problem.detail)
+                ?: AppError.Unknown(code = code, detail = problem.detail, status = status)
         }
     }
 }

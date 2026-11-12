@@ -31,6 +31,7 @@ import com.tindivo.customer.feature.catalog.business.BusinessRoute
 import com.tindivo.customer.feature.catalog.home.CatalogHomeDestination
 import com.tindivo.customer.feature.checkout.CheckoutActions
 import com.tindivo.customer.feature.checkout.CheckoutDestination
+import com.tindivo.customer.feature.courier.CourierHomeRoute
 import com.tindivo.customer.feature.deleteaccount.ACCOUNT_DELETED_KEY
 import com.tindivo.customer.feature.deleteaccount.AccountDeletedNotice
 import com.tindivo.customer.feature.deleteaccount.DeleteAccountDestination
@@ -138,6 +139,7 @@ private fun NavGraphBuilder.catalogGraph(
             onOpenAccount = { signedIn ->
                 navController.navigate(if (signedIn) AccountRoute else SignInRoute)
             },
+            onOpenCourier = { navController.navigate(CourierHomeRoute()) { launchSingleTop = true } },
             // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
             onOpenDiagnostics =
                 if (BuildConfig.DEBUG) {
@@ -170,6 +172,7 @@ private fun NavGraphBuilder.catalogGraph(
         )
     }
     checkoutDestination(navController, onOrderCreated)
+    courierDestinations(navController)
 }
 
 /** Entrada, perfil, cuenta, borrado de cuenta y verificación del celular. */

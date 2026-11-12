@@ -18,12 +18,16 @@ app = root.find("application")
 errors: list[str] = []
 
 # Permisos: INTERNET, ACCESS_NETWORK_STATE (permiso normal que pide play-services-maps; decisión de Jesús 2026-10-31),
+# ubicación en tiempo de uso para «Usar mi ubicación» (decisión de Jesús 2026-11-12: se quiere la exacta; desde
+# Android 12 la precisa solo se puede pedir junto con la aproximada, así que van las dos; nunca en segundo plano),
 # el permiso de firma que androidx.core declara para sus receptores no exportados y los de los avisos (FCM, KT-10):
 # POST_NOTIFICATIONS (Android 13+, se pide en tiempo de ejecución), WAKE_LOCK (permiso normal con el que FCM procesa un
 # aviso) y c2dm RECEIVE (recibir mensajes de FCM).
 allowed_permissions = {
     "android.permission.INTERNET",
     "android.permission.ACCESS_NETWORK_STATE",
+    "android.permission.ACCESS_FINE_LOCATION",
+    "android.permission.ACCESS_COARSE_LOCATION",
     f"{app_id}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
     "android.permission.POST_NOTIFICATIONS",
     "android.permission.WAKE_LOCK",

@@ -7,6 +7,8 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tindivo.customer.feature.addresses.AddressFormViewModel
+import com.tindivo.customer.feature.addresses.LocationReading
+import com.tindivo.customer.feature.addresses.LocationSource
 import com.tindivo.customer.feature.phone.PhoneVerifyViewModel
 import com.tindivo.customer.feature.profile.ProfileViewModel
 import com.tindivo.customer.session.SessionState
@@ -70,6 +72,13 @@ internal object NoAttempts : AttemptLookup {
         key: UUID,
         accountId: String,
     ): LookupResult = LookupResult.NotFound
+}
+
+/** Sin GPS: «Usar mi ubicación» no se ofrece y las hojas se prueban con el pin a mano, como antes. */
+internal object NoLocation : LocationSource {
+    override fun isAvailable(): Boolean = false
+
+    override suspend fun current(): LocationReading = LocationReading.NoFix
 }
 
 /**
