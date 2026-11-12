@@ -189,6 +189,8 @@ private fun PinSheet(
             AddressMap(
                 area = state.area,
                 point = point,
+                // Entregas no ofrece «Usar mi ubicación»: el mapa solo sigue al pin que marca la persona.
+                located = null,
                 onPointChosen = { point = it },
                 modifier = Modifier.matchParentSize(),
             )
