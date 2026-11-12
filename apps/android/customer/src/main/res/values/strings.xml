@@ -114,7 +114,6 @@
 
     <string name="account_addresses">Mis direcciones</string>
     <string name="addresses_title">Mis direcciones</string>
-    <string name="addresses_pick_title">Entregar en</string>
     <string name="addresses_back">Volver</string>
     <string name="addresses_loading">Cargando</string>
     <string name="addresses_retry">Reintentar</string>
