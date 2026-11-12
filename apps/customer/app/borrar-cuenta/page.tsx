@@ -49,9 +49,10 @@ export default function BorrarCuentaPage() {
             de pedidos no recibidos ligados a un número de teléfono, y el directorio de direcciones
             que usa la cajera para reconocer vecinos. Si tu número estaba bloqueado o solo podía
             pagar por adelantado, esa restricción se queda con el número hasta su fecha, aunque otra
-            cuenta lo verifique después. Las reseñas se quedan sin tu nombre. Las fotos de
-            comprobantes de pago se eliminan a los 90 días contados desde el borrado de la cuenta;
-            el detalle está en la política de privacidad.
+            cuenta lo verifique después. Las reseñas se quedan sin tu nombre, pero su texto se
+            conserva tal como lo escribiste. Las fotos de comprobantes de pago se eliminan a los 90
+            días contados desde el borrado de la cuenta; el detalle está en la política de
+            privacidad.
           </p>
         </section>
 
