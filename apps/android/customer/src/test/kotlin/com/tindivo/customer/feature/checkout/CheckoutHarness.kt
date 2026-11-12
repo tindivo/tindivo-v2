@@ -10,7 +10,9 @@ import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.RetryInterceptor
+import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
+import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartLine
 import com.tindivo.customer.feature.cart.CartSerializer
@@ -67,6 +69,9 @@ abstract class CheckoutHarness {
     protected lateinit var cartStore: CartStore
     protected lateinit var checkout: CheckoutRepository
     protected lateinit var loader: CheckoutLoader
+
+    /** El de la app: el checkout le avisa un 426 y la navegación pasa a «actualizar». */
+    protected lateinit var configService: ConfigService
     protected var quoteTotal = "30.00"
 
     @Before
@@ -108,6 +113,7 @@ abstract class CheckoutHarness {
                 AddressRepository(baseUrl, client, io),
                 CatalogRepository(baseUrl, client, io),
             )
+        configService = ConfigService(SystemRepository(baseUrl, client, io), "0.1.0", CoroutineScope(dispatcher))
     }
 
     @After
@@ -174,6 +180,7 @@ abstract class CheckoutHarness {
             ledger = OrderAttemptLedger(ledgerStore, lookup),
             sessionStore = session,
             debounce = QuoteDebounce { },
+            configService = configService,
         )
 
     protected companion object {

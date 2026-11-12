@@ -122,7 +122,7 @@ class SystemRepositoryTest {
 
             val error = (repository.config() as ApiResult.Failure).error
 
-            assertEquals(AppError.Unknown(code = "codigo_nuevo", detail = "algo pasó"), error)
+            assertEquals(AppError.Unknown(code = "codigo_nuevo", detail = "algo pasó", status = 409), error)
         }
 
     @Test

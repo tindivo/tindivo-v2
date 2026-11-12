@@ -87,7 +87,7 @@ class RetryAfterShieldTest : HttpClientTestBase() {
 
             val result = repository(realClient()).health()
 
-            assertEquals(ApiResult.Failure(AppError.Unknown(code = null, detail = "HTTP 503")), result)
+            assertEquals(ApiResult.Failure(AppError.Unknown(code = null, detail = "HTTP 503", status = 503)), result)
             assertEquals(1, server.requestCount)
         }
 
