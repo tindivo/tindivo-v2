@@ -542,4 +542,12 @@
     <string name="prepay_error_unreadable">No pudimos leer esa imagen. Elige otra captura.</string>
     <string name="prepay_error_too_large">La imagen es demasiado pesada. Elige otra captura.</string>
     <string name="prepay_error_generic">No pudimos enviar tu comprobante. Inténtalo de nuevo.</string>
+
+    <!-- Avisos del pedido (push nativo). El canal se ve en los ajustes de la app. -->
+    <string name="push_channel_orders">Tu pedido</string>
+    <string name="push_channel_orders_description">Te avisamos cuando tu pedido cambia de estado.</string>
+    <string name="push_permission_title">¿Te avisamos de tu pedido?</string>
+    <string name="push_permission_message">Te avisamos cuando tu pedido cambie de estado: cuando lo acepten, salga a entrega o llegue a tu puerta.</string>
+    <string name="push_permission_accept">Activar avisos</string>
+    <string name="push_permission_decline">Ahora no</string>
 </resources>
