@@ -52,6 +52,16 @@ system_guarded = {
     ("androidx.profileinstaller.ProfileInstallReceiver", "android.permission.DUMP"),
     ("com.google.firebase.iid.FirebaseInstanceIdReceiver", "com.google.android.c2dm.permission.SEND"),
 }
+# Los permisos que solo existen por FCM (WAKE_LOCK y c2dm RECEIVE) valen únicamente si el receptor exacto de FCM está
+# y exige el permiso de firma de Google (c2dm SEND): cada entrada por su nombre, sin patrones (CAX-007, ronda 2).
+FCM_RECEIVER = ("com.google.firebase.iid.FirebaseInstanceIdReceiver", "com.google.android.c2dm.permission.SEND")
+FCM_ONLY_PERMISSIONS = {"android.permission.WAKE_LOCK", "com.google.android.c2dm.permission.RECEIVE"}
+receivers = {(c.get(f"{A}name"), c.get(f"{A}permission")) for c in app.iter("receiver")}
+if requested & FCM_ONLY_PERMISSIONS and FCM_RECEIVER not in receivers:
+    errors.append(
+        f"permisos de FCM sin su receptor exacto protegido por c2dm SEND: {sorted(requested & FCM_ONLY_PERMISSIONS)}"
+    )
+
 exported_seen = []
 for kind in ("activity", "activity-alias", "service", "receiver", "provider"):
     for c in app.iter(kind):
