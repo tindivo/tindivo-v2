@@ -215,7 +215,17 @@ describe('send-push · orden del seguimiento (seq) y destinatario (install)', ()
   it('stateSeq: milisegundos del updated_at; lo que no es fecha no da versión', () => {
     expect(stateSeq(T1)).toBe(Date.parse(T1))
     expect(stateSeq(T2)).toBe(Date.parse(T1) + 300_250)
-    for (const malo of [undefined, null, 5, '', 'ayer', {}, '5', '1 Jan 2030', '0000-01-01T00:00:00Z']) {
+    for (const malo of [
+      undefined,
+      null,
+      5,
+      '',
+      'ayer',
+      {},
+      '5',
+      '1 Jan 2030',
+      '0000-01-01T00:00:00Z',
+    ]) {
       expect(stateSeq(malo), String(malo)).toBeUndefined()
     }
   })
