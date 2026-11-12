@@ -117,7 +117,33 @@ export function courierReleasedNotice(shortId: string): TrackingNotice {
  * - `terminal`: el estado es final (entregado o cancelado): la notificación deja de ser fija.
  *   Un cancelado no lleva paso: no hay barra que llenar.
  */
-export type TrackingProgress = { step?: number; steps?: number; terminal: boolean }
+export type TrackingProgress = {
+  step?: number
+  steps?: number
+  terminal: boolean
+  /**
+   * Versión del estado leído: `updated_at` de la fila del pedido o la entrega, en milisegundos
+   * desde la época. Dos avisos del mismo pedido que llegan desordenados se ordenan por ella: la app
+   * ignora el de `seq` menor (`orders.updated_at` lo mantiene el trigger `touch_updated_at`).
+   */
+  seq?: number
+}
+
+/**
+ * La versión (`seq`) de un estado a partir de `updated_at`. `undefined` si no es una fecha: sin
+ * versión el aviso viaja igual, pero la app no puede ordenarlo.
+ */
+export function stateSeq(updatedAt: unknown): number | undefined {
+  if (typeof updatedAt !== 'string') return undefined
+  const ms = Date.parse(updatedAt)
+  return Number.isFinite(ms) && ms > 0 ? Math.trunc(ms) : undefined
+}
+
+const withSeq = (progress: TrackingProgress | null, updatedAt: unknown): TrackingProgress | null => {
+  if (!progress) return null
+  const seq = stateSeq(updatedAt)
+  return seq === undefined ? progress : { ...progress, seq }
+}
 
 /** Pedido a domicilio: Recibido → Preparando → Listo → En camino → Entregado. */
 export const DELIVERY_STEPS = 5
@@ -140,7 +166,15 @@ const CANCELLED: TrackingProgress = { terminal: true }
  * «Listo» con la comida todavía en el fuego: el estado no distingue ese caso. Un estado que no
  * corresponde al método (p. ej. `picked_up` en un recojo) o desconocido da `null`: sin barra.
  */
-export function orderProgress(status: string, deliveryMethod: string): TrackingProgress | null {
+export function orderProgress(
+  status: string,
+  deliveryMethod: string,
+  updatedAt?: unknown,
+): TrackingProgress | null {
+  return withSeq(orderStep(status, deliveryMethod), updatedAt)
+}
+
+function orderStep(status: string, deliveryMethod: string): TrackingProgress | null {
   const pickup = deliveryMethod === 'pickup'
   const steps = pickup ? PICKUP_STEPS : DELIVERY_STEPS
   switch (status) {
@@ -172,7 +206,11 @@ export function orderProgress(status: string, deliveryMethod: string): TrackingP
  * El paso de una entrega según `courier_orders.status` (`COURIER_STATUSES`). Cuando el motorizado
  * la suelta (`release`) la entrega vuelve a `requested`: la barra vuelve al paso 1.
  */
-export function courierProgress(status: string): TrackingProgress | null {
+export function courierProgress(status: string, updatedAt?: unknown): TrackingProgress | null {
+  return withSeq(courierStep(status), updatedAt)
+}
+
+function courierStep(status: string): TrackingProgress | null {
   switch (status) {
     case 'requested':
       return at(1, COURIER_STEPS)

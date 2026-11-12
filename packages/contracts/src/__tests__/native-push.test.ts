@@ -64,6 +64,36 @@ describe('NativePushPayloadSchema v1 (CLI-8)', () => {
     }
   })
 
+  it('install y seq son opcionales y aditivos; un payload anterior sigue siendo válido', () => {
+    const nuevo = {
+      ...valido,
+      install: '8b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d',
+      seq: String(Date.parse('2026-11-12T19:00:00.000Z')),
+    }
+    expect(NativePushPayloadSchema.parse(nuevo)).toEqual(nuevo)
+    expect(NativePushPayloadSchema.safeParse(valido).success).toBe(true)
+  })
+
+  it('rechaza un install fuera de cota y un seq que no es un entero positivo de 10 a 16 cifras', () => {
+    for (const extra of [
+      { install: 'corto' },
+      { install: 'x'.repeat(65) },
+      { install: '' },
+      { seq: '0' },
+      { seq: '123' },
+      { seq: '-1700000000000' },
+      { seq: '1700000000000.5' },
+      { seq: '01700000000000' },
+      { seq: 1700000000000 },
+      { seq: '1'.repeat(17) },
+    ]) {
+      expect(
+        NativePushPayloadSchema.safeParse({ ...valido, ...extra }).success,
+        JSON.stringify(extra),
+      ).toBe(false)
+    }
+  })
+
   it('rechaza otra versión, campos ausentes y deep links que no son una ruta de la app', () => {
     expect(NativePushPayloadSchema.safeParse({ ...valido, v: 2 }).success).toBe(false)
     for (const campo of ['type', 'tag', 'title', 'body', 'deepLink'] as const) {

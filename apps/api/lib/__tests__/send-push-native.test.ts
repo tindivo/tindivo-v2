@@ -276,6 +276,36 @@ describe('send-push native · payload v1 y mensajes', () => {
     expect(sent.message.data.tag).toBe(note.tag)
   })
 
+  it('cada dispositivo recibe su propio installId y el seq del estado: el aviso a otra instalación no sirve', async () => {
+    const config = await load((await fullEnv()).env)
+    const instalaciones = [
+      '11111111-2222-4333-8444-555555555555',
+      '66666666-7777-4888-8999-000000000000',
+    ]
+    const enviados: Record<string, string>[] = []
+    for (const installId of instalaciones) {
+      const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : FCM_OK))
+      await sendNative(
+        { ...android, installId },
+        'customer',
+        {
+          ...note,
+          group: 'order-AB2C3D4E',
+          progress: { step: 2, steps: 5, terminal: false, seq: 1_794_000_000_000 },
+        },
+        'OrderStatusChanged',
+        { config, fetch: f.fn, now: () => Date.UTC(2026, 10, 12, 12, 0, 0) },
+      )
+      const sent = JSON.parse(
+        f.calls.find((c) => c.url.includes('fcm.googleapis.com'))?.body ?? '{}',
+      )
+      enviados.push(sent.message.data)
+    }
+    expect(enviados.map((d) => d.install)).toEqual(instalaciones)
+    expect(enviados.map((d) => d.seq)).toEqual(['1794000000000', '1794000000000'])
+    expect(enviados[0]?.tag).toBe(note.tag)
+  })
+
   it('al cliente, los avisos de pedido y de Entregas van SOLO-DATOS, con prioridad alta, group y TTL', async () => {
     const config = await load((await fullEnv()).env)
     for (const group of ['order-AB2C3D4E', 'courier-ZZ9Y8X7W']) {

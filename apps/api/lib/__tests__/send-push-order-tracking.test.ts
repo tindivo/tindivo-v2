@@ -14,6 +14,7 @@ import {
   orderGroup,
   orderProgress,
   PICKUP_STEPS,
+  stateSeq,
   TRACKING_TTL_SECONDS,
 } from '../../../../supabase/functions/send-push/order-tracking.ts'
 
@@ -178,7 +179,9 @@ describe('send-push · paso del seguimiento (step/steps/terminal)', () => {
   it('todo paso calculado cumple el contrato al viajar (step ≤ steps, texto)', () => {
     const progresos = [
       ...ORDER_STATUSES.flatMap((s) => [orderProgress(s, 'delivery'), orderProgress(s, 'pickup')]),
-      ...['requested', 'accepted', 'picked_up', 'delivered', 'cancelled'].map(courierProgress),
+      ...['requested', 'accepted', 'picked_up', 'delivered', 'cancelled'].map((s) =>
+        courierProgress(s),
+      ),
     ].filter((x) => x !== null)
     for (const progress of progresos) {
       const p = nativePayload(
@@ -204,6 +207,94 @@ describe('send-push · paso del seguimiento (step/steps/terminal)', () => {
 })
 
 // ── Guardarraíl sobre index.ts (no se puede ejecutar en vitest: imports jsr/npm) ──
+
+describe('send-push · orden del seguimiento (seq) y destinatario (install)', () => {
+  const T1 = '2026-11-12T19:00:00.000Z'
+  const T2 = '2026-11-12T19:05:00.250+00:00'
+
+  it('stateSeq: milisegundos del updated_at; lo que no es fecha no da versión', () => {
+    expect(stateSeq(T1)).toBe(Date.parse(T1))
+    expect(stateSeq(T2)).toBe(Date.parse(T1) + 300_250)
+    for (const malo of [undefined, null, 5, '', 'ayer', {}]) expect(stateSeq(malo)).toBeUndefined()
+  })
+
+  it('el estado posterior tiene seq mayor; una entrega soltada (vuelve al paso 1) la tiene mayor aunque el paso baje', () => {
+    const aceptada = courierProgress('accepted', T1)
+    const soltada = courierProgress('requested', T2)
+    expect(aceptada?.step).toBe(2)
+    expect(soltada?.step).toBe(1)
+    expect(soltada?.seq).toBeGreaterThan(aceptada?.seq ?? 0)
+    expect(orderProgress('delivered', 'delivery', T2)).toMatchObject({
+      terminal: true,
+      seq: stateSeq(T2),
+    })
+    expect(orderProgress('cancelled', 'delivery', T2)).toEqual({
+      terminal: true,
+      seq: stateSeq(T2),
+    })
+  })
+
+  it('sin updated_at el paso viaja igual, sin seq', () => {
+    expect(orderProgress('preparing', 'delivery')).toEqual({ step: 2, steps: 5, terminal: false })
+  })
+
+  it('nativePayload lleva seq e install, cumple el contrato y buildFcmMessage los pone en data (también solo-datos)', () => {
+    const INSTALL = '8b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d'
+    const progress = orderProgress('preparing', 'delivery', T1)
+    const p = nativePayload(
+      {
+        title: 'T',
+        body: 'B',
+        tag: 'X-AB2C3D4E',
+        url: '/pedido/AB2C3D4E',
+        group: orderGroup(SID),
+        progress,
+      },
+      'OrderStatusChanged',
+      INSTALL,
+    )
+    expect(NativePushPayloadSchema.parse(p)).toEqual(p)
+    expect(p.install).toBe(INSTALL)
+    expect(p.seq).toBe(String(Date.parse(T1)))
+    expect(p.tag).toBe('X-AB2C3D4E')
+    for (const dataOnly of [true, false]) {
+      const data = buildFcmMessage('tok', p, TRACKING_TTL_SECONDS, dataOnly).message.data
+      expect(data.install).toBe(INSTALL)
+      expect(data.seq).toBe(p.seq)
+    }
+  })
+
+  it('sin installId o sin seq esos campos no viajan', () => {
+    const p = nativePayload(
+      {
+        title: 'T',
+        body: 'B',
+        tag: 'X-1',
+        url: '/',
+        progress: { step: 1, steps: 5, terminal: false },
+      },
+      'E',
+    )
+    expect(p).not.toHaveProperty('install')
+    expect(p).not.toHaveProperty('seq')
+  })
+
+  it('un seq que no es entero positivo seguro no viaja', () => {
+    for (const seq of [0, -5, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 2]) {
+      const p = nativePayload(
+        {
+          title: 'T',
+          body: 'B',
+          tag: 'X-1',
+          url: '/',
+          progress: { step: 1, steps: 5, terminal: false, seq },
+        },
+        'E',
+      )
+      expect(p, String(seq)).not.toHaveProperty('seq')
+    }
+  })
+})
 
 describe('send-push index.ts · los momentos nuevos del cliente', () => {
   const src = readFileSync(
@@ -269,19 +360,26 @@ describe('send-push index.ts · los momentos nuevos del cliente', () => {
   it('el paso sale del estado REAL leído de la base y solo va en avisos al cliente', () => {
     // Ciclo del pedido: se lee `status` y el paso se calcula una vez para toda la rama.
     expect(src).toContain(
-      "const progress = orderProgress(String(o.status ?? ''), String(o.delivery_method ?? ''))",
+      "const progress = orderProgress(\n      String(o.status ?? ''),\n      String(o.delivery_method ?? ''),\n      o.updated_at,\n    )",
     )
     expect(src).toContain(
-      "'short_id,business_id,customer_user_id,driver_id,status,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing'",
+      "'short_id,business_id,customer_user_id,driver_id,status,updated_at,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing'",
     )
     expect(src).toContain("...(app === 'customer' ? custProgress : {}),")
     // Comprobante/validado: también leen `status` y `delivery_method`.
     expect(src).toContain(
-      ".select('short_id,business_id,customer_user_id,prep_time_minutes,status,delivery_method')",
+      ".select('short_id,business_id,customer_user_id,prep_time_minutes,status,updated_at,delivery_method')",
     )
     // Entregas: del `courier_orders.status`, en `toCustomer` y en el aviso de soltada.
-    expect(src).toContain("const progressOf = courierProgress(String(c.status ?? ''))")
+    expect(src).toContain(
+      "const progressOf = courierProgress(String(c.status ?? ''), c.updated_at)",
+    )
     expect(src.match(/\.\.\.custProgress,/g)?.length).toBe(3)
+  })
+
+  it('cada dispositivo se lee con su install_id y viaja a deliverToDevices', () => {
+    expect(src).toContain(".select('id,platform,token,environment,install_id')")
+    expect(src).toContain('installId: d.install_id as string,')
   })
 
   it('los avisos de pedido y de Entregas llevan su group (una notificación por pedido)', () => {

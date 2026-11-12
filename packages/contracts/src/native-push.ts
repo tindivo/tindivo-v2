@@ -54,6 +54,18 @@ export const NativePushPayloadSchema = z
     steps: STEP_TEXT.optional().meta({
       description: 'Total de pasos del seguimiento (entero ≥ 1 como texto)',
     }),
+    install: z.string().min(8).max(64).optional().meta({
+      description:
+        'installId de la instalación destinataria (push_devices.install_id). La app descarta un aviso cuyo install no es el de su instalación vigente',
+    }),
+    seq: z
+      .string()
+      .regex(/^[1-9][0-9]{9,15}$/)
+      .optional()
+      .meta({
+        description:
+          'Versión del estado del pedido (updated_at en ms). La app ignora un aviso con seq menor al ya mostrado',
+      }),
     terminal: z.literal('1').optional().meta({
       description:
         'Presente si el estado es final (entregado, cancelado): el seguimiento deja de ser fijo',

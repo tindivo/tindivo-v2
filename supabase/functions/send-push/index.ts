@@ -109,7 +109,7 @@ async function deliverNative(
   const devices = must(
     await db
     .from('push_devices')
-    .select('id,platform,token,environment')
+    .select('id,platform,token,environment,install_id')
     .eq('user_id', filter.userId)
     .eq('app', filter.app)
     .is('disabled_at', null)
@@ -125,6 +125,7 @@ async function deliverNative(
     token: d.token as string,
     platform: d.platform as 'ios' | 'android',
     environment: d.environment as 'production' | 'sandbox',
+    installId: d.install_id as string,
   }))
   const res = await deliverToDevices(
     rows,
@@ -662,7 +663,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       await db
         .from('orders')
         .select(
-          'short_id,business_id,customer_user_id,driver_id,status,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing',
+          'short_id,business_id,customer_user_id,driver_id,status,updated_at,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing',
         )
         .eq('id', aggregateId)
         .maybeSingle(),
@@ -680,7 +681,11 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const custUrl = `/pedido/${sid}`
     // El estado de AHORA, no el del evento: si los avisos se procesan desordenados, la barra nunca
     // retrocede ni queda fija en un pedido que ya terminó.
-    const progress = orderProgress(String(o.status ?? ''), String(o.delivery_method ?? ''))
+    const progress = orderProgress(
+      String(o.status ?? ''),
+      String(o.delivery_method ?? ''),
+      o.updated_at,
+    )
     const custProgress = progress ? { progress } : {}
     const push = (
       app: NativeApp,
@@ -981,7 +986,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const o = must(
       await db
         .from('orders')
-        .select('short_id,business_id,customer_user_id,prep_time_minutes,status,delivery_method')
+        .select('short_id,business_id,customer_user_id,prep_time_minutes,status,updated_at,delivery_method')
         .eq('id', aggregateId)
         .maybeSingle(),
       'orders',
@@ -994,7 +999,11 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         'businesses',
       )
       const bizName = (biz?.name as string) ?? 'el restaurante'
-      const progress = orderProgress(String(o.status ?? ''), String(o.delivery_method ?? ''))
+      const progress = orderProgress(
+        String(o.status ?? ''),
+        String(o.delivery_method ?? ''),
+        o.updated_at,
+      )
       const base = {
         userId: cust,
         app: 'customer' as const,
@@ -1379,7 +1388,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
     await db
       .from('courier_orders')
       .select(
-        'id,short_id,customer_user_id,driver_id,status,payer,fee_amount,origin_name,origin_reference_text,destination_reference_text,item_description,cancel_reason',
+        'id,short_id,customer_user_id,driver_id,status,updated_at,payer,fee_amount,origin_name,origin_reference_text,destination_reference_text,item_description,cancel_reason',
       )
       .eq('id', aggregateId)
       .maybeSingle(),
@@ -1394,7 +1403,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
   const customerUrl = `/entregas/${sid}`
   const tracking = { group: courierGroup(sid), ttlSeconds: TRACKING_TTL_SECONDS }
   // Del estado real de la entrega (ver `orderProgress` en la rama de pedidos).
-  const progressOf = courierProgress(String(c.status ?? ''))
+  const progressOf = courierProgress(String(c.status ?? ''), c.updated_at)
   const custProgress = progressOf ? { progress: progressOf } : {}
   const out: Note[] = []
 

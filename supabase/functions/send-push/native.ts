@@ -33,7 +33,7 @@ export type NativeNote = {
    * Paso del pedido o la entrega para la barra de la notificación de Android
    * (`orderProgress`/`courierProgress` en `order-tracking.ts`). Solo en avisos al cliente.
    */
-  progress?: { step?: number; steps?: number; terminal: boolean }
+  progress?: { step?: number; steps?: number; terminal: boolean; seq?: number }
 }
 
 /** Payload v1 (`packages/contracts/src/native-push.ts`). */
@@ -51,6 +51,17 @@ export type NativePayload = {
   steps?: string
   /** `'1'` si el estado es final (entregado o cancelado). Ausente si no lo es. */
   terminal?: '1'
+  /**
+   * La instalación destinataria (`push_devices.install_id`): la app solo pinta un aviso cuyo `install`
+   * es el de SU instalación vigente. Al cerrar sesión o cambiar de cuenta el `installId` cambia, así
+   * que un aviso en tránsito de la cuenta anterior se descarta. Un identificador aleatorio, no un dato personal.
+   */
+  install?: string
+  /**
+   * Versión del estado (`updated_at` en ms, como texto): la app ignora un aviso de un pedido con `seq`
+   * menor al que ya mostró, y uno activo después de uno terminal.
+   */
+  seq?: string
 }
 
 /** Lo mínimo que se usa de `Response`; `fetch` real y los dobles de los tests lo cumplen. */
@@ -66,6 +77,8 @@ export type NativeFetch = (
 ) => Promise<{ status: number; text(): Promise<string> }>
 
 export type NativeDevice = {
+  /** `push_devices.install_id`; va en el payload como `install`. */
+  installId?: string
   token: string
   platform: NativePlatform
   environment: NativeEnvironment
@@ -85,7 +98,11 @@ const APPS_WITH_NATIVE: readonly NativeApp[] = ['customer', 'negocios', 'motoriz
 
 // ── Payload y mensajes ──────────────────────────────────────────────────────
 
-export function nativePayload(note: NativeNote, eventType: string): NativePayload {
+export function nativePayload(
+  note: NativeNote,
+  eventType: string,
+  installId?: string,
+): NativePayload {
   const payload: NativePayload = {
     v: 1,
     type: eventType,
@@ -111,7 +128,9 @@ export function nativePayload(note: NativeNote, eventType: string): NativePayloa
       payload.steps = String(steps)
     }
     if (p.terminal) payload.terminal = '1'
+    if (p.seq !== undefined && Number.isSafeInteger(p.seq) && p.seq > 0) payload.seq = String(p.seq)
   }
+  if (installId) payload.install = installId
   return payload
 }
 
@@ -178,6 +197,8 @@ export function buildFcmMessage(
     data.steps = payload.steps
   }
   if (payload.terminal !== undefined) data.terminal = payload.terminal
+  if (payload.seq !== undefined) data.seq = payload.seq
+  if (payload.install !== undefined) data.install = payload.install
   const ttl = ttlSeconds === undefined ? {} : { ttl: `${Math.trunc(ttlSeconds)}s` }
   if (dataOnly) {
     return {
@@ -776,7 +797,7 @@ export async function sendNative(
   deps: NativeSendDeps,
 ): Promise<NativeSendResult | null> {
   if (app === 'admin') return null
-  const payload = nativePayload(note, eventType)
+  const payload = nativePayload(note, eventType, device.installId)
   try {
     if (device.platform === 'ios') {
       return deps.config.apns ? await sendApns(deps.config.apns, device, app, payload, deps) : null
