@@ -29,6 +29,41 @@ describe('NativePushPayloadSchema v1 (CLI-8)', () => {
     )
   })
 
+  it('step/steps/terminal son opcionales y aditivos: sin ellos el v1 sigue valiendo', () => {
+    const enCurso = { ...valido, group: 'order-AB2C3D4E', step: '2', steps: '5' }
+    expect(NativePushPayloadSchema.parse(enCurso)).toEqual(enCurso)
+    const entregado = { ...enCurso, step: '5', terminal: '1' }
+    expect(NativePushPayloadSchema.parse(entregado)).toEqual(entregado)
+    // Cancelado: final y sin barra.
+    const cancelado = { ...valido, terminal: '1' }
+    expect(NativePushPayloadSchema.parse(cancelado)).toEqual(cancelado)
+    expect(NativePushPayloadSchema.safeParse(valido).success).toBe(true)
+  })
+
+  it('rechaza un paso inválido: 0, no numérico, step > steps o uno sin el otro', () => {
+    const base = { ...valido, group: 'order-AB2C3D4E' }
+    for (const extra of [
+      { step: '0', steps: '5' },
+      { step: '2', steps: '0' },
+      { step: 'dos', steps: '5' },
+      { step: '02', steps: '5' },
+      { step: '-1', steps: '5' },
+      { step: '1.5', steps: '5' },
+      { step: '6', steps: '5' },
+      { step: '10', steps: '9' },
+      { step: '2' },
+      { steps: '5' },
+      { step: 2, steps: 5 },
+      { terminal: '0' },
+      { terminal: 'true' },
+    ]) {
+      expect(
+        NativePushPayloadSchema.safeParse({ ...base, ...extra }).success,
+        JSON.stringify(extra),
+      ).toBe(false)
+    }
+  })
+
   it('rechaza otra versión, campos ausentes y deep links que no son una ruta de la app', () => {
     expect(NativePushPayloadSchema.safeParse({ ...valido, v: 2 }).success).toBe(false)
     for (const campo of ['type', 'tag', 'title', 'body', 'deepLink'] as const) {

@@ -3,12 +3,17 @@ import { NativePushPayloadSchema } from '@tindivo/contracts'
 import { describe, expect, it } from 'vitest'
 import { buildFcmMessage, nativePayload } from '../../../../supabase/functions/send-push/native.ts'
 import {
+  COURIER_STEPS,
   courierGroup,
+  courierProgress,
   courierReleasedNotice,
+  DELIVERY_STEPS,
   deliveryReadyNotice,
   driverAtBusinessNotice,
   driverTookNotice,
   orderGroup,
+  orderProgress,
+  PICKUP_STEPS,
   TRACKING_TTL_SECONDS,
 } from '../../../../supabase/functions/send-push/order-tracking.ts'
 
@@ -96,6 +101,108 @@ describe('send-push · seguimiento del pedido en la notificación (una por pedid
   })
 })
 
+// ── Paso de la barra de progreso según el estado real ─────────────────────
+
+const ORDER_STATUSES = [
+  'validando',
+  'pending_acceptance',
+  'awaiting_payment',
+  'confirmed',
+  'preparing',
+  'waiting_driver',
+  'heading_to_restaurant',
+  'waiting_at_restaurant',
+  'picked_up',
+  'ready_for_pickup',
+  'delivered',
+  'cancelled',
+]
+
+describe('send-push · paso del seguimiento (step/steps/terminal)', () => {
+  it('pedido a domicilio: Recibido → Preparando → Listo → En camino → Entregado (5)', () => {
+    expect(DELIVERY_STEPS).toBe(5)
+    const paso = (status: string) => orderProgress(status, 'delivery')
+    for (const s of ['validando', 'pending_acceptance', 'awaiting_payment', 'confirmed']) {
+      expect(paso(s)).toEqual({ step: 1, steps: 5, terminal: false })
+    }
+    expect(paso('preparing')).toEqual({ step: 2, steps: 5, terminal: false })
+    for (const s of ['waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant']) {
+      expect(paso(s)).toEqual({ step: 3, steps: 5, terminal: false })
+    }
+    expect(paso('picked_up')).toEqual({ step: 4, steps: 5, terminal: false })
+    expect(paso('delivered')).toEqual({ step: 5, steps: 5, terminal: true })
+    expect(paso('cancelled')).toEqual({ terminal: true })
+    // Un estado del recojo no tiene sitio en el domicilio: sin barra.
+    expect(paso('ready_for_pickup')).toBeNull()
+  })
+
+  it('pedido para recoger: Recibido → Preparando → Listo para recoger → Entregado (4)', () => {
+    expect(PICKUP_STEPS).toBe(4)
+    const paso = (status: string) => orderProgress(status, 'pickup')
+    for (const s of ['validando', 'pending_acceptance', 'awaiting_payment', 'confirmed']) {
+      expect(paso(s)).toEqual({ step: 1, steps: 4, terminal: false })
+    }
+    expect(paso('preparing')).toEqual({ step: 2, steps: 4, terminal: false })
+    expect(paso('ready_for_pickup')).toEqual({ step: 3, steps: 4, terminal: false })
+    expect(paso('delivered')).toEqual({ step: 4, steps: 4, terminal: true })
+    expect(paso('cancelled')).toEqual({ terminal: true })
+    for (const s of [
+      'waiting_driver',
+      'heading_to_restaurant',
+      'waiting_at_restaurant',
+      'picked_up',
+    ]) {
+      expect(paso(s)).toBeNull()
+    }
+  })
+
+  it('Entregas: Buscando → Asignado → En camino → Entregado (4); soltada vuelve al paso 1', () => {
+    expect(COURIER_STEPS).toBe(4)
+    expect(courierProgress('requested')).toEqual({ step: 1, steps: 4, terminal: false })
+    for (const s of ['accepted', 'heading_to_pickup', 'at_pickup']) {
+      expect(courierProgress(s)).toEqual({ step: 2, steps: 4, terminal: false })
+    }
+    for (const s of ['picked_up', 'heading_to_dropoff']) {
+      expect(courierProgress(s)).toEqual({ step: 3, steps: 4, terminal: false })
+    }
+    expect(courierProgress('delivered')).toEqual({ step: 4, steps: 4, terminal: true })
+    expect(courierProgress('cancelled')).toEqual({ terminal: true })
+  })
+
+  it('un estado desconocido no tiene barra ni es final', () => {
+    expect(orderProgress('algo_nuevo', 'delivery')).toBeNull()
+    expect(orderProgress('', 'pickup')).toBeNull()
+    expect(courierProgress('algo_nuevo')).toBeNull()
+  })
+
+  it('todo paso calculado cumple el contrato al viajar (step ≤ steps, texto)', () => {
+    const progresos = [
+      ...ORDER_STATUSES.flatMap((s) => [orderProgress(s, 'delivery'), orderProgress(s, 'pickup')]),
+      ...['requested', 'accepted', 'picked_up', 'delivered', 'cancelled'].map(courierProgress),
+    ].filter((x) => x !== null)
+    for (const progress of progresos) {
+      const p = nativePayload(
+        {
+          title: 'T',
+          body: 'B',
+          tag: 'X-1',
+          url: '/pedido/AB2C3D4E',
+          group: orderGroup(SID),
+          progress,
+        },
+        'OrderStatusChanged',
+      )
+      expect(NativePushPayloadSchema.parse(p)).toEqual(p)
+      const data = buildFcmMessage('tok', p, TRACKING_TTL_SECONDS, true).message.data
+      if (progress.step !== undefined) {
+        expect(data.step).toBe(String(progress.step))
+        expect(data.steps).toBe(String(progress.steps))
+      }
+      expect(data.terminal).toBe(progress.terminal ? '1' : undefined)
+    }
+  })
+})
+
 // ── Guardarraíl sobre index.ts (no se puede ejecutar en vitest: imports jsr/npm) ──
 
 describe('send-push index.ts · los momentos nuevos del cliente', () => {
@@ -157,6 +264,24 @@ describe('send-push index.ts · los momentos nuevos del cliente', () => {
     expect(iQuery).toBeGreaterThan(i)
     expect(src.slice(i, iQuery)).toContain('? []')
     expect(iWeb).toBeGreaterThan(iQuery)
+  })
+
+  it('el paso sale del estado REAL leído de la base y solo va en avisos al cliente', () => {
+    // Ciclo del pedido: se lee `status` y el paso se calcula una vez para toda la rama.
+    expect(src).toContain(
+      "const progress = orderProgress(String(o.status ?? ''), String(o.delivery_method ?? ''))",
+    )
+    expect(src).toContain(
+      "'short_id,business_id,customer_user_id,driver_id,status,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing'",
+    )
+    expect(src).toContain("...(app === 'customer' ? custProgress : {}),")
+    // Comprobante/validado: también leen `status` y `delivery_method`.
+    expect(src).toContain(
+      ".select('short_id,business_id,customer_user_id,prep_time_minutes,status,delivery_method')",
+    )
+    // Entregas: del `courier_orders.status`, en `toCustomer` y en el aviso de soltada.
+    expect(src).toContain("const progressOf = courierProgress(String(c.status ?? ''))")
+    expect(src.match(/\.\.\.custProgress,/g)?.length).toBe(3)
   })
 
   it('los avisos de pedido y de Entregas llevan su group (una notificación por pedido)', () => {

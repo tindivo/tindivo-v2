@@ -29,6 +29,11 @@ export type NativeNote = {
   url: string
   group?: string
   ttlSeconds?: number
+  /**
+   * Paso del pedido o la entrega para la barra de la notificación de Android
+   * (`orderProgress`/`courierProgress` en `order-tracking.ts`). Solo en avisos al cliente.
+   */
+  progress?: { step?: number; steps?: number; terminal: boolean }
 }
 
 /** Payload v1 (`packages/contracts/src/native-push.ts`). */
@@ -41,6 +46,11 @@ export type NativePayload = {
   title: string
   body: string
   deepLink: string
+  /** Opcionales (aditivos): paso actual y total, como texto; van juntos y `step ≤ steps`. */
+  step?: string
+  steps?: string
+  /** `'1'` si el estado es final (entregado o cancelado). Ausente si no lo es. */
+  terminal?: '1'
 }
 
 /** Lo mínimo que se usa de `Response`; `fetch` real y los dobles de los tests lo cumplen. */
@@ -76,7 +86,7 @@ const APPS_WITH_NATIVE: readonly NativeApp[] = ['customer', 'negocios', 'motoriz
 // ── Payload y mensajes ──────────────────────────────────────────────────────
 
 export function nativePayload(note: NativeNote, eventType: string): NativePayload {
-  return {
+  const payload: NativePayload = {
     v: 1,
     type: eventType,
     tag: note.tag,
@@ -85,18 +95,46 @@ export function nativePayload(note: NativeNote, eventType: string): NativePayloa
     body: note.body,
     deepLink: note.url,
   }
+  const p = note.progress
+  if (p) {
+    // Un paso fuera de rango no viaja: el aviso se pinta sin barra, nunca con una barra mentirosa.
+    const { step, steps } = p
+    if (
+      step !== undefined &&
+      steps !== undefined &&
+      Number.isInteger(step) &&
+      Number.isInteger(steps) &&
+      step >= 1 &&
+      step <= steps
+    ) {
+      payload.step = String(step)
+      payload.steps = String(steps)
+    }
+    if (p.terminal) payload.terminal = '1'
+  }
+  return payload
+}
+
+/**
+ * Los avisos de seguimiento de un pedido (`order-<shortId>`) o de una entrega (`courier-<shortId>`).
+ * Al cliente viajan SOLO-DATOS en Android: los pinta la app (barra de progreso y notificación fija).
+ */
+export function isTrackingGroup(group: string): boolean {
+  return /^(order|courier)-./.test(group)
 }
 
 export type FcmMessage = {
   message: {
     token: string
-    notification: { title: string; body: string }
+    /** Ausente en un mensaje solo-datos. */
+    notification?: { title: string; body: string }
     data: Record<string, string>
     android: {
       priority: 'HIGH'
       collapse_key: string
       ttl?: string
-      notification: { tag: string; channel_id: string }
+      /** Ausente en un mensaje solo-datos. */
+      notification?: { tag: string; channel_id: string }
     }
   }
 }
@@ -113,29 +151,48 @@ export type FcmMessage = {
  *
  * `ttlSeconds` (si la nota lo trae) va como `android.ttl`: pasado ese plazo FCM descarta el aviso
  * en vez de entregar tarde un estado viejo.
+ *
+ * SOLO-DATOS (`dataOnly`, decisión de Jesús 2026-11-12): sin `notification` ni
+ * `android.notification`. El sistema no lo pinta: siempre llega a `onMessageReceived` de la app,
+ * que dibuja el seguimiento fijo con barra de progreso. Prioridad alta para que despierte al
+ * teléfono; aun así, en Xiaomi/HyperOS con ahorro de batería puede no llegar (riesgo aceptado: la
+ * app se pone al día al abrirse).
  */
 export function buildFcmMessage(
   token: string,
   payload: NativePayload,
   ttlSeconds?: number,
+  dataOnly = false,
 ): FcmMessage {
+  const data: Record<string, string> = {
+    v: String(payload.v),
+    type: payload.type,
+    tag: payload.tag,
+    group: payload.group,
+    title: payload.title,
+    body: payload.body,
+    deepLink: payload.deepLink,
+  }
+  if (payload.step !== undefined && payload.steps !== undefined) {
+    data.step = payload.step
+    data.steps = payload.steps
+  }
+  if (payload.terminal !== undefined) data.terminal = payload.terminal
+  const ttl = ttlSeconds === undefined ? {} : { ttl: `${Math.trunc(ttlSeconds)}s` }
+  if (dataOnly) {
+    return {
+      message: { token, data, android: { priority: 'HIGH', collapse_key: payload.group, ...ttl } },
+    }
+  }
   return {
     message: {
       token,
       notification: { title: payload.title, body: payload.body },
-      data: {
-        v: String(payload.v),
-        type: payload.type,
-        tag: payload.tag,
-        group: payload.group,
-        title: payload.title,
-        body: payload.body,
-        deepLink: payload.deepLink,
-      },
+      data,
       android: {
         priority: 'HIGH',
         collapse_key: payload.group,
-        ...(ttlSeconds === undefined ? {} : { ttl: `${Math.trunc(ttlSeconds)}s` }),
+        ...ttl,
         notification: { tag: payload.group, channel_id: FCM_CHANNEL_ID },
       },
     },
@@ -612,6 +669,7 @@ async function sendFcm(
   payload: NativePayload,
   deps: NativeSendDeps,
   ttlSeconds: number | undefined,
+  dataOnly: boolean,
 ): Promise<NativeSendResult> {
   const fail = (status: number | null, reason: string): NativeSendResult => ({
     channel: 'fcm',
@@ -630,7 +688,7 @@ async function sendFcm(
     res = await deps.fetch(`https://fcm.googleapis.com/v1/projects/${config.projectId}/messages:send`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
-      body: JSON.stringify(buildFcmMessage(device.token, payload, ttlSeconds)),
+      body: JSON.stringify(buildFcmMessage(device.token, payload, ttlSeconds, dataOnly)),
       signal: AbortSignal.timeout(NATIVE_TIMEOUT_MS),
       redirect: 'error',
     })
@@ -723,8 +781,12 @@ export async function sendNative(
     if (device.platform === 'ios') {
       return deps.config.apns ? await sendApns(deps.config.apns, device, app, payload, deps) : null
     }
+    // Solo-datos: el seguimiento de un pedido o una entrega en la app del cliente. Los avisos de la
+    // misma llave a otras apps (negocio, motorizado) siguen con su bloque `notification`: esas apps
+    // no tienen quién los pinte.
+    const dataOnly = app === 'customer' && isTrackingGroup(payload.group)
     return deps.config.fcm
-      ? await sendFcm(deps.config.fcm, device, payload, deps, note.ttlSeconds)
+      ? await sendFcm(deps.config.fcm, device, payload, deps, note.ttlSeconds, dataOnly)
       : null
   } catch {
     return {

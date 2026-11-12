@@ -16,13 +16,16 @@ import { asRecord, classifyRequest } from './request-kind.ts'
 import { withStartedTasks } from './task-group.ts'
 import {
   courierGroup,
+  courierProgress,
   courierReleasedNotice,
   deliveryReadyNotice,
   driverAtBusinessNotice,
   driverTookNotice,
   orderGroup,
+  orderProgress,
   TRACKING_TTL_SECONDS,
   type TrackingNotice,
+  type TrackingProgress,
 } from './order-tracking.ts'
 import {
   isOpsCaller,
@@ -181,6 +184,12 @@ type Note = {
   ttlSeconds?: number
   /** Solo a la app nativa, nunca por Web Push (la web del cliente está congelada para pedidos). */
   nativeOnly?: boolean
+  /**
+   * Paso del pedido o la entrega, calculado del estado REAL en la base al armar el aviso
+   * (`orderProgress`/`courierProgress`). Solo en avisos al cliente: la app de Android lo pinta como
+   * barra de progreso en una notificación fija. Web Push y APNs no lo usan.
+   */
+  progress?: TrackingProgress
 }
 
 /** Los campos de presentación de un aviso de pedido (sin `nativeOnly`: esos van también por la web). */
@@ -653,7 +662,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       await db
         .from('orders')
         .select(
-          'short_id,business_id,customer_user_id,driver_id,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing',
+          'short_id,business_id,customer_user_id,driver_id,status,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing',
         )
         .eq('id', aggregateId)
         .maybeSingle(),
@@ -669,6 +678,10 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const bizUser = biz?.user_id as string | null
     const cust = o.customer_user_id as string | null
     const custUrl = `/pedido/${sid}`
+    // El estado de AHORA, no el del evento: si los avisos se procesan desordenados, la barra nunca
+    // retrocede ni queda fija en un pedido que ya terminó.
+    const progress = orderProgress(String(o.status ?? ''), String(o.delivery_method ?? ''))
+    const custProgress = progress ? { progress } : {}
     const push = (
       app: NativeApp,
       userId: string | null,
@@ -688,6 +701,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         vibrate: Boolean(o2?.req),
         renotify: Boolean(o2?.renotify ?? o2?.req),
         ...orderTracking(sid),
+        ...(app === 'customer' ? custProgress : {}),
       })
     }
     /** Un momento del seguimiento que solo va a la app nativa del cliente (`order-tracking.ts`). */
@@ -700,6 +714,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         requireInteraction: false,
         vibrate: false,
         ...notice,
+        ...custProgress,
       })
     }
 
@@ -966,7 +981,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     const o = must(
       await db
         .from('orders')
-        .select('short_id,business_id,customer_user_id,prep_time_minutes')
+        .select('short_id,business_id,customer_user_id,prep_time_minutes,status,delivery_method')
         .eq('id', aggregateId)
         .maybeSingle(),
       'orders',
@@ -979,6 +994,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         'businesses',
       )
       const bizName = (biz?.name as string) ?? 'el restaurante'
+      const progress = orderProgress(String(o.status ?? ''), String(o.delivery_method ?? ''))
       const base = {
         userId: cust,
         app: 'customer' as const,
@@ -988,6 +1004,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         requireInteraction: false,
         vibrate: false,
         ...orderTracking(sid),
+        ...(progress ? { progress } : {}),
       }
       if (eventType === 'OrderProofVerified') {
         const prep = prepPhrase(o.prep_time_minutes)
@@ -1376,6 +1393,9 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
   const customer = c.customer_user_id as string | null
   const customerUrl = `/entregas/${sid}`
   const tracking = { group: courierGroup(sid), ttlSeconds: TRACKING_TTL_SECONDS }
+  // Del estado real de la entrega (ver `orderProgress` en la rama de pedidos).
+  const progressOf = courierProgress(String(c.status ?? ''))
+  const custProgress = progressOf ? { progress: progressOf } : {}
   const out: Note[] = []
 
   const toCustomer = (title: string, body: string, urgent = false) => {
@@ -1391,6 +1411,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
       vibrate: urgent,
       renotify: urgent,
       ...tracking,
+      ...custProgress,
     })
   }
 
@@ -1409,6 +1430,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
         requireInteraction: false,
         vibrate: false,
         ...courierReleasedNotice(sid),
+        ...custProgress,
       })
     }
     const cobro = c.payer === 'origin' ? `Cobra ${fee} al recoger` : `Cobra ${fee} al entregar`

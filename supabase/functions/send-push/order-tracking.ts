@@ -106,3 +106,88 @@ export function courierReleasedNotice(shortId: string): TrackingNotice {
     nativeOnly: true,
   }
 }
+
+// ── Progreso en la notificación (seguimiento fijo en Android) ───────────────
+
+/**
+ * En qué paso va un pedido o una entrega, para la barra de la notificación de Android. Viaja en
+ * `data` como `step`/`steps`/`terminal` (texto, `packages/contracts/src/native-push.ts`).
+ *
+ * - `step`/`steps`: paso actual y total (1 ≤ step ≤ steps). Sin ellos no hay barra.
+ * - `terminal`: el estado es final (entregado o cancelado): la notificación deja de ser fija.
+ *   Un cancelado no lleva paso: no hay barra que llenar.
+ */
+export type TrackingProgress = { step?: number; steps?: number; terminal: boolean }
+
+/** Pedido a domicilio: Recibido → Preparando → Listo → En camino → Entregado. */
+export const DELIVERY_STEPS = 5
+/** Pedido para recoger: Recibido → Preparando → Listo para recoger → Entregado. */
+export const PICKUP_STEPS = 4
+/** Entregas: Buscando motorizado → Motorizado asignado → En camino → Entregado. */
+export const COURIER_STEPS = 4
+
+const at = (step: number, steps: number): TrackingProgress => ({ step, steps, terminal: false })
+const done = (steps: number): TrackingProgress => ({ step: steps, steps, terminal: true })
+const CANCELLED: TrackingProgress = { terminal: true }
+
+/**
+ * El paso de un pedido de restaurante según su estado REAL en la base (`orders.status`, los de
+ * `ORDER_STATUSES` en `packages/contracts/src/enums.ts`) y su método de entrega.
+ *
+ * `waiting_driver`, `heading_to_restaurant` y `waiting_at_restaurant` son el paso «Listo»: la
+ * comida salió de cocina (o está por salir) y falta que un motorizado se la lleve. Si un
+ * motorizado tomó el pedido antes de que estuviera listo (`take` desde la cola), la barra ya marca
+ * «Listo» con la comida todavía en el fuego: el estado no distingue ese caso. Un estado que no
+ * corresponde al método (p. ej. `picked_up` en un recojo) o desconocido da `null`: sin barra.
+ */
+export function orderProgress(status: string, deliveryMethod: string): TrackingProgress | null {
+  const pickup = deliveryMethod === 'pickup'
+  const steps = pickup ? PICKUP_STEPS : DELIVERY_STEPS
+  switch (status) {
+    case 'validando':
+    case 'pending_acceptance':
+    case 'awaiting_payment':
+    case 'confirmed':
+      return at(1, steps)
+    case 'preparing':
+      return at(2, steps)
+    case 'waiting_driver':
+    case 'heading_to_restaurant':
+    case 'waiting_at_restaurant':
+      return pickup ? null : at(3, steps)
+    case 'picked_up':
+      return pickup ? null : at(4, steps)
+    case 'ready_for_pickup':
+      return pickup ? at(3, steps) : null
+    case 'delivered':
+      return done(steps)
+    case 'cancelled':
+      return CANCELLED
+    default:
+      return null
+  }
+}
+
+/**
+ * El paso de una entrega según `courier_orders.status` (`COURIER_STATUSES`). Cuando el motorizado
+ * la suelta (`release`) la entrega vuelve a `requested`: la barra vuelve al paso 1.
+ */
+export function courierProgress(status: string): TrackingProgress | null {
+  switch (status) {
+    case 'requested':
+      return at(1, COURIER_STEPS)
+    case 'accepted':
+    case 'heading_to_pickup':
+    case 'at_pickup':
+      return at(2, COURIER_STEPS)
+    case 'picked_up':
+    case 'heading_to_dropoff':
+      return at(3, COURIER_STEPS)
+    case 'delivered':
+      return done(COURIER_STEPS)
+    case 'cancelled':
+      return CANCELLED
+    default:
+      return null
+  }
+}
