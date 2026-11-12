@@ -49,9 +49,15 @@ class FakeSessionStore(
         mutableState.value = SessionState.SignedOut
     }
 
+    /**
+     * Corre al empezar [signOut] o [signOutIf], antes de comprobar nada: es otra cuenta que entra mientras el cierre
+     * espera el candado del almacén real. La prueba cambia la sesión ahí.
+     */
+    var beforeSignOut: () -> Unit = {}
+
     override suspend fun signOut() {
-        signOutCalls++
-        mutableState.value = SessionState.SignedOut
+        beforeSignOut()
+        close()
     }
 
     /** Las cuentas con que se pidió [signOutIf], cerrara o no. */
@@ -59,9 +65,15 @@ class FakeSessionStore(
 
     override suspend fun signOutIf(accountId: String): Boolean {
         signOutIfCalls += accountId
+        beforeSignOut()
         if ((mutableState.value as? SessionState.SignedIn)?.userId != accountId) return false
-        signOut()
+        close()
         return true
+    }
+
+    private fun close() {
+        signOutCalls++
+        mutableState.value = SessionState.SignedOut
     }
 
     /** Las cuentas que se pidió cerrar en el aparato, cerradas o no. */

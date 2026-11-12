@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.orders
 
+import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
@@ -19,7 +20,21 @@ class OrderDetailSessionTest : OrderDetailHarness() {
             backgroundScope.launch(dispatcher) { viewModel.state.collect {} }
 
             assertEquals(OrderDetailUiState.LoggedOut, viewModel.state.value)
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
             assertEquals(1, store.signOutCalls)
+        }
+
+    @Test
+    fun `un 401 de A cuyo cierre llega con B ya en la sesion no cierra la de B`() =
+        runTest {
+            server.enqueue(response(401, UNAUTHORIZED))
+            store.beforeSignOut = { store.switchTo("user-2") }
+            val viewModel = viewModel()
+            backgroundScope.launch(dispatcher) { viewModel.state.collect {} }
+
+            assertEquals(OrderDetailUiState.LoggedOut, viewModel.state.value)
+            assertEquals(0, store.signOutCalls)
+            assertEquals(SessionState.SignedIn("user-2"), store.state.value)
         }
 
     @Test
