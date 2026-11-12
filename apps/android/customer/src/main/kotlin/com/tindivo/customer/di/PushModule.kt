@@ -5,10 +5,13 @@ import android.os.Build
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.tindivo.core.network.ApiResult
+import com.tindivo.core.network.CourierRepository
+import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.PushDeviceInfo
 import com.tindivo.core.network.PushRepository
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.push.AndroidNotificationAccess
+import com.tindivo.customer.push.AndroidTrackingTexts
 import com.tindivo.customer.push.DataStorePushInstallationStore
 import com.tindivo.customer.push.DeviceDescription
 import com.tindivo.customer.push.FirebaseConfig
@@ -23,6 +26,8 @@ import com.tindivo.customer.push.PushPermissionPrompt
 import com.tindivo.customer.push.PushRegistrar
 import com.tindivo.customer.push.PushSignOut
 import com.tindivo.customer.push.PushTokens
+import com.tindivo.customer.push.RepositoryTrackingSource
+import com.tindivo.customer.push.TrackingReconciler
 import com.tindivo.customer.session.SessionStore
 import dagger.Module
 import dagger.Provides
@@ -147,6 +152,24 @@ object PushModule {
 
     @Provides
     fun providePushSignOut(registrar: PushRegistrar): PushSignOut = registrar
+
+    @Provides
+    @Singleton
+    fun provideTrackingReconciler(
+        @ApplicationContext context: Context,
+        sessionStore: SessionStore,
+        notifier: PushNotifier,
+        customer: CustomerRepository,
+        courier: CourierRepository,
+        @ApplicationScope scope: CoroutineScope,
+    ): TrackingReconciler =
+        TrackingReconciler(
+            sessionStore = sessionStore,
+            notifications = notifier,
+            source = RepositoryTrackingSource(customer, courier),
+            texts = AndroidTrackingTexts(context),
+            scope = scope,
+        )
 
     @Provides
     @Singleton

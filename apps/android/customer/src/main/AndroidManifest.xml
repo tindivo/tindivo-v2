@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Android 13+: los avisos del pedido. Se pide después de crear un pedido, nunca al abrir la app (PushPermissionPrompt). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16+: el seguimiento del pedido puede pedir ser «Live Update» (setRequestPromotedOngoing). Permiso normal,
+         sin diálogo; sin él la notificación fija se queda como fija normal. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <!-- «Usar mi ubicación» del formulario de dirección: una lectura al tocar el botón, en primer plano. Se piden las
          dos para que la persona pueda dar solo la aproximada. Sin ACCESS_BACKGROUND_LOCATION: nunca en segundo plano. -->

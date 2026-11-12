@@ -96,9 +96,10 @@ class FirebasePushTokens(
 }
 
 /**
- * El servicio de FCM. `onNewToken` vuelve a registrar la cuenta vigente; `onMessageReceived` (solo con la app en primer
- * plano: en segundo plano el aviso lo pinta el sistema con el bloque `notification` del mensaje) valida el payload v1 y
- * lo muestra. Un payload que no se entiende se descarta sin mostrar nada.
+ * El servicio de FCM. `onNewToken` vuelve a registrar la cuenta vigente; `onMessageReceived` valida el payload v1 y lo
+ * muestra. Los avisos de seguimiento (pedido y Entregas) llegan solo-datos y pasan siempre por aquí, con la app en
+ * primer o en segundo plano; los demás, solo con la app en primer plano (en segundo plano los pinta el sistema con el
+ * bloque `notification`). Un payload que no se entiende se descarta sin mostrar nada.
  */
 @AndroidEntryPoint
 class PushService : FirebaseMessagingService() {
@@ -113,7 +114,7 @@ class PushService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         val payload = NativePushPayload.decode(message.data) ?: return
-        notifier.show(payload)
+        notifier.show(payload, TrackingOrigin.Push)
     }
 }
 

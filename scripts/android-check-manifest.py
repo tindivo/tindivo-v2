@@ -22,7 +22,8 @@ errors: list[str] = []
 # Android 12 la precisa solo se puede pedir junto con la aproximada, así que van las dos; nunca en segundo plano),
 # el permiso de firma que androidx.core declara para sus receptores no exportados y los de los avisos (FCM, KT-10):
 # POST_NOTIFICATIONS (Android 13+, se pide en tiempo de ejecución), WAKE_LOCK (permiso normal con el que FCM procesa un
-# aviso) y c2dm RECEIVE (recibir mensajes de FCM).
+# aviso) y c2dm RECEIVE (recibir mensajes de FCM). POST_PROMOTED_NOTIFICATIONS (Android 16+, permiso normal): el
+# seguimiento fijo del pedido pide ser «Live Update» (decisión de Jesús 2026-11-12).
 allowed_permissions = {
     "android.permission.INTERNET",
     "android.permission.ACCESS_NETWORK_STATE",
@@ -30,6 +31,7 @@ allowed_permissions = {
     "android.permission.ACCESS_COARSE_LOCATION",
     f"{app_id}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
     "android.permission.POST_NOTIFICATIONS",
+    "android.permission.POST_PROMOTED_NOTIFICATIONS",
     "android.permission.WAKE_LOCK",
     "com.google.android.c2dm.permission.RECEIVE",
 }

@@ -16,6 +16,7 @@ import com.tindivo.customer.navigation.AppNavHost
 import com.tindivo.customer.navigation.DeepLinkInbox
 import com.tindivo.customer.navigation.pushTargetFrom
 import com.tindivo.customer.push.PUSH_EXTRA_KEYS
+import com.tindivo.customer.push.TrackingReconciler
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -28,6 +29,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var deepLinks: DeepLinkInbox
 
+    @Inject
+    lateinit var trackingReconciler: TrackingReconciler
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Abierta desde un aviso. Al recrearse (girar, volver tras morir el proceso) el intent es el mismo: no se repite.
@@ -36,9 +40,13 @@ class MainActivity : ComponentActivity() {
         // defecto enableEdgeToEdge los pone claros y desaparecen sobre el crema).
         val lightBars = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
         enableEdgeToEdge(statusBarStyle = lightBars, navigationBarStyle = lightBars)
-        // CLI-4: STARTED = la app en primer plano; cubre abrirla y volver a ella.
+        // CLI-4: STARTED = la app en primer plano; cubre abrirla y volver a ella. Ahí también se ponen al día las
+        // notificaciones fijas del seguimiento (un aviso que no llegó, p. ej. en Xiaomi con ahorro de batería).
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) { configService.refresh() }
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { trackingReconciler.reconcile() }
+                configService.refresh()
+            }
         }
         setContent {
             TindivoTheme {

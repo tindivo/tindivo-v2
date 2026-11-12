@@ -31,7 +31,69 @@ class NativePushPayloadTest {
             ),
             payload,
         )
-        assertEquals(valid, payload?.toData())
+        // Sin `group` en el aviso, vale el tag; al volver a las claves, va explícito.
+        assertEquals(valid + ("group" to "OrderProofVerified-AB2C3D4E"), payload?.toData())
+    }
+
+    @Test
+    fun `con step, steps y terminal validos se leen y vuelven a las mismas claves`() {
+        val tracking = valid + mapOf("group" to "order-AB2C3D4E", "step" to "2", "steps" to "5")
+        val payload = NativePushPayload.decode(tracking)
+
+        assertEquals("order-AB2C3D4E", payload?.group)
+        assertEquals(TrackingProgress.of(2, 5), payload?.progress)
+        assertEquals(false, payload?.terminal)
+        assertEquals(tracking, payload?.toData())
+
+        val delivered = tracking + mapOf("step" to "5", "terminal" to "1")
+        assertEquals(true, NativePushPayload.decode(delivered)?.terminal)
+        assertEquals(delivered, NativePushPayload.decode(delivered)?.toData())
+    }
+
+    @Test
+    fun `sin los campos nuevos el aviso se lee como antes, sin barra ni final`() {
+        val payload = NativePushPayload.decode(valid)
+
+        assertNull(payload?.progress)
+        assertEquals(false, payload?.terminal)
+    }
+
+    @Test
+    fun `un paso invalido solo quita la barra, el aviso se muestra igual`() {
+        val invalid =
+            listOf(
+                mapOf("step" to "0", "steps" to "5"),
+                mapOf("step" to "6", "steps" to "5"),
+                mapOf("step" to "dos", "steps" to "5"),
+                mapOf("step" to "2", "steps" to "cinco"),
+                mapOf("step" to "02", "steps" to "5"),
+                mapOf("step" to "-1", "steps" to "5"),
+                mapOf("step" to "1.5", "steps" to "5"),
+                mapOf("step" to "", "steps" to "5"),
+                mapOf("step" to "2", "steps" to "0"),
+                mapOf("step" to "999999999999", "steps" to "5"),
+                mapOf("step" to "2"),
+                mapOf("steps" to "5"),
+            )
+        for (extra in invalid) {
+            val payload = NativePushPayload.decode(valid + extra)
+            assertEquals(extra.toString(), "Pago confirmado", payload?.title)
+            assertNull(extra.toString(), payload?.progress)
+        }
+    }
+
+    @Test
+    fun `terminal solo vale con el texto exacto 1`() {
+        for (value in listOf("0", "true", "", "11", " 1")) {
+            assertEquals(value, false, NativePushPayload.decode(valid + ("terminal" to value))?.terminal)
+        }
+    }
+
+    @Test
+    fun `un group vacio o demasiado largo no cumple el contrato y se descarta`() {
+        assertNull(NativePushPayload.decode(valid + ("group" to "")))
+        assertNull(NativePushPayload.decode(valid + ("group" to "g".repeat(257))))
+        assertEquals("g".repeat(256), NativePushPayload.decode(valid + ("group" to "g".repeat(256)))?.group)
     }
 
     @Test
