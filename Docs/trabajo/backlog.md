@@ -16,6 +16,7 @@
 | 9 | **Libro de Reclamaciones** (Ley 29571): de Tindivo hacia el consumidor, formulario público sin sesión, copia por correo con Resend tras `RESEND_API_KEY`, datos del proveedor en `app_settings` | Obligación legal; en stand by hasta tener RUC (de persona natural con negocio basta) | Acordado 2026-08-16 |
 | 10 | **Avisos al cliente y tarjeta del motorizado**: dos propuestas de diseño publicadas en canvas, sin implementar | Retomarlas si se trabaja esa parte | Claude, sep 2026 |
 | 11 | **Decidir quién cubre un faltante de efectivo** (motorizado, negocio o Tindivo) | Nunca ha pasado en 340 rendiciones; se decide el día que ocurra | Squash del canon, 2026-10-10 |
+| 13 | **Avisos de promoción y recordatorios a la hora de comer** (push al cliente: promos de negocios y «¿ya pediste tu cena?» a las 18, 19 o 20 h, hora de Lima) | Reactivar clientes. No es fácil hoy: el reglamento de datos personales exige consentimiento **directo y aparte** para publicidad, con una forma de retirarlo igual de sencilla y atendida en 10 días (D.S. 016-2024-JUS art. 26); necesita un canal de Android propio (`promotions`, separado de `order_updates`), un interruptor en «Mi cuenta», registrar el consentimiento, una herramienta de envío para el admin con segmentos y tope de frecuencia, y la hora en `app_settings` (invariante 10). Ver también la fila 12 y [`campanas/propuesta.md`](campanas/propuesta.md) | Jesús, 2026-11-12 |
 
 ## Del backlog viejo (fusionado el 2026-10-10)
 
