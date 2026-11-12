@@ -332,4 +332,42 @@ class TrackingPresenterTest {
             assertEquals(clearsBefore + 1, rig.notifications.clears)
             assertTrue(rig.marks.saved.isEmpty())
         }
+
+    private fun barless(install: String) = payload(install, seq = null).copy(progress = null)
+
+    @Test
+    fun `un aviso del grupo del pedido sin paso ni version se muestra como antes y no toca las marcas`() =
+        runTest {
+            registrar()
+
+            assertTrue(rig.presenter.onPush(barless(installId())))
+
+            assertEquals(1, rig.notifications.shows.size)
+            assertTrue(rig.marks.saved.isEmpty())
+        }
+
+    @Test
+    fun `el mismo aviso con paso y sin version se descarta`() =
+        runTest {
+            registrar()
+
+            assertFalse(rig.presenter.onPush(barless(installId()).copy(progress = TrackingProgress.of(2, 5))))
+            assertFalse(rig.presenter.onPush(barless(installId()).copy(terminal = true)))
+
+            assertTrue(rig.notifications.shows.isEmpty())
+        }
+
+    @Test
+    fun `un aviso sin barra tras un terminal se muestra, no revive la barra ni cambia las marcas`() =
+        runTest {
+            registrar()
+            val install = installId()
+            assertTrue(rig.presenter.onPush(payload(install, seq = 5_000_000_000_000, terminal = true)))
+            val marks = rig.marks.saved
+
+            assertTrue(rig.presenter.onPush(barless(install)))
+
+            assertEquals(marks, rig.marks.saved)
+            assertFalse(rig.presenter.onPush(payload(install, seq = 6_000_000_000_000, step = 4)))
+        }
 }

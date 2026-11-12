@@ -50,9 +50,10 @@ class TrackingPresenter(
             // vuelve a comprobar aquí, sin ninguna suspensión entre esta comprobación y el pintado.
             if (!stillCurrent(account, generation)) return false
             val key = TrackingKey.parse(payload.group)
-            if (key != null &&
-                !ledger.admit(payload.group, payload.seq, payload.terminal, rankOf(payload))
-            ) {
+            // Solo los avisos que mueven el seguimiento (traen paso o son terminales) exigen una versión válida. Uno sin
+            // barra (un estado sin paso, un aviso que no es de estado) se muestra como siempre y no toca las marcas.
+            val moves = payload.progress != null || payload.terminal
+            if (key != null && moves && !ledger.admit(payload.group, payload.seq, payload.terminal, rankOf(payload))) {
                 return false
             }
             notifications.show(payload, TrackingOrigin.Push)
