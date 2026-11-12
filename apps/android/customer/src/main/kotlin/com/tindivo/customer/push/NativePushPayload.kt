@@ -11,6 +11,10 @@ package com.tindivo.customer.push
  *
  * [progress] y [terminal] (opcionales, aditivos) son el seguimiento: en qué paso va el pedido y si ya terminó. Con un
  * paso y sin terminar, la notificación es fija y lleva barra de progreso (ver [lookFor]).
+ *
+ * [install] es el `installId` de la instalación destinataria y [seq] la versión del estado (`updated_at` en ms): con el
+ * primero la app descarta un aviso que no es de su instalación vigente (ver [TrackingPresenter.onPush]); con el segundo,
+ * uno desordenado más viejo que el ya mostrado ([TrackingLedger]).
  */
 data class NativePushPayload(
     val type: String,
@@ -21,6 +25,8 @@ data class NativePushPayload(
     val group: String = tag,
     val progress: TrackingProgress? = null,
     val terminal: Boolean = false,
+    val install: String? = null,
+    val seq: Long? = null,
 ) {
     /** Las claves de `data`, para devolverlas tal cual en el intent del aviso que pinta la app. */
     fun toData(): Map<String, String> =
@@ -37,7 +43,15 @@ data class NativePushPayload(
                 put(KEY_STEPS, it.steps.toString())
             }
             if (terminal) put(KEY_TERMINAL, TERMINAL_YES)
+            install?.let { put(KEY_INSTALL, it) }
+            seq?.let { put(KEY_SEQ, it.toString()) }
         }
+
+    /**
+     * Lo ÚNICO que viaja en el `Intent` de la notificación que pinta la app: la versión y la ruta (`/pedido/<sid>`,
+     * `/entregas/<sid>`: el tipo y el código). Ni el título ni el cuerpo —que llevan nombres— salen de la notificación.
+     */
+    fun routeExtras(): Map<String, String> = mapOf(KEY_V to SUPPORTED_VERSION, KEY_DEEP_LINK to deepLink)
 
     companion object {
         const val SUPPORTED_VERSION = "1"
@@ -51,6 +65,8 @@ data class NativePushPayload(
         const val KEY_STEP = "step"
         const val KEY_STEPS = "steps"
         const val KEY_TERMINAL = "terminal"
+        const val KEY_INSTALL = "install"
+        const val KEY_SEQ = "seq"
         private const val TERMINAL_YES = "1"
 
         /** Las mismas cotas del esquema Zod del contrato. */
@@ -60,9 +76,14 @@ data class NativePushPayload(
         private const val MAX_TITLE = 256
         private const val MAX_BODY = 1024
         private const val MAX_DEEP_LINK = 512
+        private const val MIN_INSTALL = 8
+        private const val MAX_INSTALL = 64
 
         /** Un paso es un entero positivo sin ceros a la izquierda y de hasta dos cifras, como en el contrato. */
         private val STEP_TEXT = Regex("[1-9][0-9]?")
+
+        /** Un `seq` es un entero positivo sin ceros a la izquierda, de 10 a 16 cifras, como en el contrato. */
+        private val SEQ_TEXT = Regex("[1-9][0-9]{9,15}")
 
         /**
          * Lee el payload v1. Devuelve `null` (el aviso se descarta, no se muestra) si la versión no es la 1, si falta un
@@ -93,7 +114,19 @@ data class NativePushPayload(
                 group = group ?: tag,
                 progress = progressOf(data[KEY_STEP], data[KEY_STEPS]),
                 terminal = data[KEY_TERMINAL] == TERMINAL_YES,
+                install = data[KEY_INSTALL]?.takeIf { it.length in MIN_INSTALL..MAX_INSTALL },
+                seq = data[KEY_SEQ]?.takeIf { SEQ_TEXT.matches(it) }?.toLong(),
             )
+        }
+
+        /**
+         * La ruta a la que lleva un aviso TOCADO, desde los extras con que se abrió la app (los de [routeExtras], o los
+         * de un aviso pintado por el sistema, que traen todo `data`). Solo se mira la versión y la ruta: nada más hace
+         * falta para navegar. `null` si no es la versión 1 o la ruta no es relativa y limpia (ver [decode]).
+         */
+        fun decodeRoute(extras: Map<String, String>): String? {
+            if (extras[KEY_V] != SUPPORTED_VERSION) return null
+            return extras[KEY_DEEP_LINK]?.takeIf(::isAppPath)
         }
 
         private fun progressOf(

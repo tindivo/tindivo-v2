@@ -24,9 +24,9 @@ class DeepLinkInbox {
 }
 
 /**
- * El destino de un aviso tocado, desde los extras con que se abrió la app (las claves de `data`, tanto si el aviso lo
- * pintó el sistema como la app). Un payload que no es v1 válido no abre nada (`null`); uno válido con una ruta que la
- * app no conoce, el inicio.
+ * El destino de un aviso tocado, desde los extras con que se abrió la app (la versión y la ruta; el aviso lo pintó
+ * el sistema o la app). Sin versión 1 o sin una ruta relativa limpia no abre nada (`null`); con una ruta que la app no
+ * conoce, el inicio.
  */
 fun pushTargetFrom(extras: Map<String, String>): DeepLinkTarget? =
-    NativePushPayload.decode(extras)?.let { DeepLinkRouter.route(it.deepLink) }
+    NativePushPayload.decodeRoute(extras)?.let(DeepLinkRouter::route)

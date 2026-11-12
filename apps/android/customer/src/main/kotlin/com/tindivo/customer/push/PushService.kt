@@ -9,6 +9,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -82,15 +83,16 @@ class FirebasePushTokens(
         }
     }
 
-    override suspend fun delete() {
-        if (!enabled) return
-        try {
+    override suspend fun delete(): Boolean {
+        if (!enabled) return true
+        return try {
             FirebaseMessaging.getInstance().deleteToken().await()
+            true
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
-            // Mejor esfuerzo: si no se pudo, el servidor igual suelta la fila vieja cuando otra instalación registra
-            // este mismo token.
+            // Se reintenta (la limpieza queda pendiente en `PushInstallationStore`); el detalle no sale a un log.
+            false
         }
     }
 }
@@ -105,7 +107,7 @@ class FirebasePushTokens(
 class PushService : FirebaseMessagingService() {
     @Inject lateinit var registrar: PushRegistrar
 
-    @Inject lateinit var notifier: PushNotifier
+    @Inject lateinit var presenter: TrackingPresenter
 
     override fun onNewToken(token: String) {
         // El token no se guarda ni se registra desde aquí: el registro lo vuelve a pedir, atado a la cuenta vigente.
@@ -114,7 +116,9 @@ class PushService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         val payload = NativePushPayload.decode(message.data) ?: return
-        notifier.show(payload, TrackingOrigin.Push)
+        // Este hilo es del servicio de FCM (no el principal) y el trabajo es corto: se espera a la puerta de los avisos,
+        // que solo pinta lo que es de la sesión actual (`TrackingPresenter.onPush`).
+        runBlocking { presenter.onPush(payload) }
     }
 }
 

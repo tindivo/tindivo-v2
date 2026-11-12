@@ -12,7 +12,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -74,16 +73,63 @@ class PushInstallationStoreTest {
         }
 
     @Test
-    fun `al olvidar se genera uno nuevo sin cuenta, y la siguiente cuenta lo usa sin cambiarlo`() =
+    fun `al cerrar sesion hay un installId nuevo sin cuenta y queda la limpieza del anterior`() =
         runTest {
             val store = store()
             store.bindTo("A")
 
-            assertTrue(store.forget())
+            assertEquals(PendingCleanup(ids[0].toString(), "A"), store.beginSignOut(null))
             assertEquals(PushInstallation(ids[1].toString(), accountId = null), store.current())
-            assertFalse("sin cuenta no hay nada que olvidar", store.forget())
+            assertEquals(PendingCleanup(ids[0].toString(), "A"), store.pending())
+            assertNull("sin cuenta atada no hay nada que cerrar", store.beginSignOut(null))
             assertEquals(PushBinding(ids[1], replacedOther = false), store.bindTo("B"))
         }
+
+    @Test
+    fun `cerrar sesion de otra cuenta no toca la identidad ni anota limpieza`() =
+        runTest {
+            val store = store()
+            store.bindTo("A")
+
+            assertNull(store.beginSignOut("B"))
+            assertEquals(PushInstallation(ids[0].toString(), "A"), store.current())
+            assertNull(store.pending())
+        }
+
+    @Test
+    fun `la limpieza se cierra cuando se hicieron la baja y el token, en cualquier orden`() =
+        runTest {
+            val memory = MemoryDataStore(PushInstallationSnapshot())
+            val first = DataStorePushInstallationStore(memory, newId = { ids[next++] })
+            first.bindTo("A")
+            first.beginSignOut("A")
+            first.tokenDone(ids[0].toString())
+
+            val reopened = DataStorePushInstallationStore(memory)
+            assertEquals(PendingCleanup(ids[0].toString(), "A", tokenDone = true), reopened.pending())
+            reopened.serverDone("otro-install")
+            assertFalse("un installId ajeno no cierra nada", reopened.pending()?.done == true)
+            reopened.serverDone(ids[0].toString())
+            assertNull(reopened.pending())
+        }
+
+    @Test
+    fun `la limpieza pendiente se escribe y se lee del archivo`() {
+        val snapshot =
+            PushInstallationSnapshot(
+                installation = PushInstallation(ids[1].toString(), null),
+                pending = PendingCleanup(ids[0].toString(), "A", serverDone = false, tokenDone = true),
+            )
+        val bytes = ByteArrayOutputStream()
+        kotlinx.coroutines.runBlocking { PushInstallationSerializer.writeTo(snapshot, bytes) }
+
+        val read =
+            kotlinx.coroutines.runBlocking {
+                PushInstallationSerializer.readFrom(ByteArrayInputStream(bytes.toByteArray()))
+            }
+
+        assertEquals(snapshot, read)
+    }
 
     @Test
     fun `tras un 409 el installId rechazado se cambia por uno nuevo, y uno ya cambiado no se vuelve a cambiar`() =

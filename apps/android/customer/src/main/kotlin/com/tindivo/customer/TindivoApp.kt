@@ -8,7 +8,6 @@ import com.tindivo.customer.feature.deleteaccount.DeletedAccountCleanup
 import com.tindivo.customer.push.FirebaseConfig
 import com.tindivo.customer.push.PushChannels
 import com.tindivo.customer.push.PushRegistrar
-import com.tindivo.customer.push.TrackingReconciler
 import com.tindivo.customer.push.initializeFirebase
 import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
@@ -29,16 +28,12 @@ class TindivoApp :
 
     @Inject lateinit var pushRegistrar: PushRegistrar
 
-    // Cerrar sesión o cambiar de cuenta quita las notificaciones de la cuenta que se fue.
-    @Inject lateinit var trackingReconciler: TrackingReconciler
-
     override fun onCreate() {
         super.onCreate()
         deletedAccountCleanup.start()
         PushChannels.create(this)
         initializeFirebase(this, firebaseConfig)
         pushRegistrar.start()
-        trackingReconciler.start()
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader = imageLoader.get()

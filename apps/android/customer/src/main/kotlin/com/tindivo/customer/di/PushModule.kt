@@ -27,6 +27,7 @@ import com.tindivo.customer.push.PushRegistrar
 import com.tindivo.customer.push.PushSignOut
 import com.tindivo.customer.push.PushTokens
 import com.tindivo.customer.push.RepositoryTrackingSource
+import com.tindivo.customer.push.TrackingPresenter
 import com.tindivo.customer.push.TrackingReconciler
 import com.tindivo.customer.session.SessionStore
 import dagger.Module
@@ -147,8 +148,10 @@ object PushModule {
         access: NotificationAccess,
         devices: PushDevices,
         description: DeviceDescription,
+        presenter: TrackingPresenter,
         @ApplicationScope scope: CoroutineScope,
-    ): PushRegistrar = PushRegistrar(sessionStore, installations, tokens, access, devices, description, scope)
+    ): PushRegistrar =
+        PushRegistrar(sessionStore, installations, tokens, access, devices, description, presenter, scope)
 
     @Provides
     fun providePushSignOut(registrar: PushRegistrar): PushSignOut = registrar
@@ -158,17 +161,15 @@ object PushModule {
     fun provideTrackingReconciler(
         @ApplicationContext context: Context,
         sessionStore: SessionStore,
-        notifier: PushNotifier,
+        presenter: TrackingPresenter,
         customer: CustomerRepository,
         courier: CourierRepository,
-        @ApplicationScope scope: CoroutineScope,
     ): TrackingReconciler =
         TrackingReconciler(
             sessionStore = sessionStore,
-            notifications = notifier,
+            presenter = presenter,
             source = RepositoryTrackingSource(customer, courier),
             texts = AndroidTrackingTexts(context),
-            scope = scope,
         )
 
     @Provides

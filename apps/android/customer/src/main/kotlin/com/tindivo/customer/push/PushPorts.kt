@@ -15,8 +15,11 @@ interface PushTokens {
     /** El token vigente, o `null` si no se pudo obtener (sin red, sin Google Play Services). */
     suspend fun token(): String?
 
-    /** Borra el token de este aparato: el siguiente [token] será otro. Mejor esfuerzo; un fallo no se propaga. */
-    suspend fun delete()
+    /**
+     * Borra el token de este aparato: el siguiente [token] será otro. Devuelve `true` si quedó borrado (o no había nada
+     * que borrar) y `false` si falló (sin red, sin Google Play Services): quien llama lo reintenta después.
+     */
+    suspend fun delete(): Boolean
 }
 
 /** Si el sistema deja mostrar avisos a la app. */

@@ -6,9 +6,12 @@ import com.tindivo.core.network.AppError
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 
@@ -24,11 +27,21 @@ fun interface PushSignOut {
  *   **nunca sin el permiso concedido** (Android 13+). El permiso no se pide aquí.
  * - Cada registro va atado a la cuenta (`boundTo` en `PushRepository`) y usa un `installId` de esa cuenta: uno de otra
  *   se cambia antes, y el token de FCM se renueva. Un 409 cambia el `installId` y se reintenta UNA vez.
- * - Al cerrar sesión: [beforeSignOut] manda el `DELETE` con la sesión que se va (mejor esfuerzo, acotado por
- *   [unregisterTimeoutMs]). Cuando la sesión ya cerró, por la vía que sea (también un 401), se borra el token de FCM
- *   local y se genera un `installId` nuevo: la cuenta siguiente nunca hereda la identidad de la anterior.
  *
- * Todo pasa por UN [Mutex]: un registro y una baja nunca se cruzan.
+ * **Cerrar sesión** ([beforeSignOut], con la sesión todavía abierta), en este orden:
+ * 1. Se marca la cuenta como «cerrando»: ningún registro nuevo (ni un `refresh`) la vuelve a atar.
+ * 2. Bajo el candado de los avisos ([TrackingPresenter.closeAccount]), UN paso atómico: el `installId` cambia por uno
+ *    nuevo sin cuenta y la limpieza pendiente (baja en el servidor + token de FCM) queda guardada en disco; se borran
+ *    las marcas y todas las notificaciones. Desde ahí ningún aviso en camino de esa cuenta se pinta.
+ * 3. Se espera el registro que estuviera en vuelo (el mismo [Mutex]) y se da de baja el `installId` anterior con la
+ *    sesión que se va (con reintentos ante un 409 o un fallo de red), todo acotado por [unregisterTimeoutMs].
+ * 4. Se borra el token de FCM. Si algo de esto falla, la limpieza SIGUE PENDIENTE y se reintenta: el token, en cada
+ *    arranque y registro; la baja del servidor, cuando esa cuenta vuelva a tener sesión (sin sesión la API no la acepta;
+ *    mientras tanto el token de FCM ya no sirve y el servidor suelta la fila al recibir `UNREGISTERED`).
+ *
+ * Una sesión que se cierra sola (un 401) pasa por el mismo paso 2 y por el 4, sin baja del servidor.
+ *
+ * Todo registro y toda baja pasan por UN [Mutex]: nunca se cruzan.
  */
 class PushRegistrar(
     private val sessionStore: SessionStore,
@@ -37,19 +50,39 @@ class PushRegistrar(
     private val access: NotificationAccess,
     private val devices: PushDevices,
     private val description: DeviceDescription,
+    private val presenter: TrackingPresenter,
     private val scope: CoroutineScope,
     private val unregisterTimeoutMs: Long = UNREGISTER_TIMEOUT_MS,
+    private val registrationWaitMs: Long = REGISTRATION_WAIT_MS,
 ) : PushSignOut {
     private val mutex = Mutex()
+
+    /** La cuenta que está cerrando sesión: mientras dure, no se registra. Se limpia cuando la sesión ya cambió. */
+    @Volatile private var closing: String? = null
 
     /** Empieza a seguir la sesión. Se llama una vez, al arrancar el proceso. */
     fun start() {
         scope.launch {
+            retryTokenCleanup()
             sessionStore.state.collect { session ->
                 when (session) {
-                    SessionState.Unknown -> Unit
-                    SessionState.SignedOut -> mutex.withLock { forgetLocked() }
-                    is SessionState.SignedIn -> mutex.withLock { registerLocked(session.userId) }
+                    SessionState.Unknown -> {
+                        Unit
+                    }
+
+                    SessionState.SignedOut -> {
+                        closing = null
+                        closeAccount(accountId = null, hasSession = false)
+                    }
+
+                    is SessionState.SignedIn -> {
+                        if (closing != session.userId) closing = null
+                        // Otra cuenta sin pasar por SignedOut (un StateFlow puede saltárselo): lo de la anterior se cierra igual.
+                        val bound = installations.current()?.accountId
+                        if (bound != null && bound != session.userId) closeAccount(accountId = null, hasSession = false)
+                        mutex.withLock { registerLocked(session.userId) }
+                        retryServerCleanup(session.userId)
+                    }
                 }
             }
         }
@@ -60,28 +93,71 @@ class PushRegistrar(
         scope.launch {
             val account = currentAccount() ?: return@launch
             mutex.withLock { registerLocked(account) }
+            retryTokenCleanup()
         }
     }
 
     override suspend fun beforeSignOut(accountId: String) {
-        withTimeoutOrNull(unregisterTimeoutMs) {
-            mutex.withLock {
-                val saved = installations.current() ?: return@withLock
-                if (saved.accountId != accountId) return@withLock
-                val installId = saved.installId.toUuidOrNull() ?: return@withLock
-                // 409 = chocó con otro registro simultáneo del mismo aparato: el contrato pide reintentar; una vez.
-                if (devices.unregister(installId, accountId).isConflict()) devices.unregister(installId, accountId)
-            }
+        closing = accountId
+        withContext(NonCancellable) { closeAccount(accountId, hasSession = true) }
+    }
+
+    private suspend fun closeAccount(
+        accountId: String?,
+        hasSession: Boolean,
+    ) {
+        // Paso atómico: nueva identidad + limpieza anotada + marcas y bandeja vacías, bajo el candado de los avisos.
+        val pending = presenter.closeAccount { installations.beginSignOut(accountId) } ?: return
+        val locked = withTimeoutOrNull(registrationWaitMs) { mutex.lock() } != null
+        try {
+            if (locked && hasSession) withTimeoutOrNull(unregisterTimeoutMs) { unregisterServer(pending) }
+        } finally {
+            if (locked) mutex.unlock()
         }
+        deleteToken(pending)
+    }
+
+    /** La baja de [pending] en el servidor, con la sesión de su cuenta: un 409 o un fallo de red se reintentan. */
+    private suspend fun unregisterServer(pending: PendingCleanup) {
+        val installId = pending.installId.toUuidOrNull()
+        if (installId == null) {
+            installations.serverDone(pending.installId)
+            return
+        }
+        var result = devices.unregister(installId, pending.accountId)
+        var retries = 0
+        while (result is ApiResult.Failure && retries < UNREGISTER_RETRIES && result.retryable()) {
+            retries++
+            delay(RETRY_DELAY_MS * retries)
+            result = devices.unregister(installId, pending.accountId)
+        }
+        if (result is ApiResult.Success) installations.serverDone(pending.installId)
+    }
+
+    private suspend fun deleteToken(pending: PendingCleanup) {
+        if (tokens.delete()) installations.tokenDone(pending.installId)
+    }
+
+    /** El borrado del token que quedó pendiente (no necesita sesión). */
+    private suspend fun retryTokenCleanup() {
+        val pending = installations.pending() ?: return
+        if (!pending.tokenDone) deleteToken(pending)
+    }
+
+    /** La baja del servidor que quedó pendiente: solo si [account] es la cuenta de esa limpieza (necesita su sesión). */
+    private suspend fun retryServerCleanup(account: String) {
+        val pending = installations.pending() ?: return
+        if (pending.serverDone || pending.accountId != account || closing == account) return
+        mutex.withLock { withTimeoutOrNull(unregisterTimeoutMs) { unregisterServer(pending) } }
     }
 
     private suspend fun registerLocked(account: String) {
-        if (!tokens.enabled || !access.permissionGranted() || currentAccount() != account) return
+        if (!tokens.enabled || !access.permissionGranted() || currentAccount() != account || closing == account) return
         val binding = installations.bindTo(account)
         // El installId era de otra cuenta: el token de FCM también se renueva antes de registrar esta.
         if (binding.replacedOther) tokens.delete()
         val token = tokens.token() ?: return
-        if (currentAccount() != account) return
+        if (currentAccount() != account || closing == account) return
         val device = description.describe(token)
         if (devices.register(binding.installId, device, account).isConflict()) {
             val next = installations.replace(binding.installId, account)
@@ -89,15 +165,17 @@ class PushRegistrar(
         }
     }
 
-    private suspend fun forgetLocked() {
-        if (installations.forget()) tokens.delete()
-    }
-
     private fun currentAccount(): String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
 
     private companion object {
         /** Cuánto espera «Cerrar sesión» a la baja antes de cerrar igual. */
         const val UNREGISTER_TIMEOUT_MS = 5_000L
+
+        /** Cuánto espera a que termine un registro en vuelo antes de renunciar a la baja (queda pendiente). */
+        const val REGISTRATION_WAIT_MS = 10_000L
+
+        const val UNREGISTER_RETRIES = 2
+        const val RETRY_DELAY_MS = 400L
     }
 }
 
@@ -105,6 +183,18 @@ private fun ApiResult<Unit>.isConflict(): Boolean {
     val error = (this as? ApiResult.Failure)?.error
     return error is AppError.Known && error.code == ApiErrorCode.Conflict
 }
+
+/** Un 409 (choque con otro registro del mismo aparato) o un fallo de red/servidor se reintentan; un 401/403/422 no. */
+private fun ApiResult.Failure.retryable(): Boolean {
+    val e = error
+    return when (e) {
+        is AppError.Known -> e.code == ApiErrorCode.Conflict || e.status >= HTTP_SERVER_ERROR
+        is AppError.Network -> true
+        else -> false
+    }
+}
+
+private const val HTTP_SERVER_ERROR = 500
 
 private fun String.toUuidOrNull(): UUID? =
     try {

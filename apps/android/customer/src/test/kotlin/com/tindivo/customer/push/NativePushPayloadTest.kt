@@ -51,6 +51,74 @@ class NativePushPayloadTest {
     }
 
     @Test
+    fun `install y seq validos se leen y vuelven a las mismas claves, invalidos se ignoran sin tumbar el aviso`() {
+        val install = "8b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+        val full = valid + mapOf("group" to "order-AB2C3D4E", "install" to install, "seq" to "1794000000000")
+        val payload = NativePushPayload.decode(full)
+
+        assertEquals(install, payload?.install)
+        assertEquals(1_794_000_000_000L, payload?.seq)
+        assertEquals(full, payload?.toData())
+
+        for (bad in listOf("0", "123", "-1794000000000", "01794000000000", "1794000000000.5", "xxx", "1".repeat(17))) {
+            assertNull(bad, NativePushPayload.decode(valid + ("seq" to bad))?.seq)
+        }
+        for (bad in listOf("corto", "x".repeat(65), "")) {
+            assertNull(bad, NativePushPayload.decode(valid + ("install" to bad))?.install)
+        }
+    }
+
+    @Test
+    fun `CAX-006 el intent de la notificacion lleva solo la version y la ruta, nunca nombres`() {
+        val payload =
+            NativePushPayload(
+                type = "OrderStatusChanged",
+                tag = "OrderStatusChanged-AB2C3D4E",
+                title = "Pedro va por tu pedido",
+                body = "Lo recoge en Pollería Sabor",
+                deepLink = "/pedido/AB2C3D4E",
+                group = "order-AB2C3D4E",
+                progress = TrackingProgress.of(3, 5),
+                install = "8b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+                seq = 1_794_000_000_000L,
+            )
+
+        val extras = payload.routeExtras()
+
+        assertEquals(mapOf("v" to "1", "deepLink" to "/pedido/AB2C3D4E"), extras)
+        assertEquals(PUSH_EXTRA_KEYS.toSet(), extras.keys)
+        assertEquals(false, extras.values.any { it.contains("Pedro") || it.contains("Sabor") })
+        assertEquals("/pedido/AB2C3D4E", NativePushPayload.decodeRoute(extras))
+        // Un aviso pintado por el sistema trae todo `data`: solo se lee la ruta, y tras atenderlo se quita todo.
+        assertEquals("/pedido/AB2C3D4E", NativePushPayload.decodeRoute(payload.toData()))
+        assertEquals(true, PUSH_EXTRA_KEYS_TO_CLEAR.containsAll(payload.toData().keys))
+    }
+
+    @Test
+    fun `decodeRoute exige la version 1 y una ruta relativa limpia`() {
+        assertNull(NativePushPayload.decodeRoute(emptyMap()))
+        assertNull(NativePushPayload.decodeRoute(mapOf("deepLink" to "/pedido/AB2C3D4E")))
+        assertNull(NativePushPayload.decodeRoute(mapOf("v" to "2", "deepLink" to "/pedido/AB2C3D4E")))
+        for (bad in listOf("//evil.example/x", "https://evil.example/x", "pedido/AB2C3D4E", "/a b", "/a\\b", "")) {
+            assertNull(bad, NativePushPayload.decodeRoute(mapOf("v" to "1", "deepLink" to bad)))
+        }
+    }
+
+    @Test
+    fun `CAX-005 dos pedidos con el mismo hashCode de String tienen identidad de notificacion distinta`() {
+        val a = "order-AAAAAAAQ"
+        val b = "order-AAAAAAB2"
+        // La premisa: el requestCode antiguo (group.hashCode()) colisionaba.
+        assertEquals(a.hashCode(), b.hashCode())
+
+        assertEquals(false, notificationIdentity(a) == notificationIdentity(b))
+        assertEquals(notificationIdentity(a), notificationIdentity(a))
+        assertEquals("tindivo-notification://order-update/order-AAAAAAAQ", notificationIdentity(a))
+        // Un grupo con caracteres raros no rompe la URI ni se confunde con otro.
+        assertEquals(false, notificationIdentity("a/b") == notificationIdentity("a%2Fb"))
+    }
+
+    @Test
     fun `sin los campos nuevos el aviso se lee como antes, sin barra ni final`() {
         val payload = NativePushPayload.decode(valid)
 

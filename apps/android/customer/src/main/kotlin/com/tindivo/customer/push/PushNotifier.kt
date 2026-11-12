@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.annotation.StringRes
@@ -16,6 +17,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.tindivo.customer.MainActivity
 import com.tindivo.customer.R
+import java.net.URLEncoder
 
 /**
  * El canal de los avisos del pedido (KT-10). Su id es el que manda `send-push` en `android.notification.channel_id`
@@ -133,11 +135,15 @@ class PushNotifier(
         val open =
             Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                payload.toData().forEach { (key, value) -> putExtra(key, value) }
+                // Solo lo necesario para navegar (versión y ruta): el título y el cuerpo llevan nombres.
+                data = Uri.parse(notificationIdentity(payload.group))
+                payload.routeExtras().forEach { (key, value) -> putExtra(key, value) }
             }
+        // La identidad del PendingIntent es el `data` del Intent, que contiene el grupo ENTERO (ver arriba): dos pedidos
+        // nunca coinciden. Un `hashCode` de String sí colisiona (`order-AAAAAAAQ` y `order-AAAAAAB2`).
         return PendingIntent.getActivity(
             context,
-            payload.group.hashCode(),
+            REQUEST_CODE,
             open,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
@@ -183,6 +189,9 @@ class PushNotifier(
         }
 
     private companion object {
+        /** Siempre el mismo: lo que distingue un aviso de otro es la `data` del Intent (`group` completo), no este número. */
+        const val REQUEST_CODE = 0
+
         /** El id que usa FCM con la etiqueta: así el aviso de aquí y el del sistema se reemplazan entre sí. */
         const val NOTIFICATION_ID = 0
 
@@ -234,13 +243,33 @@ class AndroidTrackingTexts(
     }
 }
 
-/** Las claves del payload que lee la app al abrirse desde un aviso; el resto de extras no se mira. */
-val PUSH_EXTRA_KEYS: List<String> =
-    listOf(
-        NativePushPayload.KEY_V,
-        NativePushPayload.KEY_TYPE,
-        NativePushPayload.KEY_TAG,
-        NativePushPayload.KEY_TITLE,
-        NativePushPayload.KEY_BODY,
-        NativePushPayload.KEY_DEEP_LINK,
-    )
+/** Las únicas claves que lee la app al abrirse desde un aviso: la versión y la ruta. */
+val PUSH_EXTRA_KEYS: List<String> = listOf(NativePushPayload.KEY_V, NativePushPayload.KEY_DEEP_LINK)
+
+/**
+ * Todas las claves de `data` que el sistema puede poner como extras en un aviso que pintó él (con el bloque
+ * `notification`). Tras atender el aviso se quitan TODAS del intent, para que ni el título ni el cuerpo se queden en él.
+ */
+val PUSH_EXTRA_KEYS_TO_CLEAR: List<String> =
+    PUSH_EXTRA_KEYS +
+        listOf(
+            NativePushPayload.KEY_TYPE,
+            NativePushPayload.KEY_TAG,
+            NativePushPayload.KEY_GROUP,
+            NativePushPayload.KEY_TITLE,
+            NativePushPayload.KEY_BODY,
+            NativePushPayload.KEY_STEP,
+            NativePushPayload.KEY_STEPS,
+            NativePushPayload.KEY_TERMINAL,
+            NativePushPayload.KEY_INSTALL,
+            NativePushPayload.KEY_SEQ,
+        )
+
+/**
+ * La identidad de un aviso para Android: el grupo ENTERO, no su `hashCode`. Va como `data` del `Intent` del
+ * `PendingIntent` (que Android compara por acción, `data`, tipo y clase, no por extras): dos pedidos distintos nunca
+ * comparten `PendingIntent`, así que tocar el aviso de uno nunca abre el otro. `order-AAAAAAAQ` y `order-AAAAAAB2`
+ * tienen el mismo `hashCode` de String.
+ */
+fun notificationIdentity(group: String): String =
+    "tindivo-notification://order-update/" + URLEncoder.encode(group, Charsets.UTF_8.name())

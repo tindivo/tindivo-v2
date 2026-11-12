@@ -21,11 +21,27 @@ data class PushInstallation(
     val accountId: String? = null,
 )
 
+/**
+ * La limpieza que quedó pendiente al cerrar sesión de [accountId]: la baja de [installId] en el servidor (necesita la
+ * sesión de esa cuenta, así que solo se puede reintentar si vuelve a entrar) y el borrado del token de FCM (no necesita
+ * sesión: se reintenta al arrancar y en cada registro). Sobrevive al proceso; solo hay una.
+ */
+@Serializable
+data class PendingCleanup(
+    val installId: String,
+    val accountId: String,
+    val serverDone: Boolean = false,
+    val tokenDone: Boolean = false,
+) {
+    val done: Boolean get() = serverDone && tokenDone
+}
+
 /** El formato en disco de [PushInstallationStore]. */
 @Serializable
 data class PushInstallationSnapshot(
     val version: Int = PUSH_INSTALLATION_VERSION,
     val installation: PushInstallation? = null,
+    val pending: PendingCleanup? = null,
 )
 
 const val PUSH_INSTALLATION_VERSION = 1
@@ -53,8 +69,22 @@ interface PushInstallationStore {
         accountId: String,
     ): UUID
 
-    /** Al cerrar sesión: si el guardado está atado a una cuenta, lo cambia por uno nuevo sin cuenta. Dice si cambió. */
-    suspend fun forget(): Boolean
+    /**
+     * Al cerrar sesión, en UN solo paso atómico: si el guardado está atado a [accountId] (o a cualquier cuenta si es
+     * `null`), lo cambia por uno nuevo sin cuenta y deja anotada la limpieza pendiente del anterior. Devuelve esa
+     * limpieza, o `null` si no había nada atado. Desde ese instante ningún aviso del `installId` anterior es de esta
+     * instalación.
+     */
+    suspend fun beginSignOut(accountId: String?): PendingCleanup?
+
+    /** La limpieza que falta, si hay. */
+    suspend fun pending(): PendingCleanup?
+
+    /** Anota que la baja del servidor de [installId] se hizo. Cuando también el token, la limpieza se cierra. */
+    suspend fun serverDone(installId: String)
+
+    /** Anota que el token de FCM se borró. Cuando también la baja, la limpieza se cierra. */
+    suspend fun tokenDone(installId: String)
 }
 
 /** [PushInstallationStore] sobre DataStore (KT-9). [newId] se inyecta para las pruebas. */
@@ -97,18 +127,43 @@ class DataStorePushInstallationStore(
         return checkNotNull(result)
     }
 
-    override suspend fun forget(): Boolean {
-        var changed = false
+    override suspend fun beginSignOut(accountId: String?): PendingCleanup? {
+        var result: PendingCleanup? = null
         store.updateData { snapshot ->
-            if (snapshot.installation?.accountId == null) {
+            val saved = snapshot.installation
+            val bound = saved?.accountId
+            if (saved == null || bound == null || (accountId != null && bound != accountId)) {
                 snapshot
             } else {
-                changed = true
-                snapshot.copy(installation = PushInstallation(newId().toString(), accountId = null))
+                val pending = PendingCleanup(saved.installId, bound)
+                result = pending
+                snapshot.copy(installation = PushInstallation(newId().toString(), accountId = null), pending = pending)
             }
         }
-        return changed
+        return result
     }
+
+    override suspend fun pending(): PendingCleanup? = store.data.first().pending
+
+    override suspend fun serverDone(installId: String) {
+        store.updateData { snapshot ->
+            snapshot.copy(pending = snapshot.pending.mark(installId) { it.copy(serverDone = true) })
+        }
+    }
+
+    override suspend fun tokenDone(installId: String) {
+        store.updateData { snapshot ->
+            snapshot.copy(pending = snapshot.pending.mark(installId) { it.copy(tokenDone = true) })
+        }
+    }
+}
+
+private fun PendingCleanup?.mark(
+    installId: String,
+    change: (PendingCleanup) -> PendingCleanup,
+): PendingCleanup? {
+    if (this == null || this.installId != installId) return this
+    return change(this).takeUnless { it.done }
 }
 
 private fun String.toUuidOrNull(): UUID? =

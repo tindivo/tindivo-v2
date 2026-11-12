@@ -16,6 +16,7 @@ import com.tindivo.customer.navigation.AppNavHost
 import com.tindivo.customer.navigation.DeepLinkInbox
 import com.tindivo.customer.navigation.pushTargetFrom
 import com.tindivo.customer.push.PUSH_EXTRA_KEYS
+import com.tindivo.customer.push.PUSH_EXTRA_KEYS_TO_CLEAR
 import com.tindivo.customer.push.TrackingReconciler
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -79,7 +80,7 @@ class MainActivity : ComponentActivity() {
                 return
             }
         if (data.isEmpty()) return
-        PUSH_EXTRA_KEYS.forEach(intent::removeExtra)
+        PUSH_EXTRA_KEYS_TO_CLEAR.forEach(intent::removeExtra)
         pushTargetFrom(data)?.let(deepLinks::offer)
     }
 }

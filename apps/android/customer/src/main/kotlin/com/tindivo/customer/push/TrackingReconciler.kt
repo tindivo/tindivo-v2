@@ -5,10 +5,8 @@ import com.tindivo.core.network.CourierRepository
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -45,67 +43,29 @@ interface TrackingTexts {
  * solo-datos puede no llegar, y la notificación se quedaría en un paso viejo o fija con el pedido ya entregado.
  *
  * - Solo con sesión, y solo si hay alguna notificación fija a la vista: si no, no consulta nada.
- * - Lee la primera página de `GET /customer/orders` y de `GET /customer/courier-orders` (lo mismo que «Mis pedidos» y
- *   Entregas), atadas a la cuenta. Quita las que ya no están en curso y actualiza EN SILENCIO las que cambiaron de paso
- *   ([planReconciliation]). Si la cuenta cambió mientras tanto, no toca nada.
- * - Al cerrar sesión o cambiar de cuenta ([start]) quita todas las notificaciones de la app.
+ * - Anota la versión de la bandeja ([TrackingPresenter.version]) y lo que se muestra ANTES de consultar. Lee la primera
+ *   página de `GET /customer/orders` y de `GET /customer/courier-orders`, atadas a la cuenta, y planea sobre lo anotado.
+ * - Aplica (bajo el candado de [TrackingPresenter]) solo si la cuenta sigue siendo la misma y NO llegó ningún aviso
+ *   mientras consultaba: un aviso que llega en medio es más nuevo que la consulta y no se pisa (la próxima puesta al día
+ *   lo vuelve a mirar). Quita las que ya no están en curso y actualiza EN SILENCIO las que cambiaron de paso.
+ * - Limpiar al cerrar sesión o cambiar de cuenta es de [PushRegistrar] (a través de [TrackingPresenter.closeAccount]).
  */
 class TrackingReconciler(
     private val sessionStore: SessionStore,
-    private val notifications: TrackingNotifications,
+    private val presenter: TrackingPresenter,
     private val source: TrackingSource,
     private val texts: TrackingTexts,
-    private val scope: CoroutineScope,
 ) {
     private val mutex = Mutex()
-
-    /** Empieza a seguir la sesión. Se llama una vez, al arrancar el proceso. */
-    fun start() {
-        scope.launch {
-            var lastAccount: String? = null
-            sessionStore.state.collect { session ->
-                when (session) {
-                    SessionState.Unknown -> {
-                        Unit
-                    }
-
-                    SessionState.SignedOut -> {
-                        notifications.clearAll()
-                        lastAccount = null
-                    }
-
-                    is SessionState.SignedIn -> {
-                        // Otra cuenta sin pasar por SignedOut (un StateFlow puede saltárselo): lo de la anterior se va.
-                        if (lastAccount != null && lastAccount != session.userId) notifications.clearAll()
-                        lastAccount = session.userId
-                    }
-                }
-            }
-        }
-    }
 
     suspend fun reconcile() {
         val account = currentAccount() ?: return
         mutex.withLock {
-            if (notifications.shown().isEmpty()) return
+            val seenVersion = presenter.version()
+            val shown = presenter.shown()
+            if (shown.isEmpty()) return
             val snapshot = source.snapshot(account)
-            if (currentAccount() != account) return
-            for (action in planReconciliation(notifications.shown(), snapshot)) apply(action)
-        }
-    }
-
-    private fun apply(action: ReconcileAction) {
-        when (action) {
-            is ReconcileAction.Remove -> {
-                notifications.remove(action.key)
-            }
-
-            is ReconcileAction.Update -> {
-                // Un aviso que llegó mientras se consultaba es más nuevo que la consulta: no se pisa.
-                val now = notifications.shown().firstOrNull { it.key == action.key } ?: return
-                if (now.progress != action.expected) return
-                notifications.show(payloadFor(action.key, action.status), TrackingOrigin.Reconcile)
-            }
+            presenter.apply(account, seenVersion, planReconciliation(shown, snapshot), ::payloadFor)
         }
     }
 
