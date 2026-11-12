@@ -2,8 +2,10 @@ package com.tindivo.customer.feature.store
 
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.generated.model.TrackStoreEventRequest.Type
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -70,5 +72,45 @@ class StoreEventsTest {
         assertEquals("casaca", sender.events[0].searchTerm)
         assertNull(sender.events[1].searchTerm)
         assertTrue(sender.events[2].searchTerm?.length == STORE_QUERY_MAX)
+    }
+
+    @Test
+    fun `con la red retenida una rafaga queda acotada y track no espera ni reintenta lo descartado`() {
+        val gate = CompletableDeferred<Unit>()
+        val sent = mutableListOf<String?>()
+        var inFlight = 0
+        var maxInFlight = 0
+        val sender =
+            StoreEventSender { event ->
+                sent += event.searchTerm
+                inFlight += 1
+                maxInFlight = maxOf(maxInFlight, inFlight)
+                gate.await()
+                inFlight -= 1
+                ApiResult.Success(Unit)
+            }
+        val job = SupervisorJob()
+        val events = storeEvents(sender, CoroutineScope(job + UnconfinedTestDispatcher()))
+        val burst = (STORE_EVENTS_PENDING_MAX + 1) * 3
+
+        // El servidor no contesta: si track esperara a la red, este bucle no terminaría.
+        repeat(burst) { events.track(Type.search, searchTerm = "q$it") }
+
+        assertEquals(listOf("q0"), sent)
+        // Un único trabajador para toda la ráfaga: ninguna tarea por evento.
+        assertEquals(1, job.children.count())
+
+        gate.complete(Unit)
+
+        // Salen el que estaba en vuelo y los que cupieron en la cola, en orden; el resto se perdió para siempre.
+        assertEquals((0..STORE_EVENTS_PENDING_MAX).map { "q$it" }, sent)
+        assertEquals(1, maxInFlight)
+        assertEquals(1, job.children.count())
+
+        // Con la cola vacía vuelve a aceptar, y un descartado no reaparece.
+        events.track(Type.nav_out)
+        assertEquals(STORE_EVENTS_PENDING_MAX + 2, sent.size)
+        assertNull(sent.last())
+        job.cancel()
     }
 }
