@@ -627,7 +627,9 @@ Si el sandbox no puede aplicarse en la plataforma, la invocación falla y no hay
 ### 13.1 bis. Modo provisional Windows — riesgo aceptado (Codex CLI 0.162.0)
 
 **Autorización:** Jesús, 2026-10-15, explícita y con el riesgo residual descrito abajo aceptado por escrito.
-**Vigencia:** del 2026-10-15 al **2026-11-14** (30 días). Caduca antes si cambia la versión de la CLI, el sistema
+**Renovación:** Jesús, 2026-11-11 («apruebo»), con las mismas condiciones y el mismo riesgo residual; CLI comprobada
+sin cambios (`codex-cli 0.162.0`) al renovar.
+**Vigencia:** del 2026-10-15 al **2026-12-14** (renovada 30 días sobre el 2026-11-14). Caduca antes si cambia la versión de la CLI, el sistema
 operativo o el perfil. Al caducar, Codex vuelve a quedar bloqueado como auditor hasta que Jesús lo renueve o se
 cumpla el punto 7 de §13.1.
 
