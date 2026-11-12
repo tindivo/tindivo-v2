@@ -17,12 +17,17 @@ root = ET.parse(path).getroot()
 app = root.find("application")
 errors: list[str] = []
 
-# Permisos: INTERNET, ACCESS_NETWORK_STATE (permiso normal que pide play-services-maps; decisión de Jesús 2026-10-31)
-# y el permiso de firma que androidx.core declara para sus receptores no exportados.
+# Permisos: INTERNET, ACCESS_NETWORK_STATE (permiso normal que pide play-services-maps; decisión de Jesús 2026-10-31),
+# el permiso de firma que androidx.core declara para sus receptores no exportados y los de los avisos (FCM, KT-10):
+# POST_NOTIFICATIONS (Android 13+, se pide en tiempo de ejecución), WAKE_LOCK (permiso normal con el que FCM procesa un
+# aviso) y c2dm RECEIVE (recibir mensajes de FCM).
 allowed_permissions = {
     "android.permission.INTERNET",
     "android.permission.ACCESS_NETWORK_STATE",
     f"{app_id}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+    "android.permission.POST_NOTIFICATIONS",
+    "android.permission.WAKE_LOCK",
+    "com.google.android.c2dm.permission.RECEIVE",
 }
 requested = {e.get(f"{A}name") for e in root.iter("uses-permission")}
 requested |= {e.get(f"{A}name") for e in root.iter("uses-permission-sdk-23")}
@@ -35,8 +40,12 @@ for p in root.iter("permission"):
 
 # Exportados: con minSdk 26, un componente sin `exported` pero con intent-filter cuenta como exportado.
 launcher = f"{app_id.removesuffix('.dev')}.MainActivity"
-# Receptores de librerías que solo puede invocar el sistema o adb (permiso DUMP, nivel signature|privileged).
-system_guarded = {("androidx.profileinstaller.ProfileInstallReceiver", "android.permission.DUMP")}
+# Receptores de librerías que solo puede invocar el sistema o adb (permiso DUMP, nivel signature|privileged), y el de
+# FCM, que solo puede invocar Google Play Services (c2dm SEND es un permiso de firma de Google).
+system_guarded = {
+    ("androidx.profileinstaller.ProfileInstallReceiver", "android.permission.DUMP"),
+    ("com.google.firebase.iid.FirebaseInstanceIdReceiver", "com.google.android.c2dm.permission.SEND"),
+}
 exported_seen = []
 for kind in ("activity", "activity-alias", "service", "receiver", "provider"):
     for c in app.iter(kind):
