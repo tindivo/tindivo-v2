@@ -10,6 +10,10 @@ export const BATCH_CATEGORIES = [
   'store_events',
   'push_delivery_log',
   'admin_alerts',
+  // Antifraude (0286): ventana de 24 meses; lo que pasa de ella se anonimiza o se elimina.
+  'customer_strikes',
+  'address_directory',
+  'phone_assignments',
   // Caja (0285): solo las notas; importes, estados y fechas no se tocan.
   'cash_settlements',
 ] as const

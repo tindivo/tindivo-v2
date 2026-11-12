@@ -43,7 +43,7 @@ const PNG = Uint8Array.from(
   (c) => c.charCodeAt(0),
 )
 const DEFAULT_SETTING =
-  '{"customerIncidentsMonths": 24, "reportsMonths": 24, "phoneRestrictionsMonths": 24, "storeEventsMonths": 13, "pushDeliveryLogMonths": 13, "adminAlertsMonths": 13, "cashRecordsYears": 5}'
+  '{"customerIncidentsMonths": 24, "reportsMonths": 24, "phoneRestrictionsMonths": 24, "storeEventsMonths": 13, "pushDeliveryLogMonths": 13, "adminAlertsMonths": 13, "cashRecordsYears": 5, "strikesMonths": 24, "addressDirectoryMonths": 24, "phoneAssignmentsMonths": 24}'
 
 /** Las funciones nuevas de la 0284 que ningún cliente puede llamar. */
 const FUNCIONES = [
@@ -66,6 +66,10 @@ const FUNCIONES = [
   'list_fraud_claim_retention_due',
   'fraud_claim_retention_precheck',
   'finish_fraud_claim_retention',
+  'retention_window_start',
+  'anonymize_old_customer_strikes',
+  'purge_old_address_directory',
+  'purge_old_phone_assignments',
 ]
 /** Las que se pueden llamar por PostgREST, con argumentos válidos. */
 const LLAMABLES: [string, Record<string, unknown>][] = [
@@ -83,6 +87,10 @@ const LLAMABLES: [string, Record<string, unknown>][] = [
   ['list_fraud_claim_retention_due', { p_limit: 1 }],
   ['fraud_claim_retention_precheck', { p_claim_id: '00000000-0000-4000-8000-000000000000' }],
   ['finish_fraud_claim_retention', { p_claim_id: '00000000-0000-4000-8000-000000000000' }],
+  ['retention_window_start', { p_key: 'strikesMonths' }],
+  ['anonymize_old_customer_strikes', { p_limit: 1 }],
+  ['purge_old_address_directory', { p_limit: 1 }],
+  ['purge_old_phone_assignments', { p_limit: 1 }],
 ]
 
 /** SQL contra la base local por stdin (los acentos no se corrompen). */
@@ -420,7 +428,7 @@ describe('plazos de conservación (0284), primera corrida', () => {
     for (const [categoria, s] of Object.entries(primera)) {
       expect(s.failed, categoria).toBe(0)
     }
-    expect(lineas.filter((l) => l.includes('data_retention_category_done'))).toHaveLength(8)
+    expect(lineas.filter((l) => l.includes('data_retention_category_done'))).toHaveLength(11)
     expect(lineas.join('\n')).not.toContain(adminId)
     expect(lineas.join('\n')).not.toContain(runId)
   })

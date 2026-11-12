@@ -2,9 +2,9 @@
 
 Runbook de los plazos de conservación que fijó Jesús el 2026-11-12. La política de privacidad solo
 promete lo que esta página describe como **automático** o como **procedimiento manual con
-responsable**. Si un plazo está en «pendiente de decisión», la política no puede prometerlo todavía.
+responsable**. Si un plazo estuviera en «pendiente de decisión», la política no puede prometerlo todavía (hoy no hay ninguno).
 
-- Mecanismo: migraciones `supabase/migrations/0284_los_datos_tienen_plazo_de_conservacion.sql` y `0285_la_caja_y_los_reclamos_tienen_plazo_de_conservacion.sql` (esta, de dinero),
+- Mecanismo: migraciones `supabase/migrations/0284_los_datos_tienen_plazo_de_conservacion.sql` y `0285_la_caja_y_los_reclamos_tienen_plazo_de_conservacion.sql` (esta, de dinero) y `0286_el_antifraude_solo_cuenta_lo_de_los_ultimos_24_meses.sql`,
   módulo `packages/backend/src/modules/retention/` (`applyRetentionPolicy`) y job Inngest
   `apply-data-retention-cron` (`apps/api/lib/inngest/functions.ts`), todos los días a las **04:45 de
   Lima**. La purga de comprobantes de cuentas borradas (0269, 90 días) es otro job, a las 04:30.
@@ -28,29 +28,27 @@ responsable**. Si un plazo está en «pendiente de decisión», la política no 
 | Alertas de administración resueltas | `admin_alerts` | 13 meses desde `resolved_at` | Se eliminan; una alerta sin resolver no se toca | Automático (`purge_old_admin_alerts`) |
 | Notas de liquidaciones de caja | `cash_settlements.dispute_note`, `resolution_note` | 5 años desde el 1 de enero siguiente a `created_at` (hora de Lima) | Se borran las notas; importes, estado y fechas se quedan. Una liquidación en disputa no se toca | Automático (`anonymize_old_cash_settlement_notes`, 0285; **pendiente de revisión de Jesús**) |
 | Reclamos económicos antifraude | `fraud_coverage_claims`: `reason`, `resolution_note`, `evidence_url` | 5 años desde el 1 de enero siguiente a `created_at` (hora de Lima) | El motivo queda como `Dato eliminado`, se borran nota e imagen (Storage antes); el importe y el estado se quedan. Un reclamo pendiente no se toca | Automático (`list_fraud_claim_retention_due` → Storage → `finish_fraud_claim_retention`, 0285; **pendiente de revisión de Jesús**) |
-| Strikes antifraude | `customer_strikes` | 24 meses (propuesto) | — | **Pendiente de decisión**: el prepago los cuenta sin ventana (ver abajo) |
-| Directorio de la cajera | `address_directory` | 24 meses sin uso (propuesto) | — | **Pendiente de decisión**: una fila hace «confiable» al número (ver abajo) |
-| Historial de dueños del número | `phone_assignments` (y `phone_transfer_challenges`) | 24 meses desde `ended_at` (propuesto) | — | **Pendiente de decisión**: protege a quien recicla un número (ver abajo) |
+| Strikes antifraude | `customer_strikes` | 24 meses desde `created_at` (`strikesMonths`) | Dejan de contar para el prepago y se anonimizan: teléfono → `eliminado`, sin referencia, coordenadas, cuenta ni pedido | Automático (`anonymize_old_customer_strikes`, 0286) |
+| Directorio de la cajera | `address_directory` | 24 meses sin uso: lo último entre `last_used_at`, `updated_at` y `created_at` (`addressDirectoryMonths`) | Deja de hacer «confiable» al número y se elimina; los pedidos no se pierden (`ON DELETE SET NULL`) | Automático (`purge_old_address_directory`, 0286) |
+| Historial de dueños del número | `phone_assignments` y sus `phone_transfer_challenges` | 24 meses desde `ended_at` (`phoneAssignmentsMonths`) | La asignación terminada deja de contar y se elimina con sus desafíos. Una asignación abierta nunca se toca | Automático (`purge_old_phone_assignments`, 0286) |
 | Solicitudes de soporte y de derechos ARCO | Fuera de la base (WhatsApp de soporte) | 2 años desde la respuesta | Borrado manual | Manual (procedimiento abajo) |
 
-### Por qué hay plazos pendientes de decisión
+### Ventana de 24 meses del antifraude (0286)
 
-Borrar o anonimizar estas filas **cambia a quién se le exige pago adelantado**, y eso es una decisión
-de negocio, no de retención:
+Jesús decidió el 2026-11-12 que el antifraude solo cuenta lo de los últimos 24 meses, y aceptó que eso
+**cambie a quién se le exige pago adelantado**:
 
-- `customer_strikes`: `customer_requires_prepayment`, `customer_contraentrega_blocked`,
-  `refresh_customer_profile_risk` y la regla de validación de `create_customer_order` cuentan strikes
-  por teléfono y por referencia **sin ventana de tiempo**. Anonimizar teléfono y referencia de un
-  strike viejo le quitaría a ese número el prepago obligatorio.
-- `address_directory`: `customer_contraentrega_decision` da por confiable (`trusted`) a un número con
-  **cualquier** fila en el directorio. Borrar la fila lo pasa a `no_history`: pago adelantado o
-  validación por GPS.
-- `phone_assignments`: la misma función mira si el número tuvo **otro** dueño; si lo tuvo, solo cuenta
-  la confianza ganada en la asignación actual. Borrar la asignación terminada del dueño anterior haría
-  que el nuevo heredara sus entregas (P5 de 0277). No se puede anonimizar `user_id` (NOT NULL con FK).
+- Quien tuvo strikes hace más de 24 meses vuelve a poder pagar contra entrega.
+- Un número que solo era confiable por una fila del directorio sin uso en 24 meses pasa a `no_history`
+  (pago adelantado o validación por GPS).
+- La asignación terminada de un dueño anterior protege a quien recicla el número mientras haya terminado
+  dentro de la ventana; pasada, el nuevo dueño puede ganar confianza por el historial del teléfono.
 
-Para aplicar estos plazos hace falta antes decidir la regla de riesgo (por ejemplo, contar strikes
-solo de los últimos 24 meses, o guardar «el número tuvo otro dueño» sin la persona).
+`customer_requires_prepayment` y `customer_contraentrega_decision` cuentan solo lo que cae dentro de la
+ventana; la purga diaria quita lo que la pasa. La regla de validación de `create_customer_order` y
+`refresh_customer_profile_risk` no llevan ventana propia: quedan coherentes por la purga (desfase máximo
+de un día). Si una clave de `data_retention` falta o es inválida, esa ventana no excluye nada y esa tabla
+no se purga (falla cerrada: se cuenta todo, como antes de la 0286).
 
 ## Solicitudes de soporte y de derechos ARCO (manual)
 

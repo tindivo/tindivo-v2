@@ -200,6 +200,6 @@ describe('applyRetentionPolicy', () => {
     const summary = await applyRetentionPolicy(f)
     expect(summary.reports.failed).toBe(1)
     expect(summary.admin_alerts.rows).toBe(1)
-    expect(f.lines.filter((l) => l.includes('data_retention_category_done'))).toHaveLength(8)
+    expect(f.lines.filter((l) => l.includes('data_retention_category_done'))).toHaveLength(11)
   })
 })

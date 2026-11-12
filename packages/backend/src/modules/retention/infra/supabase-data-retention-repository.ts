@@ -35,6 +35,9 @@ const BATCH_RPC: Record<BatchCategory, string> = {
   push_delivery_log: 'purge_old_push_delivery_log',
   admin_alerts: 'purge_old_admin_alerts',
   cash_settlements: 'anonymize_old_cash_settlement_notes',
+  customer_strikes: 'anonymize_old_customer_strikes',
+  address_directory: 'purge_old_address_directory',
+  phone_assignments: 'purge_old_phone_assignments',
 }
 
 /** Las tres funciones de cada categoría con archivo (0284). */
