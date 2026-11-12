@@ -8,8 +8,6 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Rule
@@ -80,7 +78,7 @@ class PushInstallationStoreTest {
 
             assertEquals(PendingCleanup(ids[0].toString(), "A"), store.beginSignOut(null))
             assertEquals(PushInstallation(ids[1].toString(), accountId = null), store.current())
-            assertEquals(PendingCleanup(ids[0].toString(), "A"), store.pending())
+            assertEquals(listOf(PendingCleanup(ids[0].toString(), "A")), store.pending())
             assertNull("sin cuenta atada no hay nada que cerrar", store.beginSignOut(null))
             assertEquals(PushBinding(ids[1], replacedOther = false), store.bindTo("B"))
         }
@@ -93,7 +91,7 @@ class PushInstallationStoreTest {
 
             assertNull(store.beginSignOut("B"))
             assertEquals(PushInstallation(ids[0].toString(), "A"), store.current())
-            assertNull(store.pending())
+            assertEquals(emptyList<PendingCleanup>(), store.pending())
         }
 
     @Test
@@ -103,14 +101,48 @@ class PushInstallationStoreTest {
             val first = DataStorePushInstallationStore(memory, newId = { ids[next++] })
             first.bindTo("A")
             first.beginSignOut("A")
-            first.tokenDone(ids[0].toString())
+            first.tokenDone()
 
             val reopened = DataStorePushInstallationStore(memory)
-            assertEquals(PendingCleanup(ids[0].toString(), "A", tokenDone = true), reopened.pending())
+            assertEquals(listOf(PendingCleanup(ids[0].toString(), "A", tokenDone = true)), reopened.pending())
             reopened.serverDone("otro-install")
-            assertFalse("un installId ajeno no cierra nada", reopened.pending()?.done == true)
+            assertEquals("un installId ajeno no cierra nada", 1, reopened.pending().size)
             reopened.serverDone(ids[0].toString())
-            assertNull(reopened.pending())
+            assertEquals(emptyList<PendingCleanup>(), reopened.pending())
+        }
+
+    @Test
+    fun `un segundo cierre de sesion no pisa la limpieza del primero, y ambas sobreviven a reabrir (CAX-002)`() =
+        runTest {
+            val memory = MemoryDataStore(PushInstallationSnapshot())
+            val first = DataStorePushInstallationStore(memory, newId = { ids[next++] })
+            first.bindTo("A")
+            first.beginSignOut("A") // pendiente ids[0]; la identidad nueva es ids[1]
+            first.bindTo("B") // ids[1] pasa a ser de B
+            first.beginSignOut("B") // pendiente ids[1]
+
+            val reopened = DataStorePushInstallationStore(memory)
+            assertEquals(
+                listOf(PendingCleanup(ids[0].toString(), "A"), PendingCleanup(ids[1].toString(), "B")),
+                reopened.pending(),
+            )
+            // Cerrar una no cierra la otra; el token es uno solo y cierra el de todas.
+            reopened.serverDone(ids[0].toString())
+            reopened.tokenDone()
+            assertEquals(listOf(PendingCleanup(ids[1].toString(), "B", tokenDone = true)), reopened.pending())
+        }
+
+    @Test
+    fun `la misma limpieza no se anota dos veces`() =
+        runTest {
+            val memory = MemoryDataStore(PushInstallationSnapshot())
+            val store = DataStorePushInstallationStore(memory, newId = { ids[0] })
+            store.bindTo("A") // ids[0]
+            store.beginSignOut("A") // pendiente ids[0]; la nueva identidad TAMBIEN es ids[0] (newId fijo)
+            store.bindTo("A")
+            store.beginSignOut("A")
+
+            assertEquals(listOf(PendingCleanup(ids[0].toString(), "A")), store.pending())
         }
 
     @Test
@@ -118,7 +150,7 @@ class PushInstallationStoreTest {
         val snapshot =
             PushInstallationSnapshot(
                 installation = PushInstallation(ids[1].toString(), null),
-                pending = PendingCleanup(ids[0].toString(), "A", serverDone = false, tokenDone = true),
+                pending = listOf(PendingCleanup(ids[0].toString(), "A", serverDone = false, tokenDone = true)),
             )
         val bytes = ByteArrayOutputStream()
         kotlinx.coroutines.runBlocking { PushInstallationSerializer.writeTo(snapshot, bytes) }
@@ -141,8 +173,23 @@ class PushInstallationStoreTest {
             val again = store.replace(rejected = ids[0], accountId = "A")
 
             assertEquals(ids[1], replaced)
-            assertEquals(ids[1], again)
-            assertNotEquals(ids[0], store.current()?.installId?.let(UUID::fromString))
+            assertNull("el rechazado ya no es el guardado", again)
+            assertEquals(ids[1].toString(), store.current()?.installId)
+        }
+
+    @Test
+    fun `un 409 que llega despues de cerrar sesion no vuelve a atar la identidad (CAX-002)`() =
+        runTest {
+            val store = store()
+            store.bindTo("A")
+            store.beginSignOut("A")
+            val afterSignOut = store.current()
+
+            assertNull(store.replace(rejected = ids[0], accountId = "A"))
+            assertNull("ni con la identidad nueva, que no es la rechazada", store.replace(ids[1], "A"))
+
+            assertEquals(afterSignOut, store.current())
+            assertNull(store.current()?.accountId)
         }
 
     @Test

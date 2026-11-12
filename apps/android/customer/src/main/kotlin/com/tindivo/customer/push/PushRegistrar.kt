@@ -5,6 +5,7 @@ import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -35,9 +36,17 @@ fun interface PushSignOut {
  *    las marcas y todas las notificaciones. Desde ahí ningún aviso en camino de esa cuenta se pinta.
  * 3. Se espera el registro que estuviera en vuelo (el mismo [Mutex]) y se da de baja el `installId` anterior con la
  *    sesión que se va (con reintentos ante un 409 o un fallo de red), todo acotado por [unregisterTimeoutMs].
- * 4. Se borra el token de FCM. Si algo de esto falla, la limpieza SIGUE PENDIENTE y se reintenta: el token, en cada
- *    arranque y registro; la baja del servidor, cuando esa cuenta vuelva a tener sesión (sin sesión la API no la acepta;
- *    mientras tanto el token de FCM ya no sirve y el servidor suelta la fila al recibir `UNREGISTERED`).
+ * 4. Se borra el token de FCM, también bajo el [Mutex] y solo si ninguna cuenta ha vuelto a atar la instalación: el
+ *    borrado actúa sobre el token VIGENTE, así que nunca puede correr después de un registro nuevo. Si algo de esto
+ *    falla, la limpieza SIGUE PENDIENTE y se reintenta: el token, en cada arranque y ANTES de cada registro (dentro
+ *    del mismo candado); la baja del servidor, cuando esa cuenta vuelva a tener sesión (sin sesión la API no la acepta;
+ *    mientras tanto el token de FCM ya no sirve y el servidor suelta la fila al recibir `UNREGISTERED`). Si un registro
+ *    nuevo sale con el token que no se pudo borrar, el servidor se lo reasigna a la cuenta nueva y la obligación de
+ *    borrarlo queda sin objeto.
+ *
+ * Los cierres de sesión no se pisan: cada uno añade su limpieza a la lista de pendientes. Si guardar la limpieza falla
+ * (el disco no deja escribir), el cierre sigue adelante igual (CAX-010): las marcas y la bandeja se limpian, el token
+ * se intenta borrar y la identidad se suelta en el próximo cierre o arranque.
  *
  * Una sesión que se cierra sola (un 401) pasa por el mismo paso 2 y por el 4, sin baja del servidor.
  *
@@ -93,7 +102,6 @@ class PushRegistrar(
         scope.launch {
             val account = currentAccount() ?: return@launch
             mutex.withLock { registerLocked(account) }
-            retryTokenCleanup()
         }
     }
 
@@ -107,14 +115,26 @@ class PushRegistrar(
         hasSession: Boolean,
     ) {
         // Paso atómico: nueva identidad + limpieza anotada + marcas y bandeja vacías, bajo el candado de los avisos.
-        val pending = presenter.closeAccount { installations.beginSignOut(accountId) } ?: return
+        val pending =
+            try {
+                presenter.closeAccount { installations.beginSignOut(accountId) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // No se pudo guardar (CAX-010): la sesión se cierra igual. La bandeja y las marcas ya se limpiaron; el
+                // token se intenta borrar y la identidad se suelta en el próximo cierre o arranque.
+                withTimeoutOrNull(unregisterTimeoutMs) { tokens.delete() }
+                null
+            } ?: return
         val locked = withTimeoutOrNull(registrationWaitMs) { mutex.lock() } != null
         try {
-            if (locked && hasSession) withTimeoutOrNull(unregisterTimeoutMs) { unregisterServer(pending) }
+            if (locked) {
+                if (hasSession) withTimeoutOrNull(unregisterTimeoutMs) { unregisterServer(pending) }
+                withTimeoutOrNull(unregisterTimeoutMs) { cleanTokenLocked() }
+            }
         } finally {
             if (locked) mutex.unlock()
         }
-        deleteToken(pending)
     }
 
     /** La baja de [pending] en el servidor, con la sesión de su cuenta: un 409 o un fallo de red se reintentan. */
@@ -134,36 +154,59 @@ class PushRegistrar(
         if (result is ApiResult.Success) installations.serverDone(pending.installId)
     }
 
-    private suspend fun deleteToken(pending: PendingCleanup) {
-        if (tokens.delete()) installations.tokenDone(pending.installId)
+    /**
+     * El borrado del token que quedó pendiente (no necesita sesión). Con el [mutex] tomado. Solo borra si la instalación
+     * no está atada a ninguna cuenta: si lo está, el token que hay es el de un registro vigente y borrarlo lo
+     * invalidaría (CAX-009).
+     */
+    private suspend fun cleanTokenLocked() {
+        if (installations.pending().none { !it.tokenDone }) return
+        if (installations.current()?.accountId != null) return
+        if (tokens.delete()) installations.tokenDone()
     }
 
-    /** El borrado del token que quedó pendiente (no necesita sesión). */
+    /** El arranque: el borrado del token pendiente, bajo el mismo candado que los registros. */
     private suspend fun retryTokenCleanup() {
-        val pending = installations.pending() ?: return
-        if (!pending.tokenDone) deleteToken(pending)
+        mutex.withLock { cleanTokenLocked() }
     }
 
-    /** La baja del servidor que quedó pendiente: solo si [account] es la cuenta de esa limpieza (necesita su sesión). */
+    /** La baja del servidor que quedó pendiente: solo la de [account] (necesita su sesión). */
     private suspend fun retryServerCleanup(account: String) {
-        val pending = installations.pending() ?: return
-        if (pending.serverDone || pending.accountId != account || closing == account) return
-        mutex.withLock { withTimeoutOrNull(unregisterTimeoutMs) { unregisterServer(pending) } }
+        if (closing == account) return
+        mutex.withLock {
+            for (pending in installations.pending()) {
+                if (pending.serverDone || pending.accountId != account || closing == account) continue
+                withTimeoutOrNull(unregisterTimeoutMs) { unregisterServer(pending) }
+            }
+        }
     }
 
     private suspend fun registerLocked(account: String) {
-        if (!tokens.enabled || !access.permissionGranted() || currentAccount() != account || closing == account) return
+        if (!tokens.enabled || !access.permissionGranted() || !live(account)) return
+        // Antes de atar la instalación: un borrado de token pendiente no puede correr después y llevarse el nuevo.
+        cleanTokenLocked()
         val binding = installations.bindTo(account)
         // El installId era de otra cuenta: el token de FCM también se renueva antes de registrar esta.
         if (binding.replacedOther) tokens.delete()
         val token = tokens.token() ?: return
-        if (currentAccount() != account || closing == account) return
+        if (!live(account)) return
         val device = description.describe(token)
-        if (devices.register(binding.installId, device, account).isConflict()) {
-            val next = installations.replace(binding.installId, account)
-            devices.register(next, device, account)
+        var installId = binding.installId
+        var result = devices.register(installId, device, account)
+        if (result.isConflict()) {
+            // La continuación de un 409 no puede deshacer un cierre de sesión que empezó mientras el PUT iba en vuelo:
+            // la cuenta sigue viva y la identidad guardada sigue siendo la rechazada (`replace` lo comprueba).
+            if (!live(account)) return
+            installId = installations.replace(installId, account) ?: return
+            if (!live(account)) return
+            result = devices.register(installId, device, account)
         }
+        // El servidor ya tiene este token para esta cuenta: borrar el anterior (si no se pudo) ya no tiene objeto.
+        if (result is ApiResult.Success) installations.tokenDone()
     }
+
+    /** La cuenta sigue con la sesión y no está cerrándola. */
+    private fun live(account: String): Boolean = currentAccount() == account && closing != account
 
     private fun currentAccount(): String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
 

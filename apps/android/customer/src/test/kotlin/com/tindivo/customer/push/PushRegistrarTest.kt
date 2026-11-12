@@ -277,7 +277,7 @@ class PushRegistrarTest {
             registrar.beforeSignOut("A")
 
             assertEquals(2, deletes().size)
-            assertEquals(null, installations.pending())
+            assertEquals(emptyList<PendingCleanup>(), installations.pending())
             assertEquals(1, tokens.deletes)
         }
 
@@ -291,7 +291,7 @@ class PushRegistrarTest {
             registrar.beforeSignOut("A")
             session.signOutIf("A")
 
-            val pending = checkNotNull(installations.pending())
+            val pending = installations.pending().single()
             assertEquals("A", pending.accountId)
             assertEquals(false, pending.serverDone)
             assertEquals(false, pending.tokenDone)
@@ -299,12 +299,12 @@ class PushRegistrarTest {
             // Nuevo proceso, ya con red: el token se borra solo (no necesita sesión); la baja espera a la cuenta A.
             tokens.deleteWorks = true
             registrar()
-            assertEquals(true, installations.pending()?.tokenDone)
-            assertEquals(false, installations.pending()?.serverDone)
+            assertEquals(true, installations.pending().single().tokenDone)
+            assertEquals(false, installations.pending().single().serverDone)
 
             // La cuenta A vuelve a entrar: la baja pendiente sale con ella y cierra la limpieza.
             session.switchTo("A")
-            assertEquals(null, installations.pending())
+            assertEquals(emptyList<PendingCleanup>(), installations.pending())
             assertEquals(pending.installId, deletes().last().installId.toString())
         }
 
@@ -317,8 +317,8 @@ class PushRegistrarTest {
             registrar.beforeSignOut("A")
 
             assertEquals(1, tokens.deletes)
-            assertEquals(false, installations.pending()?.serverDone)
-            assertEquals(true, installations.pending()?.tokenDone)
+            assertEquals(false, installations.pending().single().serverDone)
+            assertEquals(true, installations.pending().single().tokenDone)
         }
 
     @Test
@@ -329,10 +329,10 @@ class PushRegistrarTest {
 
             session.switchTo("B")
 
-            val pending = installations.pending()
-            assertEquals(fromA.installId.toString(), pending?.installId)
-            assertEquals("A", pending?.accountId)
-            assertEquals(true, pending?.tokenDone)
+            val pending = installations.pending().single()
+            assertEquals(fromA.installId.toString(), pending.installId)
+            assertEquals("A", pending.accountId)
+            assertEquals(true, pending.tokenDone)
         }
 
     @Test
@@ -343,5 +343,135 @@ class PushRegistrarTest {
             registrar()
 
             assertEquals(emptyList<PushCall>(), devices.calls)
+        }
+
+    // CAX-002 (a): la continuación de un 409 no deshace un cierre de sesión que empezó con el PUT en vuelo.
+    @Test
+    fun `un 409 que llega despues de empezar el cierre no cambia el installId ni vuelve a registrar (CAX-002)`() =
+        runTest {
+            session.switchToSignedOut()
+            val registrar = registrar()
+            devices.holdRegister = CompletableDeferred()
+            devices.registerResults += FakePushDevices.CONFLICT
+            session.switchTo("A")
+            assertEquals(1, puts().size)
+            val inFlight = puts().single()
+
+            val closing = launch(start = CoroutineStart.UNDISPATCHED) { registrar.beforeSignOut("A") }
+            devices.holdRegister?.complete(Unit)
+            closing.join()
+
+            assertEquals("ningun segundo PUT", 1, puts().size)
+            assertEquals(null, installations.current()?.accountId)
+            assertEquals(inFlight.installId, deletes().single().installId)
+        }
+
+    // CAX-002 (b): dos cierres con la baja fallida conservan las dos obligaciones.
+    @Test
+    fun `dos cierres de sesion con la baja fallida conservan las dos limpiezas (CAX-002)`() =
+        runTest {
+            val registrar = registrar()
+            val fromA = puts().single()
+            repeat(3) { devices.unregisterResults += FakePushDevices.NO_NETWORK }
+            registrar.beforeSignOut("A")
+            session.signOutIf("A")
+
+            session.switchTo("B")
+            val fromB = puts().last()
+            repeat(3) { devices.unregisterResults += FakePushDevices.NO_NETWORK }
+            registrar.beforeSignOut("B")
+            session.signOutIf("B")
+
+            assertEquals(
+                listOf(fromA.installId.toString() to "A", fromB.installId.toString() to "B"),
+                installations.pending().map { it.installId to it.accountId },
+            )
+            assertTrue(installations.pending().none { it.serverDone })
+        }
+
+    // CAX-009: la limpieza vieja del token no puede invalidar el token con el que se registró la cuenta vigente.
+    @Test
+    fun `el borrado pendiente del token se hace antes de registrar y nunca invalida el token registrado (CAX-009)`() =
+        runTest {
+            val registrar = registrar()
+            tokens.deleteWorks = false
+            registrar.beforeSignOut("A")
+            session.signOutIf("A")
+            assertEquals(false, installations.pending().single().tokenDone)
+
+            tokens.deleteWorks = true
+            session.switchTo("B")
+            val deletesAfterRegister = tokens.deletes
+            registrar.refresh()
+
+            val last = puts().last()
+            assertEquals("B", last.accountId)
+            assertEquals("el token registrado sigue siendo el vigente", tokens.current, last.token)
+            assertEquals("refresh no borra nada despues del registro", deletesAfterRegister, tokens.deletes)
+            assertTrue(installations.pending().none { !it.tokenDone })
+        }
+
+    @Test
+    fun `si el borrado sigue fallando, registrar con ese token cierra la obligacion y no se borra despues (CAX-009)`() =
+        runTest {
+            val registrar = registrar()
+            tokens.deleteWorks = false
+            registrar.beforeSignOut("A")
+            session.signOutIf("A")
+
+            session.switchTo("B")
+            val deletesAfterRegister = tokens.deletes
+            registrar.refresh()
+
+            assertEquals(tokens.current, puts().last().token)
+            assertEquals(deletesAfterRegister, tokens.deletes)
+            assertTrue(installations.pending().none { !it.tokenDone })
+        }
+
+    // CAX-010: si no se puede escribir la identidad, cerrar sesión sigue adelante y limpia lo local.
+    @Test
+    fun `si el disco no deja escribir al cerrar sesion, no lanza, limpia la bandeja y no pinta mas (CAX-010)`() =
+        runTest {
+            val flaky = FlakyDataStore(MemoryDataStore(PushInstallationSnapshot()))
+            val failingRig = PresenterRig(session, installations = DataStorePushInstallationStore(flaky))
+            val registrar =
+                PushRegistrar(
+                    sessionStore = session,
+                    installations = failingRig.installations,
+                    tokens = tokens,
+                    access = access,
+                    devices = devices,
+                    description = TestDevice,
+                    presenter = failingRig.presenter,
+                    scope = CoroutineScope(backgroundScope.coroutineContext + UnconfinedTestDispatcher(testScheduler)),
+                ).also { it.start() }
+            val installOfA = checkNotNull(failingRig.installations.current()).installId
+            failingRig.notifications.visible[checkNotNull(TrackingKey.parse("order-AB2C3D4E"))] = null
+            flaky.failWrites = true
+
+            registrar.beforeSignOut("A")
+            session.signOutIf("A")
+
+            assertTrue(failingRig.notifications.visible.isEmpty())
+            assertTrue("el token se intenta borrar igual", tokens.deletes >= 1)
+            // Con la sesión cerrada, un aviso de A en camino ya no se pinta.
+            val late =
+                NativePushPayload(
+                    type = "OrderStatusChanged",
+                    tag = "OrderStatusChanged-AB2C3D4E",
+                    title = "T",
+                    body = "B",
+                    deepLink = "/pedido/AB2C3D4E",
+                    group = "order-AB2C3D4E",
+                    progress = TrackingProgress.of(2, 5),
+                    install = installOfA,
+                    seq = 1_000_000_000_000,
+                )
+            assertEquals(false, failingRig.presenter.onPush(late))
+
+            // Vuelve el disco: el siguiente cambio de cuenta suelta la identidad de A y anota su limpieza.
+            flaky.failWrites = false
+            session.switchTo("B")
+            assertEquals(listOf("A"), failingRig.installations.pending().map { it.accountId })
         }
 }

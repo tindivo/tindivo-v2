@@ -160,6 +160,26 @@ class AccountViewModelTest {
         }
 
     @Test
+    fun `si la limpieza de los avisos falla, cerrar sesion cierra la sesion igual (CAX-010)`() =
+        runTest {
+            server.enqueue(response(200, profile(verified = true)))
+            val viewModel =
+                AccountViewModel(
+                    customer,
+                    store,
+                    configService,
+                    PushSignOut { throw java.io.IOException("disco lleno") },
+                )
+            viewModel.settled()
+
+            viewModel.signOut()
+
+            assertEquals(1, store.signOutCalls)
+            assertEquals(SessionState.SignedOut, store.state.value)
+            assertEquals(AccountUiState.LoggedOut, viewModel.state.value)
+        }
+
+    @Test
     fun `si la sesion se cierra por otra via la pantalla pide salir`() =
         runTest {
             server.enqueue(response(200, profile(verified = true)))

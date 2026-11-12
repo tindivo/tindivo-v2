@@ -134,14 +134,20 @@ class AccountViewModel
 
         /**
          * «Cerrar sesión»: cierra la de esta pantalla; si la sesión ya es de otra cuenta, esa no se toca. Antes da de baja
-         * los avisos de este aparato con la sesión que se va (mejor esfuerzo y acotado, ver `PushRegistrar`). No se
-         * cancela si la pantalla se va a mitad: una sesión que sigue abierta tras «cerrar sesión» es peor que tardar.
+         * los avisos de este aparato con la sesión que se va (mejor esfuerzo y acotado, ver `PushRegistrar`; si falla, cierra
+         * igual). No se cancela si la pantalla se va a mitad: una sesión que sigue abierta tras «cerrar sesión» es peor que tardar.
          */
         fun signOut() {
             val account = owner ?: return
             viewModelScope.launch {
                 withContext(NonCancellable) {
-                    pushSignOut.beforeSignOut(account)
+                    // Fail-closed (CAX-010): si la limpieza de los avisos falla (el disco no deja escribir), la sesión se
+                    // cierra igual; esa limpieza queda pendiente y se reintenta.
+                    try {
+                        pushSignOut.beforeSignOut(account)
+                    } catch (_: Exception) {
+                        Unit
+                    }
                     sessionStore.signOutIf(account)
                 }
             }
