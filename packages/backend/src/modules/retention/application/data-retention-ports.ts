@@ -10,11 +10,13 @@ export const BATCH_CATEGORIES = [
   'store_events',
   'push_delivery_log',
   'admin_alerts',
+  // Caja (0285): solo las notas; importes, estados y fechas no se tocan.
+  'cash_settlements',
 ] as const
 export type BatchCategory = (typeof BATCH_CATEGORIES)[number]
 
 /** Categorías con una imagen en Storage que se borra ANTES de anonimizar la fila. */
-export const FILE_CATEGORIES = ['reports'] as const
+export const FILE_CATEGORIES = ['reports', 'fraud_coverage_claims'] as const
 export type FileCategory = (typeof FILE_CATEGORIES)[number]
 
 export type RetentionCategory = BatchCategory | FileCategory

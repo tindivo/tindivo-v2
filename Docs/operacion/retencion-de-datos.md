@@ -4,7 +4,7 @@ Runbook de los plazos de conservación que fijó Jesús el 2026-11-12. La polít
 promete lo que esta página describe como **automático** o como **procedimiento manual con
 responsable**. Si un plazo está en «pendiente de decisión», la política no puede prometerlo todavía.
 
-- Mecanismo: migración `supabase/migrations/0284_los_datos_tienen_plazo_de_conservacion.sql`,
+- Mecanismo: migraciones `supabase/migrations/0284_los_datos_tienen_plazo_de_conservacion.sql` y `0285_la_caja_y_los_reclamos_tienen_plazo_de_conservacion.sql` (esta, de dinero),
   módulo `packages/backend/src/modules/retention/` (`applyRetentionPolicy`) y job Inngest
   `apply-data-retention-cron` (`apps/api/lib/inngest/functions.ts`), todos los días a las **04:45 de
   Lima**. La purga de comprobantes de cuentas borradas (0269, 90 días) es otro job, a las 04:30.
@@ -12,7 +12,7 @@ responsable**. Si un plazo está en «pendiente de decisión», la política no 
   falta o un valor no es un entero entre 1 y 1200, esa categoría **no se toca** (falla cerrada).
 - Cómo se cuenta: en días de Lima. Vence lo ocurrido **antes** del día de corte (hoy en Lima menos el
   plazo); lo del mismo día de corte se queda hasta el día siguiente.
-- Ninguna purga toca importes, estados ni fechas de negocio, ni borra filas de dinero (invariante 9).
+- Ninguna purga toca importes, estados ni fechas de negocio, ni borra filas de dinero (invariante 9). El plazo de caja está en años (`cashRecordsYears`, 1 a 100).
 
 ## Tabla de plazos
 
@@ -26,6 +26,8 @@ responsable**. Si un plazo está en «pendiente de decisión», la política no 
 | Eventos de la tienda | `store_events` | 13 meses desde `created_at` | Se eliminan | Automático (`purge_old_store_events`) |
 | Registro de envío de avisos | `push_delivery_log` | 13 meses desde `at` | Se eliminan | Automático (`purge_old_push_delivery_log`) |
 | Alertas de administración resueltas | `admin_alerts` | 13 meses desde `resolved_at` | Se eliminan; una alerta sin resolver no se toca | Automático (`purge_old_admin_alerts`) |
+| Notas de liquidaciones de caja | `cash_settlements.dispute_note`, `resolution_note` | 5 años desde el 1 de enero siguiente a `created_at` (hora de Lima) | Se borran las notas; importes, estado y fechas se quedan. Una liquidación en disputa no se toca | Automático (`anonymize_old_cash_settlement_notes`, 0285; **pendiente de revisión de Jesús**) |
+| Reclamos económicos antifraude | `fraud_coverage_claims`: `reason`, `resolution_note`, `evidence_url` | 5 años desde el 1 de enero siguiente a `created_at` (hora de Lima) | El motivo queda como `Dato eliminado`, se borran nota e imagen (Storage antes); el importe y el estado se quedan. Un reclamo pendiente no se toca | Automático (`list_fraud_claim_retention_due` → Storage → `finish_fraud_claim_retention`, 0285; **pendiente de revisión de Jesús**) |
 | Strikes antifraude | `customer_strikes` | 24 meses (propuesto) | — | **Pendiente de decisión**: el prepago los cuenta sin ventana (ver abajo) |
 | Directorio de la cajera | `address_directory` | 24 meses sin uso (propuesto) | — | **Pendiente de decisión**: una fila hace «confiable» al número (ver abajo) |
 | Historial de dueños del número | `phone_assignments` (y `phone_transfer_challenges`) | 24 meses desde `ended_at` (propuesto) | — | **Pendiente de decisión**: protege a quien recicla un número (ver abajo) |

@@ -20,6 +20,8 @@ interface Options {
   failBatch?: (category: BatchCategory) => boolean
   /** Filas con archivo de `reports`. */
   fileRows?: DueFileRow[]
+  /** Filas con archivo de `fraud_coverage_claims` (caja). */
+  claimRows?: DueFileRow[]
   precheck?: (id: string) => FileRowPrecheck
   outcome?: (id: string) => FileRowOutcome
   failRemoveFor?: (paths: string[]) => boolean
@@ -46,10 +48,11 @@ function build(options: Options) {
       pending.set(category, left - touched)
       return touched
     },
-    listDueFileRows: async (_category: FileCategory, limit, afterId) => {
-      pages.push(afterId)
+    listDueFileRows: async (category: FileCategory, limit, afterId) => {
       if (options.failList) throw new Error('lista caída')
-      return (options.fileRows ?? [])
+      if (category === 'reports') pages.push(afterId)
+      const rows = category === 'reports' ? options.fileRows : options.claimRows
+      return (rows ?? [])
         .filter((r) => !closed.has(r.rowId))
         .filter((r) => !afterId || r.rowId > afterId)
         .sort((a, b) => a.rowId.localeCompare(b.rowId))
@@ -178,11 +181,25 @@ describe('applyRetentionPolicy', () => {
     expect(f.pages).toEqual([undefined, rowId(99)])
   })
 
+  it('caja: las notas de liquidaciones van por lotes y los reclamos borran su imagen antes', async () => {
+    const f = build({
+      batchRows: { cash_settlements: 7 },
+      claimRows: [fileRow(50, 1)],
+    })
+    const summary = await applyRetentionPolicy(f)
+    expect(summary.cash_settlements).toEqual({ rows: 7, files: 0, pending: 0, failed: 0 })
+    expect(summary.fraud_coverage_claims).toEqual({ rows: 1, files: 1, pending: 0, failed: 0 })
+    expect(f.removed).toEqual([
+      { bucket: 'payment-proofs', paths: [`${rowId(50)}/evidencia-0.jpg`] },
+    ])
+    expect(f.finished).toEqual([rowId(50)])
+  })
+
   it('si la lista falla, la categoría cuenta un fallo y el resumen sale igual', async () => {
     const f = build({ failList: true, batchRows: { admin_alerts: 1 } })
     const summary = await applyRetentionPolicy(f)
     expect(summary.reports.failed).toBe(1)
     expect(summary.admin_alerts.rows).toBe(1)
-    expect(f.lines.filter((l) => l.includes('data_retention_category_done'))).toHaveLength(6)
+    expect(f.lines.filter((l) => l.includes('data_retention_category_done'))).toHaveLength(8)
   })
 })

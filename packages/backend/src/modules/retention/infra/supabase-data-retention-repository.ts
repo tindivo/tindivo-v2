@@ -34,6 +34,7 @@ const BATCH_RPC: Record<BatchCategory, string> = {
   store_events: 'purge_old_store_events',
   push_delivery_log: 'purge_old_push_delivery_log',
   admin_alerts: 'purge_old_admin_alerts',
+  cash_settlements: 'anonymize_old_cash_settlement_notes',
 }
 
 /** Las tres funciones de cada categoría con archivo (0284). */
@@ -46,6 +47,12 @@ const FILE_RPC: Record<
     precheck: 'report_retention_precheck',
     finish: 'finish_report_retention',
     id: 'p_report_id',
+  },
+  fraud_coverage_claims: {
+    list: 'list_fraud_claim_retention_due',
+    precheck: 'fraud_claim_retention_precheck',
+    finish: 'finish_fraud_claim_retention',
+    id: 'p_claim_id',
   },
 }
 

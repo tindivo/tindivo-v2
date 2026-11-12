@@ -1,5 +1,5 @@
 /**
- * Migración 0284 + módulo `retention`: plazos de conservación. Contra la base y el Storage
+ * Migraciones 0284 y 0285 + módulo `retention`: plazos de conservación. Contra la base y el Storage
  * LOCALES, con el caso de uso real (`applyRetentionPolicy`).
  *
  * Por categoría, con el día de corte que da la propia base (`retention_cutoff`):
@@ -21,7 +21,12 @@ import {
 } from '@tindivo/backend/retention'
 import { createLogger, type LogLevel } from '@tindivo/backend/shared'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import { localClient as db } from './helpers/local-db'
+import {
+  cleanup,
+  localClient as db,
+  type SeededOrder,
+  seedContraentregaOrder,
+} from './helpers/local-db'
 
 // Cada consulta es un `docker exec` (~1 s en Windows): la preparación siembra unas 35 filas.
 vi.setConfig({ hookTimeout: 240_000, testTimeout: 120_000 })
@@ -38,7 +43,7 @@ const PNG = Uint8Array.from(
   (c) => c.charCodeAt(0),
 )
 const DEFAULT_SETTING =
-  '{"customerIncidentsMonths": 24, "reportsMonths": 24, "phoneRestrictionsMonths": 24, "storeEventsMonths": 13, "pushDeliveryLogMonths": 13, "adminAlertsMonths": 13}'
+  '{"customerIncidentsMonths": 24, "reportsMonths": 24, "phoneRestrictionsMonths": 24, "storeEventsMonths": 13, "pushDeliveryLogMonths": 13, "adminAlertsMonths": 13, "cashRecordsYears": 5}'
 
 /** Las funciones nuevas de la 0284 que ningún cliente puede llamar. */
 const FUNCIONES = [
@@ -55,6 +60,12 @@ const FUNCIONES = [
   'list_report_retention_due',
   'report_retention_precheck',
   'finish_report_retention',
+  'retention_cash_cutoff',
+  'anonymize_old_cash_settlement_notes',
+  'retention_fraud_claim_due',
+  'list_fraud_claim_retention_due',
+  'fraud_claim_retention_precheck',
+  'finish_fraud_claim_retention',
 ]
 /** Las que se pueden llamar por PostgREST, con argumentos válidos. */
 const LLAMABLES: [string, Record<string, unknown>][] = [
@@ -67,6 +78,11 @@ const LLAMABLES: [string, Record<string, unknown>][] = [
   ['list_report_retention_due', { p_limit: 1 }],
   ['report_retention_precheck', { p_report_id: '00000000-0000-4000-8000-000000000000' }],
   ['finish_report_retention', { p_report_id: '00000000-0000-4000-8000-000000000000' }],
+  ['retention_cash_cutoff', {}],
+  ['anonymize_old_cash_settlement_notes', { p_limit: 1 }],
+  ['list_fraud_claim_retention_due', { p_limit: 1 }],
+  ['fraud_claim_retention_precheck', { p_claim_id: '00000000-0000-4000-8000-000000000000' }],
+  ['finish_fraud_claim_retention', { p_claim_id: '00000000-0000-4000-8000-000000000000' }],
 ]
 
 /** SQL contra la base local por stdin (los acentos no se corrompen). */
@@ -152,6 +168,11 @@ const archivos = {
   vecino: `retencion-${runId}/vecino.png`,
 }
 let usuarioPrueba: string | undefined
+let pedidoCaja: SeededOrder | undefined
+/** Caja (§5): el corte es el 1 de enero en Lima; vencida = 1 s antes, límite = el corte. */
+const CAJA_VENCIDA = `public.retention_cash_cutoff() - interval '1 second'`
+const CAJA_LIMITE = 'public.retention_cash_cutoff()'
+const archivoReclamo = `retencion-${runId}/reclamo.png`
 
 beforeAll(async () => {
   settingOriginal = sql(
@@ -278,6 +299,39 @@ beforeAll(async () => {
     refund_completed_at: VENCIDA('reportsMonths'),
   })
 
+  // ── 5 · Caja y reclamos económicos ────────────────────────────────────────
+  const driverId = sql(`select id from public.drivers order by created_at limit 1;`)
+  expect(driverId).toMatch(/^[0-9a-f-]{36}$/)
+  pedidoCaja = await seedContraentregaOrder()
+  const liquidacion = (k: string, status: string, created: string) => {
+    ids[`caja_${k}`] = ins(`insert into public.cash_settlements
+        (business_id, driver_id, settlement_date, total_cash, order_count, status,
+         reported_amount, dispute_note, resolved_amount, resolution_note, created_at)
+      values ('${pedidoCaja?.businessId}', '${driverId}', (${created})::date, 150.75, 3, '${status}',
+        140.25, '${tag(`disputa-${k}`)}', 145.50, '${tag(`resol-${k}`)}', ${created})
+      returning id;`)
+  }
+  liquidacion('vencida', 'resolved', CAJA_VENCIDA)
+  liquidacion('limite', 'resolved', CAJA_LIMITE)
+  liquidacion('disputada', 'disputed', CAJA_VENCIDA)
+  liquidacion('reciente', 'resolved', RECIENTE)
+  await db.storage
+    .from('payment-proofs')
+    .upload(archivoReclamo, PNG, { contentType: 'image/png' })
+    .then(({ error }) => {
+      if (error) throw new Error(`subir el reclamo falló: ${error.message}`)
+    })
+  const reclamo = (k: string, status: string, created: string, evidence: string | null) => {
+    ids[`reclamo_${k}`] = ins(`insert into public.fraud_coverage_claims
+        (order_id, business_id, amount, reason, evidence_url, status, resolution_note, created_at)
+      values ('${pedidoCaja?.orderId}', '${pedidoCaja?.businessId}', 33.30, '${tag(`motivo-${k}`)}',
+        ${evidence ? `'${evidence}'` : 'null'}, '${status}', '${tag(`nota-${k}`)}', ${created})
+      returning id;`)
+  }
+  reclamo('vencido', 'approved', CAJA_VENCIDA, archivoReclamo)
+  reclamo('limite', 'rejected', CAJA_LIMITE, null)
+  reclamo('pendiente', 'pending', CAJA_VENCIDA, null)
+
   dineroAntes = fotoDelDinero()
 })
 
@@ -300,7 +354,11 @@ afterAll(async () => {
        delete from public.phone_restrictions where id in (${lista('restr_')});
        delete from public.admin_alerts where id in (${lista('alert_')});
        delete from public.push_delivery_log where id in (${lista('push_')});
-       delete from public.store_events where id in (${lista('store_')});`)
+       delete from public.store_events where id in (${lista('store_')});
+       delete from public.cash_settlements where id in (${lista('caja_')});
+       delete from public.fraud_coverage_claims where id in (${lista('reclamo_')});`)
+  await db.storage.from('payment-proofs').remove([archivoReclamo])
+  if (pedidoCaja) await cleanup(pedidoCaja)
   if (usuarioPrueba) {
     await db.from('users').delete().eq('id', usuarioPrueba)
     await db.auth.admin.deleteUser(usuarioPrueba)
@@ -362,7 +420,7 @@ describe('plazos de conservación (0284), primera corrida', () => {
     for (const [categoria, s] of Object.entries(primera)) {
       expect(s.failed, categoria).toBe(0)
     }
-    expect(lineas.filter((l) => l.includes('data_retention_category_done'))).toHaveLength(6)
+    expect(lineas.filter((l) => l.includes('data_retention_category_done'))).toHaveLength(8)
     expect(lineas.join('\n')).not.toContain(adminId)
     expect(lineas.join('\n')).not.toContain(runId)
   })
@@ -486,6 +544,47 @@ describe('plazos de conservación (0284), primera corrida', () => {
     } finally {
       await db.storage.from('payment-proofs').remove([path])
     }
+  })
+})
+
+describe('caja y reclamos económicos (0285)', () => {
+  it('el corte es el 1 de enero en Lima: 5 años contados desde el año siguiente', () => {
+    // Hoy no es 1 de enero en Lima salvo un día al año; ese día el corte retrocede un año.
+    expect(
+      sql(`select public.retention_cash_cutoff() = (make_date(
+                extract(year from (now() at time zone 'America/Lima'))::int - 5
+                - case when (now() at time zone 'America/Lima')::date
+                            = make_date(extract(year from (now() at time zone 'America/Lima'))::int, 1, 1)
+                       then 1 else 0 end, 1, 1)::timestamp at time zone 'America/Lima');`),
+    ).toBe('t')
+  })
+
+  it('liquidaciones: la vencida pierde sus notas; límite, disputa abierta y reciente, intactas', () => {
+    const fila = (k: string) =>
+      sql(`select concat_ws('|', coalesce(dispute_note, '∅'), coalesce(resolution_note, '∅'),
+                  total_cash, reported_amount, resolved_amount, status, settlement_date)
+             from public.cash_settlements where id = '${ids[`caja_${k}`]}';`)
+    expect(fila('vencida').startsWith('∅|∅|150.75|140.25|145.50|resolved|')).toBe(true)
+    for (const k of ['limite', 'disputada', 'reciente']) {
+      expect(fila(k), k).toContain(
+        `${tag(`disputa-${k}`)}|${tag(`resol-${k}`)}|150.75|140.25|145.50`,
+      )
+    }
+    expect(primera.cash_settlements.rows).toBeGreaterThanOrEqual(1)
+  })
+
+  it('reclamos: el vencido pierde motivo, nota y evidencia (la imagen se borra); el importe se queda', async () => {
+    const fila = (k: string) =>
+      sql(`select concat_ws('|', reason, coalesce(resolution_note, '∅'), coalesce(evidence_url, '∅'),
+                  amount, status)
+             from public.fraud_coverage_claims where id = '${ids[`reclamo_${k}`]}';`)
+    expect(fila('vencido')).toBe('Dato eliminado|∅|∅|33.30|approved')
+    expect(await existe(archivoReclamo)).toBe(false)
+    expect(fila('limite')).toBe(`${tag('motivo-limite')}|${tag('nota-limite')}|∅|33.30|rejected`)
+    expect(fila('pendiente')).toBe(
+      `${tag('motivo-pendiente')}|${tag('nota-pendiente')}|∅|33.30|pending`,
+    )
+    expect(primera.fraud_coverage_claims).toMatchObject({ rows: 1, files: 1, failed: 0 })
   })
 })
 
