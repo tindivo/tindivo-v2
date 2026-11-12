@@ -77,8 +77,8 @@ interface PushInstallationStore {
     /**
      * Al cerrar sesión, en UN solo paso atómico: si el guardado está atado a [accountId] (o a cualquier cuenta si es
      * `null`), lo cambia por uno nuevo sin cuenta y AÑADE a las pendientes la limpieza del anterior (sin pisar las que
-     * ya había ni repetir un `installId`). Devuelve esa limpieza, o `null` si no había nada atado. Desde ese instante ningún aviso del `installId` anterior es de esta
-     * instalación.
+     * ya había ni repetir un `installId`). Devuelve esa limpieza, o `null` si no había nada atado. Desde ese instante
+     * ningún aviso del `installId` anterior es de esta instalación.
      */
     suspend fun beginSignOut(accountId: String?): PendingCleanup?
 

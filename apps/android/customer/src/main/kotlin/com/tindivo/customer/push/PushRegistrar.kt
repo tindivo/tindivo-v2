@@ -3,6 +3,7 @@ package com.tindivo.customer.push
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
+import com.tindivo.core.network.PushDeviceInfo
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import kotlinx.coroutines.CancellationException
@@ -72,7 +73,8 @@ class PushRegistrar(
     /** Empieza a seguir la sesión. Se llama una vez, al arrancar el proceso. */
     fun start() {
         scope.launch {
-            retryTokenCleanup()
+            // El borrado del token pendiente, bajo el mismo candado que los registros.
+            mutex.withLock { cleanTokenLocked() }
             sessionStore.state.collect { session ->
                 when (session) {
                     SessionState.Unknown -> {
@@ -100,7 +102,7 @@ class PushRegistrar(
     /** FCM rotó el token (`onNewToken`), o se acaba de conceder el permiso: se vuelve a registrar la cuenta vigente. */
     fun refresh() {
         scope.launch {
-            val account = currentAccount() ?: return@launch
+            val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return@launch
             mutex.withLock { registerLocked(account) }
         }
     }
@@ -165,11 +167,6 @@ class PushRegistrar(
         if (tokens.delete()) installations.tokenDone()
     }
 
-    /** El arranque: el borrado del token pendiente, bajo el mismo candado que los registros. */
-    private suspend fun retryTokenCleanup() {
-        mutex.withLock { cleanTokenLocked() }
-    }
-
     /** La baja del servidor que quedó pendiente: solo la de [account] (necesita su sesión). */
     private suspend fun retryServerCleanup(account: String) {
         if (closing == account) return
@@ -188,27 +185,33 @@ class PushRegistrar(
         val binding = installations.bindTo(account)
         // El installId era de otra cuenta: el token de FCM también se renueva antes de registrar esta.
         if (binding.replacedOther) tokens.delete()
-        val token = tokens.token() ?: return
-        if (!live(account)) return
-        val device = description.describe(token)
-        var installId = binding.installId
+        val token = tokens.token()
+        if (token != null && live(account)) putDevice(account, binding.installId, description.describe(token))
+    }
+
+    /**
+     * El `PUT` del aparato. La continuación de un 409 no puede deshacer un cierre de sesión que empezó con el PUT en
+     * vuelo: se vuelve a comprobar que la cuenta sigue viva y `replace` solo actúa si la identidad guardada sigue siendo
+     * la rechazada y de esa cuenta. Si el servidor acepta, el token anterior que no se pudo borrar ya no tiene objeto:
+     * el servidor se lo reasignó a esta cuenta.
+     */
+    private suspend fun putDevice(
+        account: String,
+        installId: UUID,
+        device: PushDeviceInfo,
+    ) {
         var result = devices.register(installId, device, account)
         if (result.isConflict()) {
-            // La continuación de un 409 no puede deshacer un cierre de sesión que empezó mientras el PUT iba en vuelo:
-            // la cuenta sigue viva y la identidad guardada sigue siendo la rechazada (`replace` lo comprueba).
-            if (!live(account)) return
-            installId = installations.replace(installId, account) ?: return
-            if (!live(account)) return
-            result = devices.register(installId, device, account)
+            val next = if (live(account)) installations.replace(installId, account) else null
+            if (next == null || !live(account)) return
+            result = devices.register(next, device, account)
         }
-        // El servidor ya tiene este token para esta cuenta: borrar el anterior (si no se pudo) ya no tiene objeto.
         if (result is ApiResult.Success) installations.tokenDone()
     }
 
     /** La cuenta sigue con la sesión y no está cerrándola. */
-    private fun live(account: String): Boolean = currentAccount() == account && closing != account
-
-    private fun currentAccount(): String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+    private fun live(account: String): Boolean =
+        (sessionStore.state.value as? SessionState.SignedIn)?.userId == account && closing != account
 
     private companion object {
         /** Cuánto espera «Cerrar sesión» a la baja antes de cerrar igual. */

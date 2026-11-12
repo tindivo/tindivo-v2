@@ -131,8 +131,8 @@ class SharedPrefsTrackingMarkStore(
             .mapNotNull { (group, raw) ->
                 val parts = (raw as? String)?.split(SEPARATOR) ?: return@mapNotNull null
                 if (parts.size != FIELDS) return@mapNotNull null
-                val rank = parts[2].toIntOrNull() ?: return@mapNotNull null
-                val floor = parts[3].toIntOrNull() ?: return@mapNotNull null
+                val rank = parts[RANK_AT].toIntOrNull() ?: return@mapNotNull null
+                val floor = parts[FLOOR_AT].toIntOrNull() ?: return@mapNotNull null
                 group to TrackingMark(parts[0].toLongOrNull(), parts[1] == TERMINAL, rank, floor)
             }.toMap()
 
@@ -155,6 +155,8 @@ class SharedPrefsTrackingMarkStore(
         const val FILE = "tindivo_tracking_marks"
         const val SEPARATOR = "|"
         const val FIELDS = 4
+        const val RANK_AT = 2
+        const val FLOOR_AT = 3
         const val TERMINAL = "t"
         const val ACTIVE = "a"
     }
