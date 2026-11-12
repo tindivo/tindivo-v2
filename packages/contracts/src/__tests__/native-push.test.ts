@@ -19,6 +19,16 @@ describe('NativePushPayloadSchema v1 (CLI-8)', () => {
     )
   })
 
+  it('group es opcional y aditivo: el v1 sin él sigue valiendo, y si viene no puede ir vacío', () => {
+    const conGrupo = { ...valido, group: 'order-AB2C3D4E' }
+    expect(NativePushPayloadSchema.parse(conGrupo)).toEqual(conGrupo)
+    expect(NativePushPayloadSchema.safeParse(valido).success).toBe(true)
+    expect(NativePushPayloadSchema.safeParse({ ...valido, group: '' }).success).toBe(false)
+    expect(NativePushPayloadSchema.safeParse({ ...valido, group: 'x'.repeat(257) }).success).toBe(
+      false,
+    )
+  })
+
   it('rechaza otra versión, campos ausentes y deep links que no son una ruta de la app', () => {
     expect(NativePushPayloadSchema.safeParse({ ...valido, v: 2 }).success).toBe(false)
     for (const campo of ['type', 'tag', 'title', 'body', 'deepLink'] as const) {

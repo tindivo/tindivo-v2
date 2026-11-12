@@ -163,11 +163,23 @@ describe('send-push native · payload v1 y mensajes', () => {
         v: 1,
         type: 'OrderCreated',
         tag: n.tag,
+        // Sin `group` en la nota, la llave de presentación es el propio tag.
+        group: n.tag,
         title: n.title,
         body: n.body,
         deepLink: n.url,
       })
     }
+  })
+
+  it('nativePayload con group: lo lleva aparte y el tag del evento no cambia', () => {
+    const p = nativePayload(
+      { ...note, tag: 'OrderStatusChanged-take-AB2C3D4E', group: 'order-AB2C3D4E' },
+      'OrderStatusChanged',
+    )
+    expect(NativePushPayloadSchema.parse(p)).toEqual(p)
+    expect(p.tag).toBe('OrderStatusChanged-take-AB2C3D4E')
+    expect(p.group).toBe('order-AB2C3D4E')
   })
 
   it('un deepLink con host o protocolo-relativo no cumple el contrato', () => {
@@ -188,16 +200,78 @@ describe('send-push native · payload v1 y mensajes', () => {
       v: '1',
       type: 'OrderCreated',
       tag: note.tag,
+      group: note.tag,
       title: note.title,
       body: note.body,
       deepLink: note.url,
     })
     for (const v of Object.values(m.message.data)) expect(typeof v).toBe('string')
+    // Sin group ni TTL: como antes, el tag colapsa y FCM no recibe `ttl`.
     expect(m.message.android).toEqual({
       priority: 'HIGH',
       collapse_key: note.tag,
       notification: { tag: note.tag, channel_id: 'order_updates' },
     })
+  })
+
+  it('buildFcmMessage con group y TTL: una notificación por pedido en Android, tag del evento intacto', () => {
+    const p = nativePayload(
+      {
+        ...note,
+        tag: 'OrderStatusChanged-arrived-AB2C3D4E',
+        group: 'order-AB2C3D4E',
+        ttlSeconds: 10800,
+      },
+      'OrderStatusChanged',
+    )
+    const m = buildFcmMessage(SECRET_TOKEN_ANDROID, p, 10800)
+    expect(m.message.android).toEqual({
+      priority: 'HIGH',
+      collapse_key: 'order-AB2C3D4E',
+      ttl: '10800s',
+      notification: { tag: 'order-AB2C3D4E', channel_id: 'order_updates' },
+    })
+    // El `tag` del data sigue siendo el del evento (invariante 5); `group` viaja aparte para la app.
+    expect(m.message.data.tag).toBe('OrderStatusChanged-arrived-AB2C3D4E')
+    expect(m.message.data.group).toBe('order-AB2C3D4E')
+  })
+
+  it('dos estados del mismo pedido comparten la etiqueta de Android y no el tag', () => {
+    const a = buildFcmMessage(
+      SECRET_TOKEN_ANDROID,
+      nativePayload(
+        { ...note, tag: 'OrderStatusChanged-take-AB2C3D4E', group: 'order-AB2C3D4E' },
+        'OrderStatusChanged',
+      ),
+    )
+    const b = buildFcmMessage(
+      SECRET_TOKEN_ANDROID,
+      nativePayload(
+        { ...note, tag: 'OrderStatusChanged-pickup-AB2C3D4E', group: 'order-AB2C3D4E' },
+        'OrderStatusChanged',
+      ),
+    )
+    expect(a.message.android.notification.tag).toBe(b.message.android.notification.tag)
+    expect(a.message.android.collapse_key).toBe(b.message.android.collapse_key)
+    expect(a.message.data.tag).not.toBe(b.message.data.tag)
+  })
+
+  it('sendNative manda a FCM el group como etiqueta y el TTL de la nota', async () => {
+    const config = await load((await fullEnv()).env)
+    const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : FCM_OK))
+    const r = await sendNative(
+      android,
+      'customer',
+      { ...note, group: 'courier-ZZ9Y8X7W', ttlSeconds: 10800 },
+      'CourierStepped',
+      { config, fetch: f.fn, now: () => Date.UTC(2026, 9, 19, 12, 0, 0) },
+    )
+    expect(r?.outcome).toBe('ok')
+    const sent = JSON.parse(f.calls[1]?.body ?? '{}')
+    expect(sent.message.android.notification.tag).toBe('courier-ZZ9Y8X7W')
+    expect(sent.message.android.collapse_key).toBe('courier-ZZ9Y8X7W')
+    expect(sent.message.android.ttl).toBe('10800s')
+    expect(sent.message.data.tag).toBe(note.tag)
   })
 
   it('buildApnsRequest: producción, cabeceras y cuerpo', () => {

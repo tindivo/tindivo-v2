@@ -15,6 +15,16 @@ import { must } from './db-result.ts'
 import { asRecord, classifyRequest } from './request-kind.ts'
 import { withStartedTasks } from './task-group.ts'
 import {
+  courierGroup,
+  courierReleasedNotice,
+  deliveryReadyNotice,
+  driverAtBusinessNotice,
+  driverTookNotice,
+  orderGroup,
+  TRACKING_TTL_SECONDS,
+  type TrackingNotice,
+} from './order-tracking.ts'
+import {
   isOpsCaller,
   OPS_ALERT_SECRET_HEADER,
   OPS_ALERT_WINDOW,
@@ -161,6 +171,21 @@ type Note = {
   requireInteraction: boolean
   vibrate: boolean
   renotify?: boolean
+  /**
+   * Llave de presentación en Android: `orderGroup`/`courierGroup` en los avisos de un pedido o una
+   * entrega, para que haya UNA notificación por pedido que se actualiza. Sin ella vale `tag`, que
+   * no cambia (invariante 5). Web Push no la usa.
+   */
+  group?: string
+  /** `android.ttl` del aviso nativo (`TRACKING_TTL_SECONDS` en los de pedido y Entregas). */
+  ttlSeconds?: number
+  /** Solo a la app nativa, nunca por Web Push (la web del cliente está congelada para pedidos). */
+  nativeOnly?: boolean
+}
+
+/** Los campos de presentación de un aviso de pedido (sin `nativeOnly`: esos van también por la web). */
+function orderTracking(sid: string): Pick<Note, 'group' | 'ttlSeconds'> {
+  return { group: orderGroup(sid), ttlSeconds: TRACKING_TTL_SECONDS }
 }
 
 /**
@@ -471,6 +496,7 @@ async function headsUpNotes(orderId: string, eventType: string): Promise<Note[]>
     url: '/',
     requireInteraction: false,
     vibrate: false,
+    ...orderTracking(o.sid),
   }))
 }
 
@@ -531,6 +557,7 @@ async function newOrderBusinessNotes(orderId: string): Promise<Note[]> {
       // por silencio.
       requireInteraction: true,
       vibrate: true,
+      ...orderTracking(sid),
     },
   ]
 }
@@ -660,6 +687,19 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         requireInteraction: Boolean(o2?.req),
         vibrate: Boolean(o2?.req),
         renotify: Boolean(o2?.renotify ?? o2?.req),
+        ...orderTracking(sid),
+      })
+    }
+    /** Un momento del seguimiento que solo va a la app nativa del cliente (`order-tracking.ts`). */
+    const track = (notice: TrackingNotice) => {
+      if (!cust) return
+      out.push({
+        userId: cust,
+        app: 'customer',
+        tag: tagOf(sid),
+        requireInteraction: false,
+        vibrate: false,
+        ...notice,
       })
     }
 
@@ -754,6 +794,8 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
        * participar sin entrar primero a la PWA por azar"). v2 reintrodujo el
        * filtro al reescribir la función.
        */
+      // El cliente también se entera de que la comida está lista (solo en la app nativa).
+      track(deliveryReadyNotice(sid, bizName, Boolean(o.driver_id)))
       // Este error SÍ se mira: si la consulta falla, el resultado es
       // indistinguible de "no hay motorizados" — un 200 con recipients 0 que
       // parece normal. Es justo el silencio que costó tres días de diagnóstico.
@@ -783,8 +825,10 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         }
       }
     } else if (action === 'take') {
+      track(driverTookNotice(sid, await driverFirstName(o.driver_id), bizName))
       push('negocios', bizUser, 'Motorizado en camino', `Un motorizado va por #${sid}`, { url: '/' })
     } else if (action === 'arrived') {
+      track(driverAtBusinessNotice(sid, await driverFirstName(o.driver_id), bizName))
       push('negocios', bizUser, 'Motorizado en tu local', `Está esperando #${sid}`, { url: '/', req: true })
     } else if (action === 'pickup') {
       /**
@@ -943,6 +987,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
         url: `/pedido/${sid}`,
         requireInteraction: false,
         vibrate: false,
+        ...orderTracking(sid),
       }
       if (eventType === 'OrderProofVerified') {
         const prep = prepPhrase(o.prep_time_minutes)
@@ -999,6 +1044,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
           requireInteraction: true,
           vibrate: true,
           renotify: true,
+          ...orderTracking(o.sid),
         })
       }
     }
@@ -1020,6 +1066,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
           requireInteraction: true,
           vibrate: true,
           renotify: true,
+          ...orderTracking(o.sid),
         })
       }
     }
@@ -1039,6 +1086,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
           requireInteraction: true,
           vibrate: true,
           renotify: true,
+          ...orderTracking(o.sid),
         })
       }
     }
@@ -1301,9 +1349,12 @@ const COURIER_CANCEL_BODY: Record<string, string> = {
  *     momentos que la hoja de permiso le promete (`PushPermissionSheet`).
  *   · Motorizado dueño — `fee_remittance_confirmed`: el S/ 3 que rindió quedó
  *     cuadrado, hermano de `CashConfirmed`.
+ *   · Cliente, solo en la app nativa — `release`: el motorizado la soltó y se
+ *     busca otro; la entrega sigue en pie.
  *
  * El tag lleva acción y `short_id` (invariante 5): «aceptada» y «recogida» de
- * la misma entrega no se pisan, pero un reintento del mismo paso sí.
+ * la misma entrega no se pisan, pero un reintento del mismo paso sí. En Android
+ * todos comparten `courierGroup(sid)`: una sola notificación por entrega.
  */
 async function courierNotes(aggregateId: string, payload: Record<string, unknown>): Promise<Note[]> {
   const action = String(payload?.action ?? '')
@@ -1324,6 +1375,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
   const fee = soles(c.fee_amount)
   const customer = c.customer_user_id as string | null
   const customerUrl = `/entregas/${sid}`
+  const tracking = { group: courierGroup(sid), ttlSeconds: TRACKING_TTL_SECONDS }
   const out: Note[] = []
 
   const toCustomer = (title: string, body: string, urgent = false) => {
@@ -1338,6 +1390,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
       requireInteraction: urgent,
       vibrate: urgent,
       renotify: urgent,
+      ...tracking,
     })
   }
 
@@ -1346,6 +1399,18 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
     // nada que ofrecer: un push a una entrega que ya no existe en la bolsa
     // hace que el motorizado abra la app para nada.
     if (c.status !== 'requested' || c.driver_id) return []
+    // Al cliente, solo en la app nativa: su entrega no se cayó, se busca otro motorizado.
+    // Bajo la misma guarda: si otro ya la tomó, el aviso de `accept` lo reemplaza.
+    if (action === 'release' && customer) {
+      out.push({
+        userId: customer,
+        app: 'customer',
+        tag,
+        requireInteraction: false,
+        vibrate: false,
+        ...courierReleasedNotice(sid),
+      })
+    }
     const cobro = c.payer === 'origin' ? `Cobra ${fee} al recoger` : `Cobra ${fee} al entregar`
     const ruta = `${clip(c.origin_reference_text)} → ${clip(c.destination_reference_text)}`
     const { data: drivers, error } = await db
@@ -1368,6 +1433,7 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
         requireInteraction: true,
         vibrate: true,
         renotify: true,
+        ...tracking,
       })
     }
   } else if (action === 'accept') {
@@ -1406,6 +1472,8 @@ async function courierNotes(aggregateId: string, payload: Record<string, unknown
         url: '/deuda',
         requireInteraction: false,
         vibrate: false,
+        // Sin TTL: es la confirmación de un dinero rendido, no un estado que envejezca.
+        group: tracking.group,
       })
     }
   }
@@ -1524,13 +1592,16 @@ Deno.serve(async (req: Request) => {
       async (start) => {
         for (const note of notes) {
           // Un fallo de lectura lanza (500, sin marcar el final): no es «sin suscripciones».
-          const subs = must(
-            await db
-              .from('push_subscriptions')
-              .select('id,endpoint,p256dh,auth,failure_count')
-              .eq('user_id', note.userId),
-            'push_subscriptions',
-          )
+          // Un aviso `nativeOnly` no pasa por Web Push: ni se leen las suscripciones.
+          const subs = note.nativeOnly
+            ? []
+            : must(
+                await db
+                  .from('push_subscriptions')
+                  .select('id,endpoint,p256dh,auth,failure_count')
+                  .eq('user_id', note.userId),
+                'push_subscriptions',
+              )
           for (const sub of subs ?? []) {
             const body = JSON.stringify({
               title: note.title,

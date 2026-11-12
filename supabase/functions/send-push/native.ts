@@ -17,14 +17,27 @@ export type NativePlatform = 'ios' | 'android'
 export type NativeEnvironment = 'production' | 'sandbox'
 export type NativeOutcome = 'ok' | 'invalid_token' | 'failed'
 
-/** Lo que el aviso necesita de una `Note` de send-push. */
-export type NativeNote = { title: string; body: string; tag: string; url: string }
+/**
+ * Lo que el aviso necesita de una `Note` de send-push. `group` es la llave de PRESENTACIÓN en
+ * Android (ver `buildFcmMessage`); sin ella vale `tag`. `ttlSeconds`: cuánto puede guardar FCM el
+ * aviso para un teléfono sin red antes de descartarlo; sin él, el máximo de Google (28 días).
+ */
+export type NativeNote = {
+  title: string
+  body: string
+  tag: string
+  url: string
+  group?: string
+  ttlSeconds?: number
+}
 
 /** Payload v1 (`packages/contracts/src/native-push.ts`). */
 export type NativePayload = {
   v: 1
   type: string
   tag: string
+  /** Opcional en el contrato (aditivo); aquí siempre va: sin `group` en la nota, es el `tag`. */
+  group: string
   title: string
   body: string
   deepLink: string
@@ -67,6 +80,7 @@ export function nativePayload(note: NativeNote, eventType: string): NativePayloa
     v: 1,
     type: eventType,
     tag: note.tag,
+    group: note.group ?? note.tag,
     title: note.title,
     body: note.body,
     deepLink: note.url,
@@ -81,12 +95,30 @@ export type FcmMessage = {
     android: {
       priority: 'HIGH'
       collapse_key: string
+      ttl?: string
       notification: { tag: string; channel_id: string }
     }
   }
 }
 
-export function buildFcmMessage(token: string, payload: NativePayload): FcmMessage {
+/**
+ * El mensaje de FCM HTTP v1.
+ *
+ * UNA NOTIFICACIÓN POR PEDIDO EN ANDROID: `android.notification.tag` y `collapse_key` son el
+ * `group` del payload (`order-<shortId>`, `courier-<shortId>`; en el resto de avisos, su `tag`) y
+ * no el `tag`. Así cada estado del mismo pedido reemplaza al anterior en la bandeja (y vuelve a
+ * sonar) en vez de apilarse, y un teléfono que recupera la red recibe solo el último. El `tag` del
+ * payload NO cambia: sigue siendo `${event_type}-${shortId}` (invariante 5 de AGENTS.md), identifica
+ * el EVENTO y es el que usan Web Push y APNs. `group` solo decide cómo se presenta en Android.
+ *
+ * `ttlSeconds` (si la nota lo trae) va como `android.ttl`: pasado ese plazo FCM descarta el aviso
+ * en vez de entregar tarde un estado viejo.
+ */
+export function buildFcmMessage(
+  token: string,
+  payload: NativePayload,
+  ttlSeconds?: number,
+): FcmMessage {
   return {
     message: {
       token,
@@ -95,14 +127,16 @@ export function buildFcmMessage(token: string, payload: NativePayload): FcmMessa
         v: String(payload.v),
         type: payload.type,
         tag: payload.tag,
+        group: payload.group,
         title: payload.title,
         body: payload.body,
         deepLink: payload.deepLink,
       },
       android: {
         priority: 'HIGH',
-        collapse_key: payload.tag,
-        notification: { tag: payload.tag, channel_id: FCM_CHANNEL_ID },
+        collapse_key: payload.group,
+        ...(ttlSeconds === undefined ? {} : { ttl: `${Math.trunc(ttlSeconds)}s` }),
+        notification: { tag: payload.group, channel_id: FCM_CHANNEL_ID },
       },
     },
   }
@@ -577,6 +611,7 @@ async function sendFcm(
   device: NativeDevice,
   payload: NativePayload,
   deps: NativeSendDeps,
+  ttlSeconds: number | undefined,
 ): Promise<NativeSendResult> {
   const fail = (status: number | null, reason: string): NativeSendResult => ({
     channel: 'fcm',
@@ -595,7 +630,7 @@ async function sendFcm(
     res = await deps.fetch(`https://fcm.googleapis.com/v1/projects/${config.projectId}/messages:send`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
-      body: JSON.stringify(buildFcmMessage(device.token, payload)),
+      body: JSON.stringify(buildFcmMessage(device.token, payload, ttlSeconds)),
       signal: AbortSignal.timeout(NATIVE_TIMEOUT_MS),
       redirect: 'error',
     })
@@ -688,7 +723,9 @@ export async function sendNative(
     if (device.platform === 'ios') {
       return deps.config.apns ? await sendApns(deps.config.apns, device, app, payload, deps) : null
     }
-    return deps.config.fcm ? await sendFcm(deps.config.fcm, device, payload, deps) : null
+    return deps.config.fcm
+      ? await sendFcm(deps.config.fcm, device, payload, deps, note.ttlSeconds)
+      : null
   } catch {
     return {
       channel: device.platform === 'ios' ? 'apns' : 'fcm',

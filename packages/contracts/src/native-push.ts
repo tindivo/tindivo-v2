@@ -25,6 +25,10 @@ export const NativePushPayloadSchema = z.object({
     .min(1)
     .max(256)
     .meta({ description: 'Colapsa avisos repetidos; lleva el tipo de evento y el shortId' }),
+  group: z.string().min(1).max(256).optional().meta({
+    description:
+      'Llave de presentación: los avisos con el mismo group se reemplazan en el teléfono (order-<shortId>, courier-<shortId>). Sin ella, vale tag',
+  }),
   title: z.string().min(1).max(256),
   body: z.string().max(1024),
   deepLink: z
