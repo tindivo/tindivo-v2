@@ -31,8 +31,16 @@ export interface DueFileRow {
   objects: ProofObject[]
 }
 
-/** Lo que dice la base antes de tocar Storage. */
-export type FileRowPrecheck = 'ok' | 'not_due' | 'not_found'
+/**
+ * Lo que dice la base antes de tocar Storage, con la fila bloqueada: si `status` no es `ok`, no se
+ * borra nada. `objects` son los únicos archivos que el job puede borrar (la lista de
+ * `listDueFileRows` es solo informativa) y `token` identifica la marca de borrado que los protege.
+ */
+export interface FileRowPrecheck {
+  status: 'ok' | 'not_due' | 'not_found'
+  token: string | null
+  objects: ProofObject[]
+}
 
 /**
  * Cómo terminó una fila con archivo:
@@ -40,6 +48,7 @@ export type FileRowPrecheck = 'ok' | 'not_due' | 'not_found'
  * - `ref_kept`: anonimizada, pero la evidencia es una URL que la purga no controla y se conserva.
  * - `not_due` / `not_found`: la fila cambió entre la lista y el cierre; no se tocó.
  * - `object_remains`: su archivo sigue en Storage; no se tocó nada.
+ * - `stale`: la marca que autorizó el borrado ya no vale; no se tocó nada.
  */
 export const FILE_ROW_OUTCOMES = [
   'anonymized',
@@ -47,6 +56,7 @@ export const FILE_ROW_OUTCOMES = [
   'not_due',
   'not_found',
   'object_remains',
+  'stale',
 ] as const
 export type FileRowOutcome = (typeof FILE_ROW_OUTCOMES)[number]
 
@@ -58,6 +68,10 @@ export interface DataRetentionRepository {
   listDueFileRows(category: FileCategory, limit: number, afterId?: string): Promise<DueFileRow[]>
   /** Se llama antes de tocar Storage: si no es `ok`, no se borra ningún archivo. */
   precheckFileRow(category: FileCategory, rowId: string): Promise<FileRowPrecheck>
-  /** Anonimiza la fila; la base se niega (`object_remains`) si su archivo aún existe. */
-  finishFileRow(category: FileCategory, rowId: string): Promise<FileRowOutcome>
+  /** Anonimiza la fila; la base se niega (`object_remains`, `stale`) si su archivo aún existe o la marca no vale. */
+  finishFileRow(
+    category: FileCategory,
+    rowId: string,
+    token: string | null,
+  ): Promise<FileRowOutcome>
 }

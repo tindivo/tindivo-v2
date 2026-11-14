@@ -11,7 +11,7 @@
  * nada se toca (falla cerrada). La segunda corrida no hace nada. Ni anon ni authenticated
  * pueden ejecutar las funciones (GRANT), por PostgREST y por catálogo.
  */
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
 import {
   applyRetentionPolicy,
@@ -67,6 +67,12 @@ const FUNCIONES = [
   'fraud_claim_retention_precheck',
   'finish_fraud_claim_retention',
   'retention_window_start',
+  'retention_lock_path',
+  'retention_prepare_delete',
+  'retention_mark_valid',
+  'retention_release_mark',
+  'retention_guard_ref',
+  'retention_guard_row',
   'anonymize_old_customer_strikes',
   'purge_old_address_directory',
   'purge_old_phone_assignments',
@@ -149,20 +155,28 @@ function correr(lines: string[] = []): Promise<RetentionSummary> {
 const existeFila = (tabla: string, id: string) =>
   sql(`select count(*) from public.${tabla} where id = '${id}';`) === '1'
 
-/** Huella de todo lo que es dinero, estado o fecha de negocio en las tablas tocadas. */
-function fotoDelDinero(): string {
-  return sql(`
-    select md5(coalesce(string_agg(concat_ws('|', id, type, status, appeal_status, refund_status,
-             refund_amount, refund_proof_path, refund_completed_at, resolved_at, created_at,
-             order_id, business_id), ',' order by id), '')) from public.reports;
-    select md5(coalesce(string_agg(concat_ws('|', id, amount, status, resolved_at, created_at),
-             ',' order by id), '')) from public.fraud_coverage_claims;
-    select md5(coalesce(string_agg(concat_ws('|', id, total_cash, delivered_amount, confirmed_amount,
-             reported_amount, resolved_amount, status), ',' order by id), '')) from public.cash_settlements;
-    select md5(coalesce(string_agg(to_jsonb(c)::text, ',' order by c.id), '')) from public.business_charges c;
+/**
+ * Huella de TODAS las columnas de las tablas de dinero (fila completa en jsonb), salvo las que la
+ * retención borra a propósito, que se listan aquí de forma explícita (CAX-002):
+ *  · reports: customer_phone, description, resolution_note, customer_user_id, evidence_url
+ *    (+ updated_at, que registra la anonimización);
+ *  · fraud_coverage_claims: reason, resolution_note, evidence_url (+ updated_at);
+ *  · cash_settlements: dispute_note, resolution_note (+ updated_at).
+ * `business_charges` y el `balance_due` derivado de cada negocio entran sin excepción.
+ */
+const FOTO_SQL = `
+    select md5(coalesce(string_agg((to_jsonb(r) - array['customer_phone', 'description',
+             'resolution_note', 'customer_user_id', 'evidence_url', 'updated_at'])::text, ',' order by r.id), ''))
+      from public.reports r;
+    select md5(coalesce(string_agg((to_jsonb(c) - array['reason', 'resolution_note', 'evidence_url',
+             'updated_at'])::text, ',' order by c.id), '')) from public.fraud_coverage_claims c;
+    select md5(coalesce(string_agg((to_jsonb(cs) - array['dispute_note', 'resolution_note',
+             'updated_at'])::text, ',' order by cs.id), '')) from public.cash_settlements cs;
+    select md5(coalesce(string_agg(to_jsonb(bc)::text, ',' order by bc.id), '')) from public.business_charges bc;
+    select md5(coalesce(string_agg(concat_ws('|', b.id, b.balance_due), ',' order by b.id), '')) from public.businesses b;
     select md5(coalesce(string_agg(concat_ws('|', id, is_strike, incident_type, review_result,
-             reviewed_at, created_at), ',' order by id), '')) from public.customer_incidents;`)
-}
+             reviewed_at, created_at), ',' order by id), '')) from public.customer_incidents;`
+const fotoDelDinero = (): string => sql(FOTO_SQL)
 
 let settingOriginal: string
 let adminId: string
@@ -177,10 +191,13 @@ const archivos = {
 }
 let usuarioPrueba: string | undefined
 let pedidoCaja: SeededOrder | undefined
+let pedidoCarrera: SeededOrder | undefined
 /** Caja (§5): el corte es el 1 de enero en Lima; vencida = 1 s antes, límite = el corte. */
 const CAJA_VENCIDA = `public.retention_cash_cutoff() - interval '1 second'`
 const CAJA_LIMITE = 'public.retention_cash_cutoff()'
 const archivoReclamo = `retencion-${runId}/reclamo.png`
+/** `settlement_date` de cada liquidación al sembrarla: la purga no puede moverla. */
+const fechasCaja: Record<string, string> = {}
 
 beforeAll(async () => {
   settingOriginal = sql(
@@ -323,6 +340,11 @@ beforeAll(async () => {
   liquidacion('limite', 'resolved', CAJA_LIMITE)
   liquidacion('disputada', 'disputed', CAJA_VENCIDA)
   liquidacion('reciente', 'resolved', RECIENTE)
+  for (const k of ['vencida', 'limite', 'disputada', 'reciente']) {
+    fechasCaja[k] = sql(
+      `select settlement_date::text from public.cash_settlements where id = '${ids[`caja_${k}`]}';`,
+    )
+  }
   await db.storage
     .from('payment-proofs')
     .upload(archivoReclamo, PNG, { contentType: 'image/png' })
@@ -532,7 +554,9 @@ describe('plazos de conservación (0284), primera corrida', () => {
 
   it('finish_report_retention se niega con un reporte abierto o inexistente', () => {
     expect(sql(`select public.finish_report_retention('${ids.rep_abierto}');`)).toBe('not_due')
-    expect(sql(`select public.report_retention_precheck('${ids.rep_abierto}');`)).toBe('not_due')
+    expect(
+      sql(`select public.report_retention_precheck('${ids.rep_abierto}')::jsonb ->> 'status';`),
+    ).toBe('not_due')
     expect(
       sql(`select public.finish_report_retention('00000000-0000-4000-8000-000000000000');`),
     ).toBe('not_found')
@@ -572,10 +596,14 @@ describe('caja y reclamos económicos (0285)', () => {
       sql(`select concat_ws('|', coalesce(dispute_note, '∅'), coalesce(resolution_note, '∅'),
                   total_cash, reported_amount, resolved_amount, status, settlement_date)
              from public.cash_settlements where id = '${ids[`caja_${k}`]}';`)
-    expect(fila('vencida').startsWith('∅|∅|150.75|140.25|145.50|resolved|')).toBe(true)
-    for (const k of ['limite', 'disputada', 'reciente']) {
-      expect(fila(k), k).toContain(
-        `${tag(`disputa-${k}`)}|${tag(`resol-${k}`)}|150.75|140.25|145.50`,
+    expect(fila('vencida')).toBe(`∅|∅|150.75|140.25|145.50|resolved|${fechasCaja.vencida}`)
+    for (const [k, estado] of [
+      ['limite', 'resolved'],
+      ['disputada', 'disputed'],
+      ['reciente', 'resolved'],
+    ] as const) {
+      expect(fila(k), k).toBe(
+        `${tag(`disputa-${k}`)}|${tag(`resol-${k}`)}|150.75|140.25|145.50|${estado}|${fechasCaja[k]}`,
       )
     }
     expect(primera.cash_settlements.rows).toBeGreaterThanOrEqual(1)
@@ -657,5 +685,292 @@ describe('permisos: solo service_role', () => {
       expect(error, nombre).not.toBeNull()
       expect(data, nombre).toBeNull()
     }
+  })
+})
+
+/** Una conexión psql aparte (proceso propio): las pruebas de carrera necesitan dos sesiones REALES. */
+function psqlAsync(
+  input: string,
+): Promise<{ code: number | null; out: string; err: string; ms: number }> {
+  return new Promise((resolve) => {
+    const t0 = Date.now()
+    const child = spawn(
+      'docker',
+      [
+        'exec',
+        '-i',
+        CONTAINER,
+        'psql',
+        '-U',
+        'postgres',
+        '-At',
+        '-v',
+        'ON_ERROR_STOP=1',
+        '-f',
+        '-',
+      ],
+      { stdio: ['pipe', 'pipe', 'pipe'] },
+    )
+    let out = ''
+    let err = ''
+    child.stdout.on('data', (d) => {
+      out += d
+    })
+    child.stderr.on('data', (d) => {
+      err += d
+    })
+    child.on('close', (code) => resolve({ code, out: out.trim(), err, ms: Date.now() - t0 }))
+    child.stdin.end(input)
+  })
+}
+const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * CAX-001 (Codex R1): el borrado de Storage ocurre fuera de la base, así que la exclusión es una MARCA
+ * puesta bajo candado de fila y de ruta por el precheck. Dos conexiones reales se intercalan:
+ *  · A: precheck (marca) y sostiene su transacción 3 s; B intenta adoptar la ruta a mitad: B espera
+ *    el candado y, al soltarse, el trigger la rechaza (`retention_pending_delete`);
+ *  · B adopta primero y sostiene su transacción; A (precheck) espera y, al soltarse, ve la ruta
+ *    compartida: no marca nada, no devuelve objetos y la imagen se conserva.
+ */
+describe.each([
+  {
+    nombre: 'reports (0284)',
+    source: 'reports',
+    tabla: 'reports',
+    precheck: 'report_retention_precheck',
+    finish: 'finish_report_retention',
+    abrir: (id: string) => `update public.reports set status = 'open' where id = '${id}';`,
+    sembrar: (path: string, k: string) =>
+      ins(`insert into public.reports (type, status, description, evidence_url, created_at, resolved_at)
+        values ('no_show', 'resolved', '${tag(`carrera-${k}`)}', '${path}', ${ANTIGUA}, ${VENCIDA('reportsMonths')})
+        returning id;`),
+  },
+  {
+    nombre: 'fraud_coverage_claims (0285, dinero)',
+    source: 'fraud_coverage_claims',
+    tabla: 'fraud_coverage_claims',
+    precheck: 'fraud_claim_retention_precheck',
+    finish: 'finish_fraud_claim_retention',
+    abrir: (id: string) =>
+      `update public.fraud_coverage_claims set status = 'pending' where id = '${id}';`,
+    sembrar: (path: string, k: string) =>
+      ins(`insert into public.fraud_coverage_claims
+          (order_id, business_id, amount, reason, evidence_url, status, resolution_note, created_at)
+        values ('${pedidoCarrera?.orderId}', '${pedidoCarrera?.businessId}', 12.50, '${tag(`carrera-${k}`)}',
+          '${path}', 'approved', '${tag(`nota-${k}`)}', ${CAJA_VENCIDA})
+        returning id;`),
+  },
+])('CAX-001 · carrera entre el precheck y la adopción de la ruta: $nombre', (caso) => {
+  const creados: { reportes: string[]; reclamos: string[]; archivos: string[] } = {
+    reportes: [],
+    reclamos: [],
+    archivos: [],
+  }
+
+  beforeAll(async () => {
+    if (caso.source === 'fraud_coverage_claims') pedidoCarrera = await seedContraentregaOrder()
+  })
+
+  afterAll(async () => {
+    if (creados.reportes.length) {
+      sql(
+        `delete from public.reports where id in (${creados.reportes.map((i) => `'${i}'`).join(',')});`,
+      )
+    }
+    if (creados.reclamos.length) {
+      sql(
+        `delete from public.fraud_coverage_claims where id in (${creados.reclamos.map((i) => `'${i}'`).join(',')});`,
+      )
+    }
+    sql(
+      `delete from public.retention_storage_marks where path like 'retencion-${runId}/carrera-%';`,
+    )
+    if (creados.archivos.length) await db.storage.from('payment-proofs').remove(creados.archivos)
+    if (pedidoCarrera) await cleanup(pedidoCarrera)
+    pedidoCarrera = undefined
+  })
+
+  /** Fila vencida con su archivo en Storage + un reporte abierto que intentará adoptar la ruta. */
+  async function escenario(k: string) {
+    const path = `retencion-${runId}/carrera-${caso.source}-${k}.png`
+    await subir(path)
+    creados.archivos.push(path)
+    const vencida = caso.sembrar(path, k)
+    ;(caso.source === 'reports' ? creados.reportes : creados.reclamos).push(vencida)
+    const adoptante = ins(`insert into public.reports (type, status, description, created_at)
+      values ('no_show', 'open', '${tag(`adopta-${k}`)}', now()) returning id;`)
+    creados.reportes.push(adoptante)
+    const adoptar = `update public.reports set evidence_url = '${path}' where id = '${adoptante}';`
+    return { path, vencida, adoptante, adoptar }
+  }
+
+  it('A marca primero: la adopción espera el candado y el trigger la rechaza; se borra solo lo del precheck', async () => {
+    const { path, vencida, adoptante, adoptar } = await escenario('a')
+    const a = psqlAsync(
+      `begin; select public.${caso.precheck}('${vencida}'); select pg_sleep(3); commit;`,
+    )
+    await pausa(1000)
+    const b = await psqlAsync(adoptar)
+    const ra = await a
+
+    expect(ra.code, ra.err).toBe(0)
+    const precheck = JSON.parse(ra.out.split('\n').find((l) => l.startsWith('{')) ?? '{}') as {
+      status: string
+      token: string | null
+      objects: { bucket: string; path: string }[]
+    }
+    expect(precheck.status).toBe('ok')
+    expect(precheck.objects).toEqual([{ bucket: 'payment-proofs', path }])
+    // B esperó el candado de A (la intercalación fue real) y luego fue rechazada.
+    expect(b.code).not.toBe(0)
+    expect(b.err).toContain('retention_pending_delete')
+    expect(b.ms).toBeGreaterThan(1500)
+    expect(sql(`select evidence_url is null from public.reports where id = '${adoptante}';`)).toBe(
+      't',
+    )
+
+    // El job borra lo que dijo el precheck y cierra con el token.
+    await db.storage.from('payment-proofs').remove(precheck.objects.map((o) => o.path))
+    expect(await existe(path)).toBe(false)
+    expect(sql(`select public.${caso.finish}('${vencida}', '${precheck.token}');`)).toBe(
+      'anonymized',
+    )
+    expect(sql(`select count(*) from public.retention_storage_marks where path = '${path}';`)).toBe(
+      '0',
+    )
+  })
+
+  it('la adopción gana: el precheck espera, ve la ruta compartida, no marca ni lista nada y la imagen se conserva', async () => {
+    const { path, vencida, adoptante, adoptar } = await escenario('b')
+    const b = psqlAsync(`begin; ${adoptar} select pg_sleep(3); commit;`)
+    await pausa(1000)
+    const a = await psqlAsync(`select public.${caso.precheck}('${vencida}');`)
+    const rb = await b
+
+    expect(rb.code, rb.err).toBe(0)
+    expect(a.code, a.err).toBe(0)
+    expect(a.ms).toBeGreaterThan(1500)
+    const precheck = JSON.parse(a.out) as {
+      status: string
+      token: string | null
+      objects: unknown[]
+    }
+    expect(precheck).toEqual({ status: 'ok', token: null, objects: [] })
+    expect(sql(`select count(*) from public.retention_storage_marks where path = '${path}';`)).toBe(
+      '0',
+    )
+    // El job no borra nada; el cierre solo suelta la referencia de la fila vencida.
+    expect(sql(`select public.${caso.finish}('${vencida}');`)).toBe('anonymized')
+    expect(await existe(path)).toBe(true)
+    expect(sql(`select evidence_url from public.reports where id = '${adoptante}';`)).toBe(path)
+  })
+
+  it('una fila marcada no se reabre mientras se borra su imagen (A bloquea la fila; B espera y es rechazada)', async () => {
+    const { path, vencida } = await escenario('c')
+    const a = psqlAsync(
+      `begin; select public.${caso.precheck}('${vencida}'); select pg_sleep(3); commit;`,
+    )
+    await pausa(1000)
+    const b = await psqlAsync(caso.abrir(vencida))
+    const ra = await a
+    expect(ra.code, ra.err).toBe(0)
+    expect(b.code).not.toBe(0)
+    expect(b.err).toContain('retention_pending_delete')
+    expect(b.ms).toBeGreaterThan(1500)
+    expect(sql(`select count(*) from public.retention_storage_marks where path = '${path}';`)).toBe(
+      '1',
+    )
+  })
+
+  it('con una marca vencida (más de 1 h) la ruta vuelve a poder adoptarse', async () => {
+    const { path, vencida, adoptante, adoptar } = await escenario('d')
+    sql(`select public.${caso.precheck}('${vencida}');`)
+    sql(
+      `update public.retention_storage_marks set created_at = now() - interval '2 hours' where path = '${path}';`,
+    )
+    const r = await psqlAsync(adoptar)
+    expect(r.code, r.err).toBe(0)
+    expect(sql(`select evidence_url from public.reports where id = '${adoptante}';`)).toBe(path)
+  })
+
+  it('sustitución: si la fila cambia su evidencia después del precheck, el cierre responde stale', async () => {
+    const { vencida } = await escenario('f')
+    const precheck = JSON.parse(sql(`select public.${caso.precheck}('${vencida}');`)) as {
+      token: string
+    }
+    const otra = `retencion-${runId}/carrera-${caso.source}-f-otra.png`
+    sql(`update public.${caso.tabla} set evidence_url = '${otra}' where id = '${vencida}';`)
+    expect(sql(`select public.${caso.finish}('${vencida}', '${precheck.token}');`)).toBe('stale')
+    expect(sql(`select evidence_url from public.${caso.tabla} where id = '${vencida}';`)).toBe(otra)
+  })
+
+  it('el cierre con un token que ya no vale responde stale y no anonimiza', async () => {
+    const { path, vencida } = await escenario('e')
+    const precheck = JSON.parse(sql(`select public.${caso.precheck}('${vencida}');`)) as {
+      token: string
+      objects: { path: string }[]
+    }
+    await db.storage.from('payment-proofs').remove(precheck.objects.map((o) => o.path))
+    sql(`delete from public.retention_storage_marks where path = '${path}';`)
+    expect(sql(`select public.${caso.finish}('${vencida}', '${precheck.token}');`)).toBe('stale')
+    expect(
+      sql(`select evidence_url is not null from public.${caso.tabla} where id = '${vencida}';`),
+    ).toBe('t')
+  })
+})
+
+/**
+ * CAX-002 (Codex R1): el catálogo EFECTIVO de triggers de las tablas de dinero y la prueba de que la
+ * huella detecta una alteración (control negativo).
+ */
+describe('CAX-002 · triggers efectivos y control negativo de la huella del dinero', () => {
+  const TABLAS = `'reports','fraud_coverage_claims','cash_settlements','business_charges','customer_incidents'`
+
+  it('los únicos triggers de esas tablas son los conocidos, y los de retención solo leen', () => {
+    const triggers = sql(`select c.relname || '.' || t.tgname || '->' || p.proname
+        from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_proc p on p.oid = t.tgfoid
+       where not t.tgisinternal and c.relnamespace = 'public'::regnamespace and c.relname in (${TABLAS})
+       order by 1;`).split('\n')
+    expect(triggers).toEqual([
+      'business_charges.trg_business_charges_recalc_balance->recalc_business_balance',
+      'cash_settlements.touch_cash_settlements->touch_updated_at',
+      'customer_incidents.trg_incident_apply_strike->apply_incident_strike',
+      'fraud_coverage_claims.trg_retention_guard_claims_evidence->retention_guard_ref',
+      'fraud_coverage_claims.trg_retention_guard_claims_row->retention_guard_row',
+      'reports.touch_reports->touch_updated_at',
+      'reports.trg_retention_guard_reports_evidence->retention_guard_ref',
+      'reports.trg_retention_guard_reports_refund->retention_guard_ref',
+      'reports.trg_retention_guard_reports_row->retention_guard_row',
+    ])
+    // Ningún trigger de retención escribe: sin INSERT/UPDATE/DELETE en el cuerpo de sus funciones.
+    expect(
+      sql(`select count(*) from pg_proc where pronamespace = 'public'::regnamespace
+             and proname in ('retention_guard_ref', 'retention_guard_row')
+             and prosrc ~* '\\m(insert\\s+into|update\\s+\\S+\\s+set|delete\\s+from)';`),
+    ).toBe('0')
+    // Lo que la purga dispara de verdad: touch_updated_at (solo `updated_at`) y, en cargos, el recálculo
+    // de `balance_due`, que la purga no toca (no escribe en business_charges).
+    expect(
+      sql(`select count(*) from pg_proc where proname = 'touch_updated_at'
+             and prosrc ~* 'new\\.(?!updated_at)';`),
+    ).toBe('0')
+  })
+
+  it('control negativo: alterar settlement_date o balance_due cambia la huella', () => {
+    const foto = (mutacion: string) =>
+      sql(`begin; ${FOTO_SQL} ${mutacion} ${FOTO_SQL} rollback;`)
+        .split('\n')
+        .filter((l) => /^[0-9a-f]{32}$/.test(l))
+    const caja = foto(
+      `update public.cash_settlements set settlement_date = settlement_date + 1 where id = '${ids.caja_vencida}';`,
+    )
+    // 6 líneas por foto: reports, claims, cash_settlements, charges, balance_due, incidents.
+    expect(caja[2]).not.toBe(caja[8])
+    expect(caja[0]).toBe(caja[6])
+    const saldo = foto(
+      `update public.businesses set balance_due = balance_due + 1 where id = (select id from public.businesses limit 1);`,
+    )
+    expect(saldo[4]).not.toBe(saldo[10])
   })
 })

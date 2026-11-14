@@ -82,21 +82,25 @@ async function runFileCategory(
       if (!last) break
       afterId = last.rowId
 
-      for (const { rowId, objects } of due) {
+      for (const { rowId } of due) {
         try {
-          // Antes de tocar Storage: una fila que ya no vence no pierde su archivo.
-          if ((await retention.precheckFileRow(category, rowId)) !== 'ok') continue
+          // Antes de tocar Storage, y con la fila bloqueada en la base: una fila que ya no vence no
+          // pierde su archivo y el precheck deja la marca que impide que otra fila adopte la ruta. Se
+          // borra lo que devuelve ESTE precheck, nunca la lista anterior (CAX-001).
+          const check = await retention.precheckFileRow(category, rowId)
+          if (check.status !== 'ok') continue
+          const { objects } = check
           for (const [bucket, paths] of groupByBucket(objects)) {
             for (let i = 0; i < paths.length; i += OBJECTS_PER_REMOVE) {
               await storage.remove(bucket, paths.slice(i, i + OBJECTS_PER_REMOVE))
             }
           }
-          const outcome = await retention.finishFileRow(category, rowId)
+          const outcome = await retention.finishFileRow(category, rowId, check.token)
           if (outcome === 'anonymized' || outcome === 'ref_kept') {
             summary.rows += 1
             summary.files += objects.length
             if (outcome === 'ref_kept') summary.pending += 1
-          } else if (outcome === 'object_remains') {
+          } else if (outcome === 'object_remains' || outcome === 'stale') {
             summary.failed += 1
             logger.warn('data_retention_row_aborted', { category, outcome })
           } else {

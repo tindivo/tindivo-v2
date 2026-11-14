@@ -10,7 +10,7 @@ import {
   type FileRowOutcome,
   type FileRowPrecheck,
 } from './data-retention-ports'
-import type { ProofStorage } from './ports'
+import type { ProofObject, ProofStorage } from './ports'
 
 const rowId = (i: number) => `${String(i).padStart(8, '0')}-0000-4000-8000-000000000000`
 
@@ -22,7 +22,9 @@ interface Options {
   fileRows?: DueFileRow[]
   /** Filas con archivo de `fraud_coverage_claims` (caja). */
   claimRows?: DueFileRow[]
-  precheck?: (id: string) => FileRowPrecheck
+  precheck?: (id: string) => FileRowPrecheck['status']
+  /** Lo que el precheck deja borrar (por defecto, lo de la lista). */
+  precheckObjects?: (id: string) => ProofObject[]
   outcome?: (id: string) => FileRowOutcome
   failRemoveFor?: (paths: string[]) => boolean
   failList?: boolean
@@ -38,6 +40,7 @@ function build(options: Options) {
   const removed: { bucket: string; paths: string[] }[] = []
   const lines: string[] = []
   const closed = new Set<string>()
+  const tokens: (string | null)[] = []
 
   const retention: DataRetentionRepository = {
     purgeBatch: async (category, limit) => {
@@ -58,8 +61,19 @@ function build(options: Options) {
         .sort((a, b) => a.rowId.localeCompare(b.rowId))
         .slice(0, limit)
     },
-    precheckFileRow: async (_category, id) => options.precheck?.(id) ?? 'ok',
-    finishFileRow: async (_category, id) => {
+    precheckFileRow: async (category, id) => {
+      const listed =
+        (category === 'reports' ? options.fileRows : options.claimRows)?.find((r) => r.rowId === id)
+          ?.objects ?? []
+      const objects = options.precheckObjects?.(id) ?? listed
+      return {
+        status: options.precheck?.(id) ?? 'ok',
+        token: objects.length ? `token-${id}` : null,
+        objects,
+      }
+    },
+    finishFileRow: async (_category, id, token) => {
+      tokens.push(token)
       const outcome = options.outcome?.(id) ?? 'anonymized'
       if (outcome === 'anonymized' || outcome === 'ref_kept') {
         finished.push(id)
@@ -78,7 +92,18 @@ function build(options: Options) {
     module: 'test',
     sink: { write: (_level: LogLevel, line: string) => void lines.push(line) },
   })
-  return { retention, storage, logger, batchCalls, pages, finished, removed, lines, pending }
+  return {
+    retention,
+    storage,
+    logger,
+    batchCalls,
+    pages,
+    finished,
+    removed,
+    lines,
+    pending,
+    tokens,
+  }
 }
 
 const fileRow = (i: number, files = 1): DueFileRow => ({
@@ -148,6 +173,27 @@ describe('applyRetentionPolicy', () => {
     expect(f.finished).toEqual([rowId(2)])
     expect(summary.reports).toEqual({ rows: 1, files: 1, pending: 0, failed: 1 })
     expect(f.lines.join('\n')).not.toContain(rowId(1))
+  })
+
+  it('CAX-001: borra lo que devuelve el precheck, no la lista anterior, y pasa el token al cierre', async () => {
+    const f = build({
+      fileRows: [fileRow(1, 2), fileRow(2, 1)],
+      // Entre la lista y el precheck otra fila adoptó el primer archivo de la fila 1 y la fila 2
+      // quedó sin nada exclusivo: el job borra solo lo que dice el precheck.
+      precheckObjects: (id) => (id === rowId(1) ? [fileRow(1, 2).objects[1] as ProofObject] : []),
+    })
+    await applyRetentionPolicy(f)
+    expect(f.removed).toEqual([
+      { bucket: 'payment-proofs', paths: [`${rowId(1)}/evidencia-1.jpg`] },
+    ])
+    expect(f.tokens).toEqual([`token-${rowId(1)}`, null])
+  })
+
+  it('si el cierre dice stale, la fila cuenta un fallo y no se cierra', async () => {
+    const f = build({ fileRows: [fileRow(1)], outcome: () => 'stale' })
+    const summary = await applyRetentionPolicy(f)
+    expect(summary.reports).toMatchObject({ rows: 0, failed: 1 })
+    expect(f.finished).toEqual([])
   })
 
   it('si el precheck no da ok, no toca Storage ni cierra la fila', async () => {

@@ -66,7 +66,11 @@ const DueRowsSchema = z.array(
     objects: z.array(z.object({ bucket: z.string().min(1), path: z.string().min(1) })),
   }),
 )
-const PrecheckSchema = z.enum(['ok', 'not_due', 'not_found'])
+const PrecheckSchema = z.object({
+  status: z.enum(['ok', 'not_due', 'not_found']),
+  token: z.guid().nullable(),
+  objects: z.array(z.object({ bucket: z.string().min(1), path: z.string().min(1) })),
+})
 const OutcomeSchema = z.enum(FILE_ROW_OUTCOMES)
 
 /** Llama a las funciones de la 0284 con el cliente service-role. Único sitio del módulo con SDK (DES-2). */
@@ -106,9 +110,16 @@ export class SupabaseDataRetentionRepository implements DataRetentionRepository 
     return PrecheckSchema.parse(data)
   }
 
-  async finishFileRow(category: FileCategory, rowId: string): Promise<FileRowOutcome> {
+  async finishFileRow(
+    category: FileCategory,
+    rowId: string,
+    token: string | null,
+  ): Promise<FileRowOutcome> {
     const rpc = FILE_RPC[category]
-    const { data, error } = await this.client().rpc(rpc.finish, { [rpc.id]: rowId })
+    const { data, error } = await this.client().rpc(rpc.finish, {
+      [rpc.id]: rowId,
+      ...(token ? { p_token: token } : {}),
+    })
     if (error) throw new Error(`No se pudo cerrar la fila de ${category}: ${error.message}`)
     return OutcomeSchema.parse(data)
   }
