@@ -551,6 +551,25 @@
     <string name="prepay_error_unreadable">No pudimos leer esa imagen. Elige otra captura.</string>
     <string name="prepay_error_too_large">La imagen es demasiado pesada. Elige otra captura.</string>
     <string name="prepay_error_generic">No pudimos enviar tu comprobante. Inténtalo de nuevo.</string>
+
+    <!-- Avisos del pedido (push nativo). El canal se ve en los ajustes de la app. -->
+    <string name="push_channel_orders">Tu pedido</string>
+    <string name="push_channel_orders_description">Te avisamos cuando tu pedido cambia de estado.</string>
+    <string name="push_permission_title">¿Te avisamos de tu pedido?</string>
+    <string name="push_permission_message">Te avisamos cuando tu pedido cambie de estado: cuando lo acepten, salga a entrega o llegue a tu puerta.</string>
+    <string name="push_permission_accept">Activar avisos</string>
+    <string name="push_permission_decline">Ahora no</string>
+    <!-- Seguimiento puesto al día al abrir la app (cuando un aviso no llegó). Los avisos que llegan traen su texto. -->
+    <string name="push_tracking_order_received">Recibimos tu pedido</string>
+    <string name="push_tracking_order_preparing">Están preparando tu pedido</string>
+    <string name="push_tracking_order_ready">Tu pedido está listo</string>
+    <string name="push_tracking_order_on_the_way">Tu pedido va en camino</string>
+    <string name="push_tracking_pickup_ready">Tu pedido está listo para recoger</string>
+    <string name="push_tracking_courier_searching">Buscando un motorizado para tu entrega</string>
+    <string name="push_tracking_courier_assigned">Tu entrega ya tiene motorizado</string>
+    <string name="push_tracking_courier_on_the_way">Tu entrega va en camino</string>
+    <string name="push_tracking_body">Toca para ver cómo va</string>
+
     <!-- Tindivo Entregas (D-62). Textos de la web: apps/customer/features/courier. -->
     <string name="courier_entry_title">Tindivo Entregas</string>
     <string name="courier_entry_subtitle">Llevamos tus cosas de un lugar a otro</string>

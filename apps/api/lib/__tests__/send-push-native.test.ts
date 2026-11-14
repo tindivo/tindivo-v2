@@ -9,6 +9,7 @@ import {
   classifyFcm,
   deliverToDevices,
   fcmAccessToken,
+  isTrackingGroup,
   loadNativeConfig,
   MAX_NATIVE_DEVICES_PER_NOTE,
   NativeAuthError,
@@ -163,11 +164,23 @@ describe('send-push native · payload v1 y mensajes', () => {
         v: 1,
         type: 'OrderCreated',
         tag: n.tag,
+        // Sin `group` en la nota, la llave de presentación es el propio tag.
+        group: n.tag,
         title: n.title,
         body: n.body,
         deepLink: n.url,
       })
     }
+  })
+
+  it('nativePayload con group: lo lleva aparte y el tag del evento no cambia', () => {
+    const p = nativePayload(
+      { ...note, tag: 'OrderStatusChanged-take-AB2C3D4E', group: 'order-AB2C3D4E' },
+      'OrderStatusChanged',
+    )
+    expect(NativePushPayloadSchema.parse(p)).toEqual(p)
+    expect(p.tag).toBe('OrderStatusChanged-take-AB2C3D4E')
+    expect(p.group).toBe('order-AB2C3D4E')
   })
 
   it('un deepLink con host o protocolo-relativo no cumple el contrato', () => {
@@ -188,16 +201,236 @@ describe('send-push native · payload v1 y mensajes', () => {
       v: '1',
       type: 'OrderCreated',
       tag: note.tag,
+      group: note.tag,
       title: note.title,
       body: note.body,
       deepLink: note.url,
     })
     for (const v of Object.values(m.message.data)) expect(typeof v).toBe('string')
+    // Sin group ni TTL: como antes, el tag colapsa y FCM no recibe `ttl`.
     expect(m.message.android).toEqual({
       priority: 'HIGH',
       collapse_key: note.tag,
       notification: { tag: note.tag, channel_id: 'order_updates' },
     })
+  })
+
+  it('buildFcmMessage con group y TTL: una notificación por pedido en Android, tag del evento intacto', () => {
+    const p = nativePayload(
+      {
+        ...note,
+        tag: 'OrderStatusChanged-arrived-AB2C3D4E',
+        group: 'order-AB2C3D4E',
+        ttlSeconds: 10800,
+      },
+      'OrderStatusChanged',
+    )
+    const m = buildFcmMessage(SECRET_TOKEN_ANDROID, p, 10800)
+    expect(m.message.android).toEqual({
+      priority: 'HIGH',
+      collapse_key: 'order-AB2C3D4E',
+      ttl: '10800s',
+      notification: { tag: 'order-AB2C3D4E', channel_id: 'order_updates' },
+    })
+    // El `tag` del data sigue siendo el del evento (invariante 5); `group` viaja aparte para la app.
+    expect(m.message.data.tag).toBe('OrderStatusChanged-arrived-AB2C3D4E')
+    expect(m.message.data.group).toBe('order-AB2C3D4E')
+  })
+
+  it('dos estados del mismo pedido comparten la etiqueta de Android y no el tag', () => {
+    const a = buildFcmMessage(
+      SECRET_TOKEN_ANDROID,
+      nativePayload(
+        { ...note, tag: 'OrderStatusChanged-take-AB2C3D4E', group: 'order-AB2C3D4E' },
+        'OrderStatusChanged',
+      ),
+    )
+    const b = buildFcmMessage(
+      SECRET_TOKEN_ANDROID,
+      nativePayload(
+        { ...note, tag: 'OrderStatusChanged-pickup-AB2C3D4E', group: 'order-AB2C3D4E' },
+        'OrderStatusChanged',
+      ),
+    )
+    expect(a.message.android.notification?.tag).toBe(b.message.android.notification?.tag)
+    expect(a.message.android.collapse_key).toBe(b.message.android.collapse_key)
+    expect(a.message.data.tag).not.toBe(b.message.data.tag)
+  })
+
+  it('sendNative manda a FCM el group como etiqueta y el TTL de la nota', async () => {
+    const config = await load((await fullEnv()).env)
+    const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : FCM_OK))
+    // A la app del motorizado: con su bloque `notification` (solo el cliente va solo-datos).
+    const r = await sendNative(
+      android,
+      'motorizados',
+      { ...note, group: 'courier-ZZ9Y8X7W', ttlSeconds: 10800 },
+      'CourierStepped',
+      { config, fetch: f.fn, now: () => Date.UTC(2026, 9, 19, 12, 0, 0) },
+    )
+    expect(r?.outcome).toBe('ok')
+    const sent = JSON.parse(f.calls[1]?.body ?? '{}')
+    expect(sent.message.android.notification.tag).toBe('courier-ZZ9Y8X7W')
+    expect(sent.message.android.collapse_key).toBe('courier-ZZ9Y8X7W')
+    expect(sent.message.android.ttl).toBe('10800s')
+    expect(sent.message.data.tag).toBe(note.tag)
+  })
+
+  it('cada dispositivo recibe su propio installId y el seq del estado: el aviso a otra instalación no sirve', async () => {
+    const config = await load((await fullEnv()).env)
+    const instalaciones = [
+      '11111111-2222-4333-8444-555555555555',
+      '66666666-7777-4888-8999-000000000000',
+    ]
+    const enviados: Record<string, string>[] = []
+    for (const installId of instalaciones) {
+      const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : FCM_OK))
+      await sendNative(
+        { ...android, installId },
+        'customer',
+        {
+          ...note,
+          group: 'order-AB2C3D4E',
+          progress: { step: 2, steps: 5, terminal: false, seq: 1_794_000_000_000 },
+        },
+        'OrderStatusChanged',
+        { config, fetch: f.fn, now: () => Date.UTC(2026, 10, 12, 12, 0, 0) },
+      )
+      const sent = JSON.parse(
+        f.calls.find((c) => c.url.includes('fcm.googleapis.com'))?.body ?? '{}',
+      )
+      enviados.push(sent.message.data)
+    }
+    expect(enviados.map((d) => d.install)).toEqual(instalaciones)
+    expect(enviados.map((d) => d.seq)).toEqual(['1794000000000', '1794000000000'])
+    expect(enviados[0]?.tag).toBe(note.tag)
+  })
+
+  it('al cliente, los avisos de pedido y de Entregas van SOLO-DATOS, con prioridad alta, group y TTL', async () => {
+    const config = await load((await fullEnv()).env)
+    for (const group of ['order-AB2C3D4E', 'courier-ZZ9Y8X7W']) {
+      const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : FCM_OK))
+      const r = await sendNative(
+        android,
+        'customer',
+        {
+          ...note,
+          group,
+          ttlSeconds: 10800,
+          progress: { step: 2, steps: 5, terminal: false },
+        },
+        'OrderStatusChanged',
+        { config, fetch: f.fn, now: () => Date.UTC(2026, 10, 12, 12, 0, 0) },
+      )
+      expect(r?.outcome).toBe('ok')
+      const sent = JSON.parse(
+        f.calls.find((c) => c.url.includes('fcm.googleapis.com'))?.body ?? '{}',
+      )
+      expect(sent.message.notification).toBeUndefined()
+      expect(sent.message.android).toEqual({
+        priority: 'HIGH',
+        collapse_key: group,
+        ttl: '10800s',
+      })
+      // Todo lo que pinta la app viaja en `data`, como texto; el tag del evento no cambia.
+      expect(sent.message.data).toEqual({
+        v: '1',
+        type: 'OrderStatusChanged',
+        tag: note.tag,
+        group,
+        title: note.title,
+        body: note.body,
+        deepLink: note.url,
+        step: '2',
+        steps: '5',
+      })
+      expect(NativePushPayloadSchema.safeParse({ ...sent.message.data, v: 1 }).success).toBe(true)
+    }
+  })
+
+  it('los demás avisos nativos NO cambian: bloque notification intacto', async () => {
+    const config = await load((await fullEnv()).env)
+    const cases: Array<{ app: 'customer' | 'negocios' | 'motorizados'; group?: string }> = [
+      // Al cliente, sin llave de pedido (p. ej. CustomerPhoneMoved).
+      { app: 'customer' },
+      // A otras apps, aunque compartan la llave del pedido.
+      { app: 'negocios', group: 'order-AB2C3D4E' },
+      { app: 'motorizados', group: 'courier-ZZ9Y8X7W' },
+    ]
+    for (const c of cases) {
+      const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : FCM_OK))
+      await sendNative(
+        android,
+        c.app,
+        { ...note, ...(c.group ? { group: c.group } : {}) },
+        'OrderStatusChanged',
+        { config, fetch: f.fn, now: () => Date.UTC(2026, 10, 12, 12, 0, 0) },
+      )
+      const sent = JSON.parse(
+        f.calls.find((c) => c.url.includes('fcm.googleapis.com'))?.body ?? '{}',
+      )
+      const group = c.group ?? note.tag
+      expect(sent.message.notification).toEqual({ title: note.title, body: note.body })
+      expect(sent.message.android.notification).toEqual({ tag: group, channel_id: 'order_updates' })
+    }
+  })
+
+  it('isTrackingGroup: solo order-<sid> y courier-<sid>', () => {
+    expect(isTrackingGroup('order-AB2C3D4E')).toBe(true)
+    expect(isTrackingGroup('courier-ZZ9Y8X7W')).toBe(true)
+    expect(isTrackingGroup('order-')).toBe(false)
+    expect(isTrackingGroup('OrderStatusChanged-take-AB2C3D4E')).toBe(false)
+    expect(isTrackingGroup('CustomerPhoneMoved-12345678')).toBe(false)
+  })
+
+  it('nativePayload: step/steps/terminal válidos viajan como texto; uno fuera de rango no viaja', () => {
+    const base = { ...note, group: 'order-AB2C3D4E' }
+    const enCurso = nativePayload(
+      { ...base, progress: { step: 3, steps: 5, terminal: false } },
+      'X',
+    )
+    expect(enCurso).toMatchObject({ step: '3', steps: '5' })
+    expect(enCurso.terminal).toBeUndefined()
+    expect(NativePushPayloadSchema.parse(enCurso)).toEqual(enCurso)
+
+    const entregado = nativePayload(
+      { ...base, progress: { step: 5, steps: 5, terminal: true } },
+      'X',
+    )
+    expect(entregado).toMatchObject({ step: '5', steps: '5', terminal: '1' })
+    expect(NativePushPayloadSchema.parse(entregado)).toEqual(entregado)
+
+    // Cancelado: final y sin barra.
+    const cancelado = nativePayload({ ...base, progress: { terminal: true } }, 'X')
+    expect(cancelado.step).toBeUndefined()
+    expect(cancelado.steps).toBeUndefined()
+    expect(cancelado.terminal).toBe('1')
+    expect(NativePushPayloadSchema.parse(cancelado)).toEqual(cancelado)
+
+    for (const progress of [
+      { step: 0, steps: 5, terminal: false },
+      { step: 6, steps: 5, terminal: false },
+      { step: 1.5, steps: 5, terminal: false },
+      { step: 2, terminal: false },
+    ]) {
+      const p = nativePayload({ ...base, progress }, 'X')
+      expect(p.step).toBeUndefined()
+      expect(p.steps).toBeUndefined()
+      expect(NativePushPayloadSchema.parse(p)).toEqual(p)
+    }
+    // Sin progreso, el payload es el de siempre.
+    expect('step' in nativePayload(base, 'X')).toBe(false)
+  })
+
+  it('APNs no lleva step/steps/terminal', () => {
+    const p = nativePayload(
+      { ...note, group: 'order-AB2C3D4E', progress: { step: 2, steps: 5, terminal: false } },
+      'OrderStatusChanged',
+    )
+    const body = JSON.parse(buildApnsRequest(ios(), p, 'com.tindivo.customer').body)
+    expect(body.step).toBeUndefined()
+    expect(body.steps).toBeUndefined()
+    expect(body.terminal).toBeUndefined()
   })
 
   it('buildApnsRequest: producción, cabeceras y cuerpo', () => {

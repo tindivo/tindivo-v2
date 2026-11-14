@@ -19,14 +19,21 @@ errors: list[str] = []
 
 # Permisos: INTERNET, ACCESS_NETWORK_STATE (permiso normal que pide play-services-maps; decisión de Jesús 2026-10-31),
 # ubicación en tiempo de uso para «Usar mi ubicación» (decisión de Jesús 2026-11-12: se quiere la exacta; desde
-# Android 12 la precisa solo se puede pedir junto con la aproximada, así que van las dos; nunca en segundo plano)
-# y el permiso de firma que androidx.core declara para sus receptores no exportados.
+# Android 12 la precisa solo se puede pedir junto con la aproximada, así que van las dos; nunca en segundo plano),
+# el permiso de firma que androidx.core declara para sus receptores no exportados y los de los avisos (FCM, KT-10):
+# POST_NOTIFICATIONS (Android 13+, se pide en tiempo de ejecución), WAKE_LOCK (permiso normal con el que FCM procesa un
+# aviso) y c2dm RECEIVE (recibir mensajes de FCM). POST_PROMOTED_NOTIFICATIONS (Android 16+, permiso normal): el
+# seguimiento fijo del pedido pide ser «Live Update» (decisión de Jesús 2026-11-12).
 allowed_permissions = {
     "android.permission.INTERNET",
     "android.permission.ACCESS_NETWORK_STATE",
     "android.permission.ACCESS_FINE_LOCATION",
     "android.permission.ACCESS_COARSE_LOCATION",
     f"{app_id}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+    "android.permission.POST_NOTIFICATIONS",
+    "android.permission.POST_PROMOTED_NOTIFICATIONS",
+    "android.permission.WAKE_LOCK",
+    "com.google.android.c2dm.permission.RECEIVE",
 }
 requested = {e.get(f"{A}name") for e in root.iter("uses-permission")}
 requested |= {e.get(f"{A}name") for e in root.iter("uses-permission-sdk-23")}
@@ -39,8 +46,22 @@ for p in root.iter("permission"):
 
 # Exportados: con minSdk 26, un componente sin `exported` pero con intent-filter cuenta como exportado.
 launcher = f"{app_id.removesuffix('.dev')}.MainActivity"
-# Receptores de librerías que solo puede invocar el sistema o adb (permiso DUMP, nivel signature|privileged).
-system_guarded = {("androidx.profileinstaller.ProfileInstallReceiver", "android.permission.DUMP")}
+# Receptores de librerías que solo puede invocar el sistema o adb (permiso DUMP, nivel signature|privileged), y el de
+# FCM, que solo puede invocar Google Play Services (c2dm SEND es un permiso de firma de Google).
+system_guarded = {
+    ("androidx.profileinstaller.ProfileInstallReceiver", "android.permission.DUMP"),
+    ("com.google.firebase.iid.FirebaseInstanceIdReceiver", "com.google.android.c2dm.permission.SEND"),
+}
+# Los permisos que solo existen por FCM (WAKE_LOCK y c2dm RECEIVE) valen únicamente si el receptor exacto de FCM está
+# y exige el permiso de firma de Google (c2dm SEND): cada entrada por su nombre, sin patrones (CAX-007, ronda 2).
+FCM_RECEIVER = ("com.google.firebase.iid.FirebaseInstanceIdReceiver", "com.google.android.c2dm.permission.SEND")
+FCM_ONLY_PERMISSIONS = {"android.permission.WAKE_LOCK", "com.google.android.c2dm.permission.RECEIVE"}
+receivers = {(c.get(f"{A}name"), c.get(f"{A}permission")) for c in app.iter("receiver")}
+if requested & FCM_ONLY_PERMISSIONS and FCM_RECEIVER not in receivers:
+    errors.append(
+        f"permisos de FCM sin su receptor exacto protegido por c2dm SEND: {sorted(requested & FCM_ONLY_PERMISSIONS)}"
+    )
+
 exported_seen = []
 for kind in ("activity", "activity-alias", "service", "receiver", "provider"):
     for c in app.iter(kind):

@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+: los avisos del pedido. Se pide después de crear un pedido, nunca al abrir la app (PushPermissionPrompt). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16+: el seguimiento del pedido puede pedir ser «Live Update» (setRequestPromotedOngoing). Permiso normal,
+         sin diálogo; sin él la notificación fija se queda como fija normal. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <!-- «Usar mi ubicación» del formulario de dirección: una lectura al tocar el botón, en primer plano. Se piden las
          dos para que la persona pueda dar solo la aproximada. Sin ACCESS_BACKGROUND_LOCATION: nunca en segundo plano. -->
@@ -42,6 +47,39 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${mapsApiKey}" />
+
+        <!-- Avisos nativos (FCM, KT-10). El repo es público: no hay google-services.json ni su plugin. Firebase se inicia a
+             mano en TindivoApp con la configuración de BuildConfig, así que el proveedor automático se quita; sin esa
+             configuración (la CI) los avisos quedan apagados. Sin Analytics ni token automático. -->
+        <service
+            android:name=".push.PushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            tools:ignore="MissingClass"
+            tools:node="remove" />
+        <meta-data
+            android:name="firebase_messaging_auto_init_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="firebase_analytics_collection_deactivated"
+            android:value="true" />
+        <!-- El canal y el icono con que el sistema pinta el aviso cuando la app está en segundo plano. El canal es el que
+             manda send-push (order_updates); estos valores solo cubren un mensaje que no lo traiga. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="order_updates" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/push_accent" />
 
         <!-- ui-tooling (debugImplementation) añade esta actividad EXPORTADA y sin permiso: cualquier app del teléfono
              podría lanzarla y pedirle que dibuje un composable por reflexión. Se quita del manifiesto fusionado; las

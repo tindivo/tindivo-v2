@@ -6,6 +6,13 @@
  */
 
 const text = (soles: number | string): string => (Math.round(Number(soles) * 100) / 100).toFixed(2)
+/**
+ * Un instante de la base (`timestamptz`, que PostgREST entrega con microsegundos y un desfase) como ISO 8601 en UTC con
+ * milisegundos: `2026-11-14T10:00:00.123Z`. Es la MISMA conversión que hace `send-push` para el `seq` de un aviso
+ * (`Date.parse` truncado a milisegundos), así que la app puede comparar un `updatedAt` con el `seq` de un aviso.
+ */
+export const toIsoUtc = (instant: string): string => new Date(instant).toISOString()
+
 const textOrNull = (soles: number | string | null): string | null =>
   soles === null ? null : text(soles)
 
@@ -35,6 +42,7 @@ export interface OrderSummaryRow {
   order_amount: number
   delivery_fee: number
   created_at: string
+  updated_at: string
   delivered_at: string | null
   customer_order_items: OrderItemRow[]
 }
@@ -55,10 +63,10 @@ export interface OrderDetailRow extends OrderSummaryRow {
 }
 
 export const ORDER_SUMMARY_COLUMNS =
-  'id,short_id,order_number,status,delivery_method,payment_intent,cancel_reason,business_id,order_amount,delivery_fee,created_at,delivered_at,customer_order_items(item_name_snapshot,quantity,line_total,created_at)' as const
+  'id,short_id,order_number,status,delivery_method,payment_intent,cancel_reason,business_id,order_amount,delivery_fee,created_at,updated_at,delivered_at,customer_order_items(item_name_snapshot,quantity,line_total,created_at)' as const
 
 export const ORDER_DETAIL_COLUMNS =
-  'id,short_id,order_number,status,delivery_method,payment_intent,cancel_reason,business_id,order_amount,delivery_fee,created_at,delivered_at,customer_notes,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,client_pays_with,change_to_give,estimated_ready_at,arrived_at_customer_at,proof_attempt,payment_verified_at,driver_id,customer_order_items(item_name_snapshot,quantity,line_total,note,created_at,customer_order_item_modifiers(group_name_snapshot,option_name_snapshot,additional_price_snapshot,created_at))' as const
+  'id,short_id,order_number,status,delivery_method,payment_intent,cancel_reason,business_id,order_amount,delivery_fee,created_at,updated_at,delivered_at,customer_notes,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,client_pays_with,change_to_give,estimated_ready_at,arrived_at_customer_at,proof_attempt,payment_verified_at,driver_id,customer_order_items(item_name_snapshot,quantity,line_total,note,created_at,customer_order_item_modifiers(group_name_snapshot,option_name_snapshot,additional_price_snapshot,created_at))' as const
 
 const byCreatedAt = <T extends { created_at?: string }>(a: T, b: T): number =>
   (a.created_at ?? '').localeCompare(b.created_at ?? '')
@@ -80,6 +88,7 @@ function base(row: OrderSummaryRow, businessName: string | null) {
     deliveryFee: text(row.delivery_fee),
     total: (totalCents / 100).toFixed(2),
     createdAt: row.created_at,
+    updatedAt: toIsoUtc(row.updated_at),
     deliveredAt: row.delivered_at,
   }
 }

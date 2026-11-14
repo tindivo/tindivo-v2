@@ -19,6 +19,81 @@ describe('NativePushPayloadSchema v1 (CLI-8)', () => {
     )
   })
 
+  it('group es opcional y aditivo: el v1 sin él sigue valiendo, y si viene no puede ir vacío', () => {
+    const conGrupo = { ...valido, group: 'order-AB2C3D4E' }
+    expect(NativePushPayloadSchema.parse(conGrupo)).toEqual(conGrupo)
+    expect(NativePushPayloadSchema.safeParse(valido).success).toBe(true)
+    expect(NativePushPayloadSchema.safeParse({ ...valido, group: '' }).success).toBe(false)
+    expect(NativePushPayloadSchema.safeParse({ ...valido, group: 'x'.repeat(257) }).success).toBe(
+      false,
+    )
+  })
+
+  it('step/steps/terminal son opcionales y aditivos: sin ellos el v1 sigue valiendo', () => {
+    const enCurso = { ...valido, group: 'order-AB2C3D4E', step: '2', steps: '5' }
+    expect(NativePushPayloadSchema.parse(enCurso)).toEqual(enCurso)
+    const entregado = { ...enCurso, step: '5', terminal: '1' }
+    expect(NativePushPayloadSchema.parse(entregado)).toEqual(entregado)
+    // Cancelado: final y sin barra.
+    const cancelado = { ...valido, terminal: '1' }
+    expect(NativePushPayloadSchema.parse(cancelado)).toEqual(cancelado)
+    expect(NativePushPayloadSchema.safeParse(valido).success).toBe(true)
+  })
+
+  it('rechaza un paso inválido: 0, no numérico, step > steps o uno sin el otro', () => {
+    const base = { ...valido, group: 'order-AB2C3D4E' }
+    for (const extra of [
+      { step: '0', steps: '5' },
+      { step: '2', steps: '0' },
+      { step: 'dos', steps: '5' },
+      { step: '02', steps: '5' },
+      { step: '-1', steps: '5' },
+      { step: '1.5', steps: '5' },
+      { step: '6', steps: '5' },
+      { step: '10', steps: '9' },
+      { step: '2' },
+      { steps: '5' },
+      { step: 2, steps: 5 },
+      { terminal: '0' },
+      { terminal: 'true' },
+    ]) {
+      expect(
+        NativePushPayloadSchema.safeParse({ ...base, ...extra }).success,
+        JSON.stringify(extra),
+      ).toBe(false)
+    }
+  })
+
+  it('install y seq son opcionales y aditivos; un payload anterior sigue siendo válido', () => {
+    const nuevo = {
+      ...valido,
+      install: '8b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d',
+      seq: String(Date.parse('2026-11-12T19:00:00.000Z')),
+    }
+    expect(NativePushPayloadSchema.parse(nuevo)).toEqual(nuevo)
+    expect(NativePushPayloadSchema.safeParse(valido).success).toBe(true)
+  })
+
+  it('rechaza un install fuera de cota y un seq que no es un entero positivo de 10 a 16 cifras', () => {
+    for (const extra of [
+      { install: 'corto' },
+      { install: 'x'.repeat(65) },
+      { install: '' },
+      { seq: '0' },
+      { seq: '123' },
+      { seq: '-1700000000000' },
+      { seq: '1700000000000.5' },
+      { seq: '01700000000000' },
+      { seq: 1700000000000 },
+      { seq: '1'.repeat(17) },
+    ]) {
+      expect(
+        NativePushPayloadSchema.safeParse({ ...valido, ...extra }).success,
+        JSON.stringify(extra),
+      ).toBe(false)
+    }
+  })
+
   it('rechaza otra versión, campos ausentes y deep links que no son una ruta de la app', () => {
     expect(NativePushPayloadSchema.safeParse({ ...valido, v: 2 }).success).toBe(false)
     for (const campo of ['type', 'tag', 'title', 'body', 'deepLink'] as const) {

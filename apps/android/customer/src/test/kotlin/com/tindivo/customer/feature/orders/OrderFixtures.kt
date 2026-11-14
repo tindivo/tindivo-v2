@@ -37,6 +37,7 @@ internal fun listItem(
     deliveryFee = deliveryFee,
     total = total,
     createdAt = createdAt,
+    updatedAt = createdAt,
     deliveredAt = deliveredAt,
     items =
         listOf(
@@ -79,6 +80,7 @@ internal fun detail(
     deliveryFee = deliveryFee,
     total = total,
     createdAt = createdAt,
+    updatedAt = createdAt,
     deliveredAt = deliveredAt,
     items =
         listOf(
@@ -120,7 +122,7 @@ internal fun detailJson(
     {"data":{"id":"$ORDER_ID","shortId":"ABCD2345","orderNumber":12,"status":"$status",
      "deliveryMethod":"delivery","paymentIntent":"pending_cash","cancelReason":null,
      "businessId":"$BUSINESS_ID","businessName":"Pollería Rosa","amount":"45.00","deliveryFee":"3.50",
-     "total":"$total","createdAt":"2026-10-26T15:00:00.000Z","deliveredAt":null,
+     "total":"$total","createdAt":"2026-10-26T15:00:00.000Z","updatedAt":"2026-10-26T15:00:00.000Z","deliveredAt":null,
      "items":[{"name":"Pollo","quantity":2,"lineTotal":"45.00","note":null,"modifiers":[]}],
      "customerNotes":null,"deliveryAddress":"Jr. Lima 123","deliveryReference":null,"deliveryCoordinates":null,
      "paysWith":null,"changeToGive":null,"estimatedReadyAt":null,"arrivedAtCustomerAt":${jsonText(
@@ -153,7 +155,7 @@ internal fun pageJson(
             """{"id":"$id","shortId":"ABCD2345","orderNumber":12,"status":"preparing","deliveryMethod":"delivery",
             "paymentIntent":"pending_cash","cancelReason":null,"businessId":"$BUSINESS_ID",
             "businessName":"Pollería Rosa","amount":"45.00","deliveryFee":"3.50","total":"$total",
-            "createdAt":"2026-10-26T15:00:00.000Z","deliveredAt":null,
+            "createdAt":"2026-10-26T15:00:00.000Z","updatedAt":"2026-10-26T15:00:00.000Z","deliveredAt":null,
             "items":[{"name":"Pollo","quantity":2,"lineTotal":"45.00"}]}"""
         }
     return """{"data":{"items":[$items],"nextCursor":$cursor}}"""
