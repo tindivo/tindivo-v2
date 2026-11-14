@@ -55,11 +55,11 @@ class TrackingPresenterThreadsTest {
 
         val marks =
             object : MemoryMarkStore() {
-                override fun save(marks: Map<String, TrackingMark>) {
+                override fun save(marks: Map<String, TrackingMark>): Boolean {
                     // Ya pasó la comprobación de la cuenta: aquí otro hilo intenta cambiar la sesión.
                     entered.countDown()
                     check(release.await(WAIT_SECONDS, TimeUnit.SECONDS)) { "la prueba no liberó el guardado" }
-                    super.save(marks)
+                    return super.save(marks)
                 }
             }
         val notifications =

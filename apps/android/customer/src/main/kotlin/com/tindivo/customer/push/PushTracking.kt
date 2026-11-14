@@ -67,6 +67,18 @@ fun lookFor(
     )
 }
 
+/**
+ * La etiqueta (con el id 0) bajo la que se pinta [payload] (CAX-003). Los avisos que mueven el seguimiento (traen paso o
+ * son terminales) usan el `group` y se reemplazan entre sí. Uno del mismo pedido SIN paso (un estado que la app no
+ * mapea) no puede ocupar esa ranura: pisaría la notificación fija con algo que no pasó por las marcas y la quitaría de la
+ * puesta al día. Se pinta con su propia etiqueta, la del evento (`${event_type}-${shortId}`).
+ */
+fun notificationTag(payload: NativePushPayload): String {
+    val key = TrackingKey.parse(payload.group) ?: return payload.group
+    if (payload.progress != null || payload.terminal) return payload.group
+    return if (TrackingKey.parse(payload.tag) == null) payload.tag else "${payload.type}-${key.shortId}"
+}
+
 /** Qué se sigue: un pedido a domicilio, uno para recoger, o una entrega de Tindivo Entregas. */
 enum class TrackingKind { Delivery, Pickup, Courier }
 

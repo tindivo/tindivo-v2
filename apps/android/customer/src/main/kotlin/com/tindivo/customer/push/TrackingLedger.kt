@@ -7,26 +7,30 @@ package com.tindivo.customer.push
  * después de uno terminal no revive la barra fija de un pedido que ya se entregó o se canceló.
  *
  * La versión es el `seq` que manda `send-push` (el `updated_at` del pedido en milisegundos): no el paso, porque una
- * entrega soltada vuelve legítimamente del paso 2 al 1 y su `seq` sí crece. Dos estados distintos pueden caer en el
- * mismo milisegundo: con igual `seq` gana el de mayor [rank] (el orden de las transiciones: cada estado activo tiene un
- * paso mayor que el anterior y el terminal está por encima de todos).
+ * entrega soltada vuelve legítimamente del paso 2 al 1 y su `seq` sí crece. Con igual `seq` (dos estados en el mismo
+ * milisegundo) NO hay forma de saber cuál es el posterior (ni el paso ni nada del aviso lo dice, y una entrega soltada
+ * también baja de paso): se admite el que llega después, salvo que el último sea terminal.
  *
- * [floor] es el paso que la puesta al día (REST, que no trae versión) dejó en la bandeja: un aviso activo de menor paso
- * que llegue después se descarta, porque no se puede saber si es más nuevo que lo que leyó la consulta; el próximo
- * aviso de paso igual o mayor lo levanta, y si era uno legítimo que retrocedió, la siguiente puesta al día lo corrige.
+ * [floor] es el paso que la puesta al día (REST, que no trae versión) dejó en la bandeja. Un aviso activo de menor paso
+ * solo se descarta si su `seq` NO supera [floorUntil] (el reloj del aparato al poner al día más un margen): hasta ahí no
+ * se puede saber si es más nuevo que lo que leyó la consulta. Uno con `seq` mayor es posterior a la consulta (un
+ * retroceso legítimo, como una entrega soltada) y se admite.
  */
 data class TrackingMark(
     val seq: Long?,
     val terminal: Boolean,
     val rank: Int = 0,
     val floor: Int = 0,
+    /** Hasta qué versión (`seq`, en ms) vale el [floor]; con `0` no hay piso que valga. */
+    val floorUntil: Long = 0,
 )
 
 /** Dónde se guardan las marcas: sobreviven al proceso (un aviso tardío puede llegar con el proceso recién arrancado). */
 interface TrackingMarkStore {
     fun load(): Map<String, TrackingMark>
 
-    fun save(marks: Map<String, TrackingMark>)
+    /** `true` solo si quedó escrito en disco: una escritura que falla no se da por guardada (CAX-003). */
+    fun save(marks: Map<String, TrackingMark>): Boolean
 }
 
 /**
@@ -35,6 +39,8 @@ interface TrackingMarkStore {
  */
 class TrackingLedger(
     private val store: TrackingMarkStore,
+    /** El reloj del aparato en milisegundos; se inyecta para las pruebas. */
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private var marks: MutableMap<String, TrackingMark>? = null
 
@@ -49,8 +55,11 @@ class TrackingLedger(
      * - sin versión válida ([seq] `null`) NO se admite: no hay con qué ordenarlo y podría ser más viejo que lo mostrado
      *   (un servidor que no la manda, o una fecha ilegible, deja el aviso sin pintar en vez de arriesgar un retroceso);
      * - tras un estado terminal solo se admite otro terminal, y solo si no es más viejo;
-     * - uno de [seq] menor que el último mostrado se descarta; con el mismo [seq] se admite solo si su [rank] no es menor;
-     * - un activo de paso menor que el que dejó la puesta al día ([TrackingMark.floor]) se descarta.
+     * - uno de [seq] menor que el último mostrado se descarta; con el mismo [seq] se admite el que llega después;
+     * - un activo de paso menor que el que dejó la puesta al día ([TrackingMark.floor]) se descarta mientras su [seq]
+     *   no supere [TrackingMark.floorUntil];
+     * - si la marca no se pudo escribir en disco NO se admite (CAX-003): no se pinta lo que no quedó anotado y la
+     *   puesta al día lo resuelve al abrir la app.
      */
     fun admit(
         group: String,
@@ -59,18 +68,20 @@ class TrackingLedger(
         rank: Int,
     ): Boolean {
         if (seq == null || seq <= 0) return false
-        val all = loaded()
-        val last = all[group]
+        val last = loaded()[group]
         if (last != null && !follows(last, seq, terminal, rank)) return false
-        all[group] =
+        // Sobre una copia: si el disco no la acepta, lo anotado en memoria no cambia.
+        val next = loaded().toMutableMap()
+        next[group] =
             TrackingMark(
                 seq = seq,
                 terminal = terminal || last?.terminal == true,
                 rank = rank,
                 floor = 0,
             )
-        trim(all)
-        store.save(all)
+        trim(next)
+        if (!store.save(next)) return false
+        marks = next
         version++
         return true
     }
@@ -82,9 +93,9 @@ class TrackingLedger(
         rank: Int,
     ): Boolean {
         if (last.terminal && !terminal) return false
-        if (!terminal && rank < last.floor) return false
+        if (!terminal && rank < last.floor && seq <= last.floorUntil) return false
         val lastSeq = last.seq ?: return true
-        return seq > lastSeq || (seq == lastSeq && rank >= last.rank)
+        return seq >= lastSeq
     }
 
     /**
@@ -102,7 +113,13 @@ class TrackingLedger(
             if (terminal) {
                 TrackingMark(last?.seq, terminal = true, rank = TERMINAL_RANK, floor = 0)
             } else {
-                TrackingMark(last?.seq, last?.terminal == true, last?.rank ?: rank, floor = rank)
+                TrackingMark(
+                    last?.seq,
+                    last?.terminal == true,
+                    last?.rank ?: rank,
+                    floor = rank,
+                    floorUntil = clock() + FLOOR_SKEW_MS,
+                )
             }
         trim(all)
         store.save(all)
@@ -125,6 +142,9 @@ class TrackingLedger(
 
     private companion object {
         const val MAX_MARKS = 64
+
+        /** El margen entre el reloj del aparato y el del servidor (`updated_at`) al decidir qué avisos son posteriores. */
+        const val FLOOR_SKEW_MS = 2L * 60 * 1000
     }
 }
 

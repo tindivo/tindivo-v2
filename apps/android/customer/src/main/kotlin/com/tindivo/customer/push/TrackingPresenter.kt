@@ -143,6 +143,37 @@ class TrackingPresenter(
     }
 }
 
+/** Cómo se guarda una marca en una cadena: `seq|estado|rank|floor|floorUntil` (las anteriores no traían `floorUntil`). */
+internal object TrackingMarkCodec {
+    private const val SEPARATOR = "|"
+    private const val LEGACY_FIELDS = 4
+    private const val FIELDS = 5
+    private const val RANK_AT = 2
+    private const val FLOOR_AT = 3
+    private const val FLOOR_UNTIL_AT = 4
+    private const val TERMINAL = "t"
+    private const val ACTIVE = "a"
+
+    fun encode(mark: TrackingMark): String =
+        listOf(mark.seq ?: "", if (mark.terminal) TERMINAL else ACTIVE, mark.rank, mark.floor, mark.floorUntil)
+            .joinToString(SEPARATOR)
+
+    /** `null` si no es una marca. Sin `floorUntil` (formato anterior), un piso vale para siempre: lo prudente. */
+    fun decode(raw: String): TrackingMark? {
+        val parts = raw.split(SEPARATOR)
+        if (parts.size != FIELDS && parts.size != LEGACY_FIELDS) return null
+        val rank = parts[RANK_AT].toIntOrNull() ?: return null
+        val floor = parts[FLOOR_AT].toIntOrNull() ?: return null
+        val until =
+            when {
+                parts.size == FIELDS -> parts[FLOOR_UNTIL_AT].toLongOrNull() ?: return null
+                floor > 0 -> Long.MAX_VALUE
+                else -> 0L
+            }
+        return TrackingMark(parts[0].toLongOrNull(), parts[1] == TERMINAL, rank, floor, until)
+    }
+}
+
 /** Las marcas del seguimiento en `SharedPreferences` (síncrono: el servicio de FCM las lee en un hilo suyo). */
 class SharedPrefsTrackingMarkStore(
     context: Context,
@@ -152,35 +183,22 @@ class SharedPrefsTrackingMarkStore(
     override fun load(): Map<String, TrackingMark> =
         prefs.all
             .mapNotNull { (group, raw) ->
-                val parts = (raw as? String)?.split(SEPARATOR) ?: return@mapNotNull null
-                if (parts.size != FIELDS) return@mapNotNull null
-                val rank = parts[RANK_AT].toIntOrNull() ?: return@mapNotNull null
-                val floor = parts[FLOOR_AT].toIntOrNull() ?: return@mapNotNull null
-                group to TrackingMark(parts[0].toLongOrNull(), parts[1] == TERMINAL, rank, floor)
+                val mark = (raw as? String)?.let(TrackingMarkCodec::decode) ?: return@mapNotNull null
+                group to mark
             }.toMap()
 
     // `commit()` y no `apply()`: la escritura es síncrona, así que una marca admitida no se pierde si el proceso muere justo
     // después de pintar (con `apply()` la escritura va en un hilo aparte y un aviso tardío podría revivir un terminal).
+    // Devuelve su resultado: si el disco no la aceptó, quien llama no puede darla por guardada (CAX-003).
     @SuppressLint("ApplySharedPref")
-    override fun save(marks: Map<String, TrackingMark>) {
+    override fun save(marks: Map<String, TrackingMark>): Boolean =
         prefs
             .edit()
             .clear()
-            .apply {
-                marks.forEach { (group, mark) ->
-                    val state = if (mark.terminal) TERMINAL else ACTIVE
-                    putString(group, listOf(mark.seq ?: "", state, mark.rank, mark.floor).joinToString(SEPARATOR))
-                }
-            }.commit()
-    }
+            .apply { marks.forEach { (group, mark) -> putString(group, TrackingMarkCodec.encode(mark)) } }
+            .commit()
 
     private companion object {
         const val FILE = "tindivo_tracking_marks"
-        const val SEPARATOR = "|"
-        const val FIELDS = 4
-        const val RANK_AT = 2
-        const val FLOOR_AT = 3
-        const val TERMINAL = "t"
-        const val ACTIVE = "a"
     }
 }

@@ -136,10 +136,15 @@ class MemoryDataStore<T>(
 open class MemoryMarkStore : TrackingMarkStore {
     var saved: Map<String, TrackingMark> = emptyMap()
 
+    /** Si es `false`, el disco no acepta la escritura: [save] devuelve `false` y no cambia lo guardado. */
+    var writeWorks = true
+
     override fun load(): Map<String, TrackingMark> = saved
 
-    override fun save(marks: Map<String, TrackingMark>) {
+    override fun save(marks: Map<String, TrackingMark>): Boolean {
+        if (!writeWorks) return false
         saved = marks.toMap()
+        return true
     }
 }
 
@@ -157,7 +162,7 @@ open class FakeTrackingNotifications : TrackingNotifications {
         origin: TrackingOrigin,
     ) {
         shows += payload to origin
-        TrackingKey.parse(payload.group)?.let { visible[it] = payload.progress }
+        TrackingKey.parse(notificationTag(payload))?.let { visible[it] = payload.progress }
     }
 
     override fun remove(key: TrackingKey) {

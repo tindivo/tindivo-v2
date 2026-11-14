@@ -92,7 +92,7 @@ class PushNotifier(
         // notificación fija normal.
         if (look.requestPromoted) builder.setRequestPromotedOngoing(true)
         try {
-            manager.notify(payload.group, NOTIFICATION_ID, builder.build())
+            manager.notify(notificationTag(payload), NOTIFICATION_ID, builder.build())
         } catch (_: SecurityException) {
             // El permiso se revocó entre la comprobación y el aviso: no se muestra.
         }
@@ -136,7 +136,7 @@ class PushNotifier(
             Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 // Solo lo necesario para navegar (versión y ruta): el título y el cuerpo llevan nombres.
-                data = Uri.parse(notificationIdentity(payload.group))
+                data = Uri.parse(notificationIdentity(notificationTag(payload)))
                 payload.routeExtras().forEach { (key, value) -> putExtra(key, value) }
             }
         // La identidad del PendingIntent es el `data` del Intent, que contiene el grupo ENTERO (ver arriba): dos pedidos

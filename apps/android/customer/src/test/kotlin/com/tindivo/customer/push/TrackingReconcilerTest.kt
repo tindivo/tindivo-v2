@@ -230,7 +230,8 @@ class TrackingReconcilerTest {
     @Test
     fun `el paso 4 leido por la consulta no lo retrocede un aviso viejo del paso 3 (CAX-003)`() =
         runTest {
-            assertTrue(rig.presenter.onPush(pushFor(order, step(2, 5), seq = 1_000_000_000_000)))
+            val now = System.currentTimeMillis()
+            assertTrue(rig.presenter.onPush(pushFor(order, step(2, 5), seq = now - 120_000)))
             snapshot =
                 TrackingSnapshot(
                     orders = mapOf("AB2C3D4E" to TrackingStatus.Active(TrackingKind.Delivery, step(4, 5))),
@@ -240,8 +241,9 @@ class TrackingReconcilerTest {
             reconciler().reconcile()
             assertEquals(step(4, 5), notifications.visible[order])
 
-            assertEquals(false, rig.presenter.onPush(pushFor(order, step(3, 5), seq = 2_000_000_000_000)))
+            // Con una version que pudo ser anterior a la consulta (el piso vale hasta el reloj de ahora mas el margen).
+            assertEquals(false, rig.presenter.onPush(pushFor(order, step(3, 5), seq = now - 30_000)))
             assertEquals(step(4, 5), notifications.visible[order])
-            assertTrue(rig.presenter.onPush(pushFor(order, step(5, 5), seq = 3_000_000_000_000, terminal = true)))
+            assertTrue(rig.presenter.onPush(pushFor(order, step(5, 5), seq = now + 10 * 60_000, terminal = true)))
         }
 }

@@ -306,13 +306,16 @@ class TrackingPresenterTest {
         }
 
     @Test
-    fun `dos estados distintos con la misma version se ordenan por el estado (CAX-003)`() =
+    fun `dos estados distintos con la misma version se pintan por orden de llegada, el terminal gana (CAX-003)`() =
         runTest {
             registrar()
             val install = installId()
 
             assertTrue(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, step = 4)))
-            assertFalse(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, step = 3)))
+            assertTrue(
+                "un release en el mismo milisegundo",
+                rig.presenter.onPush(payload(install, 2_000_000_000_000, 3)),
+            )
             assertTrue(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, terminal = true)))
             assertFalse(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, step = 4)))
         }
@@ -369,5 +372,80 @@ class TrackingPresenterTest {
 
             assertEquals(marks, rig.marks.saved)
             assertFalse(rig.presenter.onPush(payload(install, seq = 6_000_000_000_000, step = 4)))
+        }
+
+    // CAX-003 (a): un aviso viejo sin barra no sustituye la notificacion fija del mismo pedido.
+    @Test
+    fun `un aviso viejo sin barra del mismo pedido no sustituye la notificacion fija (CAX-003)`() =
+        runTest {
+            registrar()
+            val install = installId()
+            assertTrue(rig.presenter.onPush(payload(install, seq = 5_000_000_000_000, step = 3)))
+            val pinned = rig.notifications.visible[order]
+
+            val old = barless(install)
+            assertTrue(rig.presenter.onPush(old))
+
+            assertEquals("la fija sigue donde estaba", pinned, rig.notifications.visible[order])
+            assertNotEquals(order.group, notificationTag(old))
+            assertEquals("OrderStatusChanged-AB2C3D4E", notificationTag(old))
+            assertTrue(rig.presenter.shown().any { it.key == order })
+        }
+
+    @Test
+    fun `la etiqueta de un aviso es el grupo si mueve el seguimiento y la del evento si es del pedido sin paso`() {
+        val moving = payload("x", seq = 1_000_000_000_000, step = 2)
+        assertEquals(order.group, notificationTag(moving))
+        assertEquals(order.group, notificationTag(moving.copy(progress = null, terminal = true)))
+        // Un aviso que no es del seguimiento ya tiene su grupo propio.
+        val other = barless("x").copy(group = "OrderProofRejected-AB2C3D4E", tag = "OrderProofRejected-AB2C3D4E")
+        assertEquals("OrderProofRejected-AB2C3D4E", notificationTag(other))
+        // Un tag que fuera la llave de seguimiento no puede ocupar la ranura de la fija.
+        val sneaky = barless("x").copy(tag = order.group)
+        assertEquals("OrderStatusChanged-AB2C3D4E", notificationTag(sneaky))
+    }
+
+    // CAX-003 (b): la puesta al dia no impide un retroceso legitimo posterior.
+    @Test
+    fun `tras la puesta al dia, un release posterior se pinta y uno anterior a la consulta no (CAX-003)`() =
+        runTest {
+            registrar()
+            val install = installId()
+            val courier = checkNotNull(TrackingKey.parse("courier-ZZ9Y8X7W"))
+            val now = System.currentTimeMillis()
+            assertTrue(rig.presenter.onPush(payload(install, seq = now - 60_000, step = 2, group = courier.group)))
+            val status = TrackingStatus.Active(TrackingKind.Courier, checkNotNull(TrackingProgress.of(3, 4)))
+
+            rig.presenter.apply(
+                "A",
+                session.signInGeneration.value,
+                rig.presenter.version(),
+                listOf(ReconcileAction.Update(courier, TrackingProgress.of(2, 5), status)),
+            ) { _, _ -> payload(install, seq = null, step = 3, group = courier.group) }
+
+            assertFalse(
+                "un aviso anterior a la consulta",
+                rig.presenter.onPush(payload(install, now - 30_000, 2, group = courier.group)),
+            )
+            val release = payload(install, seq = now + 10 * 60_000, step = 1, group = courier.group)
+            assertTrue("la entrega soltada despues de la consulta", rig.presenter.onPush(release))
+            assertEquals(TrackingProgress.of(1, 5), rig.notifications.visible[courier])
+        }
+
+    // CAX-003 (c): si las marcas no se pueden escribir, no se pinta.
+    @Test
+    fun `si las marcas no se pueden escribir el aviso no se pinta y se admite cuando vuelve el disco (CAX-003)`() =
+        runTest {
+            registrar()
+            val first = payload(installId(), seq = 1_000_000_000_000)
+            rig.marks.writeWorks = false
+
+            assertFalse(rig.presenter.onPush(first))
+            assertTrue(rig.notifications.shows.isEmpty())
+            assertTrue(rig.marks.saved.isEmpty())
+
+            rig.marks.writeWorks = true
+            assertTrue(rig.presenter.onPush(first))
+            assertEquals(1, rig.notifications.shows.size)
         }
 }
