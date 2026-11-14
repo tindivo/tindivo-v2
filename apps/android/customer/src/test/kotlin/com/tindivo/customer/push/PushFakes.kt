@@ -126,7 +126,7 @@ class MemoryDataStore<T>(
 }
 
 /** Las marcas del seguimiento en memoria. */
-class MemoryMarkStore : TrackingMarkStore {
+open class MemoryMarkStore : TrackingMarkStore {
     var saved: Map<String, TrackingMark> = emptyMap()
 
     override fun load(): Map<String, TrackingMark> = saved
@@ -137,7 +137,7 @@ class MemoryMarkStore : TrackingMarkStore {
 }
 
 /** La bandeja del sistema en memoria: lo que la app tiene a la vista y lo que se le pidió. */
-class FakeTrackingNotifications : TrackingNotifications {
+open class FakeTrackingNotifications : TrackingNotifications {
     val visible = linkedMapOf<TrackingKey, TrackingProgress?>()
     val shows = mutableListOf<Pair<NativePushPayload, TrackingOrigin>>()
     val removes = mutableListOf<TrackingKey>()

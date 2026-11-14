@@ -6,6 +6,7 @@ import com.tindivo.customer.push.PushNotifier
 import com.tindivo.customer.push.SharedPrefsTrackingMarkStore
 import com.tindivo.customer.push.TrackingLedger
 import com.tindivo.customer.push.TrackingPresenter
+import com.tindivo.customer.session.SessionPublishLock
 import com.tindivo.customer.session.SessionStore
 import dagger.Module
 import dagger.Provides
@@ -33,5 +34,6 @@ object TrackingModule {
         installations: PushInstallationStore,
         ledger: TrackingLedger,
         notifier: PushNotifier,
-    ): TrackingPresenter = TrackingPresenter(sessionStore, installations, ledger, notifier)
+        publishLock: SessionPublishLock,
+    ): TrackingPresenter = TrackingPresenter(sessionStore, installations, ledger, notifier, publishLock)
 }

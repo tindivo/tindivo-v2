@@ -2,6 +2,7 @@ package com.tindivo.customer.push
 
 import android.annotation.SuppressLint
 import android.content.Context
+import com.tindivo.customer.session.SessionPublishLock
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import kotlinx.coroutines.flow.first
@@ -19,12 +20,19 @@ import kotlinx.coroutines.sync.withLock
  * - El seguimiento es monótono ([TrackingLedger]): un aviso desordenado no retrocede la barra ni revive la de un pedido
  *   terminado.
  * - [apply] (la puesta al día al abrir la app) solo actúa si no llegó ningún aviso mientras consultaba.
+ *
+ * Dos candados (CAX-001), siempre en este orden: el `lock` de corrutinas (serializa avisos y cierres entre sí) y, dentro,
+ * el [SessionPublishLock] de JVM que comparte con `SupabaseSessionStore`. El tramo «¿sigue siendo la cuenta?» → marcas →
+ * pintar corre ENTERO bajo el segundo, sin suspensiones, y la sesión solo cambia de cuenta bajo ese mismo candado: o el
+ * aviso se pinta antes del cambio (y la limpieza del cierre lo retira) o ve la sesión nueva y no se pinta. Orden global:
+ * `PushRegistrar.mutex` → `lock` → [SessionPublishLock]; el de la sesión: `SupabaseSessionStore.mutex` → [SessionPublishLock].
  */
 class TrackingPresenter(
     private val sessionStore: SessionStore,
     private val installations: PushInstallationStore,
     private val ledger: TrackingLedger,
     private val notifications: TrackingNotifications,
+    private val publishLock: SessionPublishLock = SessionPublishLock(),
 ) {
     private val lock = Mutex()
 
@@ -47,17 +55,21 @@ class TrackingPresenter(
             val install = payload.install
             if (installation.accountId != account || install == null || install != installation.installId) return false
             // Tras la lectura suspendida la sesión pudo cerrarse, cambiar de cuenta o ser A -> B -> A (CAX-001): se
-            // vuelve a comprobar aquí, sin ninguna suspensión entre esta comprobación y el pintado.
-            if (!stillCurrent(account, generation)) return false
-            val key = TrackingKey.parse(payload.group)
-            // Solo los avisos que mueven el seguimiento (traen paso o son terminales) exigen una versión válida. Uno sin
-            // barra (un estado sin paso, un aviso que no es de estado) se muestra como siempre y no toca las marcas.
-            val moves = payload.progress != null || payload.terminal
-            if (key != null && moves && !ledger.admit(payload.group, payload.seq, payload.terminal, rankOf(payload))) {
-                return false
+            // vuelve a comprobar aquí y, bajo el candado de la sesión, no puede cambiar hasta que se haya pintado.
+            publishLock.withLock {
+                if (!stillCurrent(account, generation)) return@withLock false
+                val key = TrackingKey.parse(payload.group)
+                // Solo los avisos que mueven el seguimiento (traen paso o son terminales) exigen una versión válida. Uno
+                // sin barra (un estado sin paso, un aviso que no es de estado) se muestra como siempre y no toca las marcas.
+                val moves = payload.progress != null || payload.terminal
+                if (key != null && moves &&
+                    !ledger.admit(payload.group, payload.seq, payload.terminal, rankOf(payload))
+                ) {
+                    return@withLock false
+                }
+                notifications.show(payload, TrackingOrigin.Push)
+                true
             }
-            notifications.show(payload, TrackingOrigin.Push)
-            true
         }
 
     private fun stillCurrent(
@@ -99,21 +111,31 @@ class TrackingPresenter(
         textsFor: (TrackingKey, TrackingStatus.Active) -> NativePushPayload,
     ) {
         lock.withLock {
-            if (!stillCurrent(account, generation) || ledger.version != seenVersion) return
-            for (action in actions) {
-                when (action) {
-                    is ReconcileAction.Remove -> {
-                        notifications.remove(action.key)
-                        // Solo un estado terminal leído es prueba de que terminó: no aparecer entre los recientes no lo es.
-                        if (action.finished) ledger.reconciled(action.key.group, terminal = true, rank = TERMINAL_RANK)
-                    }
+            publishLock.withLock { applyLocked(account, generation, seenVersion, actions, textsFor) }
+        }
+    }
 
-                    is ReconcileAction.Update -> {
-                        val now = notifications.shown().firstOrNull { it.key == action.key } ?: continue
-                        if (now.progress == action.expected) {
-                            notifications.show(textsFor(action.key, action.status), TrackingOrigin.Reconcile)
-                            ledger.reconciled(action.key.group, terminal = false, rank = action.status.progress.step)
-                        }
+    private fun applyLocked(
+        account: String,
+        generation: Long,
+        seenVersion: Long,
+        actions: List<ReconcileAction>,
+        textsFor: (TrackingKey, TrackingStatus.Active) -> NativePushPayload,
+    ) {
+        if (!stillCurrent(account, generation) || ledger.version != seenVersion) return
+        for (action in actions) {
+            when (action) {
+                is ReconcileAction.Remove -> {
+                    notifications.remove(action.key)
+                    // Solo un estado terminal leído es prueba de que terminó: no aparecer entre los recientes no lo es.
+                    if (action.finished) ledger.reconciled(action.key.group, terminal = true, rank = TERMINAL_RANK)
+                }
+
+                is ReconcileAction.Update -> {
+                    val now = notifications.shown().firstOrNull { it.key == action.key } ?: continue
+                    if (now.progress == action.expected) {
+                        notifications.show(textsFor(action.key, action.status), TrackingOrigin.Reconcile)
+                        ledger.reconciled(action.key.group, terminal = false, rank = action.status.progress.step)
                     }
                 }
             }
