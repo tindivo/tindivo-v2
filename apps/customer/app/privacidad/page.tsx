@@ -63,7 +63,7 @@ export default function PrivacidadPage() {
       <h1 className="mt-3 font-display text-[28px] font-bold tracking-tight">
         Política de Privacidad
       </h1>
-      <p className="mt-1 text-[13px] text-ink-muted">Versión 2 · 12 de noviembre de 2026</p>
+      <p className="mt-1 text-[13px] text-ink-muted">Versión 2 · 14 de noviembre de 2026</p>
 
       <div className="mt-6 space-y-3 text-[14px] leading-[1.6] text-ink/75">
         <p>
@@ -101,7 +101,10 @@ export default function PrivacidadPage() {
           </p>
           <Bullets>
             <li>DNI: 70771140.</li>
-            <li>Domicilio: C.P. San Jacinto Mz. 51 Lt. 8, Áncash, Perú.</li>
+            <li>
+              Domicilio: C.P. San Jacinto Mz. 51 Lt. 8, distrito de Nepeña, provincia del Santa,
+              Áncash, Perú.
+            </li>
             <li>
               Correo de privacidad:{' '}
               <TextLink href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</TextLink>.
@@ -113,6 +116,11 @@ export default function PrivacidadPage() {
           <p>
             Tratamos tus datos conforme a la Ley N.° 29733, Ley de Protección de Datos Personales, y
             su reglamento, aprobado por el Decreto Supremo N.° 016-2024-JUS.
+          </p>
+          <p>
+            Tus datos forman parte del banco de datos personales{' '}
+            <B>«Usuarios de la aplicación móvil»</B>, inscrito en el Registro Nacional de Protección
+            de Datos Personales con el código <B>PN-2026-559</B> el 14 de noviembre de 2026.
           </p>
         </Section>
 
@@ -608,6 +616,10 @@ export default function PrivacidadPage() {
             <TextLink href={`#${TOC.compartir.id}`}>sección anterior</TextLink>.
           </p>
           <p>
+            Estas transferencias fuera del Perú están comunicadas a la Autoridad Nacional de
+            Protección de Datos Personales como parte de la inscripción del banco de datos.
+          </p>
+          <p>
             Esta política informa sobre el tratamiento. Cuando una finalidad o transferencia
             requiera tu consentimiento, deberá solicitarse de forma válida. El uso del servicio no
             reemplaza los consentimientos específicos que exija la ley.
@@ -943,7 +955,7 @@ export default function PrivacidadPage() {
             antes de realizar ese tratamiento.
           </p>
           <p>
-            <B>Fecha de esta versión: 12 de noviembre de 2026.</B>
+            <B>Fecha de esta versión: 14 de noviembre de 2026.</B>
           </p>
         </Section>
       </div>
