@@ -1,5 +1,5 @@
 import { getDeps } from '@tindivo/backend/composition'
-import { purgeDeletedAccountProofs } from '@tindivo/backend/retention'
+import { applyRetentionPolicy, purgeDeletedAccountProofs } from '@tindivo/backend/retention'
 import type { InngestFunction } from 'inngest'
 import { ensureBackendConfigured } from '../../src/next-adapter'
 import { processPendingOutboxEvents } from '../outbox/processor'
@@ -339,6 +339,31 @@ export const purgeDeletedAccountProofsCron: InngestFunction.Any = inngest.create
   },
 )
 
+/**
+ * Plazos de conservación (migración 0284): cada madrugada (04:45 en Lima, después de la purga
+ * de comprobantes) purga o anonimiza lo vencido de cada categoría. Una categoría que falla se
+ * registra y las demás siguen; el resumen trae cuántas filas tocó cada una. La lógica está en
+ * `packages/backend` (módulo `retention`); aquí solo se dispara.
+ */
+export const applyDataRetentionCron: InngestFunction.Any = inngest.createFunction(
+  {
+    id: 'apply-data-retention-cron',
+    name: 'Plazos de conservación de datos (diario)',
+    triggers: [{ cron: 'TZ=America/Lima 45 4 * * *' }],
+  },
+  async ({ step }) => {
+    return await step.run('apply-data-retention', async () => {
+      ensureBackendConfigured()
+      const { dataRetention, proofStorage, logger } = getDeps()
+      return await applyRetentionPolicy({
+        retention: dataRetention,
+        storage: proofStorage,
+        logger: logger.child('retention'),
+      })
+    })
+  },
+)
+
 /** Registro de funciones servidas por el endpoint /api/inngest. */
 export const functions: InngestFunction.Any[] = [
   orderAcceptanceTimeout,
@@ -349,4 +374,5 @@ export const functions: InngestFunction.Any[] = [
   courierAcceptanceTimeout,
   processOutboxEventsCron,
   purgeDeletedAccountProofsCron,
+  applyDataRetentionCron,
 ]

@@ -2,8 +2,10 @@ import { createServiceRoleClient, type TypedSupabaseClient } from '@tindivo/supa
 import { type Authenticator, SupabaseAuthenticator } from '../modules/identity'
 import { type DeviceRepository, SupabaseDeviceRepository } from '../modules/notifications'
 import {
+  type DataRetentionRepository,
   type ProofStorage,
   type RetentionRepository,
+  SupabaseDataRetentionRepository,
   SupabaseProofStorage,
   SupabaseRetentionRepository,
 } from '../modules/retention'
@@ -27,6 +29,8 @@ export interface BackendConfig {
 export interface Deps {
   auth: Authenticator
   clock: Clock
+  /** Plazos de conservación de la 0284 (job diario). */
+  dataRetention: DataRetentionRepository
   devices: DeviceRepository
   ids: IdGenerator
   logger: Logger
@@ -62,6 +66,7 @@ export function getDeps(): Deps {
   deps = {
     auth: new SupabaseAuthenticator(supabase),
     clock: systemClock,
+    dataRetention: new SupabaseDataRetentionRepository(supabase),
     devices: new SupabaseDeviceRepository(supabase),
     ids: randomIdGenerator,
     logger: createLogger({ module: 'backend' }),
