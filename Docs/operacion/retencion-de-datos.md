@@ -1,5 +1,7 @@
 # Retención de datos: plazos, purga diaria y borrado manual
 
+> Verificado: 2026-11-14 · contra `feat/retencion-plazos@11b811fe` (migraciones 0284–0286 sin aplicar; base local con `pnpm db:cycle`)
+
 Runbook de los plazos de conservación que fijó Jesús el 2026-11-12. La política de privacidad solo
 promete lo que esta página describe como **automático** o como **procedimiento manual con
 responsable**. Si un plazo estuviera en «pendiente de decisión», la política no puede prometerlo todavía (hoy no hay ninguno).
