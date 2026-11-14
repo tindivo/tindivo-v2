@@ -29,6 +29,9 @@ class FakePushTokens(
 
     /** Si es `false`, [delete] falla (sin red) y el token no cambia. */
     var deleteWorks = true
+
+    /** Si está, el siguiente [delete] se queda esperando (ya contado) hasta que la prueba la complete; solo ese. */
+    var holdDelete: CompletableDeferred<Unit>? = null
     private var generation = 1
 
     override suspend fun token(): String? {
@@ -38,6 +41,10 @@ class FakePushTokens(
 
     override suspend fun delete(): Boolean {
         deletes++
+        holdDelete?.let {
+            holdDelete = null
+            it.await()
+        }
         if (!deleteWorks) return false
         generation++
         current = token(generation)

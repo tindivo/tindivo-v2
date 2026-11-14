@@ -125,7 +125,7 @@ class PushRegistrar(
             } catch (_: Exception) {
                 // No se pudo guardar (CAX-010): la sesión se cierra igual. La bandeja y las marcas ya se limpiaron; el
                 // token se intenta borrar y la identidad se suelta en el próximo cierre o arranque.
-                withTimeoutOrNull(unregisterTimeoutMs) { tokens.delete() }
+                deleteTokenAfterFailure(accountId)
                 null
             } ?: return
         val locked = withTimeoutOrNull(registrationWaitMs) { mutex.lock() } != null
@@ -137,6 +137,36 @@ class PushRegistrar(
         } finally {
             if (locked) mutex.unlock()
         }
+    }
+
+    /**
+     * El borrado de emergencia del token cuando no se pudo guardar el cierre (CAX-009): bajo el mismo [mutex] que los
+     * registros, para que no se cruce con el de otra cuenta, y solo si ninguna OTRA cuenta tiene ya la sesión o la
+     * instalación (su token es el vigente y borrarlo lo invalidaría). Si no se puede comprobar, no se borra.
+     */
+    private suspend fun deleteTokenAfterFailure(closing: String?) {
+        if (withTimeoutOrNull(registrationWaitMs) { mutex.lock() } == null) return
+        try {
+            if (!otherAccountHolds(closing)) withTimeoutOrNull(unregisterTimeoutMs) { tokens.delete() }
+        } finally {
+            mutex.unlock()
+        }
+    }
+
+    /** Con el [mutex] tomado: ¿tiene otra cuenta distinta de [closing] la sesión o la vinculación de la instalación? */
+    private suspend fun otherAccountHolds(closing: String?): Boolean {
+        val live = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+        if (live != null && live != closing) return true
+        if (closing == null) return false
+        val bound =
+            try {
+                installations.current()?.accountId
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                return true
+            }
+        return bound != null && bound != closing
     }
 
     /** La baja de [pending] en el servidor, con la sesión de su cuenta: un 409 o un fallo de red se reintentan. */
