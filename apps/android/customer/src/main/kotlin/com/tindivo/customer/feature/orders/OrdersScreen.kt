@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -32,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import java.util.UUID
@@ -42,9 +44,13 @@ internal fun OrdersDestination(
     onBack: () -> Unit,
     onOpenOrder: (id: String) -> Unit,
     onExplore: () -> Unit,
+    onReorder: (businessId: String) -> Unit = {},
     viewModel: OrdersViewModel = hiltViewModel(),
+    supportViewModel: SupportViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
+    val uriHandler = LocalUriHandler.current
     LaunchedEffect(state) {
         if (state is OrdersUiState.LoggedOut) onBack()
     }
@@ -55,8 +61,27 @@ internal fun OrdersDestination(
         onOpenOrder = onOpenOrder,
         onExplore = onExplore,
         onBack = onBack,
+        cardActions =
+            OrderCardActions(
+                supportNumber = supportNumber,
+                onReorder = onReorder,
+                onOpenLink = { link ->
+                    try {
+                        uriHandler.openUri(link)
+                    } catch (_: IllegalArgumentException) {
+                        // Sin app que abra el enlace: se queda en la pantalla, sin registrar nada.
+                    }
+                },
+            ),
     )
 }
+
+/** Lo que una tarjeta del historial puede hacer además de abrir el pedido. */
+internal data class OrderCardActions(
+    val supportNumber: String? = null,
+    val onReorder: (businessId: String) -> Unit = {},
+    val onOpenLink: (String) -> Unit = {},
+)
 
 @Composable
 internal fun OrdersScreen(
@@ -66,6 +91,7 @@ internal fun OrdersScreen(
     onOpenOrder: (id: String) -> Unit,
     onExplore: () -> Unit,
     onBack: () -> Unit,
+    cardActions: OrderCardActions = OrderCardActions(),
 ) {
     Scaffold { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
@@ -78,10 +104,26 @@ internal fun OrdersScreen(
                 modifier = Modifier.padding(bottom = 8.dp).semantics { heading() },
             )
             when (state) {
-                OrdersUiState.Loading, OrdersUiState.LoggedOut -> OrdersLoading()
-                OrdersUiState.Empty -> EmptyOrders(onExplore = onExplore)
-                is OrdersUiState.Failed -> OrdersFailure(error = state.error, onRetry = onRetry)
-                is OrdersUiState.Loaded -> OrdersList(state = state, onLoadMore = onLoadMore, onOpenOrder = onOpenOrder)
+                OrdersUiState.Loading, OrdersUiState.LoggedOut -> {
+                    OrdersLoading()
+                }
+
+                OrdersUiState.Empty -> {
+                    EmptyOrders(onExplore = onExplore)
+                }
+
+                is OrdersUiState.Failed -> {
+                    OrdersFailure(error = state.error, onRetry = onRetry)
+                }
+
+                is OrdersUiState.Loaded -> {
+                    OrdersList(
+                        state = state,
+                        onLoadMore = onLoadMore,
+                        onOpenOrder = onOpenOrder,
+                        cardActions = cardActions,
+                    )
+                }
             }
         }
     }
@@ -92,6 +134,7 @@ private fun OrdersList(
     state: OrdersUiState.Loaded,
     onLoadMore: () -> Unit,
     onOpenOrder: (id: String) -> Unit,
+    cardActions: OrderCardActions,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -99,7 +142,7 @@ private fun OrdersList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(state.items, key = { it.id.toString() }) { order ->
-            OrderCard(order = order, onClick = { onOpenOrder(order.id.toString()) })
+            OrderCard(order = order, onClick = { onOpenOrder(order.id.toString()) }, actions = cardActions)
         }
         if (state.canLoadMore) {
             item {
@@ -127,6 +170,7 @@ private fun OrdersList(
 private fun OrderCard(
     order: OrderCardUi,
     onClick: () -> Unit,
+    actions: OrderCardActions,
 ) {
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -142,7 +186,7 @@ private fun OrderCard(
                 Text(
                     text = stringResource(order.phase.labelRes(order.isPickup)),
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = TindivoColors.brandText,
                 )
             }
             Text(text = order.itemsSummary, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
@@ -156,6 +200,22 @@ private fun OrderCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(text = order.total, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            }
+            // Como la web: volver a pedir abre la carta del negocio; la bolsa no se toca.
+            if (order.reorderable) {
+                OutlinedButton(
+                    onClick = { actions.onReorder(order.businessId.toString()) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) {
+                    Text(text = stringResource(R.string.order_reorder))
+                }
+            }
+            if (order.phase is OrderPhase.Cancelled) {
+                SupportLink(
+                    link = cancelledOrderSupportLink(actions.supportNumber, order.shortId),
+                    onOpenLink = actions.onOpenLink,
+                    label = R.string.order_support_cancelled,
+                )
             }
         }
     }
@@ -196,6 +256,8 @@ private fun OrdersPreview() {
             itemsSummary = "2× Pollo · 1× Gaseosa",
             createdAt = RelativeDate.Minutes(30),
             total = "S/ 48.50",
+            businessId = UUID.fromString("6b2a737a-018f-4c2d-9a11-6f0d3c1e8a02"),
+            reorderable = true,
         )
     TindivoTheme {
         OrdersScreen(

@@ -15,10 +15,16 @@ internal fun driverWhatsappLink(
     businessName: String?,
     shortId: String,
 ): String? {
-    val digits = phone.filter { it in '0'..'9' }
-    if (digits.isEmpty()) return null
+    val digits = whatsappDigits(phone) ?: return null
     val business = businessName ?: FALLBACK_BUSINESS
-    val text = "Hola, te escribo por mi pedido de $business (#$shortId). Estás en mi domicilio."
+    return whatsappLink(digits, "Hola, te escribo por mi pedido de $business (#$shortId). Estás en mi domicilio.")
+}
+
+/** `https://wa.me/<digits>?text=…` con [text] codificado como `encodeURIComponent` de la web. */
+internal fun whatsappLink(
+    digits: String,
+    text: String,
+): String {
     // `URLEncoder` deja el espacio como «+»; `encodeURIComponent` lo deja como «%20».
     val encoded = URLEncoder.encode(text, "UTF-8").replace("+", "%20")
     return "https://wa.me/$digits?text=$encoded"

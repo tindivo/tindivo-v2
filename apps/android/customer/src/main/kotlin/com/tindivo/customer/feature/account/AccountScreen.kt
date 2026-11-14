@@ -39,9 +39,25 @@ fun AccountDestination(
     onVerifyPhone: () -> Unit,
     phoneChanged: Boolean,
     onPhoneChangeHandled: () -> Unit,
+    profile: ProfileLink,
+    onDeleteAccount: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    // Volvió de «Completa tu perfil» con el perfil ya creado: se carga la cuenta.
+    LaunchedEffect(profile.completed) {
+        if (profile.completed) {
+            viewModel.load()
+            profile.onCompletedHandled()
+        }
+    }
+    // Sin perfil, la primera vez se abre sola la pantalla del nombre, en vez de mostrar un error.
+    LaunchedEffect(state) {
+        if (state is AccountUiState.ProfileMissing && state.openNow) {
+            viewModel.onProfilePromptOpened()
+            profile.onOpen()
+        }
+    }
     // Volvió del flujo del teléfono: se pide el perfil otra vez para ver el número nuevo.
     LaunchedEffect(phoneChanged) {
         if (phoneChanged) {
@@ -60,8 +76,17 @@ fun AccountDestination(
         onVerifyPhone = onVerifyPhone,
         onSignOut = viewModel::signOut,
         onBack = onLeave,
+        onCompleteProfile = profile.onOpen,
+        onDeleteAccount = onDeleteAccount,
     )
 }
+
+/** El enlace de la cuenta con «Completa tu perfil»: abrirla y enterarse de que volvió con el perfil creado. */
+class ProfileLink(
+    val completed: Boolean,
+    val onCompletedHandled: () -> Unit,
+    val onOpen: () -> Unit,
+)
 
 @Composable
 fun AccountScreen(
@@ -72,6 +97,8 @@ fun AccountScreen(
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
+    onCompleteProfile: () -> Unit = {},
+    onDeleteAccount: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -95,6 +122,14 @@ fun AccountScreen(
                     Failure(error = state.error, onRetry = onRetry)
                 }
 
+                is AccountUiState.ProfileMissing -> {
+                    ProfileMissing(
+                        onCompleteProfile = onCompleteProfile,
+                        onSignOut = onSignOut,
+                        onDeleteAccount = onDeleteAccount,
+                    )
+                }
+
                 is AccountUiState.Loaded -> {
                     Profile(
                         profile = state.profile,
@@ -102,6 +137,7 @@ fun AccountScreen(
                         onOpenAddresses = onOpenAddresses,
                         onVerifyPhone = onVerifyPhone,
                         onSignOut = onSignOut,
+                        onDeleteAccount = onDeleteAccount,
                     )
                 }
             }
@@ -143,12 +179,44 @@ private fun Failure(
 }
 
 @Composable
+private fun ProfileMissing(
+    onCompleteProfile: () -> Unit,
+    onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(text = stringResource(R.string.account_profile_missing_title), style = MaterialTheme.typography.titleLarge)
+        Text(
+            text = stringResource(R.string.account_profile_missing_message),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Button(
+            onClick = onCompleteProfile,
+            modifier = Modifier.heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        ) {
+            Text(text = stringResource(R.string.profile_complete))
+        }
+        OutlinedButton(
+            onClick = onSignOut,
+            modifier = Modifier.heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        ) {
+            Text(text = stringResource(R.string.account_sign_out))
+        }
+        // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
+        DeleteAccountButton(onDeleteAccount = onDeleteAccount)
+    }
+}
+
+@Composable
 private fun Profile(
     profile: AccountProfileUi,
     onOpenOrders: () -> Unit,
     onOpenAddresses: () -> Unit,
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(text = profile.fullName, style = MaterialTheme.typography.titleLarge)
@@ -195,6 +263,15 @@ private fun Profile(
         ) {
             Text(text = stringResource(R.string.account_sign_out))
         }
+        DeleteAccountButton(onDeleteAccount = onDeleteAccount)
+    }
+}
+
+/** Discreto a propósito, pero siempre a la vista: Google Play exige poder borrar la cuenta dentro de la app. */
+@Composable
+private fun DeleteAccountButton(onDeleteAccount: () -> Unit) {
+    TextButton(onClick = onDeleteAccount, modifier = Modifier.heightIn(min = 48.dp)) {
+        Text(text = stringResource(R.string.account_delete), color = MaterialTheme.colorScheme.error)
     }
 }
 

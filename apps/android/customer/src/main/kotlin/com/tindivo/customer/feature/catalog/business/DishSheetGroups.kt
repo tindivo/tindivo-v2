@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.cart.SINGLE
 
@@ -70,7 +71,7 @@ private fun GroupHeader(
                     text = stringResource(label),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (progress.done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    color = if (progress.done) TindivoColors.brandText else MaterialTheme.colorScheme.error,
                 )
             }
             hintText(progress)?.let {

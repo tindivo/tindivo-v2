@@ -36,6 +36,14 @@ class MoneyTest {
     }
 
     @Test
+    fun `menuPriceOrNull rechaza un negativo con centimos y tres decimales sin redondear (EVID-001)`() {
+        assertNull(menuPriceOrNull(BigDecimal("-1.00")))
+        assertNull(menuPriceOrNull(BigDecimal("1.005")))
+        // Un importe exacto sale tal cual, con sus dos decimales.
+        assertEquals("S/ 1.01", menuPriceOrNull(BigDecimal("1.01"))?.let(::formatSoles).plain())
+    }
+
+    @Test
     fun `el tope de importe sale de los limites de la bolsa y el maximo se muestra entero`() {
         // 50 platos × 50 unidades × (plato + 20 opciones) a 99999999.99 cada uno.
         assertEquals(BigDecimal("5249999999475.00"), MAX_AMOUNT)

@@ -174,4 +174,33 @@ class CartStoreTest {
 
             assertNull(store().cart.first())
         }
+
+    @Test
+    fun `clearIf vacia la bolsa solo si la condicion se cumple dentro de la escritura`() =
+        runTest {
+            val store = store()
+            store.add("n", "Pollería", line())
+
+            assertEquals(false, store.clearIf { false })
+            assertEquals(1, checkNotNull(store.cart.first()).lines.size)
+
+            assertTrue(store.clearIf { true })
+            assertNull(store.cart.first())
+        }
+
+    @Test
+    fun `clearIf con huella vacia solo la bolsa de esa huella`() =
+        runTest {
+            val store = store()
+            store.add("n", "Pollería", line())
+            val before = checkNotNull(store.cart.first()).fingerprint()
+            store.add("n", "Pollería", line(itemId = "otro"))
+
+            assertEquals(false, store.clearIf(before) { true })
+            assertEquals(2, checkNotNull(store.cart.first()).lines.size)
+
+            val now = checkNotNull(store.cart.first()).fingerprint()
+            assertTrue(store.clearIf(now) { true })
+            assertNull(store.cart.first())
+        }
 }

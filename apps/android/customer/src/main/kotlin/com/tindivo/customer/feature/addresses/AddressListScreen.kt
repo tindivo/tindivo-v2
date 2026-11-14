@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,17 +40,12 @@ import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
 import java.util.UUID
 
-/**
- * Une el ViewModel con la pantalla. Con [pick] es el selector del checkout: tocar una tarjeta devuelve su id con
- * [onPicked] y quien lo abrió decide qué hacer con él.
- */
+/** Une el ViewModel con la pantalla. */
 @Composable
 internal fun AddressesDestination(
-    pick: Boolean,
     onBack: () -> Unit,
     onAdd: () -> Unit,
     onEdit: (id: String) -> Unit,
-    onPicked: (id: String) -> Unit,
     changed: Boolean,
     onChangeHandled: () -> Unit,
     viewModel: AddressListViewModel = hiltViewModel(),
@@ -68,10 +63,9 @@ internal fun AddressesDestination(
     }
     AddressesScreen(
         state = state,
-        pick = pick,
         onRetry = viewModel::refresh,
         onAdd = onAdd,
-        onOpen = { id -> if (pick) onPicked(id.toString()) else onEdit(id.toString()) },
+        onOpen = { id -> onEdit(id.toString()) },
         onEdit = { id -> onEdit(id.toString()) },
         onMakeDefault = viewModel::makeDefault,
         onBack = onBack,
@@ -81,7 +75,6 @@ internal fun AddressesDestination(
 @Composable
 internal fun AddressesScreen(
     state: AddressListUiState,
-    pick: Boolean,
     onRetry: () -> Unit,
     onAdd: () -> Unit,
     onOpen: (UUID) -> Unit,
@@ -96,7 +89,7 @@ internal fun AddressesScreen(
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
                 Text(
-                    text = stringResource(if (pick) R.string.addresses_pick_title else R.string.addresses_title),
+                    text = stringResource(R.string.addresses_title),
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
@@ -266,7 +259,7 @@ private fun AddressCard(
 
 @Composable
 private fun Badge(text: String) {
-    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
+    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
@@ -295,7 +288,6 @@ private fun AddressesPreview() {
                         ),
                     ),
                 ),
-            pick = false,
             onRetry = {},
             onAdd = {},
             onOpen = {},

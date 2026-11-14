@@ -6,6 +6,9 @@ enum class CheckoutPhase {
     Loading,
     SignInRequired,
     LoadFailed,
+
+    /** La cuenta aún no tiene perfil: falta el nombre antes de poder pedir. */
+    ProfileRequired,
     Form,
     Blocked,
     Reconcile,
@@ -75,11 +78,73 @@ data class CheckoutUiState(
     /** Ya abrió «Mis pedidos» desde la vista de reconciliación: recién entonces puede decir «Ya revisé». */
     val reconcileSeen: Boolean = false,
     val createdOrderId: String? = null,
+    /** La hoja abierta encima del checkout, o ninguna. */
+    val sheet: CheckoutSheet? = null,
 ) {
     val selectedAddress: AddressUi? get() = addresses.firstOrNull { it.id == selectedAddressId }
     val isPickup: Boolean get() = method == DeliveryChoice.Pickup
     val cta: Cta get() = ctaOf(this)
+
+    /**
+     * El nombre, el celular, la nota y las direcciones son datos personales: no salen en un log. De las direcciones y
+     * las líneas de la bolsa (que llevan notas escritas) solo sale cuántas hay.
+     */
+    override fun toString(): String =
+        "CheckoutUiState(phase=$phase, businessName=$businessName, etaMin=$etaMin, etaMax=$etaMax, " +
+            "acceptsDelivery=$acceptsDelivery, acceptsPickup=$acceptsPickup, method=$method, pickupWhen=$pickupWhen, " +
+            "addresses=${addresses.size}, selectedAddressId=$selectedAddressId, name=***, " +
+            "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, note=***, " +
+            "lines=${lines.size}, pay=$pay, cash=$cash, quote=$quote, quoteStatus=$quoteStatus, sending=$sending, " +
+            "message=$message, blockedDetail=$blockedDetail, reconcileSeen=$reconcileSeen, " +
+            "createdOrderId=$createdOrderId, sheet=$sheet)"
 }
+
+/**
+ * Lo que falta se resuelve en una hoja encima del checkout, sin salir de él: al terminar, la hoja se cierra con el dato
+ * ya aplicado. Solo hay una abierta a la vez; atrás o tocar fuera la cierran sin aplicar nada.
+ */
+sealed interface CheckoutSheet {
+    /** Las direcciones guardadas: elegir una es un toque; desde aquí también se agrega otra. */
+    data object ChooseAddress : CheckoutSheet
+
+    data object AddAddress : CheckoutSheet
+
+    data class EditAddress(
+        val id: String,
+    ) : CheckoutSheet
+
+    data object VerifyPhone : CheckoutSheet
+
+    /** La cuenta aún no tiene perfil: falta el nombre. */
+    data object CompleteProfile : CheckoutSheet
+
+    /** La fase del checkout en la que esta hoja tiene sentido: fuera de ella no se abre ni se aplica. */
+    val phase: CheckoutPhase
+        get() = if (this == CompleteProfile) CheckoutPhase.ProfileRequired else CheckoutPhase.Form
+}
+
+/**
+ * La hoja que abre el botón fijo cuando dice qué falta, o `null` si lo que falta se resuelve en el propio formulario
+ * (el nombre, el pago) o el botón hace otra cosa. Una dirección incompleta se corrige; sin dirección elegida, se agrega.
+ */
+fun Cta.sheet(selectedAddressId: String?): CheckoutSheet? =
+    when (this) {
+        Cta.NeedAddress -> {
+            CheckoutSheet.AddAddress
+        }
+
+        Cta.NeedFixAddress, Cta.NeedReference, Cta.NeedPin -> {
+            selectedAddressId?.let(CheckoutSheet::EditAddress) ?: CheckoutSheet.AddAddress
+        }
+
+        Cta.NeedPhone -> {
+            CheckoutSheet.VerifyPhone
+        }
+
+        else -> {
+            null
+        }
+    }
 
 /** Qué dice y qué hace el botón fijo. */
 sealed interface Cta {
@@ -113,12 +178,6 @@ sealed interface Cta {
 
     /** Solo [Ready] crea el pedido. */
     val canConfirm: Boolean get() = this is Ready
-
-    /** Lo que falta se resuelve fuera del checkout (Mi cuenta). */
-    val opensAccount: Boolean
-        get() =
-            this is NeedAddress || this is NeedFixAddress || this is NeedReference || this is NeedPin ||
-                this is NeedPhone
 }
 
 /** Lo que falta para confirmar, en el orden de la web (`useCheckoutValidation`). */

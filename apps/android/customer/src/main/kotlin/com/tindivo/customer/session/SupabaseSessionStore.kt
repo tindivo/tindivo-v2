@@ -42,6 +42,8 @@ internal class SupabaseSessionStore(
     private val mutex = Mutex()
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Unknown)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    private val signIns = MutableStateFlow(0L)
+    override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 
     private var current: TokenSnapshot? = null
     private var restored = false
@@ -81,6 +83,9 @@ internal class SupabaseSessionStore(
         mutex.withLock {
             try {
                 adopt(backend.signInWithGoogle(idToken, rawNonce))
+                // Después del estado (ver SessionStore.signInGeneration): quien lea la generación y luego el estado
+                // nunca ve la generación vieja con la cuenta nueva sin darse cuenta.
+                signIns.value += 1
                 SignInResult.Success
             } catch (e: CancellationException) {
                 throw e
@@ -105,6 +110,38 @@ internal class SupabaseSessionStore(
             }
         }
     }
+
+    // Bajo el mismo candado que entrar y refrescar: entre leer de quién es la sesión y cerrarla no cabe otra cuenta. Se
+    // completa aunque se cancele quien llamó, como signOut.
+    override suspend fun signOutIf(accountId: String): Boolean =
+        withContext(NonCancellable) {
+            mutex.withLock {
+                restoreOnce()
+                val owner = current?.userId
+                if (owner == null || !owner.equals(accountId, ignoreCase = true)) return@withLock false
+                try {
+                    backend.signOut()
+                } catch (_: Exception) {
+                    // Sin red o sesión ya revocada: igual se cierra en el aparato.
+                }
+                drop()
+                true
+            }
+        }
+
+    // Mismo criterio que signOut: no se corta a medias. Sin llamada a Auth: solo el candado, la comprobación y drop().
+    override suspend fun signOutLocally(accountId: String): Boolean =
+        withContext(NonCancellable) {
+            mutex.withLock {
+                restoreOnce()
+                if (current?.userId == accountId) {
+                    drop()
+                    true
+                } else {
+                    false
+                }
+            }
+        }
 
     private suspend fun restoreOnce() {
         if (restored) return

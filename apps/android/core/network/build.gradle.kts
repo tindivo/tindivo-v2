@@ -44,6 +44,10 @@ openApiGenerate {
     // `additionalProperties: {}` (objeto libre) sale como `Any`, que kotlinx.serialization no sabe leer: va como JsonElement.
     typeMappings.set(mapOf("AnyType" to "JsonElement"))
     importMappings.set(mapOf("JsonElement" to "kotlinx.serialization.json.JsonElement"))
+    // CAX-005: solo se sobrescribe `data_class.mustache` (copia exacta de la del generador 7.25.0 para kotlin-client, con
+    // un `toString` que no muestra los campos: los modelos llevan nombres, celulares, referencias y coordenadas). Las
+    // demás plantillas salen del generador. Al subir de versión del generador, se vuelve a copiar la suya.
+    templateDir.set(file("openapi-templates").path)
 }
 
 sourceSets {

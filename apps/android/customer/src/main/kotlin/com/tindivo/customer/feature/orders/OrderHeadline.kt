@@ -53,6 +53,24 @@ private fun receivedHeroOf(
         else -> OrderHero.Received
     }
 
+/**
+ * La ventana de cancelación del cliente, tal como la aplica `cancel_customer_order` (0169): quien paga al recibir,
+ * en `validando` o `pending_acceptance`; el prepago, solo en `pending_acceptance` (en `validando` ya hay una captura y
+ * en `awaiting_payment` el Yape pudo salir). Si un prepago en la ventana ya trae comprobante o pago verificado, no se
+ * ofrece el botón con «no se te cobrará»: se cancela por soporte.
+ */
+internal fun cancelOfferOf(
+    status: String,
+    payment: PaymentFacts,
+): CancelOffer =
+    when {
+        payment.prepaid && status != "pending_acceptance" -> CancelOffer.None
+        payment.prepaid && payment.alreadyPaid -> CancelOffer.ViaSupport
+        payment.prepaid -> CancelOffer.Prepaid
+        status == "validando" || status == "pending_acceptance" -> CancelOffer.PayOnDelivery
+        else -> CancelOffer.None
+    }
+
 private fun cancelCopyOf(
     reason: String?,
     isPickup: Boolean,

@@ -10,6 +10,14 @@ class FakeSessionStore(
 ) : SessionStore {
     private val mutableState = MutableStateFlow(initial)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    private val signIns = MutableStateFlow(0L)
+    override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
+
+    // Como el almacén real: primero el estado, después la generación.
+    private fun enter(userId: String) {
+        mutableState.value = SessionState.SignedIn(userId)
+        signIns.value += 1
+    }
 
     var signInResult: SignInResult = SignInResult.Success
     val signInCalls = mutableListOf<Pair<String, String>>()
@@ -27,17 +35,58 @@ class FakeSessionStore(
         rawNonce: String,
     ): SignInResult {
         signInCalls += idToken to rawNonce
-        if (signInResult == SignInResult.Success) mutableState.value = SessionState.SignedIn(signInUserId)
+        if (signInResult == SignInResult.Success) enter(signInUserId)
         return signInResult
     }
 
-    /** Un cambio directo de cuenta, sin pasar por SignedOut. */
+    /** Una entrada de [userId] (cuenta como entrada en [signInGeneration]), sin pasar por SignedOut. */
     fun switchTo(userId: String) {
-        mutableState.value = SessionState.SignedIn(userId)
+        enter(userId)
     }
 
+    /** La sesión se cierra sola (un refresco que falla), sin que nadie llame a [signOut]. */
+    fun switchToSignedOut() {
+        mutableState.value = SessionState.SignedOut
+    }
+
+    /**
+     * Corre al empezar [signOut] o [signOutIf], antes de comprobar nada: es otra cuenta que entra mientras el cierre
+     * espera el candado del almacén real. La prueba cambia la sesión ahí.
+     */
+    var beforeSignOut: () -> Unit = {}
+
     override suspend fun signOut() {
+        beforeSignOut()
+        close()
+    }
+
+    /** Las cuentas con que se pidió [signOutIf], cerrara o no. */
+    val signOutIfCalls = mutableListOf<String>()
+
+    override suspend fun signOutIf(accountId: String): Boolean {
+        signOutIfCalls += accountId
+        beforeSignOut()
+        if ((mutableState.value as? SessionState.SignedIn)?.userId != accountId) return false
+        close()
+        return true
+    }
+
+    private fun close() {
         signOutCalls++
         mutableState.value = SessionState.SignedOut
+    }
+
+    /** Las cuentas que se pidió cerrar en el aparato, cerradas o no. */
+    val signOutLocallyCalls = mutableListOf<String>()
+
+    /** Corre dentro de [signOutLocally], antes de comprobar la cuenta: la prueba cambia la sesión ahí. */
+    var beforeSignOutLocally: () -> Unit = {}
+
+    override suspend fun signOutLocally(accountId: String): Boolean {
+        signOutLocallyCalls += accountId
+        beforeSignOutLocally()
+        val mine = (mutableState.value as? SessionState.SignedIn)?.userId == accountId
+        if (mine) mutableState.value = SessionState.SignedOut
+        return mine
     }
 }

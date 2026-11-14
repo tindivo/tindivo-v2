@@ -232,4 +232,21 @@ class OrderAttemptLedgerTest : LedgerTestBase() {
 
             assertEquals(listOf(key(2)), sender.keys)
         }
+
+    @Test
+    fun `forgetAccount quita solo la entrada y la confirmacion de esa cuenta`() =
+        runTest {
+            val l = ledger()
+            l.place(A, cart(), {}, Sender(network)::send)
+            l.place(B, cart(), {}, Sender(network)::send)
+            store.ledger = store.ledger.copy(lost = true, acknowledged = setOf(A, B))
+            val keyOfB = storedKey(B)
+
+            l.forgetAccount(A)
+
+            assertNull(storedKey(A))
+            assertEquals(keyOfB, storedKey(B))
+            assertEquals(setOf(B), store.ledger.acknowledged)
+            assertTrue(store.ledger.lost)
+        }
 }

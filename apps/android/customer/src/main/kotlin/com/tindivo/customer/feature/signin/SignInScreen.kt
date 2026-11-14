@@ -34,13 +34,18 @@ import com.tindivo.customer.R
 @Composable
 fun SignInDestination(
     onBack: () -> Unit,
+    onNeedsProfile: () -> Unit,
     viewModel: SignInViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     val google = remember(context) { CredentialManagerGoogleSource(context, BuildConfig.GOOGLE_WEB_CLIENT_ID) }
     LaunchedEffect(state) {
-        if (state is SignInUiState.Done) onBack()
+        when (state) {
+            SignInUiState.Done -> onBack()
+            SignInUiState.NeedsProfile -> onNeedsProfile()
+            else -> Unit
+        }
     }
     SignInScreen(
         state = state,
@@ -67,7 +72,11 @@ fun SignInScreen(
             }
             Text(text = stringResource(R.string.signin_title), style = MaterialTheme.typography.headlineMedium)
             if (googleAvailable) {
-                GoogleButton(loading = state is SignInUiState.Loading, onClick = onGoogle)
+                // Mientras se abre «Completa tu perfil» el botón sigue ocupado: un toque más no vuelve a entrar.
+                GoogleButton(
+                    loading = state is SignInUiState.Loading || state is SignInUiState.NeedsProfile,
+                    onClick = onGoogle,
+                )
                 if (state is SignInUiState.Failed) {
                     Text(
                         text = stringResource(R.string.signin_error),

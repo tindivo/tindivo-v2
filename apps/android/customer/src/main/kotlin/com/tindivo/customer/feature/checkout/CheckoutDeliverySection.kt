@@ -15,10 +15,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -30,8 +26,8 @@ import com.tindivo.customer.R
 /** «Entrega»: delivery o recojo, la dirección (o el punto de recojo), el contacto y la nota para el motorizado. */
 internal fun LazyListScope.deliverySection(
     state: CheckoutUiState,
-    actions: CheckoutActions,
     form: CheckoutFormActions,
+    openSheet: (CheckoutSheet) -> Unit,
 ) {
     item(key = "delivery") {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -41,9 +37,9 @@ internal fun LazyListScope.deliverySection(
                 PickupQuestion(state, form)
                 PickupPoint(state.businessName)
             } else {
-                AddressCard(state, actions, form)
+                AddressCard(state, openSheet)
             }
-            ContactCard(state, actions, form)
+            ContactCard(state, form, openSheet)
             if (!state.isPickup) DriverNote(state, form)
         }
     }
@@ -125,10 +121,8 @@ private fun PickupPoint(businessName: String) {
 @Composable
 private fun AddressCard(
     state: CheckoutUiState,
-    actions: CheckoutActions,
-    form: CheckoutFormActions,
+    openSheet: (CheckoutSheet) -> Unit,
 ) {
-    var choosing by rememberSaveable { mutableStateOf(false) }
     val selected = state.selectedAddress
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -138,29 +132,20 @@ private fun AddressCard(
                     text = stringResource(R.string.checkout_address_add_hint),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                TextButton(onClick = actions.onOpenAccount, modifier = Modifier.heightIn(min = 48.dp)) {
+                TextButton(
+                    onClick = { openSheet(CheckoutSheet.AddAddress) },
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
                     Text(text = stringResource(R.string.checkout_address_add))
                 }
             } else {
-                AddressSummary(selected, actions.onOpenAccount)
-                if (state.addresses.size > 1) {
-                    TextButton(onClick = { choosing = !choosing }, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(text = stringResource(R.string.checkout_address_change))
-                    }
-                }
-            }
-            if (choosing) {
-                state.addresses.forEach { address ->
-                    ChoiceRow(
-                        selected = address.id == state.selectedAddressId,
-                        enabled = true,
-                        title = address.label,
-                        hint = address.line,
-                        onClick = {
-                            choosing = false
-                            form.onSelectAddress(address.id)
-                        },
-                    )
+                AddressSummary(selected, onFix = { openSheet(CheckoutSheet.EditAddress(selected.id)) })
+                // Con una sola dirección también: desde la lista se agrega otra sin salir del checkout.
+                TextButton(
+                    onClick = { openSheet(CheckoutSheet.ChooseAddress) },
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text(text = stringResource(R.string.checkout_address_change))
                 }
             }
         }
@@ -210,8 +195,8 @@ private fun AddressSummary(
 @Composable
 private fun ContactCard(
     state: CheckoutUiState,
-    actions: CheckoutActions,
     form: CheckoutFormActions,
+    openSheet: (CheckoutSheet) -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -232,7 +217,10 @@ private fun ContactCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
-                TextButton(onClick = actions.onOpenAccount, modifier = Modifier.heightIn(min = 48.dp)) {
+                TextButton(
+                    onClick = { openSheet(CheckoutSheet.VerifyPhone) },
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
                     Text(text = stringResource(R.string.checkout_phone_verify))
                 }
             }
