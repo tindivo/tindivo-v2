@@ -8,6 +8,7 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseData
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -128,13 +129,18 @@ internal class OrderDetailViewModel
                 }
                 emit(lastOrder?.let(OrderDetailUiState::Loaded) ?: OrderDetailUiState.Loading)
                 do {
-                    val step = reduce(customer.order(id))
+                    // La cuenta de esta consulta se captura antes de lanzarla: ante su 401 se cierra solo esa.
+                    val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+                    val step = reduce(customer.order(id), account)
                     emit(step.state)
                     if (step.keepPolling) pollingDelay.await(ORDER_POLL_MILLIS)
                 } while (step.keepPolling)
             }
 
-        private suspend fun reduce(result: ApiResult<GetCustomerOrder200ResponseData>): PollStep =
+        private suspend fun reduce(
+            result: ApiResult<GetCustomerOrder200ResponseData>,
+            account: String?,
+        ): PollStep =
             when (result) {
                 is ApiResult.Success -> {
                     val order = result.data.toDetailUi()
@@ -151,18 +157,23 @@ internal class OrderDetailViewModel
                 }
 
                 is ApiResult.Failure -> {
-                    failure(result.error)
+                    failure(result.error, account)
                 }
             }
 
-        private suspend fun failure(error: AppError): PollStep {
+        /** [account] es la cuenta que hizo la consulta; sin ella no hay sesión que cerrar ante un 401. */
+        private suspend fun failure(
+            error: AppError,
+            account: String?,
+        ): PollStep {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             return when {
                 error.isUnauthorized() -> {
                     // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también.
                     invalidate()
-                    // El cierre cancela este mismo sondeo: que no corte a medias el borrado de la sesión.
-                    withContext(NonCancellable) { sessionStore.signOut() }
+                    // El cierre cancela este mismo sondeo: que no corte a medias el borrado de la sesión. Es `signOutIf`:
+                    // espera el candado del almacén y, si mientras tanto entró otra cuenta, no la cierra.
+                    if (account != null) withContext(NonCancellable) { sessionStore.signOutIf(account) }
                     PollStep(OrderDetailUiState.LoggedOut, keepPolling = false)
                 }
 
@@ -202,7 +213,7 @@ internal class OrderDetailViewModel
     }
 
 /** Un uuid en su forma canónica; cualquier otra cosa es un pedido que no existe, sin tocar la red. */
-private fun parseOrderId(raw: String?): UUID? =
+internal fun parseOrderId(raw: String?): UUID? =
     raw?.let { text ->
         try {
             UUID.fromString(text).takeIf { it.toString().equals(text, ignoreCase = true) }

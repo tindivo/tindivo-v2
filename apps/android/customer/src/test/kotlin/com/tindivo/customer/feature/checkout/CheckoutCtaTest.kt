@@ -1,7 +1,7 @@
 package com.tindivo.customer.feature.checkout
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
@@ -92,10 +92,46 @@ class CheckoutCtaTest {
     }
 
     @Test
-    fun `lo que falta en Mi cuenta abre Mi cuenta y lo demas no`() {
-        assertTrue(Cta.NeedAddress.opensAccount)
-        assertTrue(Cta.NeedPhone.opensAccount)
-        assertFalse(Cta.NeedName.opensAccount)
-        assertFalse(Cta.NeedPay.opensAccount)
+    fun `lo que falta abre su hoja encima del checkout`() {
+        assertEquals(CheckoutSheet.AddAddress, Cta.NeedAddress.sheet(null))
+        assertEquals(CheckoutSheet.EditAddress("a"), Cta.NeedFixAddress.sheet("a"))
+        assertEquals(CheckoutSheet.EditAddress("a"), Cta.NeedReference.sheet("a"))
+        assertEquals(CheckoutSheet.EditAddress("a"), Cta.NeedPin.sheet("a"))
+        assertEquals(CheckoutSheet.VerifyPhone, Cta.NeedPhone.sheet("a"))
+    }
+
+    @Test
+    fun `una direccion incompleta sin elegida se agrega en vez de corregirse`() {
+        assertEquals(CheckoutSheet.AddAddress, Cta.NeedFixAddress.sheet(null))
+        assertEquals(CheckoutSheet.AddAddress, Cta.NeedPin.sheet(null))
+    }
+
+    @Test
+    fun `lo que se resuelve en el formulario o el boton que hace otra cosa no abre hoja`() {
+        listOf(
+            Cta.NeedName,
+            Cta.NeedPickupAnswer,
+            Cta.NeedPay,
+            Cta.NeedCash,
+            Cta.Sending,
+            Cta.Calculating,
+            Cta.QuoteProblem,
+            Cta.Ready(BigDecimal("30.00")),
+        ).forEach { assertNull(it.toString(), it.sheet("a")) }
+    }
+
+    @Test
+    fun `cada hoja vive en su fase`() {
+        assertEquals(CheckoutPhase.ProfileRequired, CheckoutSheet.CompleteProfile.phase)
+        assertEquals(CheckoutPhase.Form, CheckoutSheet.ChooseAddress.phase)
+        assertEquals(CheckoutPhase.Form, CheckoutSheet.VerifyPhone.phase)
+    }
+
+    @Test
+    fun `el estado de un caso de la lista de la web abre la hoja que corresponde`() {
+        val incomplete = ready().copy(addresses = listOf(home.copy(reference = "cerc")))
+        assertEquals(CheckoutSheet.EditAddress("a"), incomplete.cta.sheet(incomplete.selectedAddressId))
+        val none = ready().copy(selectedAddressId = null)
+        assertEquals(CheckoutSheet.AddAddress, none.cta.sheet(none.selectedAddressId))
     }
 }

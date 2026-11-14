@@ -4,7 +4,8 @@
  *
  *  · `GET /customer/profile`         el perfil de la SESIÓN, nunca el de otro.
  *  · `GET /customer/payment-options` expone la decisión de la base, no la recalcula.
- *  · `GET /public/config`            solo las claves públicas; dinero como texto (D-39).
+ *  · `GET /public/config`            solo las claves públicas; dinero como texto (D-39);
+ *                                    el WhatsApp de soporte, solo dígitos.
  *  · `GET /public/landmarks`         solo las activas.
  *  · `GET /public/courier/directory` sin teléfono ni WhatsApp de los comercios.
  *
@@ -240,6 +241,7 @@ describe('GET /public/config', () => {
         'maxChange',
         'prepayThreshold',
         'prepayTimers',
+        'supportWhatsapp',
       ].sort(),
     )
     expect(data.deliveryBands).toMatchObject({
@@ -256,6 +258,8 @@ describe('GET /public/config', () => {
     expect(data.coverage.radiusKm).toEqual(expect.any(Number))
     expect(data.coveragePolygon.length).toBeGreaterThanOrEqual(3)
     expect(data.coveragePolygon[0]).toEqual({ lat: expect.any(Number), lng: expect.any(Number) })
+    // El WhatsApp de soporte, solo dígitos: la app arma `https://wa.me/<número>` sin limpiarlo.
+    expect(data.supportWhatsapp).toMatch(/^\d{9,15}$/)
   })
 
   it('el umbral sale de app_settings: cambiar la fila cambia la respuesta', async () => {

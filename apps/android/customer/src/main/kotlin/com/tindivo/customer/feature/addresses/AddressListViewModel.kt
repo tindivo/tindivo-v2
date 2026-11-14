@@ -112,7 +112,9 @@ internal class AddressListViewModel
 
                         is ApiResult.Failure -> {
                             // El servidor es la verdad: tras un fallo no se adivina quién quedó predeterminada.
-                            onFailure(result.error)?.let { settle(current.copy(busy = false, actionFailed = it)) }
+                            onFailure(result.error, account)?.let {
+                                settle(current.copy(busy = false, actionFailed = it))
+                            }
                             // Si la libreta cambió mientras tanto, se lee la nueva en vez de dejar la de antes.
                             if (stale && !loggedOut) load(account)
                         }
@@ -139,13 +141,19 @@ internal class AddressListViewModel
                 }
 
                 is ApiResult.Failure -> {
-                    onFailure(result.error)?.let { settle(AddressListUiState.Failed(it)) }
+                    onFailure(result.error, account)?.let { settle(AddressListUiState.Failed(it)) }
                 }
             }
         }
 
-        /** Avisa de un 426 y cierra la sesión ante un 401; devuelve el error si la pantalla debe mostrarlo. */
-        private suspend fun onFailure(error: AppError): AppError? {
+        /**
+         * Avisa de un 426 y, ante un 401 de una llamada de [account], cierra la sesión de esa cuenta; devuelve el error si
+         * la pantalla debe mostrarlo.
+         */
+        private suspend fun onFailure(
+            error: AppError,
+            account: String,
+        ): AppError? {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             if (error is AppError.Network && error.cause is AccountMismatchException) {
                 // La sesión ya es de otra cuenta: no salió nada. Se cierra sin cerrar la sesión nueva.
@@ -153,7 +161,9 @@ internal class AddressListViewModel
                 return null
             }
             if (!error.isUnauthorized()) return error
-            withContext(NonCancellable) { sessionStore.signOut() }
+            // El cierre cancela esta misma llamada: que no corte a medias el borrado de la sesión. Es `signOutIf`: espera
+            // el candado del almacén y, si mientras tanto entró otra cuenta, no la cierra.
+            withContext(NonCancellable) { sessionStore.signOutIf(account) }
             _state.value = AddressListUiState.LoggedOut
             return null
         }

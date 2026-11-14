@@ -1091,7 +1091,8 @@ export const OPERATIONS: OperationSpec[] = [
     method: 'get',
     path: '/public/config',
     operationId: 'getPublicConfig',
-    summary: 'Cobertura, bandas de envío, umbral de prepago y topes de efectivo',
+    summary:
+      'Cobertura, bandas de envío, umbral de prepago, topes de efectivo y WhatsApp de soporte',
     description:
       'Solo claves públicas de `app_settings`. No es `GET /config`, que trata de la versión mínima de la app.',
     tags: ['public'],

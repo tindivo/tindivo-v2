@@ -2,9 +2,13 @@ package com.tindivo.customer.feature.signin
 
 /** Lo que devuelve el selector de cuentas de Google. */
 sealed interface GoogleIdResult {
-    /** [idToken] es una credencial: no sale en logs ni en `toString`. */
+    /**
+     * [idToken] es una credencial y [displayName] un dato personal (el nombre visible de la cuenta de Google, si lo
+     * dio): ninguno sale en logs ni en `toString`.
+     */
     class Token(
         val idToken: String,
+        val displayName: String? = null,
     ) : GoogleIdResult {
         override fun toString(): String = "GoogleIdResult.Token"
     }

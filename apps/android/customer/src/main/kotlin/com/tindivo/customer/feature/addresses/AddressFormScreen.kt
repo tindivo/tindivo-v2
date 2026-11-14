@@ -33,7 +33,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
@@ -42,13 +41,13 @@ import com.tindivo.customer.R
 /** Une el ViewModel con la pantalla. [onDone] se llama al guardar, al borrar y si la sesión se cierra. */
 @Composable
 internal fun AddressFormDestination(
+    viewModel: AddressFormViewModel,
     onDone: () -> Unit,
     onChanged: () -> Unit,
-    viewModel: AddressFormViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     LaunchedEffect(state.outcome) {
-        if (state.outcome == FormOutcome.Saved || state.outcome == FormOutcome.Deleted) onChanged()
+        if (state.outcome is FormOutcome.Saved || state.outcome == FormOutcome.Deleted) onChanged()
         if (state.outcome != null) onDone()
     }
     AddressFormScreen(
@@ -60,6 +59,9 @@ internal fun AddressFormDestination(
                 onReference = viewModel::onReference,
                 onMakeDefault = viewModel::onMakeDefault,
                 onPointChosen = viewModel::onPointChosen,
+                onLocationPermission = viewModel::onLocationPermission,
+                onStopLocating = viewModel::stopLocating,
+                onForegroundChanged = viewModel::onForegroundChanged,
                 onSave = viewModel::save,
                 onAskDelete = viewModel::askDelete,
                 onCancelDelete = viewModel::cancelDelete,
@@ -76,6 +78,12 @@ internal class AddressFormActions(
     val onReference: (String) -> Unit,
     val onMakeDefault: (Boolean) -> Unit,
     val onPointChosen: (GeoPoint) -> Unit,
+    /** «Usar mi ubicación», con el permiso ya resuelto por la pantalla. */
+    val onLocationPermission: (LocationPermission) -> Unit,
+    /** El formulario sale de la pantalla: se cancela la lectura del GPS en curso. */
+    val onStopLocating: () -> Unit,
+    /** La app pasa a segundo plano (`false`) o vuelve (`true`): fuera de la vista no se lee el GPS (CAX-001). */
+    val onForegroundChanged: (Boolean) -> Unit,
     val onSave: () -> Unit,
     val onAskDelete: () -> Unit,
     val onCancelDelete: () -> Unit,
@@ -90,7 +98,7 @@ internal fun AddressFormScreen(
     actions: AddressFormActions,
 ) {
     Scaffold(
-        bottomBar = { if (!state.loading && state.loadError == null) SaveBar(state, actions.onSave) },
+        bottomBar = { if (state.showsSaveBar) SaveBar(state, actions.onSave) },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -112,12 +120,27 @@ internal fun AddressFormScreen(
                     Text(text = stringResource(R.string.address_form_cancel))
                 }
             }
-            when {
-                state.loading -> Loading()
-                state.loadError != null -> LoadFailure(state.loadError, actions.onRetry)
-                else -> FormBody(state, actions)
-            }
+            AddressFormContent(state, actions)
         }
+    }
+}
+
+/** Con el formulario ya cargado, el botón fijo de guardar va abajo, fuera del scroll. */
+internal val AddressFormState.showsSaveBar: Boolean get() = !loading && loadError == null
+
+/**
+ * El cuerpo del formulario sin marco: cargando, el fallo de carga o los campos con el mapa. Lo usan la pantalla de Mi
+ * cuenta y la hoja del checkout, cada una con su título, su forma de cerrar y su [SaveBar].
+ */
+@Composable
+internal fun AddressFormContent(
+    state: AddressFormState,
+    actions: AddressFormActions,
+) {
+    when {
+        state.loading -> Loading()
+        state.loadError != null -> LoadFailure(state.loadError, actions.onRetry)
+        else -> FormBody(state, actions)
     }
 }
 
@@ -167,9 +190,11 @@ private fun FormBody(
         AddressMap(
             area = state.area,
             point = state.point,
+            located = state.locate.located,
             onPointChosen = actions.onPointChosen,
             modifier = Modifier.fillMaxWidth().height(260.dp).semantics { contentDescription = mapDescription },
         )
+        UseMyLocation(state, actions.onLocationPermission, actions.onStopLocating, actions.onForegroundChanged)
         MapStatus(state)
         OutlinedTextField(
             value = state.line,
@@ -312,7 +337,7 @@ private fun AddressFormPreview() {
         AddressFormScreen(
             state = AddressFormState(loading = false, line = "Jr. Sucre 412", reference = "Frente a la bodega"),
             actions =
-                AddressFormActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}),
+                AddressFormActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}),
         )
     }
 }

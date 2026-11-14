@@ -43,6 +43,9 @@ android {
             buildConfigField("String", "SUPABASE_URL", "\"https://jgziumvrtogguljhpdos.supabase.co\"")
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_PXkU-RVUbJmzcg2uJRoHXA_nl02PVBd\"")
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"\"")
+            // La web pública, para abrir Términos y Privacidad. Staging no tiene web propia: los textos legales son los
+            // mismos, así que va la de producción (decisión pendiente si algún día hay una web de staging).
+            buildConfigField("String", "WEB_BASE_URL", "\"https://www.tindivo.com\"")
         }
         create("prod") {
             dimension = "environment"
@@ -50,6 +53,7 @@ android {
             buildConfigField("String", "SUPABASE_URL", "\"https://zpnipajgwfthxhdtzhly.supabase.co\"")
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_J8M8nH_cb2eYjAt2E5L27w_EhMnwS0W\"")
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"\"")
+            buildConfigField("String", "WEB_BASE_URL", "\"https://www.tindivo.com\"")
         }
     }
 
@@ -111,6 +115,7 @@ dependencies {
 
     implementation(libs.play.services.maps)
     implementation(libs.maps.compose)
+    implementation(libs.play.services.location)
 
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
@@ -122,4 +127,9 @@ dependencies {
 
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
+    // Pruebas de UI de Compose (aprobadas por Jesús el 2026-11-11, KT-16), con las versiones del mismo BOM. El manifiesto
+    // de prueba solo declara la actividad vacía donde se montan, y solo en debug.
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

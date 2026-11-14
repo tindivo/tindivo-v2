@@ -192,7 +192,20 @@ class OrdersViewModelTest {
             val state = viewModel().settled()
 
             assertEquals(OrdersUiState.LoggedOut, state)
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
             assertEquals(1, store.signOutCalls)
+        }
+
+    @Test
+    fun `un 401 de A cuyo cierre llega con B ya en la sesion no cierra la de B`() =
+        runTest {
+            server.enqueue(response(401, UNAUTHORIZED))
+            store.beforeSignOut = { store.switchTo("user-2") }
+
+            viewModel().settled()
+
+            assertEquals(0, store.signOutCalls)
+            assertEquals(SessionState.SignedIn("user-2"), store.state.value)
         }
 
     @Test

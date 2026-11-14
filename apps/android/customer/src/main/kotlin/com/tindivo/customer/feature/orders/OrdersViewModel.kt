@@ -7,6 +7,7 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SessionWatch
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -61,6 +62,9 @@ internal class OrdersViewModel
         private var loadJob: Job? = null
         private var nextCursor: String? = null
 
+        /** La cuenta de la sesión vigente: se captura al lanzar cada petición, para cerrar solo esa ante su 401. */
+        private val signedInAccount get() = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+
         init {
             val watch = SessionWatch()
             viewModelScope.launch {
@@ -79,7 +83,8 @@ internal class OrdersViewModel
         fun refresh() {
             if (loadJob?.isActive == true || _state.value is OrdersUiState.LoggedOut) return
             _state.value = OrdersUiState.Loading
-            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null)) }
+            val account = signedInAccount
+            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null), account) }
         }
 
         /**
@@ -91,10 +96,14 @@ internal class OrdersViewModel
             if (!current.canLoadMore || current.loadingMore) return
             _state.value = current.copy(loadingMore = true, loadMoreFailed = false)
             val cursor = nextCursor
-            loadJob = viewModelScope.launch { onNextPage(current, customer.orders(cursor)) }
+            val account = signedInAccount
+            loadJob = viewModelScope.launch { onNextPage(current, customer.orders(cursor), account) }
         }
 
-        private suspend fun onFirstPage(result: ApiResult<ListCustomerOrders200ResponseData>) {
+        private suspend fun onFirstPage(
+            result: ApiResult<ListCustomerOrders200ResponseData>,
+            account: String?,
+        ) {
             when (result) {
                 is ApiResult.Success -> {
                     val page = result.data.toPageUi(clock.instant())
@@ -113,7 +122,7 @@ internal class OrdersViewModel
                 }
 
                 is ApiResult.Failure -> {
-                    onFailure(result.error)?.let { settle(OrdersUiState.Failed(it)) }
+                    onFailure(result.error, account)?.let { settle(OrdersUiState.Failed(it)) }
                 }
             }
         }
@@ -121,6 +130,7 @@ internal class OrdersViewModel
         private suspend fun onNextPage(
             before: OrdersUiState.Loaded,
             result: ApiResult<ListCustomerOrders200ResponseData>,
+            account: String?,
         ) {
             when (result) {
                 is ApiResult.Success -> {
@@ -136,7 +146,7 @@ internal class OrdersViewModel
                 // Un fallo de red al pedir más no tira lo ya cargado: el botón vuelve y avisa que falló. Una respuesta
                 // que no se pudo leer sí lo tira, igual que un importe ilegible.
                 is ApiResult.Failure -> {
-                    onFailure(result.error)?.let { error ->
+                    onFailure(result.error, account)?.let { error ->
                         settle(
                             if (error.keepsShownOrders()) {
                                 before.copy(loadingMore = false, loadMoreFailed = true)
@@ -149,13 +159,20 @@ internal class OrdersViewModel
             }
         }
 
-        /** Avisa de un 426 y cierra la sesión ante un 401; devuelve el error si la pantalla debe mostrarlo. */
-        private suspend fun onFailure(error: AppError): AppError? {
+        /**
+         * Avisa de un 426 y, ante un 401, cierra la sesión de [account], la cuenta que hizo la petición; devuelve el error
+         * si la pantalla debe mostrarlo. Sin cuenta al lanzar la petición no hay sesión que cerrar.
+         */
+        private suspend fun onFailure(
+            error: AppError,
+            account: String?,
+        ): AppError? {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             if (!error.isUnauthorized()) return error
             // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también. El cierre cancela
-            // esta misma carga: que no corte a medias el borrado de la sesión.
-            withContext(NonCancellable) { sessionStore.signOut() }
+            // esta misma carga: que no corte a medias el borrado de la sesión. Es `signOutIf`: espera el candado del
+            // almacén y, si mientras tanto entró otra cuenta, no la cierra.
+            if (account != null) withContext(NonCancellable) { sessionStore.signOutIf(account) }
             _state.value = OrdersUiState.LoggedOut
             return null
         }

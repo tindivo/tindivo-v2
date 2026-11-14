@@ -3,7 +3,10 @@ package com.tindivo.core.network
 import com.tindivo.core.network.generated.model.SendPhoneCodeRequest
 import com.tindivo.core.network.generated.model.TransferCustomerPhoneRequest
 import com.tindivo.core.network.generated.model.VerifyPhoneCodeRequest
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
@@ -16,11 +19,18 @@ import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PhoneRepositoryTest : HttpClientTestBase() {
-    private fun phone() =
+    private val tokens = GatedTokens(token = testJwt(ACCOUNT))
+
+    private fun phone(io: CoroutineDispatcher = UnconfinedTestDispatcher()) =
         PhoneRepository(
             baseUrl = server.url("/api/v1").toString().trimEnd('/'),
-            client = realClient(),
-            ioDispatcher = UnconfinedTestDispatcher(),
+            client =
+                createOkHttpClient(
+                    info,
+                    RetryInterceptor(sleeper = { _, _ -> }),
+                    auth = BearerAuthInterceptor(server.url("/"), tokens),
+                ),
+            ioDispatcher = io,
         )
 
     private fun json(
@@ -48,7 +58,13 @@ class PhoneRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(200, """{"data":{"sent":true,"channel":"whatsapp"}}"""))
 
-            val data = (phone().sendCode(SendPhoneCodeRequest(phone = "+51987654321")) as ApiResult.Success).data
+            val data =
+                (
+                    phone().sendCode(
+                        SendPhoneCodeRequest(phone = "+51987654321"),
+                        ACCOUNT,
+                    ) as ApiResult.Success
+                ).data
 
             assertTrue(data.sent)
             assertEquals("whatsapp", data.channel)
@@ -66,7 +82,13 @@ class PhoneRepositoryTest : HttpClientTestBase() {
             server.enqueue(problem(429, "rate_limited"))
             server.enqueue(json(200, """{"data":{"sent":true,"channel":"whatsapp"}}"""))
 
-            val error = (phone().sendCode(SendPhoneCodeRequest(phone = "+51987654321")) as ApiResult.Failure).error
+            val error =
+                (
+                    phone().sendCode(
+                        SendPhoneCodeRequest(phone = "+51987654321"),
+                        ACCOUNT,
+                    ) as ApiResult.Failure
+                ).error
 
             assertEquals(ApiErrorCode.RateLimited, (error as AppError.Known).code)
             assertEquals(1, server.requestCount)
@@ -82,6 +104,7 @@ class PhoneRepositoryTest : HttpClientTestBase() {
                 (
                     phone().verify(
                         VerifyPhoneCodeRequest(phone = "+51987654321", code = "123456"),
+                        ACCOUNT,
                     ) as ApiResult.Success
                 ).data
 
@@ -102,6 +125,7 @@ class PhoneRepositoryTest : HttpClientTestBase() {
                 (
                     phone().verify(
                         VerifyPhoneCodeRequest(phone = "+51987654321", code = "123456"),
+                        ACCOUNT,
                     ) as ApiResult.Failure
                 ).error
 
@@ -114,7 +138,7 @@ class PhoneRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(200, """{"data":{"sent":true,"channel":"dev","verified":true}}"""))
 
-            val data = (phone().sendCode(SendPhoneCodeRequest(phone = "987654321")) as ApiResult.Success).data
+            val data = (phone().sendCode(SendPhoneCodeRequest(phone = "987654321"), ACCOUNT) as ApiResult.Success).data
 
             assertEquals("dev", data.channel)
             assertEquals(true, data.verified)
@@ -126,7 +150,13 @@ class PhoneRepositoryTest : HttpClientTestBase() {
             server.enqueue(problem(500, "internal_error"))
             server.enqueue(json(200, """{"data":{"sent":true,"channel":"sms"}}"""))
 
-            val error = (phone().sendCode(SendPhoneCodeRequest(phone = "987654321")) as ApiResult.Failure).error
+            val error =
+                (
+                    phone().sendCode(
+                        SendPhoneCodeRequest(phone = "987654321"),
+                        ACCOUNT,
+                    ) as ApiResult.Failure
+                ).error
 
             assertEquals(ApiErrorCode.InternalError, (error as AppError.Known).code)
             assertEquals(1, server.requestCount)
@@ -137,7 +167,13 @@ class PhoneRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(json(429, RATE_LIMITED, "application/problem+json"))
 
-            val error = (phone().sendCode(SendPhoneCodeRequest(phone = "987654321")) as ApiResult.Failure).error
+            val error =
+                (
+                    phone().sendCode(
+                        SendPhoneCodeRequest(phone = "987654321"),
+                        ACCOUNT,
+                    ) as ApiResult.Failure
+                ).error
 
             assertEquals("Ya pediste 3 códigos hoy. Inténtalo mañana.", (error as AppError.Known).detail)
         }
@@ -187,6 +223,7 @@ class PhoneRepositoryTest : HttpClientTestBase() {
                 (
                     phone().sendCode(
                         SendPhoneCodeRequest(phone = "123"),
+                        ACCOUNT,
                     ) as ApiResult.Failure
                 ).error as AppError.Known
 
@@ -203,6 +240,7 @@ class PhoneRepositoryTest : HttpClientTestBase() {
                 (
                     phone().transfer(
                         TransferCustomerPhoneRequest(challengeId = CHALLENGE_ID),
+                        ACCOUNT,
                     ) as ApiResult.Success
                 ).data
 
@@ -212,6 +250,70 @@ class PhoneRepositoryTest : HttpClientTestBase() {
             assertEquals("/api/v1/customer/phone/transfer", sent.url.encodedPath)
             assertEquals("""{"challengeId":"$CHALLENGE_ID"}""", sent.body?.utf8())
             assertNull(sent.headers["Idempotency-Key"])
+        }
+
+    /** Las tres operaciones, cada una con su cuerpo de la cuenta [ACCOUNT]. */
+    private val operations: List<Pair<String, suspend PhoneRepository.() -> ApiResult<*>>> =
+        listOf(
+            "send-code" to { sendCode(SendPhoneCodeRequest(phone = "987654321"), ACCOUNT) },
+            "verify" to { verify(VerifyPhoneCodeRequest(phone = "987654321", code = "123456"), ACCOUNT) },
+            "transfer" to { transfer(TransferCustomerPhoneRequest(challengeId = CHALLENGE_ID), ACCOUNT) },
+        )
+
+    private fun assertMismatch(
+        name: String,
+        result: ApiResult<*>,
+    ) {
+        val error = (result as ApiResult.Failure).error
+        assertTrue(name, error is AppError.Network && error.cause is AccountMismatchException)
+    }
+
+    @Test
+    fun `si la sesion cambia de cuenta antes de leer el token ninguna operacion del telefono sale`() =
+        runTest {
+            for ((name, operation) in operations) {
+                tokens.token = testJwt(ACCOUNT)
+                val gate = tokens.holdNextRead()
+                val call = async(Dispatchers.Default) { phone(Dispatchers.IO).operation() }
+
+                gate.awaitReached()
+                tokens.token = testJwt(OTHER_ACCOUNT)
+                gate.release()
+
+                assertMismatch(name, call.await())
+            }
+            assertEquals(0, server.requestCount)
+        }
+
+    @Test
+    fun `si el refresco tras un 401 trae otra cuenta ninguna operacion del telefono se repite con su token`() =
+        runTest {
+            for ((name, operation) in operations) {
+                tokens.token = testJwt(ACCOUNT)
+                tokens.onRefresh = null
+                server.enqueue(problem(401, "unauthorized"))
+                val gate = tokens.holdNextRefresh()
+                val call = async(Dispatchers.Default) { phone(Dispatchers.IO).operation() }
+
+                gate.awaitReached()
+                tokens.onRefresh = testJwt(OTHER_ACCOUNT)
+                gate.release()
+
+                assertMismatch(name, call.await())
+                // Solo salió el primer intento, con el token de la cuenta de la operación.
+                assertEquals(name, "Bearer ${testJwt(ACCOUNT)}", server.takeRequest().headers["Authorization"])
+            }
+            assertEquals(operations.size, server.requestCount)
+        }
+
+    @Test
+    fun `las operaciones del telefono salen con el token de su cuenta`() =
+        runTest {
+            for ((name, operation) in operations) {
+                server.enqueue(problem(500, "internal_error"))
+                phone().operation()
+                assertEquals(name, "Bearer ${testJwt(ACCOUNT)}", server.takeRequest().headers["Authorization"])
+            }
         }
 
     @Test
@@ -225,10 +327,14 @@ class PhoneRepositoryTest : HttpClientTestBase() {
         (
             phone().verify(
                 VerifyPhoneCodeRequest(phone = "987654321", code = "123456"),
+                ACCOUNT,
             ) as ApiResult.Failure
         ).error as AppError.Known
 
     private companion object {
+        const val ACCOUNT = "6f1c3a52-9d0e-4c1b-8a77-2f4e5d6c7b8a"
+        const val OTHER_ACCOUNT = "0b9e8d7c-6a5f-4e3d-9c2b-1a0f9e8d7c6b"
+
         val CHALLENGE_ID: UUID = UUID.fromString("7c2a737a-018f-4c2d-9a11-6f0d3c1e8a09")
 
         const val RATE_LIMITED = """

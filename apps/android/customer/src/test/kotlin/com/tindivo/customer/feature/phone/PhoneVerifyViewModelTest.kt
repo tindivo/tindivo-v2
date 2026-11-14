@@ -1,12 +1,17 @@
 package com.tindivo.customer.feature.phone
 
+import com.tindivo.core.network.BearerAuthInterceptor
 import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.PhoneRepository
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.SheetClose
+import com.tindivo.customer.feature.checkout.HeldIo
+import com.tindivo.customer.feature.checkout.sessionJwt
 import com.tindivo.customer.session.FakeSessionStore
+import com.tindivo.customer.session.GatedTokens
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +25,7 @@ import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -47,6 +53,7 @@ class PhoneVerifyViewModelTest {
     private val server = MockWebServer()
     private val dispatcher = UnconfinedTestDispatcher()
     private val store = FakeSessionStore()
+    private val tokens = GatedTokens(sessionJwt("user-1"))
     private val clock = MutableClock(Instant.parse("2026-10-30T15:00:00Z"))
     private lateinit var baseUrl: String
     private lateinit var configService: ConfigService
@@ -66,8 +73,13 @@ class PhoneVerifyViewModelTest {
         Dispatchers.resetMain()
     }
 
+    // El cliente real con el autenticador real: cada llamada del celular va atada a la cuenta (`boundTo`).
     private fun client() =
-        createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = RetryInterceptor(sleeper = { _, _ -> }))
+        createOkHttpClient(
+            ClientInfo("customer", "0.1.0", "1"),
+            retry = RetryInterceptor(sleeper = { _, _ -> }),
+            auth = BearerAuthInterceptor(server.url("/"), tokens),
+        )
 
     private fun viewModel(io: CoroutineDispatcher = dispatcher) =
         PhoneVerifyViewModel(PhoneRepository(baseUrl, client(), io), store, configService, clock)
@@ -379,6 +391,79 @@ class PhoneVerifyViewModelTest {
         }
 
     @Test
+    fun `al cerrar la hoja no quedan el numero, el codigo ni el permiso de traslado`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(409, CONFLICT_TRANSFER))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertNotNull(viewModel.state.value.transfer)
+
+            viewModel.discardInput()
+
+            val state = viewModel.state.value
+            assertEquals(PhoneUiState(), state)
+            assertEquals("", state.phone)
+            assertEquals("", state.code)
+            assertNull(state.transfer)
+            assertNull(state.verifiedPhone)
+            assertEquals(0, store.signOutCalls)
+            assertEquals(2, server.requestCount)
+        }
+
+    @Test
+    fun `al cerrar la hoja ya verificada no queda el numero verificado`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+
+            viewModel.discardInput()
+
+            assertEquals(PhoneUiState(), viewModel.state.value)
+        }
+
+    @Test
+    fun `un verify en vuelo cancelado al cerrar la hoja no publica nada despues`() =
+        runTest {
+            val viewModel = viewModel(Dispatchers.IO)
+            server.enqueue(response(200, SENT))
+            viewModel.onPhoneChanged("987654321")
+            viewModel.sendCode()
+            viewModel.state.first { !it.sending }
+            server.enqueue(response(200, VERIFIED, delayMillis = 300))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertTrue(viewModel.state.value.sending)
+
+            viewModel.discardInput()
+
+            assertEquals(PhoneUiState(), viewModel.state.value)
+            Thread.sleep(500)
+            assertEquals(PhoneUiState(), viewModel.state.value)
+            assertEquals(0, store.signOutCalls)
+            // No es un cierre de sesión: la instancia sigue aceptando lo que se escriba.
+            viewModel.onPhoneChanged("912345678")
+            assertEquals("912345678", viewModel.state.value.phone)
+        }
+
+    @Test
+    fun `cerrar la hoja con la sesion cerrada no reabre nada`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            store.signOut()
+
+            viewModel.discardInput()
+
+            assertEquals(PhoneUiState(loggedOut = true), viewModel.state.value)
+        }
+
+    @Test
     fun `un 401 cierra la sesion`() =
         runTest {
             server.enqueue(response(401, UNAUTHORIZED))
@@ -434,6 +519,118 @@ class PhoneVerifyViewModelTest {
             assertEquals(PhoneStep.Number, viewModel.state.value.step)
             assertEquals("", viewModel.state.value.code)
             assertEquals("987654321", viewModel.state.value.phone)
+        }
+
+    // CAX-005: la hoja del checkout decide cerrarse con el estado del ViewModel en ese momento, no con el de la última
+    // recomposición. Con un envío que empezó durante la animación, no se cierra y el resultado llega.
+
+    @Test
+    fun `con un envio en curso la hoja del checkout no se cierra y el codigo llega`() =
+        runTest {
+            server.enqueue(response(200, SENT))
+            HeldIo().use { io ->
+                val viewModel = viewModel(io = io.dispatcher)
+                viewModel.onPhoneChanged("987654321")
+                io.hold()
+                viewModel.sendCode()
+                assertTrue(viewModel.state.value.sending)
+
+                assertEquals(SheetClose.Busy, viewModel.closeIfIdle())
+                io.release()
+
+                assertEquals(PhoneStep.Code, viewModel.state.first { !it.sending }.step)
+                assertEquals(1, server.requestCount)
+            }
+        }
+
+    @Test
+    fun `cerrada la hoja con la pantalla libre un toque tardio en verificar o reenviar no sale a la red`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            viewModel.onCodeChanged("123456")
+            clock.now = clock.now.plusSeconds(61)
+
+            assertEquals(SheetClose.Close(null), viewModel.closeIfIdle())
+            viewModel.verify()
+            viewModel.resend()
+
+            assertEquals(1, server.requestCount)
+            assertFalse(viewModel.state.value.sending)
+        }
+
+    // CAX-005, entrega: el celular verificado sale una sola vez, por el efecto o por el cierre de la hoja.
+
+    @Test
+    fun `una verificacion terminada que el efecto aun no entrego sale con el cierre y despues ya no sale`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+            assertFalse(viewModel.state.value.sending)
+
+            assertEquals(SheetClose.Close(PhoneVerified), viewModel.closeIfIdle())
+            assertNull(viewModel.takeResult())
+            assertEquals(SheetClose.Close(null), viewModel.closeIfIdle())
+        }
+
+    @Test
+    fun `si el efecto entrego primero la verificacion el cierre ya no la entrega`() =
+        runTest {
+            server.enqueue(response(200, """{"data":{"sent":true,"channel":"dev","verified":true}}"""))
+            val viewModel = viewModel()
+            viewModel.onPhoneChanged("987654321")
+            viewModel.sendCode()
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+
+            assertEquals(PhoneVerified, viewModel.takeResult())
+            assertNull(viewModel.takeResult())
+            assertEquals(SheetClose.Close(null), viewModel.closeIfIdle())
+        }
+
+    @Test
+    fun `sin verificar no hay nada que entregar y con la sesion cerrada tampoco`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            assertNull(viewModel.takeResult())
+
+            store.signOut()
+            assertTrue(viewModel.state.value.loggedOut)
+            assertNull(viewModel.takeResult())
+        }
+
+    // CAX-005, entrega por el efecto: la hoja aplica el celular y se retira sin pasar por closeIfIdle. Lo que llegue en
+    // ese intervalo ya no sale a la red. Hay una respuesta para una llamada de más: si saliera, se contaría.
+
+    @Test
+    fun `entregada la verificacion por el efecto un toque tardio en verificar, reenviar o enviar no sale a la red`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+            viewModel.onCodeChanged("123456")
+            viewModel.verify()
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+            assertEquals(2, server.requestCount)
+            server.enqueue(response(200, SENT))
+
+            assertEquals(PhoneVerified, viewModel.takeResult())
+            clock.now = clock.now.plusSeconds(61)
+            viewModel.verify()
+            viewModel.resend()
+            // Desde el paso del número, «Enviar código» volvería a pedir uno.
+            viewModel.changeNumber()
+            viewModel.onPhoneChanged("987654321")
+            viewModel.sendCode()
+
+            assertEquals(2, server.requestCount)
+            assertFalse(viewModel.state.value.sending)
+            assertEquals(PhoneStep.Number, viewModel.state.value.step)
+            assertNull(viewModel.takeResult())
         }
 
     private companion object {

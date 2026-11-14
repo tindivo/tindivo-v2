@@ -5,12 +5,15 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 
-/** Doble de [AuthBackend] para las pruebas del almacén de sesión: cuenta llamadas y deja suspender restore y refresh. */
+/** Doble de [AuthBackend] para las pruebas del almacén de sesión: cuenta llamadas y deja suspender restore, refresh y la entrada. */
 internal class FakeBackend : AuthBackend {
     var stored: TokenSnapshot? = null
     var refreshResult: suspend () -> TokenSnapshot = { error("sin configurar") }
     var signInResult: () -> TokenSnapshot = { error("sin configurar") }
     var restoreGate: (suspend () -> Unit)? = null
+
+    /** Corre dentro de la entrada, con el candado del almacén tomado: la prueba la deja a medias ahí. */
+    var signInGate: (suspend () -> Unit)? = null
     var signOutFails = false
     var refreshCalls = 0
     var clearCalls = 0
@@ -24,7 +27,10 @@ internal class FakeBackend : AuthBackend {
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
-    ): TokenSnapshot = signInResult()
+    ): TokenSnapshot {
+        signInGate?.invoke()
+        return signInResult()
+    }
 
     override suspend fun refresh(): TokenSnapshot {
         refreshCalls++

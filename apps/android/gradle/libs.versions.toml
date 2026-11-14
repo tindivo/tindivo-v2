@@ -39,6 +39,10 @@ tink = "1.23.0"
 # mismos de aquí.
 playServicesMaps = "20.1.0"
 mapsCompose = "9.0.1"
+# «Usar mi ubicación» (KT-16, Jesús, 2026-11-10): Fused Location Provider, gratis y sin clave. play-services-location
+# 21.4.0 es la última publicada (maven-metadata de Google: 2026-06-25), con más de dos semanas; pide play-services-base y
+# -basement 18.9.0, la misma basement que ya trae play-services-maps.
+playServicesLocation = "21.4.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -51,6 +55,10 @@ androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+# Pruebas de UI de Compose (KT-13, TST-6): las hojas del checkout con su anfitrión real (CAX-005). Las versiones las da el
+# mismo BOM de Compose; las aprobó Jesús el 2026-11-11 (KT-16).
+androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
@@ -72,6 +80,7 @@ googleid = { module = "com.google.android.libraries.identity.googleid:googleid",
 tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

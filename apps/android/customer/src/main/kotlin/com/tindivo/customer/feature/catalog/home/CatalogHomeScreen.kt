@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
@@ -56,6 +57,7 @@ fun CatalogHomeDestination(
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
     onOpenAccount: (signedIn: Boolean) -> Unit,
+    onOpenCourier: () -> Unit,
     viewModel: CatalogHomeViewModel = hiltViewModel(),
     accountEntry: AccountEntryViewModel = hiltViewModel(),
 ) {
@@ -68,6 +70,7 @@ fun CatalogHomeDestination(
         onOpenDiagnostics = onOpenDiagnostics,
         signedIn = signedIn,
         onOpenAccount = { onOpenAccount(signedIn) },
+        onOpenCourier = onOpenCourier,
     )
 }
 
@@ -80,6 +83,7 @@ fun CatalogHomeScreen(
     onOpenDiagnostics: (() -> Unit)? = null,
     signedIn: Boolean = false,
     onOpenAccount: () -> Unit = {},
+    onOpenCourier: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -100,6 +104,7 @@ fun CatalogHomeScreen(
                             onOpenDiagnostics = onOpenDiagnostics,
                             signedIn = signedIn,
                             onOpenAccount = onOpenAccount,
+                            onOpenCourier = onOpenCourier,
                         )
                     }
                 }
@@ -115,6 +120,7 @@ private fun BusinessList(
     onOpenDiagnostics: (() -> Unit)?,
     signedIn: Boolean,
     onOpenAccount: () -> Unit,
+    onOpenCourier: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -138,6 +144,8 @@ private fun BusinessList(
                 }
             }
         }
+        // Primero qué se quiere hacer (llevar algo de un lugar a otro), después dónde comer (como la web).
+        item { CourierEntryCard(onClick = onOpenCourier) }
         state.refreshFailed?.let { error ->
             item { Text(text = errorMessage(error), color = MaterialTheme.colorScheme.error) }
         }
@@ -175,7 +183,6 @@ private fun BusinessList(
 }
 
 private val LOGO_SIZE = 72.dp
-private val LOGO_SHAPE = RoundedCornerShape(16.dp)
 private const val CLOSED_ALPHA = 0.45f
 
 /** Gris para el logo de un negocio cerrado: es la señal grande de «hoy no»; el chip la confirma. */
@@ -238,7 +245,7 @@ private fun BusinessCard(
 @Composable
 private fun BusinessLogo(business: BusinessCardUi) {
     val tone = if (business.closed) Modifier.alpha(CLOSED_ALPHA) else Modifier
-    val logoModifier = Modifier.size(LOGO_SIZE).clip(LOGO_SHAPE).then(tone)
+    val logoModifier = Modifier.size(LOGO_SIZE).clip(MaterialTheme.shapes.medium).then(tone)
     if (business.logoUrl != null) {
         // Decorativo a propósito: el nombre está al lado, y un contentDescription lo haría sonar dos veces.
         AsyncImage(
@@ -271,9 +278,10 @@ private fun Chip(
     warning: Boolean,
 ) {
     Surface(
-        shape = RoundedCornerShape(50),
-        color =
-            if (warning) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        shape = CircleShape,
+        color = if (warning) TindivoColors.warningContainer else MaterialTheme.colorScheme.secondaryContainer,
+        contentColor =
+            if (warning) TindivoColors.onWarningContainer else MaterialTheme.colorScheme.onSecondaryContainer,
     ) {
         Text(
             text = text,

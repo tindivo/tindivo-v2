@@ -64,4 +64,22 @@ object TindivoIcons {
                 "M19,19h-4v-4h4V19z",
         )
     }
+
+    /** Círculo con signo de admiración: algo salió mal ([ErrorState]). */
+    val ErrorOutline: ImageVector by lazy {
+        icon(
+            "ErrorOutline",
+            "M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 " +
+                "11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z",
+        )
+    }
+
+    /** Bandeja vacía: todavía no hay nada que mostrar ([EmptyState]). */
+    val Inbox: ImageVector by lazy {
+        icon(
+            "Inbox",
+            "M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 " +
+                "1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z",
+        )
+    }
 }

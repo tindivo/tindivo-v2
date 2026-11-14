@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.addresses
 
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.feature.checkout.sessionJwt
+import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -127,7 +128,19 @@ internal class AddressListViewModelTest : AddressHarness() {
             val vm = viewModel()
 
             assertEquals(AddressListUiState.LoggedOut, vm.settled())
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
             assertEquals(1, store.signOutCalls)
+        }
+
+    @Test
+    fun `un 401 de A cuyo cierre llega con B ya en la sesion no cierra la de B`() =
+        runTest {
+            server.enqueue(problem(401, "unauthorized"))
+            store.beforeSignOut = { store.switchTo("user-2") }
+
+            assertEquals(AddressListUiState.LoggedOut, viewModel().settled())
+            assertEquals(0, store.signOutCalls)
+            assertEquals(SessionState.SignedIn("user-2"), store.state.value)
         }
 
     @Test

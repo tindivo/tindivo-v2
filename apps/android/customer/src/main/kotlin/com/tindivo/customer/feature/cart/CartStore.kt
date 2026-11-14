@@ -81,6 +81,27 @@ class CartStore(
     }
 
     /**
+     * Vacía la bolsa solo si [stillValid] se cumple DENTRO de la escritura (con el estado real, no con uno leído antes)
+     * y, con [fingerprint], solo si la vigente es la bolsa de esa huella (no una cambiada después). Devuelve si la vació.
+     */
+    suspend fun clearIf(
+        fingerprint: String? = null,
+        stillValid: () -> Boolean,
+    ): Boolean {
+        var cleared = false
+        store.updateData { current ->
+            val same = fingerprint == null || current?.toCartOrNull()?.fingerprint() == fingerprint
+            if (same && stillValid()) {
+                cleared = true
+                null
+            } else {
+                current
+            }
+        }
+        return cleared
+    }
+
+    /**
      * Reserva la bolsa de huella [fingerprint] para [accountId] justo antes de enviar su pedido. Una bolsa con la que
      * una cuenta intentó enviar no pasa a otra: no hay «liberar», porque perderla cuesta volver a llenarla y un pedido
      * duplicado cuesta dinero. Editar la bolsa CONSERVA la reserva (deshacer una edición no libera la bolsa); solo
