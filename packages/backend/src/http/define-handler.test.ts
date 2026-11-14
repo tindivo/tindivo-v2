@@ -43,8 +43,9 @@ function makeDeps(options: { roles?: Actor['roles']; ids?: string[] } = {}) {
     dataRetention: {
       purgeBatch: async () => 0,
       listDueFileRows: async () => [],
-      precheckFileRow: async () => ({ status: 'not_found', token: null, objects: [] }),
-      finishFileRow: async () => 'not_found',
+      applyFileRow: async () => 'not_found',
+      listPendingTombstones: async () => [],
+      markTombstoneDeleted: async () => undefined,
     },
     retention: {
       listDueAccounts: async () => [],

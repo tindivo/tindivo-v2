@@ -7,7 +7,8 @@ import {
   FILE_ROW_OUTCOMES,
   type FileCategory,
   type FileRowOutcome,
-  type FileRowPrecheck,
+  type PendingTombstone,
+  type TombstoneCursor,
 } from '../application/data-retention-ports'
 
 interface RpcError {
@@ -40,38 +41,30 @@ const BATCH_RPC: Record<BatchCategory, string> = {
   phone_assignments: 'purge_old_phone_assignments',
 }
 
-/** Las tres funciones de cada categoría con archivo (0284). */
-const FILE_RPC: Record<
-  FileCategory,
-  { list: string; precheck: string; finish: string; id: string }
-> = {
+/** Las dos funciones de cada categoría con archivo (0284, 0285). */
+const FILE_RPC: Record<FileCategory, { list: string; apply: string; id: string }> = {
   reports: {
     list: 'list_report_retention_due',
-    precheck: 'report_retention_precheck',
-    finish: 'finish_report_retention',
+    apply: 'report_retention_apply',
     id: 'p_report_id',
   },
   fraud_coverage_claims: {
     list: 'list_fraud_claim_retention_due',
-    precheck: 'fraud_claim_retention_precheck',
-    finish: 'finish_fraud_claim_retention',
+    apply: 'fraud_claim_retention_apply',
     id: 'p_claim_id',
   },
 }
 
 const CountSchema = z.number().int().nonnegative()
-const DueRowsSchema = z.array(
+const DueRowsSchema = z.array(z.object({ row_id: z.guid() }))
+const OutcomeSchema = z.enum(FILE_ROW_OUTCOMES)
+const TombstonesSchema = z.array(
   z.object({
-    row_id: z.guid(),
-    objects: z.array(z.object({ bucket: z.string().min(1), path: z.string().min(1) })),
+    bucket: z.string().min(1),
+    path: z.string().min(1),
+    source_table: z.enum(['reports', 'fraud_coverage_claims']),
   }),
 )
-const PrecheckSchema = z.object({
-  status: z.enum(['ok', 'not_due', 'not_found']),
-  token: z.guid().nullable(),
-  objects: z.array(z.object({ bucket: z.string().min(1), path: z.string().min(1) })),
-})
-const OutcomeSchema = z.enum(FILE_ROW_OUTCOMES)
 
 /** Llama a las funciones de la 0284 con el cliente service-role. Único sitio del módulo con SDK (DES-2). */
 export class SupabaseDataRetentionRepository implements DataRetentionRepository {
@@ -97,30 +90,35 @@ export class SupabaseDataRetentionRepository implements DataRetentionRepository 
       ...(afterId ? { p_after_id: afterId } : {}),
     })
     if (error) throw new Error(`No se pudo listar lo vencido de ${category}: ${error.message}`)
-    return DueRowsSchema.parse(data ?? []).map((row) => ({
-      rowId: row.row_id,
-      objects: row.objects,
+    return DueRowsSchema.parse(data ?? []).map((row) => ({ rowId: row.row_id }))
+  }
+
+  async applyFileRow(category: FileCategory, rowId: string): Promise<FileRowOutcome> {
+    const rpc = FILE_RPC[category]
+    const { data, error } = await this.client().rpc(rpc.apply, { [rpc.id]: rowId })
+    if (error)
+      throw new Error(`No se pudo aplicar el plazo a la fila de ${category}: ${error.message}`)
+    return OutcomeSchema.parse(data)
+  }
+
+  async listPendingTombstones(limit: number, after?: TombstoneCursor): Promise<PendingTombstone[]> {
+    const { data, error } = await this.client().rpc('retention_pending_tombstones', {
+      p_limit: limit,
+      ...(after ? { p_after_path: after.path, p_after_bucket: after.bucket } : {}),
+    })
+    if (error) throw new Error(`No se pudo listar las lápidas de Storage: ${error.message}`)
+    return TombstonesSchema.parse(data ?? []).map((row) => ({
+      bucket: row.bucket,
+      path: row.path,
+      source: row.source_table,
     }))
   }
 
-  async precheckFileRow(category: FileCategory, rowId: string): Promise<FileRowPrecheck> {
-    const rpc = FILE_RPC[category]
-    const { data, error } = await this.client().rpc(rpc.precheck, { [rpc.id]: rowId })
-    if (error) throw new Error(`No se pudo comprobar la fila de ${category}: ${error.message}`)
-    return PrecheckSchema.parse(data)
-  }
-
-  async finishFileRow(
-    category: FileCategory,
-    rowId: string,
-    token: string | null,
-  ): Promise<FileRowOutcome> {
-    const rpc = FILE_RPC[category]
-    const { data, error } = await this.client().rpc(rpc.finish, {
-      [rpc.id]: rowId,
-      ...(token ? { p_token: token } : {}),
+  async markTombstoneDeleted(bucket: string, path: string): Promise<void> {
+    const { error } = await this.client().rpc('retention_tombstone_done', {
+      p_bucket: bucket,
+      p_path: path,
     })
-    if (error) throw new Error(`No se pudo cerrar la fila de ${category}: ${error.message}`)
-    return OutcomeSchema.parse(data)
+    if (error) throw new Error(`No se pudo marcar la lápida como borrada: ${error.message}`)
   }
 }

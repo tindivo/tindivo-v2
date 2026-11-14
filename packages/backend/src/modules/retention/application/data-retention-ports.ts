@@ -1,5 +1,3 @@
-import type { ProofObject } from './ports'
-
 /**
  * Categorías que la base purga o anonimiza por lotes, sin archivos de por medio (migración
  * 0284). Cada lote devuelve cuántas filas tocó; la base pone el tope y el plazo.
@@ -25,53 +23,48 @@ export type FileCategory = (typeof FILE_CATEGORIES)[number]
 
 export type RetentionCategory = BatchCategory | FileCategory
 
-/** Una fila vencida y los archivos que solo ella usa (los que hay que borrar antes de cerrarla). */
+/** Una fila vencida con imagen o datos por anonimizar. Es informativa: la base la revalida al aplicarla. */
 export interface DueFileRow {
   rowId: string
-  objects: ProofObject[]
 }
 
 /**
- * Lo que dice la base antes de tocar Storage, con la fila bloqueada: si `status` no es `ok`, no se
- * borra nada. `objects` son los únicos archivos que el job puede borrar (la lista de
- * `listDueFileRows` es solo informativa) y `token` identifica la marca de borrado que los protege.
- */
-export interface FileRowPrecheck {
-  status: 'ok' | 'not_due' | 'not_found'
-  token: string | null
-  objects: ProofObject[]
-}
-
-/**
- * Cómo terminó una fila con archivo:
- * - `anonymized`: datos y referencia anulados.
+ * Cómo terminó una fila con archivo (una sola transacción en la base, con la fila bloqueada):
+ * - `anonymized`: datos y referencia anulados; si la imagen era solo de esa fila, ya tiene lápida.
  * - `ref_kept`: anonimizada, pero la evidencia es una URL que la purga no controla y se conserva.
- * - `not_due` / `not_found`: la fila cambió entre la lista y el cierre; no se tocó.
- * - `object_remains`: su archivo sigue en Storage; no se tocó nada.
- * - `stale`: la marca que autorizó el borrado ya no vale; no se tocó nada.
+ * - `not_due` / `not_found`: la fila cambió entre la lista y la transacción (se reabrió, ya estaba
+ *   anonimizada o se borró): no se tocó. No es un fallo.
  */
-export const FILE_ROW_OUTCOMES = [
-  'anonymized',
-  'ref_kept',
-  'not_due',
-  'not_found',
-  'object_remains',
-  'stale',
-] as const
+export const FILE_ROW_OUTCOMES = ['anonymized', 'ref_kept', 'not_due', 'not_found'] as const
 export type FileRowOutcome = (typeof FILE_ROW_OUTCOMES)[number]
 
-/** Las funciones de la base que aplican los plazos de conservación (migración 0284). */
+/** Una ruta con lápida cuyo archivo aún no se borró de Storage. */
+export interface PendingTombstone {
+  bucket: string
+  path: string
+  /** La categoría cuya fila soltó la referencia. */
+  source: FileCategory
+}
+
+/** Posición desde la que sigue la lista de lápidas: la última ya vista. */
+export interface TombstoneCursor {
+  bucket: string
+  path: string
+}
+
+/**
+ * Las funciones de la base que aplican los plazos de conservación (migración 0284). Primero la base
+ * (referencia fuera y lápida, en una transacción); Storage se borra después desde la lápida.
+ */
 export interface DataRetentionRepository {
   /** Purga o anonimiza un lote vencido de la categoría. Devuelve cuántas filas tocó (0 a `limit`). */
   purgeBatch(category: BatchCategory, limit: number): Promise<number>
   /** Filas vencidas en orden de id, solo las que vienen DESPUÉS de `afterId`. Como mucho `limit`. */
   listDueFileRows(category: FileCategory, limit: number, afterId?: string): Promise<DueFileRow[]>
-  /** Se llama antes de tocar Storage: si no es `ok`, no se borra ningún archivo. */
-  precheckFileRow(category: FileCategory, rowId: string): Promise<FileRowPrecheck>
-  /** Anonimiza la fila; la base se niega (`object_remains`, `stale`) si su archivo aún existe o la marca no vale. */
-  finishFileRow(
-    category: FileCategory,
-    rowId: string,
-    token: string | null,
-  ): Promise<FileRowOutcome>
+  /** Revalida la fila bloqueada y, si sigue vencida, la anonimiza y deja la lápida de su imagen. */
+  applyFileRow(category: FileCategory, rowId: string): Promise<FileRowOutcome>
+  /** Lápidas pendientes de borrar en Storage, en orden estable, solo las que vienen DESPUÉS del cursor. */
+  listPendingTombstones(limit: number, after?: TombstoneCursor): Promise<PendingTombstone[]>
+  /** Marca la lápida como borrada, después de que Storage confirmó (o el objeto ya no existía). */
+  markTombstoneDeleted(bucket: string, path: string): Promise<void>
 }

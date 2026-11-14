@@ -15,6 +15,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
 import {
   applyRetentionPolicy,
+  type FileCategory,
   type RetentionSummary,
   SupabaseDataRetentionRepository,
   SupabaseProofStorage,
@@ -58,21 +59,20 @@ const FUNCIONES = [
   'anonymize_old_customer_incidents',
   'retention_report_due',
   'list_report_retention_due',
-  'report_retention_precheck',
-  'finish_report_retention',
+  'report_retention_apply',
   'retention_cash_cutoff',
   'anonymize_old_cash_settlement_notes',
   'retention_fraud_claim_due',
   'list_fraud_claim_retention_due',
-  'fraud_claim_retention_precheck',
-  'finish_fraud_claim_retention',
+  'fraud_claim_retention_apply',
   'retention_window_start',
   'retention_lock_path',
-  'retention_prepare_delete',
-  'retention_mark_valid',
-  'retention_release_mark',
+  'retention_ref_in_use',
+  'retention_tombstone_ref',
+  'retention_pending_tombstones',
+  'retention_tombstone_done',
   'retention_guard_ref',
-  'retention_guard_row',
+  'retention_created_at_immutable',
   'anonymize_old_customer_strikes',
   'purge_old_address_directory',
   'purge_old_phone_assignments',
@@ -86,13 +86,13 @@ const LLAMABLES: [string, Record<string, unknown>][] = [
   ['purge_old_phone_restrictions', { p_limit: 1 }],
   ['anonymize_old_customer_incidents', { p_limit: 1 }],
   ['list_report_retention_due', { p_limit: 1 }],
-  ['report_retention_precheck', { p_report_id: '00000000-0000-4000-8000-000000000000' }],
-  ['finish_report_retention', { p_report_id: '00000000-0000-4000-8000-000000000000' }],
+  ['report_retention_apply', { p_report_id: '00000000-0000-4000-8000-000000000000' }],
+  ['retention_pending_tombstones', { p_limit: 1 }],
+  ['retention_tombstone_done', { p_bucket: 'payment-proofs', p_path: 'x' }],
   ['retention_cash_cutoff', {}],
   ['anonymize_old_cash_settlement_notes', { p_limit: 1 }],
   ['list_fraud_claim_retention_due', { p_limit: 1 }],
-  ['fraud_claim_retention_precheck', { p_claim_id: '00000000-0000-4000-8000-000000000000' }],
-  ['finish_fraud_claim_retention', { p_claim_id: '00000000-0000-4000-8000-000000000000' }],
+  ['fraud_claim_retention_apply', { p_claim_id: '00000000-0000-4000-8000-000000000000' }],
   ['retention_window_start', { p_key: 'strikesMonths' }],
   ['anonymize_old_customer_strikes', { p_limit: 1 }],
   ['purge_old_address_directory', { p_limit: 1 }],
@@ -371,6 +371,7 @@ afterAll(async () => {
        on conflict (key) do update set value = excluded.value;`
     : `delete from public.app_settings where key = 'data_retention';`
   sql(restaurar)
+  sql(`delete from public.retention_storage_tombstones where path like 'retencion-${runId}/%';`)
   await db.storage
     .from('payment-proofs')
     .remove([archivos.propio, archivos.compartido, archivos.vecino])
@@ -552,29 +553,20 @@ describe('plazos de conservación (0284), primera corrida', () => {
     }
   })
 
-  it('finish_report_retention se niega con un reporte abierto o inexistente', () => {
-    expect(sql(`select public.finish_report_retention('${ids.rep_abierto}');`)).toBe('not_due')
+  it('report_retention_apply no toca un reporte abierto y responde not_found a uno inexistente', () => {
+    expect(sql(`select public.report_retention_apply('${ids.rep_abierto}');`)).toBe('not_due')
     expect(
-      sql(`select public.report_retention_precheck('${ids.rep_abierto}')::jsonb ->> 'status';`),
-    ).toBe('not_due')
-    expect(
-      sql(`select public.finish_report_retention('00000000-0000-4000-8000-000000000000');`),
+      sql(`select public.report_retention_apply('00000000-0000-4000-8000-000000000000');`),
     ).toBe('not_found')
   })
 
-  it('finish_report_retention no anonimiza mientras el archivo propio siga en Storage', async () => {
-    const path = `retencion-${runId}/sigue.png`
-    await subir(path)
-    try {
-      const id =
-        ins(`insert into public.reports (type, status, description, evidence_url, created_at, resolved_at)
-        values ('no_show', 'resolved', '${tag('sigue')}', '${path}', ${ANTIGUA}, ${VENCIDA('reportsMonths')})
-        returning id;`)
-      ids.rep_sigue = id
-      expect(sql(`select public.finish_report_retention('${id}');`)).toBe('object_remains')
-      expect(sql(`select description from public.reports where id = '${id}';`)).toBe(tag('sigue'))
-    } finally {
-      await db.storage.from('payment-proofs').remove([path])
+  it('lápidas: la imagen propia dejó la suya (ya borrada); la compartida, la perdida y la URL no', () => {
+    const tumba = (path: string) =>
+      sql(`select coalesce(deleted_at is not null, false)::text from public.retention_storage_tombstones
+            where path = '${path}';`)
+    expect(tumba(archivos.propio)).toBe('true')
+    for (const path of [archivos.compartido, `retencion-${runId}/no-existe.png`]) {
+      expect(tumba(path), path).toBe('')
     }
   })
 })
@@ -726,50 +718,61 @@ function psqlAsync(
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /**
- * CAX-001 (Codex R1): el borrado de Storage ocurre fuera de la base, así que la exclusión es una MARCA
- * puesta bajo candado de fila y de ruta por el precheck. Dos conexiones reales se intercalan:
- *  · A: precheck (marca) y sostiene su transacción 3 s; B intenta adoptar la ruta a mitad: B espera
- *    el candado y, al soltarse, el trigger la rechaza (`retention_pending_delete`);
- *  · B adopta primero y sostiene su transacción; A (precheck) espera y, al soltarse, ve la ruta
- *    compartida: no marca nada, no devuelve objetos y la imagen se conserva.
+ * CAX-001 (Codex R1 y R2): base primero, Storage después, con lápida. Dos conexiones psql REALES se
+ * intercalan sobre la misma fila y la misma ruta:
+ *  · A cierra la fila (`*_retention_apply`: referencia fuera + lápida, en una transacción) y la
+ *    sostiene abierta unos segundos; B intenta adoptar la ruta a mitad y es rechazada al soltarse;
+ *  · desde que A confirma, la lápida es permanente: ni pasar el tiempo ni tardar el borrado en
+ *    Storage dejan que otra fila adopte la ruta (no hay caducidad), y el job borra después;
+ *  · B adopta primero: A espera, ve la ruta compartida, no deja lápida y la imagen se conserva;
+ *  · la reapertura la serializa el `FOR UPDATE`, antes y después;
+ *  · sustituir la evidencia por NULL o por una URL externa, intercalado con el cierre;
+ *  · un fallo de Storage deja la lápida pendiente y la corrida siguiente la reintenta.
  */
+const tumbas = (path: string) =>
+  sql(
+    `select count(*) from public.retention_storage_tombstones where path = '${path}' and deleted_at is null;`,
+  )
+const tumbasTotal = (path: string) =>
+  sql(`select count(*) from public.retention_storage_tombstones where path = '${path}';`)
+
 describe.each([
   {
     nombre: 'reports (0284)',
     source: 'reports',
     tabla: 'reports',
-    precheck: 'report_retention_precheck',
-    finish: 'finish_report_retention',
+    apply: 'report_retention_apply',
     abrir: (id: string) => `update public.reports set status = 'open' where id = '${id}';`,
-    sembrar: (path: string, k: string) =>
-      ins(`insert into public.reports (type, status, description, evidence_url, created_at, resolved_at)
-        values ('no_show', 'resolved', '${tag(`carrera-${k}`)}', '${path}', ${ANTIGUA}, ${VENCIDA('reportsMonths')})
+    sembrar: (path: string | null, k: string) =>
+      ins(`insert into public.reports (type, status, description, customer_phone, evidence_url, created_at, resolved_at)
+        values ('no_show', 'resolved', '${tag(`carrera-${k}`)}', '${telefono(9)}', ${path ? `'${path}'` : 'null'},
+                ${ANTIGUA}, ${VENCIDA('reportsMonths')})
         returning id;`),
   },
   {
     nombre: 'fraud_coverage_claims (0285, dinero)',
     source: 'fraud_coverage_claims',
     tabla: 'fraud_coverage_claims',
-    precheck: 'fraud_claim_retention_precheck',
-    finish: 'finish_fraud_claim_retention',
+    apply: 'fraud_claim_retention_apply',
     abrir: (id: string) =>
       `update public.fraud_coverage_claims set status = 'pending' where id = '${id}';`,
-    sembrar: (path: string, k: string) =>
+    sembrar: (path: string | null, k: string) =>
       ins(`insert into public.fraud_coverage_claims
           (order_id, business_id, amount, reason, evidence_url, status, resolution_note, created_at)
         values ('${pedidoCarrera?.orderId}', '${pedidoCarrera?.businessId}', 12.50, '${tag(`carrera-${k}`)}',
-          '${path}', 'approved', '${tag(`nota-${k}`)}', ${CAJA_VENCIDA})
+          ${path ? `'${path}'` : 'null'}, 'approved', '${tag(`nota-${k}`)}', ${CAJA_VENCIDA})
         returning id;`),
   },
-])('CAX-001 · carrera entre el precheck y la adopción de la ruta: $nombre', (caso) => {
+])('CAX-001 · lápida de Storage: $nombre', (caso) => {
   const creados: { reportes: string[]; reclamos: string[]; archivos: string[] } = {
     reportes: [],
     reclamos: [],
     archivos: [],
   }
+  const reclamos = caso.source === 'fraud_coverage_claims'
 
   beforeAll(async () => {
-    if (caso.source === 'fraud_coverage_claims') pedidoCarrera = await seedContraentregaOrder()
+    if (reclamos) pedidoCarrera = await seedContraentregaOrder()
   })
 
   afterAll(async () => {
@@ -783,166 +786,357 @@ describe.each([
         `delete from public.fraud_coverage_claims where id in (${creados.reclamos.map((i) => `'${i}'`).join(',')});`,
       )
     }
-    sql(
-      `delete from public.retention_storage_marks where path like 'retencion-${runId}/carrera-%';`,
-    )
+    sql(`delete from public.retention_storage_tombstones where path like 'retencion-${runId}/%';`)
     if (creados.archivos.length) await db.storage.from('payment-proofs').remove(creados.archivos)
     if (pedidoCarrera) await cleanup(pedidoCarrera)
     pedidoCarrera = undefined
   })
 
   /** Fila vencida con su archivo en Storage + un reporte abierto que intentará adoptar la ruta. */
-  async function escenario(k: string) {
+  async function escenario(k: string, conArchivo = true) {
     const path = `retencion-${runId}/carrera-${caso.source}-${k}.png`
-    await subir(path)
-    creados.archivos.push(path)
+    if (conArchivo) {
+      await subir(path)
+      creados.archivos.push(path)
+    }
     const vencida = caso.sembrar(path, k)
-    ;(caso.source === 'reports' ? creados.reportes : creados.reclamos).push(vencida)
+    ;(reclamos ? creados.reclamos : creados.reportes).push(vencida)
     const adoptante = ins(`insert into public.reports (type, status, description, created_at)
       values ('no_show', 'open', '${tag(`adopta-${k}`)}', now()) returning id;`)
     creados.reportes.push(adoptante)
     const adoptar = `update public.reports set evidence_url = '${path}' where id = '${adoptante}';`
     return { path, vencida, adoptante, adoptar }
   }
+  const evidencia = (id: string, tabla: string = caso.tabla) =>
+    sql(`select coalesce(evidence_url, '∅') from public.${tabla} where id = '${id}';`)
+  const evidenciaAdoptante = (id: string) => evidencia(id, 'reports')
 
-  it('A marca primero: la adopción espera el candado y el trigger la rechaza; se borra solo lo del precheck', async () => {
+  it('A confirma primero: la adopción espera, es rechazada; la lápida es permanente y el job borra después', async () => {
     const { path, vencida, adoptante, adoptar } = await escenario('a')
+    const antes = fotoDelDinero()
     const a = psqlAsync(
-      `begin; select public.${caso.precheck}('${vencida}'); select pg_sleep(3); commit;`,
+      `begin; select public.${caso.apply}('${vencida}'); select pg_sleep(5); commit;`,
     )
-    await pausa(1000)
+    await pausa(2500)
     const b = await psqlAsync(adoptar)
     const ra = await a
 
     expect(ra.code, ra.err).toBe(0)
-    const precheck = JSON.parse(ra.out.split('\n').find((l) => l.startsWith('{')) ?? '{}') as {
-      status: string
-      token: string | null
-      objects: { bucket: string; path: string }[]
-    }
-    expect(precheck.status).toBe('ok')
-    expect(precheck.objects).toEqual([{ bucket: 'payment-proofs', path }])
+    expect(ra.out.split('\n')).toContain('anonymized')
     // B esperó el candado de A (la intercalación fue real) y luego fue rechazada.
     expect(b.code).not.toBe(0)
-    expect(b.err).toContain('retention_pending_delete')
+    expect(b.err).toContain('retention_tombstoned_path')
     expect(b.ms).toBeGreaterThan(1500)
-    expect(sql(`select evidence_url is null from public.reports where id = '${adoptante}';`)).toBe(
-      't',
-    )
+    expect(evidenciaAdoptante(adoptante)).toBe('∅')
+    // A confirmó y Storage aún no se tocó: la fila ya no tiene la ruta, la lápida está pendiente
+    // y el archivo sigue ahí. ESTA es la ventana que antes caducaba.
+    expect(evidencia(vencida)).toBe('∅')
+    expect(tumbas(path)).toBe('1')
+    expect(await existe(path)).toBe(true)
 
-    // El job borra lo que dijo el precheck y cierra con el token.
-    await db.storage.from('payment-proofs').remove(precheck.objects.map((o) => o.path))
+    // Pasa el tiempo (una marca de 1 h ya habría caducado): la ruta sigue sin poder adoptarse.
+    sql(
+      `update public.retention_storage_tombstones set created_at = now() - interval '3 days' where path = '${path}';`,
+    )
+    const b2 = await psqlAsync(adoptar)
+    expect(b2.code).not.toBe(0)
+    expect(b2.err).toContain('retention_tombstoned_path')
+    expect(await existe(path)).toBe(true)
+
+    // El job borra desde la lápida y la marca.
+    const resumen = await correr()
+    expect(resumen[caso.source as FileCategory].failed).toBe(0)
     expect(await existe(path)).toBe(false)
-    expect(sql(`select public.${caso.finish}('${vencida}', '${precheck.token}');`)).toBe(
-      'anonymized',
-    )
-    expect(sql(`select count(*) from public.retention_storage_marks where path = '${path}';`)).toBe(
-      '0',
-    )
+    expect(tumbas(path)).toBe('0')
+    expect(tumbasTotal(path)).toBe('1')
+    // Ni siquiera borrada la imagen se puede volver a adoptar la ruta.
+    const b3 = await psqlAsync(adoptar)
+    expect(b3.code).not.toBe(0)
+    expect(evidenciaAdoptante(adoptante)).toBe('∅')
+    // Ningún importe, estado ni fecha de negocio cambió.
+    expect(fotoDelDinero()).toBe(antes)
   })
 
-  it('la adopción gana: el precheck espera, ve la ruta compartida, no marca ni lista nada y la imagen se conserva', async () => {
+  it('la adopción gana: A espera, ve la ruta compartida, no deja lápida y la imagen se conserva', async () => {
     const { path, vencida, adoptante, adoptar } = await escenario('b')
-    const b = psqlAsync(`begin; ${adoptar} select pg_sleep(3); commit;`)
-    await pausa(1000)
-    const a = await psqlAsync(`select public.${caso.precheck}('${vencida}');`)
+    const b = psqlAsync(`begin; ${adoptar} select pg_sleep(5); commit;`)
+    await pausa(2500)
+    const a = await psqlAsync(`select public.${caso.apply}('${vencida}');`)
     const rb = await b
 
     expect(rb.code, rb.err).toBe(0)
     expect(a.code, a.err).toBe(0)
     expect(a.ms).toBeGreaterThan(1500)
-    const precheck = JSON.parse(a.out) as {
-      status: string
-      token: string | null
-      objects: unknown[]
-    }
-    expect(precheck).toEqual({ status: 'ok', token: null, objects: [] })
-    expect(sql(`select count(*) from public.retention_storage_marks where path = '${path}';`)).toBe(
-      '0',
-    )
-    // El job no borra nada; el cierre solo suelta la referencia de la fila vencida.
-    expect(sql(`select public.${caso.finish}('${vencida}');`)).toBe('anonymized')
+    expect(a.out).toBe('anonymized')
+    expect(tumbasTotal(path)).toBe('0')
+    await correr()
     expect(await existe(path)).toBe(true)
-    expect(sql(`select evidence_url from public.reports where id = '${adoptante}';`)).toBe(path)
+    expect(evidenciaAdoptante(adoptante)).toBe(path)
+    expect(evidencia(vencida)).toBe('∅')
   })
 
-  it('una fila marcada no se reabre mientras se borra su imagen (A bloquea la fila; B espera y es rechazada)', async () => {
+  it('reapertura ANTES: B reabre y A espera el candado de fila; al soltarse la fila ya no vence y no se toca', async () => {
     const { path, vencida } = await escenario('c')
+    const b = psqlAsync(`begin; ${caso.abrir(vencida)} select pg_sleep(5); commit;`)
+    await pausa(2500)
+    const a = await psqlAsync(`select public.${caso.apply}('${vencida}');`)
+    const rb = await b
+    expect(rb.code, rb.err).toBe(0)
+    expect(a.code, a.err).toBe(0)
+    expect(a.ms).toBeGreaterThan(1500)
+    expect(a.out).toBe('not_due')
+    expect(tumbasTotal(path)).toBe('0')
+    await correr()
+    expect(evidencia(vencida)).toBe(path)
+    expect(await existe(path)).toBe(true)
+  })
+
+  it('reapertura DESPUÉS: A confirma, B espera la fila y reabre; la fila ya no tiene imagen (el efecto querido)', async () => {
+    const { path, vencida } = await escenario('d')
     const a = psqlAsync(
-      `begin; select public.${caso.precheck}('${vencida}'); select pg_sleep(3); commit;`,
+      `begin; select public.${caso.apply}('${vencida}'); select pg_sleep(5); commit;`,
     )
-    await pausa(1000)
+    await pausa(2500)
     const b = await psqlAsync(caso.abrir(vencida))
     const ra = await a
     expect(ra.code, ra.err).toBe(0)
-    expect(b.code).not.toBe(0)
-    expect(b.err).toContain('retention_pending_delete')
+    expect(b.code, b.err).toBe(0)
     expect(b.ms).toBeGreaterThan(1500)
-    expect(sql(`select count(*) from public.retention_storage_marks where path = '${path}';`)).toBe(
-      '1',
-    )
+    expect(evidencia(vencida)).toBe('∅')
+    expect(tumbas(path)).toBe('1')
+    await correr()
+    expect(await existe(path)).toBe(false)
+    expect(tumbas(path)).toBe('0')
   })
 
-  it('con una marca vencida (más de 1 h) la ruta vuelve a poder adoptarse', async () => {
-    const { path, vencida, adoptante, adoptar } = await escenario('d')
-    sql(`select public.${caso.precheck}('${vencida}');`)
-    sql(
-      `update public.retention_storage_marks set created_at = now() - interval '2 hours' where path = '${path}';`,
-    )
-    const r = await psqlAsync(adoptar)
-    expect(r.code, r.err).toBe(0)
-    expect(sql(`select evidence_url from public.reports where id = '${adoptante}';`)).toBe(path)
-  })
-
-  it('sustitución: si la fila cambia su evidencia después del precheck, el cierre responde stale', async () => {
-    const { vencida } = await escenario('f')
-    const precheck = JSON.parse(sql(`select public.${caso.precheck}('${vencida}');`)) as {
-      token: string
+  it('sustitución intercalada: B cambia la evidencia a una URL externa o a NULL mientras A cierra; nada se pierde por error', async () => {
+    for (const [k, nuevo] of [
+      ['g', "'https://ejemplo.invalid/otra.png'"],
+      ['h', 'null'],
+    ] as const) {
+      const { path, vencida } = await escenario(k)
+      const a = psqlAsync(
+        `begin; select public.${caso.apply}('${vencida}'); select pg_sleep(5); commit;`,
+      )
+      await pausa(2500)
+      const b = await psqlAsync(
+        `update public.${caso.tabla} set evidence_url = ${nuevo} where id = '${vencida}';`,
+      )
+      const ra = await a
+      expect(ra.code, ra.err).toBe(0)
+      expect(b.code, b.err).toBe(0)
+      expect(b.ms).toBeGreaterThan(1500)
+      // A cerró primero: la lápida de la ruta original existe y la sustitución de B se aplica
+      // sobre una fila ya anonimizada. El borrado es el de la ruta ORIGINAL y nada más.
+      expect(tumbas(path)).toBe('1')
+      await correr()
+      expect(await existe(path)).toBe(false)
+      expect(evidencia(vencida)).toBe(k === 'g' ? 'https://ejemplo.invalid/otra.png' : '∅')
     }
-    const otra = `retencion-${runId}/carrera-${caso.source}-f-otra.png`
-    sql(`update public.${caso.tabla} set evidence_url = '${otra}' where id = '${vencida}';`)
-    expect(sql(`select public.${caso.finish}('${vencida}', '${precheck.token}');`)).toBe('stale')
-    expect(sql(`select evidence_url from public.${caso.tabla} where id = '${vencida}';`)).toBe(otra)
   })
 
-  it('el cierre con un token que ya no vale responde stale y no anonimiza', async () => {
-    const { path, vencida } = await escenario('e')
-    const precheck = JSON.parse(sql(`select public.${caso.precheck}('${vencida}');`)) as {
-      token: string
-      objects: { path: string }[]
+  it('sustitución ANTES del cierre: la ruta original ya no es de la fila; no se borra nada ajeno', async () => {
+    for (const [k, nuevo, esperado] of [
+      ['i', "'https://ejemplo.invalid/otra.png'", 'ref_kept'],
+      ['j', 'null', 'anonymized'],
+    ] as const) {
+      const { path, vencida } = await escenario(k)
+      sql(`update public.${caso.tabla} set evidence_url = ${nuevo} where id = '${vencida}';`)
+      expect(sql(`select public.${caso.apply}('${vencida}');`)).toBe(esperado)
+      // La fila ya no apuntaba a la ruta: no hay lápida y el archivo queda (huérfano, no perdido).
+      expect(tumbasTotal(path)).toBe('0')
+      await correr()
+      expect(await existe(path)).toBe(true)
     }
-    await db.storage.from('payment-proofs').remove(precheck.objects.map((o) => o.path))
-    sql(`delete from public.retention_storage_marks where path = '${path}';`)
-    expect(sql(`select public.${caso.finish}('${vencida}', '${precheck.token}');`)).toBe('stale')
-    expect(
-      sql(`select evidence_url is not null from public.${caso.tabla} where id = '${vencida}';`),
-    ).toBe('t')
+  })
+
+  it('si Storage falla, la fila ya está cerrada, la lápida sigue pendiente y la ruta no se puede adoptar; el reintento la borra', async () => {
+    const { path, vencida, adoptar, adoptante } = await escenario('f')
+    const lineasFallo: string[] = []
+    const real = new SupabaseProofStorage(() => db)
+    const resumen = await applyRetentionPolicy({
+      retention: new SupabaseDataRetentionRepository(() => db),
+      storage: {
+        remove: async (bucket, paths) => {
+          if (paths.includes(path)) throw new Error('Storage caído')
+          await real.remove(bucket, paths)
+        },
+      },
+      logger: createLogger({
+        module: 'test',
+        sink: { write: (_l: LogLevel, line: string) => void lineasFallo.push(line) },
+      }),
+    })
+    expect(resumen[caso.source as FileCategory].failed).toBeGreaterThanOrEqual(1)
+    expect(lineasFallo.join('\n')).not.toContain(path)
+    expect(evidencia(vencida)).toBe('∅')
+    expect(tumbas(path)).toBe('1')
+    expect(await existe(path)).toBe(true)
+    const b = await psqlAsync(adoptar)
+    expect(b.code).not.toBe(0)
+    expect(b.err).toContain('retention_tombstoned_path')
+    expect(evidenciaAdoptante(adoptante)).toBe('∅')
+
+    const reintento = await correr()
+    expect(reintento[caso.source as FileCategory]).toMatchObject({ files: 1, failed: 0 })
+    expect(await existe(path)).toBe(false)
+    expect(tumbas(path)).toBe('0')
+    // Idempotente: una tercera corrida no encuentra nada que hacer.
+    const tercera = await correr()
+    expect(tercera[caso.source as FileCategory]).toMatchObject({ rows: 0, files: 0, failed: 0 })
+  })
+
+  it('el objeto ya no existe al borrar (otra corrida lo borró): cuenta como borrado y cierra la lápida', async () => {
+    const { path, vencida } = await escenario('k')
+    expect(sql(`select public.${caso.apply}('${vencida}');`)).toBe('anonymized')
+    await db.storage.from('payment-proofs').remove([path])
+    expect(await existe(path)).toBe(false)
+    const resumen = await correr()
+    expect(resumen[caso.source as FileCategory]).toMatchObject({ files: 1, failed: 0 })
+    expect(tumbas(path)).toBe('0')
+  })
+
+  it('el cierre se niega con una fila abierta o inexistente', () => {
+    expect(sql(`select public.${caso.apply}('00000000-0000-4000-8000-000000000000');`)).toBe(
+      'not_found',
+    )
   })
 })
 
-describe('CAX-001 · reapertura de un reporte marcado por sus fechas', () => {
-  it('mover resolved_at mientras se borra la imagen es rechazado (A bloquea la fila; B espera)', async () => {
-    const path = `retencion-${runId}/carrera-fechas.png`
+describe('CAX-001 · guardas de la lápida y de created_at', () => {
+  const path = `retencion-${runId}/guardas.png`
+  let reporte = ''
+  let reclamoId = ''
+  let pedidoGuardas: SeededOrder | undefined
+
+  beforeAll(async () => {
     await subir(path)
-    const id =
+    pedidoGuardas = await seedContraentregaOrder()
+    reporte =
       ins(`insert into public.reports (type, status, description, evidence_url, created_at, resolved_at)
-      values ('no_show', 'resolved', '${tag('carrera-fechas')}', '${path}', ${ANTIGUA}, ${VENCIDA('reportsMonths')})
+      values ('no_show', 'resolved', '${tag('guardas')}', '${path}', ${ANTIGUA}, ${VENCIDA('reportsMonths')})
       returning id;`)
-    try {
-      const a = psqlAsync(
-        `begin; select public.report_retention_precheck('${id}'); select pg_sleep(3); commit;`,
-      )
-      await pausa(1000)
-      const b = await psqlAsync(`update public.reports set resolved_at = now() where id = '${id}';`)
-      const ra = await a
-      expect(ra.code, ra.err).toBe(0)
-      expect(b.code).not.toBe(0)
-      expect(b.err).toContain('retention_pending_delete')
-    } finally {
-      sql(`delete from public.retention_storage_marks where path = '${path}';
-           delete from public.reports where id = '${id}';`)
-      await db.storage.from('payment-proofs').remove([path])
-    }
+    reclamoId = ins(`insert into public.fraud_coverage_claims
+        (order_id, business_id, amount, reason, status, created_at)
+      values ('${pedidoGuardas.orderId}', '${pedidoGuardas.businessId}', 9.90, '${tag('guardas')}',
+              'approved', ${CAJA_VENCIDA}) returning id;`)
+    expect(sql(`select public.report_retention_apply('${reporte}');`)).toBe('anonymized')
+  })
+
+  afterAll(async () => {
+    sql(`delete from public.reports where id = '${reporte}';
+         delete from public.fraud_coverage_claims where id = '${reclamoId}';
+         delete from public.retention_storage_tombstones where path = '${path}';`)
+    await db.storage.from('payment-proofs').remove([path])
+    if (pedidoGuardas) await cleanup(pedidoGuardas)
+  })
+
+  it.each([
+    [
+      'orders.comprobante_prepago_url',
+      () =>
+        `update public.orders set comprobante_prepago_url = '${path}' where id = '${pedidoGuardas?.orderId}';`,
+    ],
+    [
+      'reports.evidence_url (INSERT)',
+      () =>
+        `insert into public.reports (type, status, evidence_url) values ('no_show', 'open', '${path}');`,
+    ],
+    [
+      'reports.refund_proof_path',
+      () => `update public.reports set refund_proof_path = '${path}' where id = '${reporte}';`,
+    ],
+    [
+      'fraud_coverage_claims.evidence_url',
+      () =>
+        `update public.fraud_coverage_claims set evidence_url = '${path}' where id = '${reclamoId}';`,
+    ],
+    [
+      'fraud_coverage_claims.evidence_url (INSERT)',
+      () =>
+        `insert into public.fraud_coverage_claims (order_id, business_id, amount, reason, evidence_url, status) values ('${pedidoGuardas?.orderId}', '${pedidoGuardas?.businessId}', 1, 'x', '${path}', 'pending');`,
+    ],
+  ])('ninguna columna de evidencia adopta una ruta con lápida: %s', async (_n, consulta) => {
+    const r = await psqlAsync(consulta())
+    expect(r.code).not.toBe(0)
+    expect(r.err).toContain('retention_tombstoned_path')
+  })
+
+  it('una ruta sin lápida, una URL y NULL siguen pudiéndose asignar', () => {
+    expect(
+      sql(
+        `update public.reports set evidence_url = 'https://ejemplo.invalid/x.png' where id = '${reporte}' returning 1;`,
+      ),
+    ).toContain('1')
+    expect(
+      sql(`update public.reports set evidence_url = null where id = '${reporte}' returning 1;`),
+    ).toContain('1')
+    expect(
+      sql(
+        `update public.reports set evidence_url = 'retencion-${runId}/libre.png' where id = '${reporte}' returning 1;`,
+      ),
+    ).toContain('1')
+  })
+
+  it.each([
+    ['reports', () => reporte],
+    ['fraud_coverage_claims', () => reclamoId],
+    ['customer_incidents', () => ids.inc_vencida ?? ''],
+    ['cash_settlements', () => ids.caja_vencida ?? ''],
+  ])('created_at es inmutable en %s: cambiarlo se rechaza', async (tabla, id) => {
+    const r = await psqlAsync(
+      `update public.${tabla} set created_at = created_at + interval '1 day' where id = '${id()}';`,
+    )
+    expect(r.code).not.toBe(0)
+    expect(r.err).toContain('created_at_immutable')
+    // Escribir el mismo valor no es un cambio.
+    expect(
+      sql(`update public.${tabla} set created_at = created_at where id = '${id()}' returning 1;`),
+    ).toContain('1')
+  })
+
+  it('la lápida lista solo lo que ninguna fila usa: una ruta referenciada no se borra', async () => {
+    sql(`update public.reports set evidence_url = null where id = '${reporte}';`)
+    expect(
+      sql(`select count(*) from public.retention_pending_tombstones(100) where path = '${path}';`),
+    ).toBe('1')
+    // Una fila que la adopta saltándose la guarda (replica) la saca de la lista.
+    sql(`begin; set local session_replication_role = replica;
+         update public.reports set evidence_url = '${path}' where id = '${reporte}'; commit;`)
+    expect(
+      sql(`select count(*) from public.retention_pending_tombstones(100) where path = '${path}';`),
+    ).toBe('0')
+    sql(`update public.reports set evidence_url = null where id = '${reporte}';`)
+  })
+
+  it('la tabla de lápidas no la toca ningún rol de la API: ni service_role, ni anon, ni con sesión', async () => {
+    const { error } = await (
+      db as unknown as {
+        from(t: string): { select(c: string): PromiseLike<{ data: unknown; error: unknown }> }
+      }
+    )
+      .from('retention_storage_tombstones')
+      .select('path')
+    expect(error).not.toBeNull()
+    const anon = createClient(LOCAL_URL, LOCAL_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const r = await (
+      anon as unknown as {
+        from(t: string): { select(c: string): PromiseLike<{ data: unknown; error: unknown }> }
+      }
+    )
+      .from('retention_storage_tombstones')
+      .select('path')
+    expect(r.error).not.toBeNull()
+    expect(
+      sql(`select c.relrowsecurity || '|' || (select count(*) from pg_policy where polrelid = c.oid) || '|' ||
+                  has_table_privilege('anon', c.oid, 'select,insert,update,delete') || '|' ||
+                  has_table_privilege('authenticated', c.oid, 'select,insert,update,delete') || '|' ||
+                  has_table_privilege('service_role', c.oid, 'select,insert,update,delete')
+             from pg_class c where c.oid = 'public.retention_storage_tombstones'::regclass;`),
+    ).toBe('true|0|false|false|false')
+    expect(sql(`select to_regclass('public.retention_storage_marks') is null;`)).toBe('t')
   })
 })
 
@@ -958,21 +1152,23 @@ describe('CAX-002 · triggers efectivos y control negativo de la huella del dine
         from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_proc p on p.oid = t.tgfoid
        where not t.tgisinternal and c.relnamespace = 'public'::regnamespace and c.relname in (${TABLAS})
        order by 1;`).split('\n')
-    expect(triggers).toEqual([
+    expect([...triggers].sort()).toEqual([
       'business_charges.trg_business_charges_recalc_balance->recalc_business_balance',
       'cash_settlements.touch_cash_settlements->touch_updated_at',
+      'cash_settlements.trg_retention_created_at_cash_settlements->retention_created_at_immutable',
       'customer_incidents.trg_incident_apply_strike->apply_incident_strike',
+      'customer_incidents.trg_retention_created_at_incidents->retention_created_at_immutable',
+      'fraud_coverage_claims.trg_retention_created_at_claims->retention_created_at_immutable',
       'fraud_coverage_claims.trg_retention_guard_claims_evidence->retention_guard_ref',
-      'fraud_coverage_claims.trg_retention_guard_claims_row->retention_guard_row',
       'reports.touch_reports->touch_updated_at',
+      'reports.trg_retention_created_at_reports->retention_created_at_immutable',
       'reports.trg_retention_guard_reports_evidence->retention_guard_ref',
       'reports.trg_retention_guard_reports_refund->retention_guard_ref',
-      'reports.trg_retention_guard_reports_row->retention_guard_row',
     ])
     // Ningún trigger de retención escribe: sin INSERT/UPDATE/DELETE en el cuerpo de sus funciones.
     expect(
       sql(`select count(*) from pg_proc where pronamespace = 'public'::regnamespace
-             and proname in ('retention_guard_ref', 'retention_guard_row')
+             and proname in ('retention_guard_ref', 'retention_created_at_immutable')
              and prosrc ~* '\\m(insert\\s+into|update\\s+\\S+\\s+set|delete\\s+from)';`),
     ).toBe('0')
     // Lo que la purga dispara de verdad: touch_updated_at (solo `updated_at`) y, en cargos, el recálculo

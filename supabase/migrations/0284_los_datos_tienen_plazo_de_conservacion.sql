@@ -15,10 +15,11 @@
 --        descripción y `customer_user_id` → NULL.
 --      · `reports` cerrados (ni `open`, ni apelación pendiente/en revisión, ni devolución
 --        pendiente): teléfono, descripción, nota de resolución, `customer_user_id` y
---        evidencia → NULL. La imagen de la evidencia se borra por la API de Storage ANTES
---        de anular la referencia, salvo que otra fila la siga usando (el comprobante del
---        pedido, otra apelación, una devolución, un reclamo): entonces solo se quita la
---        referencia del reporte y el archivo se queda con quien lo usa.
+--        evidencia → NULL. Primero la base, después Storage: en UNA transacción se anula la
+--        referencia y se inscribe la ruta en una lápida (`retention_storage_tombstones`); el job
+--        borra después el archivo desde la lápida. Una guarda impide que otra fila adopte una
+--        ruta con lápida. Si otra fila usa el archivo (el comprobante del pedido, otra
+--        apelación, una devolución, un reclamo), no hay lápida: el archivo se queda con ella.
 --        `refund_proof_path` NO se toca: es el comprobante de una devolución de dinero y
 --        su CHECK lo exige mientras la devolución conste como completada.
 --   4. Restricciones del número levantadas o vencidas: 24 meses desde `lifted_at` o
@@ -382,29 +383,52 @@ $$;
 revoke execute on function public.retention_ref_shared(text, text, uuid) from public, anon, authenticated;
 grant execute on function public.retention_ref_shared(text, text, uuid) to service_role;
 
--- ── Marca de «pendiente de borrado» (CAX-001) ───────────────────────────────
--- El borrado en Storage ocurre FUERA de la base (API HTTP), así que ningún candado de fila lo
--- cubre. La garantía es otra: `retention_prepare_delete` toma, en la misma transacción que la
--- comprobación («ninguna otra fila usa la ruta»), un candado consultivo por ruta y deja una
--- marca con un token. Mientras la marca está vigente (1 hora), los triggers de abajo rechazan
--- que otra fila adopte la ruta o que la fila marcada se reabra. El job borra solo los objetos
--- que devuelve ESE precheck (nunca una lista anterior) y `finish_*` exige el token.
-create table if not exists public.retention_storage_marks (
-  path       text primary key,
-  source     text not null check (source in ('reports', 'fraud_coverage_claims')),
-  row_id     uuid not null,
-  token      uuid not null default gen_random_uuid(),
-  created_at timestamptz not null default now()
+-- ── Lápidas de Storage: la base primero, Storage después (CAX-001) ───────────
+-- El borrado en Storage ocurre FUERA de la base (API HTTP), así que ningún candado lo cubre. El
+-- diseño no depende de que Storage responda a tiempo:
+--   1. UNA transacción por fila, con la fila bloqueada (`FOR UPDATE`): se revalida que sigue
+--      vencida y, en esa misma transacción, se quita la referencia y se inscribe la ruta en
+--      `retention_storage_tombstones` (la lápida).
+--   2. Desde que esa transacción confirma, `retention_guard_ref` rechaza que CUALQUIER fila adopte
+--      una ruta con lápida, sin importar cuánto tarde el borrado: no hay marca que caduque.
+--   3. El job borra en Storage solo las rutas de lápidas pendientes (`deleted_at` NULL) y marca
+--      `deleted_at` al terminar. Es idempotente; si falla, se reintenta en la corrida siguiente.
+--   4. Reapertura: la serializa el `FOR UPDATE`. Antes de la transacción, la fila ya no vence y no
+--      se toca; después, ya no tiene imagen (el efecto querido de la retención).
+-- Limpieza de la versión anterior de este archivo (marcas con caducidad y token), por si una base
+-- de desarrollo la aplicó: ninguna base remota la recibió.
+drop trigger if exists trg_retention_guard_reports_row on public.reports;
+drop function if exists public.retention_guard_row();
+drop function if exists public.retention_prepare_delete(text, uuid, text);
+drop function if exists public.retention_mark_valid(text, uuid, text, uuid);
+drop function if exists public.retention_release_mark(text, uuid);
+drop function if exists public.report_retention_precheck(uuid);
+drop function if exists public.finish_report_retention(uuid, uuid);
+drop function if exists public.finish_report_retention(uuid);
+drop table if exists public.retention_storage_marks;
+
+create table if not exists public.retention_storage_tombstones (
+  path         text not null,
+  bucket       text not null check (bucket in ('payment-proofs', 'receipts')),
+  source_table text not null check (source_table in ('reports', 'fraud_coverage_claims')),
+  source_id    uuid not null,
+  created_at   timestamptz not null default now(),
+  deleted_at   timestamptz,
+  -- La ruta identifica la lápida; el bucket solo distingue dos objetos del mismo nombre en buckets
+  -- distintos (`retention_ref_objects` los devuelve a ambos).
+  primary key (path, bucket)
 );
-create index if not exists retention_storage_marks_row on public.retention_storage_marks (source, row_id);
+create index if not exists retention_storage_tombstones_pending
+  on public.retention_storage_tombstones (path, bucket) where deleted_at is null;
 
-alter table public.retention_storage_marks enable row level security;
-revoke all on table public.retention_storage_marks from public, anon, authenticated;
-grant select, insert, update, delete on table public.retention_storage_marks to service_role;
-comment on table public.retention_storage_marks is
-  'Rutas de Storage con borrado por plazo de conservación en curso (0284). Solo service_role; sin policies a propósito.';
+alter table public.retention_storage_tombstones enable row level security;
+-- Sin policies a propósito y sin privilegios para ningún rol de la API: solo las funciones
+-- SECURITY DEFINER de abajo (dueño de la tabla) la leen y la escriben.
+revoke all on table public.retention_storage_tombstones from public, anon, authenticated, service_role;
+comment on table public.retention_storage_tombstones is
+  'Rutas de Storage cuya referencia ya se quitó por plazo de conservación (0284); el job borra las pendientes. Sin acceso directo para ningún rol de la API; sin policies a propósito.';
 
--- Candado consultivo por ruta: serializa al marcador con quien intenta adoptar la ruta.
+-- Candado consultivo por ruta: serializa al que inscribe la lápida con quien intenta adoptar la ruta.
 create or replace function public.retention_lock_path(p_path text)
 returns void
 language sql
@@ -418,85 +442,105 @@ $$;
 revoke execute on function public.retention_lock_path(text) from public, anon, authenticated;
 grant execute on function public.retention_lock_path(text) to service_role;
 
--- Debe llamarse con la fila ya bloqueada (`FOR UPDATE`) y comprobada como vencida. Devuelve
--- `{token, objects}`: los objetos que ESTA fila puede borrar ahora (vacío si la ruta no es de
--- Storage, si no existe o si otra fila la usa) y el token de la marca (null si no hay nada que borrar).
-create or replace function public.retention_prepare_delete(p_source text, p_row_id uuid, p_ref text)
-returns jsonb
-language plpgsql
-volatile
-security definer
-set search_path = ''
-as $$
-declare
-  v_token   uuid;
-  v_objects jsonb;
-begin
-  delete from public.retention_storage_marks m where m.created_at < now() - interval '1 hour';
-  if not public.retention_ref_is_path(p_ref) then
-    return jsonb_build_object('token', null, 'objects', '[]'::jsonb);
-  end if;
-
-  perform public.retention_lock_path(p_ref);
-
-  select coalesce(jsonb_agg(jsonb_build_object('bucket', o.bucket, 'path', o.path)
-                            order by o.bucket, o.path), '[]'::jsonb)
-    into v_objects
-  from public.retention_ref_objects(p_ref) o;
-
-  if v_objects = '[]'::jsonb or public.retention_ref_shared(p_ref, p_source, p_row_id) then
-    delete from public.retention_storage_marks m
-     where m.source = p_source and m.row_id = p_row_id;
-    return jsonb_build_object('token', null, 'objects', '[]'::jsonb);
-  end if;
-
-  insert into public.retention_storage_marks (path, source, row_id)
-  values (p_ref, p_source, p_row_id)
-  on conflict (path) do update
-    set source = excluded.source, row_id = excluded.row_id,
-        token = gen_random_uuid(), created_at = now()
-  returning token into v_token;
-
-  return jsonb_build_object('token', v_token, 'objects', v_objects);
-end;
-$$;
-
-revoke execute on function public.retention_prepare_delete(text, uuid, text) from public, anon, authenticated;
-grant execute on function public.retention_prepare_delete(text, uuid, text) to service_role;
-
--- ¿Sigue vigente la marca que autorizó el borrado de esta ruta para esta fila?
-create or replace function public.retention_mark_valid(p_source text, p_row_id uuid, p_ref text, p_token uuid)
+-- ¿Alguna fila usa hoy esa ruta? (sin excluir a ninguna)
+create or replace function public.retention_ref_in_use(p_ref text)
 returns boolean
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select p_token is not null and exists (
-    select 1 from public.retention_storage_marks m
-    where m.path = p_ref and m.source = p_source and m.row_id = p_row_id
-      and m.token = p_token and m.created_at > now() - interval '1 hour'
-  );
+  select exists (select 1 from public.orders o where o.comprobante_prepago_url = p_ref)
+      or exists (select 1 from public.reports r where r.evidence_url = p_ref)
+      or exists (select 1 from public.reports r where r.refund_proof_path = p_ref)
+      or exists (select 1 from public.fraud_coverage_claims c where c.evidence_url = p_ref);
 $$;
 
-revoke execute on function public.retention_mark_valid(text, uuid, text, uuid) from public, anon, authenticated;
-grant execute on function public.retention_mark_valid(text, uuid, text, uuid) to service_role;
+revoke execute on function public.retention_ref_in_use(text) from public, anon, authenticated;
+grant execute on function public.retention_ref_in_use(text) to service_role;
 
-create or replace function public.retention_release_mark(p_source text, p_row_id uuid)
+-- Debe llamarse con la fila ya bloqueada (`FOR UPDATE`) y comprobada como vencida, y ANTES de quitarle
+-- la referencia, en la misma transacción. Inscribe la lápida de cada objeto de la ruta salvo que otra
+-- fila siga usándola (entonces el archivo se queda con quien lo usa). Devuelve cuántas lápidas inscribió.
+create or replace function public.retention_tombstone_ref(p_source text, p_row_id uuid, p_ref text)
+returns integer
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_n integer := 0;
+begin
+  if not public.retention_ref_is_path(p_ref) then
+    return 0;
+  end if;
+
+  perform public.retention_lock_path(p_ref);
+
+  if public.retention_ref_shared(p_ref, p_source, p_row_id) then
+    return 0;
+  end if;
+
+  insert into public.retention_storage_tombstones (path, bucket, source_table, source_id)
+  select o.path, o.bucket, p_source, p_row_id
+  from public.retention_ref_objects(p_ref) o
+  on conflict (path, bucket) do update
+    set source_table = excluded.source_table, source_id = excluded.source_id,
+        created_at = now(), deleted_at = null;
+  get diagnostics v_n = row_count;
+  return v_n;
+end;
+$$;
+
+revoke execute on function public.retention_tombstone_ref(text, uuid, text) from public, anon, authenticated;
+grant execute on function public.retention_tombstone_ref(text, uuid, text) to service_role;
+
+-- Lápidas por borrar en Storage, por cursor estable `(path, bucket)`. Si una ruta pendiente la usa
+-- alguna fila (no debería: la guarda lo impide), no se lista: nunca se borra una ruta referenciada.
+create or replace function public.retention_pending_tombstones(
+  p_limit        integer,
+  p_after_path   text default null,
+  p_after_bucket text default null
+)
+returns table (bucket text, path text, source_table text)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select t.bucket, t.path, t.source_table
+  from public.retention_storage_tombstones t
+  where t.deleted_at is null
+    and (p_after_path is null or (t.path, t.bucket) > (p_after_path, coalesce(p_after_bucket, '')))
+    and not public.retention_ref_in_use(t.path)
+  order by t.path, t.bucket
+  limit least(greatest(coalesce(p_limit, 100), 1), 100);
+$$;
+
+revoke execute on function public.retention_pending_tombstones(integer, text, text) from public, anon, authenticated;
+grant execute on function public.retention_pending_tombstones(integer, text, text) to service_role;
+
+-- El job la llama DESPUÉS de que Storage confirmó el borrado (o dijo que el objeto ya no existe).
+create or replace function public.retention_tombstone_done(p_bucket text, p_path text)
 returns void
 language sql
 volatile
 security definer
 set search_path = ''
 as $$
-  delete from public.retention_storage_marks m where m.source = p_source and m.row_id = p_row_id;
+  update public.retention_storage_tombstones t
+     set deleted_at = now()
+   where t.bucket = p_bucket and t.path = p_path and t.deleted_at is null;
 $$;
 
-revoke execute on function public.retention_release_mark(text, uuid) from public, anon, authenticated;
-grant execute on function public.retention_release_mark(text, uuid) to service_role;
+revoke execute on function public.retention_tombstone_done(text, text) from public, anon, authenticated;
+grant execute on function public.retention_tombstone_done(text, text) to service_role;
 
--- Trigger: ninguna fila adopta una ruta marcada. `tg_argv[0]` es la columna con la ruta.
--- Solo lee: no cambia ningún valor de la fila. Las funciones de trigger no son llamables por clientes.
+-- Trigger: ninguna fila adopta una ruta con lápida, borrada o no (la lápida es permanente).
+-- `tg_argv[0]` es la columna con la ruta. Solo lee: no cambia ningún valor de la fila. Las rutas de
+-- Storage incluyen usuario, pedido y marca de tiempo (`proofObjectPath`), así que un uso legítimo
+-- nunca repite una ruta ya borrada.
 create or replace function public.retention_guard_ref()
 returns trigger
 language plpgsql
@@ -512,36 +556,36 @@ begin
   if tg_op = 'UPDATE' and v_ref is not distinct from (to_jsonb(old) ->> tg_argv[0]) then
     return new;
   end if;
+  -- Espera a quien está inscribiendo la lápida (su transacción aún no confirmó) y solo entonces mira.
   perform public.retention_lock_path(v_ref);
-  if exists (select 1 from public.retention_storage_marks m
-             where m.path = v_ref and m.created_at > now() - interval '1 hour') then
-    raise exception 'retention_pending_delete'
-      using errcode = '55006', detail = 'ese archivo se está borrando por plazo de conservación';
+  if exists (select 1 from public.retention_storage_tombstones t where t.path = v_ref) then
+    raise exception 'retention_tombstoned_path'
+      using errcode = '55006', detail = 'ese archivo ya se borra por plazo de conservación';
   end if;
   return new;
 end;
 $$;
 
--- Trigger: la fila marcada no se reabre mientras su archivo se borra. `tg_argv[0]` es la tabla.
-create or replace function public.retention_guard_row()
+-- Trigger: `created_at` no cambia nunca. Es la base del vencimiento de `reports`,
+-- `customer_incidents`, `fraud_coverage_claims` y `cash_settlements`: moverlo sacaría una fila del
+-- plazo sin pasar por ninguna otra guarda. No existía ningún trigger así antes (ver el test).
+create or replace function public.retention_created_at_immutable()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
 begin
-  if exists (select 1 from public.retention_storage_marks m
-             where m.source = tg_argv[0] and m.row_id = old.id
-               and m.created_at > now() - interval '1 hour') then
-    raise exception 'retention_pending_delete'
-      using errcode = '55006', detail = 'esta fila está en borrado por plazo de conservación';
+  if new.created_at is distinct from old.created_at then
+    raise exception 'created_at_immutable'
+      using errcode = '55000', detail = 'created_at no se puede cambiar: es la base del plazo de conservación';
   end if;
   return new;
 end;
 $$;
 
 revoke execute on function public.retention_guard_ref() from public, anon, authenticated;
-revoke execute on function public.retention_guard_row() from public, anon, authenticated;
+revoke execute on function public.retention_created_at_immutable() from public, anon, authenticated;
 
 drop trigger if exists trg_retention_guard_orders_proof on public.orders;
 create trigger trg_retention_guard_orders_proof
@@ -558,16 +602,15 @@ create trigger trg_retention_guard_reports_refund
   before insert or update of refund_proof_path on public.reports
   for each row execute function public.retention_guard_ref('refund_proof_path');
 
-drop trigger if exists trg_retention_guard_reports_row on public.reports;
-create trigger trg_retention_guard_reports_row
-  before update of status, appeal_status, refund_status, resolved_at, refund_completed_at on public.reports
-  for each row
-  when (old.status is distinct from new.status
-        or old.appeal_status is distinct from new.appeal_status
-        or old.refund_status is distinct from new.refund_status
-        or old.resolved_at is distinct from new.resolved_at
-        or old.refund_completed_at is distinct from new.refund_completed_at)
-  execute function public.retention_guard_row('reports');
+drop trigger if exists trg_retention_created_at_reports on public.reports;
+create trigger trg_retention_created_at_reports
+  before update of created_at on public.reports
+  for each row execute function public.retention_created_at_immutable();
+
+drop trigger if exists trg_retention_created_at_incidents on public.customer_incidents;
+create trigger trg_retention_created_at_incidents
+  before update of created_at on public.customer_incidents
+  for each row execute function public.retention_created_at_immutable();
 
 -- ── 6 · Registros técnicos (13 meses) ───────────────────────────────────────
 create or replace function public.purge_old_store_events(p_limit integer)
@@ -763,10 +806,11 @@ $$;
 revoke execute on function public.retention_report_due(public.reports, timestamptz) from public, anon, authenticated;
 grant execute on function public.retention_report_due(public.reports, timestamptz) to service_role;
 
--- Reportes vencidos por cursor estable (`id`), con los archivos que hay que borrar ANTES de
--- cerrar cada uno: solo los que ninguna otra fila usa.
+-- Ids de reportes vencidos por cursor estable (`id`). Es informativa: `report_retention_apply`
+-- vuelve a comprobar todo con la fila bloqueada.
+drop function if exists public.list_report_retention_due(integer, uuid);
 create or replace function public.list_report_retention_due(p_limit integer, p_after_id uuid default null)
-returns table (row_id uuid, objects jsonb)
+returns table (row_id uuid)
 language plpgsql
 stable
 security definer
@@ -779,13 +823,7 @@ begin
     return;
   end if;
   return query
-  select r.id,
-         coalesce((
-           select jsonb_agg(jsonb_build_object('bucket', o.bucket, 'path', o.path)
-                            order by o.bucket, o.path)
-           from public.retention_ref_objects(r.evidence_url) o
-           where not public.retention_ref_shared(r.evidence_url, 'reports', r.id)
-         ), '[]'::jsonb)
+  select r.id
   from public.reports r
   where public.retention_report_due(r, v_cutoff)
     and (p_after_id is null or r.id > p_after_id)
@@ -797,43 +835,13 @@ $$;
 revoke execute on function public.list_report_retention_due(integer, uuid) from public, anon, authenticated;
 grant execute on function public.list_report_retention_due(integer, uuid) to service_role;
 
--- Se llama ANTES de tocar Storage, con la fila bloqueada. Devuelve
--- `{status, token, objects}`: status ok | not_due | not_found. El job borra SOLO `objects` (calculado
--- aquí, bajo candado y con la marca ya puesta) y devuelve el `token` a `finish_report_retention`.
-drop function if exists public.report_retention_precheck(uuid);
-create or replace function public.report_retention_precheck(p_report_id uuid)
-returns jsonb
-language plpgsql
-volatile
-security definer
-set search_path = ''
-as $$
-declare
-  v_report public.reports%rowtype;
-begin
-  select * into v_report from public.reports where id = p_report_id for update;
-  if not found then
-    return jsonb_build_object('status', 'not_found', 'token', null, 'objects', '[]'::jsonb);
-  end if;
-  if not public.retention_report_due(v_report, public.retention_cutoff('reportsMonths')) then
-    perform public.retention_release_mark('reports', p_report_id);
-    return jsonb_build_object('status', 'not_due', 'token', null, 'objects', '[]'::jsonb);
-  end if;
-  return jsonb_build_object('status', 'ok')
-         || public.retention_prepare_delete('reports', p_report_id, v_report.evidence_url);
-end;
-$$;
-
-revoke execute on function public.report_retention_precheck(uuid) from public, anon, authenticated;
-grant execute on function public.report_retention_precheck(uuid) to service_role;
-
--- Cierra un reporte: anonimiza SOLO si su archivo propio ya no está en Storage y, si el job
--- borró uno, la marca de ese borrado sigue vigente (`p_token`).
--- Devuelve: anonymized | ref_kept (la evidencia es una URL y se conserva) | not_due |
--- not_found | object_remains (el borrado en Storage no ocurrió: no se toca nada) |
--- stale (la marca ya no es la que autorizó el borrado: no se toca nada).
-drop function if exists public.finish_report_retention(uuid);
-create or replace function public.finish_report_retention(p_report_id uuid, p_token uuid default null)
+-- Cierra un reporte vencido en UNA transacción: bloquea la fila, revalida que sigue vencida (mismos
+-- predicados), inscribe la lápida de su imagen propia y anula la referencia y los datos personales.
+-- Storage se borra después, por el job, desde la lápida. Devuelve:
+-- anonymized | ref_kept (la evidencia es una URL que la purga no controla y se conserva) |
+-- not_due (cambió desde la lista: se reabrió o ya está anonimizado) | not_found.
+drop function if exists public.report_retention_apply(uuid);
+create or replace function public.report_retention_apply(p_report_id uuid)
 returns text
 language plpgsql
 volatile
@@ -849,21 +857,10 @@ begin
     return 'not_found';
   end if;
   if not public.retention_report_due(v_report, public.retention_cutoff('reportsMonths')) then
-    perform public.retention_release_mark('reports', p_report_id);
     return 'not_due';
   end if;
 
-  if public.retention_ref_is_path(v_report.evidence_url) then
-    perform public.retention_lock_path(v_report.evidence_url);
-    if exists (select 1 from public.retention_ref_objects(v_report.evidence_url))
-       and not public.retention_ref_shared(v_report.evidence_url, 'reports', p_report_id) then
-      return 'object_remains';
-    end if;
-    if p_token is not null
-       and not public.retention_mark_valid('reports', p_report_id, v_report.evidence_url, p_token) then
-      return 'stale';
-    end if;
-  end if;
+  perform public.retention_tombstone_ref('reports', p_report_id, v_report.evidence_url);
 
   v_keep_ref := v_report.evidence_url is not null
                 and not public.retention_ref_is_path(v_report.evidence_url);
@@ -876,13 +873,12 @@ begin
     evidence_url = case when v_keep_ref then evidence_url else null end
   where id = p_report_id;
 
-  perform public.retention_release_mark('reports', p_report_id);
   return case when v_keep_ref then 'ref_kept' else 'anonymized' end;
 end;
 $$;
 
-revoke execute on function public.finish_report_retention(uuid, uuid) from public, anon, authenticated;
-grant execute on function public.finish_report_retention(uuid, uuid) to service_role;
+revoke execute on function public.report_retention_apply(uuid) from public, anon, authenticated;
+grant execute on function public.report_retention_apply(uuid) to service_role;
 
 -- ── Comprobación: si algo no quedó como debe, la migración falla ────────────
 do $check$
@@ -891,14 +887,15 @@ declare
   n        int;
   v_secdef boolean;
   v_cfg    text[];
+  v_role   text;
 begin
   foreach v_name in array array[
     'delete_customer_account', 'retention_cutoff', 'retention_ref_is_path',
     'retention_ref_objects', 'retention_ref_shared', 'purge_old_store_events',
     'purge_old_push_delivery_log', 'purge_old_admin_alerts', 'purge_old_phone_restrictions',
     'anonymize_old_customer_incidents', 'retention_report_due', 'list_report_retention_due',
-    'report_retention_precheck', 'finish_report_retention', 'retention_lock_path',
-    'retention_prepare_delete', 'retention_mark_valid', 'retention_release_mark'
+    'report_retention_apply', 'retention_lock_path', 'retention_ref_in_use',
+    'retention_tombstone_ref', 'retention_pending_tombstones', 'retention_tombstone_done'
   ] loop
     select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
      where s.nspname = 'public' and p.proname = v_name;
@@ -924,7 +921,7 @@ begin
       raise exception '0284: permisos de % incorrectos (solo service_role)', v_name;
     end if;
   end loop;
-  foreach v_name in array array['retention_guard_ref', 'retention_guard_row'] loop
+  foreach v_name in array array['retention_guard_ref', 'retention_created_at_immutable'] loop
     select p.prosecdef, p.proconfig into v_secdef, v_cfg from pg_proc p
       join pg_namespace s on s.oid = p.pronamespace
      where s.nspname = 'public' and p.proname = v_name;
@@ -941,12 +938,19 @@ begin
     end if;
   end loop;
   if not (select c.relrowsecurity from pg_class c
-           where c.oid = 'public.retention_storage_marks'::regclass) then
-    raise exception '0284: retention_storage_marks sin RLS';
+           where c.oid = 'public.retention_storage_tombstones'::regclass) then
+    raise exception '0284: retention_storage_tombstones sin RLS';
   end if;
-  if has_table_privilege('anon', 'public.retention_storage_marks', 'select,insert,update,delete')
-     or has_table_privilege('authenticated', 'public.retention_storage_marks', 'select,insert,update,delete') then
-    raise exception '0284: un cliente puede tocar retention_storage_marks';
+  if exists (select 1 from pg_policy where polrelid = 'public.retention_storage_tombstones'::regclass) then
+    raise exception '0284: retention_storage_tombstones no debe tener policies';
+  end if;
+  foreach v_role in array array['anon', 'authenticated', 'service_role'] loop
+    if has_table_privilege(v_role, 'public.retention_storage_tombstones', 'select,insert,update,delete') then
+      raise exception '0284: % puede tocar retention_storage_tombstones', v_role;
+    end if;
+  end loop;
+  if to_regclass('public.retention_storage_marks') is not null then
+    raise exception '0284: sobra retention_storage_marks';
   end if;
   if not exists (select 1 from public.app_settings where key = 'data_retention') then
     raise exception '0284: falta app_settings.data_retention';

@@ -10,8 +10,9 @@ export type {
   DueFileRow,
   FileCategory,
   FileRowOutcome,
-  FileRowPrecheck,
+  PendingTombstone,
   RetentionCategory,
+  TombstoneCursor,
 } from './application/data-retention-ports'
 export {
   BATCH_CATEGORIES,

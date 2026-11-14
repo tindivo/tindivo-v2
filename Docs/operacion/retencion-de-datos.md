@@ -21,17 +21,29 @@ responsable**. Si un plazo estuviera en «pendiente de decisión», la política
 | Comentario de una reseña | `order_reviews.comment` | Al borrar la cuenta | Se borra; quedan nota y etiquetas, sin autor | Automático (`delete_customer_account`, 0284) |
 | Comprobantes de una cuenta borrada | `orders.comprobante_prepago_url`, archivos de `payment-proofs` y `receipts` | 90 días desde el borrado | Se borran archivo y referencia | Automático (0269, 04:30) |
 | Incidentes antifraude revisados | `customer_incidents`: teléfono, referencia, descripción, `customer_user_id` | 24 meses desde el hecho o su revisión (lo más reciente) | Se anonimizan; el teléfono queda como `eliminado` (la columna no admite NULL). Un incidente sin revisar no se toca | Automático (`anonymize_old_customer_incidents`) |
-| Reportes cerrados | `reports`: teléfono, descripción, nota de resolución, `customer_user_id`, evidencia | 24 meses desde el hecho, la resolución o la devolución (lo más reciente) | Se anonimizan. La imagen de la evidencia se borra de Storage antes, salvo que otra fila la use. Un reporte abierto, una apelación pendiente o en revisión y una devolución pendiente no se tocan. `refund_proof_path` se conserva (comprobante de dinero) | Automático (`list_report_retention_due` → Storage → `finish_report_retention`) |
+| Reportes cerrados | `reports`: teléfono, descripción, nota de resolución, `customer_user_id`, evidencia | 24 meses desde el hecho, la resolución o la devolución (lo más reciente) | Se anonimizan. La base va primero: en una transacción se quita la referencia y se inscribe la ruta de la imagen en una lápida; Storage se borra después, desde la lápida, salvo que otra fila use el archivo. Un reporte abierto, una apelación pendiente o en revisión y una devolución pendiente no se tocan. `refund_proof_path` se conserva (comprobante de dinero) | Automático (`list_report_retention_due` → `report_retention_apply` → borrado desde la lápida) |
 | Restricciones del número levantadas o vencidas | `phone_restrictions` | 24 meses desde `lifted_at` o `until` (el más tardío) | Se eliminan. Una restricción activa nunca se toca | Automático (`purge_old_phone_restrictions`) |
 | Eventos de la tienda | `store_events` | 13 meses desde `created_at` | Se eliminan | Automático (`purge_old_store_events`) |
 | Registro de envío de avisos | `push_delivery_log` | 13 meses desde `at` | Se eliminan | Automático (`purge_old_push_delivery_log`) |
 | Alertas de administración resueltas | `admin_alerts` | 13 meses desde `resolved_at` | Se eliminan; una alerta sin resolver no se toca | Automático (`purge_old_admin_alerts`) |
 | Notas de liquidaciones de caja | `cash_settlements.dispute_note`, `resolution_note` | 5 años desde el 1 de enero siguiente a `created_at` (hora de Lima) | Se borran las notas; importes, estado y fechas se quedan. Una liquidación en disputa no se toca | Automático (`anonymize_old_cash_settlement_notes`, 0285; **pendiente de revisión de Jesús**) |
-| Reclamos económicos antifraude | `fraud_coverage_claims`: `reason`, `resolution_note`, `evidence_url` | 5 años desde el 1 de enero siguiente a `created_at` (hora de Lima) | El motivo queda como `Dato eliminado`, se borran nota e imagen (Storage antes); el importe y el estado se quedan. Un reclamo pendiente no se toca | Automático (`list_fraud_claim_retention_due` → Storage → `finish_fraud_claim_retention`, 0285; **pendiente de revisión de Jesús**) |
+| Reclamos económicos antifraude | `fraud_coverage_claims`: `reason`, `resolution_note`, `evidence_url` | 5 años desde el 1 de enero siguiente a `created_at` (hora de Lima) | El motivo queda como `Dato eliminado`, se borran nota e imagen (la base primero, Storage después desde la lápida); el importe y el estado se quedan. Un reclamo pendiente no se toca | Automático (`list_fraud_claim_retention_due` → `fraud_claim_retention_apply` → borrado desde la lápida, 0285; **pendiente de revisión de Jesús**) |
 | Strikes antifraude | `customer_strikes` | 24 meses desde `created_at` (`strikesMonths`) | Dejan de contar para el prepago y se anonimizan: teléfono → `eliminado`, sin referencia, coordenadas, cuenta ni pedido | Automático (`anonymize_old_customer_strikes`, 0286) |
 | Directorio de la cajera | `address_directory` | 24 meses sin uso: lo último entre `last_used_at`, `updated_at` y `created_at` (`addressDirectoryMonths`) | Deja de hacer «confiable» al número y se elimina; los pedidos no se pierden (`ON DELETE SET NULL`) | Automático (`purge_old_address_directory`, 0286) |
 | Historial de dueños del número | `phone_assignments` y sus `phone_transfer_challenges` | 24 meses desde `ended_at` (`phoneAssignmentsMonths`) | La asignación terminada deja de contar y se elimina con sus desafíos. Una asignación abierta nunca se toca | Automático (`purge_old_phone_assignments`, 0286) |
 | Solicitudes de soporte y de derechos ARCO | Fuera de la base (WhatsApp de soporte) | 2 años desde la respuesta | Borrado manual | Manual (procedimiento abajo) |
+
+### Imágenes: la base primero, Storage después, con lápida (0284)
+
+Por cada fila vencida con imagen propia, `report_retention_apply` / `fraud_claim_retention_apply` hacen en UNA
+transacción, con la fila bloqueada: revalidar que sigue vencida, quitar la referencia e inscribir la ruta en
+`retention_storage_tombstones`. Un trigger (`retention_guard_ref`) impide que cualquier fila adopte una ruta con
+lápida (comprobante del pedido, evidencia, comprobante de devolución, reclamo), tarde lo que tarde el borrado. El job
+borra en Storage las rutas pendientes y marca `deleted_at`; si falla, la lápida queda pendiente y la corrida
+siguiente la reintenta. `created_at` de `reports`, `customer_incidents`, `fraud_coverage_claims` y
+`cash_settlements` es inmutable (trigger). Para ver lo pendiente:
+`select count(*) from retention_storage_tombstones where deleted_at is null` (con el rol postgres: ningún rol de la
+API tiene acceso a la tabla).
 
 ### Ventana de 24 meses del antifraude (0286)
 
