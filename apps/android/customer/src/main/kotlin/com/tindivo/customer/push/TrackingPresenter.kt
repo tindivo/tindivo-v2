@@ -161,15 +161,15 @@ internal object TrackingMarkCodec {
     /** `null` si no es una marca. Sin `floorUntil` (formato anterior), un piso vale para siempre: lo prudente. */
     fun decode(raw: String): TrackingMark? {
         val parts = raw.split(SEPARATOR)
-        if (parts.size != FIELDS && parts.size != LEGACY_FIELDS) return null
-        val rank = parts[RANK_AT].toIntOrNull() ?: return null
-        val floor = parts[FLOOR_AT].toIntOrNull() ?: return null
+        val rank = parts.getOrNull(RANK_AT)?.toIntOrNull()
+        val floor = parts.getOrNull(FLOOR_AT)?.toIntOrNull()
         val until =
-            when {
-                parts.size == FIELDS -> parts[FLOOR_UNTIL_AT].toLongOrNull() ?: return null
-                floor > 0 -> Long.MAX_VALUE
-                else -> 0L
+            when (parts.size) {
+                FIELDS -> parts[FLOOR_UNTIL_AT].toLongOrNull()
+                LEGACY_FIELDS -> if (floor != null && floor > 0) Long.MAX_VALUE else 0L
+                else -> null
             }
+        if (rank == null || floor == null || until == null) return null
         return TrackingMark(parts[0].toLongOrNull(), parts[1] == TERMINAL, rank, floor, until)
     }
 }

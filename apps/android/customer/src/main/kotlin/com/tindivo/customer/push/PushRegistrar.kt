@@ -156,8 +156,8 @@ class PushRegistrar(
     /** Con el [mutex] tomado: ¿tiene otra cuenta distinta de [closing] la sesión o la vinculación de la instalación? */
     private suspend fun otherAccountHolds(closing: String?): Boolean {
         val live = (sessionStore.state.value as? SessionState.SignedIn)?.userId
-        if (live != null && live != closing) return true
-        if (closing == null) return false
+        val other = live != null && live != closing
+        if (other || closing == null) return other
         val bound =
             try {
                 installations.current()?.accountId
