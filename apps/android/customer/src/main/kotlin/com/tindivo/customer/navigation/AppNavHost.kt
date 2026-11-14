@@ -50,6 +50,7 @@ import com.tindivo.customer.feature.profile.profileDestination
 import com.tindivo.customer.feature.reviews.ReviewHost
 import com.tindivo.customer.feature.reviews.rememberReviewController
 import com.tindivo.customer.feature.signin.SignInDestination
+import com.tindivo.customer.feature.store.StoreListRoute
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
 
@@ -122,6 +123,7 @@ private fun NavGraphBuilder.catalogGraph(navController: NavHostController) {
                 navController.navigate(if (signedIn) AccountRoute else SignInRoute)
             },
             onOpenCourier = { navController.navigate(CourierHomeRoute()) { launchSingleTop = true } },
+            onOpenStore = { navController.navigate(StoreListRoute()) { launchSingleTop = true } },
             // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
             onOpenDiagnostics =
                 if (BuildConfig.DEBUG) {
@@ -155,6 +157,7 @@ private fun NavGraphBuilder.catalogGraph(navController: NavHostController) {
     }
     checkoutDestination(navController)
     courierDestinations(navController)
+    storeDestinations(navController)
 }
 
 /** Entrada, perfil, cuenta, borrado de cuenta y verificación del celular. */
