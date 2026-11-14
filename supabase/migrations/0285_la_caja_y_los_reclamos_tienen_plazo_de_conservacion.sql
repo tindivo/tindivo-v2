@@ -16,7 +16,7 @@
 --     `updated_at` (registra la anonimización; no es una fecha de negocio).
 --   · `fraud_coverage_claims`: `reason` → 'Dato eliminado' (la columna es NOT NULL; mismo
 --     marcador que 0278), `resolution_note` y `evidence_url` → NULL; la imagen se borra de
---     Storage ANTES, salvo que otra fila la use. Un reclamo pendiente no se toca.
+--     Storage DESPUÉS, desde una lápida (0284), salvo que otra fila la use. Un reclamo pendiente no se toca.
 --   · `contingency_advances`: ya no existe (la eliminó la 0123); no hay nada que purgar.
 -- Parámetro: `data_retention.cashRecordsYears` (entero 1–100). Se añade sin pisar un valor ya
 -- puesto; si falta o es inválido, no se toca nada (falla cerrada).
@@ -127,8 +127,11 @@ revoke execute on function public.retention_fraud_claim_due(public.fraud_coverag
 grant execute on function public.retention_fraud_claim_due(public.fraud_coverage_claims, timestamptz)
   to service_role;
 
+-- Ids de reclamos vencidos por cursor estable (`id`). Es informativa: `fraud_claim_retention_apply`
+-- vuelve a comprobar todo con la fila bloqueada.
+drop function if exists public.list_fraud_claim_retention_due(integer, uuid);
 create or replace function public.list_fraud_claim_retention_due(p_limit integer, p_after_id uuid default null)
-returns table (row_id uuid, objects jsonb)
+returns table (row_id uuid)
 language plpgsql
 stable
 security definer
@@ -141,13 +144,7 @@ begin
     return;
   end if;
   return query
-  select c.id,
-         coalesce((
-           select jsonb_agg(jsonb_build_object('bucket', o.bucket, 'path', o.path)
-                            order by o.bucket, o.path)
-           from public.retention_ref_objects(c.evidence_url) o
-           where not public.retention_ref_shared(c.evidence_url, 'fraud_coverage_claims', c.id)
-         ), '[]'::jsonb)
+  select c.id
   from public.fraud_coverage_claims c
   where public.retention_fraud_claim_due(c, v_cutoff)
     and (p_after_id is null or c.id > p_after_id)
@@ -159,40 +156,17 @@ $$;
 revoke execute on function public.list_fraud_claim_retention_due(integer, uuid) from public, anon, authenticated;
 grant execute on function public.list_fraud_claim_retention_due(integer, uuid) to service_role;
 
--- Devuelve `{status, token, objects}`: status ok | not_due | not_found. Se llama antes de tocar
--- Storage, con la fila bloqueada; el job borra SOLO `objects` (calculado aquí, bajo candado y con la
--- marca de 0284 ya puesta) y devuelve el `token` a `finish_fraud_claim_retention`.
+-- Cierra un reclamo vencido en UNA transacción, como `report_retention_apply` (0284): bloquea la fila,
+-- revalida que sigue vencida, inscribe la lápida de su imagen propia y anula motivo, nota y referencia.
+-- Storage se borra después, por el job, desde la lápida. Devuelve:
+-- anonymized | ref_kept | not_due | not_found.
+-- `amount`, `status`, `resolved_at` y las demás fechas no se tocan. Esta función no escribe en
+-- `business_charges` ni en `businesses`.
 drop function if exists public.fraud_claim_retention_precheck(uuid);
-create or replace function public.fraud_claim_retention_precheck(p_claim_id uuid)
-returns jsonb
-language plpgsql
-volatile
-security definer
-set search_path = ''
-as $$
-declare
-  v_claim public.fraud_coverage_claims%rowtype;
-begin
-  select * into v_claim from public.fraud_coverage_claims where id = p_claim_id for update;
-  if not found then
-    return jsonb_build_object('status', 'not_found', 'token', null, 'objects', '[]'::jsonb);
-  end if;
-  if not public.retention_fraud_claim_due(v_claim, public.retention_cash_cutoff()) then
-    perform public.retention_release_mark('fraud_coverage_claims', p_claim_id);
-    return jsonb_build_object('status', 'not_due', 'token', null, 'objects', '[]'::jsonb);
-  end if;
-  return jsonb_build_object('status', 'ok')
-         || public.retention_prepare_delete('fraud_coverage_claims', p_claim_id, v_claim.evidence_url);
-end;
-$$;
-
-revoke execute on function public.fraud_claim_retention_precheck(uuid) from public, anon, authenticated;
-grant execute on function public.fraud_claim_retention_precheck(uuid) to service_role;
-
--- Devuelve: anonymized | ref_kept | not_due | not_found | object_remains | stale (como los reportes).
--- `amount`, `status`, `resolved_at` y las demás fechas no se tocan.
+drop function if exists public.finish_fraud_claim_retention(uuid, uuid);
 drop function if exists public.finish_fraud_claim_retention(uuid);
-create or replace function public.finish_fraud_claim_retention(p_claim_id uuid, p_token uuid default null)
+drop function if exists public.fraud_claim_retention_apply(uuid);
+create or replace function public.fraud_claim_retention_apply(p_claim_id uuid)
 returns text
 language plpgsql
 volatile
@@ -208,21 +182,10 @@ begin
     return 'not_found';
   end if;
   if not public.retention_fraud_claim_due(v_claim, public.retention_cash_cutoff()) then
-    perform public.retention_release_mark('fraud_coverage_claims', p_claim_id);
     return 'not_due';
   end if;
 
-  if public.retention_ref_is_path(v_claim.evidence_url) then
-    perform public.retention_lock_path(v_claim.evidence_url);
-    if exists (select 1 from public.retention_ref_objects(v_claim.evidence_url))
-       and not public.retention_ref_shared(v_claim.evidence_url, 'fraud_coverage_claims', p_claim_id) then
-      return 'object_remains';
-    end if;
-    if p_token is not null
-       and not public.retention_mark_valid('fraud_coverage_claims', p_claim_id, v_claim.evidence_url, p_token) then
-      return 'stale';
-    end if;
-  end if;
+  perform public.retention_tombstone_ref('fraud_coverage_claims', p_claim_id, v_claim.evidence_url);
 
   v_keep_ref := v_claim.evidence_url is not null
                 and not public.retention_ref_is_path(v_claim.evidence_url);
@@ -233,27 +196,31 @@ begin
     evidence_url = case when v_keep_ref then evidence_url else null end
   where id = p_claim_id;
 
-  perform public.retention_release_mark('fraud_coverage_claims', p_claim_id);
   return case when v_keep_ref then 'ref_kept' else 'anonymized' end;
 end;
 $$;
 
-revoke execute on function public.finish_fraud_claim_retention(uuid, uuid) from public, anon, authenticated;
-grant execute on function public.finish_fraud_claim_retention(uuid, uuid) to service_role;
+revoke execute on function public.fraud_claim_retention_apply(uuid) from public, anon, authenticated;
+grant execute on function public.fraud_claim_retention_apply(uuid) to service_role;
 
--- Guardas de la marca de borrado de 0284 sobre esta tabla (solo leen; no cambian ningún valor):
--- ninguna fila adopta una ruta marcada y un reclamo marcado no se reabre mientras se borra su imagen.
+-- Guardas de 0284 sobre estas tablas (solo leen o rechazan; no cambian ningún valor):
+--  · ninguna fila de reclamos adopta una ruta con lápida;
+--  · `created_at` es inmutable: es la base del plazo de caja (reclamos y liquidaciones).
+drop trigger if exists trg_retention_guard_claims_row on public.fraud_coverage_claims;
 drop trigger if exists trg_retention_guard_claims_evidence on public.fraud_coverage_claims;
 create trigger trg_retention_guard_claims_evidence
   before insert or update of evidence_url on public.fraud_coverage_claims
   for each row execute function public.retention_guard_ref('evidence_url');
 
-drop trigger if exists trg_retention_guard_claims_row on public.fraud_coverage_claims;
-create trigger trg_retention_guard_claims_row
-  before update of status on public.fraud_coverage_claims
-  for each row
-  when (old.status is distinct from new.status)
-  execute function public.retention_guard_row('fraud_coverage_claims');
+drop trigger if exists trg_retention_created_at_claims on public.fraud_coverage_claims;
+create trigger trg_retention_created_at_claims
+  before update of created_at on public.fraud_coverage_claims
+  for each row execute function public.retention_created_at_immutable();
+
+drop trigger if exists trg_retention_created_at_cash_settlements on public.cash_settlements;
+create trigger trg_retention_created_at_cash_settlements
+  before update of created_at on public.cash_settlements
+  for each row execute function public.retention_created_at_immutable();
 
 do $check_caja$
 declare
@@ -264,7 +231,7 @@ declare
 begin
   foreach v_name in array array[
     'retention_cash_cutoff', 'anonymize_old_cash_settlement_notes', 'retention_fraud_claim_due',
-    'list_fraud_claim_retention_due', 'fraud_claim_retention_precheck', 'finish_fraud_claim_retention'
+    'list_fraud_claim_retention_due', 'fraud_claim_retention_apply'
   ] loop
     select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
      where s.nspname = 'public' and p.proname = v_name;
