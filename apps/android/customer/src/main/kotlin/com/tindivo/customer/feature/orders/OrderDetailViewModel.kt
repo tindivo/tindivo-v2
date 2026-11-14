@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.orders
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tindivo.core.network.AccountMismatchException
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
@@ -67,6 +68,11 @@ private data class PollStep(
  * Un pedido terminal o un 404 no se vuelven a consultar mientras viva el ViewModel. La sesión se vigila mientras viva el
  * ViewModel, también en segundo plano: al cerrarse se cancela la consulta en curso, se olvida lo leído y la pantalla
  * queda en [OrderDetailUiState.LoggedOut] aunque luego se vuelva a entrar.
+ *
+ * El seguimiento es de la cuenta que abrió la pantalla. Cada vuelta lee la cuenta vigente antes de consultar: si ya no
+ * es esa (otra cuenta o ninguna), hace lo mismo que cuando [SessionWatch] ve el cambio (se olvida lo leído, queda en
+ * [OrderDetailUiState.LoggedOut] y no se vuelve a consultar), sin esperar a que él lo vea. La consulta sale atada a esa
+ * cuenta: si la sesión cambia entre la lectura y el envío, no sale nada y se trata igual, sin cerrar la sesión nueva.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -81,6 +87,9 @@ internal class OrderDetailViewModel
     ) : ViewModel() {
         // La ruta tipada `OrderDetailRoute(id)` guarda el argumento bajo la clave "id".
         private val orderId: UUID? = parseOrderId(savedStateHandle.get<String>("id"))
+
+        /** La cuenta con la que se abrió la pantalla, leída al construirla: el sondeo solo consulta con ella. */
+        private val openedBy: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
 
         /** El último pedido leído bien: un error de red del sondeo no lo borra; un dato ilegible, sí. */
         private var lastOrder: OrderDetailUi? = null
@@ -129,9 +138,15 @@ internal class OrderDetailViewModel
                 }
                 emit(lastOrder?.let(OrderDetailUiState::Loaded) ?: OrderDetailUiState.Loading)
                 do {
-                    // La cuenta de esta consulta se captura antes de lanzarla: ante su 401 se cierra solo esa.
-                    val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId
-                    val step = reduce(customer.order(id), account)
+                    // La cuenta de esta consulta se lee antes de lanzarla: la petición va atada a ella y, ante su 401, se
+                    // cierra solo esa. Si ya no es la que abrió la pantalla, no se consulta más.
+                    val signedIn = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+                    val account = signedIn?.takeIf { it == openedBy }
+                    if (account == null) {
+                        invalidate()
+                        return@flow
+                    }
+                    val step = reduce(customer.order(id, account), account)
                     emit(step.state)
                     if (step.keepPolling) pollingDelay.await(ORDER_POLL_MILLIS)
                 } while (step.keepPolling)
@@ -139,7 +154,7 @@ internal class OrderDetailViewModel
 
         private suspend fun reduce(
             result: ApiResult<GetCustomerOrder200ResponseData>,
-            account: String?,
+            account: String,
         ): PollStep =
             when (result) {
                 is ApiResult.Success -> {
@@ -161,19 +176,25 @@ internal class OrderDetailViewModel
                 }
             }
 
-        /** [account] es la cuenta que hizo la consulta; sin ella no hay sesión que cerrar ante un 401. */
+        /** [account] es la cuenta que hizo la consulta: ante un 401 se cierra solo esa. */
         private suspend fun failure(
             error: AppError,
-            account: String?,
+            account: String,
         ): PollStep {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
             return when {
+                error is AppError.Network && error.cause is AccountMismatchException -> {
+                    // La sesión ya es de otra cuenta: no salió nada. Se deja de consultar sin cerrar la sesión nueva.
+                    invalidate()
+                    PollStep(OrderDetailUiState.LoggedOut, keepPolling = false)
+                }
+
                 error.isUnauthorized() -> {
                     // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también.
                     invalidate()
                     // El cierre cancela este mismo sondeo: que no corte a medias el borrado de la sesión. Es `signOutIf`:
                     // espera el candado del almacén y, si mientras tanto entró otra cuenta, no la cierra.
-                    if (account != null) withContext(NonCancellable) { sessionStore.signOutIf(account) }
+                    withContext(NonCancellable) { sessionStore.signOutIf(account) }
                     PollStep(OrderDetailUiState.LoggedOut, keepPolling = false)
                 }
 

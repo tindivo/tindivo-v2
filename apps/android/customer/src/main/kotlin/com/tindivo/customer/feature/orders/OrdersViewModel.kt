@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.orders
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tindivo.core.network.AccountMismatchException
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
@@ -62,8 +63,12 @@ internal class OrdersViewModel
         private var loadJob: Job? = null
         private var nextCursor: String? = null
 
-        /** La cuenta de la sesión vigente: se captura al lanzar cada petición, para cerrar solo esa ante su 401. */
-        private val signedInAccount get() = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+        /**
+         * La cuenta con la que se abrió la pantalla, leída al construirla y no dentro de la corrutina de cada carga: cada
+         * petición va atada a ella y, sin cuenta, no se pide nada. Si la sesión cambia antes de que una carga arranque,
+         * la petición no sale con el token de la cuenta nueva (vuelve [AccountMismatchException]).
+         */
+        private val accountId: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
 
         init {
             val watch = SessionWatch()
@@ -82,9 +87,13 @@ internal class OrdersViewModel
         /** Vuelve a pedir la primera página. Si ya hay una carga en curso o la sesión se cerró, no lanza otra. */
         fun refresh() {
             if (loadJob?.isActive == true || _state.value is OrdersUiState.LoggedOut) return
+            val account = accountId
+            if (account == null) {
+                _state.value = OrdersUiState.LoggedOut
+                return
+            }
             _state.value = OrdersUiState.Loading
-            val account = signedInAccount
-            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null), account) }
+            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null, account), account) }
         }
 
         /**
@@ -93,16 +102,16 @@ internal class OrdersViewModel
          */
         fun loadMore() {
             val current = _state.value as? OrdersUiState.Loaded ?: return
+            val account = accountId ?: return
             if (!current.canLoadMore || current.loadingMore) return
             _state.value = current.copy(loadingMore = true, loadMoreFailed = false)
             val cursor = nextCursor
-            val account = signedInAccount
-            loadJob = viewModelScope.launch { onNextPage(current, customer.orders(cursor), account) }
+            loadJob = viewModelScope.launch { onNextPage(current, customer.orders(cursor, account), account) }
         }
 
         private suspend fun onFirstPage(
             result: ApiResult<ListCustomerOrders200ResponseData>,
-            account: String?,
+            account: String,
         ) {
             when (result) {
                 is ApiResult.Success -> {
@@ -130,7 +139,7 @@ internal class OrdersViewModel
         private suspend fun onNextPage(
             before: OrdersUiState.Loaded,
             result: ApiResult<ListCustomerOrders200ResponseData>,
-            account: String?,
+            account: String,
         ) {
             when (result) {
                 is ApiResult.Success -> {
@@ -161,18 +170,23 @@ internal class OrdersViewModel
 
         /**
          * Avisa de un 426 y, ante un 401, cierra la sesión de [account], la cuenta que hizo la petición; devuelve el error
-         * si la pantalla debe mostrarlo. Sin cuenta al lanzar la petición no hay sesión que cerrar.
+         * si la pantalla debe mostrarlo.
          */
         private suspend fun onFailure(
             error: AppError,
-            account: String?,
+            account: String,
         ): AppError? {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
+            if (error is AppError.Network && error.cause is AccountMismatchException) {
+                // La sesión ya es de otra cuenta: no salió nada. Se cierra sin cerrar la sesión nueva ni dejar lo cargado.
+                _state.value = OrdersUiState.LoggedOut
+                return null
+            }
             if (!error.isUnauthorized()) return error
             // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también. El cierre cancela
             // esta misma carga: que no corte a medias el borrado de la sesión. Es `signOutIf`: espera el candado del
             // almacén y, si mientras tanto entró otra cuenta, no la cierra.
-            if (account != null) withContext(NonCancellable) { sessionStore.signOutIf(account) }
+            withContext(NonCancellable) { sessionStore.signOutIf(account) }
             _state.value = OrdersUiState.LoggedOut
             return null
         }
