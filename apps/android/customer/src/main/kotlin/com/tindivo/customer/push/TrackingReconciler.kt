@@ -5,8 +5,11 @@ import com.tindivo.core.network.CourierRepository
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -57,6 +60,24 @@ class TrackingReconciler(
     private val texts: TrackingTexts,
 ) {
     private val mutex = Mutex()
+
+    /**
+     * Atiende [TrackingPresenter.reconcileRequests]: cuando un aviso no se puede ordenar con lo observado, lee REST y
+     * pone al día sin esperar a que se abra la app. Se llama una vez, al arrancar el proceso.
+     */
+    fun start(scope: CoroutineScope) {
+        scope.launch {
+            presenter.reconcileRequests.collect {
+                try {
+                    reconcile()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // Sin red o con un error de la API: la próxima puesta al día (al abrir la app) lo vuelve a intentar.
+                }
+            }
+        }
+    }
 
     suspend fun reconcile() {
         // La generación se lee antes que la cuenta (ver `SessionStore.signInGeneration`).

@@ -5,6 +5,9 @@ import android.content.Context
 import com.tindivo.customer.session.SessionPublishLock
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -35,6 +38,15 @@ class TrackingPresenter(
     private val publishLock: SessionPublishLock = SessionPublishLock(),
 ) {
     private val lock = Mutex()
+    private val reconcileRequested =
+        MutableSharedFlow<String>(extraBufferCapacity = RECONCILE_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /**
+     * Los seguimientos (su `group`) cuyo aviso no se pudo ordenar con lo observado (misma versión y otro estado, o marcas
+     * del formato anterior): se pidió leerlos por REST. [TrackingReconciler.start] los atiende con la puesta al día de
+     * siempre, que corre al abrir la app y también al llegar uno de estos avisos.
+     */
+    val reconcileRequests: SharedFlow<String> = reconcileRequested
 
     /** Las notificaciones fijas que están a la vista. */
     fun shown(): List<ShownTracking> = notifications.shown()
@@ -62,11 +74,14 @@ class TrackingPresenter(
                 // Solo los avisos que mueven el seguimiento (traen paso o son terminales) exigen una versión válida. Uno
                 // sin barra (un estado sin paso, un aviso que no es de estado) se muestra como siempre y no toca las marcas.
                 val moves = payload.progress != null || payload.terminal
-                if (key != null && moves &&
-                    ledger.admit(payload.group, payload.seq, payload.terminal, rankOf(payload)) != Admission.Admit
-                ) {
-                    return@withLock false
-                }
+                val decision =
+                    if (key != null && moves) {
+                        ledger.admit(payload.group, payload.seq, payload.terminal, rankOf(payload))
+                    } else {
+                        Admission.Admit
+                    }
+                if (decision == Admission.Reconcile) reconcileRequested.tryEmit(payload.group)
+                if (decision != Admission.Admit) return@withLock false
                 notifications.show(payload, TrackingOrigin.Push)
                 true
             }
@@ -81,6 +96,10 @@ class TrackingPresenter(
 
     private fun rankOf(payload: NativePushPayload): Int =
         if (payload.terminal) TERMINAL_RANK else payload.progress?.step ?: 0
+
+    private companion object {
+        const val RECONCILE_BUFFER = 8
+    }
 
     /**
      * Cierra lo de la cuenta que se va: corre [invalidate] (que cambia la identidad de la instalación) y, bajo el mismo

@@ -22,6 +22,41 @@ class TrackingLedgerTest {
         terminal: Boolean = false,
     ) = ledger.admit(group, seq, terminal, if (terminal) TERMINAL_RANK else rank) == Admission.Admit
 
+    private fun decide(
+        group: String,
+        seq: Long,
+        rank: Int,
+        terminal: Boolean = false,
+    ) = ledger.admit(group, seq, terminal, if (terminal) TERMINAL_RANK else rank)
+
+    @Test
+    fun `con la misma version y el mismo estado es un duplicado, con otro estado se pide REST (CAX-003)`() {
+        val v = 2_000_000_000_000L
+        assertEquals(Admission.Admit, decide("courier-ZZ9Y8X7W", v, rank = 2))
+
+        assertEquals("duplicado", Admission.Drop, decide("courier-ZZ9Y8X7W", v, rank = 2))
+        assertEquals("otro estado, misma version", Admission.Reconcile, decide("courier-ZZ9Y8X7W", v, rank = 1))
+        assertEquals("tampoco un terminal", Admission.Reconcile, decide("courier-ZZ9Y8X7W", v, 0, terminal = true))
+        // Lo observado no cambio: el estado anotado sigue siendo el primero.
+        assertEquals(TrackingMark(v, false, 2), store.saved.getValue("courier-ZZ9Y8X7W"))
+        // Y el terminal repetido es un duplicado.
+        assertEquals(Admission.Admit, decide("order-AB2C3D4E", v, 0, terminal = true))
+        assertEquals(Admission.Drop, decide("order-AB2C3D4E", v, 0, terminal = true))
+    }
+
+    @Test
+    fun `las marcas sin version piden REST en vez de admir un activo, y un terminal sin version no`() {
+        store.saved =
+            mapOf(
+                "order-AB2C3D4E" to TrackingMark(null, false, 2),
+                "order-ZZ9Y8X7W" to TrackingMark(null, true, TERMINAL_RANK),
+            )
+        val reopened = TrackingLedger(store)
+
+        assertEquals(Admission.Reconcile, reopened.admit("order-AB2C3D4E", 9_000_000_000_000, false, 3))
+        assertEquals(Admission.Drop, reopened.admit("order-ZZ9Y8X7W", 9_000_000_000_000, true, TERMINAL_RANK))
+    }
+
     @Test
     fun `un aviso mas viejo o igual que lo ya observado se ignora, uno mas nuevo se admite`() {
         assertTrue(admit("order-AB2C3D4E", seq = 2_000_000_000_000))

@@ -247,4 +247,27 @@ class TrackingReconcilerTest {
             assertEquals(step(4, 5), notifications.visible[order])
             assertTrue(rig.presenter.onPush(pushFor(order, step(5, 5), seq = read + 10 * 60_000, terminal = true)))
         }
+
+    // CAX-003 caso 2: la peticion del presenter dispara la puesta al dia sin esperar a que se abra la app.
+    @Test
+    fun `un aviso empatado pide la puesta al dia y esta lee REST y deja el estado real (CAX-003)`() =
+        runTest {
+            val seq = 4_000_000_000_000L
+            assertTrue(rig.presenter.onPush(pushFor(order, step(2, 5), seq = seq)))
+            val reconciler = reconciler()
+            reconciler.start(backgroundScope)
+            testScheduler.runCurrent() // el colector ya esta suscrito
+            snapshot =
+                TrackingSnapshot(
+                    orders = mapOf("AB2C3D4E" to TrackingStatus.Active(TrackingKind.Delivery, step(3, 5), seq)),
+                    couriers = emptyMap(),
+                )
+
+            // Otro estado con el mismo seq: no se pinta, y se pide leer REST.
+            assertEquals(false, rig.presenter.onPush(pushFor(order, step(3, 5), seq = seq)))
+            testScheduler.runCurrent()
+
+            assertEquals(listOf("A"), queried)
+            assertEquals(step(3, 5), notifications.visible[order])
+        }
 }

@@ -19,8 +19,11 @@ data class TrackingMark(
     val rank: Int = 0,
 )
 
-/** Qué hacer con un aviso de seguimiento. */
-enum class Admission { Admit, Drop }
+/**
+ * Qué hacer con un aviso de seguimiento: [Admit] (se pinta y se anota), [Drop] (se ignora) o [Reconcile] (no se pinta:
+ * no se puede ordenar con lo observado y hay que leer REST de ese seguimiento).
+ */
+enum class Admission { Admit, Drop, Reconcile }
 
 /** Dónde se guardan las marcas: sobreviven al proceso (un aviso tardío puede llegar con el proceso recién arrancado). */
 interface TrackingMarkStore {
@@ -50,8 +53,12 @@ class TrackingLedger(
      * - sin [seq] válido NO se admite: no hay con qué ordenarlo (un servidor que no lo manda, o una fecha ilegible);
      * - sin marca previa, se admite;
      * - tras un estado terminal solo se admite otro terminal;
-     * - sin versión en la marca (formato anterior) no se admite hasta la siguiente puesta al día;
-     * - solo se admite si [seq] SUPERA la versión de la marca: uno anterior o igual no sustituye lo ya observado;
+     * - sin versión en la marca (formato anterior) no se admite: se pide la puesta al día ([Admission.Reconcile]) y
+     *   hasta que lea el pedido no se admite ningún activo;
+     * - solo se admite si [seq] SUPERA la versión de la marca: uno anterior no sustituye lo ya observado;
+     * - con la MISMA versión y el mismo estado es un duplicado ([Admission.Drop]: no se pinta otra vez); con la misma
+     *   versión y OTRO estado no se puede saber cuál es el posterior (la recepción no es el orden del estado): no se
+     *   pinta ninguno y se pide la puesta al día ([Admission.Reconcile]), que lee el estado real;
      * - si la marca no se pudo escribir en disco NO se admite (CAX-003): no se pinta lo que no quedó anotado y la
      *   puesta al día lo resuelve al abrir la app.
      */
@@ -63,7 +70,8 @@ class TrackingLedger(
     ): Admission {
         if (seq == null || seq <= 0) return Admission.Drop
         val last = loaded()[group]
-        if (last != null && !follows(last, seq, terminal)) return Admission.Drop
+        val decision = if (last == null) Admission.Admit else compare(last, seq, terminal, rank)
+        if (decision != Admission.Admit) return decision
         // Sobre una copia: si el disco no la acepta, lo anotado en memoria no cambia.
         val next = loaded().toMutableMap()
         next[group] = TrackingMark(version = seq, terminal = terminal || last?.terminal == true, rank = rank)
@@ -74,14 +82,21 @@ class TrackingLedger(
         return Admission.Admit
     }
 
-    private fun follows(
+    private fun compare(
         last: TrackingMark,
         seq: Long,
         terminal: Boolean,
-    ): Boolean {
-        if (last.terminal && !terminal) return false
-        val seen = last.version ?: return false
-        return seq > seen
+        rank: Int,
+    ): Admission {
+        val seen = last.version
+        return when {
+            last.terminal && !terminal -> Admission.Drop
+            seen == null -> if (last.terminal) Admission.Drop else Admission.Reconcile
+            seq > seen -> Admission.Admit
+            seq < seen -> Admission.Drop
+            last.terminal == terminal && last.rank == rank -> Admission.Drop
+            else -> Admission.Reconcile
+        }
     }
 
     /**

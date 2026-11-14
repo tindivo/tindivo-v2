@@ -527,4 +527,27 @@ class TrackingPresenterTest {
 
             assertEquals(TrackingProgress.of(3, 5), rig.notifications.visible[courier])
         }
+
+    // CAX-003 caso 2: llega primero el posterior y luego el anterior con el mismo seq.
+    @Test
+    fun `con el mismo seq y otro estado no se pinta el anterior y se pide REST de ese grupo (CAX-003)`() =
+        runTest {
+            registrar()
+            val install = installId()
+            val requests = mutableListOf<String>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                rig.presenter.reconcileRequests.collect { requests += it }
+            }
+            val seq = 4_000_000_000_000L
+
+            assertTrue("el posterior (paso 3) llega primero", rig.presenter.onPush(payload(install, seq, step = 3)))
+            assertFalse("el anterior (paso 2), mismo seq", rig.presenter.onPush(payload(install, seq, step = 2)))
+
+            assertEquals("sigue visible el posterior", TrackingProgress.of(3, 5), rig.notifications.visible[order])
+            assertEquals(1, rig.notifications.shows.size)
+            assertEquals(listOf(order.group), requests)
+            // Un duplicado exacto no pide nada.
+            assertFalse(rig.presenter.onPush(payload(install, seq, step = 3)))
+            assertEquals(1, requests.size)
+        }
 }
