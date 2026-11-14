@@ -920,6 +920,32 @@ describe.each([
   })
 })
 
+describe('CAX-001 · reapertura de un reporte marcado por sus fechas', () => {
+  it('mover resolved_at mientras se borra la imagen es rechazado (A bloquea la fila; B espera)', async () => {
+    const path = `retencion-${runId}/carrera-fechas.png`
+    await subir(path)
+    const id =
+      ins(`insert into public.reports (type, status, description, evidence_url, created_at, resolved_at)
+      values ('no_show', 'resolved', '${tag('carrera-fechas')}', '${path}', ${ANTIGUA}, ${VENCIDA('reportsMonths')})
+      returning id;`)
+    try {
+      const a = psqlAsync(
+        `begin; select public.report_retention_precheck('${id}'); select pg_sleep(3); commit;`,
+      )
+      await pausa(1000)
+      const b = await psqlAsync(`update public.reports set resolved_at = now() where id = '${id}';`)
+      const ra = await a
+      expect(ra.code, ra.err).toBe(0)
+      expect(b.code).not.toBe(0)
+      expect(b.err).toContain('retention_pending_delete')
+    } finally {
+      sql(`delete from public.retention_storage_marks where path = '${path}';
+           delete from public.reports where id = '${id}';`)
+      await db.storage.from('payment-proofs').remove([path])
+    }
+  })
+})
+
 /**
  * CAX-002 (Codex R1): el catálogo EFECTIVO de triggers de las tablas de dinero y la prueba de que la
  * huella detecta una alteración (control negativo).

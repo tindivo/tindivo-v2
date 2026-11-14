@@ -560,11 +560,13 @@ create trigger trg_retention_guard_reports_refund
 
 drop trigger if exists trg_retention_guard_reports_row on public.reports;
 create trigger trg_retention_guard_reports_row
-  before update of status, appeal_status, refund_status on public.reports
+  before update of status, appeal_status, refund_status, resolved_at, refund_completed_at on public.reports
   for each row
   when (old.status is distinct from new.status
         or old.appeal_status is distinct from new.appeal_status
-        or old.refund_status is distinct from new.refund_status)
+        or old.refund_status is distinct from new.refund_status
+        or old.resolved_at is distinct from new.resolved_at
+        or old.refund_completed_at is distinct from new.refund_completed_at)
   execute function public.retention_guard_row('reports');
 
 -- ── 6 · Registros técnicos (13 meses) ───────────────────────────────────────
