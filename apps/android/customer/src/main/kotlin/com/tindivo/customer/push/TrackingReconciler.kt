@@ -105,11 +105,11 @@ class RepositoryTrackingSource(
             TrackingSnapshot(
                 orders =
                     (orders.await() as? ApiResult.Success)?.data?.items?.associate {
-                        it.shortId to TrackingSteps.order(it.status, it.deliveryMethod)
+                        it.shortId to TrackingSteps.order(it.status, it.deliveryMethod, it.updatedAt)
                     },
                 couriers =
                     (couriers.await() as? ApiResult.Success)?.data?.items?.associate {
-                        it.shortId to TrackingSteps.courier(it.status)
+                        it.shortId to TrackingSteps.courier(it.status, it.updatedAt)
                     },
             )
         }

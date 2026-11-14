@@ -80,7 +80,7 @@ fun ordersJson(intent: String?) =
         """{"data":{"items":[{"id":"99999999-9999-4999-8999-999999999998","shortId":"ABCD2345","orderNumber":7,
         "status":"delivered","deliveryMethod":"delivery","paymentIntent":"$intent","cancelReason":null,
         "businessId":"$BIZ","businessName":"Pollería Don Lucho","amount":"25.00","deliveryFee":"5.00",
-        "total":"30.00","createdAt":"$STAMP","deliveredAt":"$STAMP","items":[]}],"nextCursor":null}}"""
+        "total":"30.00","createdAt":"$STAMP","updatedAt":"$STAMP","deliveredAt":"$STAMP","items":[]}],"nextCursor":null}}"""
     }
 
 private fun option(

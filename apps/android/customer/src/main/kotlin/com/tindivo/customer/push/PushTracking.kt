@@ -1,5 +1,8 @@
 package com.tindivo.customer.push
 
+import java.time.Instant
+import java.time.format.DateTimeParseException
+
 // El seguimiento del pedido en la notificación (decisión de Jesús, 2026-11-12): una notificación por pedido o entrega,
 // fija mientras está en curso, con barra de progreso, que suena en cada cambio. Aquí solo hay decisiones puras; el
 // dibujo vive en `PushNotifier` y la puesta al día al abrir la app en `TrackingReconciler`.
@@ -87,6 +90,8 @@ sealed interface TrackingStatus {
     data class Active(
         val kind: TrackingKind,
         val progress: TrackingProgress,
+        /** El `updatedAt` que trajo REST, en ms (la versión del estado leído); `null` si no vino o no se pudo leer. */
+        val version: Long? = null,
     ) : TrackingStatus
 
     /** Entregado o cancelado: ya no hay nada que seguir. */
@@ -120,6 +125,7 @@ object TrackingSteps {
     fun order(
         status: String,
         deliveryMethod: String,
+        updatedAt: String? = null,
     ): TrackingStatus {
         if (status in FINISHED) return TrackingStatus.Finished
         val pickup = deliveryMethod == "pickup"
@@ -134,11 +140,14 @@ object TrackingSteps {
                 else -> null
             }
         val steps = if (pickup) PICKUP_STEPS else DELIVERY_STEPS
-        return active(kind, step, steps)
+        return active(kind, step, steps, updatedAt)
     }
 
     /** `courier_orders.status`. */
-    fun courier(status: String): TrackingStatus {
+    fun courier(
+        status: String,
+        updatedAt: String? = null,
+    ): TrackingStatus {
         if (status in FINISHED) return TrackingStatus.Finished
         val step =
             when (status) {
@@ -147,17 +156,29 @@ object TrackingSteps {
                 "picked_up", "heading_to_dropoff" -> COURIER_ON_THE_WAY
                 else -> null
             }
-        return active(TrackingKind.Courier, step, COURIER_STEPS)
+        return active(TrackingKind.Courier, step, COURIER_STEPS, updatedAt)
     }
 
     private fun active(
         kind: TrackingKind,
         step: Int?,
         steps: Int,
+        updatedAt: String?,
     ): TrackingStatus {
         val progress = step?.let { TrackingProgress.of(it, steps) } ?: return TrackingStatus.Unknown
-        return TrackingStatus.Active(kind, progress)
+        return TrackingStatus.Active(kind, progress, versionOf(updatedAt))
     }
+
+    /**
+     * `updatedAt` de REST (ISO 8601 UTC con milisegundos) en milisegundos desde la época: la misma escala que el `seq`
+     * de un aviso (`updated_at` truncado a ms). `null` si falta o no es un instante.
+     */
+    fun versionOf(updatedAt: String?): Long? =
+        try {
+            updatedAt?.let { Instant.parse(it).toEpochMilli() }?.takeIf { it > 0 }
+        } catch (_: DateTimeParseException) {
+            null
+        }
 }
 
 /** La llave de presentación de un seguimiento: `order-<shortId>` o `courier-<shortId>`. */

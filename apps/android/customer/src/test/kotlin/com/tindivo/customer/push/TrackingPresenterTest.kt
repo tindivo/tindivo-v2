@@ -405,16 +405,17 @@ class TrackingPresenterTest {
         assertEquals("OrderStatusChanged-AB2C3D4E", notificationTag(sneaky))
     }
 
-    // CAX-003 (b): la puesta al dia no impide un retroceso legitimo posterior.
+    // CAX-003 (b): la puesta al dia no impide un retroceso legitimo posterior (piso = updatedAt de REST).
     @Test
-    fun `tras la puesta al dia, un release posterior se pinta y uno anterior a la consulta no (CAX-003)`() =
+    fun `tras la puesta al dia, un release posterior al updatedAt se pinta y uno anterior no (CAX-003)`() =
         runTest {
             registrar()
             val install = installId()
             val courier = checkNotNull(TrackingKey.parse("courier-ZZ9Y8X7W"))
-            val now = System.currentTimeMillis()
-            assertTrue(rig.presenter.onPush(payload(install, seq = now - 60_000, step = 2, group = courier.group)))
-            val status = TrackingStatus.Active(TrackingKind.Courier, checkNotNull(TrackingProgress.of(3, 4)))
+            val read = 2_000_000_000_000L // el updatedAt que trajo REST
+            assertTrue(rig.presenter.onPush(payload(install, seq = read - 60_000, step = 2, group = courier.group)))
+            val status =
+                TrackingStatus.Active(TrackingKind.Courier, checkNotNull(TrackingProgress.of(3, 4)), version = read)
 
             rig.presenter.apply(
                 "A",
@@ -423,11 +424,9 @@ class TrackingPresenterTest {
                 listOf(ReconcileAction.Update(courier, TrackingProgress.of(2, 5), status)),
             ) { _, _ -> payload(install, seq = null, step = 3, group = courier.group) }
 
-            assertFalse(
-                "un aviso anterior a la consulta",
-                rig.presenter.onPush(payload(install, now - 30_000, 2, group = courier.group)),
-            )
-            val release = payload(install, seq = now + 10 * 60_000, step = 1, group = courier.group)
+            val earlier = payload(install, read - 30_000, 2, group = courier.group)
+            assertFalse("un aviso anterior a lo que leyo REST", rig.presenter.onPush(earlier))
+            val release = payload(install, seq = read + 1, step = 1, group = courier.group)
             assertTrue("la entrega soltada despues de la consulta", rig.presenter.onPush(release))
             assertEquals(TrackingProgress.of(1, 5), rig.notifications.visible[courier])
         }

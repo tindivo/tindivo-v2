@@ -185,4 +185,19 @@ class PushTrackingTest {
             ),
         )
     }
+
+    @Test
+    fun `el updatedAt de REST se lee en milisegundos y llega al estado (CAX-003)`() {
+        val ms = 1_794_650_400_123L // 2026-11-14T10:00:00.123Z
+        assertEquals(ms, TrackingSteps.versionOf("2026-11-14T10:00:00.123Z"))
+        assertEquals(ms, TrackingSteps.versionOf("2026-11-14T05:00:00.123-05:00"))
+        assertEquals(null, TrackingSteps.versionOf(null))
+        assertEquals(null, TrackingSteps.versionOf("ayer"))
+
+        val order = TrackingSteps.order("preparing", "delivery", "2026-11-14T10:00:00.123Z")
+        assertEquals(TrackingStatus.Active(TrackingKind.Delivery, step(2, 5), ms), order)
+        val courier = TrackingSteps.courier("requested", "2026-11-14T10:00:00.123Z")
+        assertEquals(TrackingStatus.Active(TrackingKind.Courier, step(1, 4), ms), courier)
+        assertEquals(null, (TrackingSteps.order("preparing", "delivery") as TrackingStatus.Active).version)
+    }
 }

@@ -11,17 +11,19 @@ package com.tindivo.customer.push
  * milisegundo) NO hay forma de saber cuál es el posterior (ni el paso ni nada del aviso lo dice, y una entrega soltada
  * también baja de paso): se admite el que llega después, salvo que el último sea terminal.
  *
- * [floor] es el paso que la puesta al día (REST, que no trae versión) dejó en la bandeja. Un aviso activo de menor paso
- * solo se descarta si su `seq` NO supera [floorUntil] (el reloj del aparato al poner al día más un margen): hasta ahí no
- * se puede saber si es más nuevo que lo que leyó la consulta. Uno con `seq` mayor es posterior a la consulta (un
- * retroceso legítimo, como una entrega soltada) y se admite.
+ * [floor] es el paso que la puesta al día (REST) dejó en la bandeja, y [floorUntil] la versión de ese estado: el
+ * `updatedAt` que trae REST, en milisegundos, de la MISMA fila y el mismo reloj (el del servidor) que el `seq` de un
+ * aviso. Un aviso activo de menor paso se descarta solo si su `seq` NO supera [floorUntil]: es anterior o igual a lo que
+ * leyó la consulta. Uno con `seq` mayor es posterior (un retroceso legítimo, como una entrega soltada) y se admite.
+ * Nada depende del reloj del aparato. Sin `updatedAt` legible el piso vale hasta que llegue un aviso de paso igual o
+ * mayor (lo prudente).
  */
 data class TrackingMark(
     val seq: Long?,
     val terminal: Boolean,
     val rank: Int = 0,
     val floor: Int = 0,
-    /** Hasta qué versión (`seq`, en ms) vale el [floor]; con `0` no hay piso que valga. */
+    /** Hasta qué versión (`seq`, en ms) vale el [floor] (el `updatedAt` de REST); con `0` no hay piso que valga. */
     val floorUntil: Long = 0,
 )
 
@@ -39,8 +41,6 @@ interface TrackingMarkStore {
  */
 class TrackingLedger(
     private val store: TrackingMarkStore,
-    /** El reloj del aparato en milisegundos; se inyecta para las pruebas. */
-    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private var marks: MutableMap<String, TrackingMark>? = null
 
@@ -57,7 +57,7 @@ class TrackingLedger(
      * - tras un estado terminal solo se admite otro terminal, y solo si no es más viejo;
      * - uno de [seq] menor que el último mostrado se descarta; con el mismo [seq] se admite el que llega después;
      * - un activo de paso menor que el que dejó la puesta al día ([TrackingMark.floor]) se descarta mientras su [seq]
-     *   no supere [TrackingMark.floorUntil];
+     *   no supere [TrackingMark.floorUntil] (la versión que leyó REST);
      * - si la marca no se pudo escribir en disco NO se admite (CAX-003): no se pinta lo que no quedó anotado y la
      *   puesta al día lo resuelve al abrir la app.
      */
@@ -99,13 +99,15 @@ class TrackingLedger(
     }
 
     /**
-     * La puesta al día dejó en la bandeja un estado leído por REST (sin versión): si [terminal], el seguimiento terminó
-     * y ningún activo lo revive; si no, [rank] (el paso) queda como piso de lo que se puede mostrar después.
+     * La puesta al día dejó en la bandeja un estado leído por REST: si [terminal], el seguimiento terminó y ningún
+     * activo lo revive; si no, [rank] (el paso) queda como piso de lo que se puede mostrar después, mientras el aviso no
+     * sea posterior a [serverVersion] (el `updatedAt` leído, en ms; `null` si no se pudo leer: el piso no caduca).
      */
     fun reconciled(
         group: String,
         terminal: Boolean,
         rank: Int,
+        serverVersion: Long? = null,
     ) {
         val all = loaded()
         val last = all[group]
@@ -118,7 +120,7 @@ class TrackingLedger(
                     last?.terminal == true,
                     last?.rank ?: rank,
                     floor = rank,
-                    floorUntil = clock() + FLOOR_SKEW_MS,
+                    floorUntil = serverVersion ?: Long.MAX_VALUE,
                 )
             }
         trim(all)
@@ -142,9 +144,6 @@ class TrackingLedger(
 
     private companion object {
         const val MAX_MARKS = 64
-
-        /** El margen entre el reloj del aparato y el del servidor (`updated_at`) al decidir qué avisos son posteriores. */
-        const val FLOOR_SKEW_MS = 2L * 60 * 1000
     }
 }
 

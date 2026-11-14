@@ -135,7 +135,7 @@ class TrackingPresenter(
                     val now = notifications.shown().firstOrNull { it.key == action.key } ?: continue
                     if (now.progress == action.expected) {
                         notifications.show(textsFor(action.key, action.status), TrackingOrigin.Reconcile)
-                        ledger.reconciled(action.key.group, terminal = false, rank = action.status.progress.step)
+                        ledger.reconciled(action.key.group, false, action.status.progress.step, action.status.version)
                     }
                 }
             }

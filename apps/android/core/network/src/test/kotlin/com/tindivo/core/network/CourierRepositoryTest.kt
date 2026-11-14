@@ -194,7 +194,8 @@ class CourierRepositoryTest : HttpClientTestBase() {
             """{"data":{"items":[{"id":"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee","shortId":"AB23CD45",""" +
                 """"orderNumber":7,"status":"requested","cancelReason":null,"origin":$POINT,"destination":$POINT,""" +
                 """"itemDescription":"Documentos","isFragile":false,"payer":"destination","driverName":null,""" +
-                """"feeAmount":"3.00","createdAt":"2026-11-10T23:00:00Z","deliveredAt":null}],""" +
+                """"feeAmount":"3.00","createdAt":"2026-11-10T23:00:00Z","updatedAt":"2026-11-10T23:00:00Z",""" +
+                """"deliveredAt":null}],""" +
                 """"nextCursor":null,"frequentContacts":[{"name":"Mamá","phone":"987654321",""" +
                 """"coordinates":{"lat":-9.1,"lng":-78.1},"referenceText":"Casa verde frente al parque",""" +
                 """"timesUsed":3,"lastUsedAt":"2026-11-10T23:00:00Z"}]}}"""

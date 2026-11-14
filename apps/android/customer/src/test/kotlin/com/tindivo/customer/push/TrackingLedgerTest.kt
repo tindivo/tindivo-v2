@@ -9,14 +9,11 @@ import org.junit.Test
 
 /**
  * CAX-003: el seguimiento es monótono por la versión del estado (`seq`); con igual versión gana el que llega después;
- * y el piso de la puesta al día (REST, sin versión) solo vale para avisos que pudieron ser anteriores a la consulta.
+ * y el piso de la puesta al día solo vale para avisos que pudieron ser anteriores a lo que leyó REST (su `updatedAt`).
  */
 class TrackingLedgerTest {
     private val store = MemoryMarkStore()
-
-    /** El reloj del aparato, en ms: la puesta al día toma de aquí hasta dónde vale su piso. */
-    private var now = 2_000_000_000_000L
-    private val ledger = TrackingLedger(store) { now }
+    private val ledger = TrackingLedger(store)
 
     private fun admit(
         group: String,
@@ -101,28 +98,54 @@ class TrackingLedgerTest {
     }
 
     @Test
-    fun `un paso leido por la puesta al dia es el piso mientras el aviso pudo ser anterior a la consulta`() {
+    fun `sin updatedAt legible el piso de la puesta al dia no caduca hasta un aviso de paso igual o mayor`() {
         assertTrue(admit("order-AB2C3D4E", seq = 1_000_000_000_000, rank = 2))
         ledger.reconciled("order-AB2C3D4E", terminal = false, rank = 4)
+        assertEquals(Long.MAX_VALUE, store.saved.getValue("order-AB2C3D4E").floorUntil)
 
-        assertFalse("el aviso viejo del paso 3", admit("order-AB2C3D4E", seq = 1_500_000_000_000, rank = 3))
+        assertFalse("el aviso viejo del paso 3", admit("order-AB2C3D4E", seq = 9_000_000_000_000, rank = 3))
         assertTrue("uno del paso 4 en adelante si", admit("order-AB2C3D4E", seq = 1_500_000_000_000, rank = 4))
     }
 
     @Test
-    fun `tras la puesta al dia, un retroceso legitimo posterior a la consulta se admite (CAX-003)`() {
-        assertTrue(admit("courier-ZZ9Y8X7W", seq = 1_000_000_000_000, rank = 2))
-        // REST la lee «en camino» (paso 3): piso 3, valido hasta el reloj de ahora mas el margen.
-        ledger.reconciled("courier-ZZ9Y8X7W", terminal = false, rank = 3)
-        val until = store.saved.getValue("courier-ZZ9Y8X7W").floorUntil
-        assertEquals(now + 2 * 60 * 1000, until)
+    fun `con el updatedAt de REST como piso, un retroceso legitimo posterior se admite y uno anterior no (CAX-003)`() {
+        val read = 2_000_000_000_000L // el updatedAt que leyo REST, en ms
+        assertTrue(admit("courier-ZZ9Y8X7W", seq = read - 60_000, rank = 2))
+        // REST la lee «en camino» (paso 3).
+        ledger.reconciled("courier-ZZ9Y8X7W", terminal = false, rank = 3, serverVersion = read)
+        assertEquals(read, store.saved.getValue("courier-ZZ9Y8X7W").floorUntil)
 
-        // Un aviso de paso 2 con version anterior o dentro del margen pudo ser previo a la consulta: se descarta.
-        assertFalse(admit("courier-ZZ9Y8X7W", seq = until, rank = 2))
+        // Un aviso de paso 2 con version anterior o igual a lo leido pudo ser previo: se descarta.
+        assertFalse(admit("courier-ZZ9Y8X7W", seq = read - 1, rank = 2))
+        assertFalse(admit("courier-ZZ9Y8X7W", seq = read, rank = 2))
         // La entrega soltada despues (paso 1, version mayor que lo leido) es posterior: se admite y quita el piso.
-        assertTrue(admit("courier-ZZ9Y8X7W", seq = until + 1, rank = 1))
+        assertTrue(admit("courier-ZZ9Y8X7W", seq = read + 1, rank = 1))
         assertEquals(0, store.saved.getValue("courier-ZZ9Y8X7W").floor)
-        assertTrue(admit("courier-ZZ9Y8X7W", seq = until + 2, rank = 2))
+        assertTrue(admit("courier-ZZ9Y8X7W", seq = read + 2, rank = 2))
+    }
+
+    /** La misma secuencia REST + avisos, con las versiones desplazadas a una base `base`: devuelve cada decision. */
+    private fun sequence(base: Long): List<Boolean> {
+        val local = TrackingLedger(MemoryMarkStore())
+        val group = "courier-ZZ9Y8X7W"
+        val decisions = mutableListOf<Boolean>()
+        decisions += local.admit(group, base - 60_000, false, 2)
+        local.reconciled(group, terminal = false, rank = 3, serverVersion = base)
+        decisions += local.admit(group, base - 30_000, false, 2)
+        decisions += local.admit(group, base, false, 2)
+        decisions += local.admit(group, base + 1, false, 1)
+        decisions += local.admit(group, base + 2, false, 2)
+        return decisions
+    }
+
+    @Test
+    fun `el reloj del aparato no interviene, un aparato atrasado y otro adelantado deciden igual (CAX-003)`() {
+        // Versiones del servidor en el pasado remoto y en el futuro remoto respecto de cualquier reloj de aparato.
+        val behind = sequence(base = 1_000_000_000_000L) // el aparato «esta en 2099» frente a estas versiones
+        val ahead = sequence(base = 4_100_000_000_000L) // el aparato «esta en 2001» frente a estas versiones
+
+        assertEquals(listOf(true, false, false, true, true), behind)
+        assertEquals(behind, ahead)
     }
 
     @Test
