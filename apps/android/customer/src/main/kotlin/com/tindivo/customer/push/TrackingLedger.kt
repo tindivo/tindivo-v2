@@ -1,5 +1,7 @@
 package com.tindivo.customer.push
 
+import java.security.MessageDigest
+
 /**
  * Lo último que se sabe de cada seguimiento (`order-<sid>`, `courier-<sid>`): su [version], su [rank] (el orden del
  * estado: el paso, y por encima de todos el terminal) y si ya terminó.
@@ -25,28 +27,87 @@ data class TrackingMark(
  */
 enum class Admission { Admit, Drop, Reconcile }
 
+/** Lo guardado: las marcas y la cuenta dueña de ellas ([owner], ver [trackingOwnerOf]; `null` si no consta). */
+data class StoredMarks(
+    val owner: String?,
+    val marks: Map<String, TrackingMark>,
+)
+
 /** Dónde se guardan las marcas: sobreviven al proceso (un aviso tardío puede llegar con el proceso recién arrancado). */
 interface TrackingMarkStore {
-    fun load(): Map<String, TrackingMark>
+    fun load(): StoredMarks
 
     /** `true` solo si quedó escrito en disco: una escritura que falla no se da por guardada (CAX-003). */
-    fun save(marks: Map<String, TrackingMark>): Boolean
+    fun save(
+        owner: String?,
+        marks: Map<String, TrackingMark>,
+    ): Boolean
 }
 
 /**
- * Decide si un aviso de seguimiento es más nuevo que lo ya mostrado y lo anota. Las operaciones no son atómicas entre
+ * La cuenta dueña de las marcas, tal como se guarda: un resumen (SHA-256, 16 caracteres hexadecimales) del id de la
+ * cuenta, no el id. Al cargarlas, si no es el de la cuenta actual, se descartan.
+ */
+fun trackingOwnerOf(accountId: String): String =
+    MessageDigest
+        .getInstance("SHA-256")
+        .digest(accountId.toByteArray(Charsets.UTF_8))
+        .take(OWNER_BYTES)
+        .joinToString("") { "%02x".format(it) }
+
+private const val OWNER_BYTES = 8
+
+/**
+ * Decide si un aviso de seguimiento es más nuevo que lo ya observado y lo anota. Las operaciones no son atómicas entre
  * sí: quien las llama las corre bajo el candado de [TrackingPresenter].
+ *
+ * PERSISTENCIA (CAX-003). Cada escritura vuelca el mapa COMPLETO. Si una escritura de [reconciled] o [clear] falla, se
+ * reintenta una vez; si sigue fallando, la memoria queda correcta, el ledger queda [dirty] y la siguiente escritura que
+ * salga bien lo vuelca todo y limpia la marca. El archivo guarda además la cuenta dueña ([bind]): si al cargarlo no es la
+ * actual, se descarta, así que un [clear] que no llegó a disco no deja marcas de A a la vista de B. RESIDUAL: si el disco
+ * rechaza TODA escritura y el proceso muere, el terminal reconciliado (o el borrado de [clear]) puede perderse y un aviso
+ * activo tardío del mismo pedido volver a pintarse, hasta la siguiente puesta al día.
  */
 class TrackingLedger(
     private val store: TrackingMarkStore,
 ) {
     private var marks: MutableMap<String, TrackingMark>? = null
+    private var owner: String? = null
+
+    /** La memoria tiene algo que el disco no: una escritura de [reconciled] o [clear] falló. Solo para pruebas. */
+    var dirty: Boolean = false
+        private set
 
     /** Sube con cada aviso admitido y con cada limpieza: la puesta al día lo compara para saber que algo llegó en medio. */
     var version: Long = 0
         private set
 
-    private fun loaded(): MutableMap<String, TrackingMark> = marks ?: store.load().toMutableMap().also { marks = it }
+    private fun loaded(): MutableMap<String, TrackingMark> =
+        marks ?: store.load().let { stored ->
+            owner = stored.owner
+            stored.marks.toMutableMap().also { marks = it }
+        }
+
+    /**
+     * Las marcas son de [account] (ver [trackingOwnerOf]). Si el archivo era de OTRA cuenta se descartan (y el disco se
+     * corrige con la siguiente escritura); si no constaba dueño (formato anterior), pasan a ser de esta.
+     */
+    fun bind(account: String) {
+        val all = loaded()
+        val current = owner
+        if (current != null && current != account) {
+            all.clear()
+            dirty = true
+        }
+        owner = account
+    }
+
+    /** Un intento más si el primero falla; el mapa completo. */
+    private fun persist(all: Map<String, TrackingMark>): Boolean {
+        val written = store.save(owner, all) || store.save(owner, all)
+        if (written) dirty = false
+        return written
+    }
 
     /**
      * Si el aviso se debe mostrar (y queda anotado). Reglas, por [group], con [seq] la versión del aviso:
@@ -76,7 +137,7 @@ class TrackingLedger(
         val next = loaded().toMutableMap()
         next[group] = TrackingMark(version = seq, terminal = terminal || last?.terminal == true, rank = rank)
         trim(next)
-        if (!store.save(next)) return Admission.Drop
+        if (!persist(next)) return Admission.Drop
         marks = next
         version++
         return Admission.Admit
@@ -137,14 +198,15 @@ class TrackingLedger(
                 TrackingMark(seen, last?.terminal == true, rank)
             }
         trim(all)
-        store.save(all)
+        if (!persist(all)) dirty = true
         version++
     }
 
     /** Cerrar sesión o cambiar de cuenta: las marcas de la cuenta anterior no valen para la siguiente. */
     fun clear() {
         loaded().clear()
-        store.save(emptyMap())
+        owner = null
+        if (!persist(emptyMap())) dirty = true
         version++
     }
 

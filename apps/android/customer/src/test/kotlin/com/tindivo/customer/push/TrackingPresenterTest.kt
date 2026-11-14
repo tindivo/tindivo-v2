@@ -550,4 +550,18 @@ class TrackingPresenterTest {
             assertFalse(rig.presenter.onPush(payload(install, seq, step = 3)))
             assertEquals(1, requests.size)
         }
+
+    // CAX-003 caso 3: cerrar sesion nunca se bloquea por un disco que no escribe las marcas.
+    @Test
+    fun `cerrar sesion termina aunque las marcas no se puedan escribir y limpia la bandeja (CAX-003)`() =
+        runTest {
+            registrar()
+            assertTrue(rig.presenter.onPush(payload(installId(), seq = 1_000_000_000_000, step = 2)))
+            rig.marks.writeWorks = false
+
+            rig.presenter.closeAccount { Unit }
+
+            assertTrue(rig.notifications.visible.isEmpty())
+            assertEquals(1, rig.notifications.clears)
+        }
 }

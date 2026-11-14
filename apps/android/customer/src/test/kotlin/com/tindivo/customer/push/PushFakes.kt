@@ -136,13 +136,31 @@ class MemoryDataStore<T>(
 open class MemoryMarkStore : TrackingMarkStore {
     var saved: Map<String, TrackingMark> = emptyMap()
 
+    /** La cuenta dueña de lo guardado, como la anota el ledger. */
+    var owner: String? = null
+
     /** Si es `false`, el disco no acepta la escritura: [save] devuelve `false` y no cambia lo guardado. */
     var writeWorks = true
 
-    override fun load(): Map<String, TrackingMark> = saved
+    /** Cuántas escrituras seguidas fallan antes de volver a funcionar (para probar el reintento). */
+    var failNext = 0
 
-    override fun save(marks: Map<String, TrackingMark>): Boolean {
+    /** Las escrituras intentadas, con éxito o sin él. */
+    var attempts = 0
+
+    override fun load(): StoredMarks = StoredMarks(owner, saved)
+
+    override fun save(
+        owner: String?,
+        marks: Map<String, TrackingMark>,
+    ): Boolean {
+        attempts++
+        if (failNext > 0) {
+            failNext--
+            return false
+        }
         if (!writeWorks) return false
+        this.owner = owner
         saved = marks.toMap()
         return true
     }

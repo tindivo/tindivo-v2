@@ -234,4 +234,82 @@ class TrackingLedgerTest {
         assertTrue(store.saved.containsKey("order-ID100"))
         assertFalse(store.saved.containsKey("order-ID1"))
     }
+
+    // CAX-003 caso 3: la persistencia de reconciled y clear.
+    @Test
+    fun `si save falla al reconciliar un terminal, la memoria es correcta y otra escritura lo persiste (CAX-003)`() {
+        ledger.bind("owner-A")
+        assertTrue(admit("order-AB2C3D4E", seq = 1_000_000_000_000, rank = 4))
+        store.writeWorks = false
+
+        ledger.reconciled("order-AB2C3D4E", terminal = true, rank = TERMINAL_RANK)
+
+        assertTrue("la memoria quedo con el terminal, el ledger sigue sucio", ledger.dirty)
+        assertFalse("un activo tardio no revive", admit("order-AB2C3D4E", seq = 2_000_000_000_000, rank = 4))
+        assertFalse("el disco aun tiene el activo", store.saved.getValue("order-AB2C3D4E").terminal)
+
+        // El disco vuelve: la siguiente escritura buena (otro pedido) vuelca el mapa completo y limpia la marca.
+        store.writeWorks = true
+        assertTrue(admit("order-ZZ9Y8X7W", seq = 3_000_000_000_000, rank = 2))
+        assertFalse(ledger.dirty)
+        assertTrue(store.saved.getValue("order-AB2C3D4E").terminal)
+
+        // Un ledger recreado desde el disco lo ve terminal.
+        val reopened = TrackingLedger(store)
+        reopened.bind("owner-A")
+        assertEquals(Admission.Drop, reopened.admit("order-AB2C3D4E", 9_000_000_000_000, false, 4))
+    }
+
+    @Test
+    fun `una escritura que falla se reintenta una vez antes de marcar el ledger como sucio (CAX-003)`() {
+        ledger.bind("owner-A")
+        assertTrue(admit("order-AB2C3D4E", seq = 1_000_000_000_000, rank = 4))
+        val before = store.attempts
+        store.failNext = 1
+
+        ledger.reconciled("order-AB2C3D4E", terminal = true, rank = TERMINAL_RANK)
+
+        assertEquals("un intento fallido y su reintento", before + 2, store.attempts)
+        assertFalse(ledger.dirty)
+        assertTrue(store.saved.getValue("order-AB2C3D4E").terminal)
+    }
+
+    @Test
+    fun `si clear no llega a disco, al recrear con otra cuenta el disco viejo se descarta (CAX-003)`() {
+        ledger.bind("owner-A")
+        assertTrue(admit("order-AB2C3D4E", seq = 9_000_000_000_000, rank = 4))
+        store.writeWorks = false
+
+        ledger.clear()
+
+        assertTrue(ledger.dirty)
+        assertFalse("el disco conserva las marcas de A", store.saved.isEmpty())
+        assertEquals("owner-A", store.owner)
+
+        // Otro proceso, con B y el disco ya sano: lo de A no vale, aunque su version sea mayor.
+        store.writeWorks = true
+        val reopened = TrackingLedger(store)
+        reopened.bind("owner-B")
+        assertEquals(Admission.Admit, reopened.admit("order-AB2C3D4E", 1_000_000_000_000, false, 2))
+        assertEquals("owner-B", store.owner)
+    }
+
+    @Test
+    fun `las marcas sin dueno (formato anterior) pasan a ser de la cuenta actual y no se descartan`() {
+        store.saved = mapOf("order-AB2C3D4E" to TrackingMark(7L, true, TERMINAL_RANK))
+        val reopened = TrackingLedger(store)
+
+        reopened.bind("owner-A")
+
+        assertEquals(Admission.Drop, reopened.admit("order-AB2C3D4E", 9_000_000_000_000, false, 2))
+    }
+
+    @Test
+    fun `el dueno de las marcas es un resumen del id de la cuenta, no el id`() {
+        val owner = trackingOwnerOf("11111111-1111-4111-8111-111111111111")
+        assertEquals(16, owner.length)
+        assertTrue(owner.all { it in "0123456789abcdef" })
+        assertNotEquals(owner, trackingOwnerOf("22222222-2222-4222-8222-222222222222"))
+        assertEquals(owner, trackingOwnerOf("11111111-1111-4111-8111-111111111111"))
+    }
 }

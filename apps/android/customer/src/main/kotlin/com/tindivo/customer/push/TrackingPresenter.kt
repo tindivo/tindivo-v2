@@ -70,6 +70,7 @@ class TrackingPresenter(
             // vuelve a comprobar aquí y, bajo el candado de la sesión, no puede cambiar hasta que se haya pintado.
             publishLock.withLock {
                 if (!stillCurrent(account, generation)) return@withLock false
+                ledger.bind(trackingOwnerOf(account))
                 val key = TrackingKey.parse(payload.group)
                 // Solo los avisos que mueven el seguimiento (traen paso o son terminales) exigen una versión válida. Uno
                 // sin barra (un estado sin paso, un aviso que no es de estado) se muestra como siempre y no toca las marcas.
@@ -142,6 +143,7 @@ class TrackingPresenter(
         textsFor: (TrackingKey, TrackingStatus.Active) -> NativePushPayload,
     ) {
         if (!stillCurrent(account, generation) || ledger.version != seenVersion) return
+        ledger.bind(trackingOwnerOf(account))
         for (action in actions) {
             when (action) {
                 is ReconcileAction.Remove -> {
@@ -204,25 +206,36 @@ class SharedPrefsTrackingMarkStore(
 ) : TrackingMarkStore {
     private val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-    override fun load(): Map<String, TrackingMark> =
-        prefs.all
-            .mapNotNull { (group, raw) ->
-                val mark = (raw as? String)?.let(TrackingMarkCodec::decode) ?: return@mapNotNull null
-                group to mark
-            }.toMap()
+    override fun load(): StoredMarks {
+        val marks =
+            prefs.all
+                .mapNotNull { (group, raw) ->
+                    val mark = (raw as? String)?.takeIf { group != OWNER_KEY }?.let(TrackingMarkCodec::decode)
+                    mark?.let { group to it }
+                }.toMap()
+        return StoredMarks(prefs.getString(OWNER_KEY, null), marks)
+    }
 
     // `commit()` y no `apply()`: la escritura es síncrona, así que una marca admitida no se pierde si el proceso muere justo
     // después de pintar (con `apply()` la escritura va en un hilo aparte y un aviso tardío podría revivir un terminal).
     // Devuelve su resultado: si el disco no la aceptó, quien llama no puede darla por guardada (CAX-003).
     @SuppressLint("ApplySharedPref")
-    override fun save(marks: Map<String, TrackingMark>): Boolean =
+    override fun save(
+        owner: String?,
+        marks: Map<String, TrackingMark>,
+    ): Boolean =
         prefs
             .edit()
             .clear()
-            .apply { marks.forEach { (group, mark) -> putString(group, TrackingMarkCodec.encode(mark)) } }
-            .commit()
+            .apply {
+                owner?.let { putString(OWNER_KEY, it) }
+                marks.forEach { (group, mark) -> putString(group, TrackingMarkCodec.encode(mark)) }
+            }.commit()
 
     private companion object {
         const val FILE = "tindivo_tracking_marks"
+
+        /** Ningún `group` empieza por `_`: no puede confundirse con una marca. */
+        const val OWNER_KEY = "_owner"
     }
 }
