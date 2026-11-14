@@ -3848,6 +3848,11 @@
                                 "type": "string",
                                 "format": "date-time"
                               },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Última modificación (UTC, con milisegundos): la misma versión (`seq`) que llevan los avisos del seguimiento"
+                              },
                               "deliveredAt": {
                                 "nullable": true,
                                 "type": "string",
@@ -3893,6 +3898,7 @@
                               "deliveryFee",
                               "total",
                               "createdAt",
+                              "updatedAt",
                               "deliveredAt",
                               "items"
                             ],
@@ -6291,6 +6297,11 @@
                                 "type": "string",
                                 "format": "date-time"
                               },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Última modificación (UTC, con milisegundos): la misma versión (`seq`) que llevan los avisos del seguimiento"
+                              },
                               "deliveredAt": {
                                 "nullable": true,
                                 "type": "string",
@@ -6311,6 +6322,7 @@
                               "driverName",
                               "feeAmount",
                               "createdAt",
+                              "updatedAt",
                               "deliveredAt"
                             ],
                             "additionalProperties": false
@@ -10647,6 +10659,11 @@
                           "type": "string",
                           "format": "date-time"
                         },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Última modificación (UTC, con milisegundos): la misma versión (`seq`) que llevan los avisos del seguimiento"
+                        },
                         "deliveredAt": {
                           "nullable": true,
                           "type": "string",
@@ -10801,6 +10818,7 @@
                         "deliveryFee",
                         "total",
                         "createdAt",
+                        "updatedAt",
                         "deliveredAt",
                         "items",
                         "customerNotes",
