@@ -162,7 +162,7 @@ open class FakeTrackingNotifications : TrackingNotifications {
         origin: TrackingOrigin,
     ) {
         shows += payload to origin
-        TrackingKey.parse(notificationTag(payload))?.let { visible[it] = payload.progress }
+        trackingKeyOfTag(notificationTag(payload))?.let { visible[it] = payload.progress }
     }
 
     override fun remove(key: TrackingKey) {

@@ -71,6 +71,13 @@ data class NativePushPayload(
 
         /** Las mismas cotas del esquema Zod del contrato. */
         private const val MAX_TYPE = 64
+
+        /**
+         * Un tipo de evento del outbox es un identificador (`OrderStatusChanged`): letras y dígitos, sin separadores. No es
+         * una lista cerrada (un tipo nuevo del servidor sigue mostrándose en una app instalada, API-3), pero con esta
+         * gramática ninguna etiqueta `${type}-${shortId}` puede parecerse a la del seguimiento fijo ([trackingTag]).
+         */
+        private val TYPE_TEXT = Regex("[A-Za-z][A-Za-z0-9]*")
         private const val MAX_TAG = 256
         private const val MAX_GROUP = 256
         private const val MAX_TITLE = 256
@@ -87,7 +94,7 @@ data class NativePushPayload(
 
         /**
          * Lee el payload v1. Devuelve `null` (el aviso se descarta, no se muestra) si la versión no es la 1, si falta un
-         * campo o se pasa de su cota, si el título está vacío o si [deepLink] no es una ruta relativa de la app: tiene que
+         * campo o se pasa de su cota, si el tipo no es un identificador, si el título está vacío o si [deepLink] no es una ruta relativa de la app: tiene que
          * empezar con `/`, no con `//`, y no puede llevar `\` ni espacios (nada que un intérprete de URL pueda leer
          * como un host). [group] es opcional: si falta vale [tag]; si viene vacío o pasado de su cota no cumple el
          * contrato, y el aviso también se descarta.
@@ -97,7 +104,7 @@ data class NativePushPayload(
          */
         fun decode(data: Map<String, String>): NativePushPayload? {
             if (data[KEY_V] != SUPPORTED_VERSION) return null
-            val type = data[KEY_TYPE]?.takeIf { it.isNotEmpty() && it.length <= MAX_TYPE }
+            val type = data[KEY_TYPE]?.takeIf { it.length <= MAX_TYPE && TYPE_TEXT.matches(it) }
             val tag = data[KEY_TAG]?.takeIf { it.isNotEmpty() && it.length <= MAX_TAG }
             val title = data[KEY_TITLE]?.takeIf { it.isNotBlank() && it.length <= MAX_TITLE }
             val body = data[KEY_BODY]?.takeIf { it.length <= MAX_BODY }

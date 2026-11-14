@@ -227,4 +227,13 @@ class NativePushPayloadTest {
 
         assertEquals("/" + "a".repeat(511), NativePushPayload.decode(atLimits)?.deepLink)
     }
+
+    @Test
+    fun `un type que no es un identificador se descarta, uno nuevo del servidor se sigue mostrando (CAX-003)`() {
+        for (bad in listOf("tracking:order", "order-x", "Order Status", "1Order", "Ordenña", "")) {
+            assertNull(bad, NativePushPayload.decode(valid + ("type" to bad)))
+        }
+        assertEquals("AlgoNuevo2", NativePushPayload.decode(valid + ("type" to "AlgoNuevo2"))?.type)
+        assertEquals("order", NativePushPayload.decode(valid + ("type" to "order"))?.type)
+    }
 }

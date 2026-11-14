@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -393,17 +394,46 @@ class TrackingPresenterTest {
         }
 
     @Test
-    fun `la etiqueta de un aviso es el grupo si mueve el seguimiento y la del evento si es del pedido sin paso`() {
+    fun `solo el aviso que mueve el seguimiento usa la etiqueta fija, el resto una etiqueta disjunta (CAX-003)`() {
         val moving = payload("x", seq = 1_000_000_000_000, step = 2)
-        assertEquals(order.group, notificationTag(moving))
-        assertEquals(order.group, notificationTag(moving.copy(progress = null, terminal = true)))
+        assertEquals("tracking:order-AB2C3D4E", notificationTag(moving))
+        assertEquals(trackingTag(order), notificationTag(moving.copy(progress = null, terminal = true)))
+        assertEquals(order, trackingKeyOfTag(notificationTag(moving)))
         // Un aviso que no es del seguimiento ya tiene su grupo propio.
         val other = barless("x").copy(group = "OrderProofRejected-AB2C3D4E", tag = "OrderProofRejected-AB2C3D4E")
         assertEquals("OrderProofRejected-AB2C3D4E", notificationTag(other))
-        // Un tag que fuera la llave de seguimiento no puede ocupar la ranura de la fija.
-        val sneaky = barless("x").copy(tag = order.group)
-        assertEquals("OrderStatusChanged-AB2C3D4E", notificationTag(sneaky))
+        assertNull(trackingKeyOfTag(notificationTag(other)))
+        // Un grupo que imitara la etiqueta fija se desplaza.
+        val imitation = other.copy(group = trackingTag(order), tag = trackingTag(order))
+        assertEquals("event:tracking:order-AB2C3D4E", notificationTag(imitation))
+        assertNull(trackingKeyOfTag(notificationTag(imitation)))
     }
+
+    @Test
+    fun `el caso de Codex (type order, tag y group order-AB2C3D4E, sin barra) no reconstruye la fija (CAX-003)`() =
+        runTest {
+            registrar()
+            val install = installId()
+            assertTrue(rig.presenter.onPush(payload(install, seq = 5_000_000_000_000, step = 3)))
+            val pinned = rig.notifications.visible[order]
+            val data =
+                mapOf(
+                    "v" to "1",
+                    "type" to "order",
+                    "tag" to "order-AB2C3D4E",
+                    "group" to "order-AB2C3D4E",
+                    "title" to "T",
+                    "body" to "B",
+                    "deepLink" to "/pedido/AB2C3D4E",
+                    "install" to install,
+                )
+            val hostile = checkNotNull(NativePushPayload.decode(data))
+
+            assertNotEquals(trackingTag(order), notificationTag(hostile))
+            assertNull(trackingKeyOfTag(notificationTag(hostile)))
+            assertTrue(rig.presenter.onPush(hostile))
+            assertEquals("la fija sigue donde estaba", pinned, rig.notifications.visible[order])
+        }
 
     // CAX-003 (b): la puesta al dia no impide un retroceso legitimo posterior (piso = updatedAt de REST).
     @Test

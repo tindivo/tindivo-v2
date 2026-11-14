@@ -71,15 +71,32 @@ fun lookFor(
 }
 
 /**
- * La etiqueta (con el id 0) bajo la que se pinta [payload] (CAX-003). Los avisos que mueven el seguimiento (traen paso o
- * son terminales) usan el `group` y se reemplazan entre sí. Uno del mismo pedido SIN paso (un estado que la app no
- * mapea) no puede ocupar esa ranura: pisaría la notificación fija con algo que no pasó por las marcas y la quitaría de la
- * puesta al día. Se pinta con su propia etiqueta, la del evento (`${event_type}-${shortId}`).
+ * El espacio de nombres de la notificación FIJA del seguimiento (CAX-003). Ninguna otra etiqueta puede empezar así: las
+ * del resto de avisos son `group`/`${event_type}-${shortId}` y [notificationTag] las desplaza si algún dato del servidor
+ * coincidiera. `:` no lo admite un tipo de evento (ver [NativePushPayload.decode]) ni un `shortId` ([TrackingKey]).
+ */
+const val TRACKING_TAG_PREFIX: String = "tracking:"
+
+/** La etiqueta (con el id 0) de la notificación fija de [key]. */
+fun trackingTag(key: TrackingKey): String = TRACKING_TAG_PREFIX + key.group
+
+/** La llave de seguimiento de una etiqueta de notificación fija; `null` si no lo es. */
+fun trackingKeyOfTag(tag: String): TrackingKey? =
+    if (tag.startsWith(TRACKING_TAG_PREFIX)) TrackingKey.parse(tag.removePrefix(TRACKING_TAG_PREFIX)) else null
+
+/**
+ * La etiqueta (con el id 0) bajo la que se pinta [payload] (CAX-003). Solo los avisos que mueven el seguimiento (traen
+ * paso o son terminales) de un pedido o una entrega usan la etiqueta FIJA ([trackingTag]) y se reemplazan entre sí. Todo
+ * lo demás, incluido un aviso del mismo pedido SIN paso, va con su etiqueta de evento (`${event_type}-${shortId}`, o su
+ * `group` si no es de seguimiento) y nunca puede ocupar la ranura de la fija: pisaría la notificación con algo que no
+ * pasó por las marcas. Si esa etiqueta empezara por [TRACKING_TAG_PREFIX] se desplaza con `event:`: los dos espacios
+ * son disjuntos para cualquier payload.
  */
 fun notificationTag(payload: NativePushPayload): String {
-    val key = TrackingKey.parse(payload.group) ?: return payload.group
-    if (payload.progress != null || payload.terminal) return payload.group
-    return if (TrackingKey.parse(payload.tag) == null) payload.tag else "${payload.type}-${key.shortId}"
+    val key = TrackingKey.parse(payload.group)
+    if (key != null && (payload.progress != null || payload.terminal)) return trackingTag(key)
+    val base = if (key == null) payload.group else "${payload.type}-${key.shortId}"
+    return if (base.startsWith(TRACKING_TAG_PREFIX)) "event:$base" else base
 }
 
 /** Qué se sigue: un pedido a domicilio, uno para recoger, o una entrega de Tindivo Entregas. */

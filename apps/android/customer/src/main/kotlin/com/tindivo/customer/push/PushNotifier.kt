@@ -108,7 +108,7 @@ class PushNotifier(
         return active.mapNotNull { sbn ->
             val notification = sbn.notification
             val ongoing = notification.flags and Notification.FLAG_ONGOING_EVENT != 0
-            val key = sbn.tag?.let(TrackingKey::parse)
+            val key = sbn.tag?.let(::trackingKeyOfTag)
             if (sbn.id != NOTIFICATION_ID || !ongoing || key == null) return@mapNotNull null
             val extras = notification.extras
             ShownTracking(key, TrackingProgress.of(extras.getInt(EXTRA_STEP, 0), extras.getInt(EXTRA_STEPS, 0)))
@@ -116,7 +116,7 @@ class PushNotifier(
     }
 
     override fun remove(key: TrackingKey) {
-        NotificationManagerCompat.from(context).cancel(key.group, NOTIFICATION_ID)
+        NotificationManagerCompat.from(context).cancel(trackingTag(key), NOTIFICATION_ID)
     }
 
     override fun clearAll() {
