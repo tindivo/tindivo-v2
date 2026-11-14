@@ -101,7 +101,7 @@ class PushInstallationStoreTest {
             val first = DataStorePushInstallationStore(memory, newId = { ids[next++] })
             first.bindTo("A")
             first.beginSignOut("A")
-            first.tokenDone()
+            first.tokenDone(setOf(ids[0].toString()))
 
             val reopened = DataStorePushInstallationStore(memory)
             assertEquals(listOf(PendingCleanup(ids[0].toString(), "A", tokenDone = true)), reopened.pending())
@@ -128,7 +128,7 @@ class PushInstallationStoreTest {
             )
             // Cerrar una no cierra la otra; el token es uno solo y cierra el de todas.
             reopened.serverDone(ids[0].toString())
-            reopened.tokenDone()
+            reopened.tokenDone(setOf(ids[0].toString(), ids[1].toString()))
             assertEquals(listOf(PendingCleanup(ids[1].toString(), "B", tokenDone = true)), reopened.pending())
         }
 
@@ -224,5 +224,33 @@ class PushInstallationStoreTest {
             PushInstallationSerializer.writeTo(snapshot, out)
 
             assertEquals(snapshot, PushInstallationSerializer.readFrom(ByteArrayInputStream(out.toByteArray())))
+        }
+
+    @Test
+    fun `tokenDone solo cierra las limpiezas cubiertas, y con ifBound solo si la vinculacion sigue igual (CAX-011)`() =
+        runTest {
+            val memory = MemoryDataStore(PushInstallationSnapshot())
+            val store = DataStorePushInstallationStore(memory, newId = { ids[next++] })
+            store.bindTo("A")
+            store.beginSignOut("A") // pendiente ids[0]; identidad nueva ids[1]
+            store.bindTo("B") // ids[1] de B
+            store.beginSignOut("B") // pendiente ids[1]; identidad nueva ids[2]
+
+            store.tokenDone(setOf(ids[0].toString()))
+            assertEquals(
+                listOf(
+                    PendingCleanup(ids[0].toString(), "A", tokenDone = true),
+                    PendingCleanup(ids[1].toString(), "B"),
+                ),
+                store.pending(),
+            )
+
+            // La vinculación ya no es la de B con ids[1]: no actúa.
+            store.tokenDone(setOf(ids[1].toString()), ifBound = PushInstallation(ids[1].toString(), "B"))
+            assertEquals(false, store.pending().last().tokenDone)
+
+            store.bindTo("C")
+            store.tokenDone(setOf(ids[1].toString()), ifBound = PushInstallation(ids[2].toString(), "C"))
+            assertEquals(true, store.pending().last().tokenDone)
         }
 }

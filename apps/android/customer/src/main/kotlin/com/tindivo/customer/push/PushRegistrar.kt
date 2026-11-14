@@ -162,10 +162,20 @@ class PushRegistrar(
      * invalidaría (CAX-009).
      */
     private suspend fun cleanTokenLocked() {
-        if (installations.pending().none { !it.tokenDone }) return
+        // Las limpiezas que existen AHORA: el borrado solo da por hecha esas, no una que se anote mientras se borra.
+        val covered = tokenPending()
+        if (covered.isEmpty()) return
         if (installations.current()?.accountId != null) return
-        if (tokens.delete()) installations.tokenDone()
+        if (tokens.delete()) installations.tokenDone(covered)
     }
+
+    /** Los `installId` de las limpiezas cuyo token de FCM aún no se resolvió. */
+    private suspend fun tokenPending(): Set<String> =
+        installations
+            .pending()
+            .filter { !it.tokenDone }
+            .map { it.installId }
+            .toSet()
 
     /** La baja del servidor que quedó pendiente: solo la de [account] (necesita su sesión). */
     private suspend fun retryServerCleanup(account: String) {
@@ -193,20 +203,27 @@ class PushRegistrar(
      * El `PUT` del aparato. La continuación de un 409 no puede deshacer un cierre de sesión que empezó con el PUT en
      * vuelo: se vuelve a comprobar que la cuenta sigue viva y `replace` solo actúa si la identidad guardada sigue siendo
      * la rechazada y de esa cuenta. Si el servidor acepta, el token anterior que no se pudo borrar ya no tiene objeto:
-     * el servidor se lo reasignó a esta cuenta.
+     * el servidor se lo reasignó a esta cuenta. Pero solo el de las limpiezas que ya existían al EMPEZAR el PUT, y solo si
+     * la vinculación sigue siendo la que se registró: una limpieza que un cierre de sesión anotó mientras el PUT estaba
+     * en vuelo sigue pendiente (CAX-011).
      */
     private suspend fun putDevice(
         account: String,
         installId: UUID,
         device: PushDeviceInfo,
     ) {
+        val covered = tokenPending()
+        var registered = installId
         var result = devices.register(installId, device, account)
         if (result.isConflict()) {
             val next = if (live(account)) installations.replace(installId, account) else null
             if (next == null || !live(account)) return
+            registered = next
             result = devices.register(next, device, account)
         }
-        if (result is ApiResult.Success) installations.tokenDone()
+        if (result is ApiResult.Success) {
+            installations.tokenDone(covered, PushInstallation(registered.toString(), account))
+        }
     }
 
     /** La cuenta sigue con la sesión y no está cerrándola. */

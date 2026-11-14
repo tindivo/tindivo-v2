@@ -89,10 +89,16 @@ interface PushInstallationStore {
     suspend fun serverDone(installId: String)
 
     /**
-     * Anota que ya no hay token de FCM que limpiar (se borró, o lo reemplazó el de un registro nuevo) para TODAS las
-     * limpiezas: el token es uno solo por aparato. Las que también tienen la baja hecha se cierran.
+     * Anota que el token de FCM de las limpiezas [covered] (sus `installId`) ya no existe: se borró, o lo reemplazó el de
+     * un registro nuevo. Solo esas: una limpieza anotada DESPUÉS de que empezara la operación que lo resolvió (un cierre
+     * de sesión con un registro en vuelo) sigue pendiente, porque esa operación no la vio (CAX-011). Si [ifBound] no es
+     * `null`, además solo actúa si lo guardado sigue siendo exactamente esa vinculación (misma cuenta e identidad):
+     * la comprobación y el cambio van en UN paso. Las que además tienen la baja hecha se cierran.
      */
-    suspend fun tokenDone()
+    suspend fun tokenDone(
+        covered: Set<String>,
+        ifBound: PushInstallation? = null,
+    )
 }
 
 /** [PushInstallationStore] sobre DataStore (KT-9). [newId] se inyecta para las pruebas. */
@@ -170,16 +176,27 @@ class DataStorePushInstallationStore(
         }
     }
 
-    override suspend fun tokenDone() {
+    override suspend fun tokenDone(
+        covered: Set<String>,
+        ifBound: PushInstallation?,
+    ) {
         store.updateData { snapshot ->
-            snapshot.copy(
-                pending =
-                    snapshot.pending.mapNotNull {
-                        it.copy(tokenDone = true).takeUnless { done ->
-                            done.done
-                        }
-                    },
-            )
+            if (ifBound != null && snapshot.installation != ifBound) {
+                snapshot
+            } else {
+                snapshot.copy(
+                    pending =
+                        snapshot.pending.mapNotNull {
+                            if (it.installId !in
+                                covered
+                            ) {
+                                it
+                            } else {
+                                it.copy(tokenDone = true).takeUnless { done -> done.done }
+                            }
+                        },
+                )
+            }
         }
     }
 }
