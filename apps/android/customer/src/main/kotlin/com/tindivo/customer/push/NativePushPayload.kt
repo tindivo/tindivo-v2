@@ -94,10 +94,10 @@ data class NativePushPayload(
 
         /**
          * Lee el payload v1. Devuelve `null` (el aviso se descarta, no se muestra) si la versión no es la 1, si falta un
-         * campo o se pasa de su cota, si el tipo no es un identificador, si el título está vacío o si [deepLink] no es una ruta relativa de la app: tiene que
-         * empezar con `/`, no con `//`, y no puede llevar `\` ni espacios (nada que un intérprete de URL pueda leer
-         * como un host). [group] es opcional: si falta vale [tag]; si viene vacío o pasado de su cota no cumple el
-         * contrato, y el aviso también se descarta.
+         * campo o se pasa de su cota, si el tipo no es un identificador, si el título está vacío o si [deepLink] no es
+         * una ruta relativa de la app: tiene que empezar con `/`, no con `//`, y no puede llevar `\` ni espacios (nada
+         * que un intérprete de URL pueda leer como un host). [group] es opcional: si falta vale [tag]; si viene vacío o
+         * pasado de su cota no cumple el contrato, y el aviso también se descarta.
          *
          * El paso es más tolerante: `step`/`steps` inválidos (0, no numéricos, uno sin el otro, `step > steps`) solo
          * quitan la barra; el aviso se muestra igual. [terminal] solo es `true` con el valor exacto `"1"`.

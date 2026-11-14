@@ -1,31 +1,26 @@
 package com.tindivo.customer.push
 
 /**
- * Lo último que se mostró de cada seguimiento (`order-<sid>`, `courier-<sid>`): la versión del estado ([seq]), su
- * [rank] (el orden del estado: el paso del seguimiento, y por encima de todos el terminal) y si ya terminó. Con él el
- * seguimiento es MONÓTONO: un aviso que llega desordenado (más viejo que el que ya se mostró) se ignora, y uno activo
- * después de uno terminal no revive la barra fija de un pedido que ya se entregó o se canceló.
+ * Lo último que se sabe de cada seguimiento (`order-<sid>`, `courier-<sid>`): su [version], su [rank] (el orden del
+ * estado: el paso, y por encima de todos el terminal) y si ya terminó.
  *
- * La versión es el `seq` que manda `send-push` (el `updated_at` del pedido en milisegundos): no el paso, porque una
- * entrega soltada vuelve legítimamente del paso 2 al 1 y su `seq` sí crece. Con igual `seq` (dos estados en el mismo
- * milisegundo) NO hay forma de saber cuál es el posterior (ni el paso ni nada del aviso lo dice, y una entrega soltada
- * también baja de paso): se admite el que llega después, salvo que el último sea terminal.
+ * [version] es la versión del SERVIDOR más alta observada: el `seq` de cada aviso admitido (el `updated_at` de la fila en
+ * milisegundos) y el `updatedAt` (la misma fila, la misma escala) de cada lectura REST de la puesta al día. Es monótona:
+ * ni un aviso ni una lectura la bajan. Solo se admite un aviso cuyo `seq` la SUPERE: uno anterior o igual a lo ya
+ * observado, venga de un aviso o de REST, no puede sustituir el estado actual. Así una entrega soltada (que baja de paso
+ * pero con `seq` mayor) se admite y un aviso viejo, no. Nada depende del reloj del aparato.
  *
- * [floor] es el paso que la puesta al día (REST) dejó en la bandeja, y [floorUntil] la versión de ese estado: el
- * `updatedAt` que trae REST, en milisegundos, de la MISMA fila y el mismo reloj (el del servidor) que el `seq` de un
- * aviso. Un aviso activo de menor paso se descarta solo si su `seq` NO supera [floorUntil]: es anterior o igual a lo que
- * leyó la consulta. Uno con `seq` mayor es posterior (un retroceso legítimo, como una entrega soltada) y se admite.
- * Nada depende del reloj del aparato. Sin `updatedAt` legible el piso vale hasta que llegue un aviso de paso igual o
- * mayor (lo prudente).
+ * `null` = sin versión: marcas guardadas por una versión anterior de la app. Hasta que la puesta al día (al abrir la app)
+ * lea el pedido no se admite ningún aviso activo de ese grupo: no hay con qué ordenarlo.
  */
 data class TrackingMark(
-    val seq: Long?,
+    val version: Long?,
     val terminal: Boolean,
     val rank: Int = 0,
-    val floor: Int = 0,
-    /** Hasta qué versión (`seq`, en ms) vale el [floor] (el `updatedAt` de REST); con `0` no hay piso que valga. */
-    val floorUntil: Long = 0,
 )
+
+/** Qué hacer con un aviso de seguimiento. */
+enum class Admission { Admit, Drop }
 
 /** Dónde se guardan las marcas: sobreviven al proceso (un aviso tardío puede llegar con el proceso recién arrancado). */
 interface TrackingMarkStore {
@@ -51,13 +46,12 @@ class TrackingLedger(
     private fun loaded(): MutableMap<String, TrackingMark> = marks ?: store.load().toMutableMap().also { marks = it }
 
     /**
-     * `true` si el aviso se debe mostrar (y queda anotado). Reglas, por [group]:
-     * - sin versión válida ([seq] `null`) NO se admite: no hay con qué ordenarlo y podría ser más viejo que lo mostrado
-     *   (un servidor que no la manda, o una fecha ilegible, deja el aviso sin pintar en vez de arriesgar un retroceso);
-     * - tras un estado terminal solo se admite otro terminal, y solo si no es más viejo;
-     * - uno de [seq] menor que el último mostrado se descarta; con el mismo [seq] se admite el que llega después;
-     * - un activo de paso menor que el que dejó la puesta al día ([TrackingMark.floor]) se descarta mientras su [seq]
-     *   no supere [TrackingMark.floorUntil] (la versión que leyó REST);
+     * Si el aviso se debe mostrar (y queda anotado). Reglas, por [group], con [seq] la versión del aviso:
+     * - sin [seq] válido NO se admite: no hay con qué ordenarlo (un servidor que no lo manda, o una fecha ilegible);
+     * - sin marca previa, se admite;
+     * - tras un estado terminal solo se admite otro terminal;
+     * - sin versión en la marca (formato anterior) no se admite hasta la siguiente puesta al día;
+     * - solo se admite si [seq] SUPERA la versión de la marca: uno anterior o igual no sustituye lo ya observado;
      * - si la marca no se pudo escribir en disco NO se admite (CAX-003): no se pinta lo que no quedó anotado y la
      *   puesta al día lo resuelve al abrir la app.
      */
@@ -66,42 +60,47 @@ class TrackingLedger(
         seq: Long?,
         terminal: Boolean,
         rank: Int,
-    ): Boolean {
-        if (seq == null || seq <= 0) return false
+    ): Admission {
+        if (seq == null || seq <= 0) return Admission.Drop
         val last = loaded()[group]
-        if (last != null && !follows(last, seq, terminal, rank)) return false
+        if (last != null && !follows(last, seq, terminal)) return Admission.Drop
         // Sobre una copia: si el disco no la acepta, lo anotado en memoria no cambia.
         val next = loaded().toMutableMap()
-        next[group] =
-            TrackingMark(
-                seq = seq,
-                terminal = terminal || last?.terminal == true,
-                rank = rank,
-                floor = 0,
-            )
+        next[group] = TrackingMark(version = seq, terminal = terminal || last?.terminal == true, rank = rank)
         trim(next)
-        if (!store.save(next)) return false
+        if (!store.save(next)) return Admission.Drop
         marks = next
         version++
-        return true
+        return Admission.Admit
     }
 
     private fun follows(
         last: TrackingMark,
         seq: Long,
         terminal: Boolean,
-        rank: Int,
     ): Boolean {
         if (last.terminal && !terminal) return false
-        if (!terminal && rank < last.floor && seq <= last.floorUntil) return false
-        val lastSeq = last.seq ?: return true
-        return seq >= lastSeq
+        val seen = last.version ?: return false
+        return seq > seen
     }
 
     /**
-     * La puesta al día dejó en la bandeja un estado leído por REST: si [terminal], el seguimiento terminó y ningún
-     * activo lo revive; si no, [rank] (el paso) queda como piso de lo que se puede mostrar después, mientras el aviso no
-     * sea posterior a [serverVersion] (el `updatedAt` leído, en ms; `null` si no se pudo leer: el piso no caduca).
+     * ¿Es la lectura REST con [serverVersion] más vieja que lo ya observado de [group]? Entonces no puede sustituir lo
+     * que se muestra. Sin versión (REST no la trajo, o la marca es del formato anterior) no se puede decir: `false`.
+     */
+    fun isStale(
+        group: String,
+        serverVersion: Long?,
+    ): Boolean {
+        val seen = loaded()[group]?.version ?: return false
+        return serverVersion != null && serverVersion < seen
+    }
+
+    /**
+     * La puesta al día leyó [group] por REST. Si [terminal], el seguimiento terminó y ningún activo lo revive; si no,
+     * [rank] (el paso) es el estado leído. En los dos casos la versión sube a [serverVersion] (el `updatedAt` leído, en
+     * ms) si es mayor, AUNQUE el paso no haya cambiado: lo que REST observó ya no se puede sustituir por un aviso
+     * anterior. `null` no cambia la versión.
      */
     fun reconciled(
         group: String,
@@ -111,17 +110,16 @@ class TrackingLedger(
     ) {
         val all = loaded()
         val last = all[group]
+        val seen =
+            maxOf(
+                last?.version ?: Long.MIN_VALUE,
+                serverVersion ?: Long.MIN_VALUE,
+            ).takeIf { it != Long.MIN_VALUE }
         all[group] =
             if (terminal) {
-                TrackingMark(last?.seq, terminal = true, rank = TERMINAL_RANK, floor = 0)
+                TrackingMark(seen, terminal = true, rank = TERMINAL_RANK)
             } else {
-                TrackingMark(
-                    last?.seq,
-                    last?.terminal == true,
-                    last?.rank ?: rank,
-                    floor = rank,
-                    floorUntil = serverVersion ?: Long.MAX_VALUE,
-                )
+                TrackingMark(seen, last?.terminal == true, rank)
             }
         trim(all)
         store.save(all)
@@ -138,7 +136,7 @@ class TrackingLedger(
     private fun trim(all: MutableMap<String, TrackingMark>) {
         if (all.size <= MAX_MARKS) return
         // Se van las más viejas (las sin versión primero): un seguimiento de hace días ya no se va a reordenar.
-        val oldest = all.entries.sortedBy { it.value.seq ?: Long.MIN_VALUE }.take(all.size - MAX_MARKS)
+        val oldest = all.entries.sortedBy { it.value.version ?: Long.MIN_VALUE }.take(all.size - MAX_MARKS)
         oldest.forEach { all.remove(it.key) }
     }
 

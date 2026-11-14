@@ -307,18 +307,17 @@ class TrackingPresenterTest {
         }
 
     @Test
-    fun `dos estados distintos con la misma version se pintan por orden de llegada, el terminal gana (CAX-003)`() =
+    fun `un aviso con la misma version no se pinta otra vez, el terminal mas nuevo gana (CAX-003)`() =
         runTest {
             registrar()
             val install = installId()
 
             assertTrue(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, step = 4)))
-            assertTrue(
-                "un release en el mismo milisegundo",
-                rig.presenter.onPush(payload(install, 2_000_000_000_000, 3)),
-            )
-            assertTrue(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, terminal = true)))
-            assertFalse(rig.presenter.onPush(payload(install, seq = 2_000_000_000_000, step = 4)))
+            assertFalse("el mismo estado, duplicado", rig.presenter.onPush(payload(install, 2_000_000_000_000, 4)))
+            assertTrue(rig.presenter.onPush(payload(install, seq = 3_000_000_000_000, terminal = true)))
+            assertFalse(rig.presenter.onPush(payload(install, seq = 3_000_000_000_000, step = 4)))
+
+            assertEquals(2, rig.notifications.shows.size)
         }
 
     @Test
@@ -476,5 +475,56 @@ class TrackingPresenterTest {
             rig.marks.writeWorks = true
             assertTrue(rig.presenter.onPush(first))
             assertEquals(1, rig.notifications.shows.size)
+        }
+
+    // CAX-003 caso 1: T0 < T1 < T2; el paso que lee REST no cambia pero su version si.
+    @Test
+    fun `una lectura REST sin cambio de paso sube la version y un aviso anterior ya no se pinta (CAX-003)`() =
+        runTest {
+            registrar()
+            val install = installId()
+            val courier = checkNotNull(TrackingKey.parse("courier-ZZ9Y8X7W"))
+            val t0 = 1_000_000_000_000L
+            val t1 = 2_000_000_000_000L
+            val t2 = 3_000_000_000_000L
+            assertTrue(rig.presenter.onPush(payload(install, seq = t0, step = 2, group = courier.group)))
+            val status = TrackingStatus.Active(TrackingKind.Courier, checkNotNull(TrackingProgress.of(2, 5)), t2)
+
+            rig.presenter.apply(
+                "A",
+                session.signInGeneration.value,
+                rig.presenter.version(),
+                listOf(ReconcileAction.Observe(courier, status)),
+            ) { _, _ -> error("no debe pintar") }
+
+            assertFalse(
+                "el push viejo del paso 2 en T1",
+                rig.presenter.onPush(payload(install, t1, 2, group = courier.group)),
+            )
+            assertEquals(1, rig.notifications.shows.size)
+        }
+
+    @Test
+    fun `una lectura REST mas vieja que lo ya observado no sustituye lo que se muestra (CAX-003)`() =
+        runTest {
+            registrar()
+            val install = installId()
+            val courier = checkNotNull(TrackingKey.parse("courier-ZZ9Y8X7W"))
+            assertTrue(rig.presenter.onPush(payload(install, seq = 5_000_000_000_000, step = 3, group = courier.group)))
+            val stale =
+                TrackingStatus.Active(
+                    TrackingKind.Courier,
+                    checkNotNull(TrackingProgress.of(2, 4)),
+                    4_000_000_000_000,
+                )
+
+            rig.presenter.apply(
+                "A",
+                session.signInGeneration.value,
+                rig.presenter.version(),
+                listOf(ReconcileAction.Update(courier, TrackingProgress.of(3, 5), stale)),
+            ) { _, _ -> error("no debe pintar") }
+
+            assertEquals(TrackingProgress.of(3, 5), rig.notifications.visible[courier])
         }
 }

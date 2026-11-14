@@ -248,6 +248,12 @@ sealed interface ReconcileAction {
         val finished: Boolean = false,
     ) : ReconcileAction
 
+    /** El paso leído es el mismo que se muestra, pero REST trae una versión: se anota sin pintar nada. */
+    data class Observe(
+        val key: TrackingKey,
+        val status: TrackingStatus.Active,
+    ) : ReconcileAction
+
     /** Poner al día en silencio: [expected] es lo que se mostraba al planearlo. */
     data class Update(
         val key: TrackingKey,
@@ -281,7 +287,11 @@ fun planReconciliation(
             }
 
             is TrackingStatus.Active -> {
-                if (status.progress == item.progress) null else ReconcileAction.Update(item.key, item.progress, status)
+                if (status.progress == item.progress) {
+                    ReconcileAction.Observe(item.key, status)
+                } else {
+                    ReconcileAction.Update(item.key, item.progress, status)
+                }
             }
         }
     }

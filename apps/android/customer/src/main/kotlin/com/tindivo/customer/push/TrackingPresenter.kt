@@ -63,7 +63,7 @@ class TrackingPresenter(
                 // sin barra (un estado sin paso, un aviso que no es de estado) se muestra como siempre y no toca las marcas.
                 val moves = payload.progress != null || payload.terminal
                 if (key != null && moves &&
-                    !ledger.admit(payload.group, payload.seq, payload.terminal, rankOf(payload))
+                    ledger.admit(payload.group, payload.seq, payload.terminal, rankOf(payload)) != Admission.Admit
                 ) {
                     return@withLock false
                 }
@@ -133,8 +133,16 @@ class TrackingPresenter(
 
                 is ReconcileAction.Update -> {
                     val now = notifications.shown().firstOrNull { it.key == action.key } ?: continue
-                    if (now.progress == action.expected) {
+                    // Una lectura REST más vieja que lo ya observado (un aviso admitido que ella no vio) no sustituye nada.
+                    if (now.progress == action.expected && !ledger.isStale(action.key.group, action.status.version)) {
                         notifications.show(textsFor(action.key, action.status), TrackingOrigin.Reconcile)
+                        ledger.reconciled(action.key.group, false, action.status.progress.step, action.status.version)
+                    }
+                }
+
+                // El paso no cambió, pero REST observó una versión nueva: se anota (CAX-003).
+                is ReconcileAction.Observe -> {
+                    if (!ledger.isStale(action.key.group, action.status.version)) {
                         ledger.reconciled(action.key.group, false, action.status.progress.step, action.status.version)
                     }
                 }
@@ -143,34 +151,31 @@ class TrackingPresenter(
     }
 }
 
-/** Cómo se guarda una marca en una cadena: `seq|estado|rank|floor|floorUntil` (las anteriores no traían `floorUntil`). */
+/**
+ * Cómo se guarda una marca en una cadena: `version|estado|rank`. El formato anterior (`seq|estado|rank|floor[|floorUntil]`,
+ * 4 o 5 campos) se lee SIN versión: su `seq` era el del último aviso, no lo que REST observó, y sin versión no se admite
+ * ningún aviso activo hasta la siguiente puesta al día.
+ */
 internal object TrackingMarkCodec {
     private const val SEPARATOR = "|"
+    private const val FIELDS = 3
     private const val LEGACY_FIELDS = 4
-    private const val FIELDS = 5
+    private const val LEGACY_FIELDS_WITH_UNTIL = 5
     private const val RANK_AT = 2
-    private const val FLOOR_AT = 3
-    private const val FLOOR_UNTIL_AT = 4
     private const val TERMINAL = "t"
     private const val ACTIVE = "a"
 
     fun encode(mark: TrackingMark): String =
-        listOf(mark.seq ?: "", if (mark.terminal) TERMINAL else ACTIVE, mark.rank, mark.floor, mark.floorUntil)
-            .joinToString(SEPARATOR)
+        listOf(mark.version ?: "", if (mark.terminal) TERMINAL else ACTIVE, mark.rank).joinToString(SEPARATOR)
 
-    /** `null` si no es una marca. Sin `floorUntil` (formato anterior), un piso vale para siempre: lo prudente. */
+    /** `null` si no es una marca. */
     fun decode(raw: String): TrackingMark? {
         val parts = raw.split(SEPARATOR)
         val rank = parts.getOrNull(RANK_AT)?.toIntOrNull()
-        val floor = parts.getOrNull(FLOOR_AT)?.toIntOrNull()
-        val until =
-            when (parts.size) {
-                FIELDS -> parts[FLOOR_UNTIL_AT].toLongOrNull()
-                LEGACY_FIELDS -> if (floor != null && floor > 0) Long.MAX_VALUE else 0L
-                else -> null
-            }
-        if (rank == null || floor == null || until == null) return null
-        return TrackingMark(parts[0].toLongOrNull(), parts[1] == TERMINAL, rank, floor, until)
+        val known = parts.size == FIELDS || parts.size == LEGACY_FIELDS || parts.size == LEGACY_FIELDS_WITH_UNTIL
+        if (rank == null || !known) return null
+        val version = if (parts.size == FIELDS) parts[0].toLongOrNull() else null
+        return TrackingMark(version, parts[1] == TERMINAL, rank)
     }
 }
 

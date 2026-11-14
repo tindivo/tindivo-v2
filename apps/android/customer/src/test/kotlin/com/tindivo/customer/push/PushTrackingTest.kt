@@ -138,10 +138,11 @@ class PushTrackingTest {
     private val courier = checkNotNull(TrackingKey.parse("courier-ZZ9Y8X7W"))
 
     @Test
-    fun `quita las que terminaron o ya no estan, actualiza las que cambiaron y deja las iguales`() {
+    fun `quita las que terminaron o ya no estan, actualiza las que cambiaron y anota las iguales`() {
         val other = checkNotNull(TrackingKey.parse("order-QQ2R3S4T"))
         val gone = checkNotNull(TrackingKey.parse("order-MM2N3P4R"))
         val onTheWay = TrackingStatus.Active(TrackingKind.Delivery, step(4, 5))
+        val same = TrackingStatus.Active(TrackingKind.Delivery, step(2, 5), version = 1_000L)
         val plan =
             planReconciliation(
                 shown =
@@ -156,7 +157,7 @@ class PushTrackingTest {
                         orders =
                             mapOf(
                                 "AB2C3D4E" to onTheWay,
-                                "QQ2R3S4T" to TrackingStatus.Active(TrackingKind.Delivery, step(2, 5)),
+                                "QQ2R3S4T" to same,
                             ),
                         couriers = mapOf("ZZ9Y8X7W" to TrackingStatus.Finished),
                     ),
@@ -165,6 +166,8 @@ class PushTrackingTest {
         assertEquals(
             listOf(
                 ReconcileAction.Update(order, step(3, 5), onTheWay),
+                // El paso no cambió, pero REST trae una versión: se anota (CAX-003).
+                ReconcileAction.Observe(other, same),
                 ReconcileAction.Remove(gone, finished = false),
                 ReconcileAction.Remove(courier, finished = true),
             ),
