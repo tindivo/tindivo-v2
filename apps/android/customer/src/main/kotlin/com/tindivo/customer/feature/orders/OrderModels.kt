@@ -20,6 +20,8 @@ internal enum class OrderHero {
 internal enum class CancelCopy {
     CustomerCancelled,
     PrepayTimeout,
+    PrepayProofNotReviewed,
+    BusinessNoResponse,
     CouldNotConfirm,
     BusinessCancelled,
     AdminCancelled,

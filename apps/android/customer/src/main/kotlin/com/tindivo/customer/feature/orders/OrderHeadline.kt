@@ -9,7 +9,8 @@ internal fun headlineOf(
 ): OrderHeadline =
     when (phase) {
         is OrderPhase.Cancelled -> {
-            OrderHeadline.Cancelled(cancelCopyOf(phase.reason, isPickup), alreadyPaid = payment.alreadyPaid)
+            val copy = cancelCopyOf(phase.reason, isPickup, payment.proofSent)
+            OrderHeadline.Cancelled(copy, alreadyPaid = payment.alreadyPaid)
         }
 
         OrderPhase.Delivered -> {
@@ -71,14 +72,20 @@ internal fun cancelOfferOf(
         else -> CancelOffer.None
     }
 
+/**
+ * Con `prepay_timeout` y comprobante enviado, el negocio no lo revisó: el push dice lo mismo (`expired-text.ts`). La API
+ * expone `proofAttempt` y no `payment_proof_status`; un comprobante ya revisado no vence por `prepay_timeout`.
+ */
 private fun cancelCopyOf(
     reason: String?,
     isPickup: Boolean,
+    proofSent: Boolean,
 ): CancelCopy =
     when (reason) {
         "customer_cancelled" -> CancelCopy.CustomerCancelled
-        "prepay_timeout" -> CancelCopy.PrepayTimeout
-        "validation_timeout", "pending_acceptance_timeout" -> CancelCopy.CouldNotConfirm
+        "prepay_timeout" -> if (proofSent) CancelCopy.PrepayProofNotReviewed else CancelCopy.PrepayTimeout
+        "pending_acceptance_timeout" -> CancelCopy.BusinessNoResponse
+        "validation_timeout" -> CancelCopy.CouldNotConfirm
         "business_cancelled" -> CancelCopy.BusinessCancelled
         "admin_cancelled" -> CancelCopy.AdminCancelled
         "proof_rejected_final" -> CancelCopy.ProofRejected

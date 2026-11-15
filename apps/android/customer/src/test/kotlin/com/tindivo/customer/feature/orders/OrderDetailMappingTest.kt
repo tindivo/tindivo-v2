@@ -87,7 +87,7 @@ class OrderDetailMappingTest {
         assertEquals(OrderHeadline.Cancelled(CancelCopy.CustomerCancelled), copy("customer_cancelled"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.PrepayTimeout), copy("prepay_timeout"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.CouldNotConfirm), copy("validation_timeout"))
-        assertEquals(OrderHeadline.Cancelled(CancelCopy.CouldNotConfirm), copy("pending_acceptance_timeout"))
+        assertEquals(OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse), copy("pending_acceptance_timeout"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.BusinessCancelled), copy("business_cancelled"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.AdminCancelled), copy("admin_cancelled"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.ProofRejected), copy("proof_rejected_final"))
@@ -171,5 +171,35 @@ class OrderDetailMappingTest {
         assertEquals(R.string.order_cancel_admin_paid_body, CancelCopy.AdminCancelled.bodyRes(alreadyPaid = true))
         assertEquals(R.string.order_cancel_customer_body, CancelCopy.CustomerCancelled.bodyRes(alreadyPaid = false))
         assertEquals(R.string.order_cancel_prepay_body, CancelCopy.PrepayTimeout.bodyRes(alreadyPaid = true))
+        assertEquals(
+            R.string.order_cancel_prepay_unreviewed_body,
+            CancelCopy.PrepayProofNotReviewed.bodyRes(alreadyPaid = true),
+        )
+        assertEquals(R.string.order_cancel_no_response_paid_body, CancelCopy.BusinessNoResponse.bodyRes(alreadyPaid = true))
+        assertEquals(R.string.order_cancel_no_response_body, CancelCopy.BusinessNoResponse.bodyRes(alreadyPaid = false))
+    }
+
+    @Test
+    fun `prepay_timeout distingue si el cliente envio comprobante y pending_acceptance_timeout es del negocio`() {
+        fun cancelled(
+            reason: String,
+            proofAttempt: Int,
+            intent: String = "prepaid",
+        ) = detail(status = "cancelled", cancelReason = reason, paymentIntent = intent, proofAttempt = proofAttempt)
+            .toDetailUi()?.headline
+
+        assertEquals(OrderHeadline.Cancelled(CancelCopy.PrepayTimeout), cancelled("prepay_timeout", proofAttempt = 0))
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.PrepayProofNotReviewed, alreadyPaid = true),
+            cancelled("prepay_timeout", proofAttempt = 1),
+        )
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse, alreadyPaid = true),
+            cancelled("pending_acceptance_timeout", proofAttempt = 1),
+        )
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse),
+            cancelled("pending_acceptance_timeout", proofAttempt = 0, intent = "pending_cash"),
+        )
     }
 }
