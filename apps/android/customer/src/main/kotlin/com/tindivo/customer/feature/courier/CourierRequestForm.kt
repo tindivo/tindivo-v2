@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.tindivo.core.designsystem.TindivoBottomBar
 import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.core.designsystem.TindivoSpacing
@@ -76,40 +77,35 @@ private fun SubmitBar(
     form: CourierFormActions,
     openSheet: (CourierSheet) -> Unit,
 ) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shadowElevation = TindivoSpacing.hairline) {
-        Column(
-            modifier = Modifier.navigationBarsPadding().padding(TindivoSpacing.screen),
-            verticalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
-        ) {
-            val missing = state.missing
-            val message = state.message
-            when {
-                message != null -> {
-                    Text(text = sendMessageText(message), color = MaterialTheme.colorScheme.error)
-                }
-
-                missing != null -> {
-                    Text(
-                        text = stringResource(missing.textRes()),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+    TindivoBottomBar {
+        val missing = state.missing
+        val message = state.message
+        when {
+            message != null -> {
+                Text(text = sendMessageText(message), color = MaterialTheme.colorScheme.error)
             }
-            if (missing == CourierMissing.RequesterPhone) {
-                TindivoSecondaryButton(
-                    text = stringResource(R.string.courier_verify_phone),
-                    onClick = { openSheet(CourierSheet.VerifyPhone) },
-                    enabled = !state.sending,
+
+            missing != null -> {
+                Text(
+                    text = stringResource(missing.textRes()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TindivoPrimaryButton(
-                text = stringResource(R.string.courier_submit, state.service?.priceText.orEmpty()),
-                onClick = form.onSubmit,
-                enabled = missing == null,
-                loading = state.sending,
+        }
+        if (missing == CourierMissing.RequesterPhone) {
+            TindivoSecondaryButton(
+                text = stringResource(R.string.courier_verify_phone),
+                onClick = { openSheet(CourierSheet.VerifyPhone) },
+                enabled = !state.sending,
             )
         }
+        TindivoPrimaryButton(
+            text = stringResource(R.string.courier_submit, state.service?.priceText.orEmpty()),
+            onClick = form.onSubmit,
+            enabled = missing == null,
+            loading = state.sending,
+        )
     }
 }
 

@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoBottomBar
 import com.tindivo.customer.R
 
 @Composable
@@ -90,13 +91,5 @@ internal fun SaveBar(
             state.editingId == null -> R.string.address_form_save
             else -> R.string.address_form_save_changes
         }
-    Box(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
-        Button(
-            onClick = onSave,
-            enabled = state.canSave,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-        ) {
-            Text(text = stringResource(label))
-        }
-    }
+    TindivoBottomBar(text = stringResource(label), onClick = onSave, enabled = state.canSave)
 }
