@@ -106,3 +106,86 @@ describe('cancel_expired_prepay_orders — emite OrderExpired (integración)', (
     expect(await eventos(vigente.orderId)).toHaveLength(0)
   })
 })
+
+describe('cancel_expired_prepay_orders — bloques 3 y 4 emiten OrderExpired (integración)', () => {
+  let contraentrega: SeededOrder
+  let contraentregaVigente: SeededOrder
+  let conComprobante: SeededOrder
+  let conComprobanteVigente: SeededOrder
+
+  beforeAll(async () => {
+    // Bloque 3: contraentrega en validación antifraude, vencida (> 5 min).
+    contraentrega = await seedPrepaidOrder({
+      status: 'validando',
+      paymentIntent: 'pending_cash',
+      validationContext: 'antifraud',
+    })
+    await envejecer(contraentrega.orderId, 'validating_at', 60)
+    contraentregaVigente = await seedPrepaidOrder({
+      status: 'validando',
+      paymentIntent: 'pending_cash',
+      validationContext: 'antifraud',
+    })
+    // Bloque 4: prepago con comprobante pendiente de revisar, vencido (> 10 min).
+    conComprobante = await seedPrepaidOrder({
+      status: 'validando',
+      validationContext: 'proof',
+      proofAttempt: 1,
+      paymentProofStatus: 'pending',
+    })
+    await envejecer(conComprobante.orderId, 'validating_at', 60)
+    conComprobanteVigente = await seedPrepaidOrder({
+      status: 'validando',
+      validationContext: 'proof',
+      proofAttempt: 1,
+      paymentProofStatus: 'pending',
+    })
+    await barrer()
+  })
+
+  afterAll(async () => {
+    await cleanup(contraentrega)
+    await cleanup(contraentregaVigente)
+    await cleanup(conComprobante)
+    await cleanup(conComprobanteVigente)
+  })
+
+  it('bloque 3: contraentrega sin validar queda cancelada y emite un OrderExpired validation_timeout', async () => {
+    expect(await estado(contraentrega.orderId)).toEqual({
+      status: 'cancelled',
+      cancel_reason: 'validation_timeout',
+    })
+    const ev = await eventos(contraentrega.orderId)
+    expect(ev).toHaveLength(1)
+    expect(ev[0]?.event_type).toBe('OrderExpired')
+    expect(ev[0]?.aggregate_type).toBe('order')
+    expect(ev[0]?.payload).toEqual({ reason: 'validation_timeout' })
+  })
+
+  it('bloque 4: comprobante sin revisar queda cancelado y emite un OrderExpired prepay_timeout', async () => {
+    expect(await estado(conComprobante.orderId)).toEqual({
+      status: 'cancelled',
+      cancel_reason: 'prepay_timeout',
+    })
+    const ev = await eventos(conComprobante.orderId)
+    expect(ev).toHaveLength(1)
+    expect(ev[0]?.event_type).toBe('OrderExpired')
+    expect(ev[0]?.aggregate_type).toBe('order')
+    expect(ev[0]?.payload).toEqual({ reason: 'prepay_timeout' })
+  })
+
+  it('los controles vigentes de ambos bloques no se tocan y no emiten nada', async () => {
+    expect((await estado(contraentregaVigente.orderId)).status).toBe('validando')
+    expect(await eventos(contraentregaVigente.orderId)).toHaveLength(0)
+    expect((await estado(conComprobanteVigente.orderId)).status).toBe('validando')
+    expect(await eventos(conComprobanteVigente.orderId)).toHaveLength(0)
+  })
+
+  it('una segunda pasada no emite nada nuevo en ninguno de los cuatro', async () => {
+    await barrer()
+    expect(await eventos(contraentrega.orderId)).toHaveLength(1)
+    expect(await eventos(conComprobante.orderId)).toHaveLength(1)
+    expect(await eventos(contraentregaVigente.orderId)).toHaveLength(0)
+    expect(await eventos(conComprobanteVigente.orderId)).toHaveLength(0)
+  })
+})
