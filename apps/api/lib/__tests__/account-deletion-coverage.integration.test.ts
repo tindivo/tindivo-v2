@@ -989,6 +989,8 @@ const INVENTARIO_PRODUCTORES: Record<string, ClaseProductor> = {
     claves: ['by', 'forDebt', 'reason'],
   },
   'cancel_customer_order|order|OrderStatusChanged': PA(),
+  // 0287: el barrido por tiempo emite OrderExpired por cada pedido que cancela (uno por bloque).
+  'cancel_expired_prepay_orders|order|OrderExpired': PA(4),
   'confirm_order_cash|cash_settlement|CashConfirmed': {
     clase: 'sin_datos_del_cliente',
     n: 1,
