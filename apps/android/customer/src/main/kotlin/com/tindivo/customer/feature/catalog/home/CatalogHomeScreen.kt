@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -46,6 +50,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.tindivo.core.designsystem.TindivoColors
+import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
@@ -135,20 +140,11 @@ private fun BusinessList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.catalog_home_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.weight(1f).semantics { heading() },
-                )
-                onOpenDiagnostics?.let {
-                    TindivoTextButton(text = stringResource(R.string.diagnostics_title), onClick = it)
-                }
-                TindivoTextButton(
-                    text = stringResource(if (signedIn) R.string.account_entry else R.string.signin_entry),
-                    onClick = onOpenAccount,
-                )
-            }
+            HomeHeader(
+                signedIn = signedIn,
+                onOpenAccount = onOpenAccount,
+                onOpenDiagnostics = onOpenDiagnostics,
+            )
         }
         // Primero qué se quiere hacer (llevar algo de un lugar a otro), después dónde comer (como la web).
         item { CourierEntryCard(onClick = onOpenCourier) }
@@ -324,6 +320,46 @@ private fun ErrorContent(
     }
 }
 
+/**
+ * Cabecera de la portada. El título es una pieza entera: si las acciones no caben a su lado (pantalla angosta o letra
+ * grande), pasan a la línea de abajo en vez de partir «Restaurantes» a media palabra.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun HomeHeader(
+    signedIn: Boolean,
+    onOpenAccount: () -> Unit,
+    onOpenDiagnostics: (() -> Unit)?,
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.Center,
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.catalog_home_title),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            onOpenDiagnostics?.let {
+                TindivoTextButton(text = stringResource(R.string.diagnostics_title), onClick = it)
+            }
+            if (signedIn) {
+                IconButton(onClick = onOpenAccount, modifier = Modifier.size(48.dp)) {
+                    Icon(
+                        imageVector = TindivoIcons.AccountCircle,
+                        contentDescription = stringResource(R.string.account_entry),
+                    )
+                }
+            } else {
+                TindivoTextButton(text = stringResource(R.string.signin_entry), onClick = onOpenAccount)
+            }
+        }
+    }
+}
+
 @Composable
 private fun errorMessage(error: AppError): String =
     when (error) {
@@ -346,4 +382,16 @@ private fun CatalogHomePreview() {
             onOpenBusiness = {},
         )
     }
+}
+
+@Preview(name = "360 dp", showBackground = true, widthDp = 360)
+@Composable
+private fun HomeHeader360Preview() {
+    TindivoTheme { HomeHeader(signedIn = true, onOpenAccount = {}, onOpenDiagnostics = {}) }
+}
+
+@Preview(name = "Letra 1,3 a 360 dp", showBackground = true, widthDp = 360, fontScale = 1.3f)
+@Composable
+private fun HomeHeaderFontScalePreview() {
+    TindivoTheme { HomeHeader(signedIn = false, onOpenAccount = {}, onOpenDiagnostics = {}) }
 }
