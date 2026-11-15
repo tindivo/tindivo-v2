@@ -35,6 +35,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 
 /** Las hojas de la reseña: nada, la pregunta de las cinco estrellas o el detalle. */
@@ -83,9 +85,7 @@ private fun PromptContent(
             textAlign = TextAlign.Center,
         )
         StarRow(rating = 0, enabled = true, onRating = actions.onRating)
-        TextButton(onClick = actions.onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(text = stringResource(R.string.review_not_now))
-        }
+        TindivoTextButton(text = stringResource(R.string.review_not_now), onClick = actions.onDismiss)
     }
 }
 
@@ -147,13 +147,11 @@ private fun FormContent(
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
             )
         }
-        Button(
+        TindivoPrimaryButton(
+            text = stringResource(if (state.submitting) R.string.review_sending else R.string.review_send),
             onClick = actions.onSubmit,
             enabled = state.canSubmit,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        ) {
-            Text(text = stringResource(if (state.submitting) R.string.review_sending else R.string.review_send))
-        }
+        )
     }
 }
 
