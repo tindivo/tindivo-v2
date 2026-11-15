@@ -36,6 +36,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.cart.CartLine
 import com.tindivo.customer.feature.cart.MAX_NOTE_LENGTH
@@ -163,13 +165,12 @@ private fun AddButton(
             is DishCta.Add -> stringResource(R.string.dish_add_cta, cta.total)
             is DishCta.Complete -> pluralStringResource(R.plurals.dish_complete_cta, cta.missing, cta.missing)
         }
-    Button(
+    TindivoPrimaryButton(
+        text = label,
         onClick = onClick,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         enabled = state.isValid,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Text(text = label)
-    }
+    )
 }
 
 /** Preguntar antes de vaciar la bolsa de otro restaurante para empezar una en [newBusinessName]. */
@@ -185,14 +186,10 @@ internal fun NewBagDialog(
         title = { Text(stringResource(R.string.dish_new_bag_title)) },
         text = { Text(stringResource(R.string.dish_new_bag_text, currentBusinessName, newBusinessName)) },
         dismissButton = {
-            TextButton(onClick = onKeep, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(stringResource(R.string.dish_new_bag_keep))
-            }
+            TindivoTextButton(text = stringResource(R.string.dish_new_bag_keep), onClick = onKeep)
         },
         confirmButton = {
-            TextButton(onClick = onReplace, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(stringResource(R.string.dish_new_bag_replace))
-            }
+            TindivoTextButton(text = stringResource(R.string.dish_new_bag_replace), onClick = onReplace)
         },
     )
 }

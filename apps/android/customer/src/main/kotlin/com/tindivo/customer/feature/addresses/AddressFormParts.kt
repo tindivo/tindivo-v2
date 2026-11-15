@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.TindivoBottomBar
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.customer.R
 
 @Composable
@@ -47,29 +49,25 @@ internal fun DeleteSection(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
+                TindivoSecondaryButton(
+                    text = stringResource(R.string.address_form_cancel),
                     onClick = actions.onCancelDelete,
                     enabled = !state.deleting,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.address_form_cancel))
-                }
-                Button(
+                    fillWidth = false,
+                )
+                TindivoPrimaryButton(
+                    text =
+                        stringResource(
+                            if (state.deleting) {
+                                R.string.address_form_deleting
+                            } else {
+                                R.string.address_form_delete_confirm
+                            },
+                        ),
                     onClick = actions.onConfirmDelete,
                     enabled = !state.deleting,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(
-                        text =
-                            stringResource(
-                                if (state.deleting) {
-                                    R.string.address_form_deleting
-                                } else {
-                                    R.string.address_form_delete_confirm
-                                },
-                            ),
-                    )
-                }
+                    fillWidth = false,
+                )
             }
         }
     }

@@ -35,6 +35,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
@@ -84,9 +87,7 @@ internal fun AddressesScreen(
 ) {
     Scaffold { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.addresses_back))
-            }
+            TindivoTextButton(text = stringResource(R.string.addresses_back), onClick = onBack)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
                 Text(
                     text = stringResource(R.string.addresses_title),
@@ -94,9 +95,7 @@ internal fun AddressesScreen(
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 if (state is AddressListUiState.Loaded) {
-                    TextButton(onClick = onAdd, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(text = stringResource(R.string.addresses_add))
-                    }
+                    TindivoTextButton(text = stringResource(R.string.addresses_add), onClick = onAdd)
                 }
             }
             when (state) {
@@ -138,13 +137,7 @@ private fun Failure(
             text = stringResource(if (error is AppError.Network) R.string.error_network else R.string.error_generic),
             style = MaterialTheme.typography.bodyLarge,
         )
-        Button(
-            onClick = onRetry,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.addresses_retry))
-        }
+        TindivoPrimaryButton(text = stringResource(R.string.addresses_retry), onClick = onRetry, fillWidth = false)
     }
 }
 
@@ -160,13 +153,7 @@ private fun EmptyAddresses(onAdd: () -> Unit) {
             modifier = Modifier.semantics { heading() },
         )
         Text(text = stringResource(R.string.addresses_empty_body), style = MaterialTheme.typography.bodyLarge)
-        Button(
-            onClick = onAdd,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.addresses_add))
-        }
+        TindivoPrimaryButton(text = stringResource(R.string.addresses_add), onClick = onAdd, fillWidth = false)
     }
 }
 
@@ -201,9 +188,7 @@ private fun AddressList(
             )
         }
         item {
-            OutlinedButton(onClick = onAdd, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.addresses_add_another))
-            }
+            TindivoSecondaryButton(text = stringResource(R.string.addresses_add_another), onClick = onAdd)
         }
     }
 }
@@ -244,13 +229,13 @@ private fun AddressCard(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onEdit, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(R.string.addresses_edit))
-                }
+                TindivoTextButton(text = stringResource(R.string.addresses_edit), onClick = onEdit)
                 if (!address.isDefault) {
-                    TextButton(onClick = onMakeDefault, enabled = !busy, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(text = stringResource(R.string.addresses_make_default))
-                    }
+                    TindivoTextButton(
+                        text = stringResource(R.string.addresses_make_default),
+                        onClick = onMakeDefault,
+                        enabled = !busy,
+                    )
                 }
             }
         }

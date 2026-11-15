@@ -34,6 +34,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
@@ -116,9 +118,7 @@ internal fun AddressFormScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
-                TextButton(onClick = actions.onCancel, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(R.string.address_form_cancel))
-                }
+                TindivoTextButton(text = stringResource(R.string.address_form_cancel), onClick = actions.onCancel)
             }
             AddressFormContent(state, actions)
         }
@@ -165,13 +165,7 @@ private fun LoadFailure(
         }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = stringResource(message), style = MaterialTheme.typography.bodyLarge)
-        Button(
-            onClick = onRetry,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.addresses_retry))
-        }
+        TindivoPrimaryButton(text = stringResource(R.string.addresses_retry), onClick = onRetry, fillWidth = false)
     }
 }
 
