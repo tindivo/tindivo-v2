@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 
@@ -219,13 +220,11 @@ private fun Notice(
     ) {
         Text(text = message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         if (notice is DeleteNotice.Blocked && notice.showOrders) {
-            OutlinedButton(
+            TindivoSecondaryButton(
+                text = stringResource(R.string.delete_account_see_orders),
                 onClick = onOpenOrders,
-                modifier = Modifier.heightIn(min = 48.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-            ) {
-                Text(text = stringResource(R.string.delete_account_see_orders))
-            }
+                fillWidth = false,
+            )
         }
     }
 }
