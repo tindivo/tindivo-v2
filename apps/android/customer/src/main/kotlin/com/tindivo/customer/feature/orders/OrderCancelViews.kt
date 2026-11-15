@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 
 /** Lo que la pantalla le pide a [CancelOrderViewModel]. */
@@ -118,25 +120,22 @@ private fun CancelDialog(
             )
         },
         confirmButton = {
-            TextButton(
+            TindivoTextButton(
+                text =
+                    stringResource(
+                        if (cancelling) R.string.order_cancel_confirming else R.string.order_cancel_confirm,
+                    ),
                 onClick = section.actions.confirm,
                 enabled = !cancelling,
-                modifier = Modifier.heightIn(min = 48.dp),
-                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-            ) {
-                Text(
-                    stringResource(if (cancelling) R.string.order_cancel_confirming else R.string.order_cancel_confirm),
-                )
-            }
+                destructive = true,
+            )
         },
         dismissButton = {
-            TextButton(
+            TindivoTextButton(
+                text = stringResource(R.string.order_cancel_keep),
                 onClick = section.actions.dismiss,
                 enabled = !cancelling,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.order_cancel_keep))
-            }
+            )
         },
     )
 }
@@ -161,9 +160,7 @@ internal fun SupportLink(
     @StringRes label: Int = R.string.order_support_link,
 ) {
     if (link == null) return
-    TextButton(onClick = { onOpenLink(link) }, modifier = Modifier.heightIn(min = 48.dp)) {
-        Text(text = stringResource(label))
-    }
+    TindivoTextButton(text = stringResource(label), onClick = { onOpenLink(link) })
 }
 
 /**
@@ -183,21 +180,12 @@ internal fun CancelledBody(
     ) {
         OrderHeadlineBlock(headline = order.headline)
         if (order.appealViaSupport && supportLink != null) {
-            Button(
+            TindivoPrimaryButton(
+                text = stringResource(R.string.order_support_whatsapp),
                 onClick = { onOpenLink(supportLink) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-            ) {
-                Text(text = stringResource(R.string.order_support_whatsapp))
-            }
+            )
         }
-        Button(
-            onClick = onBackToMenu,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.order_back_to_menu))
-        }
+        TindivoPrimaryButton(text = stringResource(R.string.order_back_to_menu), onClick = onBackToMenu)
         if (!order.appealViaSupport) {
             SupportLink(link = supportLink, onOpenLink = onOpenLink)
         }

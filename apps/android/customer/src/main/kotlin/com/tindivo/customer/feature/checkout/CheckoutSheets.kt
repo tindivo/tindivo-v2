@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.feature.addresses.AddressFormActions
@@ -146,9 +147,7 @@ private fun ChooseAddressSheet(
                     onClick = { actions.onPickAddress(address.id) },
                 )
             }
-            TextButton(onClick = onAddNew, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.checkout_sheet_add_new))
-            }
+            TindivoTextButton(text = stringResource(R.string.checkout_sheet_add_new), onClick = onAddNew)
         }
     }
 }
