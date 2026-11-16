@@ -144,13 +144,22 @@ export async function seedFraudClaim(amount = 20.0): Promise<SeedResult> {
 //   order_status       -> validando | pending_acceptance | ... | awaiting_payment
 //   validation_context -> CHECK (validation_context IN ('antifraud','proof'))
 export interface SeedOrderOptions {
-  status?: 'pending_acceptance' | 'awaiting_payment'
+  status?: 'pending_acceptance' | 'awaiting_payment' | 'validando'
+  /** Por defecto 'prepaid'. 'pending_cash' siembra una contraentrega (bloque 3 del barrido). */
+  paymentIntent?: 'prepaid' | 'pending_cash'
+  paymentProofStatus?: 'pending'
   validationContext?: 'antifraud' | 'proof'
   proofAttempt?: number
 }
 
 export async function seedPrepaidOrder(opts: SeedOrderOptions = {}): Promise<SeededOrder> {
-  const { status = 'pending_acceptance', validationContext = 'antifraud', proofAttempt = 0 } = opts
+  const {
+    status = 'pending_acceptance',
+    validationContext = 'antifraud',
+    proofAttempt = 0,
+    paymentIntent = 'prepaid',
+    paymentProofStatus,
+  } = opts
 
   const { data: authUser, error: authErr } = await localClient.auth.admin.createUser({
     email: `prepay-${crypto.randomUUID().slice(0, 8)}@integration.local`,
@@ -181,10 +190,11 @@ export async function seedPrepaidOrder(opts: SeedOrderOptions = {}): Promise<See
       customer_phone: '+51999000222',
       order_amount: 50.0,
       delivery_fee: 3.0,
-      payment_intent: 'prepaid',
+      payment_intent: paymentIntent,
       status,
       validation_context: validationContext,
       proof_attempt: proofAttempt,
+      ...(paymentProofStatus ? { payment_proof_status: paymentProofStatus } : {}),
     })
     .select('id')
     .single()
