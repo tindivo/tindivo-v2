@@ -5,6 +5,7 @@ import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -269,5 +270,104 @@ class TrackingReconcilerTest {
 
             assertEquals(listOf("A"), queried)
             assertEquals(step(3, 5), notifications.visible[order])
+        }
+
+    // CAX-003 (R05, caso 1): un grupo observado que ya no esta a la vista tambien recibe la revision general.
+    @Test
+    fun `la puesta al dia anota la version de un grupo observado que no esta a la vista (CAX-003)`() =
+        runTest {
+            val t0 = 1_000_000_000_000L
+            val t2 = 3_000_000_000_000L
+            assertTrue(rig.presenter.onPush(pushFor(courier, step(2, 4), seq = 1_500_000_000_000)))
+            assertTrue(rig.presenter.onPush(pushFor(order, step(2, 5), seq = t0)))
+            notifications.visible.remove(order) // la quitaron de la bandeja: sigue en las marcas
+            snapshot =
+                TrackingSnapshot(
+                    orders = mapOf("AB2C3D4E" to TrackingStatus.Active(TrackingKind.Delivery, step(2, 5), t2)),
+                    couriers = mapOf("ZZ9Y8X7W" to TrackingStatus.Active(TrackingKind.Courier, step(2, 4))),
+                )
+
+            reconciler().reconcile()
+
+            assertEquals(
+                t2,
+                rig.marks.saved
+                    .getValue(order.group)
+                    .version,
+            )
+            val between = pushFor(order, step(3, 5), seq = 2_000_000_000_000)
+            assertFalse("un aviso entre T0 y T2 es anterior a lo que leyo REST", rig.presenter.onPush(between))
+            assertEquals("no se crea una notificacion que no estaba", null, notifications.visible[order])
+        }
+
+    @Test
+    fun `un grupo oculto que llega terminado por REST queda terminal (CAX-003)`() =
+        runTest {
+            assertTrue(rig.presenter.onPush(pushFor(courier, step(2, 4), seq = 1_500_000_000_000)))
+            assertTrue(rig.presenter.onPush(pushFor(order, step(2, 5), seq = 1_000_000_000_000)))
+            notifications.visible.remove(order)
+            snapshot =
+                TrackingSnapshot(
+                    orders = mapOf("AB2C3D4E" to TrackingStatus.Finished),
+                    couriers = mapOf("ZZ9Y8X7W" to TrackingStatus.Active(TrackingKind.Courier, step(2, 4))),
+                )
+
+            reconciler().reconcile()
+
+            assertFalse(rig.presenter.onPush(pushFor(order, step(3, 5), seq = 2_000_000_000_000)))
+        }
+
+    // CAX-003 (R05, caso 2): la peticion de un empate sobrevive a no tener a nadie suscrito y a no ver el grupo.
+    @Test
+    fun `una peticion emitida antes de suscribirse se atiende al arrancar, aunque el grupo este oculto (CAX-003)`() =
+        runTest {
+            val seq = 4_000_000_000_000L
+            assertTrue(rig.presenter.onPush(pushFor(courier, step(2, 4), seq = 1_500_000_000_000)))
+            assertTrue(rig.presenter.onPush(pushFor(order, step(2, 5), seq = seq)))
+            notifications.visible.remove(order)
+            // Nadie escucha todavia: la emision se pierde si no queda anotada.
+            assertFalse(rig.presenter.onPush(pushFor(order, step(3, 5), seq = seq)))
+            snapshot =
+                TrackingSnapshot(
+                    orders = mapOf("AB2C3D4E" to TrackingStatus.Active(TrackingKind.Delivery, step(3, 5), seq)),
+                    couriers = mapOf("ZZ9Y8X7W" to TrackingStatus.Active(TrackingKind.Courier, step(2, 4))),
+                )
+
+            reconciler().start(backgroundScope)
+            testScheduler.runCurrent()
+
+            assertEquals(listOf("A"), queried)
+            assertEquals(
+                3,
+                rig.marks.saved
+                    .getValue(order.group)
+                    .rank,
+            )
+        }
+
+    @Test
+    fun `un empate se atiende aunque no haya ninguna notificacion fija a la vista (CAX-003)`() =
+        runTest {
+            val seq = 4_000_000_000_000L
+            assertTrue(rig.presenter.onPush(pushFor(order, step(2, 5), seq = seq)))
+            notifications.visible.clear()
+            reconciler().start(backgroundScope)
+            testScheduler.runCurrent()
+            snapshot =
+                TrackingSnapshot(
+                    orders = mapOf("AB2C3D4E" to TrackingStatus.Active(TrackingKind.Delivery, step(3, 5), seq)),
+                    couriers = emptyMap(),
+                )
+
+            assertFalse(rig.presenter.onPush(pushFor(order, step(3, 5), seq = seq)))
+            testScheduler.runCurrent()
+
+            assertEquals(listOf("A"), queried)
+            assertEquals(
+                3,
+                rig.marks.saved
+                    .getValue(order.group)
+                    .rank,
+            )
         }
 }

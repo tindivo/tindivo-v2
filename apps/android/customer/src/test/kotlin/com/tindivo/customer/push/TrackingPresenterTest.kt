@@ -388,7 +388,7 @@ class TrackingPresenterTest {
 
             assertEquals("la fija sigue donde estaba", pinned, rig.notifications.visible[order])
             assertNotEquals(order.group, notificationTag(old))
-            assertEquals("OrderStatusChanged-AB2C3D4E", notificationTag(old))
+            assertEquals("event:order-AB2C3D4E:OrderStatusChanged", notificationTag(old))
             assertTrue(rig.presenter.shown().any { it.key == order })
         }
 
@@ -400,11 +400,11 @@ class TrackingPresenterTest {
         assertEquals(order, trackingKeyOfTag(notificationTag(moving)))
         // Un aviso que no es del seguimiento ya tiene su grupo propio.
         val other = barless("x").copy(group = "OrderProofRejected-AB2C3D4E", tag = "OrderProofRejected-AB2C3D4E")
-        assertEquals("OrderProofRejected-AB2C3D4E", notificationTag(other))
+        assertEquals("group:OrderProofRejected-AB2C3D4E", notificationTag(other))
         assertNull(trackingKeyOfTag(notificationTag(other)))
         // Un grupo que imitara la etiqueta fija se desplaza.
         val imitation = other.copy(group = trackingTag(order), tag = trackingTag(order))
-        assertEquals("event:tracking:order-AB2C3D4E", notificationTag(imitation))
+        assertEquals("group:tracking:order-AB2C3D4E", notificationTag(imitation))
         assertNull(trackingKeyOfTag(notificationTag(imitation)))
     }
 

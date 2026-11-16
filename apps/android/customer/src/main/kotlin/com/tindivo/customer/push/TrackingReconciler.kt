@@ -9,6 +9,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -67,15 +68,20 @@ class TrackingReconciler(
      */
     fun start(scope: CoroutineScope) {
         scope.launch {
-            presenter.reconcileRequests.collect {
-                try {
-                    reconcile()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    // Sin red o con un error de la API: la próxima puesta al día (al abrir la app) lo vuelve a intentar.
-                }
-            }
+            presenter.reconcileRequests
+                // Lo pedido antes de suscribirse no se repite en el flujo: queda anotado en el presenter y se atiende ya.
+                .onSubscription { if (presenter.pendingRequests().isNotEmpty()) attempt() }
+                .collect { attempt() }
+        }
+    }
+
+    private suspend fun attempt() {
+        try {
+            reconcile()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Sin red o con un error de la API: la próxima puesta al día (al abrir la app) lo vuelve a intentar.
         }
     }
 
@@ -84,12 +90,33 @@ class TrackingReconciler(
         val generation = sessionStore.signInGeneration.value
         val account = currentAccount() ?: return
         mutex.withLock {
-            val seenVersion = presenter.version()
-            val shown = presenter.shown()
-            if (shown.isEmpty()) return
-            val snapshot = source.snapshot(account)
-            presenter.apply(account, generation, seenVersion, planReconciliation(shown, snapshot), ::payloadFor)
+            var again = true
+            var attempts = 0
+            while (again && attempts < MAX_ATTEMPTS) {
+                attempts++
+                again = readAndApply(account, generation)
+            }
         }
+    }
+
+    /** Una puesta al día. `true` si hay que repetirla: un aviso llegó en medio, quedan peticiones y la sesión es la misma. */
+    private suspend fun readAndApply(
+        account: String,
+        generation: Long,
+    ): Boolean {
+        val seenVersion = presenter.version()
+        val shown = presenter.shown()
+        val requested = presenter.pendingRequests()
+        // Todo lo observado, a la vista o no, y lo pedido: una marca que no se revisa deja pasar un aviso viejo.
+        val observed = presenter.observedGroups(account, generation) + requested
+        if (shown.isEmpty() && observed.isEmpty()) return false
+        val actions = planReconciliation(shown, source.snapshot(account), observed)
+        if (presenter.apply(account, generation, seenVersion, actions, ::payloadFor)) {
+            presenter.resolveRequests(requested)
+            return false
+        }
+        val sameSession = currentAccount() == account && sessionStore.signInGeneration.value == generation
+        return sameSession && presenter.pendingRequests().isNotEmpty()
     }
 
     private fun payloadFor(
@@ -111,6 +138,9 @@ class TrackingReconciler(
     private companion object {
         /** El `type` de una notificación puesta al día por la app (no es un evento del outbox). */
         const val RECONCILE_TYPE = "TrackingSync"
+
+        /** Cuántas veces se repite una puesta al día que un aviso en medio dejó sin aplicar. */
+        const val MAX_ATTEMPTS = 3
     }
 }
 

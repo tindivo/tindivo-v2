@@ -2,6 +2,7 @@ package com.tindivo.customer.push
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -202,5 +203,34 @@ class PushTrackingTest {
         val courier = TrackingSteps.courier("requested", "2026-11-14T10:00:00.123Z")
         assertEquals(TrackingStatus.Active(TrackingKind.Courier, step(1, 4), ms), courier)
         assertEquals(null, (TrackingSteps.order("preparing", "delivery") as TrackingStatus.Active).version)
+    }
+
+    // CAX-005: dos identidades distintas nunca comparten etiqueta ni identidad de PendingIntent.
+    @Test
+    fun `dos grupos distintos admitidos nunca producen la misma etiqueta ni la misma identidad (CAX-005)`() {
+        fun barless(
+            type: String,
+            group: String,
+        ) = NativePushPayload(type, tag = "t", title = "T", body = "B", deepLink = "/x", group = group)
+
+        val a = barless("OrderStatusChanged", "tracking:order-AB2C3D4E")
+        val b = barless("OrderStatusChanged", "event:tracking:order-AB2C3D4E")
+        assertNotEquals(notificationTag(a), notificationTag(b))
+        assertNotEquals(notificationIdentity(notificationTag(a)), notificationIdentity(notificationTag(b)))
+
+        // Con llave: el tipo y el pedido; sin llave: el grupo. Ninguno se confunde con otro ni con la fija.
+        val samples =
+            listOf(
+                barless("T", "order-AB2C3D4E"),
+                barless("T-AB2C3D4E", "order-AB2C3D4E"),
+                barless("T", "courier-AB2C3D4E"),
+                barless("T", "T-AB2C3D4E"),
+                barless("T", "group:T-AB2C3D4E"),
+                barless("event:order-AB2C3D4E:T", "order-AB2C3D4E"),
+                a,
+                b,
+            )
+        assertEquals(samples.size, samples.map(::notificationTag).toSet().size)
+        for (sample in samples) assertNull(trackingKeyOfTag(notificationTag(sample)))
     }
 }

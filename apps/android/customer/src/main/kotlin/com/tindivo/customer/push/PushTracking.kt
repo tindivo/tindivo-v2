@@ -72,8 +72,8 @@ fun lookFor(
 
 /**
  * El espacio de nombres de la notificación FIJA del seguimiento (CAX-003). Ninguna otra etiqueta puede empezar así: las
- * del resto de avisos son `group`/`${event_type}-${shortId}` y [notificationTag] las desplaza si algún dato del servidor
- * coincidiera. `:` no lo admite un tipo de evento (ver [NativePushPayload.decode]) ni un `shortId` ([TrackingKey]).
+ * del resto de avisos empiezan por `event:` o `group:` ([notificationTag]), así que ningún dato del servidor puede ocupar
+ * este espacio.
  */
 const val TRACKING_TAG_PREFIX: String = "tracking:"
 
@@ -87,17 +87,22 @@ fun trackingKeyOfTag(tag: String): TrackingKey? =
 /**
  * La etiqueta (con el id 0) bajo la que se pinta [payload] (CAX-003). Solo los avisos que mueven el seguimiento (traen
  * paso o son terminales) de un pedido o una entrega usan la etiqueta FIJA ([trackingTag]) y se reemplazan entre sí. Todo
- * lo demás, incluido un aviso del mismo pedido SIN paso, va con su etiqueta de evento (`${event_type}-${shortId}`, o su
- * `group` si no es de seguimiento) y nunca puede ocupar la ranura de la fija: pisaría la notificación con algo que no
- * pasó por las marcas. Si esa etiqueta empezara por [TRACKING_TAG_PREFIX] se desplaza con `event:`: los dos espacios
- * son disjuntos para cualquier payload.
+ * lo demás, incluido un aviso del mismo pedido SIN paso, va con su etiqueta de evento (`event:<group>:<type>`, o
+ * `group:<group>` si no es de seguimiento) y nunca puede ocupar la ranura de la fija: pisaría la notificación con algo
+ * que no pasó por las marcas. La función es inyectiva entre identidades distintas (CAX-005) y los tres espacios son
+ * disjuntos para cualquier payload.
  */
 fun notificationTag(payload: NativePushPayload): String {
     val key = TrackingKey.parse(payload.group)
     if (key != null && (payload.progress != null || payload.terminal)) return trackingTag(key)
-    val base = if (key == null) payload.group else "${payload.type}-${key.shortId}"
-    return if (base.startsWith(TRACKING_TAG_PREFIX)) "event:$base" else base
+    // Un prefijo por forma, y lo que varía va al final: ninguna pareja de identidades distintas da la misma etiqueta.
+    // El `group` de un seguimiento no lleva `:` (ver [TrackingKey]), así que `event:<group>:<type>` se lee sin ambigüedad
+    // aunque el tipo lo lleve; el resto de los grupos van enteros tras `group:`.
+    return if (key == null) "$GROUP_TAG_PREFIX${payload.group}" else "$EVENT_TAG_PREFIX${key.group}:${payload.type}"
 }
+
+private const val EVENT_TAG_PREFIX = "event:"
+private const val GROUP_TAG_PREFIX = "group:"
 
 /** Qué se sigue: un pedido a domicilio, uno para recoger, o una entrega de Tindivo Entregas. */
 enum class TrackingKind { Delivery, Pickup, Courier }
@@ -268,6 +273,39 @@ sealed interface ReconcileAction {
  * paso cambió; se deja si no se pudo leer su lista o el estado es desconocido. Nunca crea una notificación nueva.
  */
 fun planReconciliation(
+    shown: List<ShownTracking>,
+    snapshot: TrackingSnapshot,
+    observed: Set<String> = emptySet(),
+): List<ReconcileAction> = planShown(shown, snapshot) + planHidden(shown, snapshot, observed)
+
+/**
+ * Los grupos [observed] (con marca, o pedidos leer) que NO tienen notificación fija a la vista: nunca se crea una
+ * notificación, pero la revisión general sí les anota lo leído (la versión y, si terminaron, el terminal): si no, un
+ * aviso viejo de un pedido cuya notificación retiraron se admitiría (CAX-003).
+ */
+private fun planHidden(
+    shown: List<ShownTracking>,
+    snapshot: TrackingSnapshot,
+    observed: Set<String>,
+): List<ReconcileAction> {
+    val visible = shown.map { it.key }.toSet()
+    return observed
+        .mapNotNull { TrackingKey.parse(it) }
+        .filter { it !in visible }
+        .mapNotNull { key ->
+            val source = (if (key.courier) snapshot.couriers else snapshot.orders) ?: return@mapNotNull null
+            when (val status = source[key.shortId]) {
+                TrackingStatus.Finished -> ReconcileAction.Remove(key, finished = true)
+
+                is TrackingStatus.Active -> ReconcileAction.Observe(key, status)
+
+                // No estar entre los recientes o un estado desconocido no prueban nada de un grupo que no se ve.
+                else -> null
+            }
+        }
+}
+
+private fun planShown(
     shown: List<ShownTracking>,
     snapshot: TrackingSnapshot,
 ): List<ReconcileAction> =

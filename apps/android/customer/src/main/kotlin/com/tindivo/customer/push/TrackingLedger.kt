@@ -65,8 +65,9 @@ private const val OWNER_BYTES = 8
  * reintenta una vez; si sigue fallando, la memoria queda correcta, el ledger queda [dirty] y la siguiente escritura que
  * salga bien lo vuelca todo y limpia la marca. El archivo guarda además la cuenta dueña ([bind]): si al cargarlo no es la
  * actual, se descarta, así que un [clear] que no llegó a disco no deja marcas de A a la vista de B. RESIDUAL: si el disco
- * rechaza TODA escritura y el proceso muere, el terminal reconciliado (o el borrado de [clear]) puede perderse y un aviso
- * activo tardío del mismo pedido volver a pintarse, hasta la siguiente puesta al día.
+ * rechaza TODA escritura hasta que el proceso muere, el terminal reconciliado (o el borrado de [clear]) puede perderse y
+ * un aviso activo tardío del mismo pedido volver a pintarse, hasta la siguiente puesta al día. Mientras el proceso vive,
+ * cualquier aviso ([admit]) o puesta al día ([bind]) reintenta el volcado pendiente ([flush]) aunque no admita nada.
  */
 class TrackingLedger(
     private val store: TrackingMarkStore,
@@ -100,6 +101,19 @@ class TrackingLedger(
             dirty = true
         }
         owner = account
+        flush()
+    }
+
+    /** Los grupos de los que hay marca (los observados, a la vista o no): la puesta al día los revisa todos. */
+    fun groups(): Set<String> = loaded().keys.toSet()
+
+    /**
+     * Si una escritura anterior falló ([dirty]), la vuelve a intentar con lo que hay en memoria. Se llama al empezar
+     * cualquier operación de un aviso o de la puesta al día, también las que acaban en [Admission.Drop]: un terminal que
+     * no llegó a disco no depende de que otro grupo admita algo después (CAX-003).
+     */
+    fun flush() {
+        if (dirty) persist(loaded())
     }
 
     /** Un intento más si el primero falla; el mapa completo. */
@@ -130,13 +144,14 @@ class TrackingLedger(
         rank: Int,
     ): Admission {
         if (seq == null || seq <= 0) return Admission.Drop
+        flush()
         val last = loaded()[group]
         val decision = if (last == null) Admission.Admit else compare(last, seq, terminal, rank)
         if (decision != Admission.Admit) return decision
         // Sobre una copia: si el disco no la acepta, lo anotado en memoria no cambia.
         val next = loaded().toMutableMap()
         next[group] = TrackingMark(version = seq, terminal = terminal || last?.terminal == true, rank = rank)
-        trim(next)
+        trim(next, keep = group)
         if (!persist(next)) return Admission.Drop
         marks = next
         version++
@@ -197,7 +212,7 @@ class TrackingLedger(
             } else {
                 TrackingMark(seen, last?.terminal == true, rank)
             }
-        trim(all)
+        trim(all, keep = group)
         if (!persist(all)) dirty = true
         version++
     }
@@ -210,10 +225,23 @@ class TrackingLedger(
         version++
     }
 
-    private fun trim(all: MutableMap<String, TrackingMark>) {
+    /**
+     * Deja a lo más [MAX_MARKS] marcas. Nunca se va [keep] (la que se acaba de anotar: con una versión más vieja que las
+     * demás sería la primera en irse) y se van primero las activas más viejas (las sin versión antes): un terminal es lo
+     * que impide que un activo tardío reviva un pedido, así que solo se expulsa si TODAS las demás son terminales, y
+     * entonces el más viejo (un aviso de seguimiento caduca a las 3 h; los terminales de más de 64 pedidos atrás ya no
+     * pueden tener un activo en camino).
+     */
+    private fun trim(
+        all: MutableMap<String, TrackingMark>,
+        keep: String,
+    ) {
         if (all.size <= MAX_MARKS) return
-        // Se van las más viejas (las sin versión primero): un seguimiento de hace días ya no se va a reordenar.
-        val oldest = all.entries.sortedBy { it.value.version ?: Long.MIN_VALUE }.take(all.size - MAX_MARKS)
+        val oldest =
+            all.entries
+                .filter { it.key != keep }
+                .sortedWith(compareBy({ it.value.terminal }, { it.value.version ?: Long.MIN_VALUE }))
+                .take(all.size - MAX_MARKS)
         oldest.forEach { all.remove(it.key) }
     }
 

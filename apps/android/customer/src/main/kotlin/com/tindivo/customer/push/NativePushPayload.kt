@@ -72,12 +72,8 @@ data class NativePushPayload(
         /** Las mismas cotas del esquema Zod del contrato. */
         private const val MAX_TYPE = 64
 
-        /**
-         * Un tipo de evento del outbox es un identificador (`OrderStatusChanged`): letras y dígitos, sin separadores. No es
-         * una lista cerrada (un tipo nuevo del servidor sigue mostrándose en una app instalada, API-3), pero con esta
-         * gramática ninguna etiqueta `${type}-${shortId}` puede parecerse a la del seguimiento fijo ([trackingTag]).
-         */
-        private val TYPE_TEXT = Regex("[A-Za-z][A-Za-z0-9]*")
+        // El tipo es opaco (API-3): el contrato v1 solo pide 1 a 64 caracteres. La identidad de presentación no depende
+        // de su gramática sino de cómo se codifica ([notificationTag]).
         private const val MAX_TAG = 256
         private const val MAX_GROUP = 256
         private const val MAX_TITLE = 256
@@ -94,7 +90,7 @@ data class NativePushPayload(
 
         /**
          * Lee el payload v1. Devuelve `null` (el aviso se descarta, no se muestra) si la versión no es la 1, si falta un
-         * campo o se pasa de su cota, si el tipo no es un identificador, si el título está vacío o si [deepLink] no es
+         * campo o se pasa de su cota, si el tipo está vacío o pasa de 64 caracteres, si el título está vacío o si [deepLink] no es
          * una ruta relativa de la app: tiene que empezar con `/`, no con `//`, y no puede llevar `\` ni espacios (nada
          * que un intérprete de URL pueda leer como un host). [group] es opcional: si falta vale [tag]; si viene vacío o
          * pasado de su cota no cumple el contrato, y el aviso también se descarta.
@@ -103,14 +99,14 @@ data class NativePushPayload(
          * quitan la barra; el aviso se muestra igual. [terminal] solo es `true` con el valor exacto `"1"`.
          */
         fun decode(data: Map<String, String>): NativePushPayload? {
-            if (data[KEY_V] != SUPPORTED_VERSION) return null
-            val type = data[KEY_TYPE]?.takeIf { it.length <= MAX_TYPE && TYPE_TEXT.matches(it) }
+            val type = data[KEY_TYPE]?.takeIf { it.length in 1..MAX_TYPE }
             val tag = data[KEY_TAG]?.takeIf { it.isNotEmpty() && it.length <= MAX_TAG }
             val title = data[KEY_TITLE]?.takeIf { it.isNotBlank() && it.length <= MAX_TITLE }
             val body = data[KEY_BODY]?.takeIf { it.length <= MAX_BODY }
             val deepLink = data[KEY_DEEP_LINK]?.takeIf(::isAppPath)
             val group = data[KEY_GROUP]
-            if (group != null && (group.isEmpty() || group.length > MAX_GROUP)) return null
+            val groupInvalid = group != null && (group.isEmpty() || group.length > MAX_GROUP)
+            if (data[KEY_V] != SUPPORTED_VERSION || groupInvalid) return null
             if (type == null || tag == null || title == null || body == null || deepLink == null) return null
             return NativePushPayload(
                 type = type,

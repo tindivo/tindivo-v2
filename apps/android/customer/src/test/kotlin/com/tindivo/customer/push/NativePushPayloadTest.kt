@@ -228,12 +228,21 @@ class NativePushPayloadTest {
         assertEquals("/" + "a".repeat(511), NativePushPayload.decode(atLimits)?.deepLink)
     }
 
+    // CAX-012: el contrato v1 solo exige 1 a 64 caracteres; la app no es mas estricta que el.
     @Test
-    fun `un type que no es un identificador se descarta, uno nuevo del servidor se sigue mostrando (CAX-003)`() {
-        for (bad in listOf("tracking:order", "order-x", "Order Status", "1Order", "Ordenña", "")) {
-            assertNull(bad, NativePushPayload.decode(valid + ("type" to bad)))
+    fun `cualquier type que admite el contrato v1 se decodifica, y uno fuera de sus cotas no (CAX-012)`() {
+        for (type in listOf(
+            "Order_StatusChanged",
+            "order.status-changed",
+            "tracking:order",
+            "Order Status",
+            "1Order",
+            "a",
+        )) {
+            assertEquals(type, NativePushPayload.decode(valid + ("type" to type))?.type)
         }
-        assertEquals("AlgoNuevo2", NativePushPayload.decode(valid + ("type" to "AlgoNuevo2"))?.type)
-        assertEquals("order", NativePushPayload.decode(valid + ("type" to "order"))?.type)
+        assertEquals("t".repeat(64), NativePushPayload.decode(valid + ("type" to "t".repeat(64)))?.type)
+        assertNull(NativePushPayload.decode(valid + ("type" to "")))
+        assertNull(NativePushPayload.decode(valid + ("type" to "t".repeat(65))))
     }
 }

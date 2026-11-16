@@ -48,6 +48,34 @@ class TrackingPresenter(
      */
     val reconcileRequests: SharedFlow<String> = reconcileRequested
 
+    // Las peticiones pendientes: el flujo no repite lo emitido antes de suscribirse y un colector puede no estar vivo, así
+    // que lo pedido se anota aquí hasta que una puesta al día lo resuelva (CAX-003). Se toca desde varios hilos.
+    private val pending = LinkedHashSet<String>()
+
+    /** Los seguimientos que se pidió leer por REST y aún no se resolvieron. */
+    fun pendingRequests(): Set<String> = synchronized(pending) { pending.toSet() }
+
+    /** La puesta al día ya leyó estos seguimientos: dejan de estar pendientes. */
+    fun resolveRequests(groups: Set<String>) {
+        synchronized(pending) { pending.removeAll(groups) }
+    }
+
+    /**
+     * Los grupos con marca de [account] (a la vista o no), o vacío si la sesión ya no es la de [generation]. Reintenta
+     * antes un volcado pendiente de las marcas.
+     */
+    suspend fun observedGroups(
+        account: String,
+        generation: Long,
+    ): Set<String> =
+        lock.withLock {
+            publishLock.withLock {
+                if (!stillCurrent(account, generation)) return@withLock emptySet()
+                ledger.bind(trackingOwnerOf(account))
+                ledger.groups()
+            }
+        }
+
     /** Las notificaciones fijas que están a la vista. */
     fun shown(): List<ShownTracking> = notifications.shown()
 
@@ -81,7 +109,10 @@ class TrackingPresenter(
                     } else {
                         Admission.Admit
                     }
-                if (decision == Admission.Reconcile) reconcileRequested.tryEmit(payload.group)
+                if (decision == Admission.Reconcile) {
+                    synchronized(pending) { pending.add(payload.group) }
+                    reconcileRequested.tryEmit(payload.group)
+                }
                 if (decision != Admission.Admit) return@withLock false
                 notifications.show(payload, TrackingOrigin.Push)
                 true
@@ -129,11 +160,10 @@ class TrackingPresenter(
         seenVersion: Long,
         actions: List<ReconcileAction>,
         textsFor: (TrackingKey, TrackingStatus.Active) -> NativePushPayload,
-    ) {
+    ): Boolean =
         lock.withLock {
             publishLock.withLock { applyLocked(account, generation, seenVersion, actions, textsFor) }
         }
-    }
 
     private fun applyLocked(
         account: String,
@@ -141,8 +171,8 @@ class TrackingPresenter(
         seenVersion: Long,
         actions: List<ReconcileAction>,
         textsFor: (TrackingKey, TrackingStatus.Active) -> NativePushPayload,
-    ) {
-        if (!stillCurrent(account, generation) || ledger.version != seenVersion) return
+    ): Boolean {
+        if (!stillCurrent(account, generation) || ledger.version != seenVersion) return false
         ledger.bind(trackingOwnerOf(account))
         for (action in actions) {
             when (action) {
@@ -169,6 +199,7 @@ class TrackingPresenter(
                 }
             }
         }
+        return true
     }
 }
 

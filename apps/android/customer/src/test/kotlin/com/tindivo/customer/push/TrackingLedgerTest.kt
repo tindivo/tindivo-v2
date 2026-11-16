@@ -312,4 +312,59 @@ class TrackingLedgerTest {
         assertNotEquals(owner, trackingOwnerOf("22222222-2222-4222-8222-222222222222"))
         assertEquals(owner, trackingOwnerOf("11111111-1111-4111-8111-111111111111"))
     }
+
+    // CAX-003 (R05, caso 3): dos fallos seguidos no pierden el terminal; la siguiente operacion lo vuelve a intentar.
+    @Test
+    fun `tras dos fallos seguidos, la siguiente operacion persiste el terminal aunque se descarte (CAX-003)`() {
+        ledger.bind("owner-A")
+        assertTrue(admit("order-AB2C3D4E", seq = 1_000_000_000_000, rank = 4))
+        store.failNext = 2
+
+        ledger.reconciled("order-AB2C3D4E", terminal = true, rank = TERMINAL_RANK)
+        assertTrue(ledger.dirty)
+        assertFalse("el disco todavia tiene el activo", store.saved.getValue("order-AB2C3D4E").terminal)
+
+        // El disco ya funciona; llega un activo tardio de ese pedido: se descarta, pero antes se vuelca lo pendiente.
+        assertFalse(admit("order-AB2C3D4E", seq = 2_000_000_000_000, rank = 4))
+
+        assertFalse(ledger.dirty)
+        val reopened = TrackingLedger(store)
+        reopened.bind("owner-A")
+        assertEquals(Admission.Drop, reopened.admit("order-AB2C3D4E", 9_000_000_000_000, false, 4))
+    }
+
+    @Test
+    fun `bind tambien reintenta lo pendiente (CAX-003)`() {
+        ledger.bind("owner-A")
+        assertTrue(admit("order-AB2C3D4E", seq = 1_000_000_000_000, rank = 4))
+        store.failNext = 2
+        ledger.reconciled("order-AB2C3D4E", terminal = true, rank = TERMINAL_RANK)
+
+        ledger.bind("owner-A")
+
+        assertFalse(ledger.dirty)
+        assertTrue(store.saved.getValue("order-AB2C3D4E").terminal)
+    }
+
+    // CAX-003 (R05): el tope de marcas no puede expulsar un terminal que sigue siendo relevante.
+    @Test
+    fun `un terminal no se expulsa por llegar mas de 64 grupos nuevos (CAX-003)`() {
+        ledger.bind("owner-A")
+        assertTrue(admit("order-TERM0001", seq = 1_000_000_000_000, terminal = true))
+        for (n in 1..70) assertTrue(admit("order-ID$n", seq = 2_000_000_000_000 + n))
+
+        assertTrue(store.saved.getValue("order-TERM0001").terminal)
+        assertEquals(Admission.Drop, ledger.admit("order-TERM0001", 9_000_000_000_000, false, 4))
+    }
+
+    @Test
+    fun `la marca que se acaba de admitir nunca es la que se expulsa (CAX-003)`() {
+        ledger.bind("owner-A")
+        for (n in 1..64) assertTrue(admit("order-ID$n", seq = 5_000_000_000_000 + n))
+
+        // Una version mas vieja que todas las guardadas: el recorte la tomaria por la mas vieja.
+        assertTrue(admit("order-NUEVO001", seq = 1_000_000_000_000))
+
+        assertTrue(store.saved.containsKey("order-NUEVO001"))
+    }
 }
