@@ -10767,6 +10767,16 @@
                           "type": "string",
                           "format": "date-time"
                         },
+                        "paymentProofStatus": {
+                          "nullable": true,
+                          "type": "string",
+                          "x-known-values": [
+                            "pending",
+                            "verified",
+                            "rejected"
+                          ],
+                          "description": "Estado del comprobante de pago del pedido; null si no hay comprobante o no aplica. Valores conocidos: pending, verified, rejected. Puede llegar uno nuevo; trátalo como desconocido."
+                        },
                         "driver": {
                           "nullable": true,
                           "type": "object",
@@ -10813,6 +10823,7 @@
                         "arrivedAtCustomerAt",
                         "proofAttempt",
                         "paymentVerifiedAt",
+                        "paymentProofStatus",
                         "driver"
                       ],
                       "additionalProperties": false

@@ -9,6 +9,7 @@ import {
   DISTANCE_BANDS,
   ORDER_STATUSES,
   PAYMENT_INTENTS,
+  PAYMENT_PROOF_STATUSES,
   PAYMENT_WALLETS,
   PICKUP_TIMINGS,
   REORDER_CHANGE_KINDS,
@@ -420,6 +421,10 @@ export const CustomerOrderDetailSchema = z.object({
   arrivedAtCustomerAt: timestampOut.nullable(),
   proofAttempt: z.number().int(),
   paymentVerifiedAt: timestampOut.nullable(),
+  paymentProofStatus: openEnum(
+    PAYMENT_PROOF_STATUSES,
+    'Estado del comprobante de pago del pedido; null si no hay comprobante o no aplica',
+  ).nullable(),
   driver: z
     .object({
       name: z.string(),

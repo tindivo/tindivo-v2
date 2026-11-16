@@ -114,6 +114,11 @@ export const PAYMENT_INTENTS = ['prepaid', 'pending_yape', 'pending_cash', 'pend
 export const PaymentIntentSchema = z.enum(PAYMENT_INTENTS)
 export type PaymentIntent = z.infer<typeof PaymentIntentSchema>
 
+// --- Comprobante de pago del pedido (0031: orders_payment_proof_status_chk) ---
+export const PAYMENT_PROOF_STATUSES = ['pending', 'verified', 'rejected'] as const
+export const PaymentProofStatusSchema = z.enum(PAYMENT_PROOF_STATUSES)
+export type PaymentProofStatus = z.infer<typeof PaymentProofStatusSchema>
+
 // --- Pago: estado real al entregar ---
 export const PAYMENT_REALS = [
   'paid_prepaid',
