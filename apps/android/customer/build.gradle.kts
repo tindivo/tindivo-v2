@@ -6,6 +6,13 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+// ID de cliente WEB de Google del Supabase de staging (tindivo-dev).
+val googleWebClientIdDev =
+    "484245553841-rj0glhkf7f1h76tpa1k0a7vacpilb6o7.apps.googleusercontent.com"
+
+// ID de cliente WEB de Google del Supabase de producción (no es secreto). PENDIENTE: lo da Jesús.
+val googleWebClientIdProd = ""
+
 android {
     namespace = "com.tindivo.customer"
     // KT-1: compileSdk ≥ targetSdk. Compose 1.12, core 1.19 y lifecycle 2.11 exigen compilar contra la API 37; el
@@ -38,11 +45,11 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
             buildConfigField("String", "API_BASE_URL", "\"https://tindivo-api-staging.vercel.app/api/v1\"")
-            // Claves PUBLICABLES de Supabase (hechas para ir en el cliente); no son secretas. El ID web de Google lo
-            // pone Jesús; vacío, la app no ofrece el inicio de sesión.
+            // Claves PUBLICABLES de Supabase (hechas para ir en el cliente); no son secretas. El ID web de Google
+            // (el del proveedor Google del Supabase de staging) tampoco es secreto: viaja dentro del APK.
             buildConfigField("String", "SUPABASE_URL", "\"https://jgziumvrtogguljhpdos.supabase.co\"")
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_PXkU-RVUbJmzcg2uJRoHXA_nl02PVBd\"")
-            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientIdDev\"")
             // La web pública, para abrir Términos y Privacidad. Staging no tiene web propia: los textos legales son los
             // mismos, así que va la de producción (decisión pendiente si algún día hay una web de staging).
             buildConfigField("String", "WEB_BASE_URL", "\"https://www.tindivo.com\"")
@@ -52,7 +59,9 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://apiv2.tindivo.com/api/v1\"")
             buildConfigField("String", "SUPABASE_URL", "\"https://zpnipajgwfthxhdtzhly.supabase.co\"")
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_J8M8nH_cb2eYjAt2E5L27w_EhMnwS0W\"")
-            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"\"")
+            // PENDIENTE (Jesús): ID de cliente WEB del proveedor Google del Supabase de producción. Vacío, la app no
+            // ofrece iniciar sesión y la validación de abajo impide empaquetar prodRelease.
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientIdProd\"")
             buildConfigField("String", "WEB_BASE_URL", "\"https://www.tindivo.com\"")
         }
     }
@@ -85,6 +94,22 @@ android {
 androidComponents {
     beforeVariants(selector().withFlavor("environment" to "prod").withBuildType("debug")) { variant ->
         variant.enable = false
+    }
+}
+
+// Un build de tienda (prodRelease) sin el ID web de Google saldría sin inicio de sesión (SignInScreen lo desactiva si
+// está vacío). Se valida al armar el grafo de tareas, antes de compilar. Solo toca a assemble/bundle/package de
+// ProdRelease. La CI, que construye el AAB solo para medir su peso, pasa -PpermitirSinGoogleId=true.
+gradle.taskGraph.whenReady {
+    val etapas = listOf("assemble", "bundle", "package")
+    val esProdRelease = { nombre: String -> nombre.contains("ProdRelease") && etapas.any { nombre.startsWith(it) } }
+    val hayProdRelease = allTasks.any { it.project == project && esProdRelease(it.name) }
+    val sinPermiso = !project.hasProperty("permitirSinGoogleId")
+    if (googleWebClientIdProd.isBlank() && hayProdRelease && sinPermiso) {
+        throw GradleException(
+            "GOOGLE_WEB_CLIENT_ID de la variante prod está vacío: la app saldría sin iniciar sesión. " +
+                "Pon el ID web de Google (el del Supabase de producción) en customer/build.gradle.kts.",
+        )
     }
 }
 
