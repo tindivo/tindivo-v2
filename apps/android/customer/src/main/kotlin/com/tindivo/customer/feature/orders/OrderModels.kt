@@ -21,6 +21,7 @@ internal enum class CancelCopy {
     CustomerCancelled,
     PrepayTimeout,
     PrepayProofNotReviewed,
+    PrepayProofRejected,
     BusinessNoResponse,
     CouldNotConfirm,
     BusinessCancelled,
@@ -29,6 +30,24 @@ internal enum class CancelCopy {
     PickupNoShow,
     DeliveryNoShow,
     Generic,
+}
+
+/** Estado del comprobante de pago que dice la API; lo desconocido no se representa (se trata como sin dato). */
+internal enum class ProofStatus {
+    Pending,
+    Verified,
+    Rejected,
+    ;
+
+    companion object {
+        fun fromApi(value: String?): ProofStatus? =
+            when (value) {
+                "pending" -> Pending
+                "verified" -> Verified
+                "rejected" -> Rejected
+                else -> null
+            }
+    }
 }
 
 /** Lo que el titular necesita saber del pago de un pedido. */
@@ -40,6 +59,11 @@ internal data class PaymentFacts(
      */
     val proofSent: Boolean,
     val verified: Boolean,
+    /**
+     * `paymentProofStatus` del detalle: `pending`, `verified`, `rejected` o `null` (sin comprobante). El enum es abierto:
+     * un valor que esta versión no conoce llega como `null`, nunca rompe.
+     */
+    val proofStatus: ProofStatus? = null,
 ) {
     /** Lo que la web llama `yaPago` en `cancelledCopy`. */
     val alreadyPaid: Boolean get() = prepaid && (proofSent || verified)

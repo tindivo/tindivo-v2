@@ -9,7 +9,7 @@ internal fun headlineOf(
 ): OrderHeadline =
     when (phase) {
         is OrderPhase.Cancelled -> {
-            val copy = cancelCopyOf(phase.reason, isPickup, payment.proofSent)
+            val copy = cancelCopyOf(phase.reason, isPickup, payment)
             OrderHeadline.Cancelled(copy, alreadyPaid = payment.alreadyPaid)
         }
 
@@ -73,17 +73,18 @@ internal fun cancelOfferOf(
     }
 
 /**
- * Con `prepay_timeout` y comprobante enviado, el negocio no lo revisó: el push dice lo mismo (`expired-text.ts`). La API
- * expone `proofAttempt` y no `payment_proof_status`; un comprobante ya revisado no vence por `prepay_timeout`.
+ * Con `prepay_timeout` el texto depende del comprobante (`paymentProofStatus`): rechazado, «No pudimos validar tu pago»;
+ * enviado y sin revisar, «No se pudo revisar tu pago a tiempo». Sin estado (`null` o un valor desconocido) se decide por
+ * `proofAttempt`, como antes: con comprobante, el aviso de sin revisar; sin él, «no llegó el pago».
  */
 private fun cancelCopyOf(
     reason: String?,
     isPickup: Boolean,
-    proofSent: Boolean,
+    payment: PaymentFacts,
 ): CancelCopy =
     when (reason) {
         "customer_cancelled" -> CancelCopy.CustomerCancelled
-        "prepay_timeout" -> if (proofSent) CancelCopy.PrepayProofNotReviewed else CancelCopy.PrepayTimeout
+        "prepay_timeout" -> prepayTimeoutCopyOf(payment)
         "pending_acceptance_timeout" -> CancelCopy.BusinessNoResponse
         "validation_timeout" -> CancelCopy.CouldNotConfirm
         "business_cancelled" -> CancelCopy.BusinessCancelled
@@ -91,4 +92,11 @@ private fun cancelCopyOf(
         "proof_rejected_final" -> CancelCopy.ProofRejected
         "no_show" -> if (isPickup) CancelCopy.PickupNoShow else CancelCopy.DeliveryNoShow
         else -> CancelCopy.Generic
+    }
+
+private fun prepayTimeoutCopyOf(payment: PaymentFacts): CancelCopy =
+    when {
+        payment.proofStatus == ProofStatus.Rejected -> CancelCopy.PrepayProofRejected
+        payment.proofStatus != null || payment.proofSent -> CancelCopy.PrepayProofNotReviewed
+        else -> CancelCopy.PrepayTimeout
     }

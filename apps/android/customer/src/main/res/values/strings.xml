@@ -220,7 +220,9 @@
     <string name="order_cancel_prepay_title">Se acabó el tiempo para pagar</string>
     <string name="order_cancel_prepay_body">El pago no llegó a tiempo, así que cancelamos tu pedido. Puedes volver a pedirlo cuando quieras.</string>
     <string name="order_cancel_prepay_unreviewed_title">No se revisó tu pago a tiempo</string>
-    <string name="order_cancel_prepay_unreviewed_body">No se pudo revisar tu pago a tiempo, así que cancelamos tu pedido. Escríbenos por WhatsApp y revisamos tu caso.</string>
+    <string name="order_cancel_prepay_unreviewed_body">No se pudo revisar tu pago a tiempo. Comunícate con Tindivo y revisamos tu caso.</string>
+    <string name="order_cancel_prepay_rejected_title">No pudimos validar tu pago</string>
+    <string name="order_cancel_prepay_rejected_body">El negocio no pudo confirmar tu comprobante y se acabó el tiempo para pagar, así que cancelamos tu pedido. Si crees que hubo un error, escríbenos por WhatsApp y revisamos tu caso.</string>
     <string name="order_cancel_no_response_title">El negocio no respondió</string>
     <string name="order_cancel_no_response_body">El negocio no respondió a tiempo, así que cancelamos tu pedido sin costo. Puedes volver a pedirlo.</string>
     <string name="order_cancel_no_response_paid_body">El negocio no respondió a tiempo, así que cancelamos tu pedido. Como ya habías enviado tu pago, escríbenos por WhatsApp para coordinarlo.</string>

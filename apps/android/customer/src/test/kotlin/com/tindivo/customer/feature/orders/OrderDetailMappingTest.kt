@@ -183,6 +183,35 @@ class OrderDetailMappingTest {
     }
 
     @Test
+    fun `prepay_timeout elige el texto segun el estado del comprobante`() {
+        fun copy(
+            proofStatus: String?,
+            proofAttempt: Int,
+        ) = detail(
+            status = "cancelled",
+            cancelReason = "prepay_timeout",
+            paymentIntent = "prepaid",
+            proofAttempt = proofAttempt,
+            paymentProofStatus = proofStatus,
+        ).toDetailUi()?.headline as OrderHeadline.Cancelled
+
+        assertEquals(CancelCopy.PrepayProofNotReviewed, copy("pending", 1).copy)
+        assertEquals(CancelCopy.PrepayProofRejected, copy("rejected", 1).copy)
+        assertEquals(CancelCopy.PrepayProofRejected, copy("rejected", 2).copy)
+        assertEquals(CancelCopy.PrepayProofNotReviewed, copy("verified", 1).copy)
+        assertEquals(CancelCopy.PrepayTimeout, copy(null, 0).copy)
+        // Valor que esta versión no conoce: se trata como null, sin romper.
+        assertEquals(CancelCopy.PrepayTimeout, copy("en_disputa", 0).copy)
+        assertEquals(CancelCopy.PrepayProofNotReviewed, copy("en_disputa", 1).copy)
+        assertTrue(copy("rejected", 1).alreadyPaid)
+        assertEquals(R.string.order_cancel_prepay_rejected_title, CancelCopy.PrepayProofRejected.titleRes())
+        assertEquals(
+            R.string.order_cancel_prepay_rejected_body,
+            CancelCopy.PrepayProofRejected.bodyRes(alreadyPaid = true),
+        )
+    }
+
+    @Test
     fun `prepay_timeout distingue si el cliente envio comprobante y pending_acceptance_timeout es del negocio`() {
         fun cancelled(
             reason: String,
