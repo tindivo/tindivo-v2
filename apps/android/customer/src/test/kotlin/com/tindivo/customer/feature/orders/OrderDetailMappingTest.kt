@@ -175,7 +175,10 @@ class OrderDetailMappingTest {
             R.string.order_cancel_prepay_unreviewed_body,
             CancelCopy.PrepayProofNotReviewed.bodyRes(alreadyPaid = true),
         )
-        assertEquals(R.string.order_cancel_no_response_paid_body, CancelCopy.BusinessNoResponse.bodyRes(alreadyPaid = true))
+        assertEquals(
+            R.string.order_cancel_no_response_paid_body,
+            CancelCopy.BusinessNoResponse.bodyRes(alreadyPaid = true),
+        )
         assertEquals(R.string.order_cancel_no_response_body, CancelCopy.BusinessNoResponse.bodyRes(alreadyPaid = false))
     }
 
@@ -186,7 +189,8 @@ class OrderDetailMappingTest {
             proofAttempt: Int,
             intent: String = "prepaid",
         ) = detail(status = "cancelled", cancelReason = reason, paymentIntent = intent, proofAttempt = proofAttempt)
-            .toDetailUi()?.headline
+            .toDetailUi()
+            ?.headline
 
         assertEquals(OrderHeadline.Cancelled(CancelCopy.PrepayTimeout), cancelled("prepay_timeout", proofAttempt = 0))
         assertEquals(
