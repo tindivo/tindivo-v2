@@ -106,7 +106,8 @@ val permitirSinGoogleId = providers.gradleProperty("permitirSinGoogleId").map { 
 val verificarGoogleIdProd =
     tasks.register("verificarGoogleIdProd") {
         group = "verification"
-        description = "Falla si prodRelease se empaqueta con el ID web de Google vacío (salvo permitirSinGoogleId=true)."
+        description =
+            "Falla si prodRelease se empaqueta con el ID web de Google vacío (salvo permitirSinGoogleId=true)."
         val idProdVacio = googleWebClientIdProd.isBlank()
         val excepcion = permitirSinGoogleId
         outputs.upToDateWhen { false }
