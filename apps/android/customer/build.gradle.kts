@@ -98,20 +98,28 @@ androidComponents {
 }
 
 // Un build de tienda (prodRelease) sin el ID web de Google saldría sin inicio de sesión (SignInScreen lo desactiva si
-// está vacío). Se valida al armar el grafo de tareas, antes de compilar. Solo toca a assemble/bundle/package de
-// ProdRelease. La CI, que construye el AAB solo para medir su peso, pasa -PpermitirSinGoogleId=true.
-gradle.taskGraph.whenReady {
-    val etapas = listOf("assemble", "bundle", "package")
-    val esProdRelease = { nombre: String -> nombre.contains("ProdRelease") && etapas.any { nombre.startsWith(it) } }
-    val hayProdRelease = allTasks.any { it.project == project && esProdRelease(it.name) }
-    val sinPermiso = !project.hasProperty("permitirSinGoogleId")
-    if (googleWebClientIdProd.isBlank() && hayProdRelease && sinPermiso) {
-        throw GradleException(
-            "GOOGLE_WEB_CLIENT_ID de la variante prod está vacío: la app saldría sin iniciar sesión. " +
-                "Pon el ID web de Google (el del Supabase de producción) en customer/build.gradle.kts.",
-        )
+// está vacío). La tarea corre siempre, en ejecución (no se da por al día ni depende de la configuration cache), y
+// preProdReleaseBuild depende de ella: todo assemble, bundle o package de prodRelease pasa por aquí. Solo el valor
+// literal `true` activa la excepción; la CI, que construye el AAB solo para medir su peso, pasa
+// -PpermitirSinGoogleId=true.
+val permitirSinGoogleId = providers.gradleProperty("permitirSinGoogleId").map { it == "true" }.orElse(false)
+val verificarGoogleIdProd =
+    tasks.register("verificarGoogleIdProd") {
+        group = "verification"
+        description = "Falla si prodRelease se empaqueta con el ID web de Google vacío (salvo permitirSinGoogleId=true)."
+        val idProdVacio = googleWebClientIdProd.isBlank()
+        val excepcion = permitirSinGoogleId
+        outputs.upToDateWhen { false }
+        doLast {
+            if (idProdVacio && !excepcion.get()) {
+                throw GradleException(
+                    "GOOGLE_WEB_CLIENT_ID de la variante prod está vacío: la app saldría sin iniciar sesión. " +
+                        "Pon el ID web de Google (el del Supabase de producción) en customer/build.gradle.kts.",
+                )
+            }
+        }
     }
-}
+tasks.matching { it.name == "preProdReleaseBuild" }.configureEach { dependsOn(verificarGoogleIdProd) }
 
 dependencies {
     implementation(project(":core:network"))
