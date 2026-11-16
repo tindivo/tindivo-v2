@@ -43,6 +43,9 @@ internal fun CancelCopy.titleRes(): Int =
     when (this) {
         CancelCopy.CustomerCancelled -> R.string.order_cancel_customer_title
         CancelCopy.PrepayTimeout -> R.string.order_cancel_prepay_title
+        CancelCopy.PrepayProofNotReviewed -> R.string.order_cancel_prepay_unreviewed_title
+        CancelCopy.PrepayProofRejected -> R.string.order_cancel_prepay_rejected_title
+        CancelCopy.BusinessNoResponse -> R.string.order_cancel_no_response_title
         CancelCopy.CouldNotConfirm -> R.string.order_cancel_unconfirmed_title
         CancelCopy.BusinessCancelled -> R.string.order_cancel_business_title
         CancelCopy.AdminCancelled -> R.string.order_cancel_admin_title
@@ -76,6 +79,18 @@ internal fun CancelCopy.bodyRes(alreadyPaid: Boolean): Int =
 
         CancelCopy.PrepayTimeout -> {
             R.string.order_cancel_prepay_body
+        }
+
+        CancelCopy.PrepayProofNotReviewed -> {
+            R.string.order_cancel_prepay_unreviewed_body
+        }
+
+        CancelCopy.PrepayProofRejected -> {
+            R.string.order_cancel_prepay_rejected_body
+        }
+
+        CancelCopy.BusinessNoResponse -> {
+            if (alreadyPaid) R.string.order_cancel_no_response_paid_body else R.string.order_cancel_no_response_body
         }
 
         CancelCopy.ProofRejected -> {

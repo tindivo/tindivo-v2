@@ -75,6 +75,7 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
             prepaid = paymentIntent == PREPAID,
             proofSent = proofAttempt >= 1,
             verified = paymentVerifiedAt != null,
+            proofStatus = ProofStatus.fromApi(paymentProofStatus),
         )
     return OrderDetailUi(
         id = id,
