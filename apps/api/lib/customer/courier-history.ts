@@ -1,9 +1,10 @@
 import { encodeCursor, keysetFilter } from '@/lib/http/cursor'
+import { toIsoUtc } from '@/lib/mappers/customer-orders'
 import { createServiceClient } from '@/lib/supabase/service'
 import { createUserClient } from '@/lib/supabase/user'
 import { parsePage } from './history'
 
-interface CourierRow {
+export interface CourierRow {
   id: string
   short_id: string
   order_number: number
@@ -25,11 +26,12 @@ interface CourierRow {
   driver_id: string | null
   fee_amount: number
   created_at: string
+  updated_at: string
   delivered_at: string | null
 }
 
 const COURIER_COLUMNS =
-  'id,short_id,order_number,status,cancel_reason,origin_name,origin_phone,origin_lat,origin_lng,origin_reference_text,destination_name,destination_phone,destination_lat,destination_lng,destination_reference_text,item_description,is_fragile,payer,driver_id,fee_amount,created_at,delivered_at' as const
+  'id,short_id,order_number,status,cancel_reason,origin_name,origin_phone,origin_lat,origin_lng,origin_reference_text,destination_name,destination_phone,destination_lat,destination_lng,destination_reference_text,item_description,is_fragile,payer,driver_id,fee_amount,created_at,updated_at,delivered_at' as const
 
 /** Lo que el sistema escribe cuando nadie puso un nombre: no es un contacto reconocible. */
 const FALLBACK_NAMES = new Set(['quien entrega', 'quien recibe'])
@@ -119,6 +121,27 @@ async function driverNames(driverIds: string[]): Promise<Map<string, string>> {
   return names
 }
 
+/** Una solicitud de Entregas como la ve su cliente en el historial. */
+export function toCourierOrderDto(r: CourierRow, driverName: string | null) {
+  return {
+    id: r.id,
+    shortId: r.short_id,
+    orderNumber: r.order_number,
+    status: r.status,
+    cancelReason: r.cancel_reason,
+    origin: originOf(r),
+    destination: destinationOf(r),
+    itemDescription: r.item_description,
+    isFragile: r.is_fragile,
+    payer: r.payer,
+    driverName,
+    feeAmount: (Math.round(Number(r.fee_amount) * 100) / 100).toFixed(2),
+    createdAt: r.created_at,
+    updatedAt: toIsoUtc(r.updated_at),
+    deliveredAt: r.delivered_at,
+  }
+}
+
 /**
  * Una página de las solicitudes de Entregas de la cliente de la sesión, y sus
  * contactos frecuentes (solo en la primera página). Con la sesión del usuario:
@@ -158,22 +181,7 @@ export async function listCustomerCourierOrders(token: string, userId: string, r
   ])
 
   return {
-    items: page.map((r) => ({
-      id: r.id,
-      shortId: r.short_id,
-      orderNumber: r.order_number,
-      status: r.status,
-      cancelReason: r.cancel_reason,
-      origin: originOf(r),
-      destination: destinationOf(r),
-      itemDescription: r.item_description,
-      isFragile: r.is_fragile,
-      payer: r.payer,
-      driverName: (r.driver_id && names.get(r.driver_id)) || null,
-      feeAmount: (Math.round(Number(r.fee_amount) * 100) / 100).toFixed(2),
-      createdAt: r.created_at,
-      deliveredAt: r.delivered_at,
-    })),
+    items: page.map((r) => toCourierOrderDto(r, (r.driver_id && names.get(r.driver_id)) || null)),
     nextCursor:
       rows.length > limit && last
         ? encodeCursor({ createdAt: last.created_at, id: last.id })

@@ -10,6 +10,7 @@ import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
 import com.tindivo.core.network.isProfileMissing
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.push.PushSignOut
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -68,6 +69,7 @@ class AccountViewModel
         private val customer: CustomerRepository,
         private val sessionStore: SessionStore,
         private val configService: ConfigService,
+        private val pushSignOut: PushSignOut,
     ) : ViewModel() {
         private val _state = MutableStateFlow<AccountUiState>(AccountUiState.Loading)
         val state: StateFlow<AccountUiState> = _state.asStateFlow()
@@ -130,10 +132,25 @@ class AccountViewModel
             if (current is AccountUiState.ProfileMissing) _state.value = current.copy(openNow = false)
         }
 
-        /** «Cerrar sesión»: cierra la de esta pantalla; si la sesión ya es de otra cuenta, esa no se toca. */
+        /**
+         * «Cerrar sesión»: cierra la de esta pantalla; si la sesión ya es de otra cuenta, esa no se toca. Antes da de baja
+         * los avisos de este aparato con la sesión que se va (mejor esfuerzo y acotado, ver `PushRegistrar`; si falla, cierra
+         * igual). No se cancela si la pantalla se va a mitad: una sesión que sigue abierta tras «cerrar sesión» es peor que tardar.
+         */
         fun signOut() {
             val account = owner ?: return
-            viewModelScope.launch { sessionStore.signOutIf(account) }
+            viewModelScope.launch {
+                withContext(NonCancellable) {
+                    // Fail-closed (CAX-010): si la limpieza de los avisos falla (el disco no deja escribir), la sesión se
+                    // cierra igual; esa limpieza queda pendiente y se reintenta.
+                    try {
+                        pushSignOut.beforeSignOut(account)
+                    } catch (_: Exception) {
+                        Unit
+                    }
+                    sessionStore.signOutIf(account)
+                }
+            }
         }
 
         /** Sigue siendo la cuenta de la pantalla: no terminó Y la sesión vigente, leída ahora, es la de [account]. */

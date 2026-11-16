@@ -100,6 +100,7 @@ class GeneratedModelPrivacyTest {
                         driverName = NAME,
                         feeAmount = "3.00",
                         createdAt = "2026-11-10T23:00:00Z",
+                        updatedAt = "2026-11-10T23:00:00Z",
                         deliveredAt = null,
                     ),
                 ),

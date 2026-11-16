@@ -52,6 +52,8 @@ import com.tindivo.customer.feature.reviews.rememberReviewController
 import com.tindivo.customer.feature.signin.SignInDestination
 import com.tindivo.customer.feature.store.StoreListRoute
 import com.tindivo.customer.feature.update.UpdateScreen
+import com.tindivo.customer.push.PushPermissionHost
+import com.tindivo.customer.push.PushPermissionViewModel
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -78,10 +80,15 @@ data object SignInRoute
 data object AccountRoute
 
 @Composable
-fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
+fun AppNavHost(
+    appViewModel: AppViewModel = hiltViewModel(),
+    deepLinkViewModel: DeepLinkViewModel = hiltViewModel(),
+    pushPermission: PushPermissionViewModel = hiltViewModel(),
+) {
     val navController = rememberNavController()
     val upgradeRequired = appViewModel.upgradeRequired.collectAsStateWithLifecycle().value
     val osNoticeVisible = appViewModel.osNoticeVisible.collectAsStateWithLifecycle().value
+    val deepLink = deepLinkViewModel.navigation.collectAsStateWithLifecycle().value
     // Un 426 llegue de donde llegue: se vacía la pila y se muestra la actualización, sin vuelta atrás (CLI-4).
     LaunchedEffect(upgradeRequired) {
         if (upgradeRequired) {
@@ -91,6 +98,14 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             }
         }
     }
+    // Un aviso tocado (KT-11). Con la actualización obligatoria no se abre nada: la app no sale de esa pantalla.
+    LaunchedEffect(deepLink, upgradeRequired) {
+        val target = deepLink ?: return@LaunchedEffect
+        if (!upgradeRequired) navController.openDeepLink(target)
+        deepLinkViewModel.navigated()
+    }
+    // La explicación del permiso de avisos: solo tras crear un pedido, nunca al abrir la app.
+    PushPermissionHost(pushPermission)
     Column {
         // D-58: aviso que no bloquea. Con la actualización obligatoria el ViewModel ya no lo muestra.
         if (osNoticeVisible) {
@@ -104,7 +119,7 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             startDestination = CatalogHomeRoute,
             modifier = contentModifier,
         ) {
-            catalogGraph(navController)
+            catalogGraph(navController, onOrderCreated = pushPermission::onOrderCreated)
             accountGraph(navController)
             addressesGraph(navController)
             ordersGraph(navController)
@@ -114,8 +129,11 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
     }
 }
 
-/** Portada, negocio, bolsa y checkout. */
-private fun NavGraphBuilder.catalogGraph(navController: NavHostController) {
+/** Portada, negocio, bolsa y checkout. [onOrderCreated]: el checkout acaba de crear un pedido. */
+private fun NavGraphBuilder.catalogGraph(
+    navController: NavHostController,
+    onOrderCreated: () -> Unit,
+) {
     composable<CatalogHomeRoute> { entry ->
         CatalogHomeDestination(
             onOpenBusiness = { id -> navController.navigate(BusinessRoute(id)) },
@@ -155,7 +173,7 @@ private fun NavGraphBuilder.catalogGraph(navController: NavHostController) {
             onCheckout = { navController.navigate(CheckoutRoute) },
         )
     }
-    checkoutDestination(navController)
+    checkoutDestination(navController, onOrderCreated)
     courierDestinations(navController)
     storeDestinations(navController)
 }
@@ -269,7 +287,10 @@ private fun NavGraphBuilder.ordersGraph(navController: NavHostController) {
 }
 
 /** El checkout. Lo que falta para pedir (dirección, celular, nombre) se resuelve en hojas encima, sin salir de aquí. */
-private fun NavGraphBuilder.checkoutDestination(navController: NavHostController) {
+private fun NavGraphBuilder.checkoutDestination(
+    navController: NavHostController,
+    onOrderCreated: () -> Unit,
+) {
     composable<CheckoutRoute> { entry ->
         CheckoutDestination(
             profileCompleted = entry.profileCompleted(),
@@ -279,6 +300,8 @@ private fun NavGraphBuilder.checkoutDestination(navController: NavHostController
                     onBack = { navController.popBackStack() },
                     // El pedido existe: el checkout sale de la pila para que «atrás» no vuelva a una bolsa vacía.
                     onOrderOpened = { id ->
+                        // Es el momento de ofrecer los avisos (Android 13+), con su explicación antes del permiso.
+                        onOrderCreated()
                         navController.navigate(OrderDetailRoute(id)) {
                             popUpTo<CheckoutRoute> { inclusive = true }
                             launchSingleTop = true

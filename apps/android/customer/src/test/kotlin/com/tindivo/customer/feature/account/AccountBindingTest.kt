@@ -8,6 +8,7 @@ import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.checkout.sessionJwt
+import com.tindivo.customer.push.NoPushSignOut
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.GatedTokens
 import com.tindivo.customer.session.SessionState
@@ -111,7 +112,7 @@ class AccountBindingTest {
     /** La pantalla de A, sin perfil todavía: es la que abre «Completa tu perfil» y recarga al volver. */
     private fun TestScope.profileMissingScreen(): AccountViewModel {
         server.enqueue(problem(404, PROFILE_MISSING))
-        val viewModel = AccountViewModel(customer, store, configService)
+        val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
         runCurrent()
         drain()
         runCurrent()
@@ -124,7 +125,7 @@ class AccountBindingTest {
     fun `si la sesion pasa a otra cuenta antes de leer el token el perfil no se pide`() =
         runTest(main) {
             val gate = tokens.holdNextRead()
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             runCurrent()
 
             gate.awaitReached()
@@ -142,7 +143,7 @@ class AccountBindingTest {
     fun `el perfil de A que llega con la sesion ya en B no se publica`() =
         runTest(main) {
             server.enqueue(profileOfA())
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             val seen = recordStates(viewModel)
             runCurrent()
 
@@ -161,7 +162,7 @@ class AccountBindingTest {
     fun `el perfil que llega despues de cerrar la sesion no se publica y la pantalla no vuelve a cargar`() =
         runTest(main) {
             server.enqueue(profileOfA())
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             val seen = recordStates(viewModel)
             runCurrent()
 
@@ -181,7 +182,7 @@ class AccountBindingTest {
     fun `un cambio directo de cuenta cierra la pantalla de A ya cargada y no carga a B en ella`() =
         runTest(main) {
             server.enqueue(profileOfA())
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             runCurrent()
             drain()
             runCurrent()
@@ -201,7 +202,7 @@ class AccountBindingTest {
     fun `cerrar sesion desde la pantalla de A no cierra la sesion de B`() =
         runTest(main) {
             server.enqueue(profileOfA())
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             runCurrent()
             drain()
             runCurrent()
@@ -219,7 +220,7 @@ class AccountBindingTest {
     fun `el perfil sale con el token de la cuenta de la pantalla`() =
         runTest(main) {
             server.enqueue(profileOfA())
-            AccountViewModel(customer, store, configService)
+            AccountViewModel(customer, store, configService, NoPushSignOut)
             runCurrent()
             drain()
             runCurrent()
@@ -231,7 +232,7 @@ class AccountBindingTest {
     fun `un error de la lectura de A que llega con la sesion ya en B no se muestra en la pantalla de B`() =
         runTest(main) {
             server.enqueue(problem(404, NOT_FOUND))
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             val seen = recordStates(viewModel)
             runCurrent()
 
@@ -249,7 +250,7 @@ class AccountBindingTest {
     fun `un 401 de la lectura de A que llega con la sesion ya en B no cierra la sesion de B`() =
         runTest(main) {
             server.enqueue(problem(401, UNAUTHORIZED))
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             val seen = recordStates(viewModel)
             runCurrent()
 

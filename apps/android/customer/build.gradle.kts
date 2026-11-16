@@ -6,6 +6,13 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+/** Una propiedad Gradle o, si no está, la variable de entorno del mismo nombre; vacía si no hay ninguna (la CI). */
+fun localSetting(name: String): String =
+    providers.gradleProperty(name).orElse(providers.environmentVariable(name)).getOrElse("")
+
+/** [value] como literal de texto de Java para `buildConfigField`. */
+fun javaString(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
 android {
     namespace = "com.tindivo.customer"
     // KT-1: compileSdk ≥ targetSdk. Compose 1.12, core 1.19 y lifecycle 2.11 exigen compilar contra la API 37; el
@@ -24,6 +31,12 @@ android {
         // MAPS_API_KEY. Sin ella (la CI) queda vacía y el mapa sale en blanco, que es lo esperado.
         manifestPlaceholders["mapsApiKey"] =
             providers.gradleProperty("MAPS_API_KEY").orElse(providers.environmentVariable("MAPS_API_KEY")).getOrElse("")
+        // Firebase (avisos, KT-10): como MAPS_API_KEY, NUNCA en el repo (es público) y sin google-services.json. Salen de
+        // la propiedad Gradle o de la variable de entorno; sin ellas (la CI) quedan vacías y los avisos se apagan solos.
+        // El FIREBASE_APP_ID es de cada sabor (abajo): dev y prod son apps distintas del mismo proyecto.
+        buildConfigField("String", "FIREBASE_API_KEY", javaString(localSetting("FIREBASE_API_KEY")))
+        buildConfigField("String", "FIREBASE_PROJECT_ID", javaString(localSetting("FIREBASE_PROJECT_ID")))
+        buildConfigField("String", "FIREBASE_SENDER_ID", javaString(localSetting("FIREBASE_SENDER_ID")))
     }
 
     // :core:network compila a bytecode 21: un módulo Android solo puede resolverlo si declara ese mismo objetivo.
@@ -46,6 +59,7 @@ android {
             // La web pública, para abrir Términos y Privacidad. Staging no tiene web propia: los textos legales son los
             // mismos, así que va la de producción (decisión pendiente si algún día hay una web de staging).
             buildConfigField("String", "WEB_BASE_URL", "\"https://www.tindivo.com\"")
+            buildConfigField("String", "FIREBASE_APP_ID", javaString(localSetting("FIREBASE_APP_ID_DEV")))
         }
         create("prod") {
             dimension = "environment"
@@ -54,6 +68,7 @@ android {
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_J8M8nH_cb2eYjAt2E5L27w_EhMnwS0W\"")
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"\"")
             buildConfigField("String", "WEB_BASE_URL", "\"https://www.tindivo.com\"")
+            buildConfigField("String", "FIREBASE_APP_ID", javaString(localSetting("FIREBASE_APP_ID_PROD")))
         }
     }
 
@@ -116,6 +131,10 @@ dependencies {
     implementation(libs.play.services.maps)
     implementation(libs.maps.compose)
     implementation(libs.play.services.location)
+
+    // Solo Messaging (KT-10): sin el plugin google-services ni Analytics.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)

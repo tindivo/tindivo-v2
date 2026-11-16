@@ -389,6 +389,10 @@ const customerOrderBase = {
   deliveryFee: moneyText,
   total: moneyText,
   createdAt: timestampOut,
+  updatedAt: timestampOut.meta({
+    description:
+      'Última modificación (UTC, con milisegundos): la misma versión (`seq`) que llevan los avisos del seguimiento',
+  }),
   deliveredAt: timestampOut.nullable(),
 }
 
@@ -506,6 +510,10 @@ export const CustomerCourierOrderSchema = z.object({
   }),
   feeAmount: moneyText,
   createdAt: timestampOut,
+  updatedAt: timestampOut.meta({
+    description:
+      'Última modificación (UTC, con milisegundos): la misma versión (`seq`) que llevan los avisos del seguimiento',
+  }),
   deliveredAt: timestampOut.nullable(),
 })
 

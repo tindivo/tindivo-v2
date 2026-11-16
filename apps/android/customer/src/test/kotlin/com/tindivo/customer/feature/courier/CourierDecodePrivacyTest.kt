@@ -116,7 +116,8 @@ class CourierDecodePrivacyTest {
                     """"orderNumber":7,"status":"requested","cancelReason":null,"origin":$POINT,"isFragile":"no",""" +
                     """"destination":$POINT,"itemDescription":"Documentos del notario",""" +
                     """"payer":"destination","driverName":"Rosa Quispe","feeAmount":"3.00",""" +
-                    """"createdAt":"2026-11-10T23:00:00Z","deliveredAt":null}],"nextCursor":null,""" +
+                    """"createdAt":"2026-11-10T23:00:00Z","updatedAt":"2026-11-10T23:00:00Z",""" +
+                    """"deliveredAt":null}],"nextCursor":null,""" +
                     """"frequentContacts":[]}}""",
             )
 

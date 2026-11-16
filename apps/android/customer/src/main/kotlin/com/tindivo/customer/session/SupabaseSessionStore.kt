@@ -38,6 +38,7 @@ internal class SupabaseSessionStore(
     private val backend: AuthBackend,
     private val clock: Clock,
     scope: CoroutineScope,
+    private val publishLock: SessionPublishLock = SessionPublishLock(),
 ) : SessionStore {
     private val mutex = Mutex()
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Unknown)
@@ -82,10 +83,7 @@ internal class SupabaseSessionStore(
     ): SignInResult =
         mutex.withLock {
             try {
-                adopt(backend.signInWithGoogle(idToken, rawNonce))
-                // Después del estado (ver SessionStore.signInGeneration): quien lea la generación y luego el estado
-                // nunca ve la generación vieja con la cuenta nueva sin darse cuenta.
-                signIns.value += 1
+                adopt(backend.signInWithGoogle(idToken, rawNonce), entering = true)
                 SignInResult.Success
             } catch (e: CancellationException) {
                 throw e
@@ -154,7 +152,11 @@ internal class SupabaseSessionStore(
                 null
             }
         restored = true
-        if (snapshot != null) adopt(snapshot, countsAsChange = false) else mutableState.value = SessionState.SignedOut
+        if (snapshot != null) {
+            adopt(snapshot, countsAsChange = false)
+        } else {
+            publishLock.withLock { mutableState.value = SessionState.SignedOut }
+        }
     }
 
     // El token está por vencer. Una vez enviado el refresh token, Auth puede haberlo gastado: solo si el error prueba
@@ -196,21 +198,30 @@ internal class SupabaseSessionStore(
 
     private fun TokenSnapshot.secondsLeft(): Long = expiresAtEpochSeconds - clock.instant().epochSecond
 
+    // Todo cambio de la cuenta visible va dentro de `publishLock` (CAX-001): bloque corto y sin suspensiones, que se toma
+    // con `mutex` ya tomado (orden: mutex → publishLock). [entering] = entrar a una cuenta: sube `signInGeneration`
+    // DESPUÉS del estado (ver SessionStore.signInGeneration), en el mismo bloque.
     private fun adopt(
         snapshot: TokenSnapshot,
         countsAsChange: Boolean = true,
+        entering: Boolean = false,
     ): TokenSnapshot {
-        current = snapshot
-        if (countsAsChange) generation.incrementAndGet()
-        mutableState.value = SessionState.SignedIn(snapshot.userId)
+        publishLock.withLock {
+            current = snapshot
+            if (countsAsChange) generation.incrementAndGet()
+            mutableState.value = SessionState.SignedIn(snapshot.userId)
+            if (entering) signIns.value += 1
+        }
         return snapshot
     }
 
     // Se completa aunque la corrutina esté cancelada: dejar la sesión a medias cerrada es peor que tardar un poco.
     private suspend fun drop() {
-        current = null
-        generation.incrementAndGet()
-        mutableState.value = SessionState.SignedOut
+        publishLock.withLock {
+            current = null
+            generation.incrementAndGet()
+            mutableState.value = SessionState.SignedOut
+        }
         withContext(NonCancellable) {
             try {
                 backend.clear()
@@ -245,6 +256,7 @@ internal fun createSupabaseSessionStore(
     clock: Clock,
     scope: CoroutineScope,
     io: CoroutineDispatcher,
+    publishLock: SessionPublishLock = SessionPublishLock(),
 ): SessionStore {
     val client =
         OkHttpClient
@@ -261,5 +273,5 @@ internal fun createSupabaseSessionStore(
             .addNetworkInterceptor(RetryAfterShieldInterceptor())
             .build()
     val backend = GoTrueAuthBackend("${url.trimEnd('/')}/auth/v1/".toHttpUrl(), publishableKey, client, file, clock, io)
-    return SupabaseSessionStore(backend, clock, scope)
+    return SupabaseSessionStore(backend, clock, scope, publishLock)
 }

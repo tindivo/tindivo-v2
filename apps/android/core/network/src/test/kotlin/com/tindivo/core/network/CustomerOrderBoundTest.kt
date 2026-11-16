@@ -67,7 +67,7 @@ class CustomerOrderBoundTest : HttpClientTestBase() {
             {"data":{"id":"5b2a737a-018f-4c2d-9a11-6f0d3c1e8a01","shortId":"ABCD2345","orderNumber":12,
              "status":"picked_up","deliveryMethod":"delivery","paymentIntent":"pending_cash","cancelReason":null,
              "businessId":"6b2a737a-018f-4c2d-9a11-6f0d3c1e8a02","businessName":"Pollería Rosa","amount":"45.00",
-             "deliveryFee":"3.50","total":"48.50","createdAt":"2026-10-26T15:00:00.000Z","deliveredAt":null,
+             "deliveryFee":"3.50","total":"48.50","createdAt":"2026-10-26T15:00:00.000Z","updatedAt":"2026-10-26T15:00:00.000Z","deliveredAt":null,
              "items":[{"name":"Pollo","quantity":2,"lineTotal":"45.00","note":null,"modifiers":[]}],
              "customerNotes":null,"deliveryAddress":"Jr. Lima 123","deliveryReference":null,
              "deliveryCoordinates":null,"paysWith":null,"changeToGive":null,"estimatedReadyAt":null,
