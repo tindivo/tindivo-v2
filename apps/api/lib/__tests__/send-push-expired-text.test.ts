@@ -30,9 +30,7 @@ describe('aviso de pedido cancelado solo (OrderExpired)', () => {
         paymentProofStatus: 'pending',
         proofAttempt: 1,
       }),
-    ).toBe(
-      'El negocio no revisó tu pago a tiempo · comunícate con Tindivo para que te devuelvan el pago',
-    )
+    ).toBe('No se pudo revisar tu pago a tiempo. Comunícate con Tindivo y revisamos tu caso.')
   })
 
   it('prepago sin comprobante: el texto de siempre', () => {

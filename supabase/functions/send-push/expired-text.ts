@@ -5,7 +5,7 @@
 // situaciones distintas con el mismo motivo (bloques 2 y 4 de `cancel_expired_prepay_orders`):
 //   · el cliente nunca pagó ni subió comprobante  -> puede volver a pedir.
 //   · el cliente SÍ subió comprobante y nadie lo revisó (bloque 4) -> su dinero pudo haber
-//     salido: que hable con Tindivo para que se lo devuelvan.
+//     salido: que hable con Tindivo, que revisa su caso (no se promete devolución).
 // Se distingue por la base y no por el payload del evento (la ruta `expire_order` de Inngest
 // no lo trae): un comprobante sin revisar es `payment_proof_status = 'pending'` con
 // `proof_attempt > 0`. Si la cajera lo hubiera revisado quedaría 'verified' o 'rejected'.
@@ -29,7 +29,7 @@ export function expiredBody(ctx: ExpiredContext): string {
     case 'prepay_timeout': {
       const attempts = typeof ctx.proofAttempt === 'number' ? ctx.proofAttempt : 0
       if (ctx.paymentProofStatus === 'pending' && attempts > 0) {
-        return 'El negocio no revisó tu pago a tiempo · comunícate con Tindivo para que te devuelvan el pago'
+        return 'No se pudo revisar tu pago a tiempo. Comunícate con Tindivo y revisamos tu caso.'
       }
       return DEFAULT_BODY
     }
