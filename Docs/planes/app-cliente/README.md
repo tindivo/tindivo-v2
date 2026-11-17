@@ -40,7 +40,8 @@ Lo transversal vive fuera, para que lo compartan todas las apps:
 | Qué | Dónde |
 |---|---|
 | Reglas del negocio (confianza y pago, faltas, plazos, términos) | `Docs/negocio/` (canon) |
-| Sistema de diseño: color, tipografía, radios, sombras, componentes, minimalismo | `Docs/negocio/diseno.md` (canon) |
+| Marca y principios de diseño (minimalismo, billetera agnóstica) | `Docs/negocio/diseno.md` (canon) |
+| Tokens y componentes (color, tipografía, radios, sombras) y lo que difiere hoy en Android | `Docs/arquitectura/sistema-de-diseno.md` (canon) |
 | Reglas del servidor que hereda toda app (estados, plazos, errores, avisos) | `Docs/trabajo/movil/03-requisitos/SYS-transversal.md` → se promueve a `planes/` cuando se apruebe |
 | Contrato REST (rutas, códigos, cabeceras, formas) | `Docs/planes/movil/contrato-rest.md` |
 | Estructura del código nativo (capas, una carpeta por área) | `Docs/arquitectura/apps-nativas.md` |
