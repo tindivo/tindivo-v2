@@ -12,15 +12,15 @@
 ## Índice de compatibilidad (2026-10-10)
 
 El código cita este archivo como `DECISIONS §N`. Desde el estándar de documentación, las decisiones nuevas van en
-`Docs/decisiones/` y el canon vive en `Docs/negocio/`, `Docs/trabajo/arquitectura/` y `Docs/glosario.md`. Esta tabla dice
+`Docs/decisiones/` y el canon vive en `Docs/negocio/`, `Docs/arquitectura/` y `Docs/glosario.md`. Esta tabla dice
 dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sigue mandando desde este archivo.
 
 | § | Tema | Dónde está hoy |
 |---|---|---|
 | §0 | Regla de precedencia de documentos | Sustituida por el estándar (`Docs/README.md` §4) |
-| §1 | Stack y versiones (fijadas, verificadas en vivo el 2026-05-29) | Versiones vivas en `pnpm-workspace.yaml`; resumen en `AGENTS.md` y `Docs/trabajo/arquitectura/README.md` |
+| §1 | Stack y versiones (fijadas, verificadas en vivo el 2026-05-29) | Versiones vivas en `pnpm-workspace.yaml`; resumen en `AGENTS.md` y `Docs/arquitectura/README.md` («Las piezas») |
 | §2 | Proyecto Supabase | Corregida: `supabase/AGENTS.md` (producción es `tindivo-prod`; migraciones solo por CLI) |
-| §3 | Estructura del monorepo | `Docs/trabajo/arquitectura/README.md` |
+| §3 | Estructura del monorepo | `Docs/arquitectura/README.md` («Las piezas») |
 | §4 | Modelo de dinero (Documento Maestro — corrige specs 09/11/12) | `Docs/negocio/dinero.md` (comisión corregida a S/ 1.50) |
 | §5 | Máquina de estados del pedido | Estados en `packages/contracts` (`ORDER_TRANSITIONS`); reglas en `Docs/negocio/servicios/pedidos-restaurante.md` |
 | §6 | `short_id` y número de pedido | `AGENTS.md`, invariantes 1 y 2 |
@@ -28,8 +28,8 @@ dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sig
 | §8 | Antifraude: strikes y validación humana | `Docs/negocio/antifraude.md` (confirmada por Jesús el 2026-10-10) |
 | §9 | Fondo de contingencia | Obsoleta desde la `0123`; sustituida por el ADR 0036 |
 | §10 | Reglas de tiempo | Plazos en `app_settings.timers`: `Docs/negocio/servicios/pedidos-restaurante.md` |
-| §11 | Outbox, push y scheduling | `Docs/trabajo/arquitectura/README.md` (cómo viajan los avisos) |
-| §12 | Seguridad / RLS | `AGENTS.md`, invariante 3, y `Docs/trabajo/arquitectura/README.md` |
+| §11 | Outbox, push y scheduling | `Docs/arquitectura/README.md` (cómo viajan los avisos) |
+| §12 | Seguridad / RLS | `AGENTS.md`, invariante 3, y `Docs/arquitectura/README.md` («La base») |
 | §13 | Resolución de las 24 contradicciones detectadas | Historia (resolvió contradicciones de los specs de mayo, ya borrados) |
 | §14 | Alcance Fase 1 — qué se activa vs qué se modela pero no | Historia (alcance de la Fase 1) |
 | §15 | Comportamiento del cliente (verdad visual = demo + spec v2) | `Docs/negocio/apps.md` (las fuentes que citaba se borraron) |

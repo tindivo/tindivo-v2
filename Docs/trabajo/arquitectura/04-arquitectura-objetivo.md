@@ -1,8 +1,8 @@
 # 04 · Arquitectura objetivo: desacoplar para poder crecer
 
 > Propuesta del 2026-10-08, **revisada tras la crítica de Codex** (`revision-codex.md`, archivada en git: `archive/estandares-v2`). Se apoya en
-> [`01-codigo.md`](01-codigo.md), [`02-base-de-datos.md`](02-base-de-datos.md) y
-> [`03-proveedores-y-vps.md`](03-proveedores-y-vps.md), y en el acuerdo sobre el contrato REST
+> `archive/arquitectura:Docs/trabajo/arquitectura/01-codigo.md`, `archive/arquitectura:Docs/trabajo/arquitectura/02-base-de-datos.md` y
+> `archive/arquitectura:Docs/trabajo/arquitectura/03-proveedores-y-vps.md`, y en el acuerdo sobre el contrato REST
 > (`../../planes/movil/contrato-rest.md`).
 
 ## 1. El principio: desacoplamiento

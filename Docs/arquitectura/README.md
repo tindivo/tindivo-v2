@@ -2,7 +2,7 @@
 
 > Verificado: 2026-10-10 · entorno: `develop@7d00aa4` (estructura, rutas, jobs) y `tindivo-prod` (solo lectura:
 > tablas, RLS, crons, triggers) · Los estándares de código están aprobados (más abajo). La propuesta de arquitectura
-> objetivo, **sin aprobar**, está en `Docs/trabajo/arquitectura/`
+> objetivo, **sin aprobar**, está en `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 
 ## Las piezas
 
