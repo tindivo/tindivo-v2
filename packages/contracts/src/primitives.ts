@@ -7,7 +7,7 @@ export type Uuid = z.infer<typeof UuidSchema>
 /**
  * Código público del pedido. 8 caracteres de un alfabeto de 32 símbolos estilo
  * Crockford que EXCLUYE los visualmente ambiguos I, O, 0 y 1. Se usa en las URLs
- * de tracking y en la referencia humana `#TND-XXXXXXXX`.
+ * de tracking y en la referencia humana `#TDV-XXXXXXXX`.
  *
  * INVARIANTE v2 (fix del bug ShortId del v1): este formato SOLO se valida al
  * CREAR un short id. Al rehidratar un agregado desde la persistencia NO se
