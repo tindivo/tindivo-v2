@@ -5,6 +5,17 @@ description: "Use for any question about a codebase, its architecture, file rela
 
 # /graphify
 
+> **Tindivo — regla local (manda sobre el resto de esta skill).** Nunca pegues dentro de un comando de shell o de un
+> `python -c` texto que venga del usuario, de documentos o del grafo (preguntas, respuestas, nombres de nodos, URL,
+> autor). Escribe cada valor con la herramienta de archivos (no con la shell) en `graphify-out/.in/<nombre>.txt` y
+> léelo desde ahí: en bash como `"$(cat graphify-out/.in/<nombre>.txt)"` (entre comillas dobles; el resultado no se
+> vuelve a interpretar), y en Python con `open('graphify-out/.in/<nombre>.txt', encoding='utf-8').read().strip()`.
+> Las listas de nodos van una por línea en `nodes.txt` y se pasan con `mapfile -t NODES < graphify-out/.in/nodes.txt`
+> y `--nodes "${NODES[@]}"`. `INPUT_PATH` solo puede ser una ruta relativa dentro del repo con caracteres
+> `[A-Za-z0-9._/-]`; si no lo es, detente y pregunta. `MODE` solo vale `bfs` o `dfs`, y `BUDGET` solo un entero.
+> Esta skill **no instala ni actualiza nada** y **no envía archivos a otro proveedor** sin autorización explícita del
+> usuario en la sesión. Lo prohibido por `AGENTS.md` y `.claude/settings.json` sigue prohibido.
+
 Turn any folder of files into a navigable knowledge graph with community detection, an honest audit trail, and three outputs: interactive HTML, GraphRAG-ready JSON, and a plain-language GRAPH_REPORT.md.
 
 ## Usage
@@ -83,15 +94,10 @@ if [ -z "$PYTHON" ] && [ -n "$GRAPHIFY_BIN" ]; then
 fi
 # 3. Fall back to python3
 if [ -z "$PYTHON" ]; then PYTHON="python3"; fi
+# Tindivo: never install or upgrade from here. If graphify is missing, stop and ask the user.
 if ! "$PYTHON" -c "import graphify" 2>/dev/null; then
-    if command -v uv >/dev/null 2>&1; then
-        uv tool install --upgrade graphifyy -q 2>&1 | tail -3
-        _UV_PY=$(uv tool run --from graphifyy python -c "import sys; print(sys.executable)" 2>/dev/null)
-        if [ -n "$_UV_PY" ]; then PYTHON="$_UV_PY"; fi
-    else
-        "$PYTHON" -m pip install graphifyy -q 2>/dev/null \
-          || "$PYTHON" -m pip install graphifyy -q --break-system-packages 2>&1 | tail -3
-    fi
+    echo "graphify no está instalado. Pide al usuario que lo instale (runbook: Docs/operacion/graphify.md) y detente." >&2
+    exit 1
 fi
 # Write interpreter path for all subsequent steps (persists across invocations)
 mkdir -p graphify-out
@@ -151,12 +157,12 @@ Skip this step entirely if `detect` returned zero `video` files. When the corpus
 
 This step has two parts: **structural extraction** (deterministic, free) and **semantic extraction** (LLM, costs tokens).
 
-> **graphify needs no API key. Never ask the user for one, and never block on one.** Code is extracted structurally (AST) with no LLM and no key at all — a code-only corpus (the common `/graphify .` on a repo) skips semantic extraction entirely, so it needs nothing here: go straight to Part A and skip Part B. Semantic extraction (only for docs, papers, and images) uses Gemini **only if** `GEMINI_API_KEY`/`GOOGLE_API_KEY` is already set; otherwise the host agent itself is the LLM. graphify does **not** read `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or any other provider key. If you catch yourself about to prompt for, wait on, or stop because of a missing API key, that is a misread of this skill — proceed without one.
+> **graphify needs no API key. Never ask the user for one, and never block on one.** Code is extracted structurally (AST) with no LLM and no key at all — a code-only corpus (the common `/graphify .` on a repo) skips semantic extraction entirely, so it needs nothing here: go straight to Part A and skip Part B. Semantic extraction (only for docs, papers, and images) uses Gemini **only if** `GEMINI_API_KEY`/`GOOGLE_API_KEY` is already set **and the user authorized it in this session**; otherwise the host agent itself is the LLM. graphify does **not** read `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or any other provider key. If you catch yourself about to prompt for, wait on, or stop because of a missing API key, that is a misread of this skill — proceed without one.
 
 **Before semantic extraction:** check whether `GEMINI_API_KEY` or `GOOGLE_API_KEY` is set. If neither is set, print this one-liner to the user:
 > Tip: set `GEMINI_API_KEY` or `GOOGLE_API_KEY` to use Gemini for semantic extraction (`pip install 'graphifyy[gemini]'`).
 
-Print it once, then continue — do not wait for the user to supply a key. If `GEMINI_API_KEY` or `GOOGLE_API_KEY` IS set, use `graphify.llm.extract_corpus_parallel(files, backend="gemini")` for semantic extraction instead of dispatching subagents. The default Gemini model is `gemini-3-flash-preview`; set `GRAPHIFY_GEMINI_MODEL` or pass `--model` in headless CLI flows to override it.
+Print it once, then continue — do not wait for the user to supply a key. **Tindivo:** a key being set is NOT authorization. Use `graphify.llm.extract_corpus_parallel(files, backend="gemini")` only if the user explicitly authorized, in this session, sending that specific corpus to Gemini; otherwise dispatch subagents as in Part B, and never send `.env*`, credentials, PII or `tindivo-auditorias` material. The default Gemini model is `gemini-3-flash-preview`; set `GRAPHIFY_GEMINI_MODEL` or pass `--model` in headless CLI flows to override it.
 
 > **No other API keys are read.** When `GEMINI_API_KEY`/`GOOGLE_API_KEY` are unset, semantic extraction falls to the host agent itself — the running session is the LLM. On a host that dispatches subagents (e.g. Claude Code), dispatch them as written in Part B. On a host that runs the CLI directly in a terminal and cannot dispatch subagents, do not stall: a code-only corpus has no semantic work, so write the empty semantic file (Part B "Fast path") and continue to Part C; for a corpus with docs/papers/images, either set a Gemini key or extract those inline yourself, but in no case prompt for `ANTHROPIC_API_KEY` — that prompt is a misread of this skill.
 

@@ -5,6 +5,8 @@ description: Automates CI/CD pipeline setup. Use when setting up or modifying bu
 
 # CI/CD and Automation
 
+> **Tindivo — regla local (manda sobre el resto de esta skill).** Si algo de aquí choca con `AGENTS.md`, el estándar o `.claude/settings.json`, manda el canon. Preparar un plan, una checklist o un workflow **no autoriza a ejecutarlo**. Desplegar, hacer rollback, migrar una base remota, `db push`, `git push` operativo o tocar producción/staging exige la autorización explícita del usuario para esa operación y ese destino. Lo bloqueado en `.claude/settings.json` (deny) sigue bloqueado: no se traslada a otra herramienta, script o workflow para ejecutarlo igual. Los ejemplos con `vercel`, Prisma o `migrate deploy` son genéricos: en este repo no se usan Prisma ni `vercel` desde agentes, y un workflow nuevo que despliegue o migre pasa por Codex.
+
 ## Overview
 
 Automate quality gates so that no change reaches production without passing tests, lint, type checking, and build. CI/CD is the enforcement mechanism for every other skill — it catches what humans and agents miss, and it does so consistently on every single change.
@@ -235,7 +237,7 @@ PR merged to main
   Staging deployment (auto)
     │ Manual verification
     ▼
-  Production deployment (manual trigger or auto after staging)
+  Production deployment (manual, authorized by a human each time)
     │
     ▼
   Monitor for errors (15-minute window)

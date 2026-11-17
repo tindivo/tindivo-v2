@@ -5,6 +5,8 @@ description: Structures git workflow practices. Use when making any code change.
 
 # Git Workflow and Versioning
 
+> **Tindivo — regla local (manda sobre el resto de esta skill).** Si algo de aquí choca con `AGENTS.md`, el estándar o `.claude/settings.json`, manda el canon. Nada de `git reset --hard`, `git clean -f`, `push --force` ni descartar trabajo ajeno sin confirmación explícita. Preparar un plan, una checklist o un workflow **no autoriza a ejecutarlo**. Desplegar, hacer rollback, migrar una base remota, `db push`, `git push` operativo o tocar producción/staging exige la autorización explícita del usuario para esa operación y ese destino. Lo bloqueado en `.claude/settings.json` (deny) sigue bloqueado: no se traslada a otra herramienta, script o workflow para ejecutarlo igual.
+
 ## Overview
 
 Git is your safety net. Treat commits as save points, branches as sandboxes, and history as documentation. With AI agents generating code at high speed, disciplined version control is the mechanism that keeps changes manageable, reviewable, and reversible.
@@ -186,7 +188,7 @@ Agent starts work
     └── Feature complete → All commits form a clean history
 ```
 
-This pattern means you never lose more than one increment of work. If an agent goes off the rails, `git reset --hard HEAD` takes you back to the last successful state.
+This pattern means you never lose more than one increment of work. If an agent goes off the rails, go back to the last good state **without destroying work**: inspect `git status` first, save anything uncommitted (`git stash push -u` or a WIP commit on its branch), and restore only the files you changed (`git restore <file>`). Never `git reset --hard`, `git clean -f` or `push --force` without the user's explicit confirmation.
 
 ## Change Summaries
 

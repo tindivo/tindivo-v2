@@ -5,6 +5,8 @@ description: Subjects every non-trivial decision to a fresh-context adversarial 
 
 # Doubt-Driven Development
 
+> **Tindivo — regla local (manda sobre el resto de esta skill).** Si algo de aquí choca con `AGENTS.md`, el estándar o `.claude/settings.json`, manda el canon. Una revisión propia, un subagente o un test **no sustituye** la auditoría obligatoria de Codex (`.claude/rules/codex-worker.md` §2), la revisión de dinero de Jesús ni la regla «nadie revisa su propio trabajo». Si una revisión obligatoria no está disponible, el trabajo queda pendiente y no se cierra. Lo de esta skill es una comprobación **adicional**.
+
 ## Overview
 
 A confident answer is not a correct one. Long sessions accumulate context that quietly turns assumptions into "facts" without anyone noticing. Doubt-driven development is the discipline of materializing a fresh-context reviewer — biased to **disprove**, not approve — before any non-trivial output stands.
@@ -162,7 +164,7 @@ Acknowledge the skip in the output (*"Proceeding with single-model findings only
 
 **Non-interactive contexts** (CI, `/loop`, autonomous-loop, scheduled runs):
 
-- Cross-model is **skipped**, and the skip must be **announced** in the output: *"Cross-model skipped: non-interactive context."*
+- Cross-model is **skipped**, and the skip must be **announced** in the output: *"Cross-model skipped: non-interactive context."* **Tindivo:** this skip covers only this skill's optional second opinion; a mandatory review (Codex, Jesús) stays pending and blocks closure.
 - **Never invoke an external CLI without explicit user authorization** — this is a load-bearing safety property.
 
 Cross-model adds cost, latency, and tool fragility. The agent surfaces the choice every cycle; the user decides whether this artifact warrants it.
@@ -226,7 +228,7 @@ If 3 cycles is "obviously insufficient" because the artifact is large: the artif
 
 - **`code-review-and-quality` / `/review`**: complementary. `/review` is post-hoc PR verdict; doubt-driven is in-flight per-decision. Use both.
 - **`source-driven-development`**: SDD verifies *facts about frameworks* against official docs. Doubt-driven verifies *your reasoning about the artifact*. SDD checks the API exists; doubt-driven checks you used it correctly under the contract.
-- **`test-driven-development`**: TDD's RED step is doubt made concrete — a failing test is a disproof attempt. When TDD applies, that failing test *is* the doubt step for behavioral claims.
+- **`test-driven-development`**: TDD's RED step is doubt made concrete — a failing test is a disproof attempt. When TDD applies, that failing test *is* the doubt step for behavioral claims (it never replaces a mandatory review).
 - **`debugging-and-error-recovery`**: when the reviewer surfaces a real failure mode, drop into the debugging skill to localize and fix.
 - **Repo orchestration rules** (`../../references/orchestration-patterns.md`): this skill orchestrates from the main session. A persona calling another persona is anti-pattern B — see Loading Constraints above.
 
@@ -235,7 +237,7 @@ If 3 cycles is "obviously insufficient" because the artifact is large: the artif
 After applying doubt-driven development:
 
 - [ ] Every non-trivial decision (per the definition above) was named explicitly as a CLAIM before standing
-- [ ] At least one fresh-context review per non-trivial artifact (a failing test produced by TDD's RED step satisfies this for behavioral claims, per Interaction with Other Skills)
+- [ ] At least one fresh-context review per non-trivial artifact (a failing test produced by TDD's RED step satisfies this skill's own check for behavioral claims; never a mandatory review)
 - [ ] The reviewer received ARTIFACT + CONTRACT — NOT the CLAIM, NOT your reasoning
 - [ ] The reviewer's prompt was adversarial ("find issues"), not validating ("is it good")
 - [ ] Findings were classified against the artifact text (not rubber-stamped) using the precedence: contract misread / actionable / trade-off / noise

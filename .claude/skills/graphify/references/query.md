@@ -1,5 +1,16 @@
 # graphify reference: query, path, explain
 
+> **Tindivo — regla local (manda sobre el resto de esta skill).** Nunca pegues dentro de un comando de shell o de un
+> `python -c` texto que venga del usuario, de documentos o del grafo (preguntas, respuestas, nombres de nodos, URL,
+> autor). Escribe cada valor con la herramienta de archivos (no con la shell) en `graphify-out/.in/<nombre>.txt` y
+> léelo desde ahí: en bash como `"$(cat graphify-out/.in/<nombre>.txt)"` (entre comillas dobles; el resultado no se
+> vuelve a interpretar), y en Python con `open('graphify-out/.in/<nombre>.txt', encoding='utf-8').read().strip()`.
+> Las listas de nodos van una por línea en `nodes.txt` y se pasan con `mapfile -t NODES < graphify-out/.in/nodes.txt`
+> y `--nodes "${NODES[@]}"`. `INPUT_PATH` solo puede ser una ruta relativa dentro del repo con caracteres
+> `[A-Za-z0-9._/-]`; si no lo es, detente y pregunta. `MODE` solo vale `bfs` o `dfs`, y `BUDGET` solo un entero.
+> Esta skill **no instala ni actualiza nada** y **no envía archivos a otro proveedor** sin autorización explícita del
+> usuario en la sesión. Lo prohibido por `AGENTS.md` y `.claude/settings.json` sigue prohibido.
+
 Load this when the user asks a question against an existing graph, or runs `/graphify path` or `/graphify explain`. The core's query stub points here for the full traversal flow. These flows use the `graphify query` CLI when it is available and fall back to an inline NetworkX traversal otherwise.
 
 Two traversal modes - choose based on the question:
@@ -64,8 +75,8 @@ Build the **expanded query string** by joining the selected tokens with spaces. 
 
 Prefer the CLI when it is installed:
 ```bash
-graphify query "QUESTION"
-# or: graphify query "QUESTION" --dfs --budget 3000
+graphify query "$(cat graphify-out/.in/question.txt)"
+# or: graphify query "$(cat graphify-out/.in/question.txt)" --dfs --budget 3000
 ```
 
 If the CLI is unavailable, load `graphify-out/graph.json` and run the traversal inline:
@@ -86,7 +97,7 @@ from pathlib import Path
 data = json.loads(Path('graphify-out/graph.json').read_text(encoding='utf-8'))
 G = json_graph.node_link_graph(data, edges='links')
 
-question = 'QUESTION'
+question = open('graphify-out/.in/question.txt', encoding='utf-8').read().strip()
 mode = 'MODE'  # 'bfs' or 'dfs'
 terms = [t.lower() for t in question.split() if len(t) >= 3]  # match the vocab threshold; keeps api/jwt/ios (#1392)
 
@@ -163,15 +174,16 @@ print(output)
 "
 ```
 
-Replace `QUESTION` with the **expanded** query string, `MODE` with `bfs` or `dfs`, and `BUDGET` with the token budget (default `2000`, or whatever `--budget N` specifies). Then answer based on the subgraph output above, using only what the graph contains.
+Write the **expanded** query string to `graphify-out/.in/question.txt` (file tool, not shell), replace `MODE` with `bfs` or `dfs`, and `BUDGET` with the token budget (default `2000`, or whatever `--budget N` specifies). Then answer based on the subgraph output above, using only what the graph contains.
 
 After writing the answer, save it back into the graph so it improves future queries. Include the expanded tokens inside the `--answer` text (e.g. `"Expanded from original query via vocab: [tokens]. Then traversed..."`) so the next `--update` extracts the expansion history as a graph node:
 
 ```bash
-$(cat graphify-out/.graphify_python) -m graphify save-result --question "ORIGINAL_QUESTION" --answer "ANSWER" --type query --nodes NODE1 NODE2
+mapfile -t NODES < graphify-out/.in/nodes.txt
+$(cat graphify-out/.graphify_python) -m graphify save-result --question "$(cat graphify-out/.in/original_question.txt)" --answer "$(cat graphify-out/.in/answer.txt)" --type query --nodes "${NODES[@]}"
 ```
 
-Replace `ORIGINAL_QUESTION` with the user's verbatim question, `ANSWER` with your full answer text (containing the expanded-token trace), `NODE1 NODE2` with the list of node labels you cited. This closes the feedback loop: the next `--update` will extract this Q&A as a node in the graph.
+Write the user's verbatim question to `graphify-out/.in/original_question.txt`, your full answer (with the expanded-token trace) to `graphify-out/.in/answer.txt`, and the node labels you cited, one per line, to `graphify-out/.in/nodes.txt` — with the file tool, never inside the command. This closes the feedback loop: the next `--update` will extract this Q&A as a node in the graph.
 
 **Work memory (self-improving loop).** Add an `--outcome` so future sessions learn from this one — append `--outcome useful|dead_end|corrected` to the `save-result` command (and `--correction "the right answer"` when correcting):
 
@@ -188,7 +200,7 @@ At the **start** of graph work, refresh and read the lessons: run `graphify refl
 Find the shortest path between two named concepts in the graph. Prefer the CLI when installed:
 
 ```bash
-graphify path "NODE_A" "NODE_B"
+graphify path "$(cat graphify-out/.in/node_a.txt)" "$(cat graphify-out/.in/node_b.txt)"
 ```
 
 If the CLI is unavailable, run it inline:
@@ -203,8 +215,8 @@ from pathlib import Path
 data = json.loads(Path('graphify-out/graph.json').read_text(encoding='utf-8'))
 G = json_graph.node_link_graph(data, edges='links')
 
-a_term = 'NODE_A'
-b_term = 'NODE_B'
+a_term = open('graphify-out/.in/node_a.txt', encoding='utf-8').read().strip()
+b_term = open('graphify-out/.in/node_b.txt', encoding='utf-8').read().strip()
 
 def find_node(term):
     term = term.lower()
@@ -241,12 +253,12 @@ except nx.NodeNotFound as e:
 "
 ```
 
-Replace `NODE_A` and `NODE_B` with the actual concept names from the user. Then explain the path in plain language - what each hop means, why it's significant.
+Write the concept names from the user to `graphify-out/.in/node_a.txt` and `graphify-out/.in/node_b.txt` (file tool). Then explain the path in plain language - what each hop means, why it's significant.
 
 After writing the explanation, save it back:
 
 ```bash
-$(cat graphify-out/.graphify_python) -m graphify save-result --question "Path from NODE_A to NODE_B" --answer "ANSWER" --type path_query --nodes NODE_A NODE_B
+$(cat graphify-out/.graphify_python) -m graphify save-result --question "Path from $(cat graphify-out/.in/node_a.txt) to $(cat graphify-out/.in/node_b.txt)" --answer "$(cat graphify-out/.in/answer.txt)" --type path_query --nodes "$(cat graphify-out/.in/node_a.txt)" "$(cat graphify-out/.in/node_b.txt)"
 ```
 
 ---
@@ -256,7 +268,7 @@ $(cat graphify-out/.graphify_python) -m graphify save-result --question "Path fr
 Give a plain-language explanation of a single node - everything connected to it. Prefer the CLI when installed:
 
 ```bash
-graphify explain "NODE_NAME"
+graphify explain "$(cat graphify-out/.in/node.txt)"
 ```
 
 If the CLI is unavailable, run it inline:
@@ -271,7 +283,7 @@ from pathlib import Path
 data = json.loads(Path('graphify-out/graph.json').read_text(encoding='utf-8'))
 G = json_graph.node_link_graph(data, edges='links')
 
-term = 'NODE_NAME'
+term = open('graphify-out/.in/node.txt', encoding='utf-8').read().strip()
 term_lower = term.lower()
 
 # Find best matching node
@@ -302,10 +314,10 @@ for neighbor in G.neighbors(nid):
 "
 ```
 
-Replace `NODE_NAME` with the concept the user asked about. Then write a 3-5 sentence explanation of what this node is, what it connects to, and why those connections are significant. Use the source locations as citations.
+Write the concept the user asked about to `graphify-out/.in/node.txt` (file tool). Then write a 3-5 sentence explanation of what this node is, what it connects to, and why those connections are significant. Use the source locations as citations.
 
 After writing the explanation, save it back:
 
 ```bash
-$(cat graphify-out/.graphify_python) -m graphify save-result --question "Explain NODE_NAME" --answer "ANSWER" --type explain --nodes NODE_NAME
+$(cat graphify-out/.graphify_python) -m graphify save-result --question "Explain $(cat graphify-out/.in/node.txt)" --answer "$(cat graphify-out/.in/answer.txt)" --type explain --nodes "$(cat graphify-out/.in/node.txt)"
 ```

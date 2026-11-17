@@ -5,6 +5,8 @@ description: Prepares production launches. Use when preparing to deploy to produ
 
 # Shipping and Launch
 
+> **Tindivo — regla local (manda sobre el resto de esta skill).** Si algo de aquí choca con `AGENTS.md`, el estándar o `.claude/settings.json`, manda el canon. Preparar un plan, una checklist o un workflow **no autoriza a ejecutarlo**. Desplegar, hacer rollback, migrar una base remota, `db push`, `git push` operativo o tocar producción/staging exige la autorización explícita del usuario para esa operación y ese destino. Lo bloqueado en `.claude/settings.json` (deny) sigue bloqueado: no se traslada a otra herramienta, script o workflow para ejecutarlo igual.
+
 ## Overview
 
 Ship with confidence. The goal is not just to deploy — it's to deploy safely, with monitoring in place, a rollback plan ready, and a clear understanding of what success looks like. Every launch should be reversible, observable, and incremental.
@@ -152,7 +154,7 @@ Use these thresholds to decide whether to advance, hold, or roll back at each st
 
 ### When to Roll Back
 
-Roll back immediately if:
+Propose a rollback to the user immediately (and execute it only with their explicit authorization) if:
 - Error rate increases by more than 2x baseline
 - P95 latency increases by more than 50%
 - User-reported issues spike
@@ -269,7 +271,7 @@ Every deployment needs a rollback plan before it happens:
 ### Rollback Steps
 1. Disable feature flag (if applicable)
    OR
-1. Deploy previous version: `git revert <commit> && git push`
+1. With the user's explicit authorization: `git revert <commit>` on a branch and its normal PR/merge flow
 2. Verify rollback: health check, error monitoring
 3. Communicate: notify team of rollback
 

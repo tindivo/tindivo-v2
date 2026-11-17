@@ -5,6 +5,8 @@ description: Discovers and invokes agent skills. Use when starting a session, or
 
 # Using Agent Skills
 
+> **Tindivo — regla local (manda sobre el resto de esta skill).** Si algo de aquí choca con `AGENTS.md`, el estándar o `.claude/settings.json`, manda el canon. Preparar un plan, una checklist o un workflow **no autoriza a ejecutarlo**. Desplegar, hacer rollback, migrar una base remota, `db push`, `git push` operativo o tocar producción/staging exige la autorización explícita del usuario para esa operación y ese destino. Lo bloqueado en `.claude/settings.json` (deny) sigue bloqueado: no se traslada a otra herramienta, script o workflow para ejecutarlo igual. Una revisión propia, un subagente o un test **no sustituye** la auditoría obligatoria de Codex (`.claude/rules/codex-worker.md` §2), la revisión de dinero de Jesús ni la regla «nadie revisa su propio trabajo». Si una revisión obligatoria no está disponible, el trabajo queda pendiente y no se cierra.
+
 ## Overview
 
 Agent Skills is a collection of engineering workflow skills organized by development phase. Each skill encodes a specific process that senior engineers follow. This meta-skill helps you discover and apply the right skill for your current task.
@@ -134,7 +136,7 @@ These are the subtle errors that look like productivity but create problems:
 
 2. **Skills are workflows, not suggestions.** Follow the steps in order. Don't skip verification steps.
 
-3. **Multiple skills can apply.** A feature implementation might involve `idea-refine` → `spec-driven-development` → `planning-and-task-breakdown` → `incremental-implementation` → `test-driven-development` → `code-review-and-quality` → `code-simplification` → `shipping-and-launch` in sequence.
+3. **Multiple skills can apply.** A feature implementation might involve `idea-refine` → `spec-driven-development` → `planning-and-task-breakdown` → `incremental-implementation` → `test-driven-development` → `code-review-and-quality` → `code-simplification` → `shipping-and-launch` (preparation only) in sequence.
 
 4. **When in doubt, start with a spec.** If the task is non-trivial and there's no spec, begin with `spec-driven-development`.
 
@@ -158,7 +160,7 @@ For a complete feature, the typical skill sequence is:
 13. git-workflow-and-versioning → Clean commit history
 14. documentation-and-adrs      → Document decisions
 15. deprecation-and-migration   → Retire old systems and move users safely when needed
-16. shipping-and-launch         → Deploy safely
+16. shipping-and-launch         → Prepare the launch; deploying needs the user's authorization
 ```
 
 Not every task needs every skill. A bug fix might only need: `debugging-and-error-recovery` → `test-driven-development` → `code-review-and-quality`.

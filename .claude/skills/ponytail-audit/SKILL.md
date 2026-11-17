@@ -62,6 +62,8 @@ tested and fixed later. This is a report the user asked for, so give it in full.
   fixtures, config, and string or dynamic references.
 - A shortcut marked with a `shortcut:` (or older `ponytail:`) comment that names its limit is a
   decision, not a finding, unless the expected load already crosses it.
+  **Tindivo:** this never covers what the canon requires (validation, security, money, mandatory tests,
+  `AGENTS.md`): a missing requirement is always a finding, with or without a comment.
 - Propose the smallest fix that works. Prefer fixes that delete code. Never
   add layers, frameworks or config the problem does not need.
 - No style taste, no "consider", no vague worries.
