@@ -41,7 +41,7 @@ for (const file of readdirSync(reqDir).filter((f) => f.endsWith('.md')).sort()) 
 const out = [
   '# App cliente — matriz de trazabilidad',
   '',
-  '> **Generado** por `node scripts/spec-matriz.mjs` desde `requisitos/` y `pantallas/`: no se edita a mano.',
+  '> Estado: **propuesto**, pendiente de aprobación de Jesús · **Generado** por `node scripts/spec-matriz.mjs` desde `requisitos/` y `pantallas/`: no se edita a mano.',
   '> Una fila por requisito: estado por plataforma, disposición móvil y pantallas que lo citan. Los endpoints viven en',
   '> cada pantalla (cabecera «Endpoints») y en la línea «Backend» de cada área. «—» en pantallas = ningún archivo lo cita.',
   '',
