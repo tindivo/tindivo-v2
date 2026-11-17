@@ -2,6 +2,7 @@
 
 > Verificado: 2026-11-17 · entorno: develop@0d0f7486 (código de `apps/android/`, solo lectura; no se compiló ni se ejecutó nada)
 > Describe lo que **hay** en Android hoy. La parte de iOS es una **propuesta** (§10): no hay código iOS en el repo.
+> **Decisión de Jesús, 2026-11-17: Android e iOS se lanzan juntos, en la misma fecha.** La paridad se asegura con vectores de conformidad JSON compartidos (§8), que hay que crear. Recortes del lanzamiento: Store, promociones y traslado de celular.
 > Reglas de código por lenguaje: `estandares/kotlin.md` y `estandares/swift.md`. Qué hace cada pantalla:
 > `Docs/planes/app-cliente/`. Contrato de red: `Docs/planes/movil/contrato-rest.md` y `packages/contracts/openapi/v1.json`.
 
@@ -14,7 +15,7 @@
 3. Cada **pantalla** es: una vista sin lógica + un modelo de estado (ViewModel) + reglas puras que se prueban sin
    Android/iOS.
 4. Hay **una carpeta por área de requisito** (`feature/<área>`), con el mismo nombre de área que la spec (§9).
-5. iOS se construye con **la misma forma**: lo que cambia es el lenguaje y el framework, no la estructura (§10, §11).
+5. iOS se construye con **la misma forma**: lo que cambia es el lenguaje y el framework, no la estructura (§10, §11). No va «después»: sale con Android, el mismo día.
 
 ## 2. Módulos
 
@@ -172,8 +173,7 @@ carpeta de vectores en `Docs/`. Lo que hay hoy es:
 - `apps/api/lib/__tests__/openapi-conformance.integration.test.ts`: comprueba que **la API** responde como su OpenAPI;
   no comprueba cálculos de cliente.
 
-**Consecuencia:** hoy nada garantiza que iOS calcule lo mismo que Android. La regla para que lo garantice (propuesta,
-pendiente de aprobación):
+**Consecuencia:** hoy nada garantiza que iOS calcule lo mismo que Android. Como las dos apps salen juntas (decisión de Jesús, 2026-11-17), **los vectores de conformidad JSON compartidos son el mecanismo de paridad y hay que crearlos antes del lanzamiento**. La regla (en lo ya decidido; el reparto de quién escribe cada vector sigue por fijar):
 
 1. Cada regla pura compartida tiene un archivo de **vectores** en `packages/contracts/fixtures/<regla>.json`:
    lista de `{ nombre, entrada, salida esperada }` con importes como cadena, coordenadas con 7 decimales y los casos
@@ -182,6 +182,8 @@ pendiente de aprobación):
    Swift: Swift Testing). El mismo archivo lo puede ejecutar la web (Vitest) y comprobar contra `cash.ts`.
 3. Un cambio en una regla cambia el vector **en el mismo PR**; sin eso, no pasa la CI.
 4. Mientras no existan los vectores, el PR que toque una regla pura cita los casos que comprobó en ambas plataformas.
+5. Los vectores se escriben **desde las decisiones aprobadas y el contrato REST v1**, no ejecutando el código que se quiere comprobar. Los mantiene quien cambia la regla; un responsable del contrato revisa su coherencia. Regla de PR: todo cambio de regla actualiza los vectores y verifica su cumplimiento en servidor, Android e iOS.
+6. Cobertura mínima propuesta por la junta (17-nov, B, punto 15): pagos y recojo (S/ 80, faltas), cancelación (antes de aceptar y 2 min), proyección `CUS-TRK-002` por servicio y modalidad, sanciones (en revisión, confirmada, anulada), validaciones (referencia con `trim`, prefijo `#TDV-`, 5 kg), orden de pendientes, aceptación de términos, acceso a un pedido ajeno, celular ocupado, textos críticos (≤ 40 caracteres de `validando`), y desconexión, reintentos y eventos fuera de orden. No se congela `app_settings` como valores inmutables, sí su significado y compatibilidad.
 
 ## 9. Design system en Compose
 
@@ -205,6 +207,8 @@ Resumen; los valores, la tabla de tokens y las diferencias con lo aprobado está
   en `CheckoutBottomBar`, `CartBar`, `StoreDetailScreen`): es trabajo pendiente, no una excepción aprobada.
 
 ## 10. Equivalencia propuesta para iOS (SwiftUI) — PROPUESTA, no aprobada
+
+> iOS sale a la vez que Android (decisión de Jesús, 2026-11-17): lo que sigue sigue siendo propuesta de estructura, pero el calendario ya no es «después».
 
 Parte de `estandares/swift.md` (SW-2 a SW-16, ya aprobados) y la completa con la correspondencia 1 a 1 con Android.
 Lo marcado como propuesta se aprueba al aprobar el plan `Docs/planes/app-cliente/`.
@@ -271,8 +275,8 @@ Una diferencia entre plataformas que **cambia lo que la persona ve o puede hacer
 
 ## Pendientes
 
-- No existen vectores de conformidad (§8): hace falta una decisión de Jesús sobre dónde viven (`packages/contracts/fixtures/`)
-  y quién escribe el primero (`CashRules`).
+- No existen vectores de conformidad (§8): hay que crearlos en `packages/contracts/fixtures/` antes del lanzamiento conjunto
+  (decisión de Jesús, 2026-11-17); falta fijar quién escribe el primero (`CashRules`).
 - Falta la barra inferior de pestañas, el `DeepLinkRouter` y el módulo de notificaciones (§4); el design system
   tiene piezas por crear y tokens que difieren de lo aprobado (`Docs/negocio/diseno.md`, «Diferencias con el código de
   Android»).

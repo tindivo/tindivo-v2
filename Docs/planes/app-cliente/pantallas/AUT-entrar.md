@@ -1,5 +1,8 @@
 # AUT · Entrar a Tindivo
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - La casilla de Términos va siempre, desmarcada, antes de «Continuar con Google» (decisión O resuelta; CUS-AUT-020).
+
 > Maquetas: `Onboarding-3-entrar` (casilla vacía, botón deshabilitado) y `Onboarding-3-entrar-aceptado` (casilla marcada).
 > Es la **única** pantalla de acceso: sin barra de progreso ni «Saltar». Solo con Google (decisión del 2026-11-16).
 

@@ -1,5 +1,10 @@
 # PAY · Pago al recibir (hoja del seguimiento)
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - **Pantalla reemplazada.** El pago ya no se muestra en una hoja: va dentro del seguimiento, en una tarjeta, una vez que el negocio acepta (CUS-PAY-014, `TRK-seguimiento`). Se conserva este archivo como historia y para los textos de la tarjeta.
+> - La tarjeta lleva «Paga a [NEGOCIO]», «Con Yape o Plin», el número del negocio, «Titular: [nombre]», «Copiar» y el total. «Subir captura» es opcional para el confiable; la alternativa es «Pagaré al motorizado al llegar». La ven el restaurante y el motorizado asignado; solo el restaurante confirma.
+> - La decisión S (a quién se paga) queda resuelta: al número del negocio, que lo confirma.
+
 > Maqueta: hoja `Seguimiento-pago`, que se abre sobre `Seguimiento` desde «Ver QR o subir captura». Decisión de Jesús
 > (2026-11-16, PATRONES-V2 §12): el pago por billetera es **agnóstico a la marca**: número del negocio + titular +
 > «Copiar» como acción principal; nunca «Yape» o «Plin» como marca.

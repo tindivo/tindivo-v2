@@ -9,7 +9,7 @@
 | CUS-ORD-001 | La app debe listar el historial del cliente con negocio, resumen de ítems, código, fecha relativa, total y estado. | **Últimos 40**, sin paginación; total = importe + envío; fecha relativa («hace 5 min», «ayer», fecha corta). Sin sesión lleva a entrar. | `app/pedidos/page.tsx:76-231` · Android: `feature/orders/OrdersViewModel.kt` (paginado por cursor con «Ver más pedidos») | ✅ | ⬜ | ADAPTAR · M1 |
 | CUS-ORD-002 | La app debe mostrar el estado con una etiqueta corta. | ⚠️ `STATUS_LABEL` **no cubre `awaiting_payment` ni `ready_for_pickup`**: el cliente vería el texto interno. Debe salir de la misma proyección que el seguimiento. | `pedidos/page.tsx:39-50` · Android: `feature/orders/OrderMapping.kt:85` (proyección propia (`headlineOf`); `awaiting_payment` y `ready_for_pickup` no se verificaron) | 🟡 | ⬜ | IGUAL · M1 |
 | CUS-ORD-003 | La app debe ofrecer, según el pedido, «Ver seguimiento», «Ver caso de pago», calificar y «Volver a pedir». | «Ver seguimiento» si está activo; «Ver caso de pago» si `proof_rejected_final`. | `pedidos/page.tsx:186-209` · Android: `feature/orders/OrdersScreen.kt` («Volver a pedir» y soporte; «Ver caso de pago» no se encontró) | 🟡 | ⬜ | IGUAL · M1 |
-| CUS-ORD-004 | La app debe ofrecer ayuda por WhatsApp en un pedido cancelado. | Mensaje con el código. ⚠️ Usa `#TDV-`; la referencia oficial es `#TND-` (`DECISIONS §6`): unificar. | `pedidos/page.tsx:211-221`; `appeal-create-view.tsx:26-28` · Android: `feature/orders/SupportContact.kt:90` (usa `#TDV-`) | ⚠️ | ⬜ | ADAPTAR · M1 |
+| CUS-ORD-004 | **Resuelto: se unifica en `#TDV-`** (Decisión de Jesús, 2026-11-17). La app debe ofrecer ayuda por WhatsApp en un pedido cancelado. | Mensaje con el código. El código visible es `#TDV-` (decisión de Jesús, 2026-11-17); el canon y el comentario del contrato aún usan el prefijo antiguo y se corrigen aparte. | `pedidos/page.tsx:211-221`; `appeal-create-view.tsx:26-28` · Android: `feature/orders/SupportContact.kt:90` (usa `#TDV-`) | ⚠️ | ⬜ | ADAPTAR · M1 |
 | CUS-ORD-005 | La app debe mantener el contador de pedidos activos con una sola consulta compartida. | `ACTIVE_ORDER_STATUSES`; se descarta la respuesta vieja si llega una nueva (testigo `ultimaPeticion`). | `lib/active-orders.ts` | 📝 | ⬜ | ADAPTAR · M1 |
 | CUS-ORD-006 | El servidor debe paginar el historial y devolver el estado ya proyectado. | Hoy: 40 fijos por PostgREST. | — | — | — | NUEVO · M1 |
 
@@ -20,8 +20,16 @@ Encontrados al especificar la web (2026-09/10); se corrigen en nativo, no se cop
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
 | 1 | CUS-ORD-002 | El historial (`STATUS_LABEL`) **no traduce** `awaiting_payment` ni `ready_for_pickup`: se ve el estado interno. | `app/pedidos/page.tsx:39-50` |
-| 2 | CUS-ORD-004 | Los mensajes de WhatsApp usan `#TDV-…`; la referencia oficial es `#TND-…`. | `pedidos/page.tsx:213`, `appeal-create-view.tsx:27` |
+| 2 | CUS-ORD-004 | **Resuelto el 2026-11-17:** el código es `#TDV-…`; lo que debe corregirse es el canon, que aún usa el prefijo antiguo. | `pedidos/page.tsx:213`, `appeal-create-view.tsx:27` |
 
 ## Notas
 - Defecto 2 de la web: sigue vivo en Android (`feature/orders/SupportContact.kt:90` usa `#TDV-`); ver decisión 3 en `decisiones-abiertas.md`.
 - Defecto 1: Android usa su propia proyección de estados (`feature/orders/OrderMapping.kt:85`); falta comprobar que cubre `awaiting_payment` y `ready_for_pickup`.
+
+## Decisiones de Jesús, 2026-11-17
+
+Los requisitos que cambian conservan su ID y llevan la marca **reemplazado por** o **retirado** en su fila; los nuevos siguen la numeración del área. Android: sin verificar contra el código (⬜ = por hacer); iOS aún no empieza. Donde se cita la junta del 17-nov (`tindivo-auditorias/2026-11-16-ux-movil/v3/junta-17nov/conclusion.md` y `junta-17nov-b/conclusion.md`), el detalle es propuesta de la junta, no decisión de Jesús.
+
+| ID | Requisito | Reglas y validaciones clave | Fuente | Android | iOS | Móvil |
+|---|---|---|---|---|---|---|
+| CUS-ORD-007 | La app debe mostrar el código del pedido como «#TDV-[8 caracteres]». | Aplica en el seguimiento, «Mis pedidos», los mensajes de WhatsApp y el soporte. Antes de cambiar el canon, verificar que ningún validador o prueba rechace el prefijo antiguo; que la búsqueda de soporte acepte ambos es propuesta no comprobada (junta B, punto 14). Se commitea aparte (cambia lo que ve la cajera). | Decisión de Jesús, 2026-11-17 (decisión 15) | ✅ | ⬜ | IGUAL · M1 |

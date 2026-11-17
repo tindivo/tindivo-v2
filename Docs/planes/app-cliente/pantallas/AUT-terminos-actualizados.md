@@ -1,5 +1,9 @@
 # AUT · Términos actualizados
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - La reaceptación se pide **al actuar** (pedir o editar datos de Cuenta), no al abrir la app, y nunca bloquea un pedido en curso, su cancelación en los primeros 2 min ni el soporte (CUS-AUT-027, que reemplaza a CUS-AUT-022). La maqueta dibuja la ventana sobre el Inicio; en la app aparece sobre la acción que la dispara, sin perder la bolsa.
+> - «Se llega desde: Apertura de la app…» queda reemplazado por esto.
+
 > Maqueta: tablero `Terminos-actualizados`: una ventana obligatoria sobre el Inicio atenuado.
 
 | | |

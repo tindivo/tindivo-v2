@@ -1,5 +1,8 @@
 # STO · Tindivo Store (catálogo y pieza)
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - **Store sale después del lanzamiento:** esta pantalla no entra en la primera versión de Android ni de iOS (`requisitos/STO.md`).
+
 > **Diseño v3 pendiente.** Esta spec recoge **solo lo que hace hoy el código Android** (`feature/store`). No es un diseño
 > nuevo. La maqueta `Store` existe en el canvas pero es de la versión anterior y **no manda** hasta que se rediseñe.
 > Tindivo Store es solo un catálogo: se pide y se coordina por WhatsApp.

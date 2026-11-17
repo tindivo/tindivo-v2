@@ -1,5 +1,10 @@
 # CHK · Confirmar pedido
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - «¿Cómo pagas?»: el confiable elige «Efectivo» o «Yape o Plin» (con logos); se elimina el selector «Al recibir» / «Pagar ahora»; el no confiable ve «Yape o Plin por adelantado» (CUS-CHK-024, 025). La maqueta `Checkout-adelantado` aún dibuja «Yape o Plin al recibir» en gris: sobra.
+> - Resumen siempre con subtotal, envío y total (CUS-CHK-026). Cliente sin historial: «Te llamaremos para confirmar tu pedido» y el número verificado debajo (CUS-CHK-027). Todo recojo es prepago y no se pregunta «¿Vas al local ahora?» (CUS-CHK-028).
+> - Tras confirmar, el pedido espera a que el negocio acepte: `TRK-esperando-aceptacion`.
+
 > Piloto de formato: las demás pantallas copian esta estructura. Maquetas: canvas «Tindivo app — pantallas», tableros
 > `5 · Confirmar: confiable, efectivo`, `5b · Confiable, billetera digital`, `5c · No confiable: solo adelantado`.
 
@@ -25,17 +30,19 @@
 
    | Situación del cliente | Opciones habilitadas | Opciones en gris |
    |---|---|---|
-   | **Confiable** (`trusted`) | «Efectivo» (al recibir) · «Billetera digital» con selector **«Al recibir»** (por defecto) / **«Pagar ahora»** (solo si el negocio acepta prepago; opcional) | — |
-   | **No confiable** por faltas o riesgo (`risk_blocked`, ≥ ⚙ `strikes.prepaymentOnlyThreshold`) | «Billetera digital por adelantado» | «Efectivo» y «Billetera digital al recibir», con candado y el motivo **una sola vez**: «Por pedidos anteriores sin recibir» |
+   | **Confiable** (`trusted`) | «Efectivo» · «Yape o Plin» (con logos; «Ves el número cuando el negocio acepte»). Sin selector «Al recibir» / «Pagar ahora» | — |
+   | **No confiable** por faltas o riesgo (`risk_blocked`, ≥ ⚙ `strikes.prepaymentOnlyThreshold`) | «Yape o Plin por adelantado» · «Pagas apenas el local acepte» | «Efectivo», con candado y el motivo **una sola vez**: «Por pedidos anteriores sin recibir» |
    | **No confiable por monto** (total con envío > ⚙ `prepay_threshold`) | igual | motivo: «Pedido mayor a S/ [⚙ prepay_threshold]» |
-   | **Sin historial con GPS en cobertura** (`no_history`) | las del confiable; el pedido pasa a `validando` (la cajera llama) | — · falta definir el texto que lo avisa → `decisiones-abiertas.md` |
+   | **Sin historial con GPS en cobertura** (`no_history`) | las del confiable; el pedido pasa a `validando` (la cajera llama) | — · bajo el botón: «Te llamaremos para confirmar tu pedido» y, debajo, el número verificado (CUS-CHK-027) |
 
    - La opción elegida se expande; las demás quedan en una línea (§10.7 del sistema de diseño).
    - **Efectivo elegido:** «¿Con cuánto pagas?» con chips «Exacto», «S/ 20», «S/ 50», «S/ 100», «Otro» y las reglas de
      billete y vuelto de CUS-CHK-008. Si el vuelto de la noche es 0: «Esta noche el negocio no tiene vuelto».
-   - **Billetera digital:** sin logos de Yape ni Plin en la opción (decisión de Jesús, 2026-11-16): ícono genérico de
-     billetera. «Pagar ahora» muestra la línea «Opcional: sube tu captura cuando el local acepte».
-4. **Resumen:** «Envío S/ [ENVÍO]» y «Total S/ [TOTAL]» (CUS-CHK-001; envío tachado si hay promo, CUS-CHK-016).
+   - **Yape o Plin:** con los logos de Yape y de Plin (decisión de Jesús, 2026-11-17, que revierte la billetera
+     agnóstica del 16-nov). No se paga aquí: el número aparece en el seguimiento cuando el negocio acepta (CUS-PAY-014).
+   - **Recojo** (sin tarjeta de entrega): solo «Yape o Plin por adelantado» y la línea «Pagas por adelantado y lo preparamos
+     apenas confirmemos el pago» (CUS-CHK-028). No hay pregunta «¿Vas al local ahora?».
+4. **Resumen:** siempre «Subtotal S/ [SUBTOTAL]», «Envío S/ [ENVÍO]» y «Total S/ [TOTAL]» (CUS-CHK-026; envío tachado si hay promo, CUS-CHK-016). La maqueta solo dibuja Envío y Total: la decisión 13 la corrige.
 5. **Términos:** «Al confirmar aceptas los Términos y la Privacidad», con enlaces de 48 dp de alto.
 6. **Barra de acción (fija):** «Confirmar pedido» + píldora «S/ [TOTAL]». Si falta algo, el botón dice qué hacer y lleva
    al campo, en el orden de CUS-CHK-013.
@@ -57,7 +64,7 @@
 ## Criterios de aceptación propios de la pantalla
 
 ```
-CA-CHK-P1 · Confiable con billetera: «Al recibir» es la opción por defecto
+CA-CHK-P1 · [RETIRADO, decisión de Jesús 2026-11-17: ya no hay selector] Confiable con billetera: «Al recibir» es la opción por defecto
   Dado un cliente con decisión trusted y un negocio que acepta prepago
   Cuando elige «Billetera digital»
   Entonces el selector muestra «Al recibir» marcado y «Pagar ahora» disponible
@@ -66,13 +73,13 @@ CA-CHK-P1 · Confiable con billetera: «Al recibir» es la opción por defecto
 CA-CHK-P2 · No confiable: el motivo se dice una vez
   Dado un cliente con decisión risk_blocked
   Cuando abre «¿Cómo pagas?»
-  Entonces solo «Billetera digital por adelantado» se puede elegir
-  Y «Efectivo» y «Billetera digital al recibir» aparecen en gris con candado
+  Entonces solo «Yape o Plin por adelantado» se puede elegir
+  Y «Efectivo» aparece en gris con candado
   Y el texto «Por pedidos anteriores sin recibir» aparece exactamente una vez
 
 CA-CHK-P3 · La opción no elegida ocupa una línea
   Dado «Efectivo» elegido
-  Entonces «Billetera digital» se muestra en una sola fila, sin subtítulo
+  Entonces «Yape o Plin» se muestra en una sola fila, sin subtítulo
 ```
 
 Los escenarios CA-CHK-01…05 de `requisitos/CHK.md` también aplican.
@@ -84,6 +91,5 @@ vibra 150 ms. Al confirmar: check animado y paso al seguimiento. Respeta «reduc
 
 ## Pendiente (va a `decisiones-abiertas.md`)
 
-- Texto del caso `no_history` → `validando` (la cajera llama): no está diseñado.
-- Variante de **recojo** (pregunta «¿Vas al local ahora?», CUS-CHK-004) no tiene maqueta v3.
-- La maqueta v3 quitó el **subtotal** y el chip **S/ 20**: confirmar con Jesús si se mantienen (el código los tiene).
+- Resueltos el 2026-11-17: texto de `validando` (CUS-CHK-027), recojo (CUS-CHK-028) y subtotal (CUS-CHK-026).
+- Sigue abierto el chip «S/ 20» (la maqueta trae Exacto / S/ 50 / S/ 100 / Otro): punto Y.

@@ -1,5 +1,10 @@
 # ENT · Tindivo Entregas (pedir, mis entregas y seguimiento)
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - Se prohíbe lo que prohíbe inDrive: alcohol, tabaco y vapeadores; joyas, metales y piedras preciosas; efectivo, billetes y moneda; armas, municiones y armas blancas; explosivos, pólvora, fuegos artificiales y venenos; drogas; material obsceno; artículos de venta restringida. Los documentos sí (CUS-ENT-022).
+> - El texto «Sin alcohol, sin nada que necesite receta especial ni refrigeración» (punto 5 de «Contenido») y la categoría «Medicinas» se ajustan a esa lista; medicamentos queda por decidir (punto X). Se retira la declaración de efectivo o joyas al pedir.
+> - La maqueta `Entregas` dice «Que entre en una mochila y pese hasta [PESO MÁXIMO]»: coincide con CUS-ENT-010.
+
 > **Diseño v3 pendiente.** Esta spec recoge **solo lo que hace hoy el código Android** (`feature/courier`). No es un diseño
 > nuevo. La maqueta `Entregas` existe en el canvas pero es de la versión anterior y **no manda** hasta que se rediseñe.
 
@@ -74,4 +79,4 @@ Sin especificar: este diseño es de la v1. No inventar hasta el rediseño v3.
 - **Diseño v3 pendiente** de toda el área. La maqueta `Entregas` trae un diseño propio (pasos «1 Recoger en» y «2 Entregar en», «¿Qué llevamos?», casilla «Es frágil», «Que entre en una mochila y pese hasta [PESO MÁXIMO]. Lo que llevamos ya debe estar pagado.», «Pedir motorizado» y «S/ [TARIFA]»); el código es distinto en texto y en pasos. No se elige.
 - **Maqueta ↔ código:** la maqueta dice «Pedir motorizado»; el código «Pedir entrega · [tarifa]» y «Pedir una entrega». La maqueta no tiene categorías ni «¿Quién paga?».
 - **Documento ↔ código:** el peso máximo es «Hasta 5 kg» en el código y en las decisiones de Jesús («que quepa dentro de la mochila del motorizado» + 5 kg); la maqueta tiene `[PESO MÁXIMO]` por parámetro.
-- Decisiones de Jesús sin pantalla: prohibidos en Entregas (drogas, armas, explosivos, material obsceno, objetos robados, animales vivos), efectivo y joyas permitidos pero declarados; «cliente no está» (T7).
+- Decisiones de Jesús sin pantalla: «cliente no está» (T7). La lista de prohibidos (la de inDrive, que **incluye** efectivo, joyas y alcohol) quedó decidida el 2026-11-17: ver `CUS-ENT-022`.

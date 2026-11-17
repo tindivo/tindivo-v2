@@ -26,3 +26,13 @@ Encontrados al especificar la web (2026-09/10); se corrigen en nativo, no se cop
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
 | 11 | CUS-SUP-002 | La política de privacidad no menciona ubicación GPS ni datos de dispositivo. | `app/privacidad/page.tsx` |
+
+## Decisiones de Jesús, 2026-11-17
+
+Los requisitos que cambian conservan su ID y llevan la marca **reemplazado por** o **retirado** en su fila; los nuevos siguen la numeración del área. Android: sin verificar contra el código (⬜ = por hacer); iOS aún no empieza. Donde se cita la junta del 17-nov (`tindivo-auditorias/2026-11-16-ux-movil/v3/junta-17nov/conclusion.md` y `junta-17nov-b/conclusion.md`), el detalle es propuesta de la junta, no decisión de Jesús.
+
+| ID | Requisito | Reglas y validaciones clave | Fuente | Android | iOS | Móvil |
+|---|---|---|---|---|---|---|
+| CUS-SUP-006 ★ | La app debe ofrecer «Ayuda con este pedido» en el seguimiento y en el detalle del pedido, y abrir el WhatsApp de soporte de Tindivo. | Fila secundaria de 48 dp; mensaje prellenado, revisable antes de enviar: «Hola, necesito ayuda con mi pedido #TDV-[CÓDIGO] de [NEGOCIO].» (junta A, T3). Sin selector de motivos. Sustituye a «Ayuda por WhatsApp» y al contacto del negocio y del motorizado. WhatsApp: ⚙ `support_whatsapp`. **Quién responde, en qué horario y qué puede resolver sigue abierto** (decisiones-abiertas.md, punto U). | Decisión de Jesús, 2026-11-17 (decisiones 3 y 4) | 🟡 | ⬜ | IGUAL · M1 |
+
+Nota: CUS-SUP-005 (falta y «Si crees que hubo un error, escríbenos por WhatsApp») sigue; la revisión formal de faltas pasó al backlog (decisión 10).

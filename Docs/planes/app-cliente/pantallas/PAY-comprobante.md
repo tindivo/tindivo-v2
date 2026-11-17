@@ -1,5 +1,10 @@
 # PAY · Pagar y subir comprobante (prepago)
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - Esta pantalla es la de la **captura obligatoria** (cliente no confiable, o confiable que decide subirla): la aprueba el restaurante. El pago llega aquí desde la tarjeta de pago del seguimiento (CUS-PAY-014), que aparece después de que el negocio acepta.
+> - Rótulo «Yape o Plin» con logos, no «Billetera digital» (CUS-PAY-017). Antes de enviar, el aviso: «El restaurante y el motorizado asignado podrán ver esta captura. Muestra solo esta operación y oculta información ajena al pago.» Solo el restaurante confirma el pago (CUS-PAY-015). Es un solo pago; las incidencias van a «Ayuda con este pedido».
+> - La cuenta secundaria «Usa otra cuenta» sigue en discusión: decisión G.
+
 > Maquetas: `Comprobante-vacio` (sin captura), `Comprobante` (captura lista) y `Comprobante-plin` (cuenta secundaria
 > abierta). Decisión posterior a la maqueta: la cuenta secundaria ya **no** se llama «Plin», se llama **«Usa otra cuenta»**.
 
@@ -17,10 +22,10 @@
 1. **Barra superior:** volver · «Pagar y subir comprobante» · reloj «Quedan [PLAZO]» (rojo `#991B1B` sobre `#FEE2E2` con
    menos de 2 min).
 2. **Monto:** «Paga exacto a La Florencia» y «S/ [TOTAL]» grande.
-3. **Tarjeta de cuenta:** rótulo «Billetera digital» (sin marca), número «987 123 456», titular «Rosa M. Huamán», «Copiar»
+3. **Tarjeta de cuenta:** rótulo «Yape o Plin» (con logos), número «987 123 456», titular «Rosa M. Huamán», «Copiar»
    (cambia a «Copiado» con check) y «Ver QR» (hoja con el QR grande y «Guardar»).
 4. **«¿No funciona? Usa otra cuenta»**: enlace de texto. Despliega la cuenta secundaria (acordeón con `aria-expanded`): la
-   primera se colapsa a una línea («Billetera digital · 987 123 456») y la secundaria se expande con su número («955 321 876»),
+   primera se colapsa a una línea («Yape o Plin · 987 123 456») y la secundaria se expande con su número («955 321 876»),
    titular, «Copiar» y «Ver QR». Tocar la fila colapsada invierte el acordeón.
 5. **Captura:** sin captura, «Subir captura» (selector del sistema: cámara o galería). Con captura: miniatura, «Captura lista» y
    «Cambiar».

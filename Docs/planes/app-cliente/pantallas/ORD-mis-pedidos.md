@@ -1,5 +1,9 @@
 # ORD · Mis pedidos
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - El código del pedido es `#TDV-[8 caracteres]` (CUS-ORD-007). El pedido en curso también se ve como tarjeta en el Inicio y como punto en esta pestaña (CUS-CAT-031, que reemplaza a CUS-CAT-019).
+> - «¿Problema con este pedido?» abre el WhatsApp de soporte (CUS-SUP-006).
+
 > Maquetas: tableros `Pedidos` (con pedido en curso e historial) y `Pedidos-vacio`. Es la pestaña «Pedidos» de la barra inferior.
 
 | | |

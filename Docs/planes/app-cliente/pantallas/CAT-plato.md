@@ -1,5 +1,9 @@
 # CAT · Plato
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - Solo los grupos obligatorios bloquean el botón; todos los campos llevan el mismo borde (CUS-CAT-033).
+> - El tamaño se muestra con su precio completo (`price_display = 'total'`, migración `0156`; «El precio es el del tamaño») y los extras suman con `delta` («+ S/ 2.00») (CUS-CAT-034). Maqueta `Plato`: Personal S/ 13.00 · Mediano S/ 26.00 · Grande S/ 35.00; el botón dice «Elige el tamaño» hasta resolverlo.
+
 > Maquetas: tableros `Plato` (faltan elecciones), `Plato-sinfoto` (respaldo sin foto) y `Plato-listo` (todo elegido).
 
 | | |

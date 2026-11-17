@@ -1,5 +1,9 @@
 # CAT · Inicio
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - Barra superior con logo, chip de dos líneas y bolsa con contador; el pedido en curso es una tarjeta al inicio y un punto en la pestaña Pedidos; nada flota sobre las pestañas; Store dice «Variedad de productos» (CUS-CAT-030 a 032).
+> - Los puntos 5 y 6 de «Contenido» y los requisitos `(requisito nuevo: pastilla «Ver bolsa»…)` de la cabecera quedan reemplazados.
+
 > Maqueta: canvas «Tindivo app — pantallas», tablero `Main` (capturas en `tindivo-auditorias/2026-11-16-ux-movil/v3/`).
 > Es la primera pestaña de la barra inferior y la puerta a los tres servicios.
 
@@ -14,20 +18,21 @@
 
 ## Contenido, de arriba abajo
 
-1. **Encabezado.** «Entregar en» y debajo la dirección vigente, «Jr. Lima 214, San Jacinto». Tocarla abre `ADR-elegir-direccion` (la maqueta no dice si es tocable: ver Pendiente). Sin sesión o sin dirección, no se muestra.
+1. **Barra superior fija.** Logo; chip de dos líneas («Entregar en» pequeño arriba y la dirección debajo, «Jr. Lima 214»); a la derecha, la bolsa con su contador («Bolsa, 2 productos»), visible siempre, también vacía (CUS-CAT-030). Tocar el chip abre `ADR-elegir-direccion`. Sin sesión o sin dirección, el chip no se muestra.
+1b. **Pedido en curso** (si lo hay), como tarjeta al inicio del contenido: «Tu pedido está en camino» · «La Florencia · llega en 8–12 min» · «Ver pedido ›»; con varios, «Tienes [N] pedidos en curso · Ver pedidos ›». Punto en la pestaña Pedidos mientras haya uno activo (CUS-CAT-031).
 2. **Saludo:** «¿Qué pedimos hoy?» (título único; sin nombre de la persona).
 3. **Dos tarjetas de servicio**, una junto a otra:
    - «Entregas» · «De A a B, ya pagado» · distintivo «ÚNICO» · moto que se desliza al entrar.
-   - «Store» · «Piezas únicas».
+   - «Store» · «Variedad de productos» (CUS-CAT-032; Store sale después del lanzamiento: punto Y).
 4. **«Restaurantes»** · «[N] abiertos ahora» (ej. «3 abiertos ahora»). Una tarjeta por negocio:
    - Abierto: nombre, rubro («Pollos a la brasa · Parrillas»), «Abierto» y «25–35 min».
    - Cerrado: la tarjeta se atenúa y dice «Cerrado · abre mañana 12:00 m.» (CUS-CAT-012).
    - Negocio en modo catálogo (`catalog_only`): se ofrece «Pedidos por WhatsApp» en lugar de ETA (CUS-CAT-015; el código ya lo hace, la maqueta no lo dibuja).
-5. **Pastilla de pedido en curso** (flotante, sobre la barra inferior): «Tu pedido va en camino» · «La Florencia · llega en 8–12 min» · «Ver». El ícono late suave. Solo si hay un pedido activo (CUS-CAT-019).
-6. **Pastilla de bolsa** (flotante, bajo la anterior): contador «2», «Ver bolsa» y «S/ [TOTAL]». Solo si la bolsa tiene productos.
+5. ~~Pastilla de pedido en curso flotante~~ — **reemplazada** por la tarjeta del punto 1b (CUS-CAT-019 → CUS-CAT-031).
+6. ~~Pastilla de bolsa flotante~~ — **retirada**: la bolsa vive en la barra superior; «Ver bolsa» existe solo dentro del negocio (CUS-CAT-030).
 7. **Barra inferior fija:** «Inicio» · «Entregas» · «Pedidos» · «Cuenta». Inicio activa.
 
-Lo fijo es la barra inferior y las dos pastillas; todo lo demás desplaza.
+Lo fijo es la barra superior y la barra de pestañas; nada flota sobre las pestañas; todo lo demás desplaza.
 
 ## Estados
 
@@ -47,11 +52,11 @@ Lo fijo es la barra inferior y las dos pastillas; todo lo demás desplaza.
 ## Criterios de aceptación propios de la pantalla
 
 ```
-CA-CAT-P1 · Las dos pastillas no tapan la barra inferior ni el contenido
+CA-CAT-P1 · [REEMPLAZADO, decisión de Jesús 2026-11-17] Nada flota sobre las pestañas
   Dado un pedido en curso y una bolsa con 2 productos
   Cuando la persona abre Inicio
-  Entonces ve la pastilla de pedido y la de bolsa sobre la barra inferior
-  Y la lista de restaurantes deja un hueco final igual a lo fijo + 16 dp (PATRONES-V2 §4)
+  Entonces ve la bolsa con su «2» en la barra superior y la tarjeta del pedido al inicio del contenido
+  Y sobre la barra de pestañas no hay ninguna pastilla
 
 CA-CAT-P2 · Un negocio cerrado se ve pero no se descarta
   Dado un negocio con is_open_now = false

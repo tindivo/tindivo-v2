@@ -1,7 +1,7 @@
 # Sistema de diseño de las apps nativas: tokens y componentes
 
 > Verificado: 2026-11-17 · entorno: develop@0d0f7486 (código de `apps/android/core/designsystem` y `packages/ui/src/theme.css`; contrastes recalculados con la fórmula WCAG 2.x)
-> Reglas y principios (minimalismo, billetera agnóstica, marca): `Docs/negocio/diseno.md`. Nombres de token estables:
+> Reglas y principios (minimalismo, Yape o Plin con logos, marca): `Docs/negocio/diseno.md`. Nombres de token estables:
 > el mismo nombre en Compose y en SwiftUI.
 
 ## 1. Nombres estables de los tokens

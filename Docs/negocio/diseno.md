@@ -1,7 +1,7 @@
 # Diseño: la marca y cómo se ve Tindivo
 
 > Verificado: 2026-11-17 · entorno: develop@0d0f7486 (código de `apps/android/core/designsystem` y `packages/ui/src/theme.css`; contrastes recalculados con la fórmula WCAG 2.x)
-> Decisiones de Jesús del 19 y 20 de septiembre de 2026 (marca) y del 16 de noviembre de 2026 (sistema de diseño de las apps nativas: paleta, patrones v2, minimalismo y billetera agnóstica) · Reglas técnicas del tema web: `DECISIONS.md §16`, `§21`, `§27`
+> Decisiones de Jesús del 19 y 20 de septiembre de 2026 (marca) y del 16 de noviembre de 2026 (sistema de diseño de las apps nativas: paleta, patrones v2 y minimalismo) y del 17 de noviembre de 2026 (formas de pago con logos de Yape y Plin, notificaciones y reglas de pantalla) · Reglas técnicas del tema web: `DECISIONS.md §16`, `§21`, `§27`
 > **Qué manda:** la marca (§1) vale para todo. El sistema de las **apps nativas** (§2 en adelante) es el de la v2 del 16-nov; la web mantiene `packages/ui/src/theme.css` hasta que Jesús decida alinearla (ver «Pendientes»). Dónde está construido el design system de Android y cómo se replica en iOS: `Docs/arquitectura/apps-nativas.md`.
 
 ## 1. La marca
@@ -54,21 +54,28 @@ Jesús ve las pantallas con demasiado texto y abrumadoras. Reglas:
 
 ## 4. Reglas de negocio que la interfaz debe respetar
 
-- **Notificaciones:** un solo permiso «Notificaciones» (Sí/No), como Yape, que cubre estados del pedido y novedades. En
-  Cuenta, un solo interruptor «Notificaciones» con la línea «Pedidos y novedades».
+- **Notificaciones:** no son obligatorias. El permiso del sistema se pide una sola vez, tras el primer pedido confirmado.
+  En Cuenta, un solo interruptor «Avisos de tus pedidos». Las promociones quedan fuera del lanzamiento. (Decisión de
+  Jesús, 2026-11-17; antes: «Pedidos y novedades».)
 - **Pago según confianza:**
-  - Confiable: «Efectivo al recibir» o «Yape o Plin». Con Yape o Plin puede pagar por adelantado cuando el negocio
-    acepta (opcional) o al recibir.
-  - No confiable (faltas o pedido sobre el umbral): «Efectivo» y «Al recibir» se ven en gris, deshabilitados, con el
-    motivo en una línea; solo «Pago por adelantado».
+  - Confiable: «Efectivo» o «Yape o Plin» (con los logos de las dos marcas). No hay selector «Al recibir» / «Pagar
+    ahora»: tras confirmar, el pedido espera a que el negocio acepte y entonces el pago se muestra dentro del
+    seguimiento (§5). Todo recojo se paga por adelantado.
+  - No confiable (faltas o pedido sobre el umbral): «Yape o Plin por adelantado»; «Efectivo» se ve en gris,
+    deshabilitado, con el motivo en una línea.
 - **Registro:** solo con Google. Un celular verificado por cuenta (SMS). Dirección, celular y nombre se piden en hojas
   dentro del checkout, nunca obligando a ir a Cuenta.
 
-## 5. Billetera agnóstica
+## 5. Pago con Yape o Plin
 
-El pago por transferencia **no se presenta como «Yape» o «Plin» de marca**, sino como pago por **billetera digital**
-(cualquiera que transfiera a ese número). Donde se muestre la cuenta (Seguimiento y demás), se enseña el **número del
-negocio, el titular y «Copiar»** como acción principal. (Decisión de Jesús, 2026-11-16.)
+El pago por transferencia se presenta como **«Yape o Plin»**, con los logos de las dos marcas. **Revierte la billetera
+agnóstica** que Jesús decidió el 2026-11-16 («Billetera digital», sin logos): el 2026-11-17 decidió mostrar las marcas.
+Donde se muestre la cuenta, se enseña el **número del negocio, el titular, «Copiar» y el total**, dentro del seguimiento y
+no en una hoja. La captura es opcional para el cliente confiable (alternativa: «Pagaré al motorizado al llegar») y
+obligatoria para el no confiable; la ven el restaurante y el motorizado asignado, y **solo el restaurante confirma el
+pago**. Es un solo pago; las incidencias van al WhatsApp de soporte. (Decisión de Jesús, 2026-11-17; detalle en
+`Docs/planes/app-cliente/`, CUS-CHK-024, CUS-PAY-014 y CUS-PAY-015. Todo cambio que toque dinero requiere además la
+revisión de Jesús y de Codex antes de aplicarse.)
 
 ## Pendientes
 

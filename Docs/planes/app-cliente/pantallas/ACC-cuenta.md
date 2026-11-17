@@ -1,5 +1,8 @@
 # ACC · Cuenta
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - El interruptor de notificaciones se llama «Avisos de tus pedidos» (CUS-NOT-005).
+
 > Maquetas: tableros `Cuenta` (perfil completo) y `Cuenta-incompleta` (faltan pasos). Es la pestaña «Cuenta» de la barra inferior.
 
 | | |
@@ -18,8 +21,8 @@
    «maria.quispe@gmail.com») y el celular «987 654 321» con la insignia «Verificado».
 3. **«Mis direcciones»:** una fila por dirección con su etiqueta («Casa», «Trabajo»), la insignia «Principal» en la
    predeterminada y la línea («Jr. Bolognesi 245»). Al final «+ Agregar dirección».
-4. **«Notificaciones»:** un solo interruptor con la línea «Pedidos y novedades» (decisión de Jesús: un solo permiso, como Yape; cubre estados del pedido y novedades).
-5. **Ayuda y legal:** «Ayuda por WhatsApp» · «Términos y condiciones» · «Privacidad».
+4. **«Notificaciones»:** un solo interruptor con la línea «Avisos de tus pedidos» (decisión de Jesús, 2026-11-17; la maqueta dice «Pedidos y novedades»: reemplazado). Sin interruptor de promociones.
+5. **Ayuda y legal:** «Ayuda por WhatsApp» (soporte general; dentro de un pedido es «Ayuda con este pedido») · «Términos y condiciones» · «Privacidad».
 6. **Sesión:** «Cerrar sesión» y, aparte y con menos peso, «Eliminar mi cuenta».
 7. **Versión:** «Tindivo 1.0.0».
 8. **Barra inferior fija:** «Inicio» · «Entregas» · «Pedidos» · «Cuenta» (activa).
@@ -58,7 +61,7 @@ CA-ACC-P1 · «Completa tu perfil» se achica al completarse
 
 CA-ACC-P2 · Un solo interruptor de notificaciones
   Dado la sección «Notificaciones»
-  Entonces hay un único interruptor con «Pedidos y novedades»
+  Entonces hay un único interruptor con «Avisos de tus pedidos»
   Y no existe un interruptor aparte de «Avisos y novedades»
 
 CA-ACC-P3 · «Eliminar mi cuenta» exige confirmar

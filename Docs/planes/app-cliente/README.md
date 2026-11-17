@@ -1,8 +1,8 @@
-# App cliente — especificación funcional (Android hoy, iOS después)
+# App cliente — especificación funcional (Android e iOS, juntos)
 
 > Estado: **propuesto**, pendiente de aprobación de Jesús en su PR · Commit de referencia: `0d0f7486` (develop)
 > Alcance: qué hace la app cliente nativa, pantalla por pantalla, independiente de la plataforma; lo que Android ya
-> implementa y lo que iOS deberá replicar · Criterios de aceptación: cada requisito ★ tiene escenarios Dado/Cuando/Entonces
+> implementa y lo que iOS deberá replicar. **Android e iOS se lanzan juntos, en la misma fecha** (decisión de Jesús, 2026-11-17) · Criterios de aceptación: cada requisito ★ tiene escenarios Dado/Cuando/Entonces
 > y cada pantalla enlaza sus requisitos, su flujo y sus endpoints.
 
 ## Para qué existe
@@ -13,6 +13,15 @@ cliente. El **cómo** está en el código; las **reglas del negocio** y su porqu
 
 Quien programa una pantalla en Android o iOS lee, en este orden: su archivo en `pantallas/`, los requisitos que cita,
 el flujo donde vive y el contrato REST. Si algo no está aquí, se pregunta; no se copia del otro cliente.
+
+## Lanzamiento conjunto de Android e iOS
+
+Decisión de Jesús, 2026-11-17: las dos plataformas salen **juntas, en la misma fecha**. Consecuencias para esta spec:
+
+- Ninguna decisión se congela mirando solo a Android: lo que cambia lo que la persona ve o puede hacer se anota aquí para las dos.
+- **La paridad se asegura con vectores de conformidad:** archivos JSON agnósticos de lenguaje junto a `packages/contracts` (`packages/contracts/fixtures/`), que consumen las pruebas del servidor, de Kotlin y de Swift; se escriben desde las decisiones aprobadas y el REST v1, no ejecutando el código que se quiere comprobar. **Hoy no existen y hay que crearlos** (`Docs/arquitectura/apps-nativas.md` §8). Regla de PR: todo cambio de regla actualiza los vectores y se verifica en servidor, Android e iOS.
+- **Recortes del lanzamiento:** Store, promociones y traslado de celular. No se recorta seguridad, reglas de dinero, soporte, legibilidad ni controles táctiles, ni la compatibilidad del REST v1.
+- La fecha la fija Jesús según la ruta más larga (iOS no ha empezado y hay dos revisiones de tienda): ver `decisiones-abiertas.md`, punto Z.
 
 ## Estructura
 
@@ -40,7 +49,7 @@ Lo transversal vive fuera, para que lo compartan todas las apps:
 | Qué | Dónde |
 |---|---|
 | Reglas del negocio (confianza y pago, faltas, plazos, términos) | `Docs/negocio/` (canon) |
-| Marca y principios de diseño (minimalismo, billetera agnóstica) | `Docs/negocio/diseno.md` (canon) |
+| Marca y principios de diseño (minimalismo, pago con Yape o Plin) | `Docs/negocio/diseno.md` (canon) |
 | Tokens y componentes (color, tipografía, radios, sombras) y lo que difiere hoy en Android | `Docs/arquitectura/sistema-de-diseno.md` (canon) |
 | Reglas del servidor que hereda toda app (estados, plazos, errores, avisos) | `Docs/trabajo/movil/03-requisitos/SYS-transversal.md` → se promueve a `planes/` cuando se apruebe |
 | Contrato REST (rutas, códigos, cabeceras, formas) | `Docs/planes/movil/contrato-rest.md` |

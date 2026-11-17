@@ -1,5 +1,7 @@
 # Flujo · Acceso y datos del cliente
 
+> **Decisiones de Jesús del 2026-11-17 que cierran preguntas de este flujo:** reaceptación de Términos **al actuar**, nunca al abrir ni sobre un pedido en curso o el soporte (CUS-AUT-027); casilla siempre, desmarcada, antes de Google (CUS-AUT-020); notificaciones opcionales, un solo interruptor «Avisos de tus pedidos» (CUS-NOT-005); celular de otra cuenta por soporte de WhatsApp, sin traslado automático (CUS-AUT-028); pedido ajeno: «No puedes abrir este pedido» con «Mis pedidos» y «Entrar con otra cuenta» (CUS-TRK-023). Donde este flujo diga «decisión actual de Jesús: ventana al abrir», «Recomendación (Jesús aún no decide)» o ofrezca el traslado «Usar en esta cuenta», manda esto.
+
 > Origen: mapa v4 auditado por Codex y Hydrogen en 3 rondas (2026-11-17; expediente fuera del repo:
 > `tindivo-auditorias/2026-11-16-ux-movil/v3/flujo-acceso/`). Las preguntas abiertas a Jesús están en
 > `../decisiones-abiertas.md`; mientras no se decidan, lo marcado «propuesta» no es regla.

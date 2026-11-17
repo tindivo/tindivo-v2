@@ -1,5 +1,10 @@
 # TRK · Seguimiento del pedido
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - El cliente ve el nombre completo del motorizado y ningún contacto; la ayuda es «Ayuda con este pedido» (CUS-TRK-021, CUS-SUP-006).
+> - Primero el pedido espera al negocio (`TRK-esperando-aceptacion`); el pago se muestra después, dentro de esta pantalla (CUS-PAY-014). Las pantallas del pago se reparten así: tarjeta en el seguimiento y `PAY-comprobante` para la captura obligatoria.
+> - Pedido ajeno (CUS-TRK-023) y «no se presentó» (CUS-TRK-022): ver Estados.
+
 > Maquetas: tableros `Seguimiento-recogiendo` (preparando, pago en efectivo) y `Seguimiento` (en camino, pago por billetera).
 > La hoja de pago de este mismo seguimiento es `PAY-pago-al-recibir`.
 
@@ -14,27 +19,27 @@
 
 ## Contenido, de arriba abajo
 
-1. **Barra superior:** volver · «Pedido #K7M3PQ2A» (código de 8 caracteres).
+1. **Barra superior:** volver · «Pedido #TDV-K7M3PQ2A» (código de 8 caracteres con el prefijo `#TDV-`, decisión 15; la maqueta no lo trae) · «Actualizar estado».
 2. **Titular del estado:** «Preparando tu pedido» / «En camino» (y los de cada fase: ver estados). Sobre la ruta, la moto avanza
    (en «Preparando» se acerca al local; al recoger salta al tramo hacia la casa).
 3. **Progreso en cuatro etapas** (CUS-TRK-002): Recibido · Preparando · En camino · Entregado. La activa late en 1,6 s; la
    pendiente usa `#7A828C`. En recojo, la tercera etapa es «Listo».
 4. **«Llega en» «18–25 min»**: siempre un rango, nunca una hora exacta (CUS-TRK-004). Sin trayecto en recojo.
-5. **Motorizado:** «Carlos Ramos» · «Tu motorizado». Su teléfono solo existe cuando llegó (`arrivedAtCustomerAt`): entonces
-   aparece «Escribirle por WhatsApp» (CUS-TRK-007).
+5. **Motorizado:** nombre completo («Carlos Ramírez») · «Tu motorizado». Sin teléfono, WhatsApp ni placa, en ningún estado (CUS-TRK-021; reemplaza a CUS-TRK-007). Avatar con foto solo si existe (punto H); si no, iniciales.
 6. **Espacio reservado** (sin tarjeta) para 5 estrellas de 24 px al entregar: «calificar» (CUS-REV-001).
 7. **Bloque de pago**, según la forma de pago elegida:
    - **Efectivo al recibir:** «Efectivo al recibir» · «Pagas con S/ 50 · Vuelto S/ [VUELTO]» · «Cambiar monto».
-   - **Billetera digital al recibir:** «Paga al recibir» · «S/ [TOTAL] · La Florencia» · número «987 654 321» · «Titular: Rosa Mendoza
-     Quispe» · «Copiar» · «Desde Yape, Plin o tu billetera» · «Ver QR o subir captura» (abre `PAY-pago-al-recibir`).
+   - **Yape o Plin, tras aceptar el negocio** (CUS-PAY-014, maquetas `Seguimiento-pago` y `Seguimiento`): «Paga a La Florencia» · «Con Yape o Plin» · número «987 654 321» · «Titular: Rosa Mendoza
+     Quispe» · «Copiar» · «Total S/ [TOTAL]» · «Subir captura» (opcional para el confiable) · «Pagaré al motorizado al llegar» · aviso «La captura es opcional. El restaurante y el motorizado asignado podrán verla. Muestra solo esta operación y oculta información ajena al pago.» Ya no hay hoja `PAY-pago-al-recibir`.
    - **Prepago:** el bloque pasa a ser `PAY-comprobante` cuando el negocio acepta (CUS-PAY-001).
-8. **«Ver resumen del pedido»** (fila de texto) y **«Ayuda por WhatsApp»** (acción de texto con ícono).
+8. **«Ver resumen del pedido»** (fila de texto) y **«Ayuda con este pedido»** (acción de texto con ícono; abre el WhatsApp de soporte, CUS-SUP-006).
 
 ## Estados
 
 | Estado | Qué se ve | Requisito |
 |---|---|---|
 | Cargando | Esqueleto del titular y la tira | CUS-TRK-001 |
+| Esperando que el negocio acepte | Pantalla `TRK-esperando-aceptacion` (CUS-TRK-019) | CUS-TRK-019 |
 | Recibido (`validando`, `pending_acceptance`, `awaiting_payment`, `confirmed`) | «Pedido recibido» · «Estamos confirmándolo con el restaurante» | CUS-TRK-002/003 |
 | Prepago, esperando al negocio | «Esperando confirmación de disponibilidad» + cuenta atrás del plazo de aceptación | CUS-TRK-005 |
 | Prepago, turno del cliente | «Restaurante confirmó. Paga ahora» + `PAY-comprobante` | CUS-PAY-001 |
@@ -43,7 +48,9 @@
 | Preparando | «Preparando» · «Tu pedido está en cocina» | CUS-TRK-002 |
 | En camino | «En camino» · «El motorizado va en ruta» | CUS-TRK-002 |
 | Listo para recoger | «Listo para recoger» · «Pásalo a recoger en el local» | CUS-TRK-002 |
-| El motorizado llegó | «Ya está en tu domicilio y no logra ubicarte.» + «Escribirle por WhatsApp» | CUS-TRK-007 |
+| El motorizado llegó | «[Nombre] llegó» · «Sal a recibir tu pedido» (maqueta `Seguimiento-llego`); sin botón de contacto | CUS-TRK-021 |
+| Pedido de otra cuenta | «No puedes abrir este pedido» · «Mis pedidos» / «Entrar con otra cuenta»; sin sesión, «Inicia sesión para intentar abrir este pedido» | CUS-TRK-023 |
+| No se presentó | El pedido se marca «no se presentó» y el cliente recibe la falta; Jesús la confirma o anula | CUS-TRK-022 |
 | Entregado | «Entregado» · «¡Buen provecho!»; el sondeo se detiene; se ofrece calificar | CUS-TRK-002, CUS-REV-001 |
 | Se puede cancelar | Fila «Estamos confirmando tu pedido» · «Hasta entonces puedes cancelar sin costo» · «Cancelar» → «¿Cancelar tu pedido?» · «Sí, cancelar pedido» / «No, mantener pedido» | CUS-TRK-006 |
 | Ya pagó y quiere cancelar | «Ya enviaste tu pago, así que este pedido no se cancela desde la app; escríbenos por soporte» | CUS-TRK-006 |
@@ -66,10 +73,10 @@ CA-TRK-P2 · La moto sigue el estado
   Cuando el estado pasa a «picked_up»
   Entonces el titular cambia a «En camino» y la moto salta al tramo hacia la casa
 
-CA-TRK-P3 · El teléfono del motorizado no aparece antes de llegar
-  Dado un pedido en camino sin `arrivedAtCustomerAt`
-  Entonces no hay botón de WhatsApp al motorizado ni se muestra su número
-  Y al llegar aparece «Escribirle por WhatsApp»
+CA-TRK-P3 · [REEMPLAZADO, decisión de Jesús 2026-11-17] El cliente nunca ve el contacto del motorizado
+  Dado un pedido en cualquier estado, también con el motorizado en la puerta
+  Entonces no hay teléfono, WhatsApp ni placa del motorizado
+  Y la ayuda es «Ayuda con este pedido», que abre el WhatsApp de soporte
 
 CA-TRK-P4 · La cancelación coincide con el servidor
   Dado un pedido de efectivo en `validando` o `pending_acceptance`

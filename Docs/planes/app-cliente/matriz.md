@@ -51,13 +51,15 @@
 | CUS-AUT-017  | ✅ | ⬜ | NUEVO · M1 | `ACC-cuenta` |
 | CUS-AUT-018  | ⬜ | ⬜ | NUEVO · M1 | `NOT-activar-notificaciones` |
 | CUS-AUT-019  | ✅ | ⬜ | ADAPTAR · M1 | — |
-| CUS-AUT-020  | ⬜ | ⬜ | IGUAL · M1 | — |
+| CUS-AUT-020  | ⬜ | ⬜ | IGUAL · M1 | `AUT-entrar` |
 | CUS-AUT-021  | 🟡 | ⬜ | IGUAL · M1 | — |
-| CUS-AUT-022  | ⬜ | ⬜ | IGUAL · M1 | — |
+| CUS-AUT-022  | ⬜ | ⬜ | IGUAL · M1 | `AUT-terminos-actualizados` |
 | CUS-AUT-023  | ⬜ | ⬜ | IGUAL · M1 | — |
 | CUS-AUT-024  | 🟡 | ⬜ | ADAPTAR · M1 | — |
 | CUS-AUT-025  | ⬜ | ⬜ | IGUAL · M1 | — |
 | CUS-AUT-026  | 🟡 | ⬜ | IGUAL · M1 | — |
+| CUS-AUT-027 ★ | ⬜ | ⬜ | IGUAL · M1 | `AUT-terminos-actualizados` |
+| CUS-AUT-028  | ⬜ | ⬜ | IGUAL · M1 | `AUT-celular` |
 | CUS-CAT-001  | ✅ | ⬜ | IGUAL · M1 | `CAT-inicio` |
 | CUS-CAT-002  | ⬜ | ⬜ | ADAPTAR · M1 | `CAT-inicio` |
 | CUS-CAT-003  | ⬜ | ⬜ | IGUAL · M1 | `CAT-inicio` |
@@ -83,17 +85,26 @@
 | CUS-CAT-023  | — | — | NUEVO · M1 | — |
 | CUS-CAT-024  | — | — | MUERTO · — | — |
 | CUS-CAT-025  | — | — | MUERTO · — | — |
+| CUS-CAT-026  | ⬜ | ⬜ | IGUAL · M1 | `CAT-negocio` |
+| CUS-CAT-027  | ⬜ | ⬜ | IGUAL · M1 | `CAT-negocio` |
+| CUS-CAT-028  | ⬜ | ⬜ | IGUAL · M1 | `CAT-negocio` |
+| CUS-CAT-029  | ⬜ | ⬜ | IGUAL · M1 | `CAT-negocio` |
+| CUS-CAT-030 ★ | ⬜ | ⬜ | IGUAL · M1 | `CAT-inicio` |
+| CUS-CAT-031  | ⬜ | ⬜ | IGUAL · M1 | `CAT-inicio`, `ORD-mis-pedidos` |
+| CUS-CAT-032  | ⬜ | ⬜ | IGUAL · M1 | `CAT-inicio` |
+| CUS-CAT-033  | ⬜ | ⬜ | IGUAL · M1 | `CAT-plato` |
+| CUS-CAT-034 ★ | ⬜ | ⬜ | IGUAL · M1 | `CAT-plato` |
 | CUS-CHK-001  | ✅ | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido` |
 | CUS-CHK-002 ★ | ✅ | ⬜ | IGUAL · M1 | `AUT-celular` |
 | CUS-CHK-003  | ✅ | ⬜ | IGUAL · M1 | — |
-| CUS-CHK-004 ★ | ✅ | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido` |
+| CUS-CHK-004 ★ | ✅ | ⬜ | IGUAL · M1 | — |
 | CUS-CHK-005  | ✅ | ⬜ | IGUAL · M1 | `ADR-elegir-direccion`, `CHK-confirmar-pedido` |
 | CUS-CHK-006 ★ | ✅ | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido`, `PAY-pago-al-recibir` |
 | CUS-CHK-007 ★ | 🟡 | ⬜ | IGUAL · M1 | — |
 | CUS-CHK-008 ★ | ✅ | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido` |
 | CUS-CHK-009 ★ | ⬜ | ⬜ | ADAPTAR · M1 | `CHK-confirmar-pedido` |
 | CUS-CHK-010 ★ | ✅ | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido` |
-| CUS-CHK-011  | 📝 | ⬜ | ADAPTAR · M1 | `CHK-confirmar-pedido`, `TRK-seguimiento` |
+| CUS-CHK-011  | 📝 | ⬜ | ADAPTAR · M1 | `CHK-confirmar-pedido`, `TRK-esperando-aceptacion`, `TRK-seguimiento` |
 | CUS-CHK-012  | ✅ | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido` |
 | CUS-CHK-013  | ✅ | ⬜ | IGUAL · M1 | `ADR-elegir-direccion`, `CHK-confirmar-pedido` |
 | CUS-CHK-014  | 🟡 | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido` |
@@ -106,6 +117,11 @@
 | CUS-CHK-021  | 🟡 | ⬜ | IGUAL · M1 | — |
 | CUS-CHK-022  | ⬜ | ⬜ | IGUAL · M1 | — |
 | CUS-CHK-023  | 🟡 | ⬜ | IGUAL · M1 | — |
+| CUS-CHK-024 ★ | ⬜ | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido` |
+| CUS-CHK-025  | ⬜ | ⬜ | IGUAL · M1 | — |
+| CUS-CHK-026 ★ | 🟡 | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido` |
+| CUS-CHK-027  | ⬜ | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido`, `TRK-esperando-aceptacion` |
+| CUS-CHK-028 ★ | 🟡 | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido` |
 | CUS-CRT-001 ★ | ✅ | ⬜ | IGUAL · M1 | `CAT-negocio`, `CAT-plato`, `CRT-bolsa` |
 | CUS-CRT-002  | ✅ | ⬜ | IGUAL · M1 | `CAT-plato` |
 | CUS-CRT-003  | ✅ | ⬜ | IGUAL · M1 | `CRT-bolsa` |
@@ -127,7 +143,7 @@
 | CUS-ENT-007  | ✅ | ⬜ | IGUAL · M1 | — |
 | CUS-ENT-008  | 🟡 | ⬜ | IGUAL · M1 | — |
 | CUS-ENT-009  | ✅ | ⬜ | IGUAL · M1 | — |
-| CUS-ENT-010  | 🟡 | ⬜ | IGUAL · M1 | — |
+| CUS-ENT-010  | 🟡 | ⬜ | IGUAL · M1 | `ENT-pedir-entrega` |
 | CUS-ENT-011  | ⬜ | ⬜ | IGUAL · M1 | — |
 | CUS-ENT-012  | 📝 | ⬜ | IGUAL · M1 | — |
 | CUS-ENT-013  | ✅ | ⬜ | IGUAL · M1 | — |
@@ -139,16 +155,20 @@
 | CUS-ENT-019  | ✅ | ⬜ | IGUAL · M1 | — |
 | CUS-ENT-020  | 📝 | ⬜ | IGUAL · M1 | — |
 | CUS-ENT-021  | ⬜ | ⬜ | NUEVO · M2 | — |
+| CUS-ENT-022 ★ | ⬜ | ⬜ | IGUAL · M1 | `ENT-pedir-entrega` |
 | CUS-NOT-001  | ⬜ | ⬜ | ADAPTAR · M1 | — |
 | CUS-NOT-002  | ⬜ | ⬜ | ADAPTAR · M1 | — |
 | CUS-NOT-003  | ⬜ | ⬜ | ADAPTAR · M1 | — |
 | CUS-NOT-004  | ⬜ | ⬜ | IGUAL · M1 | — |
+| CUS-NOT-005  | ⬜ | ⬜ | IGUAL · M1 | `ACC-cuenta`, `NOT-activar-notificaciones` |
+| CUS-NOT-006  | ⬜ | ⬜ | IGUAL · M1 | `NOT-activar-notificaciones` |
 | CUS-ORD-001  | ✅ | ⬜ | ADAPTAR · M1 | `ORD-mis-pedidos` |
 | CUS-ORD-002  | 🟡 | ⬜ | IGUAL · M1 | `ORD-mis-pedidos` |
 | CUS-ORD-003  | 🟡 | ⬜ | IGUAL · M1 | `ORD-mis-pedidos` |
 | CUS-ORD-004  | ⚠️ | ⬜ | ADAPTAR · M1 | `ORD-mis-pedidos`, `TRK-seguimiento` |
 | CUS-ORD-005  | 📝 | ⬜ | ADAPTAR · M1 | — |
 | CUS-ORD-006  | — | — | NUEVO · M1 | `ORD-mis-pedidos` |
+| CUS-ORD-007  | ✅ | ⬜ | IGUAL · M1 | `ORD-mis-pedidos` |
 | CUS-PAY-001 ★ | 🟡 | ⬜ | IGUAL · M1 | `PAY-comprobante`, `PAY-pago-al-recibir`, `TRK-seguimiento` |
 | CUS-PAY-002  | ✅ | ⬜ | ADAPTAR · M1 | `PAY-comprobante`, `PAY-pago-al-recibir` |
 | CUS-PAY-003  | ✅ | ⬜ | ADAPTAR · M1 | `PAY-comprobante`, `PAY-pago-al-recibir` |
@@ -162,6 +182,10 @@
 | CUS-PAY-011  | 🟡 | ⬜ | ADAPTAR · M1 | — |
 | CUS-PAY-012  | ⬜ | ⬜ | IGUAL · M1 | — |
 | CUS-PAY-013  | 🟡 | ⬜ | ADAPTAR · M1 | — |
+| CUS-PAY-014 ★ | ⬜ | ⬜ | IGUAL · M1 | `CHK-confirmar-pedido`, `PAY-comprobante`, `PAY-pago-al-recibir`, `TRK-esperando-aceptacion`, `TRK-seguimiento` |
+| CUS-PAY-015 ★ | ⬜ | ⬜ | IGUAL · M1 | `PAY-comprobante` |
+| CUS-PAY-016  | ⬜ | ⬜ | IGUAL · M1 | — |
+| CUS-PAY-017  | ⬜ | ⬜ | IGUAL · M1 | `PAY-comprobante` |
 | CUS-REV-001  | 🟡 | ⬜ | IGUAL · M1 | `ORD-mis-pedidos`, `TRK-seguimiento` |
 | CUS-REV-002  | ✅ | ⬜ | IGUAL · M1 | — |
 | CUS-REV-003  | ✅ | ⬜ | IGUAL · M1 | — |
@@ -178,12 +202,13 @@
 | CUS-SUP-003  | 📝 | ⬜ | NUEVO · M1 | — |
 | CUS-SUP-004  | 🟡 | ⬜ | NUEVO · M1 | — |
 | CUS-SUP-005  | 🟡 | ⬜ | IGUAL · M1 | — |
+| CUS-SUP-006 ★ | 🟡 | ⬜ | IGUAL · M1 | `ORD-mis-pedidos`, `TRK-esperando-aceptacion`, `TRK-seguimiento` |
 | CUS-TRK-001  | 🟡 | ⬜ | ADAPTAR · M1 | `TRK-seguimiento` |
-| CUS-TRK-002 ★ | ✅ | ⬜ | IGUAL · M1 | `TRK-seguimiento` |
+| CUS-TRK-002 ★ | ✅ | ⬜ | IGUAL · M1 | `TRK-esperando-aceptacion`, `TRK-seguimiento` |
 | CUS-TRK-003  | ✅ | ⬜ | IGUAL · M1 | `TRK-seguimiento` |
 | CUS-TRK-004 ★ | ⬜ | ⬜ | IGUAL · M1 | `TRK-seguimiento` |
-| CUS-TRK-005 ★ | 🟡 | ⬜ | IGUAL · M1 | `PAY-comprobante`, `TRK-seguimiento` |
-| CUS-TRK-006 ★ | ✅ | ⬜ | IGUAL · M1 | `TRK-seguimiento` |
+| CUS-TRK-005 ★ | 🟡 | ⬜ | IGUAL · M1 | `PAY-comprobante`, `TRK-esperando-aceptacion`, `TRK-seguimiento` |
+| CUS-TRK-006 ★ | ✅ | ⬜ | IGUAL · M1 | `TRK-esperando-aceptacion`, `TRK-seguimiento` |
 | CUS-TRK-007  | ✅ | ⬜ | ADAPTAR · M1 | `TRK-seguimiento` |
 | CUS-TRK-008  | ✅ | ⬜ | IGUAL · M1 | — |
 | CUS-TRK-009  | ✅ | ⬜ | IGUAL · M1 | — |
@@ -191,10 +216,15 @@
 | CUS-TRK-011  | ⬜ | ⬜ | ADAPTAR · M1 | — |
 | CUS-TRK-012  | ⬜ | ⬜ | ADAPTAR · M1 | — |
 | CUS-TRK-013  | ⬜ | ⬜ | ADAPTAR · M1 | `NOT-activar-notificaciones` |
-| CUS-TRK-014  | 🟡 | ⬜ | ADAPTAR · M1 | `TRK-seguimiento` |
-| CUS-TRK-015  | ✅ | ⬜ | IGUAL · M1 | `TRK-seguimiento` |
+| CUS-TRK-014  | 🟡 | ⬜ | ADAPTAR · M1 | `TRK-esperando-aceptacion`, `TRK-seguimiento` |
+| CUS-TRK-015  | ✅ | ⬜ | IGUAL · M1 | `TRK-esperando-aceptacion`, `TRK-seguimiento` |
 | CUS-TRK-016  | — | — | SOLO-WEB · W | — |
 | CUS-TRK-017  | ⬜ | ⬜ | NUEVO · M2 | — |
 | CUS-TRK-018  | 🟡 | ⬜ | ADAPTAR · M1 | — |
+| CUS-TRK-019 ★ | ⬜ | ⬜ | IGUAL · M1 | `TRK-esperando-aceptacion`, `TRK-seguimiento` |
+| CUS-TRK-020 ★ | ⬜ | ⬜ | IGUAL · M1 | `TRK-esperando-aceptacion` |
+| CUS-TRK-021  | ⬜ | ⬜ | IGUAL · M1 | `TRK-seguimiento` |
+| CUS-TRK-022 ★ | ⬜ | ⬜ | IGUAL · M1 | `TRK-seguimiento` |
+| CUS-TRK-023  | ⬜ | ⬜ | IGUAL · M1 | `TRK-esperando-aceptacion`, `TRK-seguimiento` |
 
-Total: 190 requisitos · sin pantalla: 93.
+Total: 220 requisitos · sin pantalla: 93.

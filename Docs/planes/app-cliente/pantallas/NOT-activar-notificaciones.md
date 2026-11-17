@@ -1,7 +1,10 @@
 # NOT · Activar notificaciones
 
-> **Pendiente de la decisión A de Jesús: ¿las notificaciones son obligatorias o no?** Esta spec describe la propuesta de la
-> maqueta (pregunta opcional, una sola vez). Si Jesús decide que son obligatorias, cambian el cierre y los estados (ver Pendiente).
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - No son obligatorias; el permiso se pide tras el primer pedido confirmado; un solo interruptor, «Avisos de tus pedidos»; las promociones quedan fuera del lanzamiento (CUS-NOT-005, 006).
+> - «Pedidos y novedades» y el «consentimiento comercial conforme a la Ley 29733» de la cabecera quedan reemplazados.
+
+> **Decisión A resuelta el 2026-11-17: las notificaciones no son obligatorias.** El permiso se pide tras el primer pedido confirmado (CUS-NOT-005).
 > Maqueta: tablero `Onboarding-4-notificaciones`: hoja sobre el Seguimiento atenuado.
 
 | | |
@@ -19,7 +22,7 @@ Hoja inferior sobre el seguimiento atenuado:
 
 1. **Ilustración:** una campana que suena una vez (ondas, 600 ms).
 2. **Título:** «¿Activar notificaciones?»
-3. **Texto:** «Te avisamos de tus pedidos y novedades.» El texto debe decir expresamente que incluye **novedades y promociones**.
+3. **Texto:** «Te avisamos de tus pedidos.» (la maqueta dice «y novedades»: reemplazado; las promociones quedan fuera del lanzamiento, CUS-NOT-006). Propuesta de la junta B: «Activa las notificaciones para recibir avisos de tu pedido».
 4. **Botón primario:** «Sí, activar».
 5. **Acción secundaria:** «Ahora no».
 
@@ -55,9 +58,9 @@ CA-NOT-P3 · El pedido no depende del permiso
   Dado una persona que no activó notificaciones
   Entonces el seguimiento se actualiza igual por sondeo (cada 8 s) y los avisos críticos se leen dentro de la app
 
-CA-NOT-P4 · El texto cubre promociones
+CA-NOT-P4 · [REEMPLAZADO, decisión de Jesús 2026-11-17] El texto no ofrece promociones
   Dado la hoja abierta
-  Entonces el texto de la pregunta menciona expresamente novedades y promociones
+  Entonces el texto habla solo de avisos del pedido
 ```
 
 ## Movimiento

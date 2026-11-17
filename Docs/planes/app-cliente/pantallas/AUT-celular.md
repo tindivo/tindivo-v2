@@ -1,5 +1,8 @@
 # AUT · Verificar el celular
 
+> **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
+> - El celular que ya pertenece a otra cuenta se resuelve por soporte de WhatsApp, sin traslado automático (CUS-AUT-028). El endpoint `POST /customer/phone/transfer` no se llama desde la app en el lanzamiento; controlarlo en servidor sin romper clientes instalados.
+
 > Maquetas: `Celular` (hoja «Tu celular», paso del número) y `Celular-codigo` (hoja «Escribe el código»). Ambas son hojas
 > sobre el checkout atenuado: el celular se pide dentro del checkout, nunca obligando a ir a Cuenta (PATRONES-V2 §11).
 
@@ -39,7 +42,7 @@
 | Código vencido | «Pasó demasiado tiempo. Pide un código nuevo.» | CUS-AUT-007 |
 | Reenvío en espera | «Podrás reenviar el código en [N] s»; la app real espera 60 s | CUS-AUT-007 |
 | Demasiados envíos (429) | Mensaje del servidor con el tiempo de espera, o «escríbenos por WhatsApp» | CUS-AUT-007 |
-| Número en otra cuenta (409) | «Este número está en otra cuenta» · «Si lo usas aquí, la otra cuenta pierde la verificación y recibe un aviso. No se mueven pedidos ni datos.» · «Usar en esta cuenta» / «Cancelar» | CUS-AUT-008 |
+| Número en otra cuenta (409) | **Decisión 2026-11-17 (CUS-AUT-028):** «Este número ya está asociado a otra cuenta» · «Contactar soporte» / «Usar otro número»; sin traslado automático. (Antes: «Si lo usas aquí, la otra cuenta pierde la verificación…» · «Usar en esta cuenta».) | CUS-AUT-008 |
 | Verificado | «Número verificado» · «Tu número [número] quedó verificado. Ya puedes pedir.» · «Listo» (código); la maqueta cierra sola | CUS-AUT-007 |
 | Sin conexión | «Sin conexión. Revisa tu internet e inténtalo de nuevo.» | CUS-AUT-007 |
 | Verificación local en desarrollo | Si el servidor responde `verified = true` al enviar, se salta el código | CUS-AUT-007 |
