@@ -1,9 +1,9 @@
 # Campañas y consentimientos: propuesta aparte del plan móvil
 
 > **Propuesta pendiente de aprobación de Jesús. No manda.** 2026-10-12 · Trabajo, no canon. Es lo que la spec de la app
-> nativa ([`../movil-enmienda/insumos.md`](../movil-enmienda/insumos.md)) trae sobre campañas y consentimientos, sacado del plan
+> nativa (`archive/movil-enmienda:Docs/trabajo/movil-enmienda/insumos.md`) trae sobre campañas y consentimientos, sacado del plan
 > móvil por decisión de Jesús: son un producto propio, con su propia aprobación, y no deben retrasar ni condicionar las
-> apps. Las filas de origen están en [`../movil-enmienda/clasificacion.md`](../movil-enmienda/clasificacion.md) («Fuera de alcance →
+> apps. Las filas de origen están en `archive/movil-enmienda:Docs/trabajo/movil-enmienda/clasificacion.md` («Fuera de alcance →
 > campañas»: 3, 12, 15, 43, 44, 47, 51, 52, 55, 61, 63, 64, 65, 89, 96, 99).
 
 ## 1. Qué trae la spec
