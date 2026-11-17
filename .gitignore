@@ -80,3 +80,7 @@ apps/api/scripts/fixtures/*.json
 # sin personas): se commitean para que `pnpm db:seed:lugares` funcione en un
 # clon nuevo.
 !apps/api/scripts/fixtures/map-landmarks.json
+
+# Mobile UX: capturas de apps de terceros (pueden mostrar datos personales) y corridas de Maestro de un solo uso
+Docs/trabajo/mobile-ux/capturas/referencias/
+Docs/trabajo/mobile-ux/capturas/actual/_run/
