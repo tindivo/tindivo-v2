@@ -16,7 +16,7 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 
 # Direcciones y mapa
 
-> Verificado: 2026-11-17 · entorno: develop@946feb2e (código) · Aprobado por Jesús el AAAA-MM-DD (medio) — PILOTO, pendiente de su visto bueno
+> Verificado: 2026-11-18 · entorno: develop@97b552dd (código) · Aprobado por Jesús el AAAA-MM-DD (medio) — PILOTO, pendiente de su visto bueno
 
 ## Antes de tocar
 
@@ -34,7 +34,7 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 
 | ID | Requisito | Fuente | ★ |
 |---|---|---|---|
-| CUS-ADR-001 | La app debe permitir guardar varias direcciones con etiqueta (Casa, Trabajo u Otro), línea, referencia, pin y precisión. | Decisión de Jesús, 2026-11-17 (referencia mínima ratificada) · `packages/contracts/src/primitives.ts` | |
+| CUS-ADR-001 | La app debe permitir guardar varias direcciones con etiqueta (Casa, Trabajo u Otro), línea, referencia, pin y precisión. | `DECISIONS.md §13` (punto 12) · Decisión de Jesús, 2026-11-18 (la referencia vuelve a su mínimo de §13; vale también para Tindivo Entregas) | |
 | CUS-ADR-002 | La app debe rechazar textos basura en la línea y en la referencia, con el mismo criterio que el servidor. | `packages/contracts/src/primitives.ts` (`isGarbageText`) | |
 | CUS-ADR-003 | La app no debe permitir guardar una dirección sin pin, o con el pin fuera de la zona de reparto. | `DECISIONS.md §13` (punto 11, polígono) | ★ |
 | CUS-ADR-004 | El centro del pueblo nunca debe usarse como ubicación por defecto. | Defecto cerrado en la web (guardaba la plaza como «casa») | |
@@ -59,7 +59,7 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 | CA-ADR-04 | Dado un formulario nuevo sin lectura del sensor ni gesto del cliente, entonces la ubicación está vacía y no se puede guardar. | CUS-ADR-004, CUS-ADR-003 |
 | CA-ADR-05 | Dado dos direcciones con la segunda predeterminada, cuando se borra la predeterminada, entonces la que queda pasa a ser la predeterminada. | CUS-ADR-009 |
 | CA-ADR-06 | Dado una dirección guardada con su precisión, cuando se edita solo la referencia, entonces la precisión y la hora de confirmación no cambian. | CUS-ADR-010 |
-| CA-ADR-07 | Dado la dirección de la clienta A, cuando el cliente B la pide, la cambia o la borra por la API, entonces recibe «no encontrado» y la fila de A no cambia. | CUS-ADR-019 |
+| CA-ADR-07 | Dado la dirección de la clienta A, cuando el cliente B la pide, la cambia o la borra por la API, entonces recibe «no encontrado» y la fila de A no cambia. Prueba: `apps/api/lib/__tests__/mv4b-customer-routes.integration.test.ts` («solo del dueño…»). | CUS-ADR-019 |
 
 ## Reglas
 
@@ -74,5 +74,5 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
 | 4 | CUS-ADR-003 | Los valores de respaldo de cobertura de la web no coinciden con el polígono real. | `apps/customer/lib/coverage.ts` |
-| 5 | CUS-ADR-001 | `DECISIONS.md §13` (punto 12) dice otro mínimo de referencia que el código (`ADDRESS_REFERENCE_MIN`). Pendiente: corregir esa fila cuando Jesús confirme el mínimo vigente. | `DECISIONS.md` |
+| 7 | CUS-ADR-001 | Una dirección guardada antes del 2026-11-18 puede tener una referencia de 5 a 14 caracteres. El pedido con ella se rechaza (422) y la app todavía no pide completarla antes de usarla. | `packages/contracts/src/requests.ts` · `direcciones/elegir-direccion` |
 | 6 | CUS-ADR-006 | El umbral de precisión «suficiente» es una constante local de la web, no una regla compartida: Android e iOS no tienen de dónde leerlo. | `apps/customer/components/map-picker.tsx` |

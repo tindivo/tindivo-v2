@@ -9,7 +9,7 @@
 
 | Capacidad | Nombre | Actores | Líneas | Depende de | Dinero | Pantallas | Requisitos | Criterios |
 |---|---|---|---|---|---|---|---|---|
-| [direcciones](direcciones/capacidad.md) | Direcciones y mapa | CUS | pedidos-restaurante, entregas | — | no | 0 | 14 | 7 |
+| [direcciones](direcciones/capacidad.md) | Direcciones y mapa | CUS | pedidos-restaurante, entregas | — | no | 2 | 14 | 7 |
 
 ## Capacidades por línea de negocio
 
