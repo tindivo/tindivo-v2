@@ -16,6 +16,23 @@ enum class ReserveResult {
     Foreign,
 }
 
+/** Qué pasó al cambiar la cantidad de una línea ([CartStore.changeQuantity]). */
+sealed interface QuantityResult {
+    /** La línea ya no está (o no hay bolsa): no se tocó nada. */
+    data object Missing : QuantityResult
+
+    /** La cantidad cambió (o ya estaba en el tope). */
+    data object Updated : QuantityResult
+
+    /** Se quitó la línea [line], que estaba en [index] de la bolsa de [businessId]; quedan [remaining] líneas. */
+    data class Removed(
+        val businessId: String,
+        val line: CartLine,
+        val index: Int,
+        val remaining: Int,
+    ) : QuantityResult
+}
+
 /**
  * La bolsa del cliente, guardada en el teléfono (KT-9). Cada operación es un único `updateData`: leer, cambiar y
  * escribir no se intercalan con otra. Lo guardado que no cuadra con las reglas de la bolsa se trata como «sin bolsa»
@@ -64,6 +81,39 @@ class CartStore(
                 ?.toSnapshot()
                 ?.keepingReservationOf(current)
         }
+    }
+
+    /**
+     * Suma [delta] unidades a la línea de firma [signature], dentro de 1..[MAX_QUANTITY], en UNA escritura: dos toques
+     * seguidos suman dos porque cada uno parte de lo guardado, no de lo que la pantalla alcanzó a mostrar. Con una
+     * sola unidad y un [delta] negativo la línea se quita en esa misma escritura y se devuelve lo necesario para
+     * «Deshacer» ([QuantityResult.Removed]).
+     */
+    suspend fun changeQuantity(
+        signature: String,
+        delta: Int,
+    ): QuantityResult {
+        var result: QuantityResult = QuantityResult.Missing
+        store.updateData { current ->
+            val cart = current?.toCartOrNull()
+            val index = cart?.lines?.indexOfFirst { it.signature == signature } ?: -1
+            if (cart == null || index < 0) {
+                result = QuantityResult.Missing
+                current
+            } else {
+                val line = cart.lines[index]
+                val next =
+                    if (line.quantity + delta < 1) {
+                        result = QuantityResult.Removed(cart.businessId, line, index, remaining = cart.lines.size - 1)
+                        cart.removeLine(signature)
+                    } else {
+                        result = QuantityResult.Updated
+                        cart.setQuantity(signature, line.quantity + delta)
+                    }
+                next.toSnapshot()?.keepingReservationOf(current)
+            }
+        }
+        return result
     }
 
     /** Recuerda cómo se entrega la bolsa. Sin bolsa no hace nada: el método es de una bolsa, no de la app. */

@@ -138,6 +138,26 @@ class CartViewModelTest {
         }
 
     @Test
+    fun `CA-CRT-03 · dos toques rapidos en mas suman dos`() =
+        runTest {
+            store.add("n", "Pollería", line(quantity = 1))
+            val viewModel = newViewModel()
+            backgroundScope.launch(dispatcher) { viewModel.state.collect {} }
+            val signature =
+                viewModel
+                    .filled()
+                    .lines
+                    .single()
+                    .signature
+
+            viewModel.changeQuantity(signature, 1)
+            viewModel.changeQuantity(signature, 1)
+
+            viewModel.awaitQuantity(3)
+            assertEquals(3, checkNotNull(store.cart.first()).lines.single().quantity)
+        }
+
+    @Test
     fun `quitar una linea y vaciar la bolsa`() =
         runTest {
             store.add("n", "Pollería", line("a"))

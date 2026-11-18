@@ -8,6 +8,7 @@ import com.tindivo.core.network.generated.model.GetBusiness200ResponseData
 import com.tindivo.customer.bag.Cart
 import com.tindivo.customer.bag.CartLine
 import com.tindivo.customer.bag.CartStore
+import com.tindivo.customer.bag.QuantityResult
 import com.tindivo.customer.dish.MenuItemUi
 import com.tindivo.customer.dish.toDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -148,12 +149,16 @@ class CartViewModel
         fun changeQuantity(
             signature: String,
             delta: Int,
-        ) {
-            val line = (state.value as? CartUiState.Filled)?.lines?.firstOrNull { it.signature == signature } ?: return
-            if (line.quantity + delta < 1) {
-                remove(signature)
-            } else {
-                launchStore { store.setQuantity(signature, line.quantity + delta) }
+        ) = launchStore {
+            // La suma se hace DENTRO de la escritura: dos toques seguidos suman dos, no uno.
+            val result = store.changeQuantity(signature, delta)
+            if (result is QuantityResult.Removed) {
+                if (result.remaining > 0) {
+                    offerUndo(RemovedLine(result.businessId, result.line, result.index))
+                } else {
+                    dropUndo()
+                    confirmingClear.value = false
+                }
             }
         }
 
