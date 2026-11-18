@@ -132,7 +132,7 @@ class CartSnapshotTest {
             val out = ByteArrayOutputStream()
             CartSerializer.writeTo(snapshot(), out)
 
-            assertTrue(out.toString(Charsets.UTF_8).contains("\"version\":1"))
+            assertTrue(out.toString(Charsets.UTF_8).contains("\"version\":$CART_SNAPSHOT_VERSION"))
             assertEquals(snapshot(), CartSerializer.readFrom(ByteArrayInputStream(out.toByteArray())))
 
             val none = ByteArrayOutputStream()
