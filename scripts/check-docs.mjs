@@ -77,7 +77,10 @@ for (const f of alcance) {
   })
 
   // 3 · cabeceras
-  const cabeza = lineas.slice(0, 12).join('\n')
+  // La cabecera son las 12 primeras líneas después del bloque de metadatos (---), si lo hay: las capacidades de
+  // Docs/producto/ empiezan con uno (Codex, PR #186, CAX-002).
+  const cierre = lineas[0] === '---' ? lineas.indexOf('---', 1) : -1
+  const cabeza = lineas.slice(cierre + 1, cierre + 13).join('\n')
   // En producto/ la cabecera va en capacidad.md y en el índice; las fichas de pantalla heredan la de su capacidad.
   const sinCabeceraPropia = f.startsWith('Docs/producto/') && (f.includes('/pantallas/') || f.includes('/_plantilla/'))
   if (esCanon(f) && !sinCabeceraPropia && !/^>\s*Verificado:/m.test(cabeza)) errores.push(`${f} · falta «> Verificado: …» en la cabecera`)

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { after, describe, test } from 'node:test'
@@ -435,6 +435,21 @@ describe('indice', () => {
     assert.match(mal.out, /ejecuta pnpm spec:indice/)
     rmSync(join(r.dir, 'Docs/producto/README.md'))
     assert.equal(exec(r.dir, ['indice', '--check']).status, 1)
+  })
+  test('no escribe a través de un enlace simbólico (CAX-001)', (t) => {
+    const r = run(base(), ['indice', '--check'])
+    const fuera = join(tmp, `fuera-${Date.now()}.txt`)
+    writeFileSync(fuera, 'intacto\n')
+    try {
+      symlinkSync(fuera, join(r.dir, 'Docs/producto/README.md'), 'file')
+    } catch (e) {
+      t.skip(`este sistema no deja crear enlaces simbólicos: ${e.code}`)
+      return
+    }
+    const mal = exec(r.dir, ['indice'])
+    assert.equal(mal.status, 1)
+    assert.match(mal.out, /enlace simbólico/)
+    assert.equal(readFileSync(fuera, 'utf8'), 'intacto\n')
   })
   test('--check no escribe', () => {
     const r = run(base(), ['indice', '--check'])

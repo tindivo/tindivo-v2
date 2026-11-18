@@ -18,7 +18,7 @@
  * Funciona sobre `process.cwd()` (la raíz del repo) para poder probarse en un repo temporal.
  */
 import { execFileSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, normalize } from 'node:path'
 
 const ROOT = process.cwd()
@@ -578,6 +578,18 @@ function main() {
       }
       console.log(`✔ spec:indice — ${destino} al día`)
       return
+    }
+    // Solo se escribe un archivo normal dentro del repo: un enlace simbólico en el camino podría hacer que el índice
+    // pise otro archivo (Codex, PR #186, CAX-001).
+    for (const tramo of ['Docs', PRODUCTO, destino]) {
+      let enlace = false
+      try {
+        enlace = lstatSync(rutaAbs(tramo)).isSymbolicLink()
+      } catch {}
+      if (enlace) {
+        console.error(`✖ spec:indice — ${tramo} es un enlace simbólico: no se escribe el índice a través de él`)
+        process.exit(1)
+      }
     }
     writeFileSync(rutaAbs(destino), texto, 'utf8')
     console.log(`✔ spec:indice — ${destino} escrito`)

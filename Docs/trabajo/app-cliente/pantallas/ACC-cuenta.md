@@ -18,7 +18,7 @@
 
 1. **Título:** «Cuenta».
 2. **Tarjeta de perfil:** inicial en círculo («M»), nombre «María Quispe», correo con el ícono de Google («G»,
-   «maria.quispe@gmail.com») y el celular «987 654 321» con la insignia «Verificado».
+   «cliente@ejemplo.pe») y el celular «987 654 321» con la insignia «Verificado».
 3. **«Mis direcciones»:** una fila por dirección con su etiqueta («Casa», «Trabajo»), la insignia «Principal» en la
    predeterminada y la línea («Jr. Bolognesi 245»). Al final «+ Agregar dirección».
 4. **«Notificaciones»:** un solo interruptor con la línea «Avisos de tus pedidos» (decisión de Jesús, 2026-11-17; la maqueta dice «Pedidos y novedades»: reemplazado). Sin interruptor de promociones.
