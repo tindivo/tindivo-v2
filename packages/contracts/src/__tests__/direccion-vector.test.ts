@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { AddressLineSchema, AddressReferenceFormSchema, AddressReferenceSchema } from '../primitives'
+import {
+  AddressLineSchema,
+  AddressReferenceFormSchema,
+  AddressReferenceSchema,
+} from '../primitives'
 
 /**
  * Vector compartido de dirección: la web (este test) y Android
