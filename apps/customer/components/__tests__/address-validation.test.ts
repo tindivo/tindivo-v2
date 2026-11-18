@@ -24,17 +24,17 @@ describe('Address validation (isLineOk & getLineError)', () => {
     expect(getLineError('Jr')).toBe('Mínimo 5 caracteres')
   })
 
-  it('rechaza direcciones compuestas solo por números', () => {
+  it('CA-ADR-02 · rechaza direcciones compuestas solo por números', () => {
     expect(isLineOk('12345')).toBe(false)
     expect(getLineError('12345')).toBe('Ingresa una dirección real, no solo números')
   })
 
-  it('rechaza caracteres repetidos (spam)', () => {
+  it('CA-ADR-02 · rechaza caracteres repetidos (spam)', () => {
     expect(isLineOk('aaaaaa')).toBe(false)
     expect(getLineError('aaaaaa')).toBe('Evita repetir letras')
   })
 
-  it('rechaza patrones repetitivos', () => {
+  it('CA-ADR-02 · rechaza patrones repetitivos', () => {
     expect(isLineOk('callecalle')).toBe(false)
     expect(getLineError('callecalle')).toBe('Evita repetir patrones o palabras')
   })
@@ -49,18 +49,18 @@ describe('Address validation (isLineOk & getLineError)', () => {
 })
 
 describe('Reference validation (isReferenceOk & getReferenceError)', () => {
-  it('rechaza referencias con menos de 5 caracteres', () => {
+  it('CA-ADR-01 · rechaza referencias con menos de 5 caracteres', () => {
     expect(isReferenceOk('')).toBe(false)
     expect(isReferenceOk('Hola')).toBe(false)
     expect(getReferenceError('Hola')).toBe('Mínimo 5 caracteres')
   })
 
-  it('rechaza referencias solo con números', () => {
+  it('CA-ADR-02 · rechaza referencias solo con números', () => {
     expect(isReferenceOk('987654')).toBe(false)
     expect(getReferenceError('987654')).toBe('Agrega una descripción, no solo números')
   })
 
-  it('rechaza patrones repetitivos en referencia', () => {
+  it('CA-ADR-02 · rechaza patrones repetitivos en referencia', () => {
     expect(isReferenceOk('lalala')).toBe(false)
     expect(getReferenceError('lalala')).toBe('Evita repetir patrones o palabras')
   })
@@ -93,7 +93,7 @@ describe('Se puede guardar una dirección (canSaveAddress & getMissingLabel)', (
     accuracyM: 8,
   }
 
-  it('NO deja guardar sin coordenadas, por muy bien llenado que esté el resto', () => {
+  it('CA-ADR-04 · NO deja guardar sin coordenadas, por muy bien llenado que esté el resto', () => {
     const sinPunto: AddressValue = { ...completa, coords: null, accuracyM: null }
     expect(canSaveAddress(sinPunto, true)).toBe(false)
     expect(getMissingLabel(sinPunto, true)).toBe('Falta marcar tu ubicación')
@@ -116,7 +116,7 @@ describe('Se puede guardar una dirección (canSaveAddress & getMissingLabel)', (
     expect(getMissingLabel(aMano, true)).toBeNull()
   })
 
-  it('fuera de la zona no se guarda, aunque haya punto', () => {
+  it('CA-ADR-03 · fuera de la zona no se guarda, aunque haya punto', () => {
     expect(canSaveAddress(completa, false)).toBe(false)
     expect(getMissingLabel(completa, false)).toBe('Fuera de la zona de reparto')
   })
