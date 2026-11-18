@@ -10,7 +10,7 @@ Jacinto. Puede ser de persona a persona o de un negocio a una persona. **No comp
 Encargos, y se descartó (ADR 0034).
 
 **Por qué existe:** el motorizado ya está pagado por noche y tiene tiempo libre entre pedidos de comida; Entregas lo
-usa sin competir con los restaurantes aliados.
+usa sin competir con los restaurantes partners.
 
 ## La referencia está en el código
 

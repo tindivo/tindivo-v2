@@ -137,7 +137,7 @@ Totales: equivale 115 · modifica 12 · retira 10 · sustituye 3 · total 140
 | CUS-TRK-010 | equivale | CUS-TRK-010 | mismos avisos con mensaje, tono y sonido | Haiku = Gemini |
 | CUS-TRK-011 | equivale | CUS-TRK-011 | mismo silenciar o activar el sonido | Haiku = Gemini |
 | CUS-TRK-012 | equivale | CUS-TRK-012 | misma pantalla que no se apaga mientras vive el pedido | Haiku = Gemini |
-| CUS-TRK-013 | modifica | CUS-TRK-013 | **contradicción abierta**: dice «una vez por pedido» y CUS-NOT-005 «una sola vez» | Claude (resolvió desacuerdo o duda) |
+| CUS-TRK-013 | modifica | CUS-NOT-005 | Se ofrece una sola vez, tras el primer pedido confirmado (manda CUS-NOT-005; Jesús, 2026-11-17) | Claude (resolvió desacuerdo o duda) |
 | CUS-TRK-014 | equivale | CUS-TRK-014 | mismo refresco al volver a primer plano y cada 8 s | Haiku = Gemini |
 | CUS-TRK-015 | modifica | CUS-TRK-015 | falta «no se presentó» tiene regla propia (TRK-022) | Haiku = Gemini |
 | CUS-TRK-016 | equivale | CUS-TRK-016 | solo web en ambas listas | Claude (resolvió desacuerdo o duda) |

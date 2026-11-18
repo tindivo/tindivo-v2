@@ -12,13 +12,14 @@ un nombre retirado, el documento está viejo: manda este glosario (estándar §3
 |---|---|---|
 | **Línea de negocio** | `Docs/negocio/servicios/<línea>.md` | A quién se vende y con qué reglas comerciales (pedidos de restaurante, Entregas, Store). No tiene código propio: es una combinación de capacidades y parámetros |
 | **Capacidad** | `Docs/producto/<capacidad>/`, un módulo de `packages/backend`, una carpeta `feature/` por app | Algo que el sistema sabe hacer y que usan una o más líneas (direcciones, checkout, despacho…). Estándar §2.4 |
-| **Partner** o **negocio aliado** | `businesses` | Un negocio que vende por Tindivo y usa su flota; paga a Tindivo por pedido entregado (`Docs/negocio/dinero.md`). «Partner» y «aliado» son lo mismo |
+| **Partner** | `businesses` | Un negocio que ya trabaja con Tindivo de forma recurrente: vende por Tindivo, usa su flota y le paga por pedido entregado (`Docs/negocio/dinero.md`) |
+| **Aliado estratégico** | — (no tiene tabla) | Un prospecto: alguien con quien Tindivo quiere trabajar y aún no es partner (por ejemplo, un supermercado conectado por API más adelante). Cuando empieza a operar, pasa a ser partner. Decisión de Jesús, 2026-11-17 |
 
 ## Servicios
 
 | Nombre oficial | En el código | Qué es |
 |---|---|---|
-| **Pedido de restaurante** | `orders`, `ORDER_STATUSES` (`enums.ts`) | Un cliente pide comida a un negocio aliado, por la app o por teléfono a la cajera. Se entrega con motorizado (`delivery_method = 'delivery'`) o se recoge en el local (`'pickup'`) |
+| **Pedido de restaurante** | `orders`, `ORDER_STATUSES` (`enums.ts`) | Un cliente pide comida a un partner, por la app o por teléfono a la cajera. Se entrega con motorizado (`delivery_method = 'delivery'`) o se recoge en el local (`'pickup'`) |
 | **Recojo en el local** | `delivery_method = 'pickup'`, estado `ready_for_pickup` | El cliente recoge su pedido en el mostrador. En el mostrador no se fía: llega a cocina pagado |
 | **Tindivo Entregas** | `courier_orders`, `courier_order_events`, `COURIER_TRANSITIONS` (`courier-status.ts`) | Llevar de un punto A a un punto B algo **ya coordinado y pagado**, dentro del pueblo. S/ 3 que paga el cliente; de lunes a domingo, de 18:00 a 23:00 (ADR 0035). No compra nada |
 | **Tindivo Store** | `store_products`, `store_product_images`, `store_categories`, `store_events`; `STORE_STATUSES` (`store.ts`) | Catálogo de segunda mano de San Jacinto (`DECISIONS.md §32`) |
@@ -42,8 +43,8 @@ un nombre retirado, el documento está viejo: manda este glosario (estándar §3
 | **Negocio**, y su **cajera** | rol `business` | Acepta y prepara pedidos; teclea los que le llegan por teléfono (`'business_manual'`, la mayoría) |
 | **Motorizado** | rol `driver` | Recoge y entrega; cobra en la puerta y rinde lo cobrado |
 | **Admin** | rol `admin` | Jesús: operación, cobros, apelaciones |
-| **Aliado** | negocio en `businesses` con catálogo en Tindivo | Negocio que vende por Tindivo y paga comisión |
-| **Negocio del directorio** | `directory_businesses` | Negocio conocido en el pueblo, aliado o no; sirve de punto A o B en Entregas y en el mapa |
+| **Partner** | negocio en `businesses` con catálogo en Tindivo | Negocio que vende por Tindivo y paga comisión. Antes se le decía «aliado»; desde el 2026-11-17 «aliado estratégico» es un prospecto (ver arriba), y donde un texto anterior diga «aliado» por un negocio que ya opera, léase partner |
+| **Negocio del directorio** | `directory_businesses` | Negocio conocido en el pueblo, partner o no; sirve de punto A o B en Entregas y en el mapa |
 
 Un mismo usuario puede tener varios roles (`users` + `user_roles`).
 

@@ -70,7 +70,7 @@ La hoja sube 250 ms; la campana suena una vez (ondas, 600 ms). Con «reducir mov
 ## Pendiente (va a `decisiones-abiertas.md`)
 
 - **Decisión A de Jesús (obligatorias o no):** la maqueta las trata como opcionales («Ahora no» las cierra para siempre). Si fueran obligatorias, esta hoja no tendría «Ahora no» y hay que definir qué pasa cuando el sistema las deniega.
-- **Documento ↔ documento:** las decisiones de Jesús del 2026-11-16 («Notificaciones al instalar») dicen que se pregunta «al instalar»; la maqueta las pregunta después del primer pedido confirmado, y `CUS-TRK-013` las ofrece una vez por pedido con tope de 2 descartes. No se elige.
+- ~~Documento ↔ documento~~ **Resuelto el 2026-11-17:** se pregunta una sola vez, tras el primer pedido confirmado (CUS-NOT-005, que modifica CUS-TRK-013). Ni «al instalar» ni «una vez por pedido».
 - **Maqueta ↔ código:** no hay código de notificaciones en Android. El servidor ya tiene `PUT /push/devices/{installId}`, pero la app no lo llama.
 - La etiqueta de cada notificación sigue la regla `${event_type}-${shortId}` (invariante 5 de `AGENTS.md`).
 - El consentimiento comercial (Ley 29733) necesita registrar versión y fecha de lo que la persona aceptó; falta decidir dónde se guarda.
