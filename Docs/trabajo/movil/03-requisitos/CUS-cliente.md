@@ -225,7 +225,7 @@ de contraentrega, promos, vuelto de la noche, plazos, tarifas) y `POST /orders` 
 | CUS-ORD-001 | La app debe listar el historial del cliente con negocio, resumen de ítems, código, fecha relativa, total y estado. | **Últimos 40**, sin paginación; total = importe + envío; fecha relativa («hace 5 min», «ayer», fecha corta). Sin sesión lleva a entrar. | `app/pedidos/page.tsx:76-231` | ✅ | ADAPTAR · M1 |
 | CUS-ORD-002 | La app debe mostrar el estado con una etiqueta corta. | ⚠️ `STATUS_LABEL` **no cubre `awaiting_payment` ni `ready_for_pickup`**: el cliente vería el texto interno. Debe salir de la misma proyección que el seguimiento. | `pedidos/page.tsx:39-50` | ⚠️ | IGUAL · M1 |
 | CUS-ORD-003 | La app debe ofrecer, según el pedido, «Ver seguimiento», «Ver caso de pago», calificar y «Volver a pedir». | «Ver seguimiento» si está activo; «Ver caso de pago» si `proof_rejected_final`. | `pedidos/page.tsx:186-209` | ✅ | IGUAL · M1 |
-| CUS-ORD-004 | La app debe ofrecer ayuda por WhatsApp en un pedido cancelado. | Mensaje con el código. ⚠️ Usa `#TDV-`; la referencia oficial es `#TND-` (`DECISIONS §6`): unificar. | `pedidos/page.tsx:211-221`; `appeal-create-view.tsx:26-28` | ⚠️ | ADAPTAR · M1 |
+| CUS-ORD-004 | La app debe ofrecer ayuda por WhatsApp en un pedido cancelado. | Mensaje con el código. `#TDV-` es el prefijo oficial (decisión de Jesús, 2026-11-17). | `pedidos/page.tsx:211-221`; `appeal-create-view.tsx:26-28` | ⚠️ | ADAPTAR · M1 |
 | CUS-ORD-005 | La app debe mantener el contador de pedidos activos con una sola consulta compartida. | `ACTIVE_ORDER_STATUSES`; se descarta la respuesta vieja si llega una nueva (testigo `ultimaPeticion`). | `lib/active-orders.ts` | ✅ | ADAPTAR · M1 |
 | CUS-ORD-006 | El servidor debe paginar el historial y devolver el estado ya proyectado. | Hoy: 40 fijos por PostgREST. | — | ➕ | NUEVO · M1 |
 
@@ -365,7 +365,7 @@ CA-CRT-01 · Bolsa de un solo negocio                                       (CUS
 | # | Hallazgo | Dónde |
 |---|---|---|
 | 1 | El historial (`STATUS_LABEL`) **no traduce** `awaiting_payment` ni `ready_for_pickup`: se ve el estado interno. | `app/pedidos/page.tsx:39-50` |
-| 2 | Los mensajes de WhatsApp usan `#TDV-…`; la referencia oficial es `#TND-…`. | `pedidos/page.tsx:213`, `appeal-create-view.tsx:27` |
+| 2 | Los mensajes de WhatsApp usan `#TDV-…`, el prefijo oficial (decisión de Jesús, 2026-11-17). | `pedidos/page.tsx:213`, `appeal-create-view.tsx:27` |
 | 3 | La vista de bloqueo se activa comparando el **texto** del error con `/bloquead/i`. | `use-checkout-actions.ts:357,374` |
 | 4 | Los *fallback* de cobertura del cliente (`-9.1547, -78.5042`) no coinciden con los vivos (`-9.1465, -78.2779`). | `lib/coverage.ts:22-30` |
 | 5 | `ADDRESS_REFERENCE_MIN` es **5** en código; `DECISIONS.md §13` dice **15**. | `contracts/primitives.ts:68` |
