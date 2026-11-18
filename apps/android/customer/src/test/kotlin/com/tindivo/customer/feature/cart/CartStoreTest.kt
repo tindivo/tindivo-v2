@@ -13,6 +13,7 @@ import com.tindivo.customer.bag.CartStore
 import com.tindivo.customer.bag.MAX_LINES
 import com.tindivo.customer.bag.MAX_MODIFIERS
 import com.tindivo.customer.bag.MAX_QUANTITY
+import com.tindivo.customer.bag.fingerprint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
