@@ -22,6 +22,8 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.math.BigDecimal
+import java.time.Clock
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CartViewModelTest {
@@ -29,6 +31,7 @@ class CartViewModelTest {
     val folder = TemporaryFolder()
 
     private val dispatcher = UnconfinedTestDispatcher()
+    private val menuServer = MenuServer(dispatcher)
     private lateinit var store: CartStore
 
     @Before
@@ -47,6 +50,7 @@ class CartViewModelTest {
 
     @After
     fun tearDown() {
+        menuServer.close()
         Dispatchers.resetMain()
     }
 
@@ -58,7 +62,7 @@ class CartViewModelTest {
         note: String? = null,
     ) = CartLine(itemId, "Lomo $itemId", BigDecimal(price), modifiers, note, quantity, null)
 
-    private fun newViewModel() = CartViewModel(store)
+    private fun newViewModel() = CartViewModel(store, menuServer.catalog(), Clock.fixed(CART_TEST_NOW, ZoneOffset.UTC))
 
     private fun String.plain() = replace('\u00A0', ' ')
 
@@ -247,7 +251,7 @@ class CartViewModelTest {
             store.replace("otro", "Chifa", line("fideos"))
             viewModel.undoRemove()
 
-            val now = viewModel.state.first { it is CartUiState.Filled && it.businessId == "otro" } as CartUiState.Filled
+            val now = viewModel.awaitFilled { it.businessId == "otro" }
             assertEquals(listOf("Lomo fideos"), now.lines.map { it.name })
         }
 

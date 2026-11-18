@@ -65,6 +65,7 @@ fun CartDestination(
                 onCheckout = onCheckout,
                 onChangeQuantity = viewModel::changeQuantity,
                 onUndoRemove = viewModel::undoRemove,
+                onRetryCheck = viewModel::retryCheck,
                 onAskClear = viewModel::askClear,
                 onCancelClear = viewModel::cancelClear,
                 onConfirmClear = viewModel::confirmClear,
@@ -78,6 +79,7 @@ class CartActions(
     val onSeeBusinesses: () -> Unit,
     val onChangeQuantity: (signature: String, delta: Int) -> Unit,
     val onUndoRemove: () -> Unit,
+    val onRetryCheck: () -> Unit,
     val onAskClear: () -> Unit,
     val onCancelClear: () -> Unit,
     val onConfirmClear: () -> Unit,
@@ -122,7 +124,7 @@ fun CartScreen(
         },
         bottomBar = {
             if (state is CartUiState.Filled) {
-                CartBottomBar(cta = state.continueCta, onContinue = actions.onCheckout)
+                CartBottomBar(cta = state.continueCta, onContinue = actions.onCheckout, onRetry = actions.onRetryCheck)
             }
         },
     ) { innerPadding ->
@@ -259,7 +261,7 @@ private fun CartPreview() {
     TindivoTheme {
         CartScreen(
             state = CartUiState.Filled("n", "Pollería Don Lucho", listOf(line), "S/ 25.00"),
-            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}),
+            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}),
         )
     }
 }

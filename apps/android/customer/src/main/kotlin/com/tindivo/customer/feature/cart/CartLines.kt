@@ -49,6 +49,13 @@ internal fun CartLineRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        line.issues.forEach {
+            Text(
+                text = stringResource(it.messageRes()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         QuantityControls(line = line, actions = actions)
     }
 }
@@ -88,3 +95,13 @@ private fun QuantityControls(
         }
     }
 }
+
+private fun LineIssue.messageRes(): Int =
+    when (this) {
+        LineIssue.Removed -> R.string.cart_issue_removed
+        LineIssue.Unavailable -> R.string.cart_issue_unavailable
+        LineIssue.OutOfWindow -> R.string.cart_issue_out_of_window
+        LineIssue.PriceChanged -> R.string.cart_issue_price_changed
+        LineIssue.OptionRemoved -> R.string.cart_issue_option_removed
+        LineIssue.InvalidSelection -> R.string.cart_issue_invalid_selection
+    }

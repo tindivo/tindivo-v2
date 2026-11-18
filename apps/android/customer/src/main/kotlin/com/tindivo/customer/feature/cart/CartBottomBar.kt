@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +26,7 @@ import com.tindivo.customer.R
 internal fun CartBottomBar(
     cta: ContinueUi,
     onContinue: () -> Unit,
+    onRetry: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
@@ -36,6 +38,11 @@ internal fun CartBottomBar(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
+            if (it == ContinueBlock.CheckFailed) {
+                TextButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(text = stringResource(R.string.cart_retry))
+                }
+            }
         }
         Button(
             onClick = onContinue,

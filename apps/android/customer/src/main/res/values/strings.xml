@@ -319,6 +319,13 @@
     <string name="cart_continue_checking">Cargando…</string>
     <string name="cart_continue_check_failed">No pudimos revisar tu bolsa con la carta. Revisa tu conexión.</string>
     <string name="cart_continue_closed">El restaurante está cerrado ahora</string>
+    <string name="cart_retry">Reintentar</string>
+    <string name="cart_issue_removed">Este producto ya no está en la carta</string>
+    <string name="cart_issue_unavailable">Agotado por ahora</string>
+    <string name="cart_issue_out_of_window">Hoy no se sirve a esta hora</string>
+    <string name="cart_issue_price_changed">El precio cambió. Quítalo y vuelve a agregarlo.</string>
+    <string name="cart_issue_option_removed">Una opción que elegiste ya no está disponible</string>
+    <string name="cart_issue_invalid_selection">El negocio cambió las opciones de este plato. Vuelve a elegirlas.</string>
     <string name="cart_continue_invalid">Quita los productos marcados para continuar</string>
     <string name="checkout_title">Confirmar pedido</string>
     <string name="checkout_eta">Llega en %1$d–%2$d min</string>
