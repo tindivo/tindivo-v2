@@ -79,10 +79,13 @@ Only when the path is one or more `https://github.com/...` URLs, or several loca
 # Detect the correct Python interpreter (handles uv tool, pipx, venv, system installs)
 PYTHON=""
 GRAPHIFY_BIN=$(which graphify 2>/dev/null)
-# 1. uv tool installs — most reliable on modern Mac/Linux
+# 1. uv tool installs. Tindivo: only look for an EXISTING install; `uv tool dir` just prints a path
+#    (no download, no environment). Never `uv tool run`, `uvx` or `pipx run` here: they can download.
 if [ -z "$PYTHON" ] && command -v uv >/dev/null 2>&1; then
-    _UV_PY=$(uv tool run --from graphifyy python -c "import sys; print(sys.executable)" 2>/dev/null)
-    if [ -n "$_UV_PY" ]; then PYTHON="$_UV_PY"; fi
+    _UV_DIR=$(uv tool dir 2>/dev/null)
+    for _C in "$_UV_DIR/graphifyy/Scripts/python.exe" "$_UV_DIR/graphifyy/bin/python"; do
+        if [ -z "$PYTHON" ] && [ -x "$_C" ]; then PYTHON="$_C"; fi
+    done
 fi
 # 2. Read shebang from graphify binary (pipx and direct pip installs)
 if [ -z "$PYTHON" ] && [ -n "$GRAPHIFY_BIN" ]; then
