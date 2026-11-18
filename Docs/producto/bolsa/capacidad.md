@@ -9,7 +9,7 @@ codigo:
   web: [apps/customer/lib/cart.ts, apps/customer/lib/cart-refresh.ts, apps/customer/lib/cart-validation.ts]
   android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/Cart.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/CartStore.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/CartSnapshot.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/CartSerializer.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/ModifierSelection.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/Money.kt]
   ios: []
-  backend: [packages/contracts/src/client-requests.ts]
+  backend: [packages/contracts/src/cart.ts, packages/contracts/src/requests.ts, packages/contracts/src/client-requests.ts]
 operaciones: []
 reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSelection, DELIVERY_METHODS]
 ---
@@ -29,8 +29,8 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
   mostrar; la web del cliente se apaga y no se corrige.
 - El método de entrega (delivery o recojo) **se elige en el checkout**; la bolsa solo lo recuerda y lo muestra como
   etiqueta (decisión de Jesús, 2026-11-18).
-- Los topes viven en `packages/contracts` (`CART_MAX_*`); Android los copia y un vector compartido lo comprueba
-  (`packages/contracts/fixtures/vectores/bolsa.json`).
+- Los topes viven en `packages/contracts` (`CART_MAX_*`); Android los copia; el vector compartido que lo comprobará
+  (`packages/contracts/fixtures/vectores/bolsa.json`) llega con el PR de Android (CA-CRT-06, CA-CRT-09).
 - Lo que comprueba el checkout antes de pagar (sesión, celular, dirección, pago pendiente: antes CUS-CRT-008) es de la
   capacidad checkout y migra con ella.
 - Trampa conocida: la validación contra la carta **no** se guarda; se repite al abrir la bolsa.
@@ -65,7 +65,7 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
 | CA-CRT-03 | Dado una línea con cantidad 1, cuando se toca «−», entonces la línea se quita; si era la última, la bolsa queda vacía sin negocio ni método. | CUS-CRT-003 |
 | CA-CRT-04 | Dado una bolsa guardada, cuando la app se cierra y se vuelve a abrir, entonces las líneas y el método siguen y la validación no. | CUS-CRT-004 |
 | CA-CRT-05 | Dado una bolsa con un plato que la carta vigente marca agotado o con otro precio, cuando se abre la bolsa, entonces se avisa en esa línea y «Continuar» no avanza hasta quitarla. | CUS-CRT-005 |
-| CA-CRT-06 | Dado el vector compartido de montos, entonces el subtotal de cada caso coincide exactamente en web y Android, y un precio con tres decimales se rechaza. | CUS-CRT-006 |
+| CA-CRT-06 | Dado el vector compartido de montos, entonces en Android (y en iOS cuando empiece) el subtotal de cada caso es exactamente el del vector y un precio con tres decimales se rechaza. La web del cliente queda fuera: suma con `float`, redondea y no se corrige porque se apaga. Lo prueba el PR de Android, que trae el vector. | CUS-CRT-006 |
 | CA-CRT-07 | Dado un negocio cerrado, cuando se abre su bolsa, entonces «Continuar» no avanza y dice «El restaurante está cerrado ahora». | CUS-CRT-009 |
 | CA-CRT-08 | Dado una bolsa con el método recojo, entonces la etiqueta dice «Recojo» y no aparece la fila del envío. | CUS-CRT-010 |
 | CA-CRT-09 | Dado el vector compartido de topes, entonces la bolsa no deja pasar de `CART_MAX_LINES` líneas, `CART_MAX_QUANTITY` unidades ni `CART_MAX_MODIFIERS` opciones, y el servidor rechaza con 422 el mismo exceso. | CUS-CRT-011 |
