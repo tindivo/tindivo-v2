@@ -298,7 +298,7 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 
 ## 7. Pagos del cliente
 
-> **Corregido el 2026-11-17 (decisión de Jesús):** el umbral es **más de S/ 80** (`prepay_threshold` en `app_settings`, comparación estricta `>` sobre pedido + envío), como ya hacen la base y el código desde la migración 0044. El S/ 100 con «≥» que decía esta sección estaba viejo.
+> **Corregido el 2026-11-17 (decisión de Jesús):** el umbral es **más de S/ 80**: el prepago es obligatorio cuando el pedido más el envío supera `prepay_threshold` (`app_settings`). Así lo hace hoy `create_customer_order` en su última versión (`0283`, línea 460: `v_order_amount + v_delivery_fee > v_threshold`). El valor 80 está en `app_settings` desde la `0044`; la forma de comparar cambió entre versiones (la `0044` usaba `>=` y solo el monto del pedido), así que para la regla vigente se cita la `0283`, no la `0044`. El S/ 100 con «≥» que decía esta sección estaba viejo.
 
 - **Default contra entrega** para pedidos de **S/ 80 o menos** (efectivo o Yape/Plin al recibir).
 - **Prepago obligatorio** para pedidos de **más de S/ 80** (solo Yape/Plin prepago). El checkout fuerza prepago y oculta contra entrega.

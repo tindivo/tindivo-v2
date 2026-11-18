@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { after, describe, test } from 'node:test'
@@ -450,6 +450,24 @@ describe('indice', () => {
     assert.equal(mal.status, 1)
     assert.match(mal.out, /enlace simbólico/)
     assert.equal(readFileSync(fuera, 'utf8'), 'intacto\n')
+  })
+  test('no escribe si un directorio padre es un enlace simbólico (CAX-001)', (t) => {
+    const r = run(base(), ['indice', '--check'])
+    // Docs/producto pasa a ser un enlace a una carpeta de fuera que ya tiene un README.md propio.
+    const fuera = join(tmp, `fuera-dir-${Date.now()}`)
+    cpSync(join(r.dir, 'Docs/producto'), fuera, { recursive: true })
+    writeFileSync(join(fuera, 'README.md'), 'intacto\n')
+    rmSync(join(r.dir, 'Docs/producto'), { recursive: true, force: true })
+    try {
+      symlinkSync(fuera, join(r.dir, 'Docs/producto'), 'junction')
+    } catch (e) {
+      t.skip(`este sistema no deja crear enlaces de carpeta: ${e.code}`)
+      return
+    }
+    const mal = exec(r.dir, ['indice'])
+    assert.equal(mal.status, 1)
+    assert.match(mal.out, /Docs\/producto es un enlace simbólico/)
+    assert.equal(readFileSync(join(fuera, 'README.md'), 'utf8'), 'intacto\n')
   })
   test('--check no escribe', () => {
     const r = run(base(), ['indice', '--check'])
