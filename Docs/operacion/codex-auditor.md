@@ -1,6 +1,6 @@
 # CODEX_AUDITOR_PROTOCOL
 
-> Verificado: 2026-11-11 · entorno: Windows de Jesús, `codex-cli 0.162.0` (renovación del modo de §13.1 bis) · Antes vivía en `.claude/rules/codex-worker.md`; ahí queda su resumen
+> Verificado: 2026-11-11 · entorno: Windows de Jesús, `codex-cli 0.162.0` (renovación del modo de §13.1 bis) · Antes vivía en `.claude/rules/codex-worker.md`; ahí queda su resumen · Enmienda: G01 cubre la ruta de este archivo (Jesús, 2026-11-18)
 
 **Versión:** 1.0.0  
 **Fecha de revisión técnica:** 2026-10-15  
@@ -62,7 +62,7 @@ Las regex siguientes son normativas; el backtick delimita la expresión y no per
 
 - **P02 — Entorno y edge**. Ruta: `(^|/)(environments?/prod(uction)?|deploy/prod(uction)?|supabase/functions|edge[-_]?functions)(/|$)`. Contenido: `\b(DATABASE_URL|SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|PRODUCTION|PROD_ENV|NODE_ENV\s*[=:]\s*["\x27]?production)\b`.
 
-- **G01 — Integridad del control**. Ruta: `(^|/)(AGENTS(\.override)?\.md|CODEX_AUDITOR_PROTOCOL\.md|\.codex/.*|\.agents/.*|CODEOWNERS|.*audit.*gate.*|.*merge.*gate.*)$`. Contenido: `\b(PENDIENTE_AUDITORIA_CODEX_POST_CUOTA|dangerously-bypass-approvals-and-sandbox|danger-full-access|skip[_-]?audit|bypass[_-]?audit)\b`.
+- **G01 — Integridad del control**. Ruta: `(^|/)(AGENTS(\.override)?\.md|CODEX_AUDITOR_PROTOCOL\.md|Docs/operacion/codex-auditor\.md|\.codex/.*|\.agents/.*|CODEOWNERS|.*audit.*gate.*|.*merge.*gate.*)$`. Contenido: `\b(PENDIENTE_AUDITORIA_CODEX_POST_CUOTA|dangerously-bypass-approvals-and-sandbox|danger-full-access|skip[_-]?audit|bypass[_-]?audit)\b`.
 
 Una modificación de workflows, dependencias o lockfiles también activa Codex si cambia permisos, secretos, un paquete de auth/pagos/criptografía, el artefacto productivo o la capacidad de saltar controles. Los nombres locales de módulos críticos DEBEN añadirse como rutas explícitas antes de la primera entrega. La lista es el mínimo obligatorio, no una lista cerrada de tecnologías.
 
