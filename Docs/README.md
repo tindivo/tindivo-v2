@@ -391,7 +391,12 @@ La complejidad de la tarea elige el modelo, no la costumbre. Claude elige y lo d
 
 | Tarea | Quién y con qué |
 |---|---|
-Reparto aprobado por Jesús el 2026-11-18 (conversación con Claude Code; propuesta auditada antes por Fable):
+Reparto pedido y aprobado por Jesús el 2026-11-18 en la conversación con Claude Code. Su pedido: «para todo lo que es
+lectura, Haiku es esencial para darte el contexto […] Para programación, yo creo que Opus con Sonnet también se pueden
+apalancar. Y si necesitamos cuestiones más de arquitectura, auditoría para toma de decisiones importantes y críticas,
+yo creo que Fable es un buen indicador […] importante también lo que es Codex y también utilizar Hydrogen o […] Argon
+[…] Gemini Flash […] si no se considera eso [la cuota], podríamos tener un plan alternativo que sería una reevaluación
+con el mismo Opus». Su aprobación de la propuesta (auditada antes por Fable): «sí, apruebo la v2, procede».
 
 | Tarea | Titular | Plan B sin cuota |
 |---|---|---|
@@ -400,7 +405,7 @@ Reparto aprobado por Jesús el 2026-11-18 (conversación con Claude Code; propue
 | Lectura masiva, barridos, inventarios, conteos | **Antigravity** (`gemini-3.8-flash-high`) | Subagente Haiku |
 | Programar con encargo cerrado | Subagente de Claude en **Sonnet** | Claude en su modelo principal (y lo revisa otro subagente limpio) |
 | Diseño, piloto, encargos, orquestación | Claude en su modelo principal | — |
-| Revisar lo que escribió cualquier Claude | Subagente en contexto limpio que no recibe el plan, o la CI (§7.4) | — |
+| Revisar lo que escribió cualquier Claude | Subagente en contexto limpio que no recibe el plan; la CI sola, solo para lo rutinario (§7.4) | — |
 | Arquitectura y decisiones críticas | Subagente en **Fable**, con preguntas cerradas (gasta mucho) | Claude en contexto limpio |
 | Segunda opinión independiente | Antigravity en **Gemini Argon o Hydrogen** (autorizados por Jesús el 2026-11-14) | Claude en contexto limpio |
 | Atacar una decisión importante (§7.4) | Codex con razonamiento alto | Contingencia de `.claude/rules/codex-worker.md` §10 |
@@ -440,16 +445,19 @@ Antigravity no cargan skills: el encargo copia el párrafo que aplica.
 | 5 | Plan | Rebanadas verticales en orden: contrato → servidor → clientes → e2e, cada una con su CA | `planning-and-task-breakdown` |
 | 6 | Implementación | Test que falla citando su CA → código mínimo → verde | `test-driven-development`, `incremental-implementation`, `ponytail`, `frontend-ui-engineering`, `source-driven-development`, `observability-and-instrumentation` |
 | 7 | Verificación | Gates con `--force`; el orquestador comprueba exit codes y `Cached: 0`: lint, type-check, unitarios, `db:cycle`, e2e, Kotlin en CI, `spec:validar` y `spec:traza` sin avisos ★ | `debugging-and-error-recovery` si algo falla |
-| 8 | Revisión | Subagente en contexto limpio sin el plan, o la CI; nunca el autor ni quien escribió el encargo. Codex si dispara. Si toca dinero: revisión explícita de Jesús, aparte del merge | `code-review-and-quality`, `code-simplification`, `security-and-hardening`, `doubt-driven-development` |
+| 8 | Revisión | Subagente en contexto limpio sin el plan; nunca el autor ni quien escribió el encargo. La CI sola basta solo para lo rutinario (§7.4). Codex si dispara. Si toca dinero: revisión explícita de Jesús, aparte del merge | `code-review-and-quality`, `code-simplification`, `security-and-hardening`, `doubt-driven-development` |
 | 9 | Entrega | PR con impacto documental, matriz de paridad, evidencia y «listo para merge» | `git-workflow-and-versioning` |
 
 **Un cambio no termina mientras una app de la matriz esté en `cambia` sin hacer.**
 
-**Ciclo corto.** Califica solo si se cumple todo, comprobado sobre el diff: toca una sola app; ningún archivo en
-`packages/contracts`, el OpenAPI, `supabase/` ni `producto/`; ningún disparador de Codex; no toca un símbolo de
-`reglas:` de una capacidad; como mucho 5 archivos y 150 líneas sin contar tests. Pasos: graphify de consumidores → test
-que falla y cambio → gates de esa app con `--force` → revisión en contexto limpio o CI → PR titulado «ciclo corto» con
-la salida del clasificador. Si un criterio deja de cumplirse, se sigue el ciclo completo desde el paso 4.
+**Ciclo corto.** Califica solo si se cumple todo, comprobado sobre el diff: toca una sola app; no cambia lo que la
+persona ve ni hace, una regla de negocio ni un documento que manda (nada que necesite aprobación de diseño, negocio o
+canon); ningún archivo en `packages/contracts`, el OpenAPI, `supabase/` ni `producto/`; ningún disparador de Codex; no
+toca un símbolo de `reglas:` de una capacidad; como mucho 5 archivos y 150 líneas sin contar tests. Pasos: graphify de
+consumidores → test que falla y cambio → gates de esa app con `--force` → revisión ajena como en el paso 8 → PR
+titulado «ciclo corto» con la salida del clasificador. Si un criterio deja de cumplirse, se para y se hacen **todos**
+los pasos del ciclo completo que falten, desde el primero que no se cumplió (si cambia lo que se ve o una regla, desde
+el paso 2).
 
 **Pruebas entre apps**, en este orden: (1) contrato por cliente: respuestas reales de la API, guardadas como fixtures
 desde el OpenAPI, que los tests de Kotlin (y de Swift) decodifican en CI; (2) compatibilidad hacia atrás: las
