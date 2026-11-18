@@ -59,7 +59,7 @@ data class AddressUi(
 
 /** Lo mínimo que acepta `POST /customer/orders` para `deliveryAddress` y `deliveryReference`. */
 const val MIN_ADDRESS_LENGTH = 5
-const val MIN_REFERENCE_LENGTH = 5
+const val MIN_REFERENCE_LENGTH = 15 // ADDRESS_REFERENCE_MIN de packages/contracts (D-31)
 const val MAX_NAME_LENGTH = 120
 const val MAX_DRIVER_NOTE_LENGTH = 200
 

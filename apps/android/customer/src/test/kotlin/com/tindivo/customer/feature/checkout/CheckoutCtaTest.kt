@@ -69,6 +69,13 @@ class CheckoutCtaTest {
     }
 
     @Test
+    fun `CA-ADR-01 · una direccion guardada con una referencia de 14 caracteres pide completarla antes de pedir`() {
+        // La API rechaza el pedido por debajo de ADDRESS_REFERENCE_MIN (15): el botón no debe dejar enviarlo.
+        assertEquals(Cta.NeedReference, ready().copy(addresses = listOf(home.copy(reference = "Frente al pozo"))).cta)
+        assertEquals(Cta.Ready(BigDecimal("30.00")), ready().copy(addresses = listOf(home.copy(reference = "Frente al pozo."))).cta)
+    }
+
+    @Test
     fun `un recojo no pide direccion pero si saber si va ahora`() {
         val pickup = ready().copy(method = DeliveryChoice.Pickup, selectedAddressId = null, pay = PayMethod.Prepaid)
         assertEquals(Cta.NeedPickupAnswer, pickup.cta)

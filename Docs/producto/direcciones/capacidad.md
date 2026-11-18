@@ -28,6 +28,7 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 - La zona de reparto es un polígono de `app_settings`; la app lo recibe en `GET /config`. Nunca se escribe en el código.
 - Trampa conocida: sin GPS ni gesto del cliente, el pin queda vacío. Nunca se usa el centro del pueblo por defecto (CUS-ADR-004).
 - Trampa conocida: los valores de respaldo de cobertura en la web no coinciden con los reales (defecto 4).
+- Trampa conocida: una dirección guardada con el mínimo anterior puede tener una referencia de 5 a 14 caracteres. La API rechaza el pedido que la usa (`deliveryReference`, 422); la web y Android no dejan confirmar y piden completarla («Agrega una referencia»).
 - iOS aún no empieza: `codigo.ios` vacío.
 
 ## Requisitos
@@ -75,4 +76,3 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 |---|---|---|---|
 | 4 | CUS-ADR-003 | Los valores de respaldo de cobertura de la web no coinciden con el polígono real. | `apps/customer/lib/coverage.ts` |
 | 6 | CUS-ADR-006 | El umbral de precisión «suficiente» es una constante local de la web, no una regla compartida: Android e iOS no tienen de dónde leerlo. | `apps/customer/components/map-picker.tsx` |
-| 7 | CUS-ADR-001 | Una dirección guardada con el mínimo anterior puede tener una referencia de 5 a 14 caracteres: la API rechaza el pedido que la usa (`deliveryReference`, 422) hasta que el cliente la complete. La web lo avisa en el checkout; falta comprobar que Android también lo avise. | `packages/contracts/src/requests.ts` |
