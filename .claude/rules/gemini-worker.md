@@ -12,5 +12,5 @@ sesión**: tiene el comando probado y las tres plantillas.
 - **Archivos efímeros** (`.gemini_task.tmp.md`, `.gemini_output.tmp.md`): en el scratchpad de la sesión, nunca en el repo.
 - **Después:** revisa por diff (`git diff`) y corre tú los gates. Si falla una condición puntual, la corriges tú; no le
   repitas el encargo en bucle.
-- **Modelos:** para barrer, solo `gemini-3.8-flash-high` (decisión de Jesús, 2026-10-10). Argon e Hydrogen solo dan
-  segunda opinión de arquitectura junto a Fable (`CLAUDE.md`).
+- **Modelos:** para barrer, solo `gemini-3.8-flash-high` (decisión de Jesús, 2026-10-10). Argon e Hydrogen, como
+  segunda opinión independiente (`Docs/README.md` §7.6).

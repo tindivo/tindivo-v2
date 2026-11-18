@@ -5,7 +5,7 @@ description: Subjects every non-trivial decision to a fresh-context adversarial 
 
 # Doubt-Driven Development
 
-> **Tindivo — regla local (manda sobre el resto de esta skill).** Si algo de aquí choca con `AGENTS.md`, el estándar o `.claude/settings.json`, manda el canon. Una revisión propia, un subagente o un test **no sustituye** la auditoría obligatoria de Codex (`.claude/rules/codex-worker.md` §2), la revisión de dinero de Jesús ni la regla «nadie revisa su propio trabajo». Si una revisión obligatoria no está disponible, el trabajo queda pendiente y no se cierra. Lo de esta skill es una comprobación **adicional**.
+> **Tindivo — regla local (manda sobre el resto de esta skill).** Si algo de aquí choca con `AGENTS.md`, el estándar o `.claude/settings.json`, manda el canon. Una revisión propia, un subagente o un test **no sustituye** la auditoría obligatoria de Codex (`Docs/operacion/codex-auditor.md` §2), la revisión de dinero de Jesús ni la regla «nadie revisa su propio trabajo». Si una revisión obligatoria no está disponible, el trabajo queda pendiente y no se cierra. Lo de esta skill es una comprobación **adicional**.
 
 ## Overview
 

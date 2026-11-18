@@ -58,4 +58,12 @@ describe('tope de líneas del AGENTS.md raíz (decisión de Jesús, 2026-11-18)'
     assert.equal(r.status, 1)
     assert.match(r.out, /AGENTS\.md tiene 151 líneas \(tope: 150\)/)
   })
+  test('con CRLF cuenta igual: 150 pasa y 151 falla', () => {
+    assert.equal(run({ 'AGENTS.md': lineas(150).replaceAll('\n', '\r\n') }).status, 0)
+    assert.equal(run({ 'AGENTS.md': lineas(151).replaceAll('\n', '\r\n') }).status, 1)
+  })
+  test('sin salto final cuenta igual: 150 pasa y 151 falla', () => {
+    assert.equal(run({ 'AGENTS.md': lineas(150).slice(0, -1) }).status, 0)
+    assert.equal(run({ 'AGENTS.md': lineas(151).slice(0, -1) }).status, 1)
+  })
 })
