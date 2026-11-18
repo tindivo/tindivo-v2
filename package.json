@@ -18,6 +18,8 @@
     "check:deploy": "node scripts/check-deploy-order.mjs",
     "mobile:models": "node scripts/generate-mobile-models.mjs",
     "check:docs": "node scripts/check-docs.mjs",
+    "spec:validar": "node scripts/spec.mjs validar",
+    "spec:indice": "node scripts/spec.mjs indice",
     "check:deps": "depcruise apps packages --config .dependency-cruiser.cjs",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",

@@ -23,7 +23,7 @@ Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 003
 
 - **Clientes.** Piden por la app o llamando al negocio. **El 84 % de los pedidos entregados en 30 días los tecleó la
   cajera** (420 de 497): el hábito del pueblo es llamar. Que el pueblo pida por la app es la apuesta (ADR 0034).
-- **Negocios aliados.** Cuatro, todos activos:
+- **Partners.** Cuatro, todos activos:
 
   | Negocio | Cómo trabaja con Tindivo | Pedidos entregados en 30 días |
   |---|---|---|

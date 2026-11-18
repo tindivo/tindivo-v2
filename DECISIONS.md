@@ -298,9 +298,11 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 
 ## 7. Pagos del cliente
 
-- **Default contra entrega** para pedidos **< S/100** (efectivo o Yape/Plin al recibir).
-- **Prepago obligatorio** para pedidos **≥ S/100** (solo Yape/Plin prepago). El checkout fuerza prepago y oculta contra entrega.
-- **Prepago opcional** para cualquier cliente bajo S/100.
+> **Corregido el 2026-11-17 (decisión de Jesús):** el umbral es **más de S/ 80**: el prepago es obligatorio cuando el pedido más el envío supera `prepay_threshold` (`app_settings`). Así lo hace hoy `create_customer_order` en su última versión (`0283`, línea 460: `v_order_amount + v_delivery_fee > v_threshold`). El valor 80 está en `app_settings` desde la `0044`; la forma de comparar cambió entre versiones (la `0044` usaba `>=` y solo el monto del pedido), así que para la regla vigente se cita la `0283`, no la `0044`. El S/ 100 con «≥» que decía esta sección estaba viejo.
+
+- **Default contra entrega** para pedidos de **S/ 80 o menos** (efectivo o Yape/Plin al recibir).
+- **Prepago obligatorio** para pedidos de **más de S/ 80** (solo Yape/Plin prepago). El checkout fuerza prepago y oculta contra entrega.
+- **Prepago opcional** para cualquier cliente de S/ 80 o menos.
 - **Comprobante de prepago**: el cliente **SÍ sube** captura; el **negocio valida con su propio número** (timer **10 min**, separado de los 5 de aceptación). Aprovisionar bucket de Storage. *(Resuelve contradicción spec 07 "sin captura" vs FASE-1 "sube comprobante" → manda FASE-1.)*
 - **Yape y Plin son equivalentes** (misma lógica, cambia número/QR). No es pasarela: Tindivo **no retiene fondos**.
 - **Límite de vuelto**: parametrizado en `app_settings` (no hardcode como el `total+50/+150` inconsistente del demo).
@@ -637,7 +639,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 **Activo en Fase 1:**
 - 1 restaurante (La Florencia, `catalog_full`), de noche (~18:00–23:00), 1 motorizado.
 - Motorizado: **panel plano** sin asignación automática.
-- Contra entrega + prepago con umbral S/100; validación humana por llamada; strikes; fondo de contingencia.
+- Contra entrega + prepago con umbral de más de S/ 80 (corregido el 2026-11-17; decía S/100); validación humana por llamada; strikes; fondo de contingencia.
 - Liquidación de efectivo diaria; liquidación semanal de comisiones **MANUAL** (la UI del admin SÍ se construye; la generación automática queda fuera).
 - `order_event_log` + registro de adelantos + auditoría inmutable desde el día 1.
 
