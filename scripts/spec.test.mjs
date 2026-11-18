@@ -4,7 +4,7 @@ import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, syml
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { after, describe, test } from 'node:test'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const script = fileURLToPath(new URL('./spec.mjs', import.meta.url))
 const tmp = mkdtempSync(join(tmpdir(), 'spec-test-'))
@@ -672,5 +672,113 @@ describe('traza: no lee a través de enlaces (CAX-001)', () => {
     const ext = externoCarpeta({ 'pedido.test.ts': '// SECRETO-EXTERNO CA-PED-P1\n' })
     const dir = conEnlace(conTests(), 'apps/customer/src', ext, 'junction')
     rechaza(null, dir, 'apps/customer/src')
+  })
+})
+
+/*
+  CAX-001, Ronda 2: no basta con no LEER a través de un enlace; tampoco se enumera ni se consulta. Estas pruebas
+  instrumentan el proceso (un módulo precargado envuelve las funciones de node:fs y anota cada ruta que toca) y
+  comprueban que ningún acceso pasa por el enlace: solo se permite el lstat del propio enlace, que es la comprobación.
+*/
+describe('spec: no enumera ni consulta a través de enlaces (CAX-001, R2)', () => {
+  let n = 0
+  const gancho = join(tmp, 'fs-gancho.mjs')
+  writeFileSync(
+    gancho,
+    `import fs from 'node:fs'
+import { syncBuiltinESMExports } from 'node:module'
+const anotar = fs.appendFileSync.bind(fs)
+const log = process.env.SPEC_FS_LOG
+let anotando = false // appendFileSync usa writeFileSync por dentro: sin esto, el gancho se anota a sí mismo sin fin
+for (const nombre of ['readdirSync', 'readFileSync', 'existsSync', 'statSync', 'lstatSync', 'writeFileSync', 'opendirSync', 'realpathSync']) {
+  const original = fs[nombre]
+  fs[nombre] = function (ruta, ...resto) {
+    if (!anotando && (typeof ruta === 'string' || ruta instanceof URL)) {
+      anotando = true
+      try {
+        anotar(log, nombre + '\\t' + String(ruta) + '\\n')
+      } finally {
+        anotando = false
+      }
+    }
+    return original.call(this, ruta, ...resto)
+  }
+}
+syncBuiltinESMExports()
+`,
+  )
+  const norm = (p) => p.replaceAll('\\', '/').toLowerCase()
+  /** Corre spec.mjs con el gancho y devuelve { status, out, accesos: [[fn, ruta]] }. */
+  const instrumentado = (dir, args) => {
+    const log = join(tmp, `fs-${n++}.log`)
+    writeFileSync(log, '')
+    const r = spawnSync(process.execPath, ['--import', pathToFileURL(gancho).href, script, ...args], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, SPEC_FS_LOG: log },
+    })
+    const accesos = readFileSync(log, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => l.split('\t'))
+    return { status: r.status, out: `${r.stdout}${r.stderr}`, accesos }
+  }
+  /** Ningún acceso entra en `enlace` (ruta relativa al repo) salvo el lstat del propio enlace. */
+  const sinPasarPor = (dir, enlace, accesos) => {
+    const base = norm(join(dir, enlace))
+    const malos = accesos.filter(([fn, ruta]) => {
+      const r = norm(ruta)
+      if (r === base) return fn !== 'lstatSync'
+      return r.startsWith(`${base}/`)
+    })
+    assert.deepEqual(malos, [], `accesos a través de ${enlace}`)
+  }
+  const carpetaExterna = (files) => {
+    const d = join(tmp, `ext-r2-${n++}`)
+    mkdirSync(d, { recursive: true })
+    for (const [f, c] of Object.entries(files)) {
+      mkdirSync(dirname(join(d, f)), { recursive: true })
+      writeFileSync(join(d, f), c)
+    }
+    return d
+  }
+  const conJunction = (files, ruta, destino, args) => {
+    const { dir } = run(files, args)
+    rmSync(join(dir, ruta), { recursive: true, force: true })
+    mkdirSync(dirname(join(dir, ruta)), { recursive: true })
+    symlinkSync(destino, join(dir, ruta), 'junction')
+    return dir
+  }
+  const base = () =>
+    con({
+      'apps/customer/src/pedido.test.ts': "test('CA-PED-01', () => {})\n",
+      'apps/api/app/api/v1/orders/route.ts': 'export {}\n',
+    })
+  const casos = [
+    ['Docs/producto como junction a una carpeta vacía', 'Docs/producto', {}],
+    ['Docs/producto como junction a una carpeta con capacidades', 'Docs/producto', { 'pedidos/capacidad.md': 'x' }],
+    ['pantallas como junction a una carpeta vacía', 'Docs/producto/pedidos/pantallas', {}],
+    ['pantallas como junction a una carpeta con pantallas', 'Docs/producto/pedidos/pantallas', { 'crear.md': 'x' }],
+    ['una capacidad entera como junction', 'Docs/producto/otra', { 'capacidad.md': 'x' }],
+  ]
+  for (const args of [['traza', 'pedidos'], ['validar'], ['indice', '--check']]) {
+    for (const [nombre, ruta, files] of casos) {
+      test(`${args[0]}: ${nombre} — rechazado sin enumerar el destino`, () => {
+        const dir = conJunction(base(), ruta, carpetaExterna(files), args)
+        const r = instrumentado(dir, args)
+        assert.equal(r.status, 1, r.out)
+        assert.match(r.out, /enlace simbólico/)
+        assert.ok(r.out.includes(ruta), `nombra ${ruta}: ${r.out}`)
+        assert.ok(r.accesos.length > 0, 'el gancho anota accesos')
+        sinPasarPor(dir, ruta, r.accesos)
+        assert.ok(!r.accesos.some(([fn]) => fn === 'writeFileSync'), 'no escribe')
+      })
+    }
+  }
+  test('el caso válido sigue funcionando con el gancho y sin enlaces', () => {
+    const { dir } = run(base(), ['traza', 'pedidos'])
+    const r = instrumentado(dir, ['traza', 'pedidos'])
+    assert.equal(r.status, 0, r.out)
+    assert.ok(r.accesos.some(([fn]) => fn === 'readdirSync'), 'el gancho ve las enumeraciones')
   })
 })

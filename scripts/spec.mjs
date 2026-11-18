@@ -60,11 +60,38 @@ function tramoEnlace(rel) {
 
 class ErrorEnlace extends Error {}
 
-/** Lee un archivo del repo; rechaza (ErrorEnlace) un enlace en el archivo o en cualquier carpeta del camino. */
-const leer = (rel) => {
+/*
+  Todo acceso al disco pasa por estas cuatro funciones (Codex, PR #187, CAX-001): antes de tocar `rel` comprueban que
+  ni él ni ninguna carpeta de su camino es un enlace simbólico o junction, y si lo es lanzan ErrorEnlace sin haber
+  leído, consultado ni enumerado nada a través del enlace.
+*/
+function sinEnlace(rel, accion) {
   const enlace = tramoEnlace(rel)
-  if (enlace) throw new ErrorEnlace(`${enlace} es un enlace simbólico: no se lee ${rel} a través de él`)
+  if (enlace) throw new ErrorEnlace(`${enlace} es un enlace simbólico: no se ${accion} ${rel} a través de él`)
+}
+
+/** Lee un archivo del repo. */
+const leer = (rel) => {
+  sinEnlace(rel, 'lee')
   return readFileSync(rutaAbs(rel), 'utf8').replace(/\r\n/g, '\n')
+}
+
+/** ¿Existe `rel` en el repo? */
+const existe = (rel) => {
+  sinEnlace(rel, 'consulta')
+  return existsSync(rutaAbs(rel))
+}
+
+/** ¿Es `rel` un archivo normal del repo? */
+const esArchivo = (rel) => existe(rel) && statSync(rutaAbs(rel)).isFile()
+
+/** Entradas de la carpeta `rel`. Un enlace DENTRO de ella también se rechaza: no se sigue ni se omite en silencio. */
+const listar = (rel) => {
+  sinEnlace(rel, 'enumera')
+  const entradas = readdirSync(rutaAbs(rel), { withFileTypes: true })
+  const enlace = entradas.find((e) => e.isSymbolicLink())
+  if (enlace) throw new ErrorEnlace(`${rel}/${enlace.name} es un enlace simbólico: no se enumera a través de él`)
+  return entradas
 }
 
 /** Quita los comentarios HTML conservando los saltos de línea (los números de línea no se mueven). */
@@ -196,9 +223,8 @@ function globARegex(glob) {
 /** Recorre el disco bajo `dir` y devuelve los .md (rutas relativas con /). */
 function mdBajo(dir) {
   const out = []
-  const abs = rutaAbs(dir)
-  if (!existsSync(abs)) return out
-  for (const e of readdirSync(abs, { withFileTypes: true })) {
+  if (!existe(dir)) return out
+  for (const e of listar(dir)) {
     const rel = `${dir}/${e.name}`
     if (e.isDirectory()) out.push(...mdBajo(rel))
     else if (e.name.endsWith('.md')) out.push(rel)
@@ -242,9 +268,8 @@ function cargar() {
   const caps = new Map()
   const err = (capsAfectadas, msg) => errores.push({ caps: capsAfectadas, msg })
 
-  const base = rutaAbs(PRODUCTO)
-  const carpetas = existsSync(base)
-    ? readdirSync(base, { withFileTypes: true })
+  const carpetas = existe(PRODUCTO)
+    ? listar(PRODUCTO)
         .filter((e) => e.isDirectory() && e.name !== '_plantilla')
         .map((e) => e.name)
         .sort()
@@ -252,7 +277,7 @@ function cargar() {
 
   for (const carpeta of carpetas) {
     const file = `${PRODUCTO}/${carpeta}/capacidad.md`
-    if (!existsSync(rutaAbs(file))) {
+    if (!existe(file)) {
       err([carpeta], `${PRODUCTO}/${carpeta} · falta capacidad.md`)
       continue
     }
@@ -314,7 +339,7 @@ function validar({ objetivo }) {
     if (operationIds) return operationIds
     operationIds = new Set()
     const f = 'packages/contracts/openapi/v1.json'
-    if (!existsSync(rutaAbs(f))) return operationIds
+    if (!existe(f)) return operationIds
     const spec = JSON.parse(leer(f))
     for (const item of Object.values(spec.paths ?? {}))
       for (const op of Object.values(item)) if (op && typeof op === 'object' && op.operationId) operationIds.add(op.operationId)
@@ -470,7 +495,7 @@ function validar({ objetivo }) {
       const porSimbolo = [...texto.matchAll(/`([^`]+)`/g)].some((m) => reglas.includes(m[1]))
       const porEnlace = [...texto.matchAll(/\]\(([^)\s]+)\)/g)].some((m) => {
         const ruta = normalize(join(dirname(cap.file), m[1].split('#')[0])).replaceAll('\\', '/')
-        return ruta.startsWith('Docs/negocio/') && existsSync(rutaAbs(ruta))
+        return ruta.startsWith('Docs/negocio/') && existe(ruta)
       })
       if (!porSimbolo && !porEnlace) err([cap.carpeta], `${aqui} · ${cita} (ninguna referencia resuelve)`)
       const resto = texto.replace(/`[^`]*`/g, '').replace(/\[[^\]]*\]\([^)]*\)/g, '')
@@ -648,7 +673,7 @@ function calcularTraza(objetivo) {
   const errores = []
   const rutasOp = new Map()
   const fOpenapi = 'packages/contracts/openapi/v1.json'
-  if (existsSync(rutaAbs(fOpenapi))) {
+  if (existe(fOpenapi)) {
     const spec = JSON.parse(leer(fOpenapi))
     for (const [ruta, item] of Object.entries(spec.paths ?? {}))
       for (const [metodo, op] of Object.entries(item))
@@ -764,7 +789,7 @@ function main() {
     }
     const destino = `${PRODUCTO}/README.md`
     if (flags.includes('--check')) {
-      const actual = existsSync(rutaAbs(destino)) && statSync(rutaAbs(destino)).isFile() ? leer(destino) : null
+      const actual = esArchivo(destino) ? leer(destino) : null
       if (actual !== texto) {
         console.error(`✖ spec:indice — ${destino} no coincide con lo que se generaría: ejecuta pnpm spec:indice`)
         process.exit(1)
