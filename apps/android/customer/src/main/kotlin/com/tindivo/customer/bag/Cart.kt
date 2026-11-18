@@ -93,12 +93,22 @@ fun addToCart(
     businessName: String,
     line: CartLine,
 ): AddResult {
-    require(line.quantity in 1..MAX_QUANTITY) { "quantity fuera de 1..$MAX_QUANTITY" }
+    requireAdmissible(line)
     return when {
         cart == null || cart.isEmpty() -> AddResult.Added(Cart(businessId, businessName, listOf(line)), capped = false)
         !cart.businessId.equals(businessId, ignoreCase = true) -> AddResult.OtherBusiness(cart.businessName)
         else -> mergeInto(cart, line)
     }
+}
+
+/**
+ * Una línea que la bolsa no sabría volver a leer (cantidad, opciones o nota fuera de los límites del pedido) no entra:
+ * al leerla, `toCartOrNull` descartaría la bolsa ENTERA. Es un error de quien llama, no un dato de la red.
+ */
+private fun requireAdmissible(line: CartLine) {
+    require(line.quantity in 1..MAX_QUANTITY) { "quantity fuera de 1..$MAX_QUANTITY" }
+    require(line.modifiers.size <= MAX_MODIFIERS) { "más de $MAX_MODIFIERS opciones en una línea" }
+    require((line.note?.length ?: 0) <= MAX_NOTE_LENGTH) { "nota de más de $MAX_NOTE_LENGTH caracteres" }
 }
 
 private fun mergeInto(
@@ -120,7 +130,7 @@ fun replacedWith(
     businessName: String,
     line: CartLine,
 ): Cart {
-    require(line.quantity in 1..MAX_QUANTITY) { "quantity fuera de 1..$MAX_QUANTITY" }
+    requireAdmissible(line)
     return Cart(businessId, businessName, listOf(line))
 }
 
@@ -147,6 +157,7 @@ fun Cart.replaceLine(
     signature: String,
     line: CartLine,
 ): Cart {
+    requireAdmissible(line)
     val index = lines.indexOfFirst { it.signature == signature }
     if (index < 0) return this
     val twin = lines.indexOfFirst { it.signature == line.signature && it.signature != signature }
@@ -177,7 +188,10 @@ fun Cart.restoreLine(
     return copy(lines = lines.take(at) + line + lines.drop(at))
 }
 
-/** Lo que admite `POST /customer/orders` (`packages/contracts/src/requests.ts`): platos distintos y, por plato. */
+/**
+ * Lo que admite `POST /customer/orders` (`packages/contracts/src/requests.ts`): platos distintos y, por plato,
+ * cantidad, opciones y largo de la nota.
+ */
 const val MAX_LINES = 50
 const val MAX_QUANTITY = 50
 const val MAX_NOTE_LENGTH = 140

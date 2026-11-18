@@ -116,10 +116,16 @@ class CartVectorTest {
         return cart.toSnapshot()?.toCartOrNull() == cart
     }
 
-    /** Las opciones caben si la bolsa guardada con ellas se vuelve a leer entera. */
+    /** Las opciones caben si [addToCart] las acepta y la bolsa guardada con ellas se vuelve a leer entera. */
     private fun modifiersFit(count: Int): Boolean {
         val modifiers = List(count) { CartModifier("opcion$it", "Extras", "Opcion $it", BigDecimal("0.10")) }
-        val cart = Cart("n", "Negocio", listOf(line("plato", modifiers = modifiers)))
+        val added =
+            try {
+                addToCart(null, "n", "Negocio", line("plato", modifiers = modifiers))
+            } catch (expected: IllegalArgumentException) {
+                return false
+            }
+        val cart = (added as AddResult.Added).cart
         return cart.toSnapshot()?.toCartOrNull() == cart
     }
 }

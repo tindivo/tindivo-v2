@@ -3,6 +3,7 @@ package com.tindivo.customer.bag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
@@ -207,5 +208,28 @@ class CartTest {
     fun `editar una linea que ya no esta no cambia nada`() {
         val cart = Cart("n", "Negocio", listOf(line("a")))
         assertEquals(cart, cart.replaceLine("fantasma", line("z")))
+    }
+
+    @Test
+    fun `una linea que la bolsa no sabria volver a leer no se agrega ni se reemplaza`() {
+        val tooManyOptions = List(MAX_MODIFIERS + 1) { mod("o$it", "0.10") }
+        val longNote = "x".repeat(MAX_NOTE_LENGTH + 1)
+        val cart = Cart("n", "Negocio", listOf(line("a")))
+        val signature = cart.lines.single().signature
+        val bad = listOf(line("b", modifiers = tooManyOptions), line("b", note = longNote))
+        for (candidate in bad) {
+            assertThrows(IllegalArgumentException::class.java) { addToCart(cart, "n", "Negocio", candidate) }
+            assertThrows(IllegalArgumentException::class.java) { replacedWith("n", "Negocio", candidate) }
+            assertThrows(IllegalArgumentException::class.java) { cart.replaceLine(signature, candidate) }
+        }
+        for (quantity in listOf(0, MAX_QUANTITY + 1)) {
+            assertThrows(IllegalArgumentException::class.java) {
+                cart.replaceLine(signature, line("b", quantity = quantity))
+            }
+        }
+        // En el límite sí entra.
+        val options = List(MAX_MODIFIERS) { mod("o$it", "0.10") }
+        val limit = line("b", modifiers = options, note = "x".repeat(MAX_NOTE_LENGTH))
+        assertEquals(2, added(addToCart(cart, "n", "Negocio", limit)).cart.lines.size)
     }
 }
