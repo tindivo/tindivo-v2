@@ -66,13 +66,61 @@
     }
   ],
   "excesos": [
-    { "id": "lineas-en-el-tope", "tope": "CART_MAX_LINES", "valor": 50, "valido": true, "motivo": "justo en el tope" },
-    { "id": "lineas-sobre-el-tope", "tope": "CART_MAX_LINES", "valor": 51, "valido": false, "motivo": "una más que el tope" },
-    { "id": "cantidad-cero", "tope": "CART_MAX_QUANTITY", "valor": 0, "valido": false, "motivo": "la cantidad mínima es 1" },
-    { "id": "cantidad-uno", "tope": "CART_MAX_QUANTITY", "valor": 1, "valido": true, "motivo": "justo en el mínimo" },
-    { "id": "cantidad-en-el-tope", "tope": "CART_MAX_QUANTITY", "valor": 50, "valido": true, "motivo": "justo en el tope" },
-    { "id": "cantidad-sobre-el-tope", "tope": "CART_MAX_QUANTITY", "valor": 51, "valido": false, "motivo": "una más que el tope" },
-    { "id": "opciones-en-el-tope", "tope": "CART_MAX_MODIFIERS", "valor": 20, "valido": true, "motivo": "justo en el tope" },
-    { "id": "opciones-sobre-el-tope", "tope": "CART_MAX_MODIFIERS", "valor": 21, "valido": false, "motivo": "una más que el tope" }
+    {
+      "id": "lineas-en-el-tope",
+      "tope": "CART_MAX_LINES",
+      "valor": 50,
+      "valido": true,
+      "motivo": "justo en el tope"
+    },
+    {
+      "id": "lineas-sobre-el-tope",
+      "tope": "CART_MAX_LINES",
+      "valor": 51,
+      "valido": false,
+      "motivo": "una más que el tope"
+    },
+    {
+      "id": "cantidad-cero",
+      "tope": "CART_MAX_QUANTITY",
+      "valor": 0,
+      "valido": false,
+      "motivo": "la cantidad mínima es 1"
+    },
+    {
+      "id": "cantidad-uno",
+      "tope": "CART_MAX_QUANTITY",
+      "valor": 1,
+      "valido": true,
+      "motivo": "justo en el mínimo"
+    },
+    {
+      "id": "cantidad-en-el-tope",
+      "tope": "CART_MAX_QUANTITY",
+      "valor": 50,
+      "valido": true,
+      "motivo": "justo en el tope"
+    },
+    {
+      "id": "cantidad-sobre-el-tope",
+      "tope": "CART_MAX_QUANTITY",
+      "valor": 51,
+      "valido": false,
+      "motivo": "una más que el tope"
+    },
+    {
+      "id": "opciones-en-el-tope",
+      "tope": "CART_MAX_MODIFIERS",
+      "valor": 20,
+      "valido": true,
+      "motivo": "justo en el tope"
+    },
+    {
+      "id": "opciones-sobre-el-tope",
+      "tope": "CART_MAX_MODIFIERS",
+      "valor": 21,
+      "valido": false,
+      "motivo": "una más que el tope"
+    }
   ]
 }
