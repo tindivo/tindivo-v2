@@ -391,12 +391,23 @@ La complejidad de la tarea elige el modelo, no la costumbre. Claude elige y lo d
 
 | Tarea | Quién y con qué |
 |---|---|
-| Localizar código o relaciones | Graphify primero (§6.5), sin coste de modelo |
-| Lectura masiva, búsquedas, inventarios, conteos | Antigravity, **siempre en su modelo más avanzado** (decisión de Jesús, 2026-10-10); o un subagente de Claude en Haiku |
-| Redacción, refactor acotado, tarea con criterio mecánico | Subagente de Claude en Sonnet |
-| Diseño, decisiones de negocio, integración, auditoría | Claude en su modelo principal |
-| Atacar una decisión importante (§7.4) | Codex con razonamiento alto |
-| Compilar o probar la app iOS | Solo en macOS: la Mac de Jesús o CI con runner macOS. Un agente en Linux o en la nube no toca Swift |
+Reparto aprobado por Jesús el 2026-11-18 (conversación con Claude Code; propuesta auditada antes por Fable):
+
+| Tarea | Titular | Plan B sin cuota |
+|---|---|---|
+| Localizar código o relaciones | Graphify primero (§6.5), sin coste de modelo | — |
+| Leer, resumir, contrastar documento ↔ código, dar contexto | Subagente de Claude en **Haiku** | Antigravity |
+| Lectura masiva, barridos, inventarios, conteos | **Antigravity** (`gemini-3.8-flash-high`) | Subagente Haiku |
+| Programar con encargo cerrado | Subagente de Claude en **Sonnet** | Claude en su modelo principal (y lo revisa otro subagente limpio) |
+| Diseño, piloto, encargos, orquestación | Claude en su modelo principal | — |
+| Revisar lo que escribió cualquier Claude | Subagente en contexto limpio que no recibe el plan, o la CI (§7.4) | — |
+| Arquitectura y decisiones críticas | Subagente en **Fable**, con preguntas cerradas (gasta mucho) | Claude en contexto limpio |
+| Segunda opinión independiente | Antigravity en **Gemini Argon o Hydrogen** (autorizados por Jesús el 2026-11-14) | Claude en contexto limpio |
+| Atacar una decisión importante (§7.4) | Codex con razonamiento alto | Contingencia de `.claude/rules/codex-worker.md` §10 |
+| Compilar o probar la app iOS | Solo en macOS: la Mac de Jesús o CI con runner macOS. Un agente en Linux o en la nube no toca Swift | — |
+
+Una decisión crítica lleva dos opiniones independientes y la aprueba siempre Jesús. Si por el plan B las dos salen del
+mismo modelo, se declara. Un plan B nunca quita un control: solo cambia quién lo ejerce.
 
 Mecanismos:
 
@@ -407,11 +418,45 @@ Mecanismos:
   cuenta de Jesús se anotan en `operacion/` al comprobarlos.
 - **Antigravity**: `agy -p "<encargo>" --model <id> --mode plan` (sin `--dangerously-skip-permissions`). Siempre el
   Gemini más avanzado: **`gemini-3.8-flash-high`**. Jesús fijó el 2026-10-10 usar solo Gemini 3.8 Flash (Antigravity
-  marca los demás como «Leaving Soon»). En la muestra del inventario (25 archivos) acertó la zona en 22 y citó literal
+  marca los demás como «Leaving Soon»); el 2026-11-14 autorizó además Argon e Hydrogen, solo para segundas opiniones. En la muestra del inventario (25 archivos) acertó la zona en 22 y citó literal
   las 25 (88 %; con 25 casos, el intervalo de confianza al 95 % va de ~70 % a ~96 %: no justifica auditar menos). Se
   revisa con `agy models` cuando salga uno nuevo.
 - **Sin orquestador adicional por ahora**: no hay una necesidad demostrada. Se reevalúa si la coordinación manual
   limita el trabajo.
+
+### 7.7 El ciclo de un cambio
+
+Todo cambio sigue el mismo orden; no se pasa a un paso sin la salida del anterior. Las skills viven en
+`.claude/skills/`: Claude aplica `using-agent-skills` al empezar cada tarea y dice qué skill usa en cada paso. Codex y
+Antigravity no cargan skills: el encargo copia el párrafo que aplica.
+
+| # | Paso | Salida que lo cierra | Skill |
+|---|---|---|---|
+| 0 | Contexto | Consumidores y capacidades afectadas (`graphify path/query`, `pnpm spec:traza <cap>`) | `graphify` |
+| 1 | Pedido | Una frase de qué y para quién, con los supuestos escritos | `interview-me` si es vago |
+| 2 | Diseño validado | El flujo propuesto, **contrastado con la app real**: cada paso cita su pantalla existente (ficha, código y canvas) o dice «nueva» | `spec-driven-development`; `/auditar-ui-mobile` solo la lanza Jesús |
+| 3 | Correcciones de Jesús | Diff aprobado de la ficha y de los requisitos y CA en `producto/<cap>/` | `documentation-and-adrs` |
+| 4 | Impacto transversal | **Matriz de paridad** (una fila por app: backend, customer web, Android, iOS, negocios, motorizados, admin; `cambia`, `no aplica` o `diferido` con motivo y entrada en `trabajo/decisiones-abiertas.md`) y **compatibilidad**: la app ya instalada sigue funcionando contra el servidor nuevo (`AGENTS.md`, invariante 11) | `api-and-interface-design`, `deprecation-and-migration` |
+| 5 | Plan | Rebanadas verticales en orden: contrato → servidor → clientes → e2e, cada una con su CA | `planning-and-task-breakdown` |
+| 6 | Implementación | Test que falla citando su CA → código mínimo → verde | `test-driven-development`, `incremental-implementation`, `ponytail`, `frontend-ui-engineering`, `source-driven-development`, `observability-and-instrumentation` |
+| 7 | Verificación | Gates con `--force`; el orquestador comprueba exit codes y `Cached: 0`: lint, type-check, unitarios, `db:cycle`, e2e, Kotlin en CI, `spec:validar` y `spec:traza` sin avisos ★ | `debugging-and-error-recovery` si algo falla |
+| 8 | Revisión | Subagente en contexto limpio sin el plan, o la CI; nunca el autor ni quien escribió el encargo. Codex si dispara. Si toca dinero: revisión explícita de Jesús, aparte del merge | `code-review-and-quality`, `code-simplification`, `security-and-hardening`, `doubt-driven-development` |
+| 9 | Entrega | PR con impacto documental, matriz de paridad, evidencia y «listo para merge» | `git-workflow-and-versioning` |
+
+**Un cambio no termina mientras una app de la matriz esté en `cambia` sin hacer.**
+
+**Ciclo corto.** Califica solo si se cumple todo, comprobado sobre el diff: toca una sola app; ningún archivo en
+`packages/contracts`, el OpenAPI, `supabase/` ni `producto/`; ningún disparador de Codex; no toca un símbolo de
+`reglas:` de una capacidad; como mucho 5 archivos y 150 líneas sin contar tests. Pasos: graphify de consumidores → test
+que falla y cambio → gates de esa app con `--force` → revisión en contexto limpio o CI → PR titulado «ciclo corto» con
+la salida del clasificador. Si un criterio deja de cumplirse, se sigue el ciclo completo desde el paso 4.
+
+**Pruebas entre apps**, en este orden: (1) contrato por cliente: respuestas reales de la API, guardadas como fixtures
+desde el OpenAPI, que los tests de Kotlin (y de Swift) decodifican en CI; (2) compatibilidad hacia atrás: las
+peticiones de la versión publicada de cada app, congeladas, corren contra la API nueva en `db:cycle`; (3) vectores
+compartidos para cada regla copiada entre TS, Kotlin y Swift (`packages/contracts/test-vectors/`); (4) e2e web que
+cruzan apps. Un CA ★ tiene prueba en cada app nativa, salvo los que garantiza el servidor. Ninguna prueba garantiza
+«cero fallos»: estas detectan la rotura entre apps antes del merge.
 
 ## 8. Mecanismos que lo sostienen
 

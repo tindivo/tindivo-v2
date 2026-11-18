@@ -63,6 +63,8 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 
 ## Cómo se trabaja
 
+- **Todo cambio sigue el ciclo de `Docs/README.md` §7.7**: diseño validado contra la app real → correcciones de Jesús →
+  matriz de paridad de todas las apps → TDD → gates → revisión ajena. Las skills de `.claude/skills/` cubren cada paso.
 - **Evidencia, no afirmaciones.** Nada está «listo» sin evidencia objetiva (salida de consola, test, captura, consulta).
   Distingue **medido** de **estimado**. Un gate en verde prueba que compila y que los tests existentes pasan, no que
   el producto funcione.
