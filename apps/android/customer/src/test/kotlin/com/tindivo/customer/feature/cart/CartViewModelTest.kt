@@ -128,7 +128,6 @@ class CartViewModelTest {
             viewModel.awaitQuantity(2)
             viewModel.changeQuantity(signature, -1)
             viewModel.awaitQuantity(1)
-
         }
 
     @Test
@@ -188,7 +187,12 @@ class CartViewModelTest {
             store.add("n", "Pollería", line("a"))
             val viewModel = newViewModel()
             backgroundScope.launch(dispatcher) { viewModel.state.collect {} }
-            val only = viewModel.filled().lines.single().signature
+            val only =
+                viewModel
+                    .filled()
+                    .lines
+                    .single()
+                    .signature
 
             viewModel.changeQuantity(only, -1)
 

@@ -236,7 +236,13 @@ class CartCheckViewModelTest {
             val after = viewModel.awaitFilled { it.editing == null && it.lines.first().total != ui.lines.first().total }
             assertEquals(listOf("Lomo", "Arroz"), after.lines.map { it.name })
             // 12.50 + 0.50 = 13.00 (antes 12.50 + 1.00).
-            assertEquals("S/ 13.00", after.lines.first().total.replace(' ', ' '))
+            assertEquals(
+                "S/ 13.00",
+                after.lines
+                    .first()
+                    .total
+                    .replace(' ', ' '),
+            )
         }
 
     @Test
@@ -270,4 +276,3 @@ class CartCheckViewModelTest {
             assertEquals(listOf(OPTION_AJI), kept.modifiers.map { it.optionId })
         }
 }
-

@@ -163,9 +163,13 @@ private fun AddButton(
 ) {
     val label =
         when (val cta = state.cta) {
-            is DishCta.Add ->
+            is DishCta.Add -> {
                 stringResource(if (saving) R.string.dish_save_cta else R.string.dish_add_cta, cta.total)
-            is DishCta.Complete -> pluralStringResource(R.plurals.dish_complete_cta, cta.missing, cta.missing)
+            }
+
+            is DishCta.Complete -> {
+                pluralStringResource(R.plurals.dish_complete_cta, cta.missing, cta.missing)
+            }
         }
     Button(
         onClick = onClick,

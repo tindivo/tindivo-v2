@@ -14,8 +14,7 @@ class CartHeaderTest {
         quantity: Int,
     ) = CartLine(itemId, "Lomo $itemId", BigDecimal("10.00"), emptyList(), null, quantity, null)
 
-    private fun cart(method: DeliveryMethod) =
-        Cart("n", "Pollería", listOf(line("a", 2), line("b", 3)), method)
+    private fun cart(method: DeliveryMethod) = Cart("n", "Pollería", listOf(line("a", 2), line("b", 3)), method)
 
     private fun filled(
         method: DeliveryMethod,

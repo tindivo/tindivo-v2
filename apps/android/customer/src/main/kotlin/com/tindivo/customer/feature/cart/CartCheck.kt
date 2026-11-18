@@ -70,13 +70,20 @@ internal fun continueFor(
         amount = amount,
         blocked =
             when (check) {
-                CartCheck.Checking -> ContinueBlock.Checking
-                CartCheck.Failed -> ContinueBlock.CheckFailed
-                is CartCheck.Done ->
+                CartCheck.Checking -> {
+                    ContinueBlock.Checking
+                }
+
+                CartCheck.Failed -> {
+                    ContinueBlock.CheckFailed
+                }
+
+                is CartCheck.Done -> {
                     when {
                         check.closed -> ContinueBlock.Closed
                         signatures.any { check.issues[it].orEmpty().isNotEmpty() } -> ContinueBlock.InvalidLines
                         else -> null
                     }
+                }
             },
     )
