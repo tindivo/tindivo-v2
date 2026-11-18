@@ -109,7 +109,7 @@ class CartVectorTest {
         val added =
             try {
                 addToCart(null, "n", "Negocio", line("plato", quantity))
-            } catch (rejected: IllegalArgumentException) {
+            } catch (expected: IllegalArgumentException) {
                 return false
             }
         val cart = (added as AddResult.Added).cart
