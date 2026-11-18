@@ -16,7 +16,7 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
 
 # Bolsa
 
-> Verificado: 2026-11-18 · entorno: develop@77670173 (código) · Aprobado por Jesús el AAAA-MM-DD (medio) — PENDIENTE de su visto bueno
+> Verificado: 2026-11-18 · entorno: develop@77670173 (código) · Aprobado por Jesús el 2026-11-18 (conversación con Claude Code: «apruebo la bolsa»)
 
 ## Antes de tocar
 
