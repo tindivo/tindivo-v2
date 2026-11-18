@@ -128,7 +128,25 @@ internal class AddressFormViewModelTest : AddressHarness() {
         }
 
     @Test
-    fun `fuera de la zona no se puede guardar y no se manda nada`() =
+    fun `CA-ADR-04 · un formulario nuevo sin lectura ni gesto no tiene punto y no se puede guardar`() =
+        runTest {
+            server.enqueue(configOk())
+            server.enqueue(addressList())
+            val vm = viewModel()
+            val loaded = vm.ready()
+
+            assertNull(loaded.point)
+            vm.onLine("Jr. Sucre 412")
+            vm.onReference("Frente a la bodega de don Carlos")
+            vm.save()
+
+            assertEquals(MissingField.Location, vm.state.value.missing)
+            assertFalse(vm.state.value.canSave)
+            assertEquals(2, server.requestCount)
+        }
+
+    @Test
+    fun `CA-ADR-03 · fuera de la zona no se puede guardar y no se manda nada`() =
         runTest {
             server.enqueue(configOk())
             server.enqueue(addressList())
@@ -171,7 +189,7 @@ internal class AddressFormViewModelTest : AddressHarness() {
         }
 
     @Test
-    fun `editar sin mover el punto no manda coordenadas para que el servidor conserve su sello`() =
+    fun `CA-ADR-06 · editar sin mover el punto no manda coordenadas para que el servidor conserve su sello`() =
         runTest {
             server.enqueue(configOk())
             server.enqueue(addressList(address()))

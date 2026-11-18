@@ -20,6 +20,7 @@
     "check:docs": "node scripts/check-docs.mjs",
     "spec:validar": "node scripts/spec.mjs validar",
     "spec:indice": "node scripts/spec.mjs indice",
+    "spec:traza": "node scripts/spec.mjs traza",
     "check:deps": "depcruise apps packages --config .dependency-cruiser.cjs",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",

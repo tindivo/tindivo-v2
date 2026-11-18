@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { after, describe, test } from 'node:test'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const script = fileURLToPath(new URL('./spec.mjs', import.meta.url))
 const tmp = mkdtempSync(join(tmpdir(), 'spec-test-'))
@@ -476,6 +476,309 @@ describe('indice', () => {
   })
 })
 
+describe('traza', () => {
+  const conTests = () =>
+    con({
+      'apps/api/app/api/v1/orders/route.ts': 'export {}\n',
+      'apps/customer/src/pedido.test.ts': "test('CA-PED-01 y CA-PED-P1', () => {})\n",
+      'apps/android/customer/src/test/kotlin/PedidoTest.kt': '// CA-PED-01\nfun t() {}\n',
+      'packages/core/lib/otro.test.ts': '// CA-PED-010 no cuenta\n',
+      'apps/customer/src/pedido.ts': '// CA-PED-P1 en un archivo que no es test\nexport {}\n',
+    })
+  const json = (files) => {
+    const r = run(files, ['traza', 'pedidos', '--json'])
+    return { ...r, t: r.status === 0 ? JSON.parse(r.out) : null }
+  }
+
+  test('estados ✅/🟡/⬜ y archivo:línea por plataforma', () => {
+    const r = json(conTests())
+    assert.equal(r.status, 0, r.out)
+    const ca = Object.fromEntries(r.t.ca.map((c) => [c.id, c]))
+    assert.deepEqual(ca['CA-PED-01'].tests.web, ['apps/customer/src/pedido.test.ts:1'])
+    assert.deepEqual(ca['CA-PED-01'].tests.android, ['apps/android/customer/src/test/kotlin/PedidoTest.kt:1'])
+    assert.equal(ca['CA-PED-P1'].tests.android, undefined)
+    assert.equal(ca['CA-PED-P1'].tests.web.length, 1)
+    for (const q of r.t.requisitos) {
+      assert.equal(q.estado.web, '✅', q.id)
+      assert.equal(q.estado.android, '🟡', q.id)
+      assert.equal(q.estado.backend, '⬜', q.id)
+      assert.equal(q.estado.ios, '—', q.id)
+    }
+  })
+  test('ios con código declarado y sin test es ⬜; texto legible', () => {
+    const files = conTests()
+    files[CAP] = cab({ codigo: '  web: [apps/customer/**/*.ts]\n  android: []\n  ios: [apps/ios/**]\n  backend: []' }) + cuerpo()
+    const r = run(files, ['traza', 'pedidos'])
+    assert.equal(r.status, 0, r.out)
+    assert.match(r.out, /CA-PED-01[^\n]*\n {2}web\s+apps\/customer\/src\/pedido\.test\.ts:1/)
+    assert.match(r.out, /\| CUS-PED-001 \| ★ \| CA-PED-01, CA-PED-P1 \| ✅ \| 🟡 \| ⬜ \| ⬜ \|/)
+  })
+  test('requisito sin CA es ⬜; CA sin test y ★ sin test salen como aviso', () => {
+    const files = conTests()
+    files[CAP] =
+      cab() +
+      cuerpo({
+        cuerpo: cuerpo().replace('| CA-PED-P1 | Dado z, entonces w. | CUS-PED-001 · NEG-PED-002 |', '| CA-PED-P2 | Dado q. | CUS-PED-001 |'),
+      })
+    const r = json(files)
+    assert.equal(r.status, 0, r.out)
+    assert.ok(r.t.avisos.some((a) => /CA-PED-P2 no tiene ningún test/.test(a)))
+    assert.equal(r.t.requisitos.find((q) => q.id === 'CUS-PED-001').estado.web, '🟡')
+    assert.equal(r.t.requisitos.find((q) => q.id === 'NEG-PED-002').estado.web, '✅')
+  })
+  test('operationId con route.ts: ruta y archivo; con {id} usa [id]', () => {
+    const files = conTests()
+    files['packages/contracts/openapi/v1.json'] = JSON.stringify({
+      paths: { '/orders': { post: { operationId: 'createOrder' } }, '/orders/{id}': { get: { operationId: 'getOrder' } } },
+    })
+    files['apps/api/app/api/v1/orders/[id]/route.ts'] = 'export {}\n'
+    files[CAP] = cab({ operaciones: '[createOrder, getOrder]' }) + cuerpo()
+    const r = json(files)
+    assert.equal(r.status, 0, r.out)
+    assert.deepEqual(r.t.operaciones.map((o) => [o.id, o.archivo, o.existe]), [
+      ['createOrder', 'apps/api/app/api/v1/orders/route.ts', true],
+      ['getOrder', 'apps/api/app/api/v1/orders/[id]/route.ts', true],
+    ])
+  })
+  test('operationId sin route.ts: exit 1', () => {
+    const r = run(base(), ['traza', 'pedidos'])
+    assert.equal(r.status, 1, r.out)
+    assert.match(r.out, /✖ createOrder .*NO EXISTE/)
+  })
+  test('operationId fuera del contrato: exit 1', () => {
+    const files = conTests()
+    files[CAP] = cab({ operaciones: '[noExiste]' }) + cuerpo()
+    const r = run(files, ['traza', 'pedidos'])
+    assert.equal(r.status, 1, r.out)
+    assert.match(r.out, /noExiste/)
+  })
+  test('globs: cuenta archivos rastreados', () => {
+    const r = json(conTests())
+    const g = r.t.globs.find((x) => x.file === CAP && x.plataforma === 'web')
+    assert.ok(g.archivos >= 1)
+  })
+  test('capacidad inexistente: exit 1; uso incorrecto: exit 2; no escribe archivos', () => {
+    const r = run(base(), ['traza', 'nada'])
+    assert.equal(r.status, 1)
+    assert.match(r.out, /la capacidad «nada» no existe/)
+    assert.equal(exec(r.dir, ['traza']).status, 2)
+    assert.equal(exec(r.dir, ['traza', 'pedidos', '--x']).status, 2)
+    assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: r.dir, encoding: 'utf8' }).replace(/^A .*\n/gm, ''), '')
+  })
+})
+
 test('subcomando desconocido: exit 2', () => {
   assert.equal(run(base(), ['nada']).status, 2)
+})
+
+describe('traza: no lee a través de enlaces (CAX-001)', () => {
+  let n = 0
+  const conTests = () =>
+    con({
+      'apps/customer/src/pedido.test.ts': "test('CA-PED-01', () => {})\n",
+      'apps/api/app/api/v1/orders/route.ts': 'export {}\n',
+    })
+  /** Árbol del repo (sin .git) como { ruta: contenido|'→enlace' }. */
+  const arbol = (dir, rel = '') => {
+    const out = {}
+    for (const e of readdirSync(join(dir, rel), { withFileTypes: true })) {
+      if (e.name === '.git') continue
+      const r = rel ? `${rel}/${e.name}` : e.name
+      if (e.isSymbolicLink()) out[r] = '→enlace'
+      else if (e.isDirectory()) Object.assign(out, arbol(dir, r))
+      else out[r] = readFileSync(join(dir, r), 'utf8')
+    }
+    return out
+  }
+  /** Repo temporal con `files`; luego reemplaza `ruta` por un enlace a `destino` (fuera del repo). */
+  const conEnlace = (files, ruta, destino, tipo) => {
+    const { dir } = run(files, ['traza', 'nada'])
+    rmSync(join(dir, ruta), { recursive: true, force: true })
+    symlinkSync(destino, join(dir, ruta), tipo)
+    return dir
+  }
+  const externoArchivo = (contenido) => {
+    const f = join(tmp, `externo-${n++}.txt`)
+    writeFileSync(f, contenido)
+    return f
+  }
+  const externoCarpeta = (files) => {
+    const d = join(tmp, `externo-dir-${n++}`)
+    for (const [f, c] of Object.entries(files)) {
+      mkdirSync(dirname(join(d, f)), { recursive: true })
+      writeFileSync(join(d, f), c)
+    }
+    return d
+  }
+  const rechaza = (t, dir, ruta) => {
+    const antes = arbol(dir)
+    const r = exec(dir, ['traza', 'pedidos'])
+    assert.equal(r.status, 1, r.out)
+    assert.match(r.out, /enlace simbólico/)
+    assert.ok(r.out.includes(ruta), `nombra ${ruta}: ${r.out}`)
+    assert.doesNotMatch(r.out, /SECRETO-EXTERNO/)
+    assert.deepEqual(arbol(dir), antes, 'no escribe archivos')
+  }
+  /** Enlace de archivo: salta solo si el SO no permite crearlo. */
+  const archivoEnlace = (t, files, ruta, contenido) => {
+    try {
+      return conEnlace(files, ruta, externoArchivo(contenido), 'file')
+    } catch (e) {
+      if (e.code === 'EPERM' || e.code === 'EACCES') {
+        t.skip(`el SO no permite crear enlaces de archivo (${e.code}): caso no ejercitado`)
+        return null
+      }
+      throw e
+    }
+  }
+
+  test('caso válido sigue funcionando', () => {
+    const r = run(conTests(), ['traza', 'pedidos'])
+    assert.equal(r.status, 0, r.out)
+    assert.match(r.out, /apps\/customer\/src\/pedido\.test\.ts:1/)
+  })
+  test('archivo de test que es enlace externo: rechazado y no se lee', (t) => {
+    const ruta = 'apps/customer/src/pedido.test.ts'
+    const dir = archivoEnlace(t, conTests(), ruta, '// SECRETO-EXTERNO CA-PED-P1\n')
+    if (dir) rechaza(t, dir, ruta)
+  })
+  test('capacidad.md enlace externo: rechazado', (t) => {
+    const dir = archivoEnlace(t, conTests(), CAP, `SECRETO-EXTERNO\n${cab()}${cuerpo()}`)
+    if (dir) rechaza(t, dir, CAP)
+  })
+  test('pantalla enlace externo: rechazada', (t) => {
+    const dir = archivoEnlace(t, conTests(), PANT, `${pantalla()}\nSECRETO-EXTERNO\n`)
+    if (dir) rechaza(t, dir, PANT)
+  })
+  test('openapi/v1.json enlace externo: rechazado', (t) => {
+    const f = 'packages/contracts/openapi/v1.json'
+    const dir = archivoEnlace(t, conTests(), f, '{"SECRETO-EXTERNO":1,"paths":{}}')
+    if (dir) rechaza(t, dir, f)
+  })
+  test('carpeta Docs/producto como junction a fuera: rechazada', () => {
+    const ext = externoCarpeta({
+      'pedidos/capacidad.md': `${cab()}${cuerpo()}`,
+      'pedidos/pantallas/crear.md': pantalla(),
+    })
+    const dir = conEnlace(conTests(), 'Docs/producto', ext, 'junction')
+    rechaza(null, dir, 'Docs/producto')
+  })
+  test('carpeta packages/contracts como junction a fuera: rechazada', () => {
+    const ext = externoCarpeta({ 'openapi/v1.json': '{"SECRETO-EXTERNO":1,"paths":{}}' })
+    const dir = conEnlace(conTests(), 'packages/contracts', ext, 'junction')
+    rechaza(null, dir, 'packages/contracts')
+  })
+  test('carpeta de tests como junction a fuera: rechazada', () => {
+    const ext = externoCarpeta({ 'pedido.test.ts': '// SECRETO-EXTERNO CA-PED-P1\n' })
+    const dir = conEnlace(conTests(), 'apps/customer/src', ext, 'junction')
+    rechaza(null, dir, 'apps/customer/src')
+  })
+})
+
+/*
+  CAX-001, Ronda 2: no basta con no LEER a través de un enlace; tampoco se enumera ni se consulta. Estas pruebas
+  instrumentan el proceso (un módulo precargado envuelve las funciones de node:fs y anota cada ruta que toca) y
+  comprueban que ningún acceso pasa por el enlace: solo se permite el lstat del propio enlace, que es la comprobación.
+*/
+describe('spec: no enumera ni consulta a través de enlaces (CAX-001, R2)', () => {
+  let n = 0
+  const gancho = join(tmp, 'fs-gancho.mjs')
+  writeFileSync(
+    gancho,
+    `import fs from 'node:fs'
+import { syncBuiltinESMExports } from 'node:module'
+const anotar = fs.appendFileSync.bind(fs)
+const log = process.env.SPEC_FS_LOG
+let anotando = false // appendFileSync usa writeFileSync por dentro: sin esto, el gancho se anota a sí mismo sin fin
+for (const nombre of ['readdirSync', 'readFileSync', 'existsSync', 'statSync', 'lstatSync', 'writeFileSync', 'opendirSync', 'realpathSync']) {
+  const original = fs[nombre]
+  fs[nombre] = function (ruta, ...resto) {
+    if (!anotando && (typeof ruta === 'string' || ruta instanceof URL)) {
+      anotando = true
+      try {
+        anotar(log, nombre + '\\t' + String(ruta) + '\\n')
+      } finally {
+        anotando = false
+      }
+    }
+    return original.call(this, ruta, ...resto)
+  }
+}
+syncBuiltinESMExports()
+`,
+  )
+  const norm = (p) => p.replaceAll('\\', '/').toLowerCase()
+  /** Corre spec.mjs con el gancho y devuelve { status, out, accesos: [[fn, ruta]] }. */
+  const instrumentado = (dir, args) => {
+    const log = join(tmp, `fs-${n++}.log`)
+    writeFileSync(log, '')
+    const r = spawnSync(process.execPath, ['--import', pathToFileURL(gancho).href, script, ...args], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, SPEC_FS_LOG: log },
+    })
+    const accesos = readFileSync(log, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => l.split('\t'))
+    return { status: r.status, out: `${r.stdout}${r.stderr}`, accesos }
+  }
+  /** Ningún acceso entra en `enlace` (ruta relativa al repo) salvo el lstat del propio enlace. */
+  const sinPasarPor = (dir, enlace, accesos) => {
+    const base = norm(join(dir, enlace))
+    const malos = accesos.filter(([fn, ruta]) => {
+      const r = norm(ruta)
+      if (r === base) return fn !== 'lstatSync'
+      return r.startsWith(`${base}/`)
+    })
+    assert.deepEqual(malos, [], `accesos a través de ${enlace}`)
+  }
+  const carpetaExterna = (files) => {
+    const d = join(tmp, `ext-r2-${n++}`)
+    mkdirSync(d, { recursive: true })
+    for (const [f, c] of Object.entries(files)) {
+      mkdirSync(dirname(join(d, f)), { recursive: true })
+      writeFileSync(join(d, f), c)
+    }
+    return d
+  }
+  const conJunction = (files, ruta, destino, args) => {
+    const { dir } = run(files, args)
+    rmSync(join(dir, ruta), { recursive: true, force: true })
+    mkdirSync(dirname(join(dir, ruta)), { recursive: true })
+    symlinkSync(destino, join(dir, ruta), 'junction')
+    return dir
+  }
+  const base = () =>
+    con({
+      'apps/customer/src/pedido.test.ts': "test('CA-PED-01', () => {})\n",
+      'apps/api/app/api/v1/orders/route.ts': 'export {}\n',
+    })
+  const casos = [
+    ['Docs/producto como junction a una carpeta vacía', 'Docs/producto', {}],
+    ['Docs/producto como junction a una carpeta con capacidades', 'Docs/producto', { 'pedidos/capacidad.md': 'x' }],
+    ['pantallas como junction a una carpeta vacía', 'Docs/producto/pedidos/pantallas', {}],
+    ['pantallas como junction a una carpeta con pantallas', 'Docs/producto/pedidos/pantallas', { 'crear.md': 'x' }],
+    ['una capacidad entera como junction', 'Docs/producto/otra', { 'capacidad.md': 'x' }],
+  ]
+  for (const args of [['traza', 'pedidos'], ['validar'], ['indice', '--check']]) {
+    for (const [nombre, ruta, files] of casos) {
+      test(`${args[0]}: ${nombre} — rechazado sin enumerar el destino`, () => {
+        const dir = conJunction(base(), ruta, carpetaExterna(files), args)
+        const r = instrumentado(dir, args)
+        assert.equal(r.status, 1, r.out)
+        assert.match(r.out, /enlace simbólico/)
+        assert.ok(r.out.includes(ruta), `nombra ${ruta}: ${r.out}`)
+        assert.ok(r.accesos.length > 0, 'el gancho anota accesos')
+        sinPasarPor(dir, ruta, r.accesos)
+        assert.ok(!r.accesos.some(([fn]) => fn === 'writeFileSync'), 'no escribe')
+      })
+    }
+  }
+  test('el caso válido sigue funcionando con el gancho y sin enlaces', () => {
+    const { dir } = run(base(), ['traza', 'pedidos'])
+    const r = instrumentado(dir, ['traza', 'pedidos'])
+    assert.equal(r.status, 0, r.out)
+    assert.ok(r.accesos.some(([fn]) => fn === 'readdirSync'), 'el gancho ve las enumeraciones')
+  })
 })
