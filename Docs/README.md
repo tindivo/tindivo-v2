@@ -454,7 +454,8 @@ la salida del clasificador. Si un criterio deja de cumplirse, se sigue el ciclo 
 **Pruebas entre apps**, en este orden: (1) contrato por cliente: respuestas reales de la API, guardadas como fixtures
 desde el OpenAPI, que los tests de Kotlin (y de Swift) decodifican en CI; (2) compatibilidad hacia atrás: las
 peticiones de la versión publicada de cada app, congeladas, corren contra la API nueva en `db:cycle`; (3) vectores
-compartidos para cada regla copiada entre TS, Kotlin y Swift (`packages/contracts/test-vectors/`); (4) e2e web que
+compartidos para cada regla copiada entre TS, Kotlin y Swift (`packages/contracts/fixtures/vectores/`, junto a los
+fixtures de TST-5 y CLI-2); (4) e2e web que
 cruzan apps. Un CA ★ tiene prueba en cada app nativa, salvo los que garantiza el servidor. Ninguna prueba garantiza
 «cero fallos»: estas detectan la rotura entre apps antes del merge.
 
