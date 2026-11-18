@@ -25,7 +25,7 @@ const tracked = execFileSync('git', ['-c', 'core.quotepath=off', 'ls-files'], { 
   .filter(Boolean)
 
 const esAgentes = (f) => /(^|\/)(AGENTS|CLAUDE)\.md$/.test(f)
-const CANON = ['Docs/negocio/', 'Docs/arquitectura/', 'Docs/operacion/', 'Docs/glosario.md', 'Docs/README.md']
+const CANON = ['Docs/negocio/', 'Docs/producto/', 'Docs/arquitectura/', 'Docs/operacion/', 'Docs/glosario.md', 'Docs/README.md']
 const esCanon = (f) => CANON.some((c) => f.startsWith(c)) && f.endsWith('.md')
 const esAdr = (f) => /^Docs\/decisiones\/\d{4}-.+\.md$/.test(f)
 const esPlan = (f) => /^Docs\/planes\/[^/]+\/[^/]+\.md$/.test(f)
@@ -78,7 +78,9 @@ for (const f of alcance) {
 
   // 3 · cabeceras
   const cabeza = lineas.slice(0, 12).join('\n')
-  if (esCanon(f) && !/^>\s*Verificado:/m.test(cabeza)) errores.push(`${f} · falta «> Verificado: …» en la cabecera`)
+  // En producto/ la cabecera va en capacidad.md y en el índice; las fichas de pantalla heredan la de su capacidad.
+  const sinCabeceraPropia = f.startsWith('Docs/producto/') && (f.includes('/pantallas/') || f.includes('/_plantilla/'))
+  if (esCanon(f) && !sinCabeceraPropia && !/^>\s*Verificado:/m.test(cabeza)) errores.push(`${f} · falta «> Verificado: …» en la cabecera`)
   if (esAdr(f) && !/^Estado:/m.test(cabeza)) errores.push(`${f} · al ADR le falta «Estado: …»`)
   if (esPlan(f) && !/Estado:/.test(cabeza)) errores.push(`${f} · al plan le falta «Estado: …» en la cabecera`)
 }

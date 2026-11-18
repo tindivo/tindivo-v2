@@ -1,10 +1,18 @@
 # Glosario
 
-> Verificado: 2026-10-10 · entorno: `develop@7d00aa4` (`packages/contracts/src/`, `supabase/migrations/`) y
+> Verificado: 2026-11-17 · entorno: `develop@946feb2e` (`packages/contracts/src/`, `supabase/migrations/`) y
 > `tindivo-prod` (solo lectura)
 
 El nombre oficial de cada cosa, cómo se llama en el código y los nombres que **ya no** se usan. Si un documento usa
 un nombre retirado, el documento está viejo: manda este glosario (estándar §3.6).
+
+## Cómo se organiza el producto
+
+| Nombre oficial | En el código | Qué es |
+|---|---|---|
+| **Línea de negocio** | `Docs/negocio/servicios/<línea>.md` | A quién se vende y con qué reglas comerciales (pedidos de restaurante, Entregas, Store). No tiene código propio: es una combinación de capacidades y parámetros |
+| **Capacidad** | `Docs/producto/<capacidad>/`, un módulo de `packages/backend`, una carpeta `feature/` por app | Algo que el sistema sabe hacer y que usan una o más líneas (direcciones, checkout, despacho…). Estándar §2.4 |
+| **Partner** o **negocio aliado** | `businesses` | Un negocio que vende por Tindivo y usa su flota; paga a Tindivo por pedido entregado (`Docs/negocio/dinero.md`). «Partner» y «aliado» son lo mismo |
 
 ## Servicios
 

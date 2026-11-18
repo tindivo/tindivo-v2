@@ -1,6 +1,6 @@
 # Docs: cómo se documenta Tindivo y cómo se trabaja con agentes
 
-> Verificado: 2026-10-12 · entorno: `develop@591ec569` · Estándar vigente, aprobado por Jesús el 2026-10-10; enmienda aprobada por Jesús el 2026-10-12 (conversación con Claude Code) · Resumen operativo: `AGENTS.md` raíz
+> Verificado: 2026-11-17 · entorno: `develop@946feb2e` · Estándar vigente, aprobado por Jesús el 2026-10-10; enmiendas aprobadas por Jesús el 2026-10-12 y el 2026-11-17 (`Docs/producto/`, §2.4; conversación con Claude Code) · Resumen operativo: `AGENTS.md` raíz
 > La transición que lo implantó (el squash de ~255 documentos a este canon) terminó el 2026-10-10; su plan y el debate
 > con Codex, que firmó con cambios en dos rondas, están en la etiqueta `archive/estandar-docs` (commit `8dcf6ba`).
 
@@ -16,7 +16,8 @@ aprobada. Este estándar pone esa frontera.
 | Dónde | Qué |
 |---|---|
 | `Docs/glosario.md` | El nombre de cada cosa |
-| `Docs/negocio/` | Plataforma, dinero, antifraude, apps, diseño y un archivo por servicio en `servicios/` |
+| `Docs/negocio/` | Plataforma, dinero, antifraude, apps, diseño y un archivo por línea de negocio en `servicios/` |
+| `Docs/producto/` | Qué hace el producto, por capacidad: requisitos, criterios de aceptación y una ficha por pantalla, común a web, Android e iOS (§2.4) |
 | `Docs/arquitectura/README.md` | Cómo está construido; los estándares de código, en `arquitectura/estandares/` |
 | `Docs/operacion/` | Runbooks: deploy, publicación de apps nativas, trampas conocidas, graphify, cómo llamar a cada agente |
 | `Docs/decisiones/` y `DECISIONS.md` | Las decisiones (ADR desde la 0034; §1–§32 e índice en `DECISIONS.md`) |
@@ -31,7 +32,7 @@ ni está abierto **no está en el repo**: está en git (§2.3).
 
 | Zona | Dónde | Qué contiene | Quién escribe | ¿Manda? |
 |---|---|---|---|---|
-| **Canon** | `Docs/negocio/`, `arquitectura/`, `decisiones/`, `operacion/`, `glosario.md`, `README.md` | Lo que es verdad hoy y por qué | Por promoción (§5) o corrección dentro de lo aprobado (§4) | **Sí**, como regla general |
+| **Canon** | `Docs/negocio/`, `producto/`, `arquitectura/`, `decisiones/`, `operacion/`, `glosario.md`, `README.md` | Lo que es verdad hoy y por qué | Por promoción (§5) o corrección dentro de lo aprobado (§4) | **Sí**, como regla general |
 | **Planes** | `Docs/planes/<tema>/` | Planes y specs **aprobados por Jesús**, en ejecución o por ejecutar | Se crean al aprobarse; se actualiza su avance | **Sí**, solo dentro de su alcance |
 | **Trabajo** | `Docs/trabajo/<tema>/` | Análisis, debates, propuestas, inventarios, bitácoras | Cualquier agente, libremente | **No** |
 
@@ -39,7 +40,8 @@ ni está abierto **no está en el repo**: está en git (§2.3).
 
 | Carpeta | Contiene | **No** contiene |
 |---|---|---|
-| `negocio/` | Reglas del negocio y su porqué, sin tecnología: roles, dinero, antifraude, tiempos; un archivo por servicio en `negocio/servicios/` (pedidos de restaurante, Entregas, Store…) | Tablas, endpoints, componentes |
+| `negocio/` | Reglas del negocio y su porqué, sin tecnología: roles, dinero, antifraude, tiempos; un archivo por línea de negocio en `negocio/servicios/` (pedidos de restaurante, Entregas, Store…) con qué capacidades usa y sus límites | Tablas, endpoints, componentes; lo que hace una pantalla (va a `producto/`) |
+| `producto/` | Una carpeta por capacidad (§2.4): requisitos, criterios de aceptación, fichas de pantalla y las reglas que cita | Valores de reglas (se citan por símbolo), estado por plataforma (se genera), maquetas |
 | `arquitectura/` | Cómo está construido y por qué: módulos, fronteras, flujo de datos, estándares de código (`estandares/`), excepciones y propiedad de los objetos de la base | Listas de columnas o endpoints (§3.2) |
 | `decisiones/` | ADR de decisiones duraderas (§5.1) | Discusión: mientras está abierta vive en `trabajo/`; después, en git, enlazada por etiqueta |
 | `operacion/` | Runbooks (deploy, base local, seed, migraciones, publicación de apps) y trampas conocidas con su síntoma. **Son la fuente** de cada procedimiento; las skills los envuelven (§6.3) | — |
@@ -76,6 +78,41 @@ tropezando con ella.
 - **Lo que no es documento no entra al repo**: salidas de modelos, muestras, listas intermedias y scripts de un solo
   uso viven en la carpeta temporal del agente. Al repo llega solo su conclusión.
 - **Antes de borrar, enlaces entrantes** (§8.1): lo que se borra no puede quedar citado como fuente.
+
+### 2.4 Producto: capacidades y pantallas
+
+Una **capacidad** es algo que el sistema sabe hacer y que usan una o más líneas de negocio (direcciones, bolsa,
+checkout, despacho, deuda…); una **línea de negocio** es a quién se vende y con qué reglas comerciales, y no tiene
+código propio (glosario). La capacidad es la unidad de `Docs/producto/<capacidad>/`, del módulo de `packages/backend` y
+de la carpeta `feature/` de cada app. Así, un cambio de diseño se edita en **un** lugar y el resto se comprueba.
+
+```
+Docs/producto/
+├── README.md                ← generado (pnpm spec:indice): capacidades × actores y × líneas
+├── _plantilla/              ← se copia para empezar una capacidad
+└── <capacidad>/
+    ├── capacidad.md         ← cabecera (lineas, depende_de, dinero, codigo, operaciones, reglas), «Antes de tocar»,
+    │                          requisitos, criterios de aceptación (CA), reglas citadas
+    └── pantallas/<slug>.md  ← una ficha por pantalla, la misma para web, Android e iOS; clave `<capacidad>/<slug>`
+```
+
+- **Se escribe a mano:** requisitos, criterios, fichas y el bloque «Antes de tocar» (máximo 15 líneas: qué es, de qué
+  depende, dónde vive su código, qué dinero toca y si dispara Codex).
+- **No se escribe:** el valor de una regla (vive en `packages/contracts`, `app_settings` o `Docs/negocio/` y se cita por
+  símbolo, §3.1); el estado por plataforma (lo calculan las pruebas que llevan el ID del criterio en su nombre); el
+  índice (`pnpm spec:indice`).
+- **IDs completos, sin rangos.** Un requisito es `CUS-ADR-001`, nunca `001…003`. Un criterio que cambia de significado
+  recibe un ID nuevo.
+- **Un cambio de diseño** edita la ficha en la misma rama que el código, y Jesús aprueba ese diff con el antes y el
+  después del tablero. Si no cabe en un PR, va primero como plan (§2.2) o, si no está aprobado, a `trabajo/`.
+- **Dinero por dependencia:** si una capacidad tiene `dinero: true`, o una pantalla cumple un requisito de una capacidad
+  así, su cambio pasa por Codex.
+- **Migración:** las capacidades entran una a una desde `negocio/servicios/`, `planes/movil/` y `trabajo/`; mientras una
+  capacidad no está en `producto/`, mandan sus fuentes de siempre. Lo migrado se borra del origen en el mismo PR.
+
+`pnpm spec:validar` comprueba cabeceras, IDs únicos y completos, que toda referencia resuelva (capacidades,
+`operationId`, globs de código, símbolos y claves de `app_settings`), que no haya ciclos en `depende_de`, que la sección
+Reglas solo cite y que no haya citas por línea ni marcas de estado escritas a mano.
 
 ## 3. Reglas de escritura del canon
 
@@ -378,9 +415,9 @@ Mecanismos:
 
 ## 8. Mecanismos que lo sostienen
 
-Corren en CI y bloquean el merge, salvo los avisos. Los puntos 1 a 5 están en el job `docs` de
-`.github/workflows/ci.yml`; el 6 y el 7, en `.github/workflows/docs-guard.yml` (el 6 lee el cuerpo del PR y el 7 corre
-por calendario, y ninguno de los dos encaja en el disparador de `ci.yml`):
+Corren en CI y bloquean el merge, salvo los avisos. En `.github/workflows/ci.yml`, los puntos 1 a 4 y el 9 corren en
+el job `quality`, y el 5 en el job `docs`; el 6 y el 7 están en `.github/workflows/docs-guard.yml` (el 6 lee el cuerpo
+del PR y el 7 corre por calendario, y ninguno de los dos encaja en el disparador de `ci.yml`):
 
 1. **Enlaces y rutas** (`pnpm check:docs`): todo enlace del canon y de `planes/`, y toda ruta mencionada en `AGENTS.md`/`CLAUDE.md`,
    existe. Las rutas históricas, de ejemplo o futuras se marcan como tales y quedan fuera.
@@ -393,6 +430,8 @@ por calendario, y ninguno de los dos encaja en el disparador de `ci.yml`):
 7. **Aviso semanal**: temas de `trabajo/` sin actividad en 30 días (`scripts/check-trabajo-age.sh`).
 8. **Carga de instrucciones**: la prueba con tokens (§6.1.1) se repite tras cada actualización de una herramienta; es
    manual y queda registrada en §6.1.
+9. **Producto** (§2.4): `pnpm spec:validar`, el índice al día (`node scripts/spec.mjs indice --check`) y las pruebas
+   del propio validador (`node --test scripts/spec.test.mjs`).
 
 Los puntos 1 a 4 son las cuatro reglas de `scripts/check-docs.mjs` (`pnpm check:docs`, paso «Documentación que
 manda» del CI). Los scripts de shell se revisan con `shellcheck`, y los workflows con `actionlint`, en el mismo job.

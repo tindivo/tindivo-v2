@@ -61,6 +61,13 @@ jobs:
       - name: Documentación que manda (enlaces, rutas y cabeceras)
         run: pnpm check:docs
 
+      # Docs/producto/: cabeceras, IDs, referencias que resuelven e índice generado al día (sin valores a mano).
+      - name: Especificación de producto (validar, índice y pruebas del validador)
+        run: |
+          pnpm spec:validar
+          node scripts/spec.mjs indice --check
+          node --test scripts/spec.test.mjs
+
       # Fronteras de arquitectura (ADR 0039): ninguna app cliente importa packages/backend, el backend no
       # importa next, domain/ no toca infra ni SDK, y un módulo solo importa el index de otro.
       - name: Fronteras de arquitectura (dependency-cruiser)
