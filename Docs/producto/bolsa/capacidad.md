@@ -9,7 +9,7 @@ codigo:
   web: [apps/customer/lib/cart.ts, apps/customer/lib/cart-refresh.ts, apps/customer/lib/cart-validation.ts]
   android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/Cart.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/CartStore.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/CartSnapshot.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/CartSerializer.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/ModifierSelection.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/Money.kt]
   ios: []
-  backend: [packages/contracts/src/client-requests.ts]
+  backend: [packages/contracts/src/cart.ts, packages/contracts/src/requests.ts, packages/contracts/src/client-requests.ts]
 operaciones: []
 reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSelection, DELIVERY_METHODS]
 ---
@@ -29,8 +29,8 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
   mostrar; la web del cliente se apaga y no se corrige.
 - El método de entrega (delivery o recojo) **se elige en el checkout**; la bolsa solo lo recuerda y lo muestra como
   etiqueta (decisión de Jesús, 2026-11-18).
-- Los topes viven en `packages/contracts` (`CART_MAX_*`); Android los copia y un vector compartido lo comprueba
-  (`packages/contracts/fixtures/vectores/bolsa.json`).
+- Los topes viven en `packages/contracts` (`CART_MAX_*`); Android los copia; el vector compartido que lo comprobará
+  (`packages/contracts/fixtures/vectores/bolsa.json`) llega con el PR de Android (CA-CRT-06, CA-CRT-09).
 - Lo que comprueba el checkout antes de pagar (sesión, celular, dirección, pago pendiente: antes CUS-CRT-008) es de la
   capacidad checkout y migra con ella.
 - Trampa conocida: la validación contra la carta **no** se guarda; se repite al abrir la bolsa.
