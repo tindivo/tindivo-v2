@@ -1,5 +1,8 @@
 package com.tindivo.customer.feature.cart
 
+import com.tindivo.customer.feature.catalog.business.MenuItemUi
+import java.util.Locale
+
 /** Una opción elegida de un plato, para enseñarla como «Grupo: Opción». */
 data class CartOptionUi(
     val group: String,
@@ -19,6 +22,15 @@ data class CartLineUi(
     val canIncrease: Boolean,
     /** Lo que la carta vigente dice de esta línea; vacío si es válida o aún no se sabe. */
     val issues: List<LineIssue> = emptyList(),
+    /** «Editar» se ofrece si el plato tiene opciones y la carta ya respondió. */
+    val canEdit: Boolean = false,
+)
+
+/** La ficha del plato abierta para editar la línea de firma [signature]: el plato de la carta y la línea tal cual. */
+data class EditingUi(
+    val signature: String,
+    val item: MenuItemUi,
+    val line: CartLine,
 )
 
 sealed interface CartUiState {
@@ -45,6 +57,8 @@ sealed interface CartUiState {
         /** Plazo de entrega del negocio, cuando la carta ya respondió y lo informa. */
         val etaMin: Int? = null,
         val etaMax: Int? = null,
+        /** La línea que se está editando, con su ficha; `null` si no se edita ninguna. */
+        val editing: EditingUi? = null,
     ) : CartUiState {
         /** En recojo no hay envío que calcular (CUS-CRT-010). */
         val showsShippingRow: Boolean get() = deliveryMethod == DeliveryMethod.Delivery
@@ -55,6 +69,7 @@ internal fun Cart?.toUi(
     undoName: String? = null,
     confirmingClear: Boolean = false,
     check: CartCheck = CartCheck.Done(closed = false, issues = emptyMap()),
+    editing: EditingUi? = null,
 ): CartUiState {
     if (this == null || isEmpty()) return CartUiState.Empty
     return CartUiState.Filled(
@@ -72,6 +87,7 @@ internal fun Cart?.toUi(
                     decreaseRemoves = line.quantity <= 1,
                     canIncrease = line.quantity < MAX_QUANTITY,
                     issues = (check as? CartCheck.Done)?.issues?.get(line.signature).orEmpty(),
+                    canEdit = line.canEditWith(check),
                 )
             },
         subtotal = requireAmountText(subtotal),
@@ -82,5 +98,9 @@ internal fun Cart?.toUi(
         units = count,
         etaMin = (check as? CartCheck.Done)?.etaMin,
         etaMax = (check as? CartCheck.Done)?.etaMax,
+        editing = editing,
     )
 }
+
+private fun CartLine.canEditWith(check: CartCheck): Boolean =
+    check is CartCheck.Done && (modifiers.isNotEmpty() || itemId.lowercase(Locale.ROOT) in check.customizable)

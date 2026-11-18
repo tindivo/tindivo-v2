@@ -165,4 +165,47 @@ class CartTest {
         val full = Cart("n", "Negocio", List(MAX_LINES) { line("p$it") })
         assertEquals(full, full.restoreLine(line("otro"), index = 0))
     }
+
+    @Test
+    fun `CA-CRT-11 · editar una linea la cambia en su sitio`() {
+        val cart = Cart("n", "Negocio", listOf(line("a"), line("b", modifiers = listOf(mod("x", "1.00"))), line("c")))
+        val old = cart.lines[1].signature
+        val edited = line("b", modifiers = listOf(mod("y", "2.00")), quantity = 2)
+
+        val result = cart.replaceLine(old, edited)
+
+        assertEquals(listOf("a", "b", "c"), result.lines.map { it.itemId })
+        assertEquals(listOf("y"), result.lines[1].modifiers.map { it.optionId })
+        assertEquals(2, result.lines[1].quantity)
+    }
+
+    @Test
+    fun `CA-CRT-11 · si la linea editada queda identica a otra se fusionan sumando cantidades`() {
+        val first = line("b", modifiers = listOf(mod("x", "1.00")), quantity = 2)
+        val second = line("b", modifiers = listOf(mod("y", "1.00")), quantity = 3)
+        val cart = Cart("n", "Negocio", listOf(line("a"), first, second))
+
+        // Se edita la primera para que elija lo mismo que la segunda.
+        val result = cart.replaceLine(first.signature, line("b", modifiers = listOf(mod("y", "1.00")), quantity = 1))
+
+        assertEquals(listOf("a", "b"), result.lines.map { it.itemId })
+        assertEquals(4, result.lines[1].quantity)
+        assertEquals(1, result.lines[1].modifiers.size)
+    }
+
+    @Test
+    fun `al fusionar la cantidad no pasa de 50`() {
+        val first = line("b", modifiers = listOf(mod("x", "1.00")), quantity = 30)
+        val second = line("b", modifiers = listOf(mod("y", "1.00")), quantity = 40)
+        val result =
+            Cart("n", "Negocio", listOf(first, second))
+                .replaceLine(first.signature, line("b", modifiers = listOf(mod("y", "1.00")), quantity = 30))
+        assertEquals(MAX_QUANTITY, result.lines.single().quantity)
+    }
+
+    @Test
+    fun `editar una linea que ya no esta no cambia nada`() {
+        val cart = Cart("n", "Negocio", listOf(line("a")))
+        assertEquals(cart, cart.replaceLine("fantasma", line("z")))
+    }
 }

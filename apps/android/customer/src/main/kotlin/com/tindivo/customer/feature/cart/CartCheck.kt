@@ -41,6 +41,8 @@ sealed interface CartCheck {
         val issues: Map<String, List<LineIssue>>,
         val etaMin: Int? = null,
         val etaMax: Int? = null,
+        /** Los platos de la carta que tienen grupos de opciones (en minúsculas): los que se pueden editar. */
+        val customizable: Set<String> = emptySet(),
     ) : CartCheck
 }
 

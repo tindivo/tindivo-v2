@@ -110,6 +110,20 @@ class CartStore(
         return restored
     }
 
+    /** Cambia la línea de firma [signature] por [line], editada (CUS-CRT-014); ver [replaceLine]. */
+    suspend fun replaceLine(
+        signature: String,
+        line: CartLine,
+    ) {
+        store.updateData { current ->
+            current
+                ?.toCartOrNull()
+                ?.replaceLine(signature, line)
+                ?.toSnapshot()
+                ?.keepingReservationOf(current)
+        }
+    }
+
     suspend fun clear() {
         store.updateData { null }
     }

@@ -45,6 +45,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.catalog.business.DishSheet
+import com.tindivo.customer.feature.catalog.business.DishSheetState
 
 /** Une el ViewModel con la pantalla. [onAddMore] vuelve a la carta del negocio de la bolsa. */
 @Composable
@@ -67,6 +69,9 @@ fun CartDestination(
                 onChangeQuantity = viewModel::changeQuantity,
                 onUndoRemove = viewModel::undoRemove,
                 onRetryCheck = viewModel::retryCheck,
+                onEdit = viewModel::startEdit,
+                onCancelEdit = viewModel::cancelEdit,
+                onSaveEdit = viewModel::saveEdit,
                 onAskClear = viewModel::askClear,
                 onCancelClear = viewModel::cancelClear,
                 onConfirmClear = viewModel::confirmClear,
@@ -81,6 +86,9 @@ class CartActions(
     val onChangeQuantity: (signature: String, delta: Int) -> Unit,
     val onUndoRemove: () -> Unit,
     val onRetryCheck: () -> Unit,
+    val onEdit: (String) -> Unit,
+    val onCancelEdit: () -> Unit,
+    val onSaveEdit: (CartLine) -> Unit,
     val onAskClear: () -> Unit,
     val onCancelClear: () -> Unit,
     val onConfirmClear: () -> Unit,
@@ -145,6 +153,14 @@ fun CartScreen(
                 is CartUiState.Filled -> FilledBag(state = state, actions = actions)
             }
         }
+    }
+    (state as? CartUiState.Filled)?.editing?.let {
+        DishSheet(
+            item = it.item,
+            onDismiss = actions.onCancelEdit,
+            onAdd = actions.onSaveEdit,
+            initial = DishSheetState.forLine(it.item, it.line),
+        )
     }
     if ((state as? CartUiState.Filled)?.confirmingClear == true) {
         ClearDialog(onCancel = actions.onCancelClear, onConfirm = actions.onConfirmClear)
@@ -296,7 +312,7 @@ private fun CartPreview() {
     TindivoTheme {
         CartScreen(
             state = CartUiState.Filled("n", "Pollería Don Lucho", listOf(line), "S/ 25.00"),
-            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}),
+            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}, {}, {}),
         )
     }
 }

@@ -1,5 +1,7 @@
 package com.tindivo.customer.feature.catalog.business
 
+import com.tindivo.customer.feature.cart.CartLine
+import com.tindivo.customer.feature.cart.CartModifier
 import com.tindivo.customer.feature.cart.MAX_MODIFIERS
 import com.tindivo.customer.feature.cart.MAX_NOTE_LENGTH
 import com.tindivo.customer.feature.cart.MAX_QUANTITY
@@ -280,5 +282,42 @@ class DishSheetStateTest {
         assertEquals(listOf("x"), state.selectedIds)
         assertFalse(state.isValid)
         assertTrue(state.cta is DishCta.Complete)
+    }
+
+    @Test
+    fun `CA-CRT-11 · editar abre la ficha con lo que ya se habia elegido`() {
+        val line =
+            CartLine(
+                itemId = "plato",
+                name = "Pollo",
+                basePrice = BigDecimal("18.00"),
+                modifiers =
+                    listOf(
+                        CartModifier("large", "size", "large", BigDecimal("4.00")),
+                        CartModifier("queso", "extras", "queso", BigDecimal("2.50")),
+                    ),
+                note = "sin ají",
+                quantity = 3,
+                imageUrl = null,
+            )
+
+        val state = DishSheetState.forLine(dish, line)
+
+        assertEquals(listOf("large", "queso"), state.selectedIds)
+        assertEquals("sin ají", state.note)
+        assertEquals(3, state.quantity)
+        assertTrue(state.isValid)
+        // 3 × (18.00 + 4.00 + 2.50) = 73.50
+        assertEquals(BigDecimal("73.50"), state.total)
+    }
+
+    @Test
+    fun `una opcion que el negocio ya no ofrece no se preselecciona`() {
+        val gone = CartModifier("chimi", "sauce", "chimi", BigDecimal("1.00"))
+        val line = CartLine("plato", "Pollo", BigDecimal("18.00"), listOf(gone), null, 1, null)
+        val state = DishSheetState.forLine(dish, line)
+        assertTrue(state.selectedIds.isEmpty())
+        // Falta el tamaño obligatorio: la persona tiene que volver a elegir antes de guardar.
+        assertFalse(state.isValid)
     }
 }

@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +69,7 @@ private fun QuantityControls(
 ) {
     val less = stringResource(R.string.cart_line_less, line.name)
     val more = stringResource(R.string.cart_line_more, line.name)
+    val editLabel = stringResource(R.string.cart_edit_line, line.name)
     val lessLabel = if (line.decreaseRemoves) stringResource(R.string.cart_line_remove, line.name) else less
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedButton(
@@ -92,6 +95,16 @@ private fun QuantityControls(
             contentPadding = PaddingValues(0.dp),
         ) {
             Text(text = "+")
+        }
+        if (line.canEdit) {
+            Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
+                TextButton(
+                    onClick = { actions.onEdit(line.signature) },
+                    modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = editLabel },
+                ) {
+                    Text(text = stringResource(R.string.cart_edit))
+                }
+            }
         }
     }
 }

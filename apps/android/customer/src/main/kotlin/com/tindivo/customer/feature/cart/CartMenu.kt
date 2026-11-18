@@ -48,7 +48,13 @@ fun validateCart(
         cart.lines
             .associate { line -> line.signature to issuesOf(line, menu.items[line.itemId.lower()], now) }
             .filterValues { it.isNotEmpty() }
-    return CartCheck.Done(closed = menu.closed, issues = issues, etaMin = menu.etaMin, etaMax = menu.etaMax)
+    return CartCheck.Done(
+        closed = menu.closed,
+        issues = issues,
+        etaMin = menu.etaMin,
+        etaMax = menu.etaMax,
+        customizable = menu.items.filterValues { it.groups.isNotEmpty() }.keys,
+    )
 }
 
 private fun issuesOf(

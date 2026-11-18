@@ -139,6 +139,32 @@ fun Cart.setQuantity(
 fun Cart.removeLine(signature: String): Cart = copy(lines = lines.filterNot { it.signature == signature })
 
 /**
+ * Reemplaza en su sitio la línea de firma [signature] por [line] (la que salió de editarla, CUS-CRT-014). Si [line]
+ * queda idéntica a OTRA línea, se fusionan: la que ya estaba conserva su sitio, suma las cantidades (sin pasar de
+ * [MAX_QUANTITY]) y se queda con el nombre y los precios de [line], los más recientes.
+ */
+fun Cart.replaceLine(
+    signature: String,
+    line: CartLine,
+): Cart {
+    val index = lines.indexOfFirst { it.signature == signature }
+    if (index < 0) return this
+    val twin = lines.indexOfFirst { it.signature == line.signature && it.signature != signature }
+    if (twin < 0) return copy(lines = lines.toMutableList().apply { set(index, line) })
+    val merged = line.copy(quantity = minOf(lines[twin].quantity + line.quantity, MAX_QUANTITY))
+    return copy(
+        lines =
+            lines.mapIndexedNotNull { i, existing ->
+                when (i) {
+                    index -> null
+                    twin -> merged
+                    else -> existing
+                }
+            },
+    )
+}
+
+/**
  * Devuelve [line] a la posición [index] (la que tenía al quitarla), con su cantidad. No hace nada si la bolsa ya tiene
  * un plato con esa firma o si ya está en [MAX_LINES]: deshacer nunca pisa ni pasa el tope.
  */

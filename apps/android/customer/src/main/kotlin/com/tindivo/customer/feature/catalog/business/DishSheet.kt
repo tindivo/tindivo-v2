@@ -51,9 +51,11 @@ internal fun DishSheet(
     item: MenuItemUi,
     onDismiss: () -> Unit,
     onAdd: (CartLine) -> Unit,
+    /** Lo que ya estaba elegido, al editar una línea de la bolsa (CUS-CRT-014); el botón dice «Guardar». */
+    initial: DishSheetState? = null,
 ) {
     var state by rememberSaveable(item.id, stateSaver = DishSheetState.saver(item)) {
-        mutableStateOf(DishSheetState(item))
+        mutableStateOf(initial ?: DishSheetState(item))
     }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -87,7 +89,7 @@ internal fun DishSheet(
                 )
                 QuantityRow(quantity = state.quantity, onChange = { state = state.withQuantity(it) })
             }
-            AddButton(state = state, onClick = { onAdd(state.toLine()) })
+            AddButton(state = state, saving = initial != null, onClick = { onAdd(state.toLine()) })
         }
     }
 }
@@ -156,11 +158,13 @@ private fun QuantityRow(
 @Composable
 private fun AddButton(
     state: DishSheetState,
+    saving: Boolean,
     onClick: () -> Unit,
 ) {
     val label =
         when (val cta = state.cta) {
-            is DishCta.Add -> stringResource(R.string.dish_add_cta, cta.total)
+            is DishCta.Add ->
+                stringResource(if (saving) R.string.dish_save_cta else R.string.dish_add_cta, cta.total)
             is DishCta.Complete -> pluralStringResource(R.plurals.dish_complete_cta, cta.missing, cta.missing)
         }
     Button(

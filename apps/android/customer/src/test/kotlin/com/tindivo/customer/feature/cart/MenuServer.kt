@@ -19,6 +19,7 @@ internal const val DISH_B = "00000000-0000-4000-8000-00000000000b"
 internal const val DISH_C = "00000000-0000-4000-8000-00000000000c"
 internal const val GROUP_SAUCE = "22222222-2222-4222-8222-222222222222"
 internal const val OPTION_AJI = "00000000-0000-4000-8000-000000000101"
+internal const val OPTION_MAYO = "00000000-0000-4000-8000-000000000102"
 
 /** Un `getBusiness` de mentira: responde SIEMPRE lo que diga [body], las veces que se pida (no hay cola que agotar). */
 internal class MenuServer(

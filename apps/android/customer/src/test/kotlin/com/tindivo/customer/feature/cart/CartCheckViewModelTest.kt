@@ -71,6 +71,9 @@ class CartCheckViewModelTest {
             it is CartUiState.Filled && it.continueCta.blocked != ContinueBlock.Checking
         } as CartUiState.Filled
 
+    private suspend fun CartViewModel.awaitFilled(matches: (CartUiState.Filled) -> Boolean): CartUiState.Filled =
+        state.first { it is CartUiState.Filled && matches(it) } as CartUiState.Filled
+
     private fun CartViewModel.keepHot(scope: CoroutineScope) {
         scope.launch(dispatcher) { state.collect {} }
     }
@@ -191,4 +194,80 @@ class CartCheckViewModelTest {
             newViewModel().also { it.keepHot(backgroundScope) }
             assertEquals(0, menuServer.requests)
         }
+
+    private val aji = CartModifier(OPTION_AJI, "Salsa", "Opcion", BigDecimal("1.00"))
+    private val mayo = CartModifier(OPTION_MAYO, "Salsa", "Opcion", BigDecimal("0.50"))
+
+    private fun saucesMenu() =
+        MenuServer.menu(
+            MenuServer.dish(DISH_A, groups = MenuServer.group(OPTION_AJI to "1.00", OPTION_MAYO to "0.50")),
+            MenuServer.dish(DISH_B),
+        )
+
+    @Test
+    fun `CA-CRT-11 · solo se ofrece editar el plato que tiene opciones`() =
+        runTest {
+            menuServer.body = saucesMenu()
+            seed(line(DISH_A, "Lomo", modifiers = listOf(aji)), line(DISH_B, "Arroz"))
+            val viewModel = newViewModel().also { it.keepHot(backgroundScope) }
+
+            val ui = viewModel.settled()
+
+            assertTrue(ui.lines[0].canEdit)
+            assertFalse(ui.lines[1].canEdit)
+        }
+
+    @Test
+    fun `CA-CRT-11 · editar abre la ficha del plato con la linea y guardar la cambia en su sitio`() =
+        runTest {
+            menuServer.body = saucesMenu()
+            seed(line(DISH_A, "Lomo", modifiers = listOf(aji)), line(DISH_B, "Arroz"))
+            val viewModel = newViewModel().also { it.keepHot(backgroundScope) }
+            val ui = viewModel.settled()
+
+            viewModel.startEdit(ui.lines[0].signature)
+
+            val editing = checkNotNull(viewModel.awaitFilled { it.editing != null }.editing)
+            assertEquals(DISH_A, editing.item.id)
+            assertEquals(listOf(OPTION_AJI), editing.line.modifiers.map { it.optionId })
+
+            viewModel.saveEdit(line(DISH_A, "Lomo", modifiers = listOf(mayo)))
+
+            val after = viewModel.awaitFilled { it.editing == null && it.lines.first().total != ui.lines.first().total }
+            assertEquals(listOf("Lomo", "Arroz"), after.lines.map { it.name })
+            // 12.50 + 0.50 = 13.00 (antes 12.50 + 1.00).
+            assertEquals("S/ 13.00", after.lines.first().total.replace(' ', ' '))
+        }
+
+    @Test
+    fun `CA-CRT-11 · si al guardar queda identica a otra linea se fusionan`() =
+        runTest {
+            menuServer.body = saucesMenu()
+            seed(line(DISH_A, "Lomo", modifiers = listOf(aji)), line(DISH_A, "Lomo", modifiers = listOf(mayo)))
+            val viewModel = newViewModel().also { it.keepHot(backgroundScope) }
+            val ui = viewModel.settled()
+
+            viewModel.startEdit(ui.lines[0].signature)
+            viewModel.saveEdit(line(DISH_A, "Lomo", modifiers = listOf(mayo)))
+
+            val merged = viewModel.awaitFilled { it.lines.size == 1 }
+            assertEquals(2, merged.lines.single().quantity)
+        }
+
+    @Test
+    fun `cancelar la edicion cierra la ficha sin tocar la bolsa`() =
+        runTest {
+            menuServer.body = saucesMenu()
+            seed(line(DISH_A, "Lomo", modifiers = listOf(aji)))
+            val viewModel = newViewModel().also { it.keepHot(backgroundScope) }
+            val ui = viewModel.settled()
+
+            viewModel.startEdit(ui.lines[0].signature)
+            viewModel.cancelEdit()
+
+            assertNull(viewModel.awaitFilled { it.editing == null }.editing)
+            val kept = checkNotNull(store.cart.first()).lines.single()
+            assertEquals(listOf(OPTION_AJI), kept.modifiers.map { it.optionId })
+        }
 }
+

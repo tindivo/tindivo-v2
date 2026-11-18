@@ -192,6 +192,23 @@ internal data class DishSheetState(
     }
 
     companion object {
+        /**
+         * La ficha de [item] con lo que ya llevaba [line] (CUS-CRT-014). Una opción que el plato ya no ofrece no se
+         * preselecciona: si era obligatoria, la ficha no deja guardar hasta elegir otra.
+         */
+        fun forLine(
+            item: MenuItemUi,
+            line: CartLine,
+        ): DishSheetState {
+            val known = item.modifierGroups.flatMap { group -> group.options.map { it.id } }.toSet()
+            return DishSheetState(
+                item = item,
+                selectedIds = line.modifiers.map { it.optionId }.filter { it in known },
+                note = line.note.orEmpty().take(MAX_NOTE_LENGTH),
+                quantity = line.quantity.coerceIn(1, MAX_QUANTITY),
+            )
+        }
+
         /** Guarda lo elegido al girar la pantalla; las opciones que ya no existen en el plato se descartan. */
         fun saver(item: MenuItemUi): Saver<DishSheetState, Any> =
             listSaver<DishSheetState, Any>(
