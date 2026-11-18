@@ -5,7 +5,7 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-10-10 (índice de compatibilidad; §34 en adelante, en `Docs/decisiones/`).
+> Última actualización: 2026-11-17 (§6 y §13 corregidos; decisiones de producto de la app cliente; §34 en adelante, en `Docs/decisiones/`).
 
 ---
 
@@ -291,7 +291,7 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 
 ## 6. `short_id` y número de pedido
 
-- **`short_id`**: 8 chars del alfabeto de 32 símbolos `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (sin I/O/0/1). Usado en URLs de tracking y en la referencia humana `#TND-XXXXXXXX`. Definido en `contracts/primitives.ts`.
+- **`short_id`**: 8 chars del alfabeto de 32 símbolos `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (sin I/O/0/1). Usado en URLs de tracking y en la referencia humana `#TDV-XXXXXXXX` (prefijo corregido el 2026-11-17, decisión de Jesús: es el que usan la web y Android). Definido en `contracts/primitives.ts`.
 - **`numero_pedido`**: secuencia atómica generada en el backend (sequence/contador), **NUNCA `Date.now()`** (otro bug del v1).
 
 ---
@@ -614,7 +614,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 | 9 | Gate del carrito sin auth | Onboarding diferido: ver carrito sin login; login al checkout. §15. |
 | 10 | Límite de vuelto / pago en pickup | Vuelto en `app_settings`; pickup inactivo. §7/§14. |
 | 11 | Cobertura: radio vs polígono | **Polígono** (`app_settings.coverage_polygon`), editable por el admin con Leaflet-draw; el cliente bloquea elegir fuera (point-in-polygon). El radio 3km (`coverage`) queda como **fallback**. *(cambiado de "radio 3km" el 2026-06-22)* |
-| 12 | Referencia de dirección mínima | **Mín 15 / máx 140** (`ADDRESS_REFERENCE_MIN`/`ADDRESS_REFERENCE_MAX` en `contracts`); contador en vivo en todos los formularios. *(bajado de 20 el 2026-06-22)* |
+| 12 | Referencia de dirección mínima | **Mín 5 / máx 140** (`ADDRESS_REFERENCE_MIN`/`ADDRESS_REFERENCE_MAX` en `contracts`); contador en vivo en todos los formularios. *(bajado de 20 el 2026-06-22 y de 15 a 5 el 2026-11-17, decisión de Jesús: es lo que ya usan los contratos, Android y la web)* |
 | 13 | Alerta urgente (5 vs 8 min) | No se activa en Fase 1; modelo conservado (>5 urgente, >8 alerta). §10. |
 | 14 | Helpers RLS sin `search_path` | `SET search_path = ''` en todos. §12. |
 | 15 | RLS incompleta | Todas las policies antes de exponer; bloqueante. §12. |
@@ -1342,3 +1342,17 @@ Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs
 - **0038** · Estándares de código v2 → `Docs/decisiones/0038-estandares-de-codigo-v2.md`
 - **0039** · El backend es un paquete y la API su interfaz REST →
   `Docs/decisiones/0039-el-backend-es-un-paquete-y-la-api-su-interfaz.md`
+
+---
+
+## Decisiones de producto de la app cliente (2026-11-17)
+
+Decisión de Jesús, 2026-11-17 (conversación con Claude Code). Registradas aquí por petición expresa de Jesús; el
+detalle, los flujos y los criterios están en `Docs/trabajo/app-cliente/` (llega con el PR #186, que sustituyó al #182) y no
+se duplican.
+
+- **«Yape o Plin»**, en vez de una billetera agnóstica, en lo que ve el cliente.
+- **Todo recojo es prepagado**: llega a cocina pagado.
+- **iOS y Android se lanzan juntos**, en la misma fecha (`Docs/planes/movil/decisiones.md`, D-12).
+- **Tindivo Store va después del lanzamiento.**
+- **Tindivo Entregas usa la lista de prohibidos de inDrive** (`Docs/negocio/servicios/entregas.md`).

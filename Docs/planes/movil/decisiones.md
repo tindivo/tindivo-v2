@@ -3,6 +3,7 @@
 > Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code: «oka»); alcance ampliado con
 > D-49 a D-53, aprobado por Jesús el 2026-10-13 (conversación con Claude Code) · Alcance: las
 > decisiones de la migración a apps nativas; manda la sección 1. Análisis y requisitos: `Docs/trabajo/movil/`
+> Verificado: 2026-11-17 (D-12 y D-32).
 > **Actualizado el 2026-09-20** con tus respuestas. La sección 1 es lo decidido; lo que no me correspondía decidir
 > sigue en las secciones 2 y 3, con opciones, una **recomendación** y de qué depende.
 
@@ -16,7 +17,7 @@
 | D-03 | **`tindivo-prod` es operación real** (1 mes y 5 días a 2026-09-20). | Tú, 2026-09-20 | Compatibilidad hacia atrás obligatoria; cambios fuera de 18:00-23:00; Ola A. **Corrige** mis notas del 2026-09-10 («no hay producción viva») |
 | D-04 | **La revisión legal la haces tú** (sin abogado por ahora). | Tú, 2026-09-20 | Textos estándar ahora y revisión profesional más adelante; no bloquea el arranque. Ver `D-23/D-24` |
 | D-10 | **Tienes Mac.** | Tú, 2026-09-20 | iOS se escribe y depura ahí; **falta modelo y macOS** para Xcode 26 (`05-arranque/01` paso 0) |
-| D-12 | **Customer: Android e iOS se lanzan a la vez.** | Tú, 2026-09-20 | Android se construye primero e iOS lo sigue de cerca con la misma especificación y vectores (lanzar a la vez ≠ construir a la vez): `05-arranque/03` |
+| D-12 | **Customer: Android e iOS se lanzan a la vez.** | Tú, 2026-09-20 | Android se construye primero e iOS lo sigue de cerca con la misma especificación y vectores (lanzar a la vez ≠ construir a la vez): `05-arranque/03`. **Ratificada por Jesús el 2026-11-17: se lanzan juntos, en la misma fecha.** |
 | D-13 | **Planes gratuitos** (Supabase y Vercel); regiones EE. UU. | Tú, 2026-09-20 | Regiones confirmadas: base `us-west-2`, funciones `iad1` (`PER-02`). Sin copias y Hobby no comercial (`PRO-06`). Ver `D-37` |
 | D-30 | **App de Negocios (cajera): sube de prioridad; solo Android; es lo más urgente.** | Tú, 2026-09-20 | Primer carril de app (N). iOS de Negocios queda fuera por ahora. Ver `D-35` |
 
@@ -128,7 +129,7 @@ aprobación manual: «no quiero trabajo manual de aprobar cambio de número».
 | D-28 | **Sistema de diseño en nativo** (`MOB-21`). | Iconos: Material Symbols en ambas · SF Symbols en iOS + Material en Android. Modo oscuro sí/no. | Exportar los **tokens** (color, radio, tipografía Geist/JetBrains Mono) como JSON; SF Symbols en iOS; modo oscuro **fuera de M1**. | Diseño de M1 |
 | D-29 | **Versiones mínimas de SO** y presupuesto de dispositivo. | iOS 16.1+ (Live Activities) o 17+ · Android 8 (API 26) o superior. | Decidir con **datos reales de dispositivos** de la PWA (`@vercel/analytics` en el Customer) y con el móvil gama baja que se quiera soportar. `targetSdk` = 36 (obligatorio en Play desde el 2026-08-31). | Alcance de `NAT-LIV` |
 | D-31 | **Referencia mínima de dirección** (`CUS-ADR-001`). | 5 (código) · 15 (`DECISIONS.md §13`). | Decidir con la cajera/motorizados qué referencia sirve a la puerta; el número debe vivir en **una** fuente (⚙). | Validaciones |
-| D-32 | **Formato del código de pedido**: `#TND-` (oficial) vs `#TDV-` (mensajes de WhatsApp). | — | Unificar en `#TND-`. | Textos |
+| D-32 | **Formato del código de pedido**: `#TND-` vs `#TDV-`. | — | **`#TDV-`** (decisión de Jesús, 2026-11-17: es lo que ya usan la web y Android). | Textos |
 | D-33 | **Canal del pedido nativo** (`ARQ-08`). | Renombrar `customer_pwa` · conservarlo y añadir `client_platform` (`ios`/`android`/`web`). | **Conservar y añadir columnas**; generalizar los CHECK con un predicado. | Antes del primer *build* |
 | D-34 | **Quién financia cupones/promos** (`NAT-MKT-003`). | Tindivo · el negocio. | Depende del modelo económico (Tindivo no retiene fondos). | `NAT-MKT-003` |
 
