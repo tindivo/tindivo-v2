@@ -1,0 +1,78 @@
+{
+  "topes": {
+    "CART_MAX_LINES": 50,
+    "CART_MAX_QUANTITY": 50,
+    "CART_MAX_MODIFIERS": 20
+  },
+  "montos": [
+    {
+      "id": "monto-decimales-exactos",
+      "lineas": [
+        { "precioBase": "12.10", "opciones": [], "cantidad": 3 },
+        { "precioBase": "0.35", "opciones": [], "cantidad": 2 }
+      ],
+      "valido": true,
+      "subtotal": "37.00",
+      "motivo": "con float 3 x 12.10 da 36.300000000000004; exacto da 36.30 + 0.70"
+    },
+    {
+      "id": "monto-opciones-suman",
+      "lineas": [{ "precioBase": "15.00", "opciones": ["2.50", "0.30"], "cantidad": 2 }],
+      "valido": true,
+      "subtotal": "35.60",
+      "motivo": "(15.00 + 2.50 + 0.30) x 2"
+    },
+    {
+      "id": "monto-sin-decimales",
+      "lineas": [{ "precioBase": "10", "opciones": [], "cantidad": 3 }],
+      "valido": true,
+      "subtotal": "30.00",
+      "motivo": "un precio entero se muestra con dos decimales"
+    },
+    {
+      "id": "monto-diez-centimos-tres-veces",
+      "lineas": [{ "precioBase": "0.10", "opciones": [], "cantidad": 3 }],
+      "valido": true,
+      "subtotal": "0.30",
+      "motivo": "con float 3 x 0.10 da 0.30000000000000004"
+    },
+    {
+      "id": "monto-maximo-de-carta",
+      "lineas": [{ "precioBase": "99999999.99", "opciones": [], "cantidad": 50 }],
+      "valido": true,
+      "subtotal": "4999999999.50",
+      "motivo": "el mayor precio de carta (numeric(10,2)) en el tope de cantidad"
+    },
+    {
+      "id": "monto-tres-decimales-en-plato",
+      "lineas": [{ "precioBase": "12.105", "opciones": [], "cantidad": 1 }],
+      "valido": false,
+      "subtotal": null,
+      "motivo": "tres decimales: es un dato roto y no se redondea"
+    },
+    {
+      "id": "monto-tres-decimales-en-opcion",
+      "lineas": [{ "precioBase": "10.00", "opciones": ["0.001"], "cantidad": 1 }],
+      "valido": false,
+      "subtotal": null,
+      "motivo": "tres decimales en una opción: se rechaza igual"
+    },
+    {
+      "id": "monto-negativo",
+      "lineas": [{ "precioBase": "-1.00", "opciones": [], "cantidad": 1 }],
+      "valido": false,
+      "subtotal": null,
+      "motivo": "un precio negativo no es un precio de carta"
+    }
+  ],
+  "excesos": [
+    { "id": "lineas-en-el-tope", "tope": "CART_MAX_LINES", "valor": 50, "valido": true, "motivo": "justo en el tope" },
+    { "id": "lineas-sobre-el-tope", "tope": "CART_MAX_LINES", "valor": 51, "valido": false, "motivo": "una más que el tope" },
+    { "id": "cantidad-cero", "tope": "CART_MAX_QUANTITY", "valor": 0, "valido": false, "motivo": "la cantidad mínima es 1" },
+    { "id": "cantidad-uno", "tope": "CART_MAX_QUANTITY", "valor": 1, "valido": true, "motivo": "justo en el mínimo" },
+    { "id": "cantidad-en-el-tope", "tope": "CART_MAX_QUANTITY", "valor": 50, "valido": true, "motivo": "justo en el tope" },
+    { "id": "cantidad-sobre-el-tope", "tope": "CART_MAX_QUANTITY", "valor": 51, "valido": false, "motivo": "una más que el tope" },
+    { "id": "opciones-en-el-tope", "tope": "CART_MAX_MODIFIERS", "valor": 20, "valido": true, "motivo": "justo en el tope" },
+    { "id": "opciones-sobre-el-tope", "tope": "CART_MAX_MODIFIERS", "valor": 21, "valido": false, "motivo": "una más que el tope" }
+  ]
+}
