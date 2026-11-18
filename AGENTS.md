@@ -66,8 +66,8 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 - **Evidencia, no afirmaciones.** Nada está «listo» sin evidencia objetiva (salida de consola, test, captura, consulta).
   Distingue **medido** de **estimado**. Un gate en verde prueba que compila y que los tests existentes pasan, no que
   el producto funcione.
-- **Antes de implementar, lee el canon y el plan aplicables**; si falta una definición vigente necesaria, pregunta
-  antes de implementar esa parte.
+- **Todo cambio sigue el ciclo de `Docs/README.md` §7.7** (paridad entre apps, TDD, revisión ajena, skills). Lee antes
+  el canon y el plan aplicables; si falta una definición vigente necesaria, pregunta antes de implementar esa parte.
 - **Pasos numerados; si uno falla, para** ahí y repórtalo. No acumules cambios sobre algo roto. Verifica cada paso
   antes del siguiente y no declares completa una tarea hasta comprobar todos sus criterios de aceptación. Adjunta la
   evidencia cruda pertinente, no solo tu conclusión.

@@ -4,6 +4,7 @@
  *
  *   node scripts/spec.mjs validar [<capacidad>] [--aviso]   (pnpm spec:validar)
  *   node scripts/spec.mjs indice [--check]                  (pnpm spec:indice)
+ *   node scripts/spec.mjs traza <capacidad> [--json]        (pnpm spec:traza; solo stdout, no escribe nada)
  *
  * Una capacidad es Docs/producto/<id>/capacidad.md; sus pantallas, Docs/producto/<id>/pantallas/*.md. Se ignoran
  * Docs/producto/_plantilla/ y Docs/producto/README.md (este último lo genera `indice`).
@@ -42,7 +43,56 @@ const git = (...args) =>
   execFileSync('git', ['-c', 'core.quotepath=off', ...args], { cwd: ROOT, encoding: 'utf8' })
 
 const rutaAbs = (rel) => join(ROOT, rel)
-const leer = (rel) => readFileSync(rutaAbs(rel), 'utf8').replace(/\r\n/g, '\n')
+
+/** Primer tramo de `rel` (de la raíz hacia el archivo) que es un enlace simbólico o junction; null si ninguno. */
+function tramoEnlace(rel) {
+  const partes = rel.split('/')
+  for (let i = 1; i <= partes.length; i++) {
+    const tramo = partes.slice(0, i).join('/')
+    try {
+      if (lstatSync(rutaAbs(tramo)).isSymbolicLink()) return tramo
+    } catch {
+      return null // no existe: lo dirá quien lo lea
+    }
+  }
+  return null
+}
+
+class ErrorEnlace extends Error {}
+
+/*
+  Todo acceso al disco pasa por estas cuatro funciones (Codex, PR #187, CAX-001): antes de tocar `rel` comprueban que
+  ni él ni ninguna carpeta de su camino es un enlace simbólico o junction, y si lo es lanzan ErrorEnlace sin haber
+  leído, consultado ni enumerado nada a través del enlace.
+*/
+function sinEnlace(rel, accion) {
+  const enlace = tramoEnlace(rel)
+  if (enlace) throw new ErrorEnlace(`${enlace} es un enlace simbólico: no se ${accion} ${rel} a través de él`)
+}
+
+/** Lee un archivo del repo. */
+const leer = (rel) => {
+  sinEnlace(rel, 'lee')
+  return readFileSync(rutaAbs(rel), 'utf8').replace(/\r\n/g, '\n')
+}
+
+/** ¿Existe `rel` en el repo? */
+const existe = (rel) => {
+  sinEnlace(rel, 'consulta')
+  return existsSync(rutaAbs(rel))
+}
+
+/** ¿Es `rel` un archivo normal del repo? */
+const esArchivo = (rel) => existe(rel) && statSync(rutaAbs(rel)).isFile()
+
+/** Entradas de la carpeta `rel`. Un enlace DENTRO de ella también se rechaza: no se sigue ni se omite en silencio. */
+const listar = (rel) => {
+  sinEnlace(rel, 'enumera')
+  const entradas = readdirSync(rutaAbs(rel), { withFileTypes: true })
+  const enlace = entradas.find((e) => e.isSymbolicLink())
+  if (enlace) throw new ErrorEnlace(`${rel}/${enlace.name} es un enlace simbólico: no se enumera a través de él`)
+  return entradas
+}
 
 /** Quita los comentarios HTML conservando los saltos de línea (los números de línea no se mueven). */
 const sinComentarios = (texto) => texto.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' '))
@@ -173,9 +223,8 @@ function globARegex(glob) {
 /** Recorre el disco bajo `dir` y devuelve los .md (rutas relativas con /). */
 function mdBajo(dir) {
   const out = []
-  const abs = rutaAbs(dir)
-  if (!existsSync(abs)) return out
-  for (const e of readdirSync(abs, { withFileTypes: true })) {
+  if (!existe(dir)) return out
+  for (const e of listar(dir)) {
     const rel = `${dir}/${e.name}`
     if (e.isDirectory()) out.push(...mdBajo(rel))
     else if (e.name.endsWith('.md')) out.push(rel)
@@ -219,9 +268,8 @@ function cargar() {
   const caps = new Map()
   const err = (capsAfectadas, msg) => errores.push({ caps: capsAfectadas, msg })
 
-  const base = rutaAbs(PRODUCTO)
-  const carpetas = existsSync(base)
-    ? readdirSync(base, { withFileTypes: true })
+  const carpetas = existe(PRODUCTO)
+    ? listar(PRODUCTO)
         .filter((e) => e.isDirectory() && e.name !== '_plantilla')
         .map((e) => e.name)
         .sort()
@@ -229,7 +277,7 @@ function cargar() {
 
   for (const carpeta of carpetas) {
     const file = `${PRODUCTO}/${carpeta}/capacidad.md`
-    if (!existsSync(rutaAbs(file))) {
+    if (!existe(file)) {
       err([carpeta], `${PRODUCTO}/${carpeta} · falta capacidad.md`)
       continue
     }
@@ -291,7 +339,7 @@ function validar({ objetivo }) {
     if (operationIds) return operationIds
     operationIds = new Set()
     const f = 'packages/contracts/openapi/v1.json'
-    if (!existsSync(rutaAbs(f))) return operationIds
+    if (!existe(f)) return operationIds
     const spec = JSON.parse(leer(f))
     for (const item of Object.values(spec.paths ?? {}))
       for (const op of Object.values(item)) if (op && typeof op === 'object' && op.operationId) operationIds.add(op.operationId)
@@ -447,7 +495,7 @@ function validar({ objetivo }) {
       const porSimbolo = [...texto.matchAll(/`([^`]+)`/g)].some((m) => reglas.includes(m[1]))
       const porEnlace = [...texto.matchAll(/\]\(([^)\s]+)\)/g)].some((m) => {
         const ruta = normalize(join(dirname(cap.file), m[1].split('#')[0])).replaceAll('\\', '/')
-        return ruta.startsWith('Docs/negocio/') && existsSync(rutaAbs(ruta))
+        return ruta.startsWith('Docs/negocio/') && existe(ruta)
       })
       if (!porSimbolo && !porEnlace) err([cap.carpeta], `${aqui} · ${cita} (ninguna referencia resuelve)`)
       const resto = texto.replace(/`[^`]*`/g, '').replace(/\[[^\]]*\]\([^)]*\)/g, '')
@@ -539,6 +587,176 @@ function generarIndice() {
   return { errores: [], texto: out.join('\n') }
 }
 
+// ───────────────────────── traza
+
+const PLATAFORMAS_TRAZA = ['web', 'android', 'ios', 'backend']
+const RE_ARCHIVO_TEST = /\.(test|spec)\.|(^|\/)(src\/test|__tests__|e2e)\//
+const RE_ID_PLANO = /^[A-Za-z0-9-]+$/
+
+/** Plataforma de un archivo de test por su ruta (packages cuenta como web); null si no es de ninguna. */
+function plataformaDe(ruta) {
+  if (ruta.startsWith('apps/android/')) return 'android'
+  if (ruta.startsWith('apps/ios/')) return 'ios'
+  if (ruta.startsWith('apps/api/')) return 'backend'
+  if (ruta.startsWith('apps/customer/') || ruta.startsWith('packages/')) return 'web'
+  return null
+}
+
+/**
+ * Calcula la traza de una capacidad. Devuelve { error } si no existe, o { traza } con
+ * { ca, requisitos, operaciones, globs, avisos, errores }.
+ */
+function calcularTraza(objetivo) {
+  const { caps } = cargar()
+  const cap = caps.get(objetivo)
+  if (!cap) return { error: `la capacidad «${objetivo}» no existe en ${PRODUCTO}/` }
+
+  const tracked = git('ls-files', '-z').split('\0').filter(Boolean)
+
+  // criterios y requisitos, leídos con las mismas funciones que `validar`
+  const criterios = []
+  for (const { celdas } of filasDeTabla(cap.secciones['Criterios de aceptación']))
+    if (RE_CA.test(celdas[0]))
+      criterios.push({
+        id: celdas[0],
+        requisitos: (celdas[2] ?? '')
+          .split(/[,·]/)
+          .map((x) => x.trim())
+          .filter(Boolean),
+      })
+  const requisitos = []
+  for (const { celdas } of filasDeTabla(cap.secciones.Requisitos))
+    if (RE_REQ.test(celdas[0])) requisitos.push({ id: celdas[0], estrella: (celdas[3] ?? '').includes('★') })
+
+  // CA → tests (archivo:línea) por plataforma
+  const tests = tracked
+    .filter((f) => RE_ARCHIVO_TEST.test(f))
+    .map((f) => {
+      try {
+        return { f, lineas: leer(f).split('\n') }
+      } catch (e) {
+        if (e instanceof ErrorEnlace) throw e
+        return null
+      }
+    })
+    .filter(Boolean)
+  const ca = criterios.map((c) => {
+    const re = new RegExp(`(?<![A-Za-z0-9-])${c.id}(?![A-Za-z0-9-])`)
+    const porPlataforma = {}
+    const otros = []
+    for (const { f, lineas } of tests) {
+      const n = lineas.findIndex((l) => re.test(l))
+      if (n < 0) continue
+      const p = plataformaDe(f)
+      if (p) (porPlataforma[p] ??= []).push(`${f}:${n + 1}`)
+      else otros.push(`${f}:${n + 1}`)
+    }
+    return { id: c.id, requisitos: c.requisitos, tests: porPlataforma, otros }
+  })
+
+  // estado por requisito y plataforma
+  const iosVacio = Array.isArray(cap.cab?.codigo?.ios) && cap.cab.codigo.ios.length === 0
+  const reqs = requisitos.map((r) => {
+    const suyos = ca.filter((c) => c.requisitos.includes(r.id))
+    const estado = {}
+    for (const p of PLATAFORMAS_TRAZA) {
+      if (p === 'ios' && iosVacio) estado[p] = '—'
+      else {
+        const con = suyos.filter((c) => (c.tests[p] ?? []).length > 0).length
+        estado[p] = con === 0 ? '⬜' : con === suyos.length ? '✅' : '🟡'
+      }
+    }
+    return { id: r.id, estrella: r.estrella, ca: suyos.map((c) => c.id), estado }
+  })
+
+  // operationId → método, ruta y route.ts
+  const errores = []
+  const rutasOp = new Map()
+  const fOpenapi = 'packages/contracts/openapi/v1.json'
+  if (existe(fOpenapi)) {
+    const spec = JSON.parse(leer(fOpenapi))
+    for (const [ruta, item] of Object.entries(spec.paths ?? {}))
+      for (const [metodo, op] of Object.entries(item))
+        if (op && typeof op === 'object' && op.operationId)
+          rutasOp.set(op.operationId, { metodo: metodo.toUpperCase(), ruta })
+  }
+  const ids = [...(cap.cab?.operaciones ?? []), ...cap.pantallas.flatMap((p) => p.cab?.operaciones ?? [])]
+  const operaciones = [...new Set(ids)].map((id) => {
+    const r = rutasOp.get(id)
+    if (!r) {
+      errores.push(`operationId «${id}»: no existe en ${fOpenapi}`)
+      return { id, metodo: null, ruta: null, archivo: null, existe: false }
+    }
+    const archivo = `apps/api/app/api/v1${r.ruta.replace(/\{([^}]+)\}/g, '[$1]')}/route.ts`
+    const existe = tracked.includes(archivo)
+    if (!existe) errores.push(`operationId «${id}»: ${r.metodo} ${r.ruta} no tiene ${archivo}`)
+    return { id, metodo: r.metodo, ruta: r.ruta, archivo, existe }
+  })
+
+  // globs de codigo
+  const globs = []
+  const fuentes = [{ file: cap.file, cab: cap.cab }, ...cap.pantallas.map((p) => ({ file: p.file, cab: p.cab }))]
+  for (const { file, cab } of fuentes) {
+    if (!cab?.codigo || typeof cab.codigo !== 'object') continue
+    for (const [plataforma, lista] of Object.entries(cab.codigo))
+      for (const glob of lista) {
+        const re = globARegex(glob)
+        globs.push({ file, plataforma, glob, archivos: tracked.filter((f) => re.test(f)).length })
+      }
+  }
+
+  // avisos
+  const avisos = []
+  for (const c of ca)
+    if (Object.keys(c.tests).length === 0 && c.otros.length === 0) avisos.push(`${c.id} no tiene ningún test`)
+  for (const r of reqs)
+    if (r.estrella)
+      for (const p of ['web', 'android'])
+        if (r.estado[p] === '⬜') avisos.push(`${r.id} (★) sin test en ${p}`)
+  for (const o of operaciones) if (!o.metodo) avisos.push(`operationId «${o.id}» sin ruta`)
+
+  return { traza: { capacidad: objetivo, ca, requisitos: reqs, operaciones, globs, avisos, errores } }
+}
+
+function imprimirTraza(t) {
+  const out = [`Traza de «${t.capacidad}»`, '', '## Criterios de aceptación → tests', '']
+  for (const c of t.ca) {
+    out.push(`${c.id}  (${c.requisitos.join(', ') || '—'})`)
+    if (Object.keys(c.tests).length === 0 && c.otros.length === 0) out.push('  sin tests')
+    for (const p of PLATAFORMAS_TRAZA) for (const x of c.tests[p] ?? []) out.push(`  ${p.padEnd(8)} ${x}`)
+    for (const x of c.otros) out.push(`  otros    ${x}`)
+  }
+  out.push(
+    '',
+    '## Requisitos → estado por plataforma',
+    '',
+    '| Requisito | ★ | CA | web | android | ios | backend |',
+    '|---|---|---|---|---|---|---|',
+  )
+  for (const r of t.requisitos)
+    out.push(
+      `| ${r.id} | ${r.estrella ? '★' : ''} | ${r.ca.join(', ') || '—'} | ${PLATAFORMAS_TRAZA.map((p) => r.estado[p]).join(' | ')} |`,
+    )
+  out.push('', '## Operaciones → rutas', '')
+  for (const o of t.operaciones)
+    out.push(
+      o.metodo
+        ? `${o.existe ? '✔' : '✖'} ${o.id}  ${o.metodo} ${o.ruta}  →  ${o.archivo}${o.existe ? '' : '  (NO EXISTE)'}`
+        : `✖ ${o.id}  sin ruta en el contrato`,
+    )
+  out.push('', '## Código declarado (archivos rastreados que casa cada glob)', '')
+  for (const g of t.globs)
+    out.push(`${String(g.archivos).padStart(3)}  ${g.plataforma.padEnd(8)} ${g.glob}  (${g.file.replace(`${PRODUCTO}/`, '')})`)
+  out.push('', '## Avisos', '')
+  if (t.avisos.length === 0) out.push('Ninguno.')
+  for (const a of t.avisos) out.push(`⚠ ${a}`)
+  if (t.errores.length) {
+    out.push('', '## Errores', '')
+    for (const e of t.errores) out.push(`✖ ${e}`)
+  }
+  return out.join('\n')
+}
+
 // ───────────────────────── main
 
 function main() {
@@ -571,7 +789,7 @@ function main() {
     }
     const destino = `${PRODUCTO}/README.md`
     if (flags.includes('--check')) {
-      const actual = existsSync(rutaAbs(destino)) && statSync(rutaAbs(destino)).isFile() ? leer(destino) : null
+      const actual = esArchivo(destino) ? leer(destino) : null
       if (actual !== texto) {
         console.error(`✖ spec:indice — ${destino} no coincide con lo que se generaría: ejecuta pnpm spec:indice`)
         process.exit(1)
@@ -581,23 +799,38 @@ function main() {
     }
     // Solo se escribe un archivo normal dentro del repo: un enlace simbólico en el camino podría hacer que el índice
     // pise otro archivo (Codex, PR #186, CAX-001).
-    for (const tramo of ['Docs', PRODUCTO, destino]) {
-      let enlace = false
-      try {
-        enlace = lstatSync(rutaAbs(tramo)).isSymbolicLink()
-      } catch {}
-      if (enlace) {
-        console.error(`✖ spec:indice — ${tramo} es un enlace simbólico: no se escribe el índice a través de él`)
-        process.exit(1)
-      }
+    const enlace = tramoEnlace(destino)
+    if (enlace) {
+      console.error(`✖ spec:indice — ${enlace} es un enlace simbólico: no se escribe el índice a través de él`)
+      process.exit(1)
     }
     writeFileSync(rutaAbs(destino), texto, 'utf8')
     console.log(`✔ spec:indice — ${destino} escrito`)
     return
   }
 
-  console.error('uso: node scripts/spec.mjs validar [<capacidad>] [--aviso] | indice [--check]')
+  if (cmd === 'traza') {
+    if (pos.length !== 1 || !RE_ID_PLANO.test(pos[0]) || flags.some((f) => f !== '--json')) {
+      console.error('uso: node scripts/spec.mjs traza <capacidad> [--json]')
+      process.exit(2)
+    }
+    const { error, traza } = calcularTraza(pos[0])
+    if (error) {
+      console.error(`✖ spec:traza — ${error}`)
+      process.exit(1)
+    }
+    console.log(flags.includes('--json') ? JSON.stringify(traza, null, 2) : imprimirTraza(traza))
+    process.exit(traza.errores.length ? 1 : 0)
+  }
+
+  console.error('uso: node scripts/spec.mjs validar [<capacidad>] [--aviso] | indice [--check] | traza <capacidad> [--json]')
   process.exit(2)
 }
 
-main()
+try {
+  main()
+} catch (e) {
+  if (!(e instanceof ErrorEnlace)) throw e
+  console.error(`✖ spec:${process.argv[2] ?? ''} — ${e.message}`)
+  process.exit(1)
+}
