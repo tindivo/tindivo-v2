@@ -32,10 +32,15 @@ sealed interface CartUiState {
         val subtotal: String,
         /** El plato que se acaba de quitar y se puede devolver durante [UNDO_MILLIS]; `null` si no hay aviso. */
         val undoName: String? = null,
+        /** «¿Vaciar tu bolsa?» está abierta (CUS-CRT-016). */
+        val confirmingClear: Boolean = false,
     ) : CartUiState
 }
 
-internal fun Cart?.toUi(undoName: String? = null): CartUiState {
+internal fun Cart?.toUi(
+    undoName: String? = null,
+    confirmingClear: Boolean = false,
+): CartUiState {
     if (this == null || isEmpty()) return CartUiState.Empty
     return CartUiState.Filled(
         businessId = businessId,
@@ -55,5 +60,6 @@ internal fun Cart?.toUi(undoName: String? = null): CartUiState {
             },
         subtotal = requireAmountText(subtotal),
         undoName = undoName,
+        confirmingClear = confirmingClear,
     )
 }

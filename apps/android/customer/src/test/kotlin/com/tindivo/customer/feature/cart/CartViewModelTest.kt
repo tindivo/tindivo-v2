@@ -145,7 +145,7 @@ class CartViewModelTest {
             val after = viewModel.state.first { it is CartUiState.Filled && it.lines.size == 1 } as CartUiState.Filled
             assertEquals(listOf("Lomo b"), after.lines.map { it.name })
 
-            viewModel.clear()
+            viewModel.confirmClear()
             assertEquals(CartUiState.Empty, viewModel.state.first { it == CartUiState.Empty })
         }
 
@@ -263,5 +263,40 @@ class CartViewModelTest {
             viewModel.remove(second)
 
             assertEquals("Lomo b", viewModel.awaitFilled { it.undoName == "Lomo b" }.undoName)
+        }
+
+    @Test
+    fun `CA-CRT-13 · vaciar pide confirmacion y al cancelar la bolsa no cambia`() =
+        runTest {
+            seedThree()
+            val viewModel = newViewModel()
+            backgroundScope.launch(dispatcher) { viewModel.state.collect {} }
+            assertFalse(viewModel.filled().confirmingClear)
+
+            viewModel.askClear()
+            assertTrue(viewModel.awaitFilled { it.confirmingClear }.confirmingClear)
+
+            viewModel.cancelClear()
+            val after = viewModel.awaitFilled { !it.confirmingClear }
+            assertEquals(3, after.lines.size)
+            assertEquals(3, checkNotNull(store.cart.first()).lines.size)
+        }
+
+    @Test
+    fun `CA-CRT-13 · al confirmar la bolsa queda vacia`() =
+        runTest {
+            seedThree()
+            val viewModel = newViewModel()
+            backgroundScope.launch(dispatcher) { viewModel.state.collect {} }
+            viewModel.filled()
+
+            viewModel.askClear()
+            viewModel.confirmClear()
+
+            assertEquals(CartUiState.Empty, viewModel.state.first { it == CartUiState.Empty })
+            assertNull(store.cart.first())
+            // La próxima bolsa no hereda la pregunta.
+            store.add("n", "Pollería", line("a"))
+            assertFalse(viewModel.filled().confirmingClear)
         }
 }

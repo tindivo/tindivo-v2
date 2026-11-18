@@ -36,10 +36,13 @@ class CartViewModel
         private val store: CartStore,
     ) : ViewModel() {
         private val removed = MutableStateFlow<RemovedLine?>(null)
+        private val confirmingClear = MutableStateFlow(false)
         private var undoJob: Job? = null
 
         val state: StateFlow<CartUiState> =
-            combine(store.cart, removed) { cart, last -> cart.toUi(undoName = last?.undoNameFor(cart)) }
+            combine(store.cart, removed, confirmingClear) { cart, last, asking ->
+                cart.toUi(undoName = last?.undoNameFor(cart), confirmingClear = asking)
+            }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), CartUiState.Loading)
 
         /**
@@ -69,7 +72,12 @@ class CartViewModel
                 if (index < 0) return@launchStore
                 val line = cart.lines[index]
                 store.remove(signature)
-                if (cart.lines.size > 1) offerUndo(RemovedLine(cart.businessId, line, index)) else dropUndo()
+                if (cart.lines.size > 1) {
+                    offerUndo(RemovedLine(cart.businessId, line, index))
+                } else {
+                    dropUndo()
+                    confirmingClear.value = false
+                }
             }
 
         /** Devuelve la última línea quitada a su sitio, si aún se puede. */
@@ -79,7 +87,17 @@ class CartViewModel
             launchStore { store.restoreLine(last.businessId, last.line, last.index) }
         }
 
-        fun clear() {
+        /** «Vaciar» abre la pregunta; la bolsa no cambia hasta [confirmClear]. */
+        fun askClear() {
+            confirmingClear.value = true
+        }
+
+        fun cancelClear() {
+            confirmingClear.value = false
+        }
+
+        fun confirmClear() {
+            confirmingClear.value = false
             dropUndo()
             launchStore { store.clear() }
         }

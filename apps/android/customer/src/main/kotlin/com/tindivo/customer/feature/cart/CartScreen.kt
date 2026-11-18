@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,10 +32,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -69,7 +66,9 @@ fun CartDestination(
                 onCheckout = onCheckout,
                 onChangeQuantity = viewModel::changeQuantity,
                 onUndoRemove = viewModel::undoRemove,
-                onClear = viewModel::clear,
+                onAskClear = viewModel::askClear,
+                onCancelClear = viewModel::cancelClear,
+                onConfirmClear = viewModel::confirmClear,
             ),
     )
 }
@@ -80,7 +79,9 @@ class CartActions(
     val onSeeBusinesses: () -> Unit,
     val onChangeQuantity: (signature: String, delta: Int) -> Unit,
     val onUndoRemove: () -> Unit,
-    val onClear: () -> Unit,
+    val onAskClear: () -> Unit,
+    val onCancelClear: () -> Unit,
+    val onConfirmClear: () -> Unit,
     val onCheckout: () -> Unit,
 )
 
@@ -90,7 +91,6 @@ fun CartScreen(
     state: CartUiState,
     actions: CartActions,
 ) {
-    var confirmingClear by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val undoName = (state as? CartUiState.Filled)?.undoName
     UndoSnackbar(undoName, snackbarHostState, actions.onUndoRemove)
@@ -114,7 +114,7 @@ fun CartScreen(
                 },
                 actions = {
                     if (state is CartUiState.Filled) {
-                        TextButton(onClick = { confirmingClear = true }, modifier = Modifier.heightIn(min = 48.dp)) {
+                        TextButton(onClick = actions.onAskClear, modifier = Modifier.heightIn(min = 48.dp)) {
                             Text(text = stringResource(R.string.cart_clear))
                         }
                     }
@@ -145,14 +145,8 @@ fun CartScreen(
             }
         }
     }
-    if (confirmingClear) {
-        ClearDialog(
-            onCancel = { confirmingClear = false },
-            onConfirm = {
-                confirmingClear = false
-                actions.onClear()
-            },
-        )
+    if ((state as? CartUiState.Filled)?.confirmingClear == true) {
+        ClearDialog(onCancel = actions.onCancelClear, onConfirm = actions.onConfirmClear)
     }
 }
 
@@ -248,7 +242,11 @@ private fun ClearDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
+            TextButton(
+                onClick = onConfirm,
+                modifier = Modifier.heightIn(min = 48.dp),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) {
                 Text(stringResource(R.string.cart_clear_confirm))
             }
         },
@@ -272,7 +270,7 @@ private fun CartPreview() {
     TindivoTheme {
         CartScreen(
             state = CartUiState.Filled("n", "Pollería Don Lucho", listOf(line), "S/ 25.00"),
-            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}, {}),
+            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}),
         )
     }
 }
