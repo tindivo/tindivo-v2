@@ -38,6 +38,17 @@ data class EditingUi(
     val line: CartLine,
 )
 
+/**
+ * El aviso «Quitaste "[name]"» con «Deshacer». [id] es la identidad de ESA eliminación (la clave del aviso: dos platos con
+ * el mismo nombre no se confunden) y [removedAtMillis] el instante en que se quitó, para que la raya calcule lo que
+ * queda desde ahí y no arranque llena al girar la pantalla o volver a ella.
+ */
+data class UndoUi(
+    val id: Long,
+    val name: String,
+    val removedAtMillis: Long,
+)
+
 sealed interface CartUiState {
     /** Aún no se leyó lo guardado: no se enseña «vacía» por un instante. */
     data object Loading : CartUiState
@@ -50,7 +61,7 @@ sealed interface CartUiState {
         val lines: List<CartLineUi>,
         val subtotal: String,
         /** El plato que se acaba de quitar y se puede devolver durante [UNDO_MILLIS]; `null` si no hay aviso. */
-        val undoName: String? = null,
+        val undo: UndoUi? = null,
         /** «¿Vaciar tu bolsa?» está abierta (CUS-CRT-016). */
         val confirmingClear: Boolean = false,
         /** «Continuar» con el mismo monto que [subtotal] y, si no se puede tocar, el motivo. */
@@ -65,13 +76,16 @@ sealed interface CartUiState {
         /** La línea que se está editando, con su ficha; `null` si no se edita ninguna. */
         val editing: EditingUi? = null,
     ) : CartUiState {
+        /** El nombre del plato que se puede devolver, para el texto del aviso. */
+        val undoName: String? get() = undo?.name
+
         /** En recojo no hay envío que calcular (CUS-CRT-010). */
         val showsShippingRow: Boolean get() = deliveryMethod == DeliveryMethod.Delivery
     }
 }
 
 internal fun Cart?.toUi(
-    undoName: String? = null,
+    undo: UndoUi? = null,
     confirmingClear: Boolean = false,
     check: CartCheck = CartCheck.Done(closed = false, issues = emptyMap()),
     editing: EditingUi? = null,
@@ -96,7 +110,7 @@ internal fun Cart?.toUi(
                 )
             },
         subtotal = requireAmountText(subtotal),
-        undoName = undoName,
+        undo = undo,
         confirmingClear = confirmingClear,
         continueCta = continueFor(requireAmountText(subtotal), check, lines.map { it.signature }),
         deliveryMethod = deliveryMethod,

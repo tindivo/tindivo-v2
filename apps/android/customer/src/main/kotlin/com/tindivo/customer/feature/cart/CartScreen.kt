@@ -86,6 +86,7 @@ fun CartDestination(
                 onCancelClear = viewModel::cancelClear,
                 onConfirmClear = viewModel::confirmClear,
             ),
+        nowMillis = viewModel::nowMillis,
     )
 }
 
@@ -110,16 +111,17 @@ class CartActions(
 fun CartScreen(
     state: CartUiState,
     actions: CartActions,
+    nowMillis: () -> Long = { System.currentTimeMillis() },
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    val undoName = (state as? CartUiState.Filled)?.undoName
-    UndoSnackbar(undoName, snackbarHostState, actions.onUndoRemove)
+    val undo = (state as? CartUiState.Filled)?.undo
+    UndoSnackbar(undo, snackbarHostState, actions.onUndoRemove)
     Scaffold(
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 Column {
                     Snackbar(data)
-                    UndoCountdown()
+                    undo?.let { UndoCountdown(it, nowMillis) }
                 }
             }
         },
@@ -185,19 +187,20 @@ fun CartScreen(
 }
 
 /**
- * El aviso «Quitaste "[plato]"» con «Deshacer». Dura lo que el ViewModel diga: cuando [undoName] vuelve a `null`
- * (pasaron 5 s, o la bolsa cambió) la clave del efecto cambia y el aviso se cierra solo.
+ * El aviso «Quitaste "[plato]"» con «Deshacer». Dura lo que el ViewModel diga: cuando [undo] vuelve a `null`
+ * (pasaron 5 s, o la bolsa cambió) el efecto se cancela y el aviso se cierra solo. La clave del efecto es la identidad
+ * de la eliminación ([UndoUi.id]), no el nombre: quitar otro plato con el mismo nombre reinicia el aviso.
  */
 @Composable
 private fun UndoSnackbar(
-    undoName: String?,
+    undo: UndoUi?,
     host: SnackbarHostState,
     onUndo: () -> Unit,
 ) {
-    if (undoName == null) return
-    val message = stringResource(R.string.cart_removed, undoName)
+    if (undo == null) return
+    val message = stringResource(R.string.cart_removed, undo.name)
     val action = stringResource(R.string.cart_undo)
-    LaunchedEffect(undoName) {
+    LaunchedEffect(undo.id) {
         val result = host.showSnackbar(message, actionLabel = action, duration = SnackbarDuration.Indefinite)
         if (result == SnackbarResult.ActionPerformed) onUndo()
     }
@@ -205,21 +208,30 @@ private fun UndoSnackbar(
 
 /**
  * La raya naranja bajo el aviso: va de llena a vacía en [UNDO_MILLIS], el mismo plazo del ViewModel (CUS-CRT-013).
- * Con «quitar animaciones» del sistema se queda llena y quieta; el aviso se retira igual al cumplirse el plazo.
+ * Parte de lo que queda desde que se quitó ([UndoUi.removedAtMillis]), no de llena: al girar la pantalla o volver a ella
+ * sigue donde iba. Con «quitar animaciones» del sistema se queda quieta; el aviso se retira igual al cumplirse el plazo.
  */
 @Composable
-private fun UndoCountdown() {
+private fun UndoCountdown(
+    undo: UndoUi,
+    nowMillis: () -> Long,
+) {
     val resolver = LocalContext.current.contentResolver
     val still =
         remember(resolver) {
             Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) ==
                 0f
         }
-    val remaining by produceState(initialValue = 1f, still) {
+    val remaining by produceState(
+        initialValue = undoRemainingFraction(nowMillis() - undo.removedAtMillis),
+        undo.id,
+        still,
+    ) {
         if (still) return@produceState
+        val elapsedAtStart = nowMillis() - undo.removedAtMillis
         val start = withFrameMillis { it }
         while (value > 0f) {
-            value = undoRemainingFraction(withFrameMillis { it } - start)
+            value = undoRemainingFraction(elapsedAtStart + withFrameMillis { it } - start)
         }
     }
     LinearProgressIndicator(

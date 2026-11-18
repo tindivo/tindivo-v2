@@ -31,6 +31,10 @@ internal const val UNDO_MILLIS = 5_000L
 
 /** La línea que se acaba de quitar, con el sitio que ocupaba, para devolverla tal cual. */
 private data class RemovedLine(
+    /** La identidad de esta eliminación: la clave del aviso en la pantalla. */
+    val id: Long,
+    /** Cuándo se quitó, con el reloj inyectado. */
+    val atMillis: Long,
     val businessId: String,
     val line: CartLine,
     val index: Int,
@@ -49,8 +53,8 @@ private data class Overlay(
 )
 
 /** El aviso solo vale mientras la bolsa siga siendo la del negocio de la que se quitó. */
-private fun RemovedLine.undoNameFor(cart: Cart?): String? =
-    line.name.takeIf { cart != null && cart.businessId.equals(businessId, ignoreCase = true) }
+private fun RemovedLine.undoFor(cart: Cart?): UndoUi? =
+    UndoUi(id, line.name, atMillis).takeIf { cart != null && cart.businessId.equals(businessId, ignoreCase = true) }
 
 @HiltViewModel
 class CartViewModel
@@ -75,6 +79,7 @@ class CartViewModel
         /** La bolsa frente a la carta vigente. No se guarda: nace en [CartCheck.Checking] cada vez que se abre. */
         private val check = MutableStateFlow<CartCheck>(CartCheck.Checking)
         private var undoJob: Job? = null
+        private var removals = 0L
         private var checkJob: Job? = null
 
         /** De qué negocio y con qué platos se pidió la última carta: solo un negocio o un plato nuevo vuelve a pedirla. */
@@ -90,7 +95,7 @@ class CartViewModel
         val state: StateFlow<CartUiState> =
             combine(store.cart, check, overlay) { cart, checked, over ->
                 cart.toUi(
-                    undoName = over.removed?.undoNameFor(cart),
+                    undo = over.removed?.undoFor(cart),
                     confirmingClear = over.confirmingClear,
                     check = checked,
                     editing = editingOf(cart, over.editing),
@@ -186,7 +191,7 @@ class CartViewModel
             val result = store.changeQuantity(signature, delta)
             if (result is QuantityResult.Removed) {
                 if (result.remaining > 0) {
-                    offerUndo(RemovedLine(result.businessId, result.line, result.index))
+                    offerUndo(removedLine(result.businessId, result.line, result.index))
                 } else {
                     dropUndo()
                     confirmingClear.value = false
@@ -206,7 +211,7 @@ class CartViewModel
                 val line = cart.lines[index]
                 store.remove(signature)
                 if (cart.lines.size > 1) {
-                    offerUndo(RemovedLine(cart.businessId, line, index))
+                    offerUndo(removedLine(cart.businessId, line, index))
                 } else {
                     dropUndo()
                     confirmingClear.value = false
@@ -262,6 +267,15 @@ class CartViewModel
             editingSignature.value = null
             launchStore { store.replaceLine(signature, line) }
         }
+
+        private fun removedLine(
+            businessId: String,
+            line: CartLine,
+            index: Int,
+        ) = RemovedLine(++removals, clock.millis(), businessId, line, index)
+
+        /** El instante de ahora con el mismo reloj que usó el ViewModel al quitar: la raya del aviso parte de él. */
+        fun nowMillis(): Long = clock.millis()
 
         private fun offerUndo(last: RemovedLine) {
             undoJob?.cancel()

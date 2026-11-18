@@ -301,6 +301,31 @@ class CartViewModelTest {
         }
 
     @Test
+    fun `CA-CRT-10 · cada eliminacion tiene su identidad y su instante, aunque dos platos se llamen igual`() =
+        runTest {
+            fun same(itemId: String) = CartLine(itemId, "Lomo", BigDecimal("12.50"), emptyList(), null, 1, null)
+            store.add("n", "Pollería", same("a"))
+            store.add("n", "Pollería", same("b"))
+            store.add("n", "Pollería", same("c"))
+            val (a, b) = checkNotNull(store.cart.first()).lines.map { it.signature }
+            val viewModel = newViewModel()
+            backgroundScope.launch(dispatcher) { viewModel.state.collect {} }
+            viewModel.filled()
+
+            viewModel.remove(a)
+            val first = checkNotNull(viewModel.awaitFilled { it.undo != null }.undo)
+            viewModel.remove(b)
+            val second = checkNotNull(viewModel.awaitFilled { it.undo != null && it.undo?.id != first.id }.undo)
+
+            assertEquals("Lomo", first.name)
+            assertEquals(first.name, second.name)
+            // Con el mismo nombre, la clave del aviso (la identidad) es otra: el aviso se reinicia.
+            assertTrue(first.id != second.id)
+            // Y lleva el instante en que se quitó (con el reloj inyectado) para que la raya no arranque llena al volver.
+            assertEquals(CART_TEST_NOW.toEpochMilli(), second.removedAtMillis)
+        }
+
+    @Test
     fun `CA-CRT-13 · vaciar pide confirmacion y al cancelar la bolsa no cambia`() =
         runTest {
             seedThree()
