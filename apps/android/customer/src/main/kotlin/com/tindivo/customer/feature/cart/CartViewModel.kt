@@ -37,11 +37,14 @@ class CartViewModel
     ) : ViewModel() {
         private val removed = MutableStateFlow<RemovedLine?>(null)
         private val confirmingClear = MutableStateFlow(false)
+
+        /** La bolsa frente a la carta vigente. No se guarda: nace en [CartCheck.Checking] cada vez que se abre. */
+        private val check = MutableStateFlow<CartCheck>(CartCheck.Checking)
         private var undoJob: Job? = null
 
         val state: StateFlow<CartUiState> =
-            combine(store.cart, removed, confirmingClear) { cart, last, asking ->
-                cart.toUi(undoName = last?.undoNameFor(cart), confirmingClear = asking)
+            combine(store.cart, removed, confirmingClear, check) { cart, last, asking, checked ->
+                cart.toUi(undoName = last?.undoNameFor(cart), confirmingClear = asking, check = checked)
             }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), CartUiState.Loading)
 

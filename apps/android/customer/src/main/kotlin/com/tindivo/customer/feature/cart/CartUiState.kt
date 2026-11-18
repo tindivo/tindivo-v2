@@ -17,6 +17,8 @@ data class CartLineUi(
     /** Con 1 unidad el «−» es el tacho: quita la línea (CUS-CRT-003). */
     val decreaseRemoves: Boolean,
     val canIncrease: Boolean,
+    /** Lo que la carta vigente dice de esta línea; vacío si es válida o aún no se sabe. */
+    val issues: List<LineIssue> = emptyList(),
 )
 
 sealed interface CartUiState {
@@ -34,12 +36,15 @@ sealed interface CartUiState {
         val undoName: String? = null,
         /** «¿Vaciar tu bolsa?» está abierta (CUS-CRT-016). */
         val confirmingClear: Boolean = false,
+        /** «Continuar» con el mismo monto que [subtotal] y, si no se puede tocar, el motivo. */
+        val continueCta: ContinueUi = ContinueUi(subtotal),
     ) : CartUiState
 }
 
 internal fun Cart?.toUi(
     undoName: String? = null,
     confirmingClear: Boolean = false,
+    check: CartCheck = CartCheck.Done(closed = false, issues = emptyMap()),
 ): CartUiState {
     if (this == null || isEmpty()) return CartUiState.Empty
     return CartUiState.Filled(
@@ -56,10 +61,12 @@ internal fun Cart?.toUi(
                     total = requireAmountText(line.total),
                     decreaseRemoves = line.quantity <= 1,
                     canIncrease = line.quantity < MAX_QUANTITY,
+                    issues = (check as? CartCheck.Done)?.issues?.get(line.signature).orEmpty(),
                 )
             },
         subtotal = requireAmountText(subtotal),
         undoName = undoName,
         confirmingClear = confirmingClear,
+        continueCta = continueFor(requireAmountText(subtotal), check, lines.map { it.signature }),
     )
 }

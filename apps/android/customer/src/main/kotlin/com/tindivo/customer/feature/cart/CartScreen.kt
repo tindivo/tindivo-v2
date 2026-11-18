@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -123,17 +122,7 @@ fun CartScreen(
         },
         bottomBar = {
             if (state is CartUiState.Filled) {
-                Button(
-                    onClick = actions.onCheckout,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(16.dp)
-                            .heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.cart_continue))
-                }
+                CartBottomBar(cta = state.continueCta, onContinue = actions.onCheckout)
             }
         },
     ) { innerPadding ->
