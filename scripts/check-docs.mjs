@@ -89,7 +89,10 @@ for (const f of alcance) {
 }
 
 const AGENTS_MAX_LINEAS = 150
-const raiz = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8').replace(/\r?\n$/, '').split(/\r?\n/).length
+// LF, CRLF y CR suelto cuentan como fin de línea (CAX-002): con solo LF, 151 líneas con CR pasarían como una.
+const raiz = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8')
+  .replace(/(\r\n|\r|\n)$/, '')
+  .split(/\r\n|\r|\n/).length
 if (raiz > AGENTS_MAX_LINEAS)
   errores.push(`AGENTS.md tiene ${raiz} líneas (tope: ${AGENTS_MAX_LINEAS}): lo que no cabe va al canon y se enlaza`)
 

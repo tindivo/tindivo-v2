@@ -62,6 +62,13 @@ describe('tope de líneas del AGENTS.md raíz (decisión de Jesús, 2026-11-18)'
     assert.equal(run({ 'AGENTS.md': lineas(150).replaceAll('\n', '\r\n') }).status, 0)
     assert.equal(run({ 'AGENTS.md': lineas(151).replaceAll('\n', '\r\n') }).status, 1)
   })
+  test('con CR suelto cuenta igual, con y sin salto final (CAX-002)', () => {
+    const cr = (n) => lineas(n).replaceAll('\n', '\r')
+    assert.equal(run({ 'AGENTS.md': cr(150) }).status, 0)
+    assert.equal(run({ 'AGENTS.md': cr(151) }).status, 1)
+    assert.equal(run({ 'AGENTS.md': cr(150).slice(0, -1) }).status, 0)
+    assert.equal(run({ 'AGENTS.md': cr(151).slice(0, -1) }).status, 1)
+  })
   test('sin salto final cuenta igual: 150 pasa y 151 falla', () => {
     assert.equal(run({ 'AGENTS.md': lineas(150).slice(0, -1) }).status, 0)
     assert.equal(run({ 'AGENTS.md': lineas(151).slice(0, -1) }).status, 1)

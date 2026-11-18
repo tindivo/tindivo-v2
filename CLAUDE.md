@@ -13,7 +13,8 @@
   `using-agent-skills` y di qué skill usas en cada paso.
 - **Aplica siempre `.claude/rules/`**: son resúmenes que se cargan solos; el texto que manda está en `Docs/operacion/`
   (`antigravity-worker.md`: encargos y auditoría de Antigravity; `codex-auditor.md`: cuándo y cómo firma Codex, sus
-  rondas y su contingencia sin cuota). Léelo entero antes de escribir un encargo. Antes de cada
+  rondas y su contingencia sin cuota). Léelo entero antes de escribir un encargo y, el de Codex, también antes de
+  retomar una auditoría o de cerrar, marcar o integrar una entrega que pasó por él. Antes de cada
   tarea, di el reparto según la tabla de §7.6: Haiku lee y da contexto; Antigravity barre; Sonnet programa con encargo
   cerrado; tú diseñas, haces el piloto y escribes encargos; un subagente limpio revisa lo de cualquier Claude; Fable,
   con Argon o Hydrogen como segunda opinión, decide la arquitectura; Codex firma lo que dispare `codex-auditor.md` §2.

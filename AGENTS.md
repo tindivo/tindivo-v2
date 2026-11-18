@@ -47,7 +47,8 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 | `e2e/` (Playwright) | `e2e/AGENTS.md` |
 | código de una capacidad que ya tiene `Docs/producto/<capacidad>/` | su `capacidad.md`, bloque «Antes de tocar» |
 | `apps/android/` | `Docs/arquitectura/estandares/kotlin.md` y las trampas de Android en `Docs/operacion/trampas.md` |
-| un encargo para Codex o para Antigravity | `Docs/operacion/codex-auditor.md` o `Docs/operacion/antigravity-worker.md`, enteros |
+| un encargo para Codex, retomar su auditoría o cerrar o integrar lo que auditó | `Docs/operacion/codex-auditor.md`, entero |
+| un encargo para Antigravity | `Docs/operacion/antigravity-worker.md`, entero |
 
 ## Invariantes (lecciones del v1; no se rompen)
 
