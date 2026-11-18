@@ -21,10 +21,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -32,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -63,7 +68,7 @@ fun CartDestination(
                 onSeeBusinesses = onSeeBusinesses,
                 onCheckout = onCheckout,
                 onChangeQuantity = viewModel::changeQuantity,
-                onRemove = viewModel::remove,
+                onUndoRemove = viewModel::undoRemove,
                 onClear = viewModel::clear,
             ),
     )
@@ -74,7 +79,7 @@ class CartActions(
     val onAddMore: (String) -> Unit,
     val onSeeBusinesses: () -> Unit,
     val onChangeQuantity: (signature: String, delta: Int) -> Unit,
-    val onRemove: (String) -> Unit,
+    val onUndoRemove: () -> Unit,
     val onClear: () -> Unit,
     val onCheckout: () -> Unit,
 )
@@ -86,7 +91,11 @@ fun CartScreen(
     actions: CartActions,
 ) {
     var confirmingClear by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val undoName = (state as? CartUiState.Filled)?.undoName
+    UndoSnackbar(undoName, snackbarHostState, actions.onUndoRemove)
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -144,6 +153,25 @@ fun CartScreen(
                 actions.onClear()
             },
         )
+    }
+}
+
+/**
+ * El aviso «Quitaste "[plato]"» con «Deshacer». Dura lo que el ViewModel diga: cuando [undoName] vuelve a `null`
+ * (pasaron 5 s, o la bolsa cambió) la clave del efecto cambia y el aviso se cierra solo.
+ */
+@Composable
+private fun UndoSnackbar(
+    undoName: String?,
+    host: SnackbarHostState,
+    onUndo: () -> Unit,
+) {
+    if (undoName == null) return
+    val message = stringResource(R.string.cart_removed, undoName)
+    val action = stringResource(R.string.cart_undo)
+    LaunchedEffect(undoName) {
+        val result = host.showSnackbar(message, actionLabel = action, duration = SnackbarDuration.Indefinite)
+        if (result == SnackbarResult.ActionPerformed) onUndo()
     }
 }
 
@@ -207,72 +235,6 @@ private fun FilledBag(
 }
 
 @Composable
-private fun CartLineRow(
-    line: CartLineUi,
-    actions: CartActions,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = line.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            Text(text = line.total, style = MaterialTheme.typography.titleMedium)
-        }
-        line.options.forEach {
-            Text(
-                text = stringResource(R.string.cart_option, it.group, it.option),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        line.note?.let {
-            Text(
-                text = stringResource(R.string.cart_line_note, it),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        QuantityControls(line = line, actions = actions)
-    }
-}
-
-@Composable
-private fun QuantityControls(
-    line: CartLineUi,
-    actions: CartActions,
-) {
-    val less = stringResource(R.string.cart_line_less, line.name)
-    val more = stringResource(R.string.cart_line_more, line.name)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(
-            onClick = { actions.onChangeQuantity(line.signature, -1) },
-            enabled = line.canDecrease,
-            modifier = Modifier.size(48.dp).semantics { contentDescription = less },
-            contentPadding = PaddingValues(0.dp),
-        ) {
-            Text(text = "−")
-        }
-        Text(text = line.quantity.toString(), style = MaterialTheme.typography.titleMedium)
-        OutlinedButton(
-            onClick = { actions.onChangeQuantity(line.signature, 1) },
-            enabled = line.canIncrease,
-            modifier = Modifier.size(48.dp).semantics { contentDescription = more },
-            contentPadding = PaddingValues(0.dp),
-        ) {
-            Text(text = "+")
-        }
-        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { actions.onRemove(line.signature) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.cart_remove))
-            }
-        }
-    }
-}
-
-@Composable
 private fun ClearDialog(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
@@ -304,7 +266,7 @@ private fun CartPreview() {
             note = "sin ají",
             quantity = 2,
             total = "S/ 25.00",
-            canDecrease = true,
+            decreaseRemoves = false,
             canIncrease = true,
         )
     TindivoTheme {

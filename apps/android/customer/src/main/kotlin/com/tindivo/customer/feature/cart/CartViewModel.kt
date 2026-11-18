@@ -3,68 +3,31 @@ package com.tindivo.customer.feature.cart
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
 
-/** Una opción elegida de un plato, para enseñarla como «Grupo: Opción». */
-data class CartOptionUi(
-    val group: String,
-    val option: String,
+/** Cuánto tiempo se puede deshacer el último «quitar» (CUS-CRT-013). */
+internal const val UNDO_MILLIS = 5_000L
+
+/** La línea que se acaba de quitar, con el sitio que ocupaba, para devolverla tal cual. */
+private data class RemovedLine(
+    val businessId: String,
+    val line: CartLine,
+    val index: Int,
 )
 
-/** Una línea de la bolsa, ya decidida: los importes son texto para mostrar, nunca para calcular. */
-data class CartLineUi(
-    val signature: String,
-    val name: String,
-    val options: List<CartOptionUi>,
-    val note: String?,
-    val quantity: Int,
-    val total: String,
-    /** Con 1 unidad el «−» está deshabilitado: para quitar el plato está «Quitar». */
-    val canDecrease: Boolean,
-    val canIncrease: Boolean,
-)
-
-sealed interface CartUiState {
-    /** Aún no se leyó lo guardado: no se enseña «vacía» por un instante. */
-    data object Loading : CartUiState
-
-    data object Empty : CartUiState
-
-    data class Filled(
-        val businessId: String,
-        val businessName: String,
-        val lines: List<CartLineUi>,
-        val subtotal: String,
-    ) : CartUiState
-}
-
-internal fun Cart?.toUi(): CartUiState {
-    if (this == null || isEmpty()) return CartUiState.Empty
-    return CartUiState.Filled(
-        businessId = businessId,
-        businessName = businessName,
-        lines =
-            lines.map { line ->
-                CartLineUi(
-                    signature = line.signature,
-                    name = line.name,
-                    options = line.modifiers.map { CartOptionUi(it.groupName, it.optionName) },
-                    note = line.note,
-                    quantity = line.quantity,
-                    total = requireAmountText(line.total),
-                    canDecrease = line.quantity > 1,
-                    canIncrease = line.quantity < MAX_QUANTITY,
-                )
-            },
-        subtotal = requireAmountText(subtotal),
-    )
-}
+/** El aviso solo vale mientras la bolsa siga siendo la del negocio de la que se quitó. */
+private fun RemovedLine.undoNameFor(cart: Cart?): String? =
+    line.name.takeIf { cart != null && cart.businessId.equals(businessId, ignoreCase = true) }
 
 @HiltViewModel
 class CartViewModel
@@ -72,23 +35,70 @@ class CartViewModel
     constructor(
         private val store: CartStore,
     ) : ViewModel() {
+        private val removed = MutableStateFlow<RemovedLine?>(null)
+        private var undoJob: Job? = null
+
         val state: StateFlow<CartUiState> =
-            store.cart
-                .map { it.toUi() }
+            combine(store.cart, removed) { cart, last -> cart.toUi(undoName = last?.undoNameFor(cart)) }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), CartUiState.Loading)
 
-        /** Suma o resta una unidad a la línea; se queda dentro de 1..[MAX_QUANTITY]. */
+        /**
+         * Suma o resta una unidad a la línea; se queda dentro de 1..[MAX_QUANTITY]. Con una sola unidad, restar es
+         * quitar la línea.
+         */
         fun changeQuantity(
             signature: String,
             delta: Int,
         ) {
             val line = (state.value as? CartUiState.Filled)?.lines?.firstOrNull { it.signature == signature } ?: return
-            launchStore { store.setQuantity(signature, line.quantity + delta) }
+            if (line.quantity + delta < 1) {
+                remove(signature)
+            } else {
+                launchStore { store.setQuantity(signature, line.quantity + delta) }
+            }
         }
 
-        fun remove(signature: String) = launchStore { store.remove(signature) }
+        /**
+         * Quita la línea. Si queda alguna, se ofrece «Deshacer» durante [UNDO_MILLIS]; si era la última, la bolsa pasa a
+         * vacía sin aviso.
+         */
+        fun remove(signature: String) =
+            launchStore {
+                val cart = store.cart.first() ?: return@launchStore
+                val index = cart.lines.indexOfFirst { it.signature == signature }
+                if (index < 0) return@launchStore
+                val line = cart.lines[index]
+                store.remove(signature)
+                if (cart.lines.size > 1) offerUndo(RemovedLine(cart.businessId, line, index)) else dropUndo()
+            }
 
-        fun clear() = launchStore { store.clear() }
+        /** Devuelve la última línea quitada a su sitio, si aún se puede. */
+        fun undoRemove() {
+            val last = removed.value ?: return
+            dropUndo()
+            launchStore { store.restoreLine(last.businessId, last.line, last.index) }
+        }
+
+        fun clear() {
+            dropUndo()
+            launchStore { store.clear() }
+        }
+
+        private fun offerUndo(last: RemovedLine) {
+            undoJob?.cancel()
+            removed.value = last
+            undoJob =
+                viewModelScope.launch {
+                    delay(UNDO_MILLIS)
+                    removed.value = null
+                }
+        }
+
+        private fun dropUndo() {
+            undoJob?.cancel()
+            undoJob = null
+            removed.value = null
+        }
 
         // Si no se puede escribir en el teléfono, la bolsa se queda como estaba y la pantalla sigue mostrándola.
         private fun launchStore(block: suspend () -> Unit) {

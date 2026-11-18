@@ -138,6 +138,19 @@ fun Cart.setQuantity(
 
 fun Cart.removeLine(signature: String): Cart = copy(lines = lines.filterNot { it.signature == signature })
 
+/**
+ * Devuelve [line] a la posición [index] (la que tenía al quitarla), con su cantidad. No hace nada si la bolsa ya tiene
+ * un plato con esa firma o si ya está en [MAX_LINES]: deshacer nunca pisa ni pasa el tope.
+ */
+fun Cart.restoreLine(
+    line: CartLine,
+    index: Int,
+): Cart {
+    if (lines.any { it.signature == line.signature } || lines.size >= MAX_LINES) return this
+    val at = index.coerceIn(0, lines.size)
+    return copy(lines = lines.take(at) + line + lines.drop(at))
+}
+
 /** Lo que admite `POST /customer/orders` (`packages/contracts/src/requests.ts`): platos distintos y, por plato. */
 const val MAX_LINES = 50
 const val MAX_QUANTITY = 50

@@ -147,4 +147,22 @@ class CartTest {
         assertEquals(MAX_LINES, merged.cart.lines.size)
         assertEquals(2, merged.cart.lines[0].quantity)
     }
+
+    @Test
+    fun `CA-CRT-10 · devolver una linea la pone en su posicion con su cantidad`() {
+        val cart = Cart("n", "Negocio", listOf(line("a"), line("c")))
+        val back = cart.restoreLine(line("b", quantity = 3), index = 1)
+        assertEquals(listOf("a", "b", "c"), back.lines.map { it.itemId })
+        assertEquals(3, back.lines[1].quantity)
+        // Una posición fuera de rango la deja al final.
+        assertEquals(listOf("a", "c", "z"), cart.restoreLine(line("z"), index = 9).lines.map { it.itemId })
+    }
+
+    @Test
+    fun `devolver una linea que ya esta o con la bolsa llena no cambia nada`() {
+        val cart = Cart("n", "Negocio", listOf(line("a")))
+        assertEquals(cart, cart.restoreLine(line("a", quantity = 4), index = 0))
+        val full = Cart("n", "Negocio", List(MAX_LINES) { line("p$it") })
+        assertEquals(full, full.restoreLine(line("otro"), index = 0))
+    }
 }

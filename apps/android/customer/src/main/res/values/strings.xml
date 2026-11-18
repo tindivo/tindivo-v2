@@ -83,7 +83,9 @@
     <string name="cart_add_more">+ Agregar más</string>
     <string name="cart_empty">Tu bolsa está vacía</string>
     <string name="cart_see_businesses">Ver negocios</string>
-    <string name="cart_remove">Quitar</string>
+    <string name="cart_removed">Quitaste \"%1$s\"</string>
+    <string name="cart_undo">Deshacer</string>
+    <string name="cart_line_remove">Quitar %1$s de la bolsa</string>
     <string name="cart_line_less">Quitar una unidad de %1$s</string>
     <string name="cart_line_more">Agregar una unidad de %1$s</string>
     <string name="cart_option">%1$s: %2$s</string>

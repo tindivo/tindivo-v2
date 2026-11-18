@@ -87,6 +87,29 @@ class CartStore(
         }
     }
 
+    /**
+     * Devuelve [line] a la posición [index] de la bolsa de [businessId] (deshacer, CUS-CRT-013). No hace nada si la
+     * bolsa ya es de otro negocio, está vacía o ya tiene ese plato; devuelve si la devolvió.
+     */
+    suspend fun restoreLine(
+        businessId: String,
+        line: CartLine,
+        index: Int,
+    ): Boolean {
+        var restored = false
+        store.updateData { current ->
+            val cart = current?.toCartOrNull()
+            if (cart == null || !cart.businessId.equals(businessId, ignoreCase = true)) {
+                current
+            } else {
+                val next = cart.restoreLine(line, index)
+                restored = next != cart
+                next.toSnapshot()?.keepingReservationOf(current)
+            }
+        }
+        return restored
+    }
+
     suspend fun clear() {
         store.updateData { null }
     }
