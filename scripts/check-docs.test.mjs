@@ -46,3 +46,16 @@ describe('cabecera de una capacidad de Docs/producto/ (CAX-002)', () => {
     assert.equal(run({ 'Docs/negocio/a.md': `# A\n${'\n'.repeat(14)}> Verificado: 2026-11-17\n` }).status, 1)
   })
 })
+
+describe('tope de líneas del AGENTS.md raíz (decisión de Jesús, 2026-11-18)', () => {
+  const lineas = (n) => `${Array.from({ length: n }, (_, i) => `línea ${i + 1}`).join('\n')}\n`
+  test('con 150 líneas pasa', () => {
+    const r = run({ 'AGENTS.md': lineas(150) })
+    assert.equal(r.status, 0, r.out)
+  })
+  test('con 151 líneas falla y dice cuántas tiene', () => {
+    const r = run({ 'AGENTS.md': lineas(151) })
+    assert.equal(r.status, 1)
+    assert.match(r.out, /AGENTS\.md tiene 151 líneas \(tope: 150\)/)
+  })
+})

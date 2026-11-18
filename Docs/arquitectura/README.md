@@ -6,7 +6,8 @@
 
 ## Las piezas
 
-Monorepo pnpm + Turborepo. Cinco aplicaciones Next.js y paquetes compartidos:
+Monorepo pnpm + Turborepo. Cinco aplicaciones Next.js, la app Android y paquetes compartidos (piezas verificadas en
+`develop@6de11405`, 2026-11-18):
 
 | App | Para quién | Puerto local |
 |---|---|---|
@@ -15,11 +16,13 @@ Monorepo pnpm + Turborepo. Cinco aplicaciones Next.js y paquetes compartidos:
 | `apps/negocios` | La cajera: tablero de pedidos, pedidos manuales, deuda, configuración | 3002 |
 | `apps/admin` | Jesús: operación, negocios, cobros, reportes, Store | 3003 |
 | `apps/motorizados` | El motorizado: cola, pedidos, Entregas, rendición | 3004 |
+| `apps/android` | Kotlin + Compose, Gradle aparte; hoy `:customer` (cliente) sobre `:core:network` y `:core:designsystem` | — |
 
 | Paquete | Qué es |
 |---|---|
 | `packages/contracts` | **La fuente canónica** de primitivas, enums, máquinas de estados, errores y el OpenAPI (Zod v4) |
-| `packages/core` | Dominio puro compartido por las apps web; la lógica de negocio nueva del backend va en `packages/backend` (ADR 0039, por crear) |
+| `packages/backend` | Lógica de negocio del backend (ADR 0039): `modules/`, `composition/`, `http/`, `shared/`; solo lo importa `apps/api` |
+| `packages/core` | Dominio puro compartido por las apps web |
 | `packages/api-client` | Cliente HTTP de la API para las apps |
 | `packages/supabase` | Clientes de Supabase y tipos generados de la base |
 | `packages/ui` | Sistema de diseño (Tailwind v4) |

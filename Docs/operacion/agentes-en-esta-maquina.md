@@ -7,8 +7,8 @@ invoca cada uno sin que falle.
 
 ## Codex: auditor de solo lectura
 
-> **Modo provisional con riesgo aceptado** (`.claude/rules/codex-worker.md` §13.1 bis), vigente hasta el
-> **2026-11-14**. Codex puede leer todo lo que lee Jesús: no es aislamiento. Preflight medido el 2026-10-15 con
+> **Modo provisional con riesgo aceptado** (`Docs/operacion/codex-auditor.md` §13.1 bis), vigente hasta el
+> **2026-12-14** (renovado por Jesús el 2026-11-11). Codex puede leer todo lo que lee Jesús: no es aislamiento. Preflight medido el 2026-10-15 con
 > Codex CLI 0.162.0.
 
 La invocación es la de §13.2–§13.4 del protocolo (array `COMMON`), sobre una copia `git archive` fuera del repo, y

@@ -8,14 +8,22 @@ Instrucciones para **cualquier agente** en este repo: Claude Code (lo importa de
 Plataforma de delivery hiperlocal para pueblos del Perú; opera en San Jacinto (Áncash) y `tindivo-prod` es
 **operación real**. Servicios: pedidos de restaurante, **Tindivo Entregas** (llevar de A a B algo ya pagado) y
 **Tindivo Store**. Antifraude **humano** (la cajera llama). Tindivo **no retiene fondos**: el cliente paga directo
-al negocio (Yape, Plin o efectivo). Monorepo pnpm + Turborepo: `apps/{api,customer,negocios,motorizados,admin}` y
-`packages/{core,contracts,api-client,supabase,ui}`. El v1 está en `../tindivo-delivery` (solo como referencia).
+al negocio (Yape, Plin o efectivo). Monorepo pnpm + Turborepo; `packages/{backend,core,contracts,api-client,supabase,
+ui,map,images}`. El v1 está en `../tindivo-delivery` (solo como referencia).
+
+Una app por actor, nativa en cada plataforma (Jesús, 2026-11-17). Todas hablan solo con `apps/api`:
+
+| Actor | Hoy | Hasta fin de 2026 |
+|---|---|---|
+| Cliente | `apps/android` (módulo `:customer`) y `apps/customer` (web, se apagará: D-27) | Android + iOS (sin carpeta aún) |
+| Negocio | `apps/negocios` (web) | web + Android |
+| Admin y motorizado | `apps/admin`, `apps/motorizados` (web) | web; a móvil en 2027 |
 
 ## Dónde está la verdad
 
 | Zona | Dónde | ¿Manda? |
 |---|---|---|
-| **Canon** | `Docs/decisiones/` (ADR), `DECISIONS.md` (decisiones §1–§32 e índice), `Docs/glosario.md`, y lo que vaya naciendo en `Docs/negocio/`, `Docs/arquitectura/`, `Docs/operacion/` | Sí |
+| **Canon** | `Docs/decisiones/` (ADR), `DECISIONS.md` (decisiones §1–§32 e índice), `Docs/glosario.md`, `Docs/producto/` (una carpeta por capacidad), y lo que vaya naciendo en `Docs/negocio/`, `Docs/arquitectura/`, `Docs/operacion/` | Sí |
 | **Planes** | `Docs/planes/` (hoy: migraciones, la migración móvil y la transición del estándar) | Sí, solo dentro de su alcance |
 | **Trabajo** | `Docs/trabajo/` | **No**: borradores, debates, análisis |
 | **Historia** | git | No. Lo borrado se cita por commit |
@@ -37,6 +45,9 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 | `supabase/`, cualquier SQL contra una base, pruebas de integración de `apps/api` o scripts que usen la base | `supabase/AGENTS.md` |
 | iconos en `apps/negocios`, `apps/motorizados` o `packages/ui` | `apps/negocios/AGENTS.md` |
 | `e2e/` (Playwright) | `e2e/AGENTS.md` |
+| código de una capacidad que ya tiene `Docs/producto/<capacidad>/` | su `capacidad.md`, bloque «Antes de tocar» |
+| `apps/android/` | `Docs/arquitectura/estandares/kotlin.md` y las trampas de Android en `Docs/operacion/trampas.md` |
+| un encargo para Codex o para Antigravity | `Docs/operacion/codex-auditor.md` o `Docs/operacion/antigravity-worker.md`, enteros |
 
 ## Invariantes (lecciones del v1; no se rompen)
 
@@ -56,10 +67,10 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 10. **Fechas operativas en hora de Lima**: `(now() at time zone 'America/Lima')::date`, nunca `current_date` (es UTC,
     y de 19:00 a medianoche ya es mañana). Parámetros operativos en `app_settings`, no en el código.
 11. **Contrato REST v1** (`Docs/planes/movil/contrato-rest.md`): manda en rutas, códigos, cabeceras y formas; una app instalada no se rompe (API-3).
-12. **Backend**: la lógica nueva va en `packages/backend` (por crear), que solo importa `apps/api`, y este solo enlaza
+12. **Backend**: la lógica nueva va en `packages/backend`, que solo importa `apps/api`, y este solo enlaza
     rutas (DES-3, DES-9, DES-11). Los clientes solo hablan con la API; el SDK de un proveedor, solo en `infra/` (DES-1, DES-2).
 13. En la API el dinero es una cadena decimal, nunca `float` ni `Double`; los instantes viajan en UTC (API-8, TS-11).
-14. Nadie revisa su propio trabajo (`Docs/README.md` §7.1); lo por decidir va a `Docs/trabajo/decisiones-abiertas.md` (por crear).
+14. Nadie revisa su propio trabajo (`Docs/README.md` §7.1); lo por decidir va a `Docs/trabajo/decisiones-abiertas.md`.
 
 ## Cómo se trabaja
 
@@ -96,7 +107,7 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 
 TypeScript **strict** (TS 6) · Zod **v4** · Next **16** + React **19** + Tailwind **v4** · Biome (`pnpm lint`) sin
 errores nuevos y sin bajar reglas a `warn` · vertical slicing por feature (una feature no importa de otra; lo común
-sube a `lib/` o `packages/`) · los módulos de negocio del backend van en `packages/backend` (por crear) y `packages/core`
+sube a `lib/` o `packages/`) · los módulos de negocio del backend van en `packages/backend` y `packages/core`
 (ADR 0039) se queda con lo que comparten las apps web · `packages/contracts` es la fuente canónica de primitivas, enums,
 transiciones y errores · coordenadas `numeric(10,7)` · sin Server Actions ni BFFs: las apps nativas (Swift + Kotlin) usan
 la misma API REST · sin Prisma/Drizzle (RLS) · TDD en `packages/core` · abstracciones: TS-6 · dinero: tests unitarios
