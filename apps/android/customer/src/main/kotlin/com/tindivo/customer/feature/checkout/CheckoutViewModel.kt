@@ -7,12 +7,12 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.core.network.generated.model.CreateOrder201ResponseData
 import com.tindivo.core.network.generated.model.CreateOrderRequest
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.CartStore
+import com.tindivo.customer.bag.DeliveryMethod
+import com.tindivo.customer.bag.ReserveResult
+import com.tindivo.customer.bag.fingerprint
 import com.tindivo.customer.config.ConfigService
-import com.tindivo.customer.feature.cart.Cart
-import com.tindivo.customer.feature.cart.CartStore
-import com.tindivo.customer.feature.cart.DeliveryMethod
-import com.tindivo.customer.feature.cart.ReserveResult
-import com.tindivo.customer.feature.cart.fingerprint
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel

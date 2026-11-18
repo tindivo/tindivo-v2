@@ -2,6 +2,11 @@ package com.tindivo.customer.feature.cart
 
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.CartModifier
+import com.tindivo.customer.bag.CartSerializer
+import com.tindivo.customer.bag.CartSnapshot
+import com.tindivo.customer.bag.CartStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

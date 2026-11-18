@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.cart
+package com.tindivo.customer.bag
 
 import java.math.BigDecimal
 import java.util.Locale

@@ -1,6 +1,10 @@
 package com.tindivo.customer.feature.cart
 
-import com.tindivo.customer.feature.catalog.business.DishWindow
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.ModifierGroupRule
+import com.tindivo.customer.bag.checkModifierSelection
+import com.tindivo.customer.dish.DishWindow
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.Locale

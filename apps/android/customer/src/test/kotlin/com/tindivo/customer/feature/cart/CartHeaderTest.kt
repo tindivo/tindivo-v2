@@ -1,5 +1,8 @@
 package com.tindivo.customer.feature.cart
 
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.DeliveryMethod
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

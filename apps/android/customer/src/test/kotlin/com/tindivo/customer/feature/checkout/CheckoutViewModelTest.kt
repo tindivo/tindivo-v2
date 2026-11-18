@@ -1,6 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
-import com.tindivo.customer.feature.cart.fingerprint
+import com.tindivo.customer.bag.fingerprint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope

@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.cart
+package com.tindivo.customer.bag
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement

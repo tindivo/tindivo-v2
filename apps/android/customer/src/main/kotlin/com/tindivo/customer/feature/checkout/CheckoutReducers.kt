@@ -2,8 +2,8 @@ package com.tindivo.customer.feature.checkout
 
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
-import com.tindivo.customer.feature.cart.Cart
-import com.tindivo.customer.feature.cart.DeliveryMethod
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.DeliveryMethod
 
 /** Espera entre un cambio y la cotización siguiente. Se inyecta para probar sin esperar de verdad (KT-4). */
 fun interface QuoteDebounce {

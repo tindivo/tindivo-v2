@@ -1,10 +1,10 @@
-package com.tindivo.customer.feature.catalog.business
+package com.tindivo.customer.dish
 
-import com.tindivo.customer.feature.cart.CartLine
-import com.tindivo.customer.feature.cart.CartModifier
-import com.tindivo.customer.feature.cart.MAX_MODIFIERS
-import com.tindivo.customer.feature.cart.MAX_NOTE_LENGTH
-import com.tindivo.customer.feature.cart.MAX_QUANTITY
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.CartModifier
+import com.tindivo.customer.bag.MAX_MODIFIERS
+import com.tindivo.customer.bag.MAX_NOTE_LENGTH
+import com.tindivo.customer.bag.MAX_QUANTITY
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

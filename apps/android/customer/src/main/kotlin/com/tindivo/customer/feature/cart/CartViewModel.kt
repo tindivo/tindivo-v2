@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.generated.model.GetBusiness200ResponseData
-import com.tindivo.customer.feature.catalog.business.MenuItemUi
-import com.tindivo.customer.feature.catalog.business.toDetail
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.CartStore
+import com.tindivo.customer.dish.MenuItemUi
+import com.tindivo.customer.dish.toDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

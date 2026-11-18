@@ -1,9 +1,9 @@
 package com.tindivo.customer.feature.deleteaccount
 
 import com.tindivo.core.network.ApiResult
+import com.tindivo.customer.bag.CartStore
+import com.tindivo.customer.bag.fingerprint
 import com.tindivo.customer.di.ApplicationScope
-import com.tindivo.customer.feature.cart.CartStore
-import com.tindivo.customer.feature.cart.fingerprint
 import com.tindivo.customer.feature.checkout.OrderAttemptLedger
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore

@@ -3,7 +3,7 @@ package com.tindivo.customer.feature.checkout
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.cart.formatSoles
+import com.tindivo.customer.bag.formatSoles
 import java.math.BigDecimal
 
 /** Los importes ya pasaron por [parseApiAmount]: tienen dos decimales y [formatSoles] no redondea. */

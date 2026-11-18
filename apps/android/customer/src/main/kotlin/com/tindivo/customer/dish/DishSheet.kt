@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.catalog.business
+package com.tindivo.customer.dish
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,9 +37,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.cart.CartLine
-import com.tindivo.customer.feature.cart.MAX_NOTE_LENGTH
-import com.tindivo.customer.feature.cart.MAX_QUANTITY
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.MAX_NOTE_LENGTH
+import com.tindivo.customer.bag.MAX_QUANTITY
 
 /**
  * La ficha de un plato: foto, descripción, opciones, nota y cantidad, con el botón que lo agrega a la bolsa. Todo lo

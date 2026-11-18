@@ -45,8 +45,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.catalog.business.DishSheet
-import com.tindivo.customer.feature.catalog.business.DishSheetState
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.DeliveryMethod
+import com.tindivo.customer.dish.DishSheet
+import com.tindivo.customer.dish.DishSheetState
 
 /** Une el ViewModel con la pantalla. [onAddMore] vuelve a la carta del negocio de la bolsa. */
 @Composable

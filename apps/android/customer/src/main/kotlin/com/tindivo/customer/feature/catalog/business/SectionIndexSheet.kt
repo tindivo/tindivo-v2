@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tindivo.customer.R
+import com.tindivo.customer.dish.MenuCategoryUi
 
 /** Hoja con todas las secciones de la carta; tocar una la cierra y salta a ella. */
 @OptIn(ExperimentalMaterial3Api::class)

@@ -1,8 +1,8 @@
 package com.tindivo.customer.feature.checkout
 
 import androidx.lifecycle.viewModelScope
-import com.tindivo.customer.feature.cart.ReserveResult
-import com.tindivo.customer.feature.cart.fingerprint
+import com.tindivo.customer.bag.ReserveResult
+import com.tindivo.customer.bag.fingerprint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first

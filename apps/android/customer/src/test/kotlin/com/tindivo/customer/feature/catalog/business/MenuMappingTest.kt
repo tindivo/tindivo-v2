@@ -8,6 +8,7 @@ import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.dish.INVALID_MENU
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

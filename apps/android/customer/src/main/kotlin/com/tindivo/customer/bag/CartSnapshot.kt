@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.cart
+package com.tindivo.customer.bag
 
 import kotlinx.serialization.Serializable
 import java.math.BigDecimal

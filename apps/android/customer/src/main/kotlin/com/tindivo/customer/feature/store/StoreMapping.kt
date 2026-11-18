@@ -5,7 +5,7 @@ import com.tindivo.core.network.generated.model.GetStoreProduct200ResponseDataPr
 import com.tindivo.core.network.generated.model.ListStoreProducts200ResponseData
 import com.tindivo.core.network.generated.model.ListStoreProducts200ResponseDataProductsInner
 import com.tindivo.core.network.generated.model.ListStoreProducts200ResponseDataSettings
-import com.tindivo.customer.feature.cart.formatAmount
+import com.tindivo.customer.bag.formatAmount
 import java.math.BigDecimal
 import java.math.RoundingMode
 

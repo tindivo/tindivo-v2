@@ -1,6 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
-import com.tindivo.customer.feature.cart.DeliveryMethod
+import com.tindivo.customer.bag.DeliveryMethod
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

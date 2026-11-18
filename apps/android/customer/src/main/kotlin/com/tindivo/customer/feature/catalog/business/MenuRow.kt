@@ -3,6 +3,9 @@ package com.tindivo.customer.feature.catalog.business
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import com.tindivo.customer.dish.BusinessDetailUi
+import com.tindivo.customer.dish.MenuCategoryUi
+import com.tindivo.customer.dish.MenuItemUi
 
 /**
  * Una fila de la carta, en el orden exacto en que la pantalla la pinta.

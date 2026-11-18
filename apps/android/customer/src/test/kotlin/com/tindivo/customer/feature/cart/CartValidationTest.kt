@@ -1,6 +1,10 @@
 package com.tindivo.customer.feature.cart
 
-import com.tindivo.customer.feature.catalog.business.DishWindow
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.CartModifier
+import com.tindivo.customer.bag.ModifierGroupRule
+import com.tindivo.customer.dish.DishWindow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

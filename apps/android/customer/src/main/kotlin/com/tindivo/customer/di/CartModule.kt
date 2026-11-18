@@ -3,9 +3,9 @@ package com.tindivo.customer.di
 import android.content.Context
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
-import com.tindivo.customer.feature.cart.CartSerializer
-import com.tindivo.customer.feature.cart.CartSnapshot
-import com.tindivo.customer.feature.cart.CartStore
+import com.tindivo.customer.bag.CartSerializer
+import com.tindivo.customer.bag.CartSnapshot
+import com.tindivo.customer.bag.CartStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

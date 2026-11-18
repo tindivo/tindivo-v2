@@ -7,8 +7,8 @@ import com.tindivo.core.network.generated.model.ListCustomerCourierOrders200Resp
 import com.tindivo.core.network.generated.model.ListCustomerCourierOrders200ResponseDataFrequentContactsInner
 import com.tindivo.core.network.generated.model.ListCustomerCourierOrders200ResponseDataItemsInner
 import com.tindivo.core.network.generated.model.ListCustomerCourierOrders200ResponseDataItemsInnerOrigin
-import com.tindivo.customer.feature.cart.formatSoles
-import com.tindivo.customer.feature.cart.menuPriceOrNull
+import com.tindivo.customer.bag.formatSoles
+import com.tindivo.customer.bag.menuPriceOrNull
 import com.tindivo.customer.feature.orders.apiInstantOrNull
 import com.tindivo.customer.feature.orders.apiMoneyTextOrNull
 import java.math.BigDecimal

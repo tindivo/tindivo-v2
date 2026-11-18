@@ -1,6 +1,11 @@
 package com.tindivo.customer.feature.cart
 
-import com.tindivo.customer.feature.catalog.business.MenuItemUi
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.DeliveryMethod
+import com.tindivo.customer.bag.MAX_QUANTITY
+import com.tindivo.customer.bag.requireAmountText
+import com.tindivo.customer.dish.MenuItemUi
 import java.util.Locale
 
 /** Una opción elegida de un plato, para enseñarla como «Grupo: Opción». */

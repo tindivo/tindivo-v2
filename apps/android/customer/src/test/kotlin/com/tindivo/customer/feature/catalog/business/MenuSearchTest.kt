@@ -1,5 +1,8 @@
 package com.tindivo.customer.feature.catalog.business
 
+import com.tindivo.customer.dish.DishWindow
+import com.tindivo.customer.dish.MenuCategoryUi
+import com.tindivo.customer.dish.MenuItemUi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

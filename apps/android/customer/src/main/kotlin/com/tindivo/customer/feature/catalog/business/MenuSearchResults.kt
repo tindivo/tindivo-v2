@@ -16,6 +16,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.dp
 import com.tindivo.customer.R
+import com.tindivo.customer.dish.BusinessDetailUi
+import com.tindivo.customer.dish.MenuItemUi
 
 /** Fracción del color primario con que se pinta el fondo del texto que casó con la consulta. */
 private const val HIGHLIGHT_ALPHA = 0.2f

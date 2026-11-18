@@ -3,8 +3,8 @@ package com.tindivo.customer.feature.checkout
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
-import com.tindivo.customer.feature.cart.Cart
-import com.tindivo.customer.feature.cart.fingerprint
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.fingerprint
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
