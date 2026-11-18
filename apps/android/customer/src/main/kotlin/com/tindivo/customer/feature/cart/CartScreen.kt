@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.cart
 
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,9 +19,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -30,9 +33,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -107,7 +115,14 @@ fun CartScreen(
     val undoName = (state as? CartUiState.Filled)?.undoName
     UndoSnackbar(undoName, snackbarHostState, actions.onUndoRemove)
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Column {
+                    Snackbar(data)
+                    UndoCountdown()
+                }
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -186,6 +201,33 @@ private fun UndoSnackbar(
         val result = host.showSnackbar(message, actionLabel = action, duration = SnackbarDuration.Indefinite)
         if (result == SnackbarResult.ActionPerformed) onUndo()
     }
+}
+
+/**
+ * La raya naranja bajo el aviso: va de llena a vacía en [UNDO_MILLIS], el mismo plazo del ViewModel (CUS-CRT-013).
+ * Con «quitar animaciones» del sistema se queda llena y quieta; el aviso se retira igual al cumplirse el plazo.
+ */
+@Composable
+private fun UndoCountdown() {
+    val resolver = LocalContext.current.contentResolver
+    val still =
+        remember(resolver) {
+            Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) ==
+                0f
+        }
+    val remaining by produceState(initialValue = 1f, still) {
+        if (still) return@produceState
+        val start = withFrameMillis { it }
+        while (value > 0f) {
+            value = undoRemainingFraction(withFrameMillis { it } - start)
+        }
+    }
+    LinearProgressIndicator(
+        progress = { remaining },
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primary,
+        trackColor = Color.Transparent,
+    )
 }
 
 /** «Recojo», o «Delivery» con su plazo si el negocio lo informa. */
