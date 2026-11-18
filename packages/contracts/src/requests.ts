@@ -3,7 +3,7 @@ import { DeliveryMethodSchema, PaymentIntentSchema, PickupTimingSchema } from '.
 import { isCustomerPaymentAllowed } from './payment-rules'
 import {
   ADDRESS_LINE_MIN,
-  ADDRESS_REFERENCE_MIN,
+  ADDRESS_REFERENCE_API_MIN,
   AddressLineSchema,
   AddressReferenceSchema,
   CoordinatesSchema,
@@ -164,9 +164,9 @@ export const CreateOrderRequestSchema = z
   .refine(
     (d) =>
       d.deliveryMethod === 'pickup' ||
-      (d.deliveryReference?.trim().length ?? 0) >= ADDRESS_REFERENCE_MIN,
+      (d.deliveryReference?.trim().length ?? 0) >= ADDRESS_REFERENCE_API_MIN,
     {
-      message: `La referencia es obligatoria para delivery (mínimo ${ADDRESS_REFERENCE_MIN} caracteres)`,
+      message: `La referencia es obligatoria para delivery (mínimo ${ADDRESS_REFERENCE_API_MIN} caracteres)`,
       path: ['deliveryReference'],
     },
   )

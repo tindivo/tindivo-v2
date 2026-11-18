@@ -69,12 +69,12 @@ class CheckoutCtaTest {
     }
 
     @Test
-    fun `CA-ADR-01 · una direccion guardada con una referencia de 14 caracteres pide completarla antes de pedir`() {
-        // La API rechaza el pedido por debajo de ADDRESS_REFERENCE_MIN (15): el botón no debe dejar enviarlo.
+    fun `una direccion guardada con el minimo anterior sigue sirviendo para pedir`() {
+        // La API v1 acepta desde ADDRESS_REFERENCE_API_MIN (5); solo el formulario pide 15 (D-31, API-3).
         val catorce = ready().copy(addresses = listOf(home.copy(reference = "Frente al pozo")))
-        val quince = ready().copy(addresses = listOf(home.copy(reference = "Frente al pozo.")))
-        assertEquals(Cta.NeedReference, catorce.cta)
-        assertEquals(Cta.Ready(BigDecimal("30.00")), quince.cta)
+        val cuatro = ready().copy(addresses = listOf(home.copy(reference = "cerc")))
+        assertEquals(Cta.Ready(BigDecimal("30.00")), catorce.cta)
+        assertEquals(Cta.NeedReference, cuatro.cta)
     }
 
     @Test
