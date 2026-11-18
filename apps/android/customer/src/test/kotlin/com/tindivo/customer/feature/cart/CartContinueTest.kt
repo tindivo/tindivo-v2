@@ -4,6 +4,7 @@ import com.tindivo.customer.bag.Cart
 import com.tindivo.customer.bag.CartLine
 import com.tindivo.customer.bag.MAX_QUANTITY
 import com.tindivo.customer.bag.removeLine
+import com.tindivo.customer.bag.restoreLine
 import com.tindivo.customer.bag.setQuantity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
