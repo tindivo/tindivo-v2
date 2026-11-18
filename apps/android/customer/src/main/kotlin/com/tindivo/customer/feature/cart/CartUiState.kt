@@ -107,5 +107,9 @@ internal fun Cart?.toUi(
     )
 }
 
-private fun CartLine.canEditWith(check: CartCheck): Boolean =
-    check is CartCheck.Done && (modifiers.isNotEmpty() || itemId.lowercase(Locale.ROOT) in check.customizable)
+/** «Editar» se ofrece solo si el plato sigue en la carta vigente y tiene opciones (o la línea ya elegía alguna). */
+private fun CartLine.canEditWith(check: CartCheck): Boolean {
+    if (check !is CartCheck.Done) return false
+    val key = itemId.lowercase(Locale.ROOT)
+    return key in check.inMenu && (modifiers.isNotEmpty() || key in check.customizable)
+}

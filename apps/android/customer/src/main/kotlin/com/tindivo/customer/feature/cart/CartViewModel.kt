@@ -36,6 +36,12 @@ private data class RemovedLine(
     val index: Int,
 )
 
+/** La carta vigente de un negocio y sus platos tal como los muestra la ficha, por id en minúsculas. */
+private class LoadedMenu(
+    val menu: CartMenu,
+    val items: Map<String, MenuItemUi>,
+)
+
 private data class Overlay(
     val removed: RemovedLine?,
     val confirmingClear: Boolean,
@@ -60,17 +66,20 @@ class CartViewModel
         /** La firma de la línea cuya ficha está abierta (CUS-CRT-014). */
         private val editingSignature = MutableStateFlow<String?>(null)
 
-        /** Los platos de la carta que respondió el negocio, para abrir su ficha al editar. No se guarda. */
-        private var menuItems: Map<String, MenuItemUi> = emptyMap()
+        /** La carta vigente que respondió el negocio de la bolsa, y sus platos para abrir la ficha al editar. */
+        private var loaded: LoadedMenu? = null
+
+        /** La bolsa tal como la vio la última emisión. */
+        private var currentCart: Cart? = null
 
         /** La bolsa frente a la carta vigente. No se guarda: nace en [CartCheck.Checking] cada vez que se abre. */
         private val check = MutableStateFlow<CartCheck>(CartCheck.Checking)
         private var undoJob: Job? = null
         private var checkJob: Job? = null
 
-        /** De qué negocio y con qué platos se pidió la última revisión: solo un plato nuevo la vuelve a pedir. */
-        private var checkedBusiness: String? = null
-        private var checkedSignatures: Set<String> = emptySet()
+        /** De qué negocio y con qué platos se pidió la última carta: solo un negocio o un plato nuevo vuelve a pedirla. */
+        private var requestedBusiness: String? = null
+        private var requestedItems: Set<String> = emptySet()
 
         /** Lo que se abre encima de la bolsa: el aviso de deshacer, la pregunta de vaciar y la ficha de un plato. */
         private val overlay =
@@ -92,27 +101,45 @@ class CartViewModel
             viewModelScope.launch { store.cart.collect { onCart(it) } }
         }
 
-        /** Al abrir la bolsa (y cada vez que entra un plato nuevo) se revisa contra la carta vigente (CUS-CRT-005). */
+        /**
+         * Al abrir la bolsa se pide la carta vigente (CUS-CRT-005). Con la carta ya en mano, cada cambio de la bolsa se
+         * revalida contra ella sin pedir la red (la revisión es una función pura): editar, quitar, devolver o fusionar
+         * líneas refresca los avisos. Solo se vuelve a pedir si cambia el negocio o entra un plato que esa carta no tenía.
+         */
         private fun onCart(cart: Cart?) {
+            currentCart = cart
             if (cart == null || cart.isEmpty()) {
                 checkJob?.cancel()
-                checkedBusiness = null
-                checkedSignatures = emptySet()
+                loaded = null
+                requestedBusiness = null
+                requestedItems = emptySet()
                 check.value = CartCheck.Checking
+                editingSignature.value = null
                 return
             }
-            val signatures = cart.lines.map { it.signature }.toSet()
-            val sameBusiness = checkedBusiness.equals(cart.businessId, ignoreCase = true)
-            // Quitar o devolver líneas no cambia lo ya revisado: la carta no cambió por eso.
-            if (sameBusiness && checkedSignatures.containsAll(signatures)) return
-            checkedSignatures = signatures
-            checkedBusiness = cart.businessId
-            runCheck(cart.businessId)
+            val itemIds = cart.lines.map { it.itemId.lowercase(Locale.ROOT) }.toSet()
+            val sameBusiness = requestedBusiness.equals(cart.businessId, ignoreCase = true)
+            val known =
+                loaded
+                    ?.menu
+                    ?.items
+                    ?.keys
+                    .orEmpty() + requestedItems
+            if (!sameBusiness || !known.containsAll(itemIds)) {
+                if (!sameBusiness) loaded = null
+                requestedBusiness = cart.businessId
+                requestedItems = itemIds
+                runCheck(cart.businessId)
+            } else {
+                loaded?.let { check.value = validateCart(cart, it.menu, clock.instant()) }
+            }
+            // Una edición abierta cuyo plato ya no se puede mostrar (la línea se fue o el plato salió de la carta) se cierra.
+            editingSignature.value?.let { if (editingOf(cart, it) == null) editingSignature.value = null }
         }
 
         /** Vuelve a pedir la carta, después de que falló. */
         fun retryCheck() {
-            checkedBusiness?.let { runCheck(it) }
+            requestedBusiness?.let { runCheck(it) }
         }
 
         private fun runCheck(businessId: String) {
@@ -122,24 +149,29 @@ class CartViewModel
                 viewModelScope.launch {
                     check.value =
                         when (val result = catalog.business(businessId)) {
-                            is ApiResult.Success -> checkAgainst(result.data)
+                            is ApiResult.Success -> checkAgainst(businessId, result.data)
                             is ApiResult.Failure -> CartCheck.Failed
                         }
                 }
         }
 
-        private suspend fun checkAgainst(data: GetBusiness200ResponseData): CartCheck {
+        private suspend fun checkAgainst(
+            businessId: String,
+            data: GetBusiness200ResponseData,
+        ): CartCheck {
             val now = clock.instant()
-            menuItems =
-                data
-                    .toDetail()
-                    ?.categories
-                    ?.flatMap { it.items }
-                    ?.associateBy { it.id.lowercase(Locale.ROOT) }
-                    .orEmpty()
-            val cart = store.cart.first()?.takeUnless { it.isEmpty() } ?: return CartCheck.Checking
-            val menu = data.toCartMenu(now) ?: return CartCheck.Failed
-            return validateCart(cart, menu, now)
+            val detail = data.toDetail() ?: return CartCheck.Failed
+            val menu = data.toCartMenu(detail, now)
+            val result = checkResult(store.cart.first(), businessId, menu, now)
+            // Solo se guarda la carta si es la del negocio de la bolsa de ahora: la de otro no se usa para nada.
+            if (result is CartCheck.Done) {
+                loaded =
+                    LoadedMenu(
+                        menu,
+                        detail.categories.flatMap { it.items }.associateBy { it.id.lowercase(Locale.ROOT) },
+                    )
+            }
+            return result
         }
 
         /**
@@ -208,13 +240,15 @@ class CartViewModel
             signature: String?,
         ): EditingUi? {
             val line = cart?.lines?.firstOrNull { it.signature == signature } ?: return null
-            val item = menuItems[line.itemId.lowercase(Locale.ROOT)] ?: return null
+            val item = loaded?.items?.get(line.itemId.lowercase(Locale.ROOT)) ?: return null
             return EditingUi(line.signature, item, line)
         }
 
         /** Abre la ficha del plato con lo elegido. No hace nada si la carta aún no respondió o el plato ya no está. */
         fun startEdit(signature: String) {
-            if (menuItems.isEmpty()) return
+            val line = (state.value as? CartUiState.Filled)?.lines?.firstOrNull { it.signature == signature }
+            // Solo se abre si «Editar» se ofrecía y el plato está en la carta: si no, no queda una firma puesta.
+            if (line?.canEdit != true || editingOf(currentCart, signature) == null) return
             editingSignature.value = signature
         }
 

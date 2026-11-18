@@ -43,6 +43,8 @@ sealed interface CartCheck {
         val etaMax: Int? = null,
         /** Los platos de la carta que tienen grupos de opciones (en minúsculas): los que se pueden editar. */
         val customizable: Set<String> = emptySet(),
+        /** Todos los platos de la carta vigente (en minúsculas): solo de esos se puede abrir la ficha al editar. */
+        val inMenu: Set<String> = emptySet(),
     ) : CartCheck
 }
 

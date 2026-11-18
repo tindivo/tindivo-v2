@@ -265,6 +265,83 @@ class CartCheckViewModelTest {
             assertEquals(2, merged.lines.single().quantity)
         }
 
+    /** La carta de hoy: el plato A a 13.00 (la bolsa lo guardó a 12.50) con las mismas salsas de siempre. */
+    private fun repricedMenu() =
+        MenuServer.menu(
+            MenuServer.dish(
+                DISH_A,
+                price = "13.00",
+                groups =
+                    MenuServer.group(
+                        OPTION_AJI to "1.00",
+                        OPTION_MAYO to "0.50",
+                    ),
+            ),
+            MenuServer.dish(DISH_B),
+        )
+
+    @Test
+    fun `CA-CRT-11 · editar con las mismas opciones refresca el precio y desbloquea Continuar`() =
+        runTest {
+            menuServer.body = repricedMenu()
+            seed(line(DISH_A, "Lomo", price = "12.50", modifiers = listOf(aji)), line(DISH_B, "Arroz"))
+            val viewModel = newViewModel().also { it.keepHot(backgroundScope) }
+            val ui = viewModel.settled()
+            assertEquals(listOf(LineIssue.PriceChanged), ui.lines[0].issues)
+            assertEquals(ContinueBlock.InvalidLines, ui.continueCta.blocked)
+            val requests = menuServer.requests
+
+            // La ficha devuelve la misma firma (mismas opciones) pero con el precio de hoy.
+            viewModel.startEdit(ui.lines[0].signature)
+            viewModel.saveEdit(line(DISH_A, "Lomo", price = "13.00", modifiers = listOf(aji)))
+
+            val after = viewModel.awaitFilled { it.editing == null && it.continueCta.blocked == null }
+            assertEquals(emptyList<LineIssue>(), after.lines[0].issues)
+            // Se revalidó con la carta que ya había: no hizo falta la red.
+            assertEquals(requests, menuServer.requests)
+        }
+
+    @Test
+    fun `CA-CRT-11 · fusionar con una gemela marcada refresca el precio y desbloquea Continuar`() =
+        runTest {
+            menuServer.body = repricedMenu()
+            seed(
+                line(DISH_A, "Lomo", price = "12.50", modifiers = listOf(aji)),
+                line(DISH_A, "Lomo", price = "12.50", modifiers = listOf(mayo)),
+            )
+            val viewModel = newViewModel().also { it.keepHot(backgroundScope) }
+            val ui = viewModel.settled()
+            assertEquals(ContinueBlock.InvalidLines, ui.continueCta.blocked)
+
+            viewModel.startEdit(ui.lines[0].signature)
+            viewModel.saveEdit(line(DISH_A, "Lomo", price = "13.00", modifiers = listOf(mayo)))
+
+            val merged = viewModel.awaitFilled { it.lines.size == 1 && it.continueCta.blocked == null }
+            assertEquals(2, merged.lines.single().quantity)
+            assertEquals(emptyList<LineIssue>(), merged.lines.single().issues)
+        }
+
+    @Test
+    fun `CA-CRT-11 · un plato que ya no esta en la carta no se puede editar y no deja la edicion pendiente`() =
+        runTest {
+            // La carta solo tiene B: el plato A (con opciones elegidas) ya no está.
+            menuServer.body = MenuServer.menu(MenuServer.dish(DISH_B))
+            seed(line(DISH_A, "Lomo", modifiers = listOf(aji)))
+            val viewModel = newViewModel().also { it.keepHot(backgroundScope) }
+            val ui = viewModel.settled()
+            assertFalse(ui.lines.single().canEdit)
+
+            viewModel.startEdit(ui.lines.single().signature)
+            assertNull(viewModel.awaitFilled { true }.editing)
+
+            // Si la carta vuelve a tenerlo, la ficha NO se abre sola por un intento anterior.
+            menuServer.body = saucesMenu()
+            viewModel.retryCheck()
+            val back = viewModel.settled()
+            assertTrue(back.lines.single().canEdit)
+            assertNull(back.editing)
+        }
+
     @Test
     fun `cancelar la edicion cierra la ficha sin tocar la bolsa`() =
         runTest {

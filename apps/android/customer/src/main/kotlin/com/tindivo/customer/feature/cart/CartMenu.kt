@@ -58,8 +58,26 @@ fun validateCart(
         etaMin = menu.etaMin,
         etaMax = menu.etaMax,
         customizable = menu.items.filterValues { it.groups.isNotEmpty() }.keys,
+        inMenu = menu.items.keys,
     )
 }
+
+/**
+ * Lo que la revisión dice de [cart] cuando responde la carta de [requestedBusinessId]. Si la bolsa ya es de otro
+ * negocio (o ya no hay bolsa) la carta que llegó no es la suya: se queda en [CartCheck.Checking] y no se valida contra
+ * una carta equivocada.
+ */
+internal fun checkResult(
+    cart: Cart?,
+    requestedBusinessId: String,
+    menu: CartMenu,
+    now: Instant,
+): CartCheck =
+    if (cart == null || cart.isEmpty() || !cart.businessId.equals(requestedBusinessId, ignoreCase = true)) {
+        CartCheck.Checking
+    } else {
+        validateCart(cart, menu, now)
+    }
 
 private fun issuesOf(
     line: CartLine,

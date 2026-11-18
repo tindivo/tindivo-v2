@@ -6,6 +6,7 @@ import com.tindivo.customer.bag.CartModifier
 import com.tindivo.customer.bag.ModifierGroupRule
 import com.tindivo.customer.dish.DishWindow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
@@ -115,6 +116,31 @@ class CartValidationTest {
         val check = validateCart(cart, menu(menuItem(), closed = true), CART_TEST_NOW)
         assertTrue(check.closed)
         assertEquals(emptyMap<String, List<LineIssue>>(), check.issues)
+    }
+
+    @Test
+    fun `CA-CRT-07 · una carta que responde cuando la bolsa ya es de otro negocio no se aplica a ella`() {
+        val cart = Cart("otro-negocio", "Otro", listOf(line("plato")))
+
+        // La carta es la de «negocio»: la bolsa es de «otro-negocio», así que no hay nada que validar todavía.
+        assertEquals(CartCheck.Checking, checkResult(cart, "negocio", menu(menuItem()), CART_TEST_NOW))
+        assertEquals(CartCheck.Checking, checkResult(null, "negocio", menu(menuItem()), CART_TEST_NOW))
+        // Con el mismo negocio (aunque cambien las mayúsculas del uuid) sí se valida.
+        assertTrue(checkResult(cart, "OTRO-NEGOCIO", menu(menuItem()), CART_TEST_NOW) is CartCheck.Done)
+    }
+
+    @Test
+    fun `CA-CRT-11 · solo se puede editar un plato que sigue en la carta`() {
+        val withOption = line("plato", modifiers = listOf(mod("aji", "1.00")))
+        val gone = line("fantasma", modifiers = listOf(mod("aji", "1.00")))
+        val cart = Cart("n", "N", listOf(withOption, gone))
+
+        val check = validateCart(cart, menu(menuItem()), CART_TEST_NOW)
+        val ui = cart.toUi(check = check) as CartUiState.Filled
+
+        assertTrue(ui.lines[0].canEdit)
+        // Tiene opciones elegidas pero el plato ya no está: «Editar» no abriría nada.
+        assertFalse(ui.lines[1].canEdit)
     }
 
     @Test
