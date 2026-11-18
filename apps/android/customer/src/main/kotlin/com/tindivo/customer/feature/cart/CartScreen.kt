@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -100,10 +101,19 @@ fun CartScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = stringResource(R.string.cart_title),
-                        modifier = Modifier.semantics { heading() },
-                    )
+                    Column {
+                        Text(
+                            text = stringResource(R.string.cart_title),
+                            modifier = Modifier.semantics { heading() },
+                        )
+                        if (state is CartUiState.Filled) {
+                            Text(
+                                text = pluralStringResource(R.plurals.cart_products, state.units, state.units),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = actions.onBack, modifier = Modifier.size(48.dp)) {
@@ -160,6 +170,18 @@ private fun UndoSnackbar(
     }
 }
 
+/** «Recojo», o «Delivery» con su plazo si el negocio lo informa. */
+@Composable
+private fun deliveryLabel(state: CartUiState.Filled): String {
+    val min = state.etaMin
+    val max = state.etaMax
+    return when {
+        state.deliveryMethod == DeliveryMethod.Pickup -> stringResource(R.string.cart_label_pickup)
+        min != null && max != null -> stringResource(R.string.cart_label_delivery_eta, min, max)
+        else -> stringResource(R.string.cart_label_delivery)
+    }
+}
+
 @Composable
 private fun EmptyBag(onSeeBusinesses: () -> Unit) {
     Column(
@@ -185,7 +207,18 @@ private fun FilledBag(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text(text = state.businessName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = state.businessName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = deliveryLabel(state),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         items(state.lines, key = { it.signature }) { line ->
             CartLineRow(line = line, actions = actions)
@@ -201,19 +234,21 @@ private fun FilledBag(
                 )
             }
         }
-        item {
-            Text(
-                text = stringResource(R.string.cart_shipping_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (state.showsShippingRow) {
+            item {
+                Text(
+                    text = stringResource(R.string.cart_shipping_row),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         item {
             OutlinedButton(
                 onClick = { actions.onAddMore(state.businessId) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             ) {
-                Text(text = stringResource(R.string.cart_add_more))
+                Text(text = stringResource(R.string.cart_add_more, state.businessName))
             }
         }
     }

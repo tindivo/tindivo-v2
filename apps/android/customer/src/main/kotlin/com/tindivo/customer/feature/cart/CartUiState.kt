@@ -38,7 +38,17 @@ sealed interface CartUiState {
         val confirmingClear: Boolean = false,
         /** «Continuar» con el mismo monto que [subtotal] y, si no se puede tocar, el motivo. */
         val continueCta: ContinueUi = ContinueUi(subtotal),
-    ) : CartUiState
+        /** Cómo se entrega: solo se muestra; se elige en el checkout (CUS-CRT-007). */
+        val deliveryMethod: DeliveryMethod = DeliveryMethod.Delivery,
+        /** Unidades de todas las líneas: los «[n] productos» de la barra. */
+        val units: Int = lines.sumOf { it.quantity },
+        /** Plazo de entrega del negocio, cuando la carta ya respondió y lo informa. */
+        val etaMin: Int? = null,
+        val etaMax: Int? = null,
+    ) : CartUiState {
+        /** En recojo no hay envío que calcular (CUS-CRT-010). */
+        val showsShippingRow: Boolean get() = deliveryMethod == DeliveryMethod.Delivery
+    }
 }
 
 internal fun Cart?.toUi(
@@ -68,5 +78,9 @@ internal fun Cart?.toUi(
         undoName = undoName,
         confirmingClear = confirmingClear,
         continueCta = continueFor(requireAmountText(subtotal), check, lines.map { it.signature }),
+        deliveryMethod = deliveryMethod,
+        units = count,
+        etaMin = (check as? CartCheck.Done)?.etaMin,
+        etaMax = (check as? CartCheck.Done)?.etaMax,
     )
 }

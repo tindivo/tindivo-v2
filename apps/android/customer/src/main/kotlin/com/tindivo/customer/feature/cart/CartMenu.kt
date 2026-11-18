@@ -25,10 +25,12 @@ data class CartMenuItem(
     val groups: List<CartMenuGroup>,
 )
 
-/** La carta vigente de un negocio, por id de plato en minúsculas, y si hoy está [closed]. */
+/** La carta vigente de un negocio, por id de plato en minúsculas, si hoy está [closed] y su plazo de entrega. */
 data class CartMenu(
     val items: Map<String, CartMenuItem>,
     val closed: Boolean,
+    val etaMin: Int? = null,
+    val etaMax: Int? = null,
 )
 
 private fun String.lower() = lowercase(Locale.ROOT)
@@ -46,7 +48,7 @@ fun validateCart(
         cart.lines
             .associate { line -> line.signature to issuesOf(line, menu.items[line.itemId.lower()], now) }
             .filterValues { it.isNotEmpty() }
-    return CartCheck.Done(closed = menu.closed, issues = issues)
+    return CartCheck.Done(closed = menu.closed, issues = issues, etaMin = menu.etaMin, etaMax = menu.etaMax)
 }
 
 private fun issuesOf(

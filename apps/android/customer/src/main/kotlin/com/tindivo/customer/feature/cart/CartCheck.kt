@@ -32,10 +32,15 @@ sealed interface CartCheck {
     /** No se pudo leer la carta (red, servidor, datos rotos). */
     data object Failed : CartCheck
 
-    /** La carta respondió. [issues] va por firma de línea; una línea sin entrada es válida. */
+    /**
+     * La carta respondió. [issues] va por firma de línea; una línea sin entrada es válida. [etaMin] y [etaMax] son el
+     * plazo de entrega que informa el negocio, si lo informa.
+     */
     data class Done(
         val closed: Boolean,
         val issues: Map<String, List<LineIssue>>,
+        val etaMin: Int? = null,
+        val etaMax: Int? = null,
     ) : CartCheck
 }
 

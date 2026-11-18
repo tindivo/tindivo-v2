@@ -42,5 +42,10 @@ internal fun GetBusiness200ResponseData.toCartMenu(now: Instant): CartMenu? {
         schedule.map {
             ScheduleDay(it.dayOfWeek, it.isOpen, it.shift1Start, it.shift1End, it.shift2Start, it.shift2End)
         }
-    return CartMenu(items = items, closed = isClosedAt(days, openingConfirmed, now))
+    return CartMenu(
+        items = items,
+        closed = isClosedAt(days, openingConfirmed, now),
+        etaMin = business.estimatedEtaMin,
+        etaMax = business.estimatedEtaMax,
+    )
 }

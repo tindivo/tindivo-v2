@@ -23,9 +23,12 @@ appId: com.tindivo.customer.dev
     timeout: 10000
 - takeScreenshot: 03-plato
 - tapOn: "Agregar.*"
-- tapOn: "Ver mi bolsa"
+- tapOn: "Ver bolsa"
 - extendedWaitUntil:
     visible: "Subtotal"
+    timeout: 10000
+- extendedWaitUntil:
+    notVisible: "Cargando…"
     timeout: 10000
 - takeScreenshot: 04-bolsa
 - tapOn: "Continuar"

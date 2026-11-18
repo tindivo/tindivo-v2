@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
 
-/** Lo que enseña la barra «Ver mi bolsa»: unidades y subtotal ya formateado. */
+/** Lo que enseña la barra «Ver bolsa»: unidades y subtotal ya formateado. */
 data class CartBarUi(
     val count: Int,
     val subtotal: String,
