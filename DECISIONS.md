@@ -1346,7 +1346,8 @@ Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs
 ## Decisiones de producto de la app cliente (2026-11-17)
 
 Decisión de Jesús, 2026-11-17 (conversación con Claude Code). Registradas aquí por petición expresa de Jesús; el
-detalle, los flujos y los criterios están en `Docs/planes/app-cliente/` (PR #182) y no se duplican.
+detalle, los flujos y los criterios están en `Docs/trabajo/app-cliente/` (llega con el PR #186, que sustituyó al #182) y no
+se duplican.
 
 - **«Yape o Plin»**, en vez de una billetera agnóstica, en lo que ve el cliente.
 - **Todo recojo es prepagado**: llega a cocina pagado.
