@@ -44,6 +44,13 @@
       "motivo": "el mayor precio de carta (numeric(10,2)) en el tope de cantidad"
     },
     {
+      "id": "monto-ceros-de-mas-valen-igual",
+      "lineas": [{ "precioBase": "12.100", "opciones": [], "cantidad": 1 }],
+      "valido": true,
+      "subtotal": "12.10",
+      "motivo": "se cuenta el valor, no el texto: 12.100 vale 12.10 y los ceros finales no son un tercer decimal"
+    },
+    {
       "id": "monto-tres-decimales-en-plato",
       "lineas": [{ "precioBase": "12.105", "opciones": [], "cantidad": 1 }],
       "valido": false,

@@ -39,7 +39,9 @@ const vector = JSON.parse(readFileSync(original, 'utf8')) as Vector
 
 /** Céntimos exactos de un precio de carta, o null si no lo es (más de dos decimales, negativo). */
 function centimos(texto: string): bigint | null {
-  const m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(texto)
+  // Se cuenta el VALOR, no el texto: los ceros finales no son decimales (12.100 vale 12.10; 12.105 no se acepta).
+  const valor = texto.includes('.') ? texto.replace(/0+$/, '').replace(/\.$/, '') : texto
+  const m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(valor)
   if (!m) return null
   return BigInt(m[1] ?? '0') * 100n + BigInt((m[2] ?? '').padEnd(2, '0') || '0')
 }
