@@ -108,7 +108,7 @@ class CartViewModel
 
         /** Vuelve a pedir la carta, después de que falló. */
         fun retryCheck() {
-            checkedBusiness?.let(::runCheck)
+            checkedBusiness?.let { runCheck(it) }
         }
 
         private fun runCheck(businessId: String) {

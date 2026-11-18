@@ -56,8 +56,10 @@ class CartDeliveryMethodTest {
             store.add("n", "Pollería", line())
             store.setDeliveryMethod(DeliveryMethod.Pickup)
 
-            // Otro DataStore sobre el mismo archivo: lo que había en memoria no cuenta.
-            assertEquals(DeliveryMethod.Pickup, checkNotNull(store().cart.first()).deliveryMethod)
+            // Lo que quedó en el archivo, leído sin pasar por el DataStore: lo que había en memoria no cuenta.
+            val onDisk = checkNotNull(file().inputStream().use { CartSerializer.readFrom(it) })
+            assertEquals("pickup", onDisk.deliveryMethod)
+            assertEquals(DeliveryMethod.Pickup, checkNotNull(onDisk.toCartOrNull()).deliveryMethod)
         }
 
     @Test
