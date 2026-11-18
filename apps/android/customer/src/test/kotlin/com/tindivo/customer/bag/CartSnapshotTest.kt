@@ -141,6 +141,30 @@ class CartSnapshotTest {
         }
 
     @Test
+    fun `CA-CRT-04 · un tindivo_cart json de la version 1 se lee como delivery sin perder lineas`() =
+        runTest {
+            // Los bytes de un archivo v1 tal como estaban en el teléfono: sin `deliveryMethod` ni `reservation`.
+            val v1 =
+                (
+                    "{\"version\":1,\"businessId\":\"8f1f2b5e-6d3c-4a7b-9e10-1a2b3c4d5e6f\"," +
+                        "\"businessName\":\"Don Lucho\",\"lines\":[" +
+                        "{\"itemId\":\"a\",\"name\":\"Lomo\",\"basePrice\":\"12.50\",\"modifiers\":[" +
+                        "{\"optionId\":\"queso\",\"groupName\":\"Extras\",\"optionName\":\"Queso\"," +
+                        "\"price\":\"2.50\"}]," +
+                        "\"note\":\"sin cebolla\",\"quantity\":2,\"imageUrl\":null}," +
+                        "{\"itemId\":\"b\",\"name\":\"Arroz\",\"basePrice\":\"4.00\",\"modifiers\":[]," +
+                        "\"note\":null,\"quantity\":1,\"imageUrl\":null}]}"
+                ).encodeToByteArray()
+
+            val cart = checkNotNull(CartSerializer.readFrom(ByteArrayInputStream(v1))?.toCartOrNull())
+
+            assertEquals(DeliveryMethod.Delivery, cart.deliveryMethod)
+            assertEquals(listOf("a", "b"), cart.lines.map { it.itemId })
+            assertEquals(listOf(2, 1), cart.lines.map { it.quantity })
+            assertEquals(BigDecimal("34.00"), cart.subtotal)
+        }
+
+    @Test
     fun `el serializador con bytes corruptos lanza CorruptionException`() =
         runTest {
             val corrupt =
