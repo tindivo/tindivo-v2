@@ -49,20 +49,20 @@ describe('Address validation (isLineOk & getLineError)', () => {
 })
 
 describe('Reference validation (isReferenceOk & getReferenceError)', () => {
-  it('rechaza referencias con menos de 15 caracteres', () => {
+  it('rechaza referencias con menos de 5 caracteres', () => {
     expect(isReferenceOk('')).toBe(false)
     expect(isReferenceOk('Hola')).toBe(false)
-    expect(getReferenceError('Hola')).toBe('Mínimo 15 caracteres')
+    expect(getReferenceError('Hola')).toBe('Mínimo 5 caracteres')
   })
 
   it('rechaza referencias solo con números', () => {
-    expect(isReferenceOk('987654321012345')).toBe(false)
-    expect(getReferenceError('987654321012345')).toBe('Agrega una descripción, no solo números')
+    expect(isReferenceOk('987654')).toBe(false)
+    expect(getReferenceError('987654')).toBe('Agrega una descripción, no solo números')
   })
 
   it('rechaza patrones repetitivos en referencia', () => {
-    expect(isReferenceOk('lalalalalalalala')).toBe(false)
-    expect(getReferenceError('lalalalalalalala')).toBe('Evita repetir patrones o palabras')
+    expect(isReferenceOk('lalala')).toBe(false)
+    expect(getReferenceError('lalala')).toBe('Evita repetir patrones o palabras')
   })
 
   it('acepta referencias descriptivas válidas', () => {

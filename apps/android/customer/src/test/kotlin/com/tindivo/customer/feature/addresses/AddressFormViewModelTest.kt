@@ -90,7 +90,7 @@ internal class AddressFormViewModelTest : AddressHarness() {
         runTest {
             server.enqueue(configOk())
             server.enqueue(addressList())
-            server.enqueue(problem(422, "validation_error", "La referencia debe tener al menos 15 caracteres"))
+            server.enqueue(problem(422, "validation_error", "La referencia debe tener al menos 5 caracteres"))
             val vm = viewModel()
             vm.ready()
             vm.fillValid()
@@ -102,7 +102,7 @@ internal class AddressFormViewModelTest : AddressHarness() {
             assertFalse(state.saving)
             val error = state.saveError as AppError.Known
             assertEquals(ApiErrorCode.ValidationError, error.code)
-            assertEquals("La referencia debe tener al menos 15 caracteres", error.serverDetail())
+            assertEquals("La referencia debe tener al menos 5 caracteres", error.serverDetail())
             assertTrue(state.canSave)
             // Escribir de nuevo limpia el error.
             vm.onReference("Frente al parque")

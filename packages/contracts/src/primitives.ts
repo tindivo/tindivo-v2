@@ -63,9 +63,9 @@ export type Coordinates = z.infer<typeof CoordinatesSchema>
 
 /**
  * Límites de la referencia de dirección (fuente única; consumida por UI y backend).
- * Mínimo 15 chars.
+ * Mínimo 5 chars.
  */
-export const ADDRESS_REFERENCE_MIN = 15
+export const ADDRESS_REFERENCE_MIN = 5
 export const ADDRESS_REFERENCE_MAX = 140
 export const ADDRESS_LINE_MIN = 5
 export const ADDRESS_LINE_MAX = 200

@@ -164,7 +164,7 @@ describe('0223 · qué puede pagar el cliente según cómo recibe', () => {
         deliveryMethod: 'delivery',
         paymentIntent: 'pending_yape',
         deliveryAddress: 'Jr. Los Pinos 123',
-        deliveryReference: 'Frente a la plaza, puerta azul',
+        deliveryReference: 'Portón azul',
         coordinates: { lat: -8.9, lng: -78.3 },
       })
       expect(r.success).toBe(true)

@@ -10,7 +10,7 @@ import java.math.BigDecimal
 internal const val COURIER_ITEM_MAX = 120
 internal const val COURIER_NOTE_MAX = 140
 internal const val COURIER_NAME_MAX = 120
-internal const val COURIER_REFERENCE_MIN = 15
+internal const val COURIER_REFERENCE_MIN = 5
 internal const val COURIER_REFERENCE_MAX = 140
 private const val PE_PHONE_DIGITS = 9
 private val PE_PHONE = Regex("""^9\d{8}$""")
