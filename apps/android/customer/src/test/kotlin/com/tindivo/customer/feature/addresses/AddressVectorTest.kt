@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Recorre el vector compartido con la web (`packages/contracts/test-vectors/direccion.json`).
+ * Recorre el vector compartido con la web (`packages/contracts/fixtures/vectores/direccion.json`).
  * La copia de este recurso debe ser idéntica a la original: lo comprueba el test de Vitest
  * `direccion-vector.test.ts`. Un caso con `"discrepa": "android"` se salta y se reporta.
  */
@@ -18,8 +18,8 @@ class AddressVectorTest {
     private val casos =
         Json
             .parseToJsonElement(
-                requireNotNull(javaClass.getResourceAsStream("/test-vectors/direccion.json")) {
-                    "falta el recurso test-vectors/direccion.json"
+                requireNotNull(javaClass.getResourceAsStream("/fixtures/vectores/direccion.json")) {
+                    "falta el recurso fixtures/vectores/direccion.json"
                 }.bufferedReader().readText(),
             ).jsonArray
             .map { it.jsonObject }

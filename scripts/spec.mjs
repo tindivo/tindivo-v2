@@ -43,7 +43,29 @@ const git = (...args) =>
   execFileSync('git', ['-c', 'core.quotepath=off', ...args], { cwd: ROOT, encoding: 'utf8' })
 
 const rutaAbs = (rel) => join(ROOT, rel)
-const leer = (rel) => readFileSync(rutaAbs(rel), 'utf8').replace(/\r\n/g, '\n')
+
+/** Primer tramo de `rel` (de la raíz hacia el archivo) que es un enlace simbólico o junction; null si ninguno. */
+function tramoEnlace(rel) {
+  const partes = rel.split('/')
+  for (let i = 1; i <= partes.length; i++) {
+    const tramo = partes.slice(0, i).join('/')
+    try {
+      if (lstatSync(rutaAbs(tramo)).isSymbolicLink()) return tramo
+    } catch {
+      return null // no existe: lo dirá quien lo lea
+    }
+  }
+  return null
+}
+
+class ErrorEnlace extends Error {}
+
+/** Lee un archivo del repo; rechaza (ErrorEnlace) un enlace en el archivo o en cualquier carpeta del camino. */
+const leer = (rel) => {
+  const enlace = tramoEnlace(rel)
+  if (enlace) throw new ErrorEnlace(`${enlace} es un enlace simbólico: no se lee ${rel} a través de él`)
+  return readFileSync(rutaAbs(rel), 'utf8').replace(/\r\n/g, '\n')
+}
 
 /** Quita los comentarios HTML conservando los saltos de línea (los números de línea no se mueven). */
 const sinComentarios = (texto) => texto.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' '))
@@ -587,7 +609,8 @@ function calcularTraza(objetivo) {
     .map((f) => {
       try {
         return { f, lineas: leer(f).split('\n') }
-      } catch {
+      } catch (e) {
+        if (e instanceof ErrorEnlace) throw e
         return null
       }
     })
@@ -751,15 +774,10 @@ function main() {
     }
     // Solo se escribe un archivo normal dentro del repo: un enlace simbólico en el camino podría hacer que el índice
     // pise otro archivo (Codex, PR #186, CAX-001).
-    for (const tramo of ['Docs', PRODUCTO, destino]) {
-      let enlace = false
-      try {
-        enlace = lstatSync(rutaAbs(tramo)).isSymbolicLink()
-      } catch {}
-      if (enlace) {
-        console.error(`✖ spec:indice — ${tramo} es un enlace simbólico: no se escribe el índice a través de él`)
-        process.exit(1)
-      }
+    const enlace = tramoEnlace(destino)
+    if (enlace) {
+      console.error(`✖ spec:indice — ${enlace} es un enlace simbólico: no se escribe el índice a través de él`)
+      process.exit(1)
     }
     writeFileSync(rutaAbs(destino), texto, 'utf8')
     console.log(`✔ spec:indice — ${destino} escrito`)
@@ -784,4 +802,10 @@ function main() {
   process.exit(2)
 }
 
-main()
+try {
+  main()
+} catch (e) {
+  if (!(e instanceof ErrorEnlace)) throw e
+  console.error(`✖ spec:${process.argv[2] ?? ''} — ${e.message}`)
+  process.exit(1)
+}

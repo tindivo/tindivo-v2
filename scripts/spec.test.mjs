@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { after, describe, test } from 'node:test'
@@ -569,4 +569,108 @@ describe('traza', () => {
 
 test('subcomando desconocido: exit 2', () => {
   assert.equal(run(base(), ['nada']).status, 2)
+})
+
+describe('traza: no lee a través de enlaces (CAX-001)', () => {
+  let n = 0
+  const conTests = () =>
+    con({
+      'apps/customer/src/pedido.test.ts': "test('CA-PED-01', () => {})\n",
+      'apps/api/app/api/v1/orders/route.ts': 'export {}\n',
+    })
+  /** Árbol del repo (sin .git) como { ruta: contenido|'→enlace' }. */
+  const arbol = (dir, rel = '') => {
+    const out = {}
+    for (const e of readdirSync(join(dir, rel), { withFileTypes: true })) {
+      if (e.name === '.git') continue
+      const r = rel ? `${rel}/${e.name}` : e.name
+      if (e.isSymbolicLink()) out[r] = '→enlace'
+      else if (e.isDirectory()) Object.assign(out, arbol(dir, r))
+      else out[r] = readFileSync(join(dir, r), 'utf8')
+    }
+    return out
+  }
+  /** Repo temporal con `files`; luego reemplaza `ruta` por un enlace a `destino` (fuera del repo). */
+  const conEnlace = (files, ruta, destino, tipo) => {
+    const { dir } = run(files, ['traza', 'nada'])
+    rmSync(join(dir, ruta), { recursive: true, force: true })
+    symlinkSync(destino, join(dir, ruta), tipo)
+    return dir
+  }
+  const externoArchivo = (contenido) => {
+    const f = join(tmp, `externo-${n++}.txt`)
+    writeFileSync(f, contenido)
+    return f
+  }
+  const externoCarpeta = (files) => {
+    const d = join(tmp, `externo-dir-${n++}`)
+    for (const [f, c] of Object.entries(files)) {
+      mkdirSync(dirname(join(d, f)), { recursive: true })
+      writeFileSync(join(d, f), c)
+    }
+    return d
+  }
+  const rechaza = (t, dir, ruta) => {
+    const antes = arbol(dir)
+    const r = exec(dir, ['traza', 'pedidos'])
+    assert.equal(r.status, 1, r.out)
+    assert.match(r.out, /enlace simbólico/)
+    assert.ok(r.out.includes(ruta), `nombra ${ruta}: ${r.out}`)
+    assert.doesNotMatch(r.out, /SECRETO-EXTERNO/)
+    assert.deepEqual(arbol(dir), antes, 'no escribe archivos')
+  }
+  /** Enlace de archivo: salta solo si el SO no permite crearlo. */
+  const archivoEnlace = (t, files, ruta, contenido) => {
+    try {
+      return conEnlace(files, ruta, externoArchivo(contenido), 'file')
+    } catch (e) {
+      if (e.code === 'EPERM' || e.code === 'EACCES') {
+        t.skip(`el SO no permite crear enlaces de archivo (${e.code}): caso no ejercitado`)
+        return null
+      }
+      throw e
+    }
+  }
+
+  test('caso válido sigue funcionando', () => {
+    const r = run(conTests(), ['traza', 'pedidos'])
+    assert.equal(r.status, 0, r.out)
+    assert.match(r.out, /apps\/customer\/src\/pedido\.test\.ts:1/)
+  })
+  test('archivo de test que es enlace externo: rechazado y no se lee', (t) => {
+    const ruta = 'apps/customer/src/pedido.test.ts'
+    const dir = archivoEnlace(t, conTests(), ruta, '// SECRETO-EXTERNO CA-PED-P1\n')
+    if (dir) rechaza(t, dir, ruta)
+  })
+  test('capacidad.md enlace externo: rechazado', (t) => {
+    const dir = archivoEnlace(t, conTests(), CAP, `SECRETO-EXTERNO\n${cab()}${cuerpo()}`)
+    if (dir) rechaza(t, dir, CAP)
+  })
+  test('pantalla enlace externo: rechazada', (t) => {
+    const dir = archivoEnlace(t, conTests(), PANT, `${pantalla()}\nSECRETO-EXTERNO\n`)
+    if (dir) rechaza(t, dir, PANT)
+  })
+  test('openapi/v1.json enlace externo: rechazado', (t) => {
+    const f = 'packages/contracts/openapi/v1.json'
+    const dir = archivoEnlace(t, conTests(), f, '{"SECRETO-EXTERNO":1,"paths":{}}')
+    if (dir) rechaza(t, dir, f)
+  })
+  test('carpeta Docs/producto como junction a fuera: rechazada', () => {
+    const ext = externoCarpeta({
+      'pedidos/capacidad.md': `${cab()}${cuerpo()}`,
+      'pedidos/pantallas/crear.md': pantalla(),
+    })
+    const dir = conEnlace(conTests(), 'Docs/producto', ext, 'junction')
+    rechaza(null, dir, 'Docs/producto')
+  })
+  test('carpeta packages/contracts como junction a fuera: rechazada', () => {
+    const ext = externoCarpeta({ 'openapi/v1.json': '{"SECRETO-EXTERNO":1,"paths":{}}' })
+    const dir = conEnlace(conTests(), 'packages/contracts', ext, 'junction')
+    rechaza(null, dir, 'packages/contracts')
+  })
+  test('carpeta de tests como junction a fuera: rechazada', () => {
+    const ext = externoCarpeta({ 'pedido.test.ts': '// SECRETO-EXTERNO CA-PED-P1\n' })
+    const dir = conEnlace(conTests(), 'apps/customer/src', ext, 'junction')
+    rechaza(null, dir, 'apps/customer/src')
+  })
 })

@@ -18,10 +18,10 @@ interface Caso {
 }
 
 const raiz = resolve(__dirname, '../..')
-const original = resolve(raiz, 'test-vectors/direccion.json')
+const original = resolve(raiz, 'fixtures/vectores/direccion.json')
 const copiaAndroid = resolve(
   raiz,
-  '../../apps/android/customer/src/test/resources/test-vectors/direccion.json',
+  '../../apps/android/customer/src/test/resources/fixtures/vectores/direccion.json',
 )
 const casos = JSON.parse(readFileSync(original, 'utf8')) as Caso[]
 
