@@ -3593,7 +3593,7 @@
                   },
                   "deliveryReference": {
                     "type": "string",
-                    "minLength": 5,
+                    "minLength": 15,
                     "maxLength": 140
                   },
                   "coordinates": {
@@ -6002,7 +6002,7 @@
                       },
                       "referenceText": {
                         "type": "string",
-                        "minLength": 5,
+                        "minLength": 15,
                         "maxLength": 140
                       }
                     },
@@ -6044,7 +6044,7 @@
                       },
                       "referenceText": {
                         "type": "string",
-                        "minLength": 5,
+                        "minLength": 15,
                         "maxLength": 140
                       }
                     },
@@ -10065,7 +10065,7 @@
                   },
                   "reference": {
                     "type": "string",
-                    "minLength": 5,
+                    "minLength": 15,
                     "maxLength": 140
                   },
                   "coordinates": {
@@ -10351,7 +10351,7 @@
                   },
                   "reference": {
                     "type": "string",
-                    "minLength": 5,
+                    "minLength": 15,
                     "maxLength": 140
                   },
                   "coordinates": {

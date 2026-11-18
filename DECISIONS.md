@@ -614,7 +614,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 | 9 | Gate del carrito sin auth | Onboarding diferido: ver carrito sin login; login al checkout. §15. |
 | 10 | Límite de vuelto / pago en pickup | Vuelto en `app_settings`; pickup inactivo. §7/§14. |
 | 11 | Cobertura: radio vs polígono | **Polígono** (`app_settings.coverage_polygon`), editable por el admin con Leaflet-draw; el cliente bloquea elegir fuera (point-in-polygon). El radio 3km (`coverage`) queda como **fallback**. *(cambiado de "radio 3km" el 2026-06-22)* |
-| 12 | Referencia de dirección mínima | **Mín 5 / máx 140** (`ADDRESS_REFERENCE_MIN`/`ADDRESS_REFERENCE_MAX` en `contracts`); contador en vivo en todos los formularios. *(bajado de 20 el 2026-06-22 y de 15 a 5 el 2026-11-17, decisión de Jesús: es lo que ya usan los contratos, Android y la web)* |
+| 12 | Referencia de dirección mínima | **Mín 15 / máx 140** (`ADDRESS_REFERENCE_MIN`/`ADDRESS_REFERENCE_MAX` en `contracts`); contador en vivo en todos los formularios. Vale para las direcciones del cliente y para los dos extremos de Tindivo Entregas. *(bajado de 20 el 2026-06-22; bajado de 15 a 5 el 2026-11-17 y devuelto a 15 el 2026-11-18, decisión de Jesús: `Docs/planes/movil/decisiones.md` D-31)* |
 | 13 | Alerta urgente (5 vs 8 min) | No se activa en Fase 1; modelo conservado (>5 urgente, >8 alerta). §10. |
 | 14 | Helpers RLS sin `search_path` | `SET search_path = ''` en todos. §12. |
 | 15 | RLS incompleta | Todas las policies antes de exponer; bloqueante. §12. |

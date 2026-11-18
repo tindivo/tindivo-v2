@@ -91,7 +91,7 @@ class CourierAttemptsTransportTest {
         CreateCourierOrderRequestOrigin(
             contactName = "Contacto",
             coordinates = CreateOrderRequestCoordinates(BigDecimal("-9.1000000"), BigDecimal("-78.1000000")),
-            referenceText = "Referencia",
+            referenceText = "Frente a la plaza, puerta azul",
         )
 
     private fun keyOf(recorded: RecordedRequest): String? = recorded.headers["Idempotency-Key"]

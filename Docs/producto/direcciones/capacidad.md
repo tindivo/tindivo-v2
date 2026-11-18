@@ -34,7 +34,7 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 
 | ID | Requisito | Fuente | ★ |
 |---|---|---|---|
-| CUS-ADR-001 | La app debe permitir guardar varias direcciones con etiqueta (Casa, Trabajo u Otro), línea, referencia, pin y precisión. | `DECISIONS.md §13` (punto 12) · Decisión de Jesús, 2026-11-18 (la referencia vuelve a su mínimo de §13; vale también para Tindivo Entregas) | |
+| CUS-ADR-001 | La app debe permitir guardar varias direcciones con etiqueta (Casa, Trabajo u Otro), línea, referencia, pin y precisión. | `DECISIONS.md §13` (punto 12) · Decisión de Jesús, 2026-11-18 (D-31: referencia mínima 15; vale también para Tindivo Entregas) | |
 | CUS-ADR-002 | La app debe rechazar textos basura en la línea y en la referencia, con el mismo criterio que el servidor. | `packages/contracts/src/primitives.ts` (`isGarbageText`) | |
 | CUS-ADR-003 | La app no debe permitir guardar una dirección sin pin, o con el pin fuera de la zona de reparto. | `DECISIONS.md §13` (punto 11, polígono) | ★ |
 | CUS-ADR-004 | El centro del pueblo nunca debe usarse como ubicación por defecto. | Defecto cerrado en la web (guardaba la plaza como «casa») | |
@@ -74,5 +74,5 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
 | 4 | CUS-ADR-003 | Los valores de respaldo de cobertura de la web no coinciden con el polígono real. | `apps/customer/lib/coverage.ts` |
-| 5 | CUS-ADR-001 | `ADDRESS_REFERENCE_MIN` es 5; `DECISIONS.md §13` y la decisión del 2026-11-18 dicen 15. Lo cambia el PR de la referencia de 15, que además deja a las direcciones ya guardadas con 5 a 14 caracteres pidiendo completarse. | `packages/contracts/src/primitives.ts` |
 | 6 | CUS-ADR-006 | El umbral de precisión «suficiente» es una constante local de la web, no una regla compartida: Android e iOS no tienen de dónde leerlo. | `apps/customer/components/map-picker.tsx` |
+| 7 | CUS-ADR-001 | Una dirección guardada con el mínimo anterior puede tener una referencia de 5 a 14 caracteres: la API rechaza el pedido que la usa (`deliveryReference`, 422) hasta que el cliente la complete. La web lo avisa en el checkout; falta comprobar que Android también lo avise. | `packages/contracts/src/requests.ts` |
