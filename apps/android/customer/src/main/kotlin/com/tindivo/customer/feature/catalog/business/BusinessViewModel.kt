@@ -9,6 +9,7 @@ import com.tindivo.core.network.CatalogRepository
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.dish.BusinessDetailUi
 import com.tindivo.customer.dish.INVALID_MENU
+import com.tindivo.customer.dish.toDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

@@ -16,6 +16,7 @@ import com.tindivo.customer.dish.INVALID_MENU
 import com.tindivo.customer.dish.MenuCategoryUi
 import com.tindivo.customer.dish.MenuItemUi
 import com.tindivo.customer.dish.formatPrice
+import com.tindivo.customer.dish.visibleAt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

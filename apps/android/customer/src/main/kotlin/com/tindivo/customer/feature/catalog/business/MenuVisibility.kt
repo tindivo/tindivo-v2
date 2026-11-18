@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.catalog.business
 
+import com.tindivo.customer.dish.visibleAt
 import java.time.Instant
 
 /**
