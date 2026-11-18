@@ -29,7 +29,7 @@ describe('pickDefaultAddress', () => {
 })
 
 describe('heirAfterRemoving', () => {
-  it('promueve a la superviviente cuando se borra la predeterminada', () => {
+  it('CA-ADR-05 · promueve a la superviviente cuando se borra la predeterminada', () => {
     const heir = heirAfterRemoving([addr('a', true), addr('b')], 'a')
     expect(heir?.id).toBe('b')
   })
@@ -128,7 +128,7 @@ describe('sealLocation', () => {
     ...over,
   })
 
-  it('conserva sello y precisión cuando el punto no se movió', () => {
+  it('CA-ADR-06 · conserva sello y precisión cuando el punto no se movió', () => {
     // El caso que destruía la medida: editar la etiqueta o la referencia sin
     // tocar el mapa. `accuracyM` del formulario entra en null porque el
     // MapPicker no lo rehidrataba, y ese null pisaba los 8 m del sensor.

@@ -476,6 +476,97 @@ describe('indice', () => {
   })
 })
 
+describe('traza', () => {
+  const conTests = () =>
+    con({
+      'apps/api/app/api/v1/orders/route.ts': 'export {}\n',
+      'apps/customer/src/pedido.test.ts': "test('CA-PED-01 y CA-PED-P1', () => {})\n",
+      'apps/android/customer/src/test/kotlin/PedidoTest.kt': '// CA-PED-01\nfun t() {}\n',
+      'packages/core/lib/otro.test.ts': '// CA-PED-010 no cuenta\n',
+      'apps/customer/src/pedido.ts': '// CA-PED-P1 en un archivo que no es test\nexport {}\n',
+    })
+  const json = (files) => {
+    const r = run(files, ['traza', 'pedidos', '--json'])
+    return { ...r, t: r.status === 0 ? JSON.parse(r.out) : null }
+  }
+
+  test('estados ✅/🟡/⬜ y archivo:línea por plataforma', () => {
+    const r = json(conTests())
+    assert.equal(r.status, 0, r.out)
+    const ca = Object.fromEntries(r.t.ca.map((c) => [c.id, c]))
+    assert.deepEqual(ca['CA-PED-01'].tests.web, ['apps/customer/src/pedido.test.ts:1'])
+    assert.deepEqual(ca['CA-PED-01'].tests.android, ['apps/android/customer/src/test/kotlin/PedidoTest.kt:1'])
+    assert.equal(ca['CA-PED-P1'].tests.android, undefined)
+    assert.equal(ca['CA-PED-P1'].tests.web.length, 1)
+    for (const q of r.t.requisitos) {
+      assert.equal(q.estado.web, '✅', q.id)
+      assert.equal(q.estado.android, '🟡', q.id)
+      assert.equal(q.estado.backend, '⬜', q.id)
+      assert.equal(q.estado.ios, '—', q.id)
+    }
+  })
+  test('ios con código declarado y sin test es ⬜; texto legible', () => {
+    const files = conTests()
+    files[CAP] = cab({ codigo: '  web: [apps/customer/**/*.ts]\n  android: []\n  ios: [apps/ios/**]\n  backend: []' }) + cuerpo()
+    const r = run(files, ['traza', 'pedidos'])
+    assert.equal(r.status, 0, r.out)
+    assert.match(r.out, /CA-PED-01[^\n]*\n {2}web\s+apps\/customer\/src\/pedido\.test\.ts:1/)
+    assert.match(r.out, /\| CUS-PED-001 \| ★ \| CA-PED-01, CA-PED-P1 \| ✅ \| 🟡 \| ⬜ \| ⬜ \|/)
+  })
+  test('requisito sin CA es ⬜; CA sin test y ★ sin test salen como aviso', () => {
+    const files = conTests()
+    files[CAP] =
+      cab() +
+      cuerpo({
+        cuerpo: cuerpo().replace('| CA-PED-P1 | Dado z, entonces w. | CUS-PED-001 · NEG-PED-002 |', '| CA-PED-P2 | Dado q. | CUS-PED-001 |'),
+      })
+    const r = json(files)
+    assert.equal(r.status, 0, r.out)
+    assert.ok(r.t.avisos.some((a) => /CA-PED-P2 no tiene ningún test/.test(a)))
+    assert.equal(r.t.requisitos.find((q) => q.id === 'CUS-PED-001').estado.web, '🟡')
+    assert.equal(r.t.requisitos.find((q) => q.id === 'NEG-PED-002').estado.web, '✅')
+  })
+  test('operationId con route.ts: ruta y archivo; con {id} usa [id]', () => {
+    const files = conTests()
+    files['packages/contracts/openapi/v1.json'] = JSON.stringify({
+      paths: { '/orders': { post: { operationId: 'createOrder' } }, '/orders/{id}': { get: { operationId: 'getOrder' } } },
+    })
+    files['apps/api/app/api/v1/orders/[id]/route.ts'] = 'export {}\n'
+    files[CAP] = cab({ operaciones: '[createOrder, getOrder]' }) + cuerpo()
+    const r = json(files)
+    assert.equal(r.status, 0, r.out)
+    assert.deepEqual(r.t.operaciones.map((o) => [o.id, o.archivo, o.existe]), [
+      ['createOrder', 'apps/api/app/api/v1/orders/route.ts', true],
+      ['getOrder', 'apps/api/app/api/v1/orders/[id]/route.ts', true],
+    ])
+  })
+  test('operationId sin route.ts: exit 1', () => {
+    const r = run(base(), ['traza', 'pedidos'])
+    assert.equal(r.status, 1, r.out)
+    assert.match(r.out, /✖ createOrder .*NO EXISTE/)
+  })
+  test('operationId fuera del contrato: exit 1', () => {
+    const files = conTests()
+    files[CAP] = cab({ operaciones: '[noExiste]' }) + cuerpo()
+    const r = run(files, ['traza', 'pedidos'])
+    assert.equal(r.status, 1, r.out)
+    assert.match(r.out, /noExiste/)
+  })
+  test('globs: cuenta archivos rastreados', () => {
+    const r = json(conTests())
+    const g = r.t.globs.find((x) => x.file === CAP && x.plataforma === 'web')
+    assert.ok(g.archivos >= 1)
+  })
+  test('capacidad inexistente: exit 1; uso incorrecto: exit 2; no escribe archivos', () => {
+    const r = run(base(), ['traza', 'nada'])
+    assert.equal(r.status, 1)
+    assert.match(r.out, /la capacidad «nada» no existe/)
+    assert.equal(exec(r.dir, ['traza']).status, 2)
+    assert.equal(exec(r.dir, ['traza', 'pedidos', '--x']).status, 2)
+    assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: r.dir, encoding: 'utf8' }).replace(/^A .*\n/gm, ''), '')
+  })
+})
+
 test('subcomando desconocido: exit 2', () => {
   assert.equal(run(base(), ['nada']).status, 2)
 })

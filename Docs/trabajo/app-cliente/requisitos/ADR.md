@@ -39,4 +39,4 @@ Encontrados al especificar la web (2026-09/10); se corrigen en nativo, no se cop
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
 | 4 | CUS-ADR-003 (cobertura) | Los *fallback* de cobertura del cliente (`-9.1547, -78.5042`) no coinciden con los vivos (`-9.1465, -78.2779`). | `lib/coverage.ts:22-30` |
-| 5 | CUS-ADR-001 | Cerrado el 2026-11-18: el código pasa a 15, como `DECISIONS.md §13`. | `contracts/primitives.ts:68` |
+| 5 | CUS-ADR-001 | El código dice 5; lo sube a 15 el PR de la referencia (decisión del 2026-11-18). | `contracts/primitives.ts:68` |

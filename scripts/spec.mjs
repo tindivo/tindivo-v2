@@ -4,6 +4,7 @@
  *
  *   node scripts/spec.mjs validar [<capacidad>] [--aviso]   (pnpm spec:validar)
  *   node scripts/spec.mjs indice [--check]                  (pnpm spec:indice)
+ *   node scripts/spec.mjs traza <capacidad> [--json]        (pnpm spec:traza; solo stdout, no escribe nada)
  *
  * Una capacidad es Docs/producto/<id>/capacidad.md; sus pantallas, Docs/producto/<id>/pantallas/*.md. Se ignoran
  * Docs/producto/_plantilla/ y Docs/producto/README.md (este último lo genera `indice`).
@@ -539,6 +540,175 @@ function generarIndice() {
   return { errores: [], texto: out.join('\n') }
 }
 
+// ───────────────────────── traza
+
+const PLATAFORMAS_TRAZA = ['web', 'android', 'ios', 'backend']
+const RE_ARCHIVO_TEST = /\.(test|spec)\.|(^|\/)(src\/test|__tests__|e2e)\//
+const RE_ID_PLANO = /^[A-Za-z0-9-]+$/
+
+/** Plataforma de un archivo de test por su ruta (packages cuenta como web); null si no es de ninguna. */
+function plataformaDe(ruta) {
+  if (ruta.startsWith('apps/android/')) return 'android'
+  if (ruta.startsWith('apps/ios/')) return 'ios'
+  if (ruta.startsWith('apps/api/')) return 'backend'
+  if (ruta.startsWith('apps/customer/') || ruta.startsWith('packages/')) return 'web'
+  return null
+}
+
+/**
+ * Calcula la traza de una capacidad. Devuelve { error } si no existe, o { traza } con
+ * { ca, requisitos, operaciones, globs, avisos, errores }.
+ */
+function calcularTraza(objetivo) {
+  const { caps } = cargar()
+  const cap = caps.get(objetivo)
+  if (!cap) return { error: `la capacidad «${objetivo}» no existe en ${PRODUCTO}/` }
+
+  const tracked = git('ls-files', '-z').split('\0').filter(Boolean)
+
+  // criterios y requisitos, leídos con las mismas funciones que `validar`
+  const criterios = []
+  for (const { celdas } of filasDeTabla(cap.secciones['Criterios de aceptación']))
+    if (RE_CA.test(celdas[0]))
+      criterios.push({
+        id: celdas[0],
+        requisitos: (celdas[2] ?? '')
+          .split(/[,·]/)
+          .map((x) => x.trim())
+          .filter(Boolean),
+      })
+  const requisitos = []
+  for (const { celdas } of filasDeTabla(cap.secciones.Requisitos))
+    if (RE_REQ.test(celdas[0])) requisitos.push({ id: celdas[0], estrella: (celdas[3] ?? '').includes('★') })
+
+  // CA → tests (archivo:línea) por plataforma
+  const tests = tracked
+    .filter((f) => RE_ARCHIVO_TEST.test(f))
+    .map((f) => {
+      try {
+        return { f, lineas: leer(f).split('\n') }
+      } catch {
+        return null
+      }
+    })
+    .filter(Boolean)
+  const ca = criterios.map((c) => {
+    const re = new RegExp(`(?<![A-Za-z0-9-])${c.id}(?![A-Za-z0-9-])`)
+    const porPlataforma = {}
+    const otros = []
+    for (const { f, lineas } of tests) {
+      const n = lineas.findIndex((l) => re.test(l))
+      if (n < 0) continue
+      const p = plataformaDe(f)
+      if (p) (porPlataforma[p] ??= []).push(`${f}:${n + 1}`)
+      else otros.push(`${f}:${n + 1}`)
+    }
+    return { id: c.id, requisitos: c.requisitos, tests: porPlataforma, otros }
+  })
+
+  // estado por requisito y plataforma
+  const iosVacio = Array.isArray(cap.cab?.codigo?.ios) && cap.cab.codigo.ios.length === 0
+  const reqs = requisitos.map((r) => {
+    const suyos = ca.filter((c) => c.requisitos.includes(r.id))
+    const estado = {}
+    for (const p of PLATAFORMAS_TRAZA) {
+      if (p === 'ios' && iosVacio) estado[p] = '—'
+      else {
+        const con = suyos.filter((c) => (c.tests[p] ?? []).length > 0).length
+        estado[p] = con === 0 ? '⬜' : con === suyos.length ? '✅' : '🟡'
+      }
+    }
+    return { id: r.id, estrella: r.estrella, ca: suyos.map((c) => c.id), estado }
+  })
+
+  // operationId → método, ruta y route.ts
+  const errores = []
+  const rutasOp = new Map()
+  const fOpenapi = 'packages/contracts/openapi/v1.json'
+  if (existsSync(rutaAbs(fOpenapi))) {
+    const spec = JSON.parse(leer(fOpenapi))
+    for (const [ruta, item] of Object.entries(spec.paths ?? {}))
+      for (const [metodo, op] of Object.entries(item))
+        if (op && typeof op === 'object' && op.operationId)
+          rutasOp.set(op.operationId, { metodo: metodo.toUpperCase(), ruta })
+  }
+  const ids = [...(cap.cab?.operaciones ?? []), ...cap.pantallas.flatMap((p) => p.cab?.operaciones ?? [])]
+  const operaciones = [...new Set(ids)].map((id) => {
+    const r = rutasOp.get(id)
+    if (!r) {
+      errores.push(`operationId «${id}»: no existe en ${fOpenapi}`)
+      return { id, metodo: null, ruta: null, archivo: null, existe: false }
+    }
+    const archivo = `apps/api/app/api/v1${r.ruta.replace(/\{([^}]+)\}/g, '[$1]')}/route.ts`
+    const existe = tracked.includes(archivo)
+    if (!existe) errores.push(`operationId «${id}»: ${r.metodo} ${r.ruta} no tiene ${archivo}`)
+    return { id, metodo: r.metodo, ruta: r.ruta, archivo, existe }
+  })
+
+  // globs de codigo
+  const globs = []
+  const fuentes = [{ file: cap.file, cab: cap.cab }, ...cap.pantallas.map((p) => ({ file: p.file, cab: p.cab }))]
+  for (const { file, cab } of fuentes) {
+    if (!cab?.codigo || typeof cab.codigo !== 'object') continue
+    for (const [plataforma, lista] of Object.entries(cab.codigo))
+      for (const glob of lista) {
+        const re = globARegex(glob)
+        globs.push({ file, plataforma, glob, archivos: tracked.filter((f) => re.test(f)).length })
+      }
+  }
+
+  // avisos
+  const avisos = []
+  for (const c of ca)
+    if (Object.keys(c.tests).length === 0 && c.otros.length === 0) avisos.push(`${c.id} no tiene ningún test`)
+  for (const r of reqs)
+    if (r.estrella)
+      for (const p of ['web', 'android'])
+        if (r.estado[p] === '⬜') avisos.push(`${r.id} (★) sin test en ${p}`)
+  for (const o of operaciones) if (!o.metodo) avisos.push(`operationId «${o.id}» sin ruta`)
+
+  return { traza: { capacidad: objetivo, ca, requisitos: reqs, operaciones, globs, avisos, errores } }
+}
+
+function imprimirTraza(t) {
+  const out = [`Traza de «${t.capacidad}»`, '', '## Criterios de aceptación → tests', '']
+  for (const c of t.ca) {
+    out.push(`${c.id}  (${c.requisitos.join(', ') || '—'})`)
+    if (Object.keys(c.tests).length === 0 && c.otros.length === 0) out.push('  sin tests')
+    for (const p of PLATAFORMAS_TRAZA) for (const x of c.tests[p] ?? []) out.push(`  ${p.padEnd(8)} ${x}`)
+    for (const x of c.otros) out.push(`  otros    ${x}`)
+  }
+  out.push(
+    '',
+    '## Requisitos → estado por plataforma',
+    '',
+    '| Requisito | ★ | CA | web | android | ios | backend |',
+    '|---|---|---|---|---|---|---|',
+  )
+  for (const r of t.requisitos)
+    out.push(
+      `| ${r.id} | ${r.estrella ? '★' : ''} | ${r.ca.join(', ') || '—'} | ${PLATAFORMAS_TRAZA.map((p) => r.estado[p]).join(' | ')} |`,
+    )
+  out.push('', '## Operaciones → rutas', '')
+  for (const o of t.operaciones)
+    out.push(
+      o.metodo
+        ? `${o.existe ? '✔' : '✖'} ${o.id}  ${o.metodo} ${o.ruta}  →  ${o.archivo}${o.existe ? '' : '  (NO EXISTE)'}`
+        : `✖ ${o.id}  sin ruta en el contrato`,
+    )
+  out.push('', '## Código declarado (archivos rastreados que casa cada glob)', '')
+  for (const g of t.globs)
+    out.push(`${String(g.archivos).padStart(3)}  ${g.plataforma.padEnd(8)} ${g.glob}  (${g.file.replace(`${PRODUCTO}/`, '')})`)
+  out.push('', '## Avisos', '')
+  if (t.avisos.length === 0) out.push('Ninguno.')
+  for (const a of t.avisos) out.push(`⚠ ${a}`)
+  if (t.errores.length) {
+    out.push('', '## Errores', '')
+    for (const e of t.errores) out.push(`✖ ${e}`)
+  }
+  return out.join('\n')
+}
+
 // ───────────────────────── main
 
 function main() {
@@ -596,7 +766,21 @@ function main() {
     return
   }
 
-  console.error('uso: node scripts/spec.mjs validar [<capacidad>] [--aviso] | indice [--check]')
+  if (cmd === 'traza') {
+    if (pos.length !== 1 || !RE_ID_PLANO.test(pos[0]) || flags.some((f) => f !== '--json')) {
+      console.error('uso: node scripts/spec.mjs traza <capacidad> [--json]')
+      process.exit(2)
+    }
+    const { error, traza } = calcularTraza(pos[0])
+    if (error) {
+      console.error(`✖ spec:traza — ${error}`)
+      process.exit(1)
+    }
+    console.log(flags.includes('--json') ? JSON.stringify(traza, null, 2) : imprimirTraza(traza))
+    process.exit(traza.errores.length ? 1 : 0)
+  }
+
+  console.error('uso: node scripts/spec.mjs validar [<capacidad>] [--aviso] | indice [--check] | traza <capacidad> [--json]')
   process.exit(2)
 }
 

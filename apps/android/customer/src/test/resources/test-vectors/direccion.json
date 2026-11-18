@@ -1,0 +1,317 @@
+[
+  {
+    "id": "linea-vacio",
+    "campo": "linea",
+    "valor": "",
+    "valido": false,
+    "motivo": "vacío"
+  },
+  {
+    "id": "linea-solo-espacios",
+    "campo": "linea",
+    "valor": "      ",
+    "valido": false,
+    "motivo": "solo espacios: tras recortar queda vacío"
+  },
+  {
+    "id": "linea-min-menos-uno",
+    "campo": "linea",
+    "valor": "Jr1x",
+    "valido": false,
+    "motivo": "un carácter menos que el mínimo (4)"
+  },
+  {
+    "id": "linea-min-justo",
+    "campo": "linea",
+    "valor": "Jr1 J",
+    "valido": true,
+    "motivo": "justo en el mínimo (5)"
+  },
+  {
+    "id": "linea-min-con-espacios-alrededor",
+    "campo": "linea",
+    "valor": "  Jr1 J  ",
+    "valido": true,
+    "motivo": "los espacios de los bordes no cuentan: el recortado mide el mínimo"
+  },
+  {
+    "id": "linea-min-menos-uno-con-espacios",
+    "campo": "linea",
+    "valor": "  Jr1x  ",
+    "valido": false,
+    "motivo": "con espacios de relleno el recortado sigue por debajo del mínimo"
+  },
+  {
+    "id": "linea-max-justo",
+    "campo": "linea",
+    "valor": "Jr1 Jr2 Jr3 Jr4 Jr5 Jr6 Jr7 Jr8 Jr9 Jr10 Jr11 Jr12 Jr13 Jr14 Jr15 Jr16 Jr17 Jr18 Jr19 Jr20 Jr21 Jr22 Jr23 Jr24 Jr25 Jr26 Jr27 Jr28 Jr29 Jr30 Jr31 Jr32 Jr33 Jr34 Jr35 Jr36 Jr37 Jr38 Jr39 Jr40 Jr41 Jr42",
+    "valido": true,
+    "motivo": "justo en el máximo (200)"
+  },
+  {
+    "id": "linea-max-mas-uno",
+    "campo": "linea",
+    "valor": "Jr1 Jr2 Jr3 Jr4 Jr5 Jr6 Jr7 Jr8 Jr9 Jr10 Jr11 Jr12 Jr13 Jr14 Jr15 Jr16 Jr17 Jr18 Jr19 Jr20 Jr21 Jr22 Jr23 Jr24 Jr25 Jr26 Jr27 Jr28 Jr29 Jr30 Jr31 Jr32 Jr33 Jr34 Jr35 Jr36 Jr37 Jr38 Jr39 Jr40 Jr41 Jr42x",
+    "valido": false,
+    "motivo": "un carácter más que el máximo (201)"
+  },
+  {
+    "id": "linea-solo-digitos",
+    "campo": "linea",
+    "valor": "12345678",
+    "valido": false,
+    "motivo": "solo dígitos"
+  },
+  {
+    "id": "linea-solo-digitos-cinco",
+    "campo": "linea",
+    "valor": "98765",
+    "valido": false,
+    "motivo": "solo dígitos en el mínimo exacto"
+  },
+  {
+    "id": "linea-digitos-con-letras",
+    "campo": "linea",
+    "valor": "Jr 12345",
+    "valido": true,
+    "motivo": "dígitos mezclados con letras es válido"
+  },
+  {
+    "id": "linea-caracter-repetido-cinco",
+    "campo": "linea",
+    "valor": "aaaaaa",
+    "valido": false,
+    "motivo": "el mismo carácter seis veces seguidas"
+  },
+  {
+    "id": "linea-caracter-repetido-cuatro",
+    "campo": "linea",
+    "valor": "xcasaaaa y",
+    "valido": false,
+    "motivo": "cuatro caracteres iguales seguidos dentro de otro texto"
+  },
+  {
+    "id": "linea-caracter-repetido-tres",
+    "campo": "linea",
+    "valor": "Jr. Sucre 111",
+    "valido": true,
+    "motivo": "tres iguales seguidos todavía es válido"
+  },
+  {
+    "id": "linea-patron-repetido",
+    "campo": "linea",
+    "valor": "asdfasdf",
+    "valido": false,
+    "motivo": "patrón repetido sin espacios"
+  },
+  {
+    "id": "linea-patron-repetido-con-espacios",
+    "campo": "linea",
+    "valor": "lala lala",
+    "valido": false,
+    "motivo": "patrón repetido con espacio en medio"
+  },
+  {
+    "id": "linea-patron-palabra",
+    "campo": "linea",
+    "valor": "callecalle",
+    "valido": false,
+    "motivo": "una palabra repetida"
+  },
+  {
+    "id": "linea-patron-mayusculas",
+    "campo": "linea",
+    "valor": "AsDfAsDf",
+    "valido": false,
+    "motivo": "patrón repetido sin distinguir mayúsculas"
+  },
+  {
+    "id": "linea-patron-parcial",
+    "campo": "linea",
+    "valor": "asdfasdf Jr Sucre",
+    "valido": true,
+    "motivo": "el patrón repetido solo cuenta si es todo el texto"
+  },
+  {
+    "id": "linea-valido-1",
+    "campo": "linea",
+    "valor": "Jr. Sucre 412",
+    "valido": true,
+    "motivo": "caso realista"
+  },
+  {
+    "id": "ref-vacio",
+    "campo": "referencia",
+    "valor": "",
+    "valido": false,
+    "motivo": "vacío"
+  },
+  {
+    "id": "ref-solo-espacios",
+    "campo": "referencia",
+    "valor": "      ",
+    "valido": false,
+    "motivo": "solo espacios: tras recortar queda vacío"
+  },
+  {
+    "id": "ref-min-menos-uno",
+    "campo": "referencia",
+    "valor": "Jr1x",
+    "valido": false,
+    "motivo": "un carácter menos que el mínimo (4)"
+  },
+  {
+    "id": "ref-min-justo",
+    "campo": "referencia",
+    "valor": "Jr1 J",
+    "valido": true,
+    "motivo": "justo en el mínimo (5)"
+  },
+  {
+    "id": "ref-min-con-espacios-alrededor",
+    "campo": "referencia",
+    "valor": "  Jr1 J  ",
+    "valido": true,
+    "motivo": "los espacios de los bordes no cuentan: el recortado mide el mínimo"
+  },
+  {
+    "id": "ref-min-menos-uno-con-espacios",
+    "campo": "referencia",
+    "valor": "  Jr1x  ",
+    "valido": false,
+    "motivo": "con espacios de relleno el recortado sigue por debajo del mínimo"
+  },
+  {
+    "id": "ref-max-justo",
+    "campo": "referencia",
+    "valor": "Jr1 Jr2 Jr3 Jr4 Jr5 Jr6 Jr7 Jr8 Jr9 Jr10 Jr11 Jr12 Jr13 Jr14 Jr15 Jr16 Jr17 Jr18 Jr19 Jr20 Jr21 Jr22 Jr23 Jr24 Jr25 Jr26 Jr27 Jr28 Jr29 Jr30",
+    "valido": true,
+    "motivo": "justo en el máximo (140)"
+  },
+  {
+    "id": "ref-max-mas-uno",
+    "campo": "referencia",
+    "valor": "Jr1 Jr2 Jr3 Jr4 Jr5 Jr6 Jr7 Jr8 Jr9 Jr10 Jr11 Jr12 Jr13 Jr14 Jr15 Jr16 Jr17 Jr18 Jr19 Jr20 Jr21 Jr22 Jr23 Jr24 Jr25 Jr26 Jr27 Jr28 Jr29 Jr30x",
+    "valido": false,
+    "motivo": "un carácter más que el máximo (141)"
+  },
+  {
+    "id": "ref-solo-digitos",
+    "campo": "referencia",
+    "valor": "12345678",
+    "valido": false,
+    "motivo": "solo dígitos"
+  },
+  {
+    "id": "ref-solo-digitos-cinco",
+    "campo": "referencia",
+    "valor": "98765",
+    "valido": false,
+    "motivo": "solo dígitos en el mínimo exacto"
+  },
+  {
+    "id": "ref-digitos-con-letras",
+    "campo": "referencia",
+    "valor": "Jr 12345",
+    "valido": true,
+    "motivo": "dígitos mezclados con letras es válido"
+  },
+  {
+    "id": "ref-caracter-repetido-cinco",
+    "campo": "referencia",
+    "valor": "aaaaaa",
+    "valido": false,
+    "motivo": "el mismo carácter seis veces seguidas"
+  },
+  {
+    "id": "ref-caracter-repetido-cuatro",
+    "campo": "referencia",
+    "valor": "xcasaaaa y",
+    "valido": false,
+    "motivo": "cuatro caracteres iguales seguidos dentro de otro texto"
+  },
+  {
+    "id": "ref-caracter-repetido-tres",
+    "campo": "referencia",
+    "valor": "Jr. Sucre 111",
+    "valido": true,
+    "motivo": "tres iguales seguidos todavía es válido"
+  },
+  {
+    "id": "ref-patron-repetido",
+    "campo": "referencia",
+    "valor": "asdfasdf",
+    "valido": false,
+    "motivo": "patrón repetido sin espacios"
+  },
+  {
+    "id": "ref-patron-repetido-con-espacios",
+    "campo": "referencia",
+    "valor": "lala lala",
+    "valido": false,
+    "motivo": "patrón repetido con espacio en medio"
+  },
+  {
+    "id": "ref-patron-palabra",
+    "campo": "referencia",
+    "valor": "callecalle",
+    "valido": false,
+    "motivo": "una palabra repetida"
+  },
+  {
+    "id": "ref-patron-mayusculas",
+    "campo": "referencia",
+    "valor": "AsDfAsDf",
+    "valido": false,
+    "motivo": "patrón repetido sin distinguir mayúsculas"
+  },
+  {
+    "id": "ref-patron-parcial",
+    "campo": "referencia",
+    "valor": "asdfasdf Jr Sucre",
+    "valido": true,
+    "motivo": "el patrón repetido solo cuenta si es todo el texto"
+  },
+  {
+    "id": "ref-valido-1",
+    "campo": "referencia",
+    "valor": "Frente a la bodega de don Carlos",
+    "valido": true,
+    "motivo": "caso realista"
+  },
+  {
+    "id": "linea-valido-2",
+    "campo": "linea",
+    "valor": "Av. Los Incas s/n",
+    "valido": true,
+    "motivo": "caso realista"
+  },
+  {
+    "id": "linea-valido-3",
+    "campo": "linea",
+    "valor": "Mz B Lote 14",
+    "valido": true,
+    "motivo": "caso realista"
+  },
+  {
+    "id": "linea-valido-tildes",
+    "campo": "linea",
+    "valor": "Jr. Ramón Castilla 230, Ñahuimpuquio",
+    "valido": true,
+    "motivo": "tildes y eñes"
+  },
+  {
+    "id": "referencia-valido-2",
+    "campo": "referencia",
+    "valor": "Casa de reja negra, portón azul",
+    "valido": true,
+    "motivo": "caso realista"
+  },
+  {
+    "id": "referencia-valido-3",
+    "campo": "referencia",
+    "valor": "Al costado de la botica San Martín",
+    "valido": true,
+    "motivo": "caso realista"
+  }
+]

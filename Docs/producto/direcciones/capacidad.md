@@ -47,7 +47,7 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 | CUS-ADR-016 | Cuando el cliente coloca el pin, la app debe sugerir la dirección con el geocodificador del sistema, sin coste. | Decisión de Jesús, 2026-11-16 | |
 | CUS-ADR-017 | La app debe permitir editar la dirección sugerida antes de guardarla. | Decisión de Jesús, 2026-11-16 | |
 | CUS-ADR-018 | Si el geocodificador devuelve solo la localidad, la app debe pedir que se escriba la calle. | Decisión de Jesús, 2026-11-16 | |
-| CUS-ADR-019 | Un cliente no debe poder leer, cambiar ni borrar una dirección de otro cliente. | `AGENTS.md` invariante 3 (RLS) · policy `ca_self_all` | ★ |
+| CUS-ADR-019 | Un cliente no debe poder leer, cambiar ni borrar una dirección de otro cliente. | `AGENTS.md` invariante 3 (RLS) · policy `ca_self_all` (lo garantiza el servidor: no es de paridad) | |
 
 ## Criterios de aceptación
 
@@ -74,5 +74,5 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
 | 4 | CUS-ADR-003 | Los valores de respaldo de cobertura de la web no coinciden con el polígono real. | `apps/customer/lib/coverage.ts` |
-| 7 | CUS-ADR-001 | Una dirección guardada antes del 2026-11-18 puede tener una referencia de 5 a 14 caracteres. El pedido con ella se rechaza (422) y la app todavía no pide completarla antes de usarla. | `packages/contracts/src/requests.ts` · `direcciones/elegir-direccion` |
+| 5 | CUS-ADR-001 | `ADDRESS_REFERENCE_MIN` es 5; `DECISIONS.md §13` y la decisión del 2026-11-18 dicen 15. Lo cambia el PR de la referencia de 15, que además deja a las direcciones ya guardadas con 5 a 14 caracteres pidiendo completarse. | `packages/contracts/src/primitives.ts` |
 | 6 | CUS-ADR-006 | El umbral de precisión «suficiente» es una constante local de la web, no una regla compartida: Android e iOS no tienen de dónde leerlo. | `apps/customer/components/map-picker.tsx` |
