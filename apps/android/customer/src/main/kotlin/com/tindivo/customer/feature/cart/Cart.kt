@@ -38,11 +38,26 @@ data class CartLine(
     val total: BigDecimal get() = unitPrice * BigDecimal(quantity)
 }
 
+/** Cómo se entrega la bolsa. Se elige en el checkout; la bolsa solo lo recuerda (CUS-CRT-007). */
+enum class DeliveryMethod(
+    val wire: String,
+) {
+    Delivery("delivery"),
+    Pickup("pickup"),
+    ;
+
+    companion object {
+        /** El método de un texto guardado; uno desconocido o ausente cae a [Delivery]. */
+        fun fromWire(value: String?): DeliveryMethod = entries.firstOrNull { it.wire == value } ?: Delivery
+    }
+}
+
 /** La bolsa: platos de un solo negocio. Inmutable; cada cambio devuelve otra. */
 data class Cart(
     val businessId: String,
     val businessName: String,
     val lines: List<CartLine>,
+    val deliveryMethod: DeliveryMethod = DeliveryMethod.Delivery,
 ) {
     val subtotal: BigDecimal get() = lines.fold(BigDecimal.ZERO) { sum, line -> sum + line.total }
 

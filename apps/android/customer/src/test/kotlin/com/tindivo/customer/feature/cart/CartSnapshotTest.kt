@@ -60,8 +60,8 @@ class CartSnapshotTest {
     }
 
     @Test
-    fun `una version distinta de 1 descarta la bolsa`() {
-        assertNull(snapshot().copy(version = 2).toCartOrNull())
+    fun `una version desconocida descarta la bolsa`() {
+        assertNull(snapshot().copy(version = CART_SNAPSHOT_VERSION + 1).toCartOrNull())
         assertNull(snapshot().copy(version = 0).toCartOrNull())
     }
 

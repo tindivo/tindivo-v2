@@ -66,6 +66,17 @@ class CartStore(
         }
     }
 
+    /** Recuerda cómo se entrega la bolsa. Sin bolsa no hace nada: el método es de una bolsa, no de la app. */
+    suspend fun setDeliveryMethod(method: DeliveryMethod) {
+        store.updateData { current ->
+            current
+                ?.toCartOrNull()
+                ?.copy(deliveryMethod = method)
+                ?.toSnapshot()
+                ?.keepingReservationOf(current)
+        }
+    }
+
     suspend fun remove(signature: String) {
         store.updateData { current ->
             current

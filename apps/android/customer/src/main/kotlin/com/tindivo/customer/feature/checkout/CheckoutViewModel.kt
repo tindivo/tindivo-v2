@@ -10,6 +10,7 @@ import com.tindivo.core.network.generated.model.CreateOrderRequest
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartStore
+import com.tindivo.customer.feature.cart.DeliveryMethod
 import com.tindivo.customer.feature.cart.ReserveResult
 import com.tindivo.customer.feature.cart.fingerprint
 import com.tindivo.customer.session.SessionState
@@ -337,7 +338,20 @@ class CheckoutViewModel
             val allowed = if (method == DeliveryChoice.Pickup) current.acceptsPickup else current.acceptsDelivery
             if (!allowed || current.method == method) return
             edit { copy(method = method, pay = null, cash = CashChoice.None) }
+            rememberMethod(method)
             requote(debounced = true)
+        }
+
+        /** La bolsa recuerda el método elegido (CUS-CRT-007); si no se puede escribir, se queda el anterior. */
+        private fun rememberMethod(method: DeliveryChoice) {
+            val remembered = if (method == DeliveryChoice.Pickup) DeliveryMethod.Pickup else DeliveryMethod.Delivery
+            viewModelScope.launch {
+                try {
+                    cartStore.setDeliveryMethod(remembered)
+                } catch (ignored: IOException) {
+                    // La pantalla ya muestra la elección; la bolsa conserva el método anterior.
+                }
+            }
         }
 
         fun setPickupWhen(choice: PickupWhen) {
