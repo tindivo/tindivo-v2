@@ -4,6 +4,7 @@ import {
   loadPhoneSettings,
   maskPhone,
   phoneClaimProblem,
+  releasePhoneCode,
   reservePhoneCode,
 } from '@tindivo/backend/identity/http'
 import { SendPhoneCodeRequestSchema } from '@tindivo/contracts'
@@ -161,12 +162,13 @@ export async function POST(req: Request): Promise<Response> {
 
     // Tope por USUARIO en 24 h: la reserva es atómica en la base (bloquea por usuario, cuenta y apunta de una vez)
     // y va ANTES de Twilio. Un error de lectura o de reserva RECHAZA: nunca deja pasar. Si Twilio falla después, el
-    // cupo reservado no se devuelve (ante la duda se manda menos); la plaza del número en Redis sí se libera.
-    let allowed: boolean
+    // cupo reservado se devuelve solo ante un rechazo inequívoco de Twilio (4xx con código de su API); un error
+    // ambiguo (5xx, timeout) lo deja gastado: ante la duda se manda menos. La plaza del número en Redis sí se libera.
+    let attemptId: string | null
     let maxAttempts: number
     try {
       maxAttempts = (await loadPhoneSettings(service)).maxCodesPer24h
-      allowed = await reservePhoneCode(service, user.id, fullPhone, maxAttempts)
+      attemptId = await reservePhoneCode(service, user.id, fullPhone, maxAttempts)
     } catch (reserveErr) {
       after(phoneLimit.release)
       if (reserveErr instanceof AccountDeletedError) {
@@ -192,7 +194,7 @@ export async function POST(req: Request): Promise<Response> {
         },
       )
     }
-    if (!allowed) {
+    if (attemptId === null) {
       after(phoneLimit.release)
       return problem('rate_limited', {
         detail: `Máximo ${maxAttempts} intentos de verificación en 24 horas. Intenta de nuevo más tarde.`,
@@ -232,6 +234,12 @@ export async function POST(req: Request): Promise<Response> {
         // salió y no gasta el cupo del número. La devolución va tras la
         // respuesta (no espera a Redis); la lápida cubre un EVAL aún en vuelo.
         after(phoneLimit.release)
+        // El SMS no salió: el cupo personal también se devuelve. Si no se puede, falla cerrado: queda gastado y se registra.
+        try {
+          await releasePhoneCode(service, user.id, attemptId)
+        } catch {
+          console.error('[send-code] no se pudo liberar el cupo reservado; queda gastado')
+        }
         return problem('internal_error', {
           detail:
             'No pudimos enviarte el SMS. Escríbenos por WhatsApp y te verificamos el número a mano.',
