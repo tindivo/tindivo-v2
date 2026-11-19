@@ -46,6 +46,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.tindivo.core.designsystem.TindivoColors
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
@@ -140,13 +142,12 @@ private fun BusinessList(
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 onOpenDiagnostics?.let {
-                    TextButton(onClick = it, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(text = stringResource(R.string.diagnostics_title))
-                    }
+                    TindivoTextButton(text = stringResource(R.string.diagnostics_title), onClick = it)
                 }
-                TextButton(onClick = onOpenAccount, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(if (signedIn) R.string.account_entry else R.string.signin_entry))
-                }
+                TindivoTextButton(
+                    text = stringResource(if (signedIn) R.string.account_entry else R.string.signin_entry),
+                    onClick = onOpenAccount,
+                )
             }
         }
         // Primero qué se quiere hacer (llevar algo de un lugar a otro), después dónde comer (como la web).
@@ -319,13 +320,7 @@ private fun ErrorContent(
 ) {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = errorMessage(error), style = MaterialTheme.typography.bodyLarge)
-        Button(
-            onClick = onRetry,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.catalog_retry))
-        }
+        TindivoPrimaryButton(text = stringResource(R.string.catalog_retry), onClick = onRetry, fillWidth = false)
     }
 }
 

@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 
 /** «¿Cómo pagas?»: las opciones de la cotización, en su orden, agrupadas por momento. */
@@ -126,9 +127,7 @@ private fun PrepayExplainer(businessName: String) {
     var open by rememberSaveable { mutableStateOf(true) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = { open = !open }, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.checkout_prepay_how))
-            }
+            TindivoTextButton(text = stringResource(R.string.checkout_prepay_how), onClick = { open = !open })
             if (open) {
                 Text(
                     text = "1. " + stringResource(R.string.checkout_prepay_step1),

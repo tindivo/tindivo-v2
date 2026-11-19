@@ -13,6 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 
 /** El WhatsApp de soporte de Tindivo (el mismo de la web, `TINDIVO_SUPPORT_WHATSAPP`). */
@@ -70,9 +73,7 @@ internal fun BlockedView(
         Text(stringResource(R.string.checkout_blocked_message))
         reason?.let { Text(it) }
         BigButton(R.string.checkout_blocked_whatsapp) { uriHandler.openUri(SUPPORT_WHATSAPP_URL) }
-        TextButton(onClick = actions.onSeeBusinesses, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(stringResource(R.string.checkout_blocked_home))
-        }
+        TindivoTextButton(text = stringResource(R.string.checkout_blocked_home), onClick = actions.onSeeBusinesses)
     }
 }
 
@@ -89,22 +90,16 @@ internal fun ReconcileView(
     CheckoutFrame(actions.onBack) {
         Text(stringResource(R.string.checkout_reconcile_title), style = MaterialTheme.typography.titleLarge)
         Text(stringResource(R.string.checkout_reconcile_message))
-        OutlinedButton(
-            onClick = {
-                form.onOrdersOpened()
-                actions.onOpenOrders()
-            },
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.checkout_reconcile_orders))
-        }
-        Button(
+        TindivoSecondaryButton(text = stringResource(R.string.checkout_reconcile_orders), onClick = {
+            form.onOrdersOpened()
+            actions.onOpenOrders()
+        })
+        TindivoPrimaryButton(
+            text = stringResource(R.string.checkout_reconcile_continue),
             onClick = form.onAcknowledge,
-            enabled = state.reconcileSeen && !state.sending,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.checkout_reconcile_continue))
-        }
+            enabled =
+                state.reconcileSeen && !state.sending,
+        )
     }
 }
 
@@ -113,7 +108,5 @@ private fun BigButton(
     @StringRes textRes: Int,
     onClick: () -> Unit,
 ) {
-    Button(onClick = onClick, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-        Text(stringResource(textRes))
-    }
+    TindivoPrimaryButton(text = stringResource(textRes), onClick = onClick)
 }

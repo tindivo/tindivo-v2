@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
@@ -67,9 +68,7 @@ fun SignInScreen(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.signin_back))
-            }
+            TindivoTextButton(text = stringResource(R.string.signin_back), onClick = onBack)
             Text(text = stringResource(R.string.signin_title), style = MaterialTheme.typography.headlineMedium)
             if (googleAvailable) {
                 // Mientras se abre «Completa tu perfil» el botón sigue ocupado: un toque más no vuelve a entrar.

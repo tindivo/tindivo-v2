@@ -34,6 +34,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 
@@ -94,9 +97,7 @@ internal fun PhoneVerifyScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            TextButton(onClick = actions.onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.phone_back))
-            }
+            TindivoTextButton(text = stringResource(R.string.phone_back), onClick = actions.onBack)
             Text(
                 text = stringResource(R.string.phone_title),
                 style = MaterialTheme.typography.headlineMedium,
@@ -175,26 +176,23 @@ private fun CodeStep(
         enabled = !state.sending,
         onClick = actions.onVerify,
     )
-    OutlinedButton(
+    TindivoSecondaryButton(
+        text = stringResource(R.string.phone_resend),
         onClick = actions.onResend,
-        enabled = !state.sending && state.resendSeconds <= 0,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-    ) {
-        Text(text = stringResource(R.string.phone_resend))
-    }
+        enabled =
+            !state.sending && state.resendSeconds <= 0,
+    )
     if (state.resendSeconds > 0) {
         Text(
             text = stringResource(R.string.phone_resend_wait, state.resendSeconds),
             style = MaterialTheme.typography.bodyMedium,
         )
     }
-    TextButton(
+    TindivoTextButton(
+        text = stringResource(R.string.phone_change_number),
         onClick = actions.onChangeNumber,
         enabled = !state.sending,
-        modifier = Modifier.heightIn(min = 48.dp),
-    ) {
-        Text(text = stringResource(R.string.phone_change_number))
-    }
+    )
 }
 
 @Composable
@@ -224,22 +222,19 @@ private fun TransferDialog(
         title = { Text(text = stringResource(R.string.phone_transfer_title)) },
         text = { Text(text = stringResource(R.string.phone_transfer_message)) },
         confirmButton = {
-            Button(
+            TindivoPrimaryButton(
+                text = stringResource(R.string.phone_transfer_confirm),
                 onClick = actions.onConfirmTransfer,
                 enabled = !sending,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(text = stringResource(R.string.phone_transfer_confirm))
-            }
+                fillWidth = false,
+            )
         },
         dismissButton = {
-            TextButton(
+            TindivoTextButton(
+                text = stringResource(R.string.phone_transfer_cancel),
                 onClick = actions.onDismissTransfer,
                 enabled = !sending,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(text = stringResource(R.string.phone_transfer_cancel))
-            }
+            )
         },
     )
 }
@@ -250,14 +245,7 @@ private fun ActionButton(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-    ) {
-        Text(text = text)
-    }
+    TindivoPrimaryButton(text = text, onClick = onClick, enabled = enabled)
 }
 
 @Composable

@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.tindivo.core.designsystem.TindivoSecondaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 
 /** Los dos permisos de ubicación en tiempo de uso: la persona puede dar solo el aproximado y también sirve. */
@@ -72,7 +74,11 @@ internal fun UseMyLocation(
             onPermission(permissionAnswer(grants, activity))
         }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedButton(
+        TindivoSecondaryButton(
+            text =
+                stringResource(
+                    if (locate.locating) R.string.address_form_locating else R.string.address_form_use_location,
+                ),
             onClick = {
                 if (hasLocationPermission(context)) {
                     onPermission(LocationPermission.Granted)
@@ -81,15 +87,8 @@ internal fun UseMyLocation(
                 }
             },
             enabled = !locate.locating && !state.busy,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(
-                text =
-                    stringResource(
-                        if (locate.locating) R.string.address_form_locating else R.string.address_form_use_location,
-                    ),
-            )
-        }
+            fillWidth = false,
+        )
         locate.notice?.let { notice ->
             Text(
                 text = stringResource(notice.messageRes()),
@@ -97,9 +96,10 @@ internal fun UseMyLocation(
                 color = MaterialTheme.colorScheme.error,
             )
             if (notice == LocateNotice.DeniedForever) {
-                TextButton(onClick = { openAppSettings(context) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(R.string.address_form_locate_settings))
-                }
+                TindivoTextButton(
+                    text = stringResource(R.string.address_form_locate_settings),
+                    onClick = { openAppSettings(context) },
+                )
             }
         }
     }

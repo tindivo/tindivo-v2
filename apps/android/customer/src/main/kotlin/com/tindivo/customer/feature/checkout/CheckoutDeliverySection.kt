@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 
 /** «Entrega»: delivery o recojo, la dirección (o el punto de recojo), el contacto y la nota para el motorizado. */
@@ -132,21 +133,15 @@ private fun AddressCard(
                     text = stringResource(R.string.checkout_address_add_hint),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                TextButton(
-                    onClick = { openSheet(CheckoutSheet.AddAddress) },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.checkout_address_add))
-                }
+                TindivoTextButton(text = stringResource(R.string.checkout_address_add), onClick = {
+                    openSheet(CheckoutSheet.AddAddress)
+                })
             } else {
                 AddressSummary(selected, onFix = { openSheet(CheckoutSheet.EditAddress(selected.id)) })
                 // Con una sola dirección también: desde la lista se agrega otra sin salir del checkout.
-                TextButton(
-                    onClick = { openSheet(CheckoutSheet.ChooseAddress) },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.checkout_address_change))
-                }
+                TindivoTextButton(text = stringResource(R.string.checkout_address_change), onClick = {
+                    openSheet(CheckoutSheet.ChooseAddress)
+                })
             }
         }
     }
@@ -186,9 +181,7 @@ private fun AddressSummary(
         )
     }
     if (warnings.isNotEmpty()) {
-        TextButton(onClick = onFix, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(text = stringResource(R.string.checkout_address_fix))
-        }
+        TindivoTextButton(text = stringResource(R.string.checkout_address_fix), onClick = onFix)
     }
 }
 
@@ -217,12 +210,9 @@ private fun ContactCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
-                TextButton(
-                    onClick = { openSheet(CheckoutSheet.VerifyPhone) },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.checkout_phone_verify))
-                }
+                TindivoTextButton(text = stringResource(R.string.checkout_phone_verify), onClick = {
+                    openSheet(CheckoutSheet.VerifyPhone)
+                })
             }
         }
     }

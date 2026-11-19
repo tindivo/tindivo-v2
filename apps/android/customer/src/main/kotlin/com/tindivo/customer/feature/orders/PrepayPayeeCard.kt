@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 import kotlinx.coroutines.launch
 
@@ -151,9 +152,7 @@ private fun QrPreview(
         AlertDialog(
             onDismissRequest = { zoomed = false },
             confirmButton = {
-                TextButton(onClick = { zoomed = false }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(R.string.prepay_close))
-                }
+                TindivoTextButton(text = stringResource(R.string.prepay_close), onClick = { zoomed = false })
             },
             text = {
                 AsyncImage(

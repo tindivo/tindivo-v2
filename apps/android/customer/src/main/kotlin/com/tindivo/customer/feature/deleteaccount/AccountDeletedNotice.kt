@@ -20,6 +20,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
@@ -138,9 +139,7 @@ internal fun AccountDeletedNoticeContent(
             )
         },
         confirmButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.delete_account_done_ok))
-            }
+            TindivoTextButton(text = stringResource(R.string.delete_account_done_ok), onClick = onDismiss)
         },
     )
 }

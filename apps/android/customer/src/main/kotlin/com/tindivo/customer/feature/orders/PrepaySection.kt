@@ -31,6 +31,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.customer.R
 
 /**
@@ -58,9 +60,11 @@ internal fun PrepaySection(
 
                 is PrepayInfoState.Failed -> {
                     Text(text = stringResource(R.string.prepay_info_error), style = MaterialTheme.typography.bodyLarge)
-                    OutlinedButton(onClick = actions.retryInfo, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(text = stringResource(R.string.prepay_retry))
-                    }
+                    TindivoSecondaryButton(
+                        text = stringResource(R.string.prepay_retry),
+                        onClick = actions.retryInfo,
+                        fillWidth = false,
+                    )
                 }
 
                 // El detalle se vuelve a consultar solo y dirá en qué quedó el pedido.
@@ -155,9 +159,7 @@ private fun ProofPicker(
     val sending = state.send is SendState.Sending
     val photo = state.photo
     if (photo == null) {
-        Button(onClick = pick, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text(text = stringResource(R.string.prepay_upload))
-        }
+        TindivoPrimaryButton(text = stringResource(R.string.prepay_upload), onClick = pick)
         Text(
             text = stringResource(R.string.prepay_upload_hint),
             style = MaterialTheme.typography.bodySmall,
@@ -170,9 +172,12 @@ private fun ProofPicker(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
             )
-            OutlinedButton(onClick = pick, enabled = !sending, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.prepay_change))
-            }
+            TindivoSecondaryButton(
+                text = stringResource(R.string.prepay_change),
+                onClick = pick,
+                enabled = !sending,
+                fillWidth = false,
+            )
         }
         AsyncImage(
             model = photo,
@@ -221,15 +226,15 @@ private fun SendFailure(
     )
     when (problem) {
         SendProblem.Offline, SendProblem.Generic -> {
-            OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.prepay_retry))
-            }
+            TindivoSecondaryButton(text = stringResource(R.string.prepay_retry), onClick = onRetry, fillWidth = false)
         }
 
         SendProblem.Unreadable, SendProblem.TooLarge -> {
-            OutlinedButton(onClick = onPick, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.prepay_pick_other))
-            }
+            TindivoSecondaryButton(
+                text = stringResource(R.string.prepay_pick_other),
+                onClick = onPick,
+                fillWidth = false,
+            )
         }
 
         // Lo que dijo el servidor ya explica qué hacer; el detalle se vuelve a consultar solo.

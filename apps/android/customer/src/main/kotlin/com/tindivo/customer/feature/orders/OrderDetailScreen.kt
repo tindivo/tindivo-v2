@@ -25,6 +25,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import java.util.UUID
@@ -110,9 +112,7 @@ internal fun OrderDetailScreen(
 ) {
     Scaffold { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.orders_back))
-            }
+            TindivoTextButton(text = stringResource(R.string.orders_back), onClick = onBack)
             when (state) {
                 OrderDetailUiState.Loading, OrderDetailUiState.LoggedOut -> {
                     OrdersLoading()
@@ -177,9 +177,7 @@ private fun OrderBody(
         CancelRow(offer = order.cancel, section = cancel, supportLink = supportLink, onOpenLink = onOpenLink)
         cancel.state.problem?.let { CancelProblemText(problem = it) }
         if (onRate != null) {
-            Button(onClick = onRate, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.review_rate))
-            }
+            TindivoPrimaryButton(text = stringResource(R.string.review_rate), onClick = onRate)
         }
         if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
             OrderSteps(phase = order.phase, isPickup = order.isPickup)

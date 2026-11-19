@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
@@ -171,13 +172,7 @@ private fun ErrorContent(
 ) {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = errorMessage(error), style = MaterialTheme.typography.bodyLarge)
-        Button(
-            onClick = onRetry,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.business_retry))
-        }
+        TindivoPrimaryButton(text = stringResource(R.string.business_retry), onClick = onRetry, fillWidth = false)
     }
 }
 

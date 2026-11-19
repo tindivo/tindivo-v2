@@ -1,14 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -16,7 +8,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoBottomBar
+import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.customer.R
 
 /**
@@ -30,33 +23,26 @@ internal fun CheckoutBottomBar(
     openSheet: (CheckoutSheet) -> Unit,
 ) {
     val cta = state.cta
-    Surface(shadowElevation = 8.dp) {
-        Column(
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            state.message?.let {
-                Text(
-                    text = it.text(),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                )
-            }
-            Button(
-                onClick = { onCta(cta, state.selectedAddressId, form, openSheet) },
-                enabled = cta != Cta.Sending,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) {
-                Text(text = cta.label())
-            }
-            supportLine(state)?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+    TindivoBottomBar {
+        state.message?.let {
+            Text(
+                text = it.text(),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
+        TindivoPrimaryButton(
+            text = cta.label(),
+            onClick = { onCta(cta, state.selectedAddressId, form, openSheet) },
+            enabled = cta != Cta.Sending,
+        )
+        supportLine(state)?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

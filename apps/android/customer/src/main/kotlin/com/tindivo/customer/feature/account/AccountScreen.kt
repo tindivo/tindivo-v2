@@ -26,6 +26,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
@@ -105,9 +108,7 @@ fun AccountScreen(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.account_back))
-            }
+            TindivoTextButton(text = stringResource(R.string.account_back), onClick = onBack)
             Text(
                 text = stringResource(R.string.account_title),
                 style = MaterialTheme.typography.headlineMedium,
@@ -168,13 +169,7 @@ private fun Failure(
         }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = message, style = MaterialTheme.typography.bodyLarge)
-        Button(
-            onClick = onRetry,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.account_retry))
-        }
+        TindivoPrimaryButton(text = stringResource(R.string.account_retry), onClick = onRetry, fillWidth = false)
     }
 }
 
@@ -190,20 +185,12 @@ private fun ProfileMissing(
             text = stringResource(R.string.account_profile_missing_message),
             style = MaterialTheme.typography.bodyLarge,
         )
-        Button(
+        TindivoPrimaryButton(
+            text = stringResource(R.string.profile_complete),
             onClick = onCompleteProfile,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.profile_complete))
-        }
-        OutlinedButton(
-            onClick = onSignOut,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.account_sign_out))
-        }
+            fillWidth = false,
+        )
+        TindivoSecondaryButton(text = stringResource(R.string.account_sign_out), onClick = onSignOut, fillWidth = false)
         // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
         DeleteAccountButton(onDeleteAccount = onDeleteAccount)
     }
@@ -230,39 +217,21 @@ private fun Profile(
         if (profile.phoneVerified && profile.phone != null) {
             Text(text = profile.phone, style = MaterialTheme.typography.bodyLarge)
         }
-        OutlinedButton(
+        TindivoSecondaryButton(
+            text =
+                stringResource(
+                    if (profile.phoneVerified) R.string.account_phone_change else R.string.account_phone_verify,
+                ),
             onClick = onVerifyPhone,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(
-                text =
-                    stringResource(
-                        if (profile.phoneVerified) R.string.account_phone_change else R.string.account_phone_verify,
-                    ),
-            )
-        }
-        Button(
-            onClick = onOpenOrders,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.account_orders))
-        }
-        OutlinedButton(
+            fillWidth = false,
+        )
+        TindivoPrimaryButton(text = stringResource(R.string.account_orders), onClick = onOpenOrders, fillWidth = false)
+        TindivoSecondaryButton(
+            text = stringResource(R.string.account_addresses),
             onClick = onOpenAddresses,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.account_addresses))
-        }
-        OutlinedButton(
-            onClick = onSignOut,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.account_sign_out))
-        }
+            fillWidth = false,
+        )
+        TindivoSecondaryButton(text = stringResource(R.string.account_sign_out), onClick = onSignOut, fillWidth = false)
         DeleteAccountButton(onDeleteAccount = onDeleteAccount)
     }
 }
@@ -270,9 +239,7 @@ private fun Profile(
 /** Discreto a propósito, pero siempre a la vista: Google Play exige poder borrar la cuenta dentro de la app. */
 @Composable
 private fun DeleteAccountButton(onDeleteAccount: () -> Unit) {
-    TextButton(onClick = onDeleteAccount, modifier = Modifier.heightIn(min = 48.dp)) {
-        Text(text = stringResource(R.string.account_delete), color = MaterialTheme.colorScheme.error)
-    }
+    TindivoTextButton(text = stringResource(R.string.account_delete), onClick = onDeleteAccount, destructive = true)
 }
 
 @Preview(showBackground = true)
