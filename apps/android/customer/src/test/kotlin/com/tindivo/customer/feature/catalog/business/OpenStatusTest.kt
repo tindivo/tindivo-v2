@@ -74,7 +74,7 @@ class OpenStatusTest {
     }
 
     @Test
-    fun `dentro del horario pero sin confirmar la jornada esta cerrado; sin dato manda el horario`() {
+    fun `dentro del horario pero sin confirmar la jornada esta cerrado`() {
         val noConfirmado = openStatus(week, at("2026-07-07", "20:00"), false)
         assertEquals(OpenStatus.Closed(null, 0, notConfirmed = true), noConfirmado)
         assertEquals(OpenStatus.Open("23:00"), openStatus(week, at("2026-07-07", "20:00"), null))
