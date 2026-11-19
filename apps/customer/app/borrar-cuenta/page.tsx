@@ -30,7 +30,7 @@ export default function BorrarCuentaPage() {
         <section>
           <h2 className="font-display text-[17px] font-bold tracking-tight">Qué se elimina</h2>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-[14px] leading-[1.55] text-ink/75">
-            <li>Tu cuenta y tu inicio de sesión (Google, Apple o correo).</li>
+            <li>Tu cuenta y tu inicio de sesión (Google o correo).</li>
             <li>Tu perfil: nombre, teléfono y correo.</li>
             <li>Tus direcciones guardadas y tu ubicación en el mapa.</li>
             <li>Tus avisos en el celular, tus avisos de seguridad y tu aceptación de términos.</li>
@@ -39,20 +39,20 @@ export default function BorrarCuentaPage() {
         </section>
 
         <section>
-          <h2 className="font-display text-[17px] font-bold tracking-tight">
-            Qué se conserva, y sin tu nombre
-          </h2>
+          <h2 className="font-display text-[17px] font-bold tracking-tight">Qué se conserva</h2>
           <p className="mt-1 text-[14px] leading-[1.55] text-ink/75">
-            Los pedidos que ya hiciste se quedan porque son la caja de cada negocio. Pierden todo lo
-            que te identifica: tu nombre, tu teléfono, la dirección, la referencia, la ubicación y
-            tus notas. Solo quedan el importe, el estado y las fechas. También se conservan, por
-            seguridad contra fraudes, los reportes de pedidos no recibidos ligados a un número de
-            teléfono, y el directorio de direcciones que usa la cajera para reconocer vecinos. Si tu
-            número estaba bloqueado o solo podía pagar por adelantado, esa restricción se queda con
-            el número hasta su fecha, aunque otra cuenta lo verifique después. Las reseñas se quedan
-            sin tu nombre. Las fotos de comprobantes de pago se guardan con el pedido anonimizado el
-            tiempo que su negocio las necesite para su caja; el plazo exacto está en la política de
-            privacidad.
+            Los pedidos que ya hiciste se quedan porque son la caja de cada negocio. Se les retiran
+            tu nombre, tu teléfono, la dirección, la referencia, la ubicación y tus notas, pero
+            conservan el importe, el estado, las fechas, sus identificadores y otros datos
+            operativos: retirar tus datos de contacto no equivale a eliminar toda posibilidad de
+            relacionarlos contigo. También se conservan, por seguridad contra fraudes, los reportes
+            de pedidos no recibidos ligados a un número de teléfono, y el directorio de direcciones
+            que usa la cajera para reconocer vecinos. Si tu número estaba bloqueado o solo podía
+            pagar por adelantado, esa restricción se queda con el número hasta su fecha, aunque otra
+            cuenta lo verifique después. Las reseñas se quedan sin tu nombre, pero su texto se
+            conserva tal como lo escribiste. Las fotos de comprobantes de pago se conservan hasta 90
+            días contados desde el borrado de la cuenta; un proceso diario las elimina después,
+            salvo las que requieren revisión manual (el detalle está en la política de privacidad).
           </p>
         </section>
 
