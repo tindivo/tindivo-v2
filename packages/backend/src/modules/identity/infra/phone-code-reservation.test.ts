@@ -7,7 +7,7 @@ function dbWith(result: { data: unknown; error: { message: string } | null }) {
   return { db: { rpc } as unknown as TypedSupabaseClient, rpc }
 }
 
-describe('CAX-002 · la reserva del envío de código es atómica y falla cerrado', () => {
+describe('CA-AUT-14 · la reserva del envío de código es atómica y falla cerrado', () => {
   it('llama a reserve_phone_code con el usuario, el número y el tope', async () => {
     const { db, rpc } = dbWith({ data: true, error: null })
     expect(await reservePhoneCode(db, 'u1', '+51987654321', 3)).toBe(true)
@@ -45,7 +45,7 @@ describe('CAX-002 · la reserva del envío de código es atómica y falla cerrad
   })
 })
 
-describe('CAX-003 · el teléfono en un log va enmascarado', () => {
+describe('CA-AUT-15 · el teléfono en un log va enmascarado', () => {
   it('deja el prefijo y los tres últimos dígitos', () => {
     expect(maskPhone('+51987654321')).toBe('+51******321')
     expect(maskPhone('+51987654321')).not.toContain('9876')

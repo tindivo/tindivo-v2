@@ -158,7 +158,7 @@ class SignInViewModelTest {
         }
 
     @Test
-    fun `CAX-001 entra con la aceptacion pendiente y solo la confirma despues de registrarla`() =
+    fun `CA-AUT-13 entra con la aceptacion pendiente y solo la confirma despues de registrarla`() =
         runTest {
             viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba") }
 
@@ -168,7 +168,7 @@ class SignInViewModelTest {
         }
 
     @Test
-    fun `CAX-001 si el registro falla la aceptacion no se confirma`() =
+    fun `CA-AUT-13 si el registro falla la aceptacion no se confirma`() =
         runTest {
             profiles.termsResult = ApiResult.Failure(AppError.Known(ApiErrorCode.InternalError, 500, null))
 
@@ -179,7 +179,7 @@ class SignInViewModelTest {
         }
 
     @Test
-    fun `CAX-001 si no se puede confirmar la marca no se sigue y la sesion se cierra`() =
+    fun `CA-AUT-13 si no se puede confirmar la marca no se sigue y la sesion se cierra`() =
         runTest {
             store.confirmTermsResult = false
 

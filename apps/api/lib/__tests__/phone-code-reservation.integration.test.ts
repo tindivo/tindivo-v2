@@ -64,7 +64,7 @@ beforeAll(() => {
 })
 
 describe('0293 · reserve_phone_code', () => {
-  it('CAX-002 · con tope 1 y ocho solicitudes simultáneas pasa una sola', async () => {
+  it('CA-AUT-14 · con tope 1 y ocho solicitudes simultáneas pasa una sola', async () => {
     const u = await newUser()
     const calls = Array.from({ length: 8 }, () =>
       reserve(db)('reserve_phone_code', { p_user_id: u.id, p_phone: phone(), p_max: 1 }),
@@ -76,7 +76,7 @@ describe('0293 · reserve_phone_code', () => {
     expect(await attempts(u.id)).toBe(1)
   })
 
-  it('CAX-002 · con tope 3 y diez solicitudes simultáneas pasan exactamente tres', async () => {
+  it('CA-AUT-14 · con tope 3 y diez solicitudes simultáneas pasan exactamente tres', async () => {
     const u = await newUser()
     const results = await Promise.all(
       Array.from({ length: 10 }, () =>
@@ -130,7 +130,7 @@ describe('0293 · reserve_phone_code', () => {
     expect(await attempts(u.id)).toBe(0)
   })
 
-  it('CAX-002 · anon y un usuario autenticado (no propietario del cupo) no pueden llamarla', async () => {
+  it('CA-AUT-14 · anon y un usuario autenticado (no propietario del cupo) no pueden llamarla', async () => {
     const owner = await newUser()
     const other = await newUser()
     const anon = createClient<Database>(URL, ANON_KEY, opts)
@@ -156,7 +156,7 @@ describe('0293 · reserve_phone_code', () => {
     expect(await attempts(owner.id)).toBe(0)
   })
 
-  it('CAX-002 · una cuenta borrada no puede reservar', async () => {
+  it('CA-AUT-14 · una cuenta borrada no puede reservar', async () => {
     const u = await newUser()
     const { error } = await db.rpc('delete_customer_account', { p_user_id: u.id })
     expect(error).toBeNull()

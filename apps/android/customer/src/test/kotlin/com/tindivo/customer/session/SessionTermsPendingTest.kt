@@ -66,7 +66,7 @@ class SessionTermsPendingTest {
         ).build()
 
     @Test
-    fun `CAX-001 tras un reinicio una sesion con la aceptacion pendiente no se restaura y se borra`() =
+    fun `CA-AUT-13 tras un reinicio una sesion con la aceptacion pendiente no se restaura y se borra`() =
         runTest {
             server.enqueue(tokens("acceso", "refresco"))
             backend().signInWithGoogle("id-token", "nonce", termsPending = true)
@@ -79,7 +79,7 @@ class SessionTermsPendingTest {
         }
 
     @Test
-    fun `CAX-001 una sesion con la aceptacion confirmada si se restaura tras el reinicio`() =
+    fun `CA-AUT-13 una sesion con la aceptacion confirmada si se restaura tras el reinicio`() =
         runTest {
             server.enqueue(tokens("acceso", "refresco"))
             val first = backend()
@@ -92,7 +92,7 @@ class SessionTermsPendingTest {
         }
 
     @Test
-    fun `CAX-001 refrescar con la aceptacion pendiente conserva la marca`() =
+    fun `CA-AUT-13 refrescar con la aceptacion pendiente conserva la marca`() =
         runTest {
             server.enqueue(tokens("acceso", "refresco"))
             server.enqueue(tokens("acceso-2", "refresco-2"))
@@ -104,7 +104,7 @@ class SessionTermsPendingTest {
         }
 
     @Test
-    fun `CAX-001 el almacen reiniciado no da ninguna sesion utilizable sin aceptacion registrada`() =
+    fun `CA-AUT-13 el almacen reiniciado no da ninguna sesion utilizable sin aceptacion registrada`() =
         runTest {
             server.enqueue(tokens("acceso", "refresco"))
             val before = SupabaseSessionStore(backend(), clock, backgroundScope)
@@ -116,7 +116,7 @@ class SessionTermsPendingTest {
         }
 
     @Test
-    fun `CAX-001 confirmada la aceptacion el almacen reiniciado conserva la sesion`() =
+    fun `CA-AUT-13 confirmada la aceptacion el almacen reiniciado conserva la sesion`() =
         runTest {
             server.enqueue(tokens("acceso", "refresco"))
             val before = SupabaseSessionStore(backend(), clock, backgroundScope)
@@ -129,7 +129,7 @@ class SessionTermsPendingTest {
         }
 
     @Test
-    fun `CAX-001 confirmar la aceptacion de otra cuenta no toca la sesion`() =
+    fun `CA-AUT-13 confirmar la aceptacion de otra cuenta no toca la sesion`() =
         runTest {
             server.enqueue(tokens("acceso", "refresco"))
             val store = SupabaseSessionStore(backend(), clock, backgroundScope)

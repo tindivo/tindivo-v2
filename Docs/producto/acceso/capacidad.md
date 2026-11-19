@@ -88,6 +88,9 @@ reglas: [PHONE_PE_RE, UpdateCustomerProfileRequestSchema, app_settings:terms_ver
 | CA-AUT-P10 | Dado un celular ya verificado en el checkout, cuando la persona escribe uno distinto, entonces no se puede confirmar el pedido hasta verificarlo. | CUS-AUT-009 |
 | CA-AUT-09 | Dado un número verificado en la cuenta A, cuando la cuenta B lo verifica por SMS, entonces recibe «Este número ya está asociado a otra cuenta» con «Contactar soporte» y «Usar otro número», no hay traslado, y no ve pedidos ni faltas de A. | CUS-AUT-008, CUS-AUT-028 |
 | CA-AUT-12 | Dado un envío de código, cuando el usuario ya agotó el tope de envíos en 24 horas, entonces el servidor responde 429; el tope sale de `app_settings:phone_code_max_per_24h` y su valor de arranque es el que ya regía. | CUS-AUT-007 |
+| CA-AUT-13 | Dado un acceso con Google cuya aceptación de Términos aún no se registró, cuando la app se cierra o el proceso muere y se vuelve a abrir, entonces esa sesión no se restaura, se borra y la persona queda como invitada; con la aceptación confirmada, la sesión se conserva. | CUS-AUT-021 |
+| CA-AUT-14 | Dado un usuario con tope N y más de N solicitudes de envío de código simultáneas, entonces el servidor reserva el envío de forma atómica antes de llamar a Twilio y solo N pasan; un error al contar o reservar rechaza (503) y nunca deja pasar. | CUS-AUT-007 |
+| CA-AUT-15 | Dado cualquier envío o verificación de código, entonces ningún log del servidor lleva el teléfono entero, el código maestro del simulacro ni el mensaje libre de Twilio. | CUS-AUT-007 |
 | CA-AUT-10 | Dado una persona que perdió su cuenta de Google, cuando está en la pantalla de acceso, entonces ve cómo escribir a soporte por WhatsApp. | CUS-AUT-025 |
 | CA-AUT-11 | Dado la primera apertura de la app, entonces se ve el Inicio de restaurantes como invitado, sin pantallas previas, con la franja «Pide en San Jacinto · Pagas directo al negocio». | CUS-AUT-026 |
 

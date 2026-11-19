@@ -154,7 +154,7 @@ describe('send-code · segunda defensa de configuración', () => {
     expect(dbState.reserveCalls.map((c) => c.p_max)).toEqual([3])
   })
 
-  it('CAX-002 · la reserva va antes de Twilio y un envío permitido lo manda', async () => {
+  it('CA-AUT-14 · la reserva va antes de Twilio y un envío permitido lo manda', async () => {
     for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
     vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
@@ -170,7 +170,7 @@ describe('send-code · segunda defensa de configuración', () => {
     expect(order).toEqual(['twilio'])
   })
 
-  it('CAX-002 · un error de reserva rechaza con 503, no manda SMS y libera la plaza del número', async () => {
+  it('CA-AUT-14 · un error de reserva rechaza con 503, no manda SMS y libera la plaza del número', async () => {
     for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
     vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
@@ -184,7 +184,7 @@ describe('send-code · segunda defensa de configuración', () => {
     expect(release).toHaveBeenCalledTimes(1)
   })
 
-  it('CAX-002 · una respuesta de reserva que no es booleana también rechaza', async () => {
+  it('CA-AUT-14 · una respuesta de reserva que no es booleana también rechaza', async () => {
     for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
     vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
@@ -194,7 +194,7 @@ describe('send-code · segunda defensa de configuración', () => {
     expect(verifyCreate).not.toHaveBeenCalled()
   })
 
-  it('CAX-002 · si la cuenta se borró mientras tanto, 401 y no se manda SMS', async () => {
+  it('CA-AUT-14 · si la cuenta se borró mientras tanto, 401 y no se manda SMS', async () => {
     for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
     vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
@@ -204,7 +204,7 @@ describe('send-code · segunda defensa de configuración', () => {
     expect(verifyCreate).not.toHaveBeenCalled()
   })
 
-  it('CAX-002 · si Twilio falla después de reservar, el cupo no se devuelve (no hay segunda llamada a la base)', async () => {
+  it('CA-AUT-14 · si Twilio falla después de reservar, el cupo no se devuelve (no hay segunda llamada a la base)', async () => {
     for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
     vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
@@ -214,7 +214,7 @@ describe('send-code · segunda defensa de configuración', () => {
     expect(dbState.reserveCalls.length).toBe(1)
   })
 
-  it('CAX-003 · ningún log lleva el teléfono entero, el código maestro ni el mensaje de Twilio', async () => {
+  it('CA-AUT-15 · ningún log lleva el teléfono entero, el código maestro ni el mensaje de Twilio', async () => {
     for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
     vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
