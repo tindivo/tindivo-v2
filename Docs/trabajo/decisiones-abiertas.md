@@ -98,3 +98,10 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 - **Contexto**: `Docs/negocio/antifraude.md` dice que el motorizado espera 5 minutos y reporta, con falta al instante; la decisión del 2026-11-17 dice que el motorizado se va y la falta nace de noche, con confirmación de Jesús en el admin. Sin decidir: si la falta cuenta antes de confirmarse, qué pasa con el dinero de un pedido prepagado que termina en `no_show` y si el admin tiene hoy la pantalla de confirmar o anular. Todo ajuste de dinero se escribe solo en `business_charges`.
 - **Alternativas**: (a) la falta nace «en revisión» y sin efecto hasta que Jesús la confirme; (b) cuenta al instante y se anula si Jesús lo decide.
 - **Recomendación**: (a), y actualizar `antifraude.md` con la aprobación de Jesús. El destino del dinero prepagado, sin recomendación hasta tener la política.
+
+### DA-25 · Espera del negocio: ¿el plazo completo o lo que queda?
+
+- 2026-11-19 · Bloquea: CA-TRK-06 y la cuenta atrás de la espera (CUS-TRK-019, CUS-TRK-005) · Detectó: Claude
+- **Contexto**: el criterio aprobado dice «Responde en hasta [plazo de aceptación] min», con el plazo completo; el requisito de la cuenta atrás dice que mientras corra un plazo se muestra lo que queda. Una sola línea no puede ser las dos cosas, y el texto de la segunda línea no está aprobado.
+- **Alternativas**: (a) dos líneas: «Responde en hasta [plazo] min» fija y «Quedan [n] min» con la cuenta atrás (es lo que hace hoy Android); (b) una línea que baja: «Responde en hasta [lo que queda] min»; (c) solo el plazo completo, sin cuenta atrás visible hasta el último tercio.
+- **Recomendación**: (a). Conserva lo aprobado y da la cuenta atrás; Jesús aprueba el texto «Quedan [n] min».
