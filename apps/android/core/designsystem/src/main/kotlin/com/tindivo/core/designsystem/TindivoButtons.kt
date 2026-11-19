@@ -38,7 +38,8 @@ private val SecondaryBorderWidth = 1.dp
  *
  * Con [loading] la etiqueta se oculta (sin cambiar el tamaño del botón) y en su lugar gira un indicador; el botón deja
  * de responder, conserva su color y TalkBack sigue leyendo la etiqueta, anuncia que está en curso y que no se puede
- * tocar. Así una segunda pulsación no repite la acción mientras la primera no termina.
+ * tocar. Así una segunda pulsación no repite la acción mientras la primera no termina. Con `fillWidth = false` mide lo que
+ * pide su etiqueta (para botones dentro de una fila), pero conserva el alto.
  */
 @Composable
 fun TindivoPrimaryButton(
@@ -47,6 +48,7 @@ fun TindivoPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     loading: Boolean = false,
+    fillWidth: Boolean = true,
 ) {
     val scheme = MaterialTheme.colorScheme
     val colors =
@@ -64,7 +66,7 @@ fun TindivoPrimaryButton(
         colors = colors,
         modifier =
             modifier
-                .fillMaxWidth()
+                .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
                 .height(TindivoSpacing.primaryButtonHeight)
                 .semantics { liveRegion = LiveRegionMode.Polite },
     ) {
@@ -97,6 +99,7 @@ fun TindivoSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    fillWidth: Boolean = true,
 ) {
     OutlinedButton(
         onClick = onClick,
@@ -105,7 +108,7 @@ fun TindivoSecondaryButton(
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
         modifier =
             modifier
-                .fillMaxWidth()
+                .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
                 .height(TindivoSpacing.primaryButtonHeight),
     ) {
         Text(
@@ -119,7 +122,8 @@ fun TindivoSecondaryButton(
 
 /**
  * Acción de texto, sin fondo ni borde («Ver todo», «Reintentar» dentro de una fila). La letra es el naranja para texto
- * ([TindivoColors.brandText]), no el de los botones, para que se lea sobre blanco y crema.
+ * ([TindivoColors.brandText]), no el de los botones, para que se lea sobre blanco y crema. Con [destructive] la letra
+ * es el color de error («Eliminar», «Cancelar pedido»).
  */
 @Composable
 fun TindivoTextButton(
@@ -127,11 +131,15 @@ fun TindivoTextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    destructive: Boolean = false,
 ) {
     TextButton(
         onClick = onClick,
         enabled = enabled,
-        colors = ButtonDefaults.textButtonColors(contentColor = TindivoColors.brandText),
+        colors =
+            ButtonDefaults.textButtonColors(
+                contentColor = if (destructive) MaterialTheme.colorScheme.error else TindivoColors.brandText,
+            ),
         modifier = modifier.heightIn(min = TindivoSpacing.touchTarget),
     ) {
         Text(text = text, style = MaterialTheme.typography.labelLarge)
@@ -162,6 +170,18 @@ private fun TindivoButtonsPreview() {
                 modifier = Modifier.padding(top = TindivoSpacing.item),
             )
             TindivoTextButton(text = "Ver todo", onClick = {}, modifier = Modifier.padding(top = TindivoSpacing.item))
+            TindivoTextButton(
+                text = "Eliminar",
+                onClick = {},
+                destructive = true,
+                modifier = Modifier.padding(top = TindivoSpacing.item),
+            )
+            TindivoPrimaryButton(
+                text = "Reintentar",
+                onClick = {},
+                fillWidth = false,
+                modifier = Modifier.padding(top = TindivoSpacing.item),
+            )
         }
     }
 }

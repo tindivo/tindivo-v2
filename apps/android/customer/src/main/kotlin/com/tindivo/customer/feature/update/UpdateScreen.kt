@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.customer.R
 
 private const val STORE_URL = "https://play.google.com/store/apps/details?id=com.tindivo.customer"
@@ -49,13 +50,9 @@ fun UpdateScreen(viewModel: UpdateViewModel = hiltViewModel()) {
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            Button(
-                onClick = { openStore(context) },
-                modifier = Modifier.heightIn(min = 48.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-            ) {
-                Text(text = stringResource(R.string.update_open_store))
-            }
+            TindivoPrimaryButton(text = stringResource(R.string.update_open_store), onClick = {
+                openStore(context)
+            }, fillWidth = false)
         }
     }
 }

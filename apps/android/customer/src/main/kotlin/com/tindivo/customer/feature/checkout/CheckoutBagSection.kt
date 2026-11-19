@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 
 /** «Tu pedido»: la bolsa en un acordeón. Los importes por línea salen de la cotización, no de los precios de la carta. */
@@ -89,9 +90,7 @@ private fun BagCard(
                                 ?.soles(),
                     )
                 }
-                TextButton(onClick = onEditBag, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(R.string.checkout_bag_edit))
-                }
+                TindivoTextButton(text = stringResource(R.string.checkout_bag_edit), onClick = onEditBag)
             }
         }
     }

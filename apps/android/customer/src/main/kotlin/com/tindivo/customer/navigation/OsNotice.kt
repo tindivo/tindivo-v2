@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 
 /** D-58: el aviso de que el Android del aparato es antiguo. Solo avisa; nunca bloquea. */
@@ -41,13 +42,11 @@ internal fun OsNotice(onDismiss: () -> Unit) {
         ) {
             Text(text = stringResource(R.string.os_notice_title), style = MaterialTheme.typography.titleSmall)
             Text(text = stringResource(R.string.os_notice_message), style = MaterialTheme.typography.bodyMedium)
-            TextButton(
+            TindivoTextButton(
+                text = stringResource(R.string.os_notice_dismiss),
                 onClick = onDismiss,
-                modifier = Modifier.heightIn(min = 48.dp).align(Alignment.End),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                Text(text = stringResource(R.string.os_notice_dismiss))
-            }
+                modifier = Modifier.align(Alignment.End),
+            )
         }
     }
 }

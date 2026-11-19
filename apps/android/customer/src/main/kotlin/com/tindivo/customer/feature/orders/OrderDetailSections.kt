@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.StatusRow
+import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.customer.R
 
 @Composable
@@ -116,13 +117,10 @@ internal fun DriverBlock(
                 Text(text = stringResource(R.string.order_driver_at_door), style = MaterialTheme.typography.bodyMedium)
             }
             driver.whatsappLink?.let { link ->
-                Button(
+                TindivoPrimaryButton(
+                    text = stringResource(R.string.order_driver_whatsapp),
                     onClick = { onOpenLink(link) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-                ) {
-                    Text(text = stringResource(R.string.order_driver_whatsapp))
-                }
+                )
             }
         }
     }

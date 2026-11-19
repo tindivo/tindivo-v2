@@ -34,6 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoColors
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import java.util.UUID
@@ -95,9 +98,7 @@ internal fun OrdersScreen(
 ) {
     Scaffold { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.orders_back))
-            }
+            TindivoTextButton(text = stringResource(R.string.orders_back), onClick = onBack)
             Text(
                 text = stringResource(R.string.orders_title),
                 style = MaterialTheme.typography.headlineMedium,
@@ -153,12 +154,7 @@ private fun OrdersList(
                     if (state.loadingMore) {
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                     } else {
-                        OutlinedButton(
-                            onClick = onLoadMore,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        ) {
-                            Text(text = stringResource(R.string.orders_load_more))
-                        }
+                        TindivoSecondaryButton(text = stringResource(R.string.orders_load_more), onClick = onLoadMore)
                     }
                 }
             }
@@ -203,12 +199,9 @@ private fun OrderCard(
             }
             // Como la web: volver a pedir abre la carta del negocio; la bolsa no se toca.
             if (order.reorderable) {
-                OutlinedButton(
-                    onClick = { actions.onReorder(order.businessId.toString()) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.order_reorder))
-                }
+                TindivoSecondaryButton(text = stringResource(R.string.order_reorder), onClick = {
+                    actions.onReorder(order.businessId.toString())
+                })
             }
             if (order.phase is OrderPhase.Cancelled) {
                 SupportLink(
@@ -233,13 +226,11 @@ private fun EmptyOrders(onExplore: () -> Unit) {
             modifier = Modifier.semantics { heading() },
         )
         Text(text = stringResource(R.string.orders_empty_body), style = MaterialTheme.typography.bodyLarge)
-        Button(
+        TindivoPrimaryButton(
+            text = stringResource(R.string.orders_empty_action),
             onClick = onExplore,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.orders_empty_action))
-        }
+            fillWidth = false,
+        )
     }
 }
 

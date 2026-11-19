@@ -39,6 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
@@ -79,9 +80,7 @@ internal fun ProfileScreen(
                     .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.profile_back))
-            }
+            TindivoTextButton(text = stringResource(R.string.profile_back), onClick = onBack)
             Text(
                 text = stringResource(R.string.profile_title),
                 style = MaterialTheme.typography.headlineMedium,
@@ -162,18 +161,12 @@ private fun TermsNotice() {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(text = stringResource(R.string.profile_terms), style = MaterialTheme.typography.bodyMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                onClick = { uriHandler.openUri(BuildConfig.WEB_BASE_URL + TERMS_PATH) },
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(text = stringResource(R.string.profile_terms_link))
-            }
-            TextButton(
-                onClick = { uriHandler.openUri(BuildConfig.WEB_BASE_URL + PRIVACY_PATH) },
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(text = stringResource(R.string.profile_privacy_link))
-            }
+            TindivoTextButton(text = stringResource(R.string.profile_terms_link), onClick = {
+                uriHandler.openUri(BuildConfig.WEB_BASE_URL + TERMS_PATH)
+            })
+            TindivoTextButton(text = stringResource(R.string.profile_privacy_link), onClick = {
+                uriHandler.openUri(BuildConfig.WEB_BASE_URL + PRIVACY_PATH)
+            })
         }
     }
 }

@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.EmptyState
 import com.tindivo.core.designsystem.ErrorState
 import com.tindivo.core.designsystem.LoadingState
+import com.tindivo.core.designsystem.TindivoBottomBar
 import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoSecondaryButton
@@ -178,47 +179,41 @@ private fun StoreBuyBar(
     action: StoreBuyAction,
     onBuy: (StoreBuyAction) -> Unit,
 ) {
-    Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
-        Column(
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(TindivoSpacing.screen),
-            verticalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            when (action) {
-                is StoreBuyAction.Want -> {
+    TindivoBottomBar(horizontalAlignment = Alignment.CenterHorizontally) {
+        when (action) {
+            is StoreBuyAction.Want -> {
+                if (action.whatsappUrl == null) {
+                    StoreWhatsappMissing()
+                } else {
+                    TindivoPrimaryButton(text = stringResource(R.string.store_want), onClick = { onBuy(action) })
+                    Text(
+                        text = stringResource(R.string.store_want_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+
+            is StoreBuyAction.NotifyWhenFree -> {
+                LabeledAction(R.string.store_reserved_label) {
                     if (action.whatsappUrl == null) {
                         StoreWhatsappMissing()
                     } else {
-                        TindivoPrimaryButton(text = stringResource(R.string.store_want), onClick = { onBuy(action) })
-                        Text(
-                            text = stringResource(R.string.store_want_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-
-                is StoreBuyAction.NotifyWhenFree -> {
-                    LabeledAction(R.string.store_reserved_label) {
-                        if (action.whatsappUrl == null) {
-                            StoreWhatsappMissing()
-                        } else {
-                            TindivoSecondaryButton(
-                                text = stringResource(R.string.store_notify),
-                                onClick = { onBuy(action) },
-                            )
-                        }
-                    }
-                }
-
-                is StoreBuyAction.SeeSimilar -> {
-                    LabeledAction(R.string.store_sold_label) {
-                        TindivoPrimaryButton(
-                            text = stringResource(R.string.store_see_similar),
+                        TindivoSecondaryButton(
+                            text = stringResource(R.string.store_notify),
                             onClick = { onBuy(action) },
                         )
                     }
+                }
+            }
+
+            is StoreBuyAction.SeeSimilar -> {
+                LabeledAction(R.string.store_sold_label) {
+                    TindivoPrimaryButton(
+                        text = stringResource(R.string.store_see_similar),
+                        onClick = { onBuy(action) },
+                    )
                 }
             }
         }

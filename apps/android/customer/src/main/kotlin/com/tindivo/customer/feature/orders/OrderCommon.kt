@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
 
@@ -47,13 +48,7 @@ internal fun OrdersFailure(
     Column(modifier = Modifier.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = message, style = MaterialTheme.typography.bodyLarge)
         if (onRetry != null) {
-            Button(
-                onClick = onRetry,
-                modifier = Modifier.heightIn(min = 48.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-            ) {
-                Text(text = stringResource(R.string.orders_retry))
-            }
+            TindivoPrimaryButton(text = stringResource(R.string.orders_retry), onClick = onRetry, fillWidth = false)
         }
     }
 }

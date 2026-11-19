@@ -40,7 +40,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoBottomBar
 import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 
@@ -105,26 +109,17 @@ fun CartScreen(
                 },
                 actions = {
                     if (state is CartUiState.Filled) {
-                        TextButton(onClick = { confirmingClear = true }, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text(text = stringResource(R.string.cart_clear))
-                        }
+                        TindivoTextButton(
+                            text = stringResource(R.string.cart_clear),
+                            onClick = { confirmingClear = true },
+                        )
                     }
                 },
             )
         },
         bottomBar = {
             if (state is CartUiState.Filled) {
-                Button(
-                    onClick = actions.onCheckout,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(16.dp)
-                            .heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.cart_continue))
-                }
+                TindivoBottomBar(text = stringResource(R.string.cart_continue), onClick = actions.onCheckout)
             }
         },
     ) { innerPadding ->
@@ -155,9 +150,11 @@ private fun EmptyBag(onSeeBusinesses: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(text = stringResource(R.string.cart_empty), style = MaterialTheme.typography.titleMedium)
-        Button(onClick = onSeeBusinesses, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(text = stringResource(R.string.cart_see_businesses))
-        }
+        TindivoPrimaryButton(
+            text = stringResource(R.string.cart_see_businesses),
+            onClick = onSeeBusinesses,
+            fillWidth = false,
+        )
     }
 }
 
@@ -196,12 +193,10 @@ private fun FilledBag(
             )
         }
         item {
-            OutlinedButton(
+            TindivoSecondaryButton(
+                text = stringResource(R.string.cart_add_more),
                 onClick = { actions.onAddMore(state.businessId) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) {
-                Text(text = stringResource(R.string.cart_add_more))
-            }
+            )
         }
     }
 }
@@ -265,9 +260,10 @@ private fun QuantityControls(
             Text(text = "+")
         }
         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { actions.onRemove(line.signature) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.cart_remove))
-            }
+            TindivoTextButton(
+                text = stringResource(R.string.cart_remove),
+                onClick = { actions.onRemove(line.signature) },
+            )
         }
     }
 }
@@ -281,14 +277,10 @@ private fun ClearDialog(
         onDismissRequest = onCancel,
         title = { Text(stringResource(R.string.cart_clear_title)) },
         dismissButton = {
-            TextButton(onClick = onCancel, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(stringResource(R.string.cart_clear_cancel))
-            }
+            TindivoTextButton(text = stringResource(R.string.cart_clear_cancel), onClick = onCancel)
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(stringResource(R.string.cart_clear_confirm))
-            }
+            TindivoTextButton(text = stringResource(R.string.cart_clear_confirm), onClick = onConfirm)
         },
     )
 }

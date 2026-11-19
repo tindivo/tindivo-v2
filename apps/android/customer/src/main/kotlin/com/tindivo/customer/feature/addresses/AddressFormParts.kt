@@ -17,6 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoBottomBar
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.customer.R
 
 @Composable
@@ -46,29 +49,25 @@ internal fun DeleteSection(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
+                TindivoSecondaryButton(
+                    text = stringResource(R.string.address_form_cancel),
                     onClick = actions.onCancelDelete,
                     enabled = !state.deleting,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.address_form_cancel))
-                }
-                Button(
+                    fillWidth = false,
+                )
+                TindivoPrimaryButton(
+                    text =
+                        stringResource(
+                            if (state.deleting) {
+                                R.string.address_form_deleting
+                            } else {
+                                R.string.address_form_delete_confirm
+                            },
+                        ),
                     onClick = actions.onConfirmDelete,
                     enabled = !state.deleting,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(
-                        text =
-                            stringResource(
-                                if (state.deleting) {
-                                    R.string.address_form_deleting
-                                } else {
-                                    R.string.address_form_delete_confirm
-                                },
-                            ),
-                    )
-                }
+                    fillWidth = false,
+                )
             }
         }
     }
@@ -90,13 +89,5 @@ internal fun SaveBar(
             state.editingId == null -> R.string.address_form_save
             else -> R.string.address_form_save_changes
         }
-    Box(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
-        Button(
-            onClick = onSave,
-            enabled = state.canSave,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-        ) {
-            Text(text = stringResource(label))
-        }
-    }
+    TindivoBottomBar(text = stringResource(label), onClick = onSave, enabled = state.canSave)
 }
