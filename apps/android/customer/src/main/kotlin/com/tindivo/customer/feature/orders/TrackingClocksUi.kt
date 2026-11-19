@@ -42,10 +42,17 @@ internal fun AcceptanceWaitBlock(
             fontWeight = FontWeight.Bold,
         )
         Text(text = stringResource(R.string.order_wait_status), style = MaterialTheme.typography.bodyLarge)
+        // El plazo completo, como lo aprobó Jesús (CA-TRK-06); la cuenta atrás va aparte.
+        if (acceptanceMinutes != null) {
+            Text(
+                text = stringResource(R.string.order_wait_respond, acceptanceMinutes),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
         when (val clock = acceptanceClockOf(start, acceptanceMinutes, now)) {
             is AcceptanceClock.Running -> {
                 Text(
-                    text = stringResource(R.string.order_wait_respond, clock.minutesLeft),
+                    text = stringResource(R.string.order_wait_left, clock.minutesLeft),
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (clock.urgent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 )
