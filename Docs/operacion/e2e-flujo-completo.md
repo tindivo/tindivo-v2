@@ -1,6 +1,6 @@
 # Prueba de punta a punta de un pedido por la API REST
 
-> Verificado: 2026-11-15 · contra `test/e2e-flujo-completo-api` sobre `develop@0d025129`, pila LOCAL (Supabase 127.0.0.1:54321, API en el puerto 3001)
+> Verificado: 2026-11-19 · contra `test/e2e-punta-a-punta` sobre `develop@25a6d537`, pila LOCAL (Supabase 127.0.0.1:54321, API en el puerto 3001), con `pnpm e2e:todo --reset`: 80/80 pasos, 13 escenarios
 
 `scripts/e2e/flujo-completo.ts` lleva UN pedido de restaurante por todo su ciclo usando solo `/api/v1`, como las apps:
 el cliente lo crea, la cajera lo valida y lo acepta, y el motorizado lo toma, lo recoge y lo entrega. Inicia sesión con
@@ -16,6 +16,14 @@ vistas y comprueba el estado esperado y que los tres actores ven el mismo `short
 Escenarios: **contraentrega** (efectivo; si el cliente no tiene historial nace en `validando` y pasa por
 `POST /business/orders/{id}/validate`) y **prepago** (`accept` → `upload-url` + PUT a Storage → `prepay-proof` →
 `validate` → `ready` → entrega). El de contraentrega comprueba además el efectivo a rendir (`cash_owed_at_delivery`).
+
+## Todos los escenarios
+
+`pnpm e2e:todo` arranca la API si hace falta y corre los 13 escenarios bajo el candado (`--reset` hace antes `db reset` y el seed e2e; `--playwright` suma `pnpm test:e2e`). La lista de escenarios está en el script (`SCENARIO_NAMES`). Un escenario se corre solo con `--scenario <nombre>`.
+
+Discusión: [matriz de escenarios](../trabajo/e2e/escenarios.md)
+
+Quedan fuera de staging los que usan la service role (`no-show`, `prepago-vencido`, `celular-sms`, `entregas`, `borrar-cuenta`). `no-show` deja un strike a `cliente2@e2e.local`: la corrida siguiente exige `--reset` (su primer pedido pasa a ser prepago).
 
 ## Local
 

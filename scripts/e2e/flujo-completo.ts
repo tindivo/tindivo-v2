@@ -48,6 +48,11 @@ const ACCOUNTS = {
 }
 const CUSTOMER_NAME = 'Cliente E2E'
 const CUSTOMER_PHONE = '900000003'
+const PHONES: Partial<Record<string, string>> = {
+  customer: '900000003',
+  customer2: '900000004',
+  customer3: '900000005',
+}
 const DELIVERY = {
   address: 'Jr. Los Pinos 123',
   reference: 'Portón azul, frente al parque',
@@ -88,7 +93,7 @@ function readEnvFile(path: string): Record<string, string> {
 }
 
 type Json = Record<string, unknown>
-type Actor = 'customer' | 'business' | 'driver'
+type Actor = 'customer' | 'business' | 'driver' | 'customer2' | 'customer3' | 'fresh'
 
 class StepFailure extends Error {}
 
@@ -140,7 +145,37 @@ function unwrap(body: Json): Json {
 }
 
 // ── Registro de pasos ─────────────────────────────────────────────────────────────────────────────
-const results: { name: string; ok: boolean; ms: number; detail?: string }[] = []
+const results: { name: string; ok: boolean; ms: number; detail?: string; expected?: boolean }[] = []
+
+interface Scenario {
+  name: string
+  localOnly?: boolean
+  run: () => Promise<void>
+}
+type Outcome = 'ok' | 'falla' | 'rojo-esperado' | 'defecto-corregido' | 'saltado'
+const outcomes: { name: string; outcome: Outcome; note?: string }[] = []
+
+/**
+ * Defectos reales del producto que un escenario destapó. El escenario sigue corriendo: se espera que
+ * falle, y si empieza a pasar la suite avisa para que se quite la marca. Cada uno enlaza su fila de
+ * `Docs/trabajo/e2e/escenarios.md`. No se arregla aquí: es código de producto.
+ */
+const SCENARIO_NAMES = [
+  'contraentrega',
+  'prepago',
+  'rechazo',
+  'cancela-cliente',
+  'no-show',
+  'recojo',
+  'prepago-heic',
+  'mis-pedidos',
+  'prepago-vencido',
+  'celular-sms',
+  'entregas',
+  'borrar-cuenta',
+  'compat-v1',
+]
+const KNOWN_DEFECTS: Record<string, string> = {}
 async function step<T>(name: string, fn: () => Promise<T>): Promise<T> {
   const t0 = Date.now()
   try {
@@ -208,8 +243,8 @@ interface View {
   shortId: string
 }
 
-async function customerView(ctx: Ctx, id: string): Promise<View> {
-  const r = await http(ctx, 'GET', `${ctx.api}/customer/orders/${id}`, { actor: 'customer' })
+async function customerView(ctx: Ctx, id: string, who: Actor = 'customer'): Promise<View> {
+  const r = await http(ctx, 'GET', `${ctx.api}/customer/orders/${id}`, { actor: who })
   expect(r.status === 200, `GET /customer/orders/{id}: ${describeHttp(r)}`)
   const o = unwrap(r.body)
   return { status: String(o.status), shortId: String(o.shortId) }
@@ -244,10 +279,10 @@ async function assertViews(
   ctx: Ctx,
   id: string,
   expected: string,
-  opts: { driverMustSee: boolean },
+  opts: { driverMustSee: boolean; who?: Actor },
 ): Promise<Json> {
   const [c, b, d] = [
-    await customerView(ctx, id),
+    await customerView(ctx, id, opts.who ?? 'customer'),
     await businessView(ctx, id),
     await driverView(ctx, id),
   ]
@@ -292,13 +327,15 @@ async function createOrder(
   ctx: Ctx,
   paymentIntent: 'pending_cash' | 'prepaid',
   cashPayingWith?: number,
+  who: Actor = 'customer',
+  extra: Json = {},
 ): Promise<Created> {
   const body: Json = {
     businessId: BUSINESS_ID,
     deliveryMethod: 'delivery',
     paymentIntent,
     customerName: CUSTOMER_NAME,
-    customerPhone: CUSTOMER_PHONE,
+    customerPhone: PHONES[who] ?? CUSTOMER_PHONE,
     deliveryAddress: DELIVERY.address,
     deliveryReference: DELIVERY.reference,
     coordinates: { lat: DELIVERY.lat, lng: DELIVERY.lng },
@@ -315,8 +352,15 @@ async function createOrder(
     ],
   }
   if (cashPayingWith !== undefined) body.cashPayingWith = cashPayingWith
+  Object.assign(body, extra)
+  if (extra.deliveryMethod === 'pickup') {
+    // Un recojo no lleva domicilio ni punto de entrega.
+    for (const k of ['deliveryAddress', 'deliveryReference', 'coordinates', 'gpsValidation']) {
+      delete body[k]
+    }
+  }
   const r = await http(ctx, 'POST', `${ctx.api}/customer/orders`, {
-    actor: 'customer',
+    actor: who,
     body,
     headers: { 'idempotency-key': randomUUID() },
   })
@@ -505,6 +549,531 @@ async function scenarioPrepago(ctx: Ctx, prep: number): Promise<string> {
   return id
 }
 
+
+// ── Escenarios 3 en adelante (ver Docs/trabajo/e2e/escenarios.md) ─────────────────────────────────
+async function call(
+  ctx: Ctx,
+  actor: Actor,
+  method: string,
+  path: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+): Promise<{ status: number; body: Json; text: string }> {
+  return http(ctx, method, `${ctx.api}${path}`, { actor, body, headers })
+}
+
+const svcHeaders = (key: string): Record<string, string> => ({
+  apikey: key,
+  authorization: `Bearer ${key}`,
+})
+
+/** Si el pedido nació en `validando`, la cajera lo valida; devuelve el estado resultante. */
+async function settle(ctx: Ctx, o: Created, who: Actor): Promise<string> {
+  if (o.status === 'validando') await validatePass(ctx, o.id, 2)
+  return (await customerView(ctx, o.id, who)).status
+}
+
+/** Pedido de efectivo de `who` hasta `preparing`. */
+async function toPreparing(ctx: Ctx, who: Actor): Promise<Created> {
+  const o = await createOrder(ctx, 'pending_cash', 50, who)
+  const st = await settle(ctx, o, who)
+  if (st === 'pending_acceptance') {
+    await transition(ctx, 'business', o.id, { action: 'accept', prepTimeMinutes: 2 }, 'preparing')
+  }
+  expect((await customerView(ctx, o.id, who)).status === 'preparing', 'no llegó a preparing')
+  return o
+}
+
+/** Cierra cualquier pedido activo de `who` en el negocio e2e: un escenario roto no debe dejar pedidos que arrastren a los demás. */
+async function releaseActive(ctx: Ctx, who: Actor): Promise<void> {
+  const list = await call(ctx, who, 'GET', '/customer/orders')
+  if (list.status !== 200) return
+  const root = unwrap(list.body)
+  const rows = (Array.isArray(root.items) ? root.items : Array.isArray(list.body.data) ? list.body.data : []) as Json[]
+  for (const row of rows) {
+    const st = String(row.status)
+    if (st === 'delivered' || st === 'cancelled') continue
+    const r = await call(ctx, 'business', 'POST', `/business/orders/${String(row.id)}/transition`, {
+      action: 'cancel',
+      reasonCode: 'other',
+    })
+    console.log(`        limpieza: pedido ${String(row.id).slice(0, 8)} de ${who} en ${st} → HTTP ${r.status}`)
+  }
+}
+
+async function scenarioRechazo(ctx: Ctx): Promise<string> {
+  console.log('\nEscenario · el negocio rechaza el pedido')
+  const o = await step('cliente2: POST /customer/orders (efectivo)', () =>
+    createOrder(ctx, 'pending_cash', 50, 'customer2'),
+  )
+  await step('negocio: llamada de la cajera si hace falta', async () => {
+    await settle(ctx, o, 'customer2')
+  })
+  await step('negocio: cancel (sin stock) → cancelled, visto por todos', async () => {
+    await transition(
+      ctx,
+      'business',
+      o.id,
+      { action: 'cancel', reasonCode: 'out_of_stock' },
+      'cancelled',
+    )
+    await assertViews(ctx, o.id, 'cancelled', { driverMustSee: false, who: 'customer2' })
+  })
+  await step('un pedido cancelado es terminal: accept da 4xx', async () => {
+    const r = await call(ctx, 'business', 'POST', `/business/orders/${o.id}/transition`, {
+      action: 'accept',
+      prepTimeMinutes: 5,
+    })
+    expect(r.status >= 400 && r.status < 500, `accept sobre cancelled: ${describeHttp(r)}`)
+  })
+  return o.id
+}
+
+async function scenarioCancelaCliente(ctx: Ctx): Promise<string> {
+  console.log('\nEscenario · el cliente cancela dentro de la ventana')
+  const a = await step('cliente3: POST /customer/orders', () =>
+    createOrder(ctx, 'pending_cash', 50, 'customer3'),
+  )
+  await step('cliente3: un segundo pedido en el mismo negocio se bloquea', async () => {
+    let status = 0
+    let text = ''
+    try {
+      await createOrder(ctx, 'pending_cash', 50, 'customer3')
+    } catch (e) {
+      text = e instanceof Error ? e.message : String(e)
+      status = Number(/HTTP (\d+)/.exec(text)?.[1] ?? 0)
+    }
+    // CUS-CAT-018 dice 409 `active_order_block`; el servidor responde 422 `validation_error` con el texto «pedido activo».
+    // Es una discrepancia entre el CA y el código (ver Docs/trabajo/e2e/escenarios.md): aquí se afirma el bloqueo.
+    expect(status === 409 || status === 422, `esperaba 409/422: ${text.slice(0, 200)}`)
+    expect(/pedido activo/i.test(text), `el bloqueo no explica el motivo: ${text.slice(0, 200)}`)
+    console.log(`        el servidor respondió HTTP ${status} (el CA dice 409)`)
+  })
+  await step('cliente3: POST /cancel → cancelled', async () => {
+    const r = await call(ctx, 'customer3', 'POST', `/customer/orders/${a.id}/cancel`)
+    expect(r.status === 200, `cancel: ${describeHttp(r)}`)
+    await assertViews(ctx, a.id, 'cancelled', { driverMustSee: false, who: 'customer3' })
+  })
+  const b = await step('cliente3: pide otro y el negocio lo acepta', () => toPreparing(ctx, 'customer3'))
+  await step('cliente3: ya aceptado, cancelar da 4xx', async () => {
+    const r = await call(ctx, 'customer3', 'POST', `/customer/orders/${b.id}/cancel`)
+    expect(r.status >= 400 && r.status < 500, `cancel tras aceptar: ${describeHttp(r)}`)
+    expect(
+      (await customerView(ctx, b.id, 'customer3')).status === 'preparing',
+      'el pedido cambió de estado',
+    )
+  })
+  await step('negocio: cierra ese pedido para no dejarlo activo', async () => {
+    await transition(ctx, 'business', b.id, { action: 'cancel', reasonCode: 'other' }, 'cancelled')
+  })
+  return a.id
+}
+
+async function scenarioNoShow(ctx: Ctx, serviceKey: string): Promise<string> {
+  console.log('\nEscenario · el motorizado reporta «no se presentó»')
+  const o = await step('cliente2: pedido hasta preparing', () => toPreparing(ctx, 'customer2'))
+  await step('negocio + motorizado: ready → take → arrived → pickup', async () => {
+    await transition(ctx, 'business', o.id, { action: 'ready' }, 'waiting_driver')
+    await transition(ctx, 'driver', o.id, { action: 'take' }, 'heading_to_restaurant')
+    await transition(ctx, 'driver', o.id, { action: 'arrived' }, 'waiting_at_restaurant')
+    await transition(ctx, 'driver', o.id, { action: 'pickup' }, 'picked_up')
+  })
+  await step('motorizado: arrived_customer; antes de 5 min no_show se rechaza', async () => {
+    await transition(
+      ctx,
+      'driver',
+      o.id,
+      { action: 'arrived_customer', lat: DELIVERY.lat, lng: DELIVERY.lng, accuracy_m: 10 },
+      'picked_up',
+    )
+    const early = await call(ctx, 'driver', 'POST', `/driver/orders/${o.id}/transition`, {
+      action: 'no_show',
+      lat: DELIVERY.lat,
+      lng: DELIVERY.lng,
+      accuracy_m: 10,
+    })
+    expect(early.status === 409, `no_show antes de 5 min debía dar 409: ${describeHttp(early)}`)
+  })
+  await step('pasan 5 min (se envejece la llegada) y no_show → cancelled', async () => {
+    const svc = svcHeaders(serviceKey)
+    const p = await http(ctx, 'PATCH', `${ctx.supabase}/rest/v1/orders?id=eq.${o.id}`, {
+      headers: { ...svc, prefer: 'return=minimal' },
+      body: { arrived_at_customer_at: new Date(Date.now() - 10 * 60_000).toISOString() },
+    })
+    expect(p.status < 300, `envejecer la llegada: ${describeHttp(p)}`)
+    await transition(
+      ctx,
+      'driver',
+      o.id,
+      { action: 'no_show', lat: DELIVERY.lat, lng: DELIVERY.lng, accuracy_m: 10 },
+      'cancelled',
+    )
+    await assertViews(ctx, o.id, 'cancelled', { driverMustSee: true, who: 'customer2' })
+  })
+  return o.id
+}
+
+async function scenarioRecojo(ctx: Ctx): Promise<string> {
+  console.log('\nEscenario · recojo en el local')
+  await step('recojo «más tarde» en efectivo se rechaza (va prepagado)', async () => {
+    const r = await http(ctx, 'POST', `${ctx.api}/customer/orders`, {
+      actor: 'customer3',
+      body: {
+        businessId: BUSINESS_ID,
+        deliveryMethod: 'pickup',
+        pickupTiming: 'later',
+        paymentIntent: 'pending_cash',
+        customerName: CUSTOMER_NAME,
+        customerPhone: PHONES.customer3,
+        items: [{ menuItemId: ITEM_MEDIO_ID, quantity: 1 }],
+      },
+      headers: { 'idempotency-key': randomUUID() },
+    })
+    expect(r.status >= 400 && r.status < 500, `debía rechazarse: ${describeHttp(r)}`)
+  })
+  const o = await step('cliente3: POST recojo «ya», prepago', () =>
+    createOrder(ctx, 'prepaid', undefined, 'customer3', {
+      deliveryMethod: 'pickup',
+      pickupTiming: 'now',
+    }),
+  )
+  console.log(`        recojo ${o.shortId} nace en ${o.status}`)
+  await step('negocio: el recojo sin domicilio ni tarifa llega a la cajera', async () => {
+    const b = await businessView(ctx, o.id)
+    expect(Number(b.row.delivery_fee ?? 0) === 0, `delivery_fee ${String(b.row.delivery_fee)}`)
+  })
+  await step('negocio: accept → awaiting_payment', async () => {
+    await transition(
+      ctx,
+      'business',
+      o.id,
+      { action: 'accept', prepTimeMinutes: 2 },
+      'awaiting_payment',
+    )
+  })
+  await step('cliente3: comprobante → validando → la cajera valida → preparing', async () => {
+    const up = await call(ctx, 'customer3', 'POST', `/customer/orders/${o.id}/prepay-proof/upload-url`, {
+      contentType: 'image/png',
+    })
+    expect(up.status === 200 || up.status === 201, `upload-url: ${describeHttp(up)}`)
+    const u = unwrap(up.body)
+    const put = await fetch(String(u.uploadUrl), {
+      method: 'PUT',
+      headers: { 'content-type': 'image/png' },
+      body: PNG_1X1 as unknown as BodyInit,
+    })
+    expect(put.ok, `PUT: HTTP ${put.status}`)
+    const pp = await call(ctx, 'customer3', 'POST', `/customer/orders/${o.id}/prepay-proof`, {
+      path: String(u.path),
+    })
+    expect(pp.status === 200, `prepay-proof: ${describeHttp(pp)}`)
+    const s = await validatePass(ctx, o.id, 2)
+    expect(s === 'preparing', `validate dejó "${s}"`)
+  })
+  await step('negocio: ready → ready_for_pickup → handover (mostrador)', async () => {
+    await transition(ctx, 'business', o.id, { action: 'ready' }, 'ready_for_pickup')
+    await transition(ctx, 'business', o.id, { action: 'handover' }, 'delivered')
+    await assertViews(ctx, o.id, 'delivered', { driverMustSee: false, who: 'customer3' })
+  })
+  return o.id
+}
+
+async function scenarioPrepagoHeic(ctx: Ctx): Promise<string> {
+  console.log('\nEscenario · prepago con comprobante HEIC (foto de iPhone)')
+  // Cabecera ISO-BMFF `ftyp heic`: lo mínimo para que el servidor lo reconozca como HEIC.
+  const HEIC = Buffer.from('0000001866747970686569630000000068656963', 'hex')
+  const o = await step('cliente3: POST prepago y el negocio acepta', async () => {
+    const c = await createOrder(ctx, 'prepaid', undefined, 'customer3')
+    await transition(ctx, 'business', c.id, { action: 'accept', prepTimeMinutes: 2 }, 'awaiting_payment')
+    return c
+  })
+  await step('cliente3: upload-url image/heic + PUT + prepay-proof → validando', async () => {
+    const up = await call(ctx, 'customer3', 'POST', `/customer/orders/${o.id}/prepay-proof/upload-url`, {
+      contentType: 'image/heic',
+    })
+    expect(up.status === 200 || up.status === 201, `upload-url heic: ${describeHttp(up)}`)
+    const u = unwrap(up.body)
+    const put = await fetch(String(u.uploadUrl), {
+      method: 'PUT',
+      headers: { 'content-type': 'image/heic' },
+      body: HEIC as unknown as BodyInit,
+    })
+    expect(put.ok, `PUT heic: HTTP ${put.status} ${redact((await put.text()).slice(0, 200))}`)
+    const pp = await call(ctx, 'customer3', 'POST', `/customer/orders/${o.id}/prepay-proof`, {
+      path: String(u.path),
+    })
+    expect(pp.status === 200, `prepay-proof heic: ${describeHttp(pp)}`)
+    await assertViews(ctx, o.id, 'validando', { driverMustSee: false, who: 'customer3' })
+  })
+  await step('negocio: cancel para no dejarlo activo', async () => {
+    await transition(ctx, 'business', o.id, { action: 'cancel', reasonCode: 'other' }, 'cancelled')
+  })
+  return o.id
+}
+
+async function scenarioMisPedidos(ctx: Ctx, deliveredId: string): Promise<void> {
+  console.log('\nEscenario · Mis pedidos, repetir pedido y reseña')
+  await step('cliente: GET /customer/orders lista el pedido entregado', async () => {
+    const r = await call(ctx, 'customer', 'GET', '/customer/orders')
+    expect(r.status === 200, `lista: ${describeHttp(r)}`)
+    expect(r.text.includes(deliveredId), 'el pedido entregado no aparece en Mis pedidos')
+  })
+  await step('cliente: GET reorder trae la bolsa del pedido', async () => {
+    const r = await call(ctx, 'customer', 'GET', `/customer/orders/${deliveredId}/reorder`)
+    expect(r.status === 200, `reorder: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(d.businessId === BUSINESS_ID, 'reorder de otro negocio')
+    expect(
+      Array.isArray(d.items) && d.items.length === 2,
+      `items del reorder: ${JSON.stringify(d.items)?.slice(0, 120)}`,
+    )
+  })
+  await step('otro cliente no puede repetir un pedido ajeno (404)', async () => {
+    const r = await call(ctx, 'customer2', 'GET', `/customer/orders/${deliveredId}/reorder`)
+    expect(r.status === 404, `esperaba 404: ${describeHttp(r)}`)
+  })
+  let reviewId = deliveredId
+  await step('la reseña aparece pendiente (es UN pedido: el más reciente sin calificar)', async () => {
+    const r = await call(ctx, 'customer', 'GET', '/customer/reviews/pending')
+    expect(r.status === 200, `pending: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(typeof d.orderId === 'string', `sin pedido pendiente: ${r.text.slice(0, 200)}`)
+    reviewId = String(d.orderId)
+    expect(d.businessId === BUSINESS_ID, 'la reseña pendiente es de otro negocio')
+  })
+  await step('POST review 5 estrellas → creada; una segunda falla', async () => {
+    const r = await call(ctx, 'customer', 'POST', `/customer/orders/${reviewId}/review`, {
+      rating: 5,
+      tags: [],
+      comment: 'e2e',
+    })
+    expect(r.status === 201 || r.status === 200, `review: ${describeHttp(r)}`)
+    const again = await call(ctx, 'customer', 'POST', `/customer/orders/${reviewId}/review`, {
+      rating: 4,
+      tags: [],
+    })
+    expect(
+      again.status >= 400 && again.status < 500,
+      `la 2.ª reseña debía fallar: ${describeHttp(again)}`,
+    )
+  })
+}
+
+async function scenarioPrepagoVencido(ctx: Ctx, serviceKey: string): Promise<string> {
+  console.log('\nEscenario · cancelación automática por falta de pago (solo local)')
+  const svc = svcHeaders(serviceKey)
+  const o = await step('cliente2: POST prepago y el negocio acepta', async () => {
+    const c = await createOrder(ctx, 'prepaid', undefined, 'customer2')
+    await transition(ctx, 'business', c.id, { action: 'accept', prepTimeMinutes: 2 }, 'awaiting_payment')
+    return c
+  })
+  await step('se envejece awaiting_payment_at 60 min y corre el barrido (pg_cron)', async () => {
+    const g = await http(
+      ctx,
+      'GET',
+      `${ctx.supabase}/rest/v1/orders?id=eq.${o.id}&select=awaiting_payment_at`,
+      { headers: svc },
+    )
+    const at = (JSON.parse(g.text) as { awaiting_payment_at: string }[])[0]?.awaiting_payment_at
+    expect(at, 'sin awaiting_payment_at')
+    const p = await http(ctx, 'PATCH', `${ctx.supabase}/rest/v1/orders?id=eq.${o.id}`, {
+      headers: { ...svc, prefer: 'return=minimal' },
+      body: { awaiting_payment_at: new Date(Date.parse(at) - 60 * 60_000).toISOString() },
+    })
+    expect(p.status < 300, `envejecer: ${describeHttp(p)}`)
+    const sweep = await http(
+      ctx,
+      'POST',
+      `${ctx.supabase}/rest/v1/rpc/cancel_expired_prepay_orders`,
+      { headers: svc, body: {} },
+    )
+    expect(sweep.status < 300, `barrido: ${describeHttp(sweep)}`)
+  })
+  await step('todos ven cancelled por prepay_timeout y hay OrderExpired en el outbox', async () => {
+    await assertViews(ctx, o.id, 'cancelled', { driverMustSee: false, who: 'customer2' })
+    const r = await http(
+      ctx,
+      'GET',
+      `${ctx.supabase}/rest/v1/orders?id=eq.${o.id}&select=cancel_reason`,
+      { headers: svc },
+    )
+    expect(r.text.includes('prepay_timeout'), `cancel_reason: ${r.text}`)
+    const e = await http(
+      ctx,
+      'GET',
+      `${ctx.supabase}/rest/v1/domain_events?aggregate_id=eq.${o.id}&event_type=eq.OrderExpired&select=event_type`,
+      { headers: svc },
+    )
+    expect(e.text.includes('OrderExpired'), 'sin OrderExpired en el outbox')
+  })
+  return o.id
+}
+
+// Un número distinto en cada corrida: un celular verificado queda asociado a su cuenta (no se reutiliza).
+const FRESH_PHONE = `9${String(Date.now()).slice(-8)}`
+
+/** Cliente nuevo (solo local, con service role): lo que ve la app tras entrar por primera vez. */
+async function createFreshCustomer(ctx: Ctx, serviceKey: string): Promise<{ email: string }> {
+  const email = `fresh-${Date.now()}@e2e.local`
+  const r = await http(ctx, 'POST', `${ctx.supabase}/auth/v1/admin/users`, {
+    headers: svcHeaders(serviceKey),
+    body: { email, password: E2E_PASSWORD, email_confirm: true },
+  })
+  expect(r.status < 300, `crear usuario nuevo: ${describeHttp(r)}`)
+  ctx.tokens.fresh = await login(ctx, email, E2E_PASSWORD)
+  return { email }
+}
+
+/** El cliente nuevo con celular verificado (lo que piden pedir y Entregas); se crea una sola vez por corrida. */
+async function ensureVerifiedFresh(ctx: Ctx, serviceKey: string): Promise<void> {
+  if (ctx.tokens.fresh && freshVerified) return
+  if (!ctx.tokens.fresh) await createFreshCustomer(ctx, serviceKey)
+  const put = await call(ctx, 'fresh', 'PUT', '/customer/profile', { fullName: 'Cliente Nuevo' })
+  expect(put.status === 200, `PUT profile: ${describeHttp(put)}`)
+  const s = await call(ctx, 'fresh', 'POST', '/customer/phone/send-code', { phone: FRESH_PHONE })
+  expect(s.status === 200, `send-code: ${describeHttp(s)}`)
+  const v = await call(ctx, 'fresh', 'POST', '/customer/phone/verify', { phone: FRESH_PHONE, code: '000000' })
+  expect(v.status === 200, `verify: ${describeHttp(v)}`)
+  freshVerified = true
+}
+let freshVerified = false
+
+async function scenarioCelularSms(ctx: Ctx, serviceKey: string): Promise<void> {
+  console.log('\nEscenario · cliente nuevo: acceso con celular por SMS (OTP simulado en local)')
+  await step('cliente nuevo: sin perfil (404), PUT /customer/profile lo crea', async () => {
+    if (!ctx.tokens.fresh) await createFreshCustomer(ctx, serviceKey)
+    const before = await call(ctx, 'fresh', 'GET', '/customer/profile')
+    expect(before.status === 404, `un cliente nuevo no tiene perfil: ${describeHttp(before)}`)
+    const r = await call(ctx, 'fresh', 'PUT', '/customer/profile', { fullName: 'Cliente Nuevo' })
+    expect(r.status === 200, `PUT profile: ${describeHttp(r)}`)
+  })
+  await step('send-code → 200; un código equivocado no verifica', async () => {
+    const s = await call(ctx, 'fresh', 'POST', '/customer/phone/send-code', { phone: FRESH_PHONE })
+    expect(s.status === 200, `send-code: ${describeHttp(s)}`)
+    const bad = await call(ctx, 'fresh', 'POST', '/customer/phone/verify', {
+      phone: FRESH_PHONE,
+      code: '111111',
+    })
+    expect(bad.status >= 400 && bad.status < 500, `código malo aceptado: ${describeHttp(bad)}`)
+  })
+  await step('verify con el código del simulacro (000000) → teléfono verificado', async () => {
+    const v = await call(ctx, 'fresh', 'POST', '/customer/phone/verify', {
+      phone: FRESH_PHONE,
+      code: '000000',
+    })
+    expect(v.status === 200, `verify: ${describeHttp(v)}`)
+    const p = await call(ctx, 'fresh', 'GET', '/customer/profile')
+    expect(p.text.includes(FRESH_PHONE), `el perfil no muestra el celular verificado: ${p.text.slice(0, 200)}`)
+    freshVerified = true
+  })
+}
+
+async function scenarioEntregas(ctx: Ctx, serviceKey: string): Promise<string> {
+  console.log('\nEscenario · Tindivo Entregas de A a B')
+  await step('cliente nuevo con celular verificado', () => ensureVerifiedFresh(ctx, serviceKey))
+  const body = {
+    origin: {
+      contactName: 'Tienda de Rosa',
+      coordinates: { lat: -9.1465, lng: -78.2779 },
+      referenceText: 'Frente a la plaza, puerta verde',
+    },
+    destination: {
+      contactName: 'María Pérez',
+      contactPhone: '900000077',
+      coordinates: { lat: DELIVERY.lat, lng: DELIVERY.lng },
+      referenceText: 'Portón azul, frente al parque',
+    },
+    requesterName: 'Cliente Nuevo',
+    requesterPhone: FRESH_PHONE,
+    itemDescription: 'Una caja pequeña ya pagada',
+    isFragile: false,
+    readyInMin: 0,
+    payer: 'origin',
+    weightConfirmed: true,
+    prepaidConfirmed: true,
+  }
+  const id = await step('cliente nuevo (verificado): POST /customer/courier-orders', async () => {
+    const r = await call(ctx, 'fresh', 'POST', '/customer/courier-orders', body, {
+      'idempotency-key': randomUUID(),
+    })
+    expect(r.status === 201, `courier-orders: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(typeof d.id === 'string', `sin id: ${r.text.slice(0, 200)}`)
+    return String(d.id)
+  })
+  await step('motorizado: la entrega aparece en su lista', async () => {
+    const r = await call(ctx, 'driver', 'GET', '/driver/courier-orders')
+    expect(r.status === 200, `driver courier-orders: ${describeHttp(r)}`)
+    expect(r.text.includes(id), 'la entrega no aparece al motorizado')
+  })
+  for (const [step_, extra] of [
+    ['accept', {}],
+    ['pick_up', { paymentMethod: 'cash' }],
+    ['deliver', {}],
+  ] as const) {
+    await step(`motorizado: ${step_}`, async () => {
+      const r = await call(ctx, 'driver', 'POST', `/driver/courier-orders/${id}/step`, {
+        step: step_,
+        ...extra,
+      })
+      expect(r.status === 200, `${step_}: ${describeHttp(r)}`)
+    })
+  }
+  await step('cliente: Entregas lo muestra entregado en su historial', async () => {
+    const r = await call(ctx, 'fresh', 'GET', '/customer/courier-orders')
+    expect(r.status === 200, `historial: ${describeHttp(r)}`)
+    expect(r.text.includes(id) && r.text.includes('delivered'), `historial: ${r.text.slice(0, 300)}`)
+  })
+  return id
+}
+
+async function scenarioBorrarCuenta(ctx: Ctx, serviceKey: string): Promise<void> {
+  console.log('\nEscenario · borrar la cuenta (Apple 5.1.1(v) / Google)')
+  await step('cliente nuevo con celular verificado', () => ensureVerifiedFresh(ctx, serviceKey))
+  const o = await step('cliente nuevo: pedido en curso (recojo no; delivery efectivo)', async () => {
+    const c = await createOrder(ctx, 'pending_cash', 50, 'fresh', { customerPhone: FRESH_PHONE })
+    return c
+  })
+  await step('DELETE /customer/account con un pedido en curso → 409', async () => {
+    const r = await call(ctx, 'fresh', 'DELETE', '/customer/account')
+    expect(r.status === 409, `esperaba 409: ${describeHttp(r)}`)
+  })
+  await step('el pedido se cancela y la cuenta se borra → 204', async () => {
+    const c = await call(ctx, 'fresh', 'POST', `/customer/orders/${o.id}/cancel`)
+    expect(c.status === 200, `cancel: ${describeHttp(c)}`)
+    const r = await call(ctx, 'fresh', 'DELETE', '/customer/account')
+    expect(r.status === 204, `esperaba 204: ${describeHttp(r)}`)
+  })
+  await step('con el mismo token la cuenta ya no existe (401)', async () => {
+    const r = await call(ctx, 'fresh', 'GET', '/customer/profile')
+    expect(r.status === 401, `esperaba 401: ${describeHttp(r)}`)
+  })
+}
+
+async function scenarioCompatV1(ctx: Ctx): Promise<void> {
+  console.log('\nEscenario · compatibilidad: formas que la app instalada ya conoce (invariante 11)')
+  await step('GET /health y /openapi.json responden', async () => {
+    const h = await http(ctx, 'GET', `${ctx.api}/health`)
+    expect(h.status === 200, `health ${h.status}`)
+    const o = await http(ctx, 'GET', `${ctx.api}/openapi.json`)
+    expect(o.status === 200 && o.text.includes('/customer/orders'), `openapi ${o.status}`)
+  })
+  await step('un POST de pedido sin Idempotency-Key se rechaza con 422 (no se crea nada)', async () => {
+    const r = await http(ctx, 'POST', `${ctx.api}/customer/orders`, {
+      actor: 'customer',
+      body: { businessId: BUSINESS_ID },
+    })
+    expect(r.status === 422 || r.status === 400, `esperaba 4xx de validación: ${describeHttp(r)}`)
+  })
+  await step('los pedidos entregados conservan las claves v1 (id, shortId, status, businessId)', async () => {
+    const list = await call(ctx, 'customer', 'GET', '/customer/orders')
+    expect(list.status === 200, `lista: ${describeHttp(list)}`)
+    for (const k of ['"id"', '"shortId"', '"status"', '"businessId"']) {
+      expect(list.text.includes(k), `la lista de pedidos perdió la clave ${k}`)
+    }
+  })
+}
+
 async function checkEvents(ctx: Ctx, serviceKey: string, id: string, label: string): Promise<void> {
   await step(`domain_events (${label}): ciclo de vida registrado`, async () => {
     const r = await http(
@@ -589,8 +1158,8 @@ async function main(): Promise<void> {
 
   const prep = Number(opt('--prep-minutes') ?? 2)
   const scenario = opt('--scenario') ?? 'all'
-  if (!['contraentrega', 'prepago', 'all'].includes(scenario))
-    return die('--scenario: contraentrega | prepago | all')
+  if (scenario !== 'all' && !SCENARIO_NAMES.includes(scenario))
+    return die(`--scenario: ${SCENARIO_NAMES.join(' | ')} | all`)
 
   const ctx: Ctx = { api, supabase, anonKey, isLocal, tokens: {} }
   console.log('Flujo completo de un pedido · API REST')
@@ -613,17 +1182,110 @@ async function main(): Promise<void> {
       const r = await http(ctx, 'GET', `${api}/health`)
       expect(r.status === 200, `health: ${describeHttp(r)}`)
     })
-    if (scenario === 'contraentrega' || scenario === 'all') {
-      orders.push({ label: 'contraentrega', id: await scenarioContraentrega(ctx, prep) })
+    const serviceKey = process.env.TINDIVO_E2E_SERVICE_KEY ?? apiEnv.SUPABASE_SERVICE_ROLE_KEY
+    if (isLocal) {
+      if (!serviceKey) throw new Error('falta SUPABASE_SERVICE_ROLE_KEY en apps/api/.env.local')
+      secrets.push(serviceKey)
     }
-    if (scenario === 'prepago' || scenario === 'all') {
-      orders.push({ label: 'prepago', id: await scenarioPrepago(ctx, prep) })
+    for (const [actor, email] of [
+      ['customer2', 'cliente2@e2e.local'],
+      ['customer3', 'cliente3@e2e.local'],
+    ] as const) {
+      await step(`login ${actor} (${email})`, async () => {
+        ctx.tokens[actor] = await login(ctx, email, pass(email))
+      })
+    }
+    let deliveredId = ''
+    const want = (n: string): boolean => scenario === 'all' || scenario === n
+    const scenarios: Scenario[] = [
+      {
+        name: 'contraentrega',
+        run: async () => {
+          deliveredId = await scenarioContraentrega(ctx, prep)
+          orders.push({ label: 'contraentrega', id: deliveredId })
+        },
+      },
+      {
+        name: 'prepago',
+        run: async () => {
+          orders.push({ label: 'prepago', id: await scenarioPrepago(ctx, prep) })
+        },
+      },
+      { name: 'rechazo', run: async () => void (await scenarioRechazo(ctx)) },
+      { name: 'cancela-cliente', run: async () => void (await scenarioCancelaCliente(ctx)) },
+      {
+        name: 'no-show',
+        localOnly: true,
+        run: async () => void (await scenarioNoShow(ctx, serviceKey ?? '')),
+      },
+      { name: 'recojo', run: async () => void (await scenarioRecojo(ctx)) },
+      { name: 'prepago-heic', run: async () => void (await scenarioPrepagoHeic(ctx)) },
+      {
+        name: 'mis-pedidos',
+        run: async () => {
+          if (!deliveredId) deliveredId = await scenarioContraentrega(ctx, prep)
+          await scenarioMisPedidos(ctx, deliveredId)
+        },
+      },
+      {
+        name: 'prepago-vencido',
+        localOnly: true,
+        run: async () => void (await scenarioPrepagoVencido(ctx, serviceKey ?? '')),
+      },
+      {
+        name: 'celular-sms',
+        localOnly: true,
+        run: async () => void (await scenarioCelularSms(ctx, serviceKey ?? '')),
+      },
+      {
+        name: 'entregas',
+        localOnly: true,
+        run: async () => void (await scenarioEntregas(ctx, serviceKey ?? '')),
+      },
+      {
+        name: 'borrar-cuenta',
+        localOnly: true,
+        run: async () => void (await scenarioBorrarCuenta(ctx, serviceKey ?? '')),
+      },
+      { name: 'compat-v1', run: async () => void (await scenarioCompatV1(ctx)) },
+    ]
+    for (const sc of scenarios) {
+      if (!want(sc.name)) continue
+      if (sc.localOnly && !isLocal) {
+        console.log(`\nEscenario ${sc.name}: SALTADO (solo corre contra la base local)`)
+        outcomes.push({ name: sc.name, outcome: 'saltado' })
+        continue
+      }
+      for (const who of ['customer', 'customer2', 'customer3'] as const) await releaseActive(ctx, who)
+      const known = KNOWN_DEFECTS[sc.name]
+      const before = results.length
+      try {
+        await sc.run()
+        if (known) {
+          outcomes.push({ name: sc.name, outcome: 'defecto-corregido' })
+          failed = true
+          console.log(`  FALLA  ${sc.name} pasó pero estaba marcado como defecto conocido (${known}): quita la marca`)
+        } else outcomes.push({ name: sc.name, outcome: 'ok' })
+      } catch (err) {
+        if (!(err instanceof StepFailure)) {
+          console.error(`\nError inesperado: ${redact(err instanceof Error ? err.message : String(err))}`)
+        }
+        if (known) {
+          outcomes.push({ name: sc.name, outcome: 'rojo-esperado', note: known })
+          // Los pasos fallidos de un escenario marcado no cuentan como fallo de la suite.
+          for (let i = before; i < results.length; i++) {
+            const r = results[i]
+            if (r && !r.ok) r.expected = true
+          }
+        } else {
+          outcomes.push({ name: sc.name, outcome: 'falla' })
+          failed = true
+        }
+      }
     }
     if (flag('--check-events')) {
-      const serviceKey = process.env.TINDIVO_E2E_SERVICE_KEY ?? apiEnv.SUPABASE_SERVICE_ROLE_KEY
       if (!serviceKey)
         throw new Error('--check-events: falta SUPABASE_SERVICE_ROLE_KEY en apps/api/.env.local')
-      secrets.push(serviceKey)
       for (const o of orders) await checkEvents(ctx, serviceKey, o.id, o.label)
     }
   } catch (err) {
@@ -636,8 +1298,12 @@ async function main(): Promise<void> {
   }
 
   const okCount = results.filter((r) => r.ok).length
+  const expectedRed = results.filter((r) => !r.ok && r.expected).length
+  console.log('\nEscenarios')
+  for (const o of outcomes) console.log(`  ${o.outcome.toUpperCase().padEnd(18)} ${o.name}${o.note ? ` — ${o.note}` : ''}`)
+  const count = (k: Outcome): number => outcomes.filter((o) => o.outcome === k).length
   console.log(
-    `\n${failed ? 'FAIL' : 'PASS'} · ${okCount}/${results.length} pasos · ${((Date.now() - t0) / 1000).toFixed(1)} s`,
+    `\n${failed ? 'FAIL' : 'PASS'} · ${okCount}/${results.length} pasos (${expectedRed} rojos esperados) · escenarios: ${count('ok')} ok, ${count('falla')} fallan, ${count('rojo-esperado')} rojos esperados, ${count('saltado')} saltados · ${((Date.now() - t0) / 1000).toFixed(1)} s`,
   )
   process.exit(failed ? 1 : 0)
 }
