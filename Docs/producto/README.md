@@ -11,10 +11,11 @@
 |---|---|---|---|---|---|---|---|---|
 | [bolsa](bolsa/capacidad.md) | Bolsa | CUS | pedidos-restaurante | — | sí | 1 | 15 | 13 |
 | [direcciones](direcciones/capacidad.md) | Direcciones y mapa | CUS | pedidos-restaurante, entregas | — | no | 2 | 14 | 7 |
+| [notificaciones](notificaciones/capacidad.md) | Notificaciones | CUS | pedidos-restaurante, entregas | — | no | 1 | 6 | 8 |
 
 ## Capacidades por línea de negocio
 
-| Línea | bolsa | direcciones |
-|---|---|---|
-| entregas |  | ● |
-| pedidos-restaurante | ● | ● |
+| Línea | bolsa | direcciones | notificaciones |
+|---|---|---|---|
+| entregas |  | ● | ● |
+| pedidos-restaurante | ● | ● | ● |
