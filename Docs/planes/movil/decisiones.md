@@ -70,7 +70,7 @@
 **Reglas aplicables que no son decisiones del plan** (ya están en los estándares de código v2, ADR 0038, y se citan sin
 número D propio): `DES-6` (el contrato es compatible hacia atrás; `oasdiff` contra la rama base en la CI) y `CLI-14`
 (toda publicación pasa por pruebas internas y sale con liberación gradual o escalonada). Los números `D-54` a `D-64` están
-en uso (secciones de abajo); el siguiente libre es `D-65`.
+en uso (secciones de abajo); el siguiente libre es `D-66`.
 
 ### Decididas el 2026-10-24
 
@@ -123,6 +123,13 @@ aprobación manual: «no quiero trabajo manual de aprobar cambio de número».
 |---|---|---|
 | D-64 | **Al cerrar sesión, la app Android invalida la sesión guardada por dos vías independientes**: borra o vacía el archivo cifrado y destruye la clave del Keystore que lo descifra. **La garantía de que no queda una sesión restaurable vale mientras funcione al menos una de las dos.** Si fallan las dos a la vez y luego ambas se recuperan, la sesión anterior puede volver al reiniciar en ese mismo teléfono. Es un límite aceptado, no un defecto por corregir: exige dos fallos independientes del aparato, y el afectado es su propio dueño. No se añade una tercera vía (opción B). Origen: CAX-004 del PR #111, escalado tras tres rondas de Codex (expediente `tindivo-auditorias/2026-10-26-android-sesion-google`, fuera del repo) | Jesús, 2026-10-29 (opción A) |
 
+### Superficie de la API y sesión en iOS
+
+| # | Decisión | Quién / cuándo |
+|---|---|---|
+| D-21 | **Superficie que consume la app (`ARQ-01`): REST como contrato del dominio**, con las fronteras de `contrato-rest.md` §1 (sustituye a la opción C «mixto mínimo»). Fuente: `contrato-rest.md` §6, fila `D-21` | Jesús, 2026-10-10 (decisión de Jesús, 2026-11-18, conversación con Claude Code: pasa a decidida en este registro) |
+| D-65 | **Auth en iOS como en Android:** REST contra Auth (`token?grant_type=id_token`), sin SDK de Supabase, detrás de `SessionStore`/`AuthBackend` con refresco único. **Apple** con AuthenticationServices (framework del sistema). **Google** con el SDK oficial GoogleSignIn (dependencia aprobada según `SW-16`); si al montarlo no admite un nonce propio, se pasa al flujo web con `ASWebAuthenticationSession`. El alta con Apple necesita una migración que admita el proveedor `apple` en el hook `before_user_created`, que firma Codex | Jesús, 2026-11-18 (decisión de Jesús, 2026-11-18, conversación con Claude Code) |
+
 ## 2. Decisiones abiertas — organización y plazos externos
 
 | # | Decisión | Opciones | Recomendación | Bloquea |
@@ -136,7 +143,6 @@ aprobación manual: «no quiero trabajo manual de aprobar cambio de número».
 | # | Decisión | Opciones | Recomendación | Depende / bloquea |
 |---|---|---|---|---|
 | D-20 | **Dónde vive el dominio** (`ARQ-04`). | A: base de datos (lo actual, ordenado: esquema declarativo, una función por acción, tests en CI). B: TypeScript con RPC finas. | **A, y no ahora**: conserva lo probado y es higiene de la Ola 2, no un bloqueador. | `ARQ-04` |
-| D-21 | **Superficie que consume la app** (`ARQ-01`). | A: Supabase directo (SDK de Swift/Kotlin). B: fachada REST completa (`03-superficie-api.md §4`). **C: mixto mínimo.** | **C**: lecturas simples y tiempo real directos con RLS; **escrituras con reglas** por REST/RPC **versionadas**; más `GET /config`. Ver §3.1 | Bloquea el primer *build* de Customer |
 | D-24 | **Consentimiento y marketing** (`NAT-CON`). | Texto, categorías, edad mínima, horas de silencio, frecuencia máxima. | Empezar por `order_updates` (no comercial) y añadir `promotions` tras M1; texto estándar y revisión más adelante (`D-04`). | `NAT-MKT-001` |
 | D-28 | **Sistema de diseño en nativo** (`MOB-21`). | Iconos: Material Symbols en ambas · SF Symbols en iOS + Material en Android. Modo oscuro sí/no. | Exportar los **tokens** (color, radio, tipografía Geist/JetBrains Mono) como JSON; SF Symbols en iOS; modo oscuro **fuera de M1**. | Diseño de M1 |
 | D-33 | **Canal del pedido nativo** (`ARQ-08`). | Renombrar `customer_pwa` · conservarlo y añadir `client_platform` (`ios`/`android`/`web`). | **Conservar y añadir columnas**; generalizar los CHECK con un predicado. | Antes del primer *build* |
@@ -226,6 +232,4 @@ de la tienda.
 1. **`D-10`**: modelo, año y versión de macOS de tu Mac.
 2. **`D-11`**: crear hoy la cuenta de **Google Play** y la de **Apple**, y reunir 15-20 testers (`05-arranque/01`).
 3. **`D-37`**: ¿subes Supabase y Vercel a Pro antes del lanzamiento público?
-4. **`D-21`**: ¿aprobamos la **versión mínima** del contrato (§3.1)?
-5. **`D-35`**: ¿confirmas Negocios Android primero y Customer después?
-6. **`D-36`**: ¿publicas como persona natural por ahora?
+4. **`D-36`**: ¿publicas como persona natural por ahora?
