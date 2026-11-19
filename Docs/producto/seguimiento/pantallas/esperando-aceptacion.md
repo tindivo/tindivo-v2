@@ -25,7 +25,7 @@ Es el primer estado del seguimiento: no hay pantalla intermedia entre el checkou
 1. Barra superior: volver · «Pedido #TDV-K7M3PQ2A» · «Actualizar estado». El tablero no lleva el prefijo; manda la decisión 15 (CUS-ORD-007).
 2. Ilustración del negocio recibiendo el pedido (etiqueta accesible «Ilustración: el negocio recibe tu pedido»).
 3. Progreso en cuatro etapas, con la primera activa: «Paso 1 de 4: Recibido, Preparando, En camino, Entregado» (CUS-TRK-002).
-4. Estado: «Esperando al negocio» y «Responde en hasta» el plazo de aceptación completo en minutos (CA-TRK-06), y aparte la cuenta atrás de lo que queda, que cuenta desde `pendingAcceptanceAt` (CUS-TRK-005; DA-25).
+4. Estado: «Esperando al negocio» y «Responde en hasta» el plazo de aceptación completo en minutos (CA-TRK-06), y aparte la cuenta atrás de lo que queda en `m:ss`, sin texto propio, que cuenta desde `pendingAcceptanceAt` (CUS-TRK-005; DA-25).
 5. Resumen corto: nombre del negocio · número de productos y total · «Ver resumen del pedido».
 6. Acciones de texto: «Cancelar pedido» y «Ayuda con este pedido», con ícono.
 
