@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.orders
 
+import java.time.Instant
 import java.util.UUID
 
 /** Lo que dice el título grande de un pedido en curso o entregado (textos literales de la web). */
@@ -137,14 +138,12 @@ internal data class CashPaymentUi(
 )
 
 /**
- * El motorizado. [name] solo llega cuando ya es asunto del cliente; [atDoor] es que llegó a la puerta y el pedido no
- * se ha entregado, y solo entonces puede haber [whatsappLink]. El teléfono no se guarda ni se muestra nunca como texto.
- * Su `toString` no lleva el nombre ni el enlace (que trae el celular): el detalle del pedido que lo contiene tampoco.
+ * El motorizado: solo su nombre completo y si llegó a la puerta con el pedido sin entregar (CUS-TRK-021). El cliente no
+ * recibe ni usa su teléfono, su WhatsApp ni su placa. Su `toString` no lleva el nombre: el detalle que lo contiene tampoco.
  */
 internal data class DriverUi(
-    val name: String?,
+    val name: String,
     val atDoor: Boolean,
-    val whatsappLink: String?,
 ) {
     override fun toString(): String = "DriverUi(atDoor=$atDoor)"
 }
@@ -175,6 +174,12 @@ internal data class OrderDetailUi(
     val awaitingPrepayment: Boolean = false,
     /** Si el detalle ofrece cancelar y con qué aviso ([cancelOfferOf]). */
     val cancel: CancelOffer = CancelOffer.None,
+    /** El `status` tal cual, para los relojes y el tiempo estimado. */
+    val status: String = "",
+    /** Desde cuándo espera al negocio (`pendingAcceptanceAt`); `null` si el servidor no lo manda. */
+    val pendingAcceptanceAt: Instant? = null,
+    val estimatedReadyAt: Instant? = null,
+    val travel: TravelRange? = null,
 )
 
 /**

@@ -232,7 +232,6 @@ private fun EmptyOrders(onExplore: () -> Unit) {
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.semantics { heading() },
         )
-        Text(text = stringResource(R.string.orders_empty_body), style = MaterialTheme.typography.bodyLarge)
         Button(
             onClick = onExplore,
             modifier = Modifier.heightIn(min = 48.dp),

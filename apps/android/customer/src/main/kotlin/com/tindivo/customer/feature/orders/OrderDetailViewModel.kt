@@ -120,6 +120,14 @@ internal class OrderDetailViewModel
             viewModelScope.launch { sessionStore.state.collect { if (watch.ended(it)) invalidate() } }
         }
 
+        /**
+         * «Entrar con otra cuenta» desde un pedido ajeno (CUS-TRK-023): cierra la sesión de esta cuenta. Lo leído se
+         * olvida solo, porque el cierre pasa por [SessionWatch].
+         */
+        fun switchAccount() {
+            viewModelScope.launch { withContext(NonCancellable) { sessionStore.signOut() } }
+        }
+
         /** Vuelve a consultar desde cero (después de un error sin datos). */
         fun retry() {
             restart.value++
