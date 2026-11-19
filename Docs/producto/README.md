@@ -9,12 +9,14 @@
 
 | Capacidad | Nombre | Actores | Líneas | Depende de | Dinero | Pantallas | Requisitos | Criterios |
 |---|---|---|---|---|---|---|---|---|
+| [acceso](acceso/capacidad.md) | Acceso, términos y celular | CUS | pedidos-restaurante, entregas | — | no | 3 | 24 | 21 |
 | [bolsa](bolsa/capacidad.md) | Bolsa | CUS | pedidos-restaurante | — | sí | 1 | 15 | 13 |
+| [cuenta](cuenta/capacidad.md) | Cuenta y borrado de cuenta | CUS | pedidos-restaurante, entregas | acceso, direcciones | no | 1 | 12 | 10 |
 | [direcciones](direcciones/capacidad.md) | Direcciones y mapa | CUS | pedidos-restaurante, entregas | — | no | 2 | 14 | 7 |
 
 ## Capacidades por línea de negocio
 
-| Línea | bolsa | direcciones |
-|---|---|---|
-| entregas |  | ● |
-| pedidos-restaurante | ● | ● |
+| Línea | acceso | bolsa | cuenta | direcciones |
+|---|---|---|---|---|
+| entregas | ● |  | ● | ● |
+| pedidos-restaurante | ● | ● | ● | ● |
