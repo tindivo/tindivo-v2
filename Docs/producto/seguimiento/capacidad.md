@@ -102,6 +102,7 @@ Los criterios CA-TRK-01 y CA-TRK-02 vienen de la web y se conservan; CA-TRK-03 a
 | 7 | CUS-TRK-010, CUS-TRK-012 | Android no avisa al cambiar el estado ni mantiene la pantalla encendida. | `feature/orders/` |
 | 8 | CUS-TRK-005 | La cuenta atrás de verificación no sale: `getPublicConfig` no trae su plazo; solo están los de aceptación y pago. | `packages/contracts/src/openapi/public-responses.ts` |
 | 9 | CUS-TRK-022 | El canon de antifraude dice que el motorizado reporta a los 5 minutos de espera y que hay falta al instante; la decisión del 2026-11-17 dice que se va y que la falta nace de noche con confirmación de Jesús (decisión para Jesús 8). No se comprobó que el admin tenga hoy esa pantalla de confirmar o anular. | `Docs/negocio/antifraude.md` · `apps/admin/app/incidentes/page.tsx` |
+| 10 | CUS-TRK-008 | La ruta pública `public/orders/{shortId}` manda `paysWith`, `changeToGive`, `amount`, `deliveryFee` y `total` como número JSON y no como cadena decimal (API-8). Es previo a este cambio y no se cambia: es el contrato v1 de las apps ya instaladas. | `packages/contracts/src/openapi/public-responses.ts` |
 
 ## Abierto
 
