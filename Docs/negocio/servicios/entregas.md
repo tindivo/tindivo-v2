@@ -64,11 +64,9 @@ de S/ 200, son un **borrador sin revisión legal**.
 
 ## Cómo se pide
 
-Aprobado por Jesús el 2026-10-07: **una sola entrada** (la tarjeta del inicio y `tindivo.com/entregas` abren lo mismo),
-el **mapa del punto A primero**, y los atajos dentro del mapa: **repetir una entrega** (hasta 3 anteriores), **buscar un
-lugar** por su nombre (negocios primero, luego referencias públicas) y, en el punto B, **«Usar mi dirección»**. «Listo
-y pagado» se vuelve a marcar en cada envío. Recoger de un negocio del directorio llega cuando haya negocios cargados con
-su contacto.
+Lo que hace la app del cliente al pedir (la entrada única, el mapa del punto A, los atajos, las confirmaciones y el
+seguimiento) vive en `Docs/producto/entregas/` (aprobado por Jesús el 2026-10-07). Aquí queda la regla: «listo y
+pagado» se vuelve a marcar en cada envío.
 
 ## El motorizado
 
