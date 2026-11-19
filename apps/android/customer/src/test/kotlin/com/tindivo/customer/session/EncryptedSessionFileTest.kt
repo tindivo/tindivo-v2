@@ -144,6 +144,19 @@ class EncryptedSessionFileTest {
     }
 
     @Test
+    fun `CA-TRK-09 al anotar el cierre pendiente tambien se intenta destruir la clave por su alias`() {
+        val file = java.io.File(folder.root, "sesion.bin")
+        var destroyed = 0
+        val store = EncryptedSessionFile(file, newAead(), SessionKeys { destroyed++ })
+        store.write(session)
+
+        store.markClosePending()
+
+        assertEquals(1, destroyed)
+        assertTrue(store.closePending())
+    }
+
+    @Test
     fun `CA-TRK-09 borrar la sesion guardada quita la nota de cierre pendiente`() {
         val file = java.io.File(folder.root, "sesion.bin")
         val store = EncryptedSessionFile(file, newAead(), NoKeys)

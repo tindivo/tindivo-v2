@@ -238,9 +238,11 @@ internal class SupabaseSessionStore(
     // reintenta; `EncryptedSessionFile.delete` ya vacía el archivo y destruye las claves, así que solo si ni eso
     // pudo, el error de disco es el riesgo residual.
     // Devuelve `true` solo si lo guardado quedó borrado. Si se agotan los intentos, no hay sesión en memoria (nadie
-    // recibe un token) pero tampoco se declara éxito: se deja una nota APARTE del archivo cifrado (si el disco falla al
-    // borrarlo, una nota de cero bytes es lo que aún puede escribirse) y [closePending] sube. Con la nota puesta, el
-    // próximo arranque no restaura nada y vuelve a intentar borrar; «Reintentar» hace lo mismo sin reiniciar.
+    // recibe un token) pero tampoco se declara éxito: [closePending] sube y se intenta dejar una nota APARTE del archivo
+    // cifrado (y destruir la clave por su alias). La nota es la segunda barrera, no una garantía: con ella puesta, el
+    // próximo arranque no restaura nada y vuelve a intentar borrar; «Reintentar» hace lo mismo sin reiniciar. Queda un
+    // riesgo residual cuando fallan TODOS a la vez (borrado, vaciado, destrucción de la clave y escritura de la nota):
+    // entonces el próximo arranque restauraría la cuenta anterior. [localClearFailures] cuenta esos fallos.
     private suspend fun drop(): Boolean {
         current = null
         generation.incrementAndGet()

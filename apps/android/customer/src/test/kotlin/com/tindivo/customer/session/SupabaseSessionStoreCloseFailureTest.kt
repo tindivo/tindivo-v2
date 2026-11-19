@@ -43,6 +43,7 @@ class SupabaseSessionStoreCloseFailureTest {
     private class FlakyFile : SessionFile {
         var plain: String? = null
         var failDelete = false
+        var failMark = false
         var pending = false
 
         override fun read(): String? = plain
@@ -59,6 +60,7 @@ class SupabaseSessionStoreCloseFailureTest {
         }
 
         override fun markClosePending() {
+            if (failMark) throw IOException("disco")
             pending = true
         }
 
@@ -138,6 +140,28 @@ class SupabaseSessionStoreCloseFailureTest {
             assertNull("la cuenta A no se restaura", second.accessToken())
             assertEquals(SessionState.SignedOut, second.state.value)
             assertTrue(second.closePending.value)
+        }
+
+    @Test
+    fun `CA-TRK-09 si tampoco se puede escribir la nota no hay exito, el aviso sigue y se cuentan los fallos`() =
+        runTest {
+            val file = FlakyFile()
+            signedInAsA(file)
+            val first = store(file)
+            first.accessToken()
+            server.enqueue(failedRevocation())
+            file.failDelete = true
+            file.failMark = true
+
+            val closed = first.signOutIf("user-a")
+            advanceUntilIdle()
+
+            assertFalse(closed)
+            assertTrue(first.closePending.value)
+            assertEquals(SessionState.SignedOut, first.state.value)
+            assertNull(first.accessToken())
+            // Tres borrados y la nota: cuatro fallos, sin datos de la cuenta.
+            assertEquals(4, first.localClearFailures)
         }
 
     @Test

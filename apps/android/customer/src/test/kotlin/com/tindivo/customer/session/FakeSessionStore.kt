@@ -23,6 +23,17 @@ class FakeSessionStore(
     val signInCalls = mutableListOf<Pair<String, String>>()
     var signOutCalls = 0
 
+    private val mutableClosePending = MutableStateFlow(false)
+    override val closePending: StateFlow<Boolean> = mutableClosePending.asStateFlow()
+
+    /** Con `true`, [signOutLocally] no logra borrar lo guardado: devuelve `false` y [closePending] sube. */
+    var localCloseFails = false
+
+    /** Lo que haría un reintento exitoso, o un arranque que por fin borra lo pendiente. */
+    fun clearPending() {
+        mutableClosePending.value = false
+    }
+
     /** La cuenta con la que entra [signInWithGoogle]. */
     var signInUserId = "user-1"
 
@@ -87,6 +98,10 @@ class FakeSessionStore(
         beforeSignOutLocally()
         val mine = (mutableState.value as? SessionState.SignedIn)?.userId == accountId
         if (mine) mutableState.value = SessionState.SignedOut
+        if (mine && localCloseFails) {
+            mutableClosePending.value = true
+            return false
+        }
         return mine
     }
 }

@@ -67,8 +67,25 @@ class EncryptedSessionFile(
     // escribir una nota de cero bytes pero no borrar el archivo, esa nota es lo que evita restaurar la sesión.
     private val closeMarker = File(file.parentFile, "${file.name}.closing")
 
+    // Segunda barrera, no una garantía: se escribe la nota y, escriba o no, se intenta destruir la clave por su alias
+    // (sin tocar el archivo): sin clave, lo guardado no se descifra. Si falla también esto (más el borrado y el
+    // vaciado de antes), queda un riesgo residual: nadie puede garantizar nada con un disco que no responde.
     override fun markClosePending() {
-        closeMarker.writeBytes(ByteArray(0))
+        val noteFailure =
+            try {
+                closeMarker.writeBytes(ByteArray(0))
+                null
+            } catch (e: IOException) {
+                e
+            }
+        try {
+            keys.destroy()
+        } catch (_: IOException) {
+            // Se decide con lo de arriba: si la nota tampoco se escribió, se avisa.
+        } catch (_: GeneralSecurityException) {
+            // Igual.
+        }
+        if (noteFailure != null) throw noteFailure
     }
 
     override fun closePending(): Boolean = closeMarker.exists()
@@ -79,8 +96,9 @@ class EncryptedSessionFile(
         val temp = File(file.parentFile, "${file.name}.tmp")
         temp.writeBytes(encrypted)
         Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        // La sesión nueva reemplazó a la que quedó pendiente de cerrar: ya no hay nada que esa nota proteja.
-        closeMarker.delete()
+        // La sesión nueva reemplazó a la que quedó pendiente de cerrar: ya no hay nada que esa nota proteja. Si la
+        // nota no se puede quitar el fallo sube: no se da por buena una entrada que el próximo arranque descartaría.
+        Files.deleteIfExists(closeMarker.toPath())
     }
 
     override fun delete() {
@@ -103,7 +121,8 @@ class EncryptedSessionFile(
                 false
             }
         if (fileFailure != null && !keysDestroyed) throw IOException("no se pudo invalidar la sesión guardada")
-        closeMarker.delete()
+        // Si la nota no se puede quitar, el fallo sube: la memoria y el disco no se desincronizan.
+        Files.deleteIfExists(closeMarker.toPath())
     }
 
     // Si no se puede borrar, se vacía: un archivo de 0 bytes no se restaura y vale como sin sesión. Si ni eso, se avisa.
