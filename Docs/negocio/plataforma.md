@@ -1,6 +1,6 @@
 # Plataforma: qué es Tindivo, quién participa, dónde y cuándo
 
-> Verificado: 2026-11-18 (principio 1 y fila de Store) y 2026-10-10 (el resto) · entorno: `tindivo-prod` (solo lectura) + `develop@7d00aa4` · Nombres: `Docs/glosario.md`
+> Verificado: 2026-11-19 (principio 1) y 2026-11-18 (fila de Store) y 2026-10-10 (el resto) · entorno: `tindivo-prod` (solo lectura) + `develop@7d00aa4` · Nombres: `Docs/glosario.md`
 
 ## Qué es
 
@@ -55,9 +55,7 @@ Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 003
    se eliminó en la `0123`. **Una excepción, autorizada por Jesús:** cuando una apelación se aprueba (el negocio
    rechazó por error un comprobante de prepago), Jesús le devuelve el dinero al cliente y lo carga a la deuda del
    negocio (`register_appeal_refund` → `refund_charge`). Es la única forma en que Tindivo pone dinero en el medio:
-   adelanta y recupera, nunca guarda el del cliente (ADR 0036). **Excepción explícita en Tindivo Entregas** (decisión de
-   Jesús, 2026-11-18, conversación con Claude Code): el motorizado entrega a Tindivo su comisión por entrega (S/ 3,
-   `courier.pricing.basePrice`); es **tarifa de Tindivo**, no dinero del cliente retenido (`Docs/negocio/servicios/entregas.md`).
+   adelanta y recupera, nunca guarda el del cliente (ADR 0036). **Excepción explícita:** En Tindivo Entregas, el motorizado le rinde a Tindivo la comisión de Tindivo por la entrega ("Transporte de Entregas" en `Docs/negocio/dinero.md`): es tarifa de Tindivo, no dinero del cliente. Aprobado por Jesús el 2026-11-19, conversación con Claude Code (invariante 9). Ver `Docs/negocio/servicios/entregas.md`.
 2. **El antifraude es humano.** Ante un cliente nuevo o con strikes que paga contraentrega, **la cajera lo llama**
    antes de cocinar (`validando`). La llamada es antifraude, no un canal para avisarle del estado del pedido.
 3. **Se cobra solo lo entregado.** Un pedido cancelado no genera comisión ni deuda.
