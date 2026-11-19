@@ -4,7 +4,7 @@ import java.time.Instant
 import java.time.ZoneId
 
 /** Una fila de `business_schedule` tal como la manda la carta: `dayOfWeek` 0 = lunes … 6 = domingo. */
-internal data class ScheduleDayUi(
+data class ScheduleDayUi(
     val dayOfWeek: Int,
     val isOpen: Boolean,
     val shift1Start: String?,
