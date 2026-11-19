@@ -78,6 +78,20 @@ describe('render', () => {
   })
 })
 
+describe('valores resueltos por el implementador, pendientes de Jesús', () => {
+  it('body, secondaryHeight y chip llevan "pending" con su motivo', () => {
+    const pending = [
+      ...Object.entries(tokens.type),
+      ...Object.entries(tokens.spacing),
+      ...Object.entries(tokens.color),
+      ...Object.entries(tokens.radius),
+    ]
+      .filter(([, v]) => 'pending' in v && v.pending)
+      .map(([k]) => k)
+    expect(pending.sort()).toEqual(['body', 'chip', 'secondaryHeight'])
+  })
+})
+
 describe('parseTokens (rechaza lo malformado)', () => {
   const clone = () => structuredClone(JSON.parse(readFileSync(`${ROOT}tokens.json`, 'utf8')))
 
@@ -97,6 +111,17 @@ describe('parseTokens (rechaza lo malformado)', () => {
     const bad = clone()
     bad.color.scrim.alpha = 2
     expect(() => parseTokens(bad)).toThrow(/color.scrim/)
+  })
+
+  it('tolera "pending" (texto) y lo rechaza si no es texto o está vacío', () => {
+    const ok = clone()
+    ok.type.body.pending = 'motivo'
+    expect(parseTokens(ok).type.body.pending).toBe('motivo')
+    for (const bad of [5, '']) {
+      const t = clone()
+      t.spacing.secondaryHeight.pending = bad
+      expect(() => parseTokens(t)).toThrow(/spacing.secondaryHeight/)
+    }
   })
 
   it('un peso fuera de 400-700', () => {

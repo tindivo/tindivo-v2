@@ -7,14 +7,18 @@ import { fileURLToPath } from 'node:url'
 
 export interface ColorToken {
   value: string
+  /** Valor resuelto por quien escribió el JSON; espera confirmación de Jesús. */
+  pending?: string
   /** 0 a 1; si falta, opaco. */
   alpha?: number
 }
 export interface NumberToken {
   value: number
+  pending?: string
 }
 export interface TypeToken {
   size: number
+  pending?: string
   /** Si falta, el canon no fija interlínea. */
   line?: number
   weight: 400 | 500 | 600 | 700
@@ -66,7 +70,11 @@ function group<T>(
     if (seen.has(key)) fail(path, 'el nombre ya existe en otro grupo (los nombres son únicos)')
     seen.add(key)
     if (typeof v !== 'object' || v === null) fail(path, 'debe ser un objeto')
-    check(path, v as Record<string, unknown>)
+    const meta = v as Record<string, unknown>
+    if (meta.pending !== undefined && (typeof meta.pending !== 'string' || meta.pending === '')) {
+      fail(path, 'pending debe ser un texto con el motivo')
+    }
+    check(path, meta)
   }
   return raw as Record<string, T>
 }

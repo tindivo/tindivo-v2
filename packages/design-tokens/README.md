@@ -1,17 +1,18 @@
 # @tindivo/design-tokens
 
-Los valores salen de `Docs/negocio/sistema-de-diseno.md` (canon; decisión de Jesús, 2026-11-18); `tokens.json` los lleva a datos con los mismos nombres. De ahí salen tres archivos versionados en `generated/`. Nadie
-los edita a mano.
+Los valores son los del canon `Docs/negocio/sistema-de-diseno.md` (decisión de Jesús, 2026-11-18), **no los de Android**. `tokens.json` se escribe a mano a partir de ese documento, con los mismos nombres, y un test (`canon-parity.test.ts`) compara el JSON con las tablas de §2 a §5. De ahí salen tres archivos versionados en `generated/`. Nadie los edita a mano.
 
 | Plataforma | Salida | Qué contiene |
 |---|---|---|
 | Web | `generated/css/tokens.css` | Variables `--tindivo-*` en `:root` (no pisan las de `packages/ui/src/theme.css`) |
-| Android | `generated/kotlin/TindivoTokens.kt` | `TindivoTokens.{Colors,Radius,Spacing,Typography}` con `Color`, `Dp` y `TextUnit` de Compose |
-| iOS | `generated/swift/TindivoTokens.swift` | `TindivoTokens.{Colors,Radius,Spacing,Typography}` con `Color` y `CGFloat` de SwiftUI, todo `public` |
+| Android | `generated/kotlin/TindivoTokens.kt` | `TindivoTokens.{Colors,Radius,Spacing,Typography,Elevation}` con `Color`, `Dp`, `TextUnit` y capas de sombra de Compose |
+| iOS | `generated/swift/TindivoTokens.swift` | `TindivoTokens.{Colors,Radius,Spacing,Typography,Elevation}` con `Color`, `CGFloat` y capas de sombra de SwiftUI, todo `public` |
 
-Hoy hay **22 colores, 5 radios, 8 espaciados y 15 estilos de texto**, más la familia (Geist). Los valores son los de
-`apps/android/core/designsystem` a 2026-11-18: Android es la app en producción, y un test
-(`src/__tests__/android-parity.test.ts`) falla si el JSON y ese módulo se separan.
+Hoy hay **32 colores** (incluye `scrim` al 48 % y el degradado del CTA como `gradientCtaStart/Mid/End`), **5 radios, 10 espaciados y tamaños táctiles, 6 estilos de texto y 3 elevaciones**, más la familia (Geist). Los nombres son los del canon y únicos entre grupos.
+
+**Valores pendientes de Jesús** (campo `"pending"` en `tokens.json`, listados en el canon): `body` (el canon da 400–500; se tomó 400), `secondaryHeight` (48–52; se tomó 48) y `chip` (el canon no fija interlineado; sale como `normal`, `nil` o `TextUnit.Unspecified`).
+
+**Android hoy no cumple el canon.** `src/__tests__/android-parity.test.ts` compara cada token con `apps/android/core/designsystem` y exige que las diferencias sean exactamente las de su lista `KNOWN_DIFFS` (token · canon · Android hoy), más `KNOWN_ANDROID_ONLY` (lo que Android tiene y el canon no nombra). La lista no puede crecer a escondidas ni quedar vieja: se borra una fila cuando Android se alinea, en su PR de diseño.
 
 ## Comandos
 
@@ -21,7 +22,9 @@ pnpm tokens:check   # falla (exit 1) si lo versionado no es lo que saldría del 
 pnpm --filter @tindivo/design-tokens test
 ```
 
-El generador es una función pura (`src/generate.ts`), sin dependencias; Node la ejecuta directamente.
+El generador es una función pura (`src/generate.ts`), sin dependencias. Node lo ejecuta directamente (`node src/cli.ts`), lo que exige **Node >= 22.18** (`engines` del paquete; la CI usa 24; el `engines` de la raíz sigue en 20.9 porque lo demás del repo no lo necesita).
+
+El `test` de este paquete lee archivos de fuera de él (`apps/android/core/designsystem/**` y el canon), así que `turbo.json` del paquete los declara como `inputs`: si cambia `TindivoColors.kt`, turbo no da cache hit.
 
 ## Cómo cambiar un token
 

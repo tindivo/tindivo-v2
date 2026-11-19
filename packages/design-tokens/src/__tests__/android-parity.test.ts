@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { parseAndroidPalette } from '../android-colors.ts'
 import { loadTokens } from '../generate.ts'
 
 /**
@@ -89,12 +90,10 @@ function androidValues() {
   const colors = read('TindivoColors.kt')
   const theme = read('TindivoTheme.kt')
   const type = read('TindivoType.kt')
-  const palette: Record<string, string> = { White: '#FFFFFF' }
-  for (const m of colors.matchAll(/val (\w+) = Color\(color = 0xFF([0-9A-F]{6})\)/g)) {
-    palette[m[1] as string] = `#${m[2]}`
+  const palette: Record<string, string> = {
+    White: '#FFFFFF',
+    ...parseAndroidPalette(colors.replace('inversePrimary =', 'val inversePrimary =')),
   }
-  const inverse = /inversePrimary = Color\(color = 0xFF([0-9A-F]{6})\)/.exec(colors)
-  palette.inversePrimary = `#${inverse?.[1]}`
   const shapes: Record<string, string> = {}
   for (const m of theme.matchAll(/(\w+) = RoundedCornerShape\((\d+)\.dp\)/g)) {
     shapes[m[1] as string] = String(m[2])
