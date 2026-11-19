@@ -1,8 +1,8 @@
 # Estándares · Swift (app de clientes para iOS)
 
-> Verificado: 2026-11-18 (ruta futura de iOS) y 2026-10-12 (el resto) · entorno: `develop@591ec569` · Parte de `Docs/arquitectura/estandares/` (niveles y excepciones: `README.md`)
+> Verificado: 2026-11-18 (ruta de iOS: `apps/ios/`) y 2026-10-12 (el resto) · entorno: `develop@591ec569` · Parte de `Docs/arquitectura/estandares/` (niveles y excepciones: `README.md`)
 
-Aplica a `apps/customer-ios/` (por crear: iOS aún no tiene carpeta). Las reglas comunes a iOS y Android (CLI) y las transversales están en `README.md`. Plan del producto: `Docs/planes/movil/`.
+Aplica a `apps/ios/` (por crear: iOS aún no tiene carpeta). Las reglas comunes a iOS y Android (CLI) y las transversales están en `README.md`. Plan del producto: `Docs/planes/movil/`.
 
 ## Reglas
 
@@ -28,7 +28,7 @@ Aplica a `apps/customer-ios/` (por crear: iOS aún no tiene carpeta). Las reglas
 ## Estructura
 
 ```
-apps/customer-ios/   (por crear)
+apps/ios/   (por crear)
 ├── AGENTS.md
 ├── TindivoCustomer.xcodeproj
 ├── TindivoCustomer/
