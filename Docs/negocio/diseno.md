@@ -1,6 +1,6 @@
 # Diseño: la marca y cómo se ve Tindivo
 
-> Verificado: 2026-10-10 · entorno: `develop` (`packages/ui/src/theme.css`, `apps/customer`) · Decisiones de Jesús del
+> Verificado: 2026-11-18 (regla de Entregas) y 2026-10-10 (el resto) · entorno: `develop` (`packages/ui/src/theme.css`, `apps/customer`) · Decisiones de Jesús del
 > 19 y 20 de septiembre de 2026 · Reglas técnicas del tema: `DECISIONS.md §16`, `§21`, `§27`
 
 ## La marca
@@ -22,16 +22,12 @@
 - **Precio de Entregas: «Desde S/ 3»** en tarjetas y botones; el importe exacto solo con el pedido hecho.
 - La vara de calidad es **«nivel inDrive», primero el celular**. Lo mejorable que se vea por el camino se anota para la
   siguiente iteración en `Docs/trabajo/entregas-ux/iteraciones-ux-pin.md`.
+- **Entregas va sin azul, con un solo color de marca**, tampoco en la moto (decidido por Jesús el 2026-09-20 y ratificado el
+  2026-11-18, conversación con Claude Code). Hoy el código aún pinta Entregas de azul (`apps/customer/features/courier/components/courier-home.tsx`
+  y la app del motorizado): es una desviación por corregir en un cambio de código aparte, no una excepción.
 
 ## Componentes
 
 - Botones en píldora (`rounded-full`), blanco sobre naranja, extra-negrita; los del sistema de diseño de `packages/ui`,
   que la CI vigila (`pnpm check:ds`).
 - En `apps/negocios` y `apps/motorizados`, solo los iconos del subset cerrado (`apps/negocios/AGENTS.md`).
-
-## Pendientes
-
-- **¿Entregas lleva azul o no?** El 2026-09-20 Jesús decidió «sin azul, tampoco en la moto» (un solo color de marca).
-  El código construido después pinta Entregas de azul en la tarjeta del inicio
-  (`apps/customer/features/courier/components/courier-home.tsx`) y en la app del motorizado, para distinguirlo de la
-  comida. Hasta que Jesús diga cuál vale, no se cambia ninguno de los dos.
