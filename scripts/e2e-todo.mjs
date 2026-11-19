@@ -8,6 +8,7 @@
  *
  * Levanta la API en :3001 si no responde y la apaga al terminar. Si el candado de la base está ocupado, se niega
  * (código 75): no lo fuerza. La salida es la de cada comando, tal cual; el código de salida es el del primero que falle.
+ * Sin `--reset`, cada corrida suma clientes nuevos y pedidos entregados; los escenarios no dependen de ese estado (el no-show usa un cliente propio), pero si algo falla por «primer pedido con pago adelantado» o por un pedido activo, repite con `--reset`.
  * Contra staging se corre a mano: `Docs/operacion/e2e-flujo-completo.md`.
  */
 import { spawn, spawnSync } from 'node:child_process'
@@ -52,11 +53,9 @@ async function main() {
 
   let code = 0
   try {
-    const seq = args.has('--reset')
-      ? ['db:lock', 'run', '--', 'supabase', 'db', 'reset', '"&&"', 'node', 'scripts/e2e/espera-auth.mjs', '"&&"', pnpm, 'db:seed:e2e', '"&&"']
-      : ['db:lock', 'run', '--']
-    const full = [...seq, 'node', 'scripts/e2e/flujo-completo.ts', '--check-events']
-    console.log(`\n> ${pnpm} ${full.join(' ')}`)
+    const full = ['db:lock', 'run', '--', 'node', 'scripts/e2e/ciclo.mjs', ...(args.has('--reset') ? ['--reset'] : [])]
+    console.log(`
+> ${pnpm} ${full.join(' ')}`)
     code = run(pnpm, full)
     if (code === 0 && args.has('--playwright')) {
       console.log('\n> pnpm test:e2e')

@@ -1,6 +1,6 @@
 # Prueba de punta a punta de un pedido por la API REST
 
-> Verificado: 2026-11-19 · contra `test/e2e-punta-a-punta` sobre `develop@25a6d537`, pila LOCAL (Supabase 127.0.0.1:54321, API en el puerto 3001), con `pnpm e2e:todo --reset`: 80/80 pasos, 13 escenarios
+> Verificado: 2026-11-19 · contra `test/e2e-punta-a-punta` sobre `develop@25a6d537`, pila LOCAL (Supabase 127.0.0.1:54321, API en el puerto 3001), con `pnpm e2e:todo --reset` y otra vez sin `--reset`: 82/82 pasos, 13 escenarios
 
 `scripts/e2e/flujo-completo.ts` lleva UN pedido de restaurante por todo su ciclo usando solo `/api/v1`, como las apps:
 el cliente lo crea, la cajera lo valida y lo acepta, y el motorizado lo toma, lo recoge y lo entrega. Inicia sesión con
@@ -23,7 +23,7 @@ Escenarios: **contraentrega** (efectivo; si el cliente no tiene historial nace e
 
 Discusión: [matriz de escenarios](../trabajo/e2e/escenarios.md)
 
-Quedan fuera de staging los que usan la service role (`no-show`, `prepago-vencido`, `celular-sms`, `entregas`, `borrar-cuenta`). `no-show` deja un strike a `cliente2@e2e.local`: la corrida siguiente exige `--reset` (su primer pedido pasa a ser prepago).
+Quedan fuera de staging los que usan la service role (`no-show`, `prepago-vencido`, `celular-sms`, `entregas`, `borrar-cuenta`). `no-show` y los escenarios de cliente nuevo crean sus propios clientes (teléfono y referencia únicos por corrida), así que el strike no envenena a los clientes fijos ni la dirección «Portón azul…» que comparte Playwright. Sin `--reset` se acumulan clientes y pedidos entregados; si algo falla por «primer pedido con pago adelantado» o por un pedido activo, repite con `--reset`.
 
 ## Local
 

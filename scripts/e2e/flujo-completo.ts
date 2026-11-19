@@ -61,6 +61,7 @@ const DELIVERY = {
 }
 const PROD_REF = 'zpnipajgwfthxhdtzhly'
 const STAGING_REF = 'jgziumvrtogguljhpdos'
+const STAGING_API_HOST = 'tindivo-api-staging.vercel.app'
 // PNG real de 1x1: pasa la validación de imagen del bucket.
 const PNG_1X1 = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -93,7 +94,7 @@ function readEnvFile(path: string): Record<string, string> {
 }
 
 type Json = Record<string, unknown>
-type Actor = 'customer' | 'business' | 'driver' | 'customer2' | 'customer3' | 'fresh'
+type Actor = 'customer' | 'business' | 'driver' | 'customer2' | 'customer3' | 'fresh' | 'fresh2'
 
 class StepFailure extends Error {}
 
@@ -116,14 +117,13 @@ async function http(
   ctx: Ctx,
   method: string,
   url: string,
-  opts: { actor?: Actor; body?: unknown; headers?: Record<string, string>; raw?: Uint8Array } = {},
-): Promise<{ status: number; body: Json; text: string }> {
+  opts: { actor?: Actor; body?: unknown; headers?: Record<string, string> } = {},
+): Promise<{ status: number; body: Json; text: string; headers: Headers }> {
   const headers: Record<string, string> = { ...(opts.headers ?? {}) }
   const token = opts.actor ? ctx.tokens[opts.actor] : undefined
   if (token) headers.authorization = `Bearer ${token}`
   let payload: BodyInit | undefined
-  if (opts.raw) payload = opts.raw as unknown as BodyInit
-  else if (opts.body !== undefined) {
+  if (opts.body !== undefined) {
     headers['content-type'] = 'application/json'
     payload = JSON.stringify(opts.body)
   }
@@ -135,7 +135,7 @@ async function http(
   } catch {
     body = { _raw: text.slice(0, 300) }
   }
-  return { status: res.status, body, text: redact(text) }
+  return { status: res.status, body, text: redact(text), headers: res.headers }
 }
 
 /** Respuestas `{data: …}` o planas. */
@@ -155,11 +155,6 @@ interface Scenario {
 type Outcome = 'ok' | 'falla' | 'rojo-esperado' | 'defecto-corregido' | 'saltado'
 const outcomes: { name: string; outcome: Outcome; note?: string }[] = []
 
-/**
- * Defectos reales del producto que un escenario destapó. El escenario sigue corriendo: se espera que
- * falle, y si empieza a pasar la suite avisa para que se quite la marca. Cada uno enlaza su fila de
- * `Docs/trabajo/e2e/escenarios.md`. No se arregla aquí: es código de producto.
- */
 const SCENARIO_NAMES = [
   'contraentrega',
   'prepago',
@@ -175,7 +170,13 @@ const SCENARIO_NAMES = [
   'borrar-cuenta',
   'compat-v1',
 ]
-const KNOWN_DEFECTS: Record<string, string> = {}
+/**
+ * Defectos reales del producto que un escenario destapó, atados a UN paso concreto. El escenario sigue
+ * corriendo: se espera que falle justo en ese paso; si falla en otro, o si pasa entero, la suite falla y
+ * avisa para quitar la marca. `row` es la fila de `Docs/trabajo/e2e/escenarios.md`. No se arregla aquí:
+ * es código de producto. Hoy no hay ninguno.
+ */
+const KNOWN_DEFECTS: Record<string, { step: string; row: string; why: string }> = {}
 async function step<T>(name: string, fn: () => Promise<T>): Promise<T> {
   const t0 = Date.now()
   try {
@@ -199,6 +200,26 @@ function expect(cond: unknown, msg: string): asserts cond {
 }
 function describeHttp(r: { status: number; text: string }): string {
   return `HTTP ${r.status} ${r.text.slice(0, 400)}`
+}
+/** Un rechazo se afirma por su estado HTTP y por el `code` del problema RFC 9457, no por «cualquier 4xx». */
+function expectProblem(
+  r: { status: number; body: Json; text: string },
+  status: number,
+  code: string,
+  what: string,
+): void {
+  expect(
+    r.status === status && r.body.code === code,
+    `${what}: esperaba HTTP ${status} ${code}; llegó ${describeHttp(r)}`,
+  )
+}
+/** Dinero como cadena decimal (API-8): dos decimales y el valor esperado, calculado desde los datos de entrada. */
+function expectMoney(label: string, got: unknown, expectedCents: number): void {
+  expect(typeof got === 'string' && /^\d+\.\d{2}$/.test(got), `${label} no es una cadena decimal: ${JSON.stringify(got)}`)
+  expect(
+    Math.round(Number(got) * 100) === expectedCents,
+    `${label} = ${String(got)}; se esperaba ${(expectedCents / 100).toFixed(2)}`,
+  )
 }
 
 // ── Credenciales ──────────────────────────────────────────────────────────────────────────────────
@@ -323,13 +344,12 @@ interface Created {
   status: string
 }
 
-async function createOrder(
-  ctx: Ctx,
+function orderBody(
   paymentIntent: 'pending_cash' | 'prepaid',
   cashPayingWith?: number,
   who: Actor = 'customer',
   extra: Json = {},
-): Promise<Created> {
+): Json {
   const body: Json = {
     businessId: BUSINESS_ID,
     deliveryMethod: 'delivery',
@@ -359,6 +379,17 @@ async function createOrder(
       delete body[k]
     }
   }
+  return body
+}
+
+async function createOrder(
+  ctx: Ctx,
+  paymentIntent: 'pending_cash' | 'prepaid',
+  cashPayingWith?: number,
+  who: Actor = 'customer',
+  extra: Json = {},
+): Promise<Created> {
+  const body = orderBody(paymentIntent, cashPayingWith, who, extra)
   const r = await http(ctx, 'POST', `${ctx.api}/customer/orders`, {
     actor: who,
     body,
@@ -441,6 +472,31 @@ async function scenarioContraentrega(ctx: Ctx, prep: number): Promise<string> {
   )
   const id = created.id
   console.log(`        pedido ${created.shortId} (${id}) nace en ${created.status}`)
+  await step('dinero como cadena (API-8): amount, deliveryFee, total, paysWith, changeToGive', async () => {
+    // El envío esperado sale de la cotización (otra ruta), no de la misma fila; el resto, de los datos de entrada.
+    const q = await call(ctx, 'customer', 'POST', '/customer/checkout/quote', {
+      businessId: BUSINESS_ID,
+      deliveryMethod: 'delivery',
+      coordinates: { lat: DELIVERY.lat, lng: DELIVERY.lng },
+      items: [
+        { menuItemId: ITEM_MEDIO_ID, quantity: 1 },
+        { menuItemId: ITEM_GASEOSA_ID, quantity: 1 },
+      ],
+    })
+    expect(q.status === 200, `quote: ${describeHttp(q)}`)
+    const feeText = unwrap(q.body).deliveryFee
+    expect(typeof feeText === 'string' && /^\d+\.\d{2}$/.test(feeText), `quote.deliveryFee: ${JSON.stringify(feeText)}`)
+    const feeCents = Math.round(Number(feeText) * 100)
+    const totalCents = SUBTOTAL * 100 + feeCents
+    const r = await call(ctx, 'customer', 'GET', `/customer/orders/${id}`)
+    expect(r.status === 200, `GET order: ${describeHttp(r)}`)
+    const o = unwrap(r.body)
+    expectMoney('amount', o.amount, SUBTOTAL * 100)
+    expectMoney('deliveryFee', o.deliveryFee, feeCents)
+    expectMoney('total', o.total, totalCents)
+    expectMoney('paysWith', o.paysWith, PAYS_WITH * 100)
+    expectMoney('changeToGive', o.changeToGive, PAYS_WITH * 100 - totalCents)
+  })
   await step(`vistas: ${created.status}`, async () => {
     await assertViews(ctx, id, created.status, { driverMustSee: false })
   })
@@ -520,7 +576,7 @@ async function scenarioPrepago(ctx: Ctx, prep: number): Promise<string> {
     const put = await fetch(String(u.uploadUrl), {
       method: 'PUT',
       headers: { 'content-type': 'image/png' },
-      body: PNG_1X1 as unknown as BodyInit,
+      body: new Blob([PNG_1X1], { type: 'image/png' }),
     })
     expect(put.ok, `PUT a Storage: HTTP ${put.status} ${redact((await put.text()).slice(0, 300))}`)
     return String(u.path)
@@ -558,7 +614,7 @@ async function call(
   path: string,
   body?: unknown,
   headers?: Record<string, string>,
-): Promise<{ status: number; body: Json; text: string }> {
+): Promise<{ status: number; body: Json; text: string; headers: Headers }> {
   return http(ctx, method, `${ctx.api}${path}`, { actor, body, headers })
 }
 
@@ -624,7 +680,7 @@ async function scenarioRechazo(ctx: Ctx): Promise<string> {
       action: 'accept',
       prepTimeMinutes: 5,
     })
-    expect(r.status >= 400 && r.status < 500, `accept sobre cancelled: ${describeHttp(r)}`)
+    expectProblem(r, 409, 'invalid_state_transition', 'accept sobre un pedido cancelado')
   })
   return o.id
 }
@@ -657,7 +713,7 @@ async function scenarioCancelaCliente(ctx: Ctx): Promise<string> {
   const b = await step('cliente3: pide otro y el negocio lo acepta', () => toPreparing(ctx, 'customer3'))
   await step('cliente3: ya aceptado, cancelar da 4xx', async () => {
     const r = await call(ctx, 'customer3', 'POST', `/customer/orders/${b.id}/cancel`)
-    expect(r.status >= 400 && r.status < 500, `cancel tras aceptar: ${describeHttp(r)}`)
+    expectProblem(r, 409, 'order_not_cancellable', 'cancelar tras aceptar')
     expect(
       (await customerView(ctx, b.id, 'customer3')).status === 'preparing',
       'el pedido cambió de estado',
@@ -671,7 +727,28 @@ async function scenarioCancelaCliente(ctx: Ctx): Promise<string> {
 
 async function scenarioNoShow(ctx: Ctx, serviceKey: string): Promise<string> {
   console.log('\nEscenario · el motorizado reporta «no se presentó»')
-  const o = await step('cliente2: pedido hasta preparing', () => toPreparing(ctx, 'customer2'))
+  // Un cliente propio (teléfono y referencia únicos): el strike del no-show no envenena a los clientes e2e fijos
+  // ni la dirección «Portón azul…» que comparte Playwright (apps/api/scripts/e2e-fixtures.ts).
+  const o = await step('cliente nuevo propio: pedido hasta preparing', async () => {
+    await createFreshCustomer(ctx, serviceKey, 'fresh2')
+    const put = await call(ctx, 'fresh2', 'PUT', '/customer/profile', { fullName: 'Cliente No Show' })
+    expect(put.status === 200, `PUT profile: ${describeHttp(put)}`)
+    const phone = `9${String(Date.now() + 1).slice(-8)}`
+    const s0 = await call(ctx, 'fresh2', 'POST', '/customer/phone/send-code', { phone })
+    expect(s0.status === 200, `send-code: ${describeHttp(s0)}`)
+    const v0 = await call(ctx, 'fresh2', 'POST', '/customer/phone/verify', { phone, code: '000000' })
+    expect(v0.status === 200, `verify: ${describeHttp(v0)}`)
+    const c = await createOrder(ctx, 'pending_cash', 50, 'fresh2', {
+      customerPhone: phone,
+      deliveryReference: `Casa de la prueba no-show ${Date.now()}`,
+    })
+    const st = await settle(ctx, c, 'fresh2')
+    if (st === 'pending_acceptance') {
+      await transition(ctx, 'business', c.id, { action: 'accept', prepTimeMinutes: 2 }, 'preparing')
+    }
+    expect((await customerView(ctx, c.id, 'fresh2')).status === 'preparing', 'no llegó a preparing')
+    return c
+  })
   await step('negocio + motorizado: ready → take → arrived → pickup', async () => {
     await transition(ctx, 'business', o.id, { action: 'ready' }, 'waiting_driver')
     await transition(ctx, 'driver', o.id, { action: 'take' }, 'heading_to_restaurant')
@@ -692,7 +769,7 @@ async function scenarioNoShow(ctx: Ctx, serviceKey: string): Promise<string> {
       lng: DELIVERY.lng,
       accuracy_m: 10,
     })
-    expect(early.status === 409, `no_show antes de 5 min debía dar 409: ${describeHttp(early)}`)
+    expectProblem(early, 409, 'invalid_state_transition', 'no_show antes de 5 minutos')
   })
   await step('pasan 5 min (se envejece la llegada) y no_show → cancelled', async () => {
     const svc = svcHeaders(serviceKey)
@@ -708,7 +785,7 @@ async function scenarioNoShow(ctx: Ctx, serviceKey: string): Promise<string> {
       { action: 'no_show', lat: DELIVERY.lat, lng: DELIVERY.lng, accuracy_m: 10 },
       'cancelled',
     )
-    await assertViews(ctx, o.id, 'cancelled', { driverMustSee: true, who: 'customer2' })
+    await assertViews(ctx, o.id, 'cancelled', { driverMustSee: true, who: 'fresh2' })
   })
   return o.id
 }
@@ -729,7 +806,7 @@ async function scenarioRecojo(ctx: Ctx): Promise<string> {
       },
       headers: { 'idempotency-key': randomUUID() },
     })
-    expect(r.status >= 400 && r.status < 500, `debía rechazarse: ${describeHttp(r)}`)
+    expectProblem(r, 422, 'validation_error', 'recojo «más tarde» en efectivo')
   })
   const o = await step('cliente3: POST recojo «ya», prepago', () =>
     createOrder(ctx, 'prepaid', undefined, 'customer3', {
@@ -760,7 +837,7 @@ async function scenarioRecojo(ctx: Ctx): Promise<string> {
     const put = await fetch(String(u.uploadUrl), {
       method: 'PUT',
       headers: { 'content-type': 'image/png' },
-      body: PNG_1X1 as unknown as BodyInit,
+      body: new Blob([PNG_1X1], { type: 'image/png' }),
     })
     expect(put.ok, `PUT: HTTP ${put.status}`)
     const pp = await call(ctx, 'customer3', 'POST', `/customer/orders/${o.id}/prepay-proof`, {
@@ -796,7 +873,7 @@ async function scenarioPrepagoHeic(ctx: Ctx): Promise<string> {
     const put = await fetch(String(u.uploadUrl), {
       method: 'PUT',
       headers: { 'content-type': 'image/heic' },
-      body: HEIC as unknown as BodyInit,
+      body: new Blob([HEIC], { type: 'image/heic' }),
     })
     expect(put.ok, `PUT heic: HTTP ${put.status} ${redact((await put.text()).slice(0, 200))}`)
     const pp = await call(ctx, 'customer3', 'POST', `/customer/orders/${o.id}/prepay-proof`, {
@@ -913,14 +990,18 @@ async function scenarioPrepagoVencido(ctx: Ctx, serviceKey: string): Promise<str
 const FRESH_PHONE = `9${String(Date.now()).slice(-8)}`
 
 /** Cliente nuevo (solo local, con service role): lo que ve la app tras entrar por primera vez. */
-async function createFreshCustomer(ctx: Ctx, serviceKey: string): Promise<{ email: string }> {
-  const email = `fresh-${Date.now()}@e2e.local`
+async function createFreshCustomer(
+  ctx: Ctx,
+  serviceKey: string,
+  who: Actor = 'fresh',
+): Promise<{ email: string }> {
+  const email = `${who}-${Date.now()}@e2e.local`
   const r = await http(ctx, 'POST', `${ctx.supabase}/auth/v1/admin/users`, {
     headers: svcHeaders(serviceKey),
     body: { email, password: E2E_PASSWORD, email_confirm: true },
   })
   expect(r.status < 300, `crear usuario nuevo: ${describeHttp(r)}`)
-  ctx.tokens.fresh = await login(ctx, email, E2E_PASSWORD)
+  ctx.tokens[who] = await login(ctx, email, E2E_PASSWORD)
   return { email }
 }
 
@@ -954,7 +1035,7 @@ async function scenarioCelularSms(ctx: Ctx, serviceKey: string): Promise<void> {
       phone: FRESH_PHONE,
       code: '111111',
     })
-    expect(bad.status >= 400 && bad.status < 500, `código malo aceptado: ${describeHttp(bad)}`)
+    expectProblem(bad, 422, 'validation_error', 'código SMS equivocado')
   })
   await step('verify con el código del simulacro (000000) → teléfono verificado', async () => {
     const v = await call(ctx, 'fresh', 'POST', '/customer/phone/verify', {
@@ -1060,10 +1141,35 @@ async function scenarioCompatV1(ctx: Ctx): Promise<void> {
   })
   await step('un POST de pedido sin Idempotency-Key se rechaza con 422 (no se crea nada)', async () => {
     const r = await http(ctx, 'POST', `${ctx.api}/customer/orders`, {
-      actor: 'customer',
-      body: { businessId: BUSINESS_ID },
+      actor: 'customer3',
+      body: orderBody('pending_cash', 50, 'customer3'),
     })
-    expect(r.status === 422 || r.status === 400, `esperaba 4xx de validación: ${describeHttp(r)}`)
+    expectProblem(r, 422, 'validation_error', 'pedido válido sin Idempotency-Key')
+    expect(/Idempotency-Key/.test(r.text), `el rechazo no nombra la cabecera: ${r.text.slice(0, 200)}`)
+    const list = await call(ctx, 'customer3', 'GET', '/customer/orders')
+    expect(!/pending_acceptance|validando/.test(list.text), 'sin la clave se creó un pedido activo')
+  })
+  await step('la misma Idempotency-Key repetida no crea un segundo pedido', async () => {
+    const key = randomUUID()
+    const body = orderBody('pending_cash', 50, 'customer3')
+    const first = await http(ctx, 'POST', `${ctx.api}/customer/orders`, {
+      actor: 'customer3',
+      body,
+      headers: { 'idempotency-key': key },
+    })
+    expect(first.status === 201, `primer envío: ${describeHttp(first)}`)
+    const again = await http(ctx, 'POST', `${ctx.api}/customer/orders`, {
+      actor: 'customer3',
+      body,
+      headers: { 'idempotency-key': key },
+    })
+    expect(again.status === 201, `repetición: ${describeHttp(again)}`)
+    expect(unwrap(again.body).id === unwrap(first.body).id, 'la repetición devolvió otro pedido')
+    expect(again.headers.get('idempotency-replayed') === 'true', 'falta idempotency-replayed: true')
+    const list = await call(ctx, 'customer3', 'GET', '/customer/orders')
+    const ids = (unwrap(list.body).items as Json[]).filter((i) => i.id === unwrap(first.body).id)
+    expect(ids.length === 1, `el pedido aparece ${ids.length} veces en Mis pedidos`)
+    await releaseActive(ctx, 'customer3')
   })
   await step('los pedidos entregados conservan las claves v1 (id, shortId, status, businessId)', async () => {
     const list = await call(ctx, 'customer', 'GET', '/customer/orders')
@@ -1121,6 +1227,20 @@ async function main(): Promise<void> {
     )
   }
   const isLocal = host === '127.0.0.1' || host === 'localhost'
+  // La API también se restringe: localhost, o el staging conocido y solo con --staging. Nunca una URL libre.
+  let apiHost: string
+  try {
+    apiHost = new URL(api).hostname
+  } catch {
+    return die(`URL de la API inválida: ${api}`)
+  }
+  const apiLocal = apiHost === '127.0.0.1' || apiHost === 'localhost'
+  if (!apiLocal && !(staging && apiHost === STAGING_API_HOST)) {
+    return die(`la API ${apiHost} no está permitida: localhost, o ${STAGING_API_HOST} con --staging.`)
+  }
+  if (isLocal !== apiLocal) {
+    return die('Supabase y la API deben ser los dos locales o los dos de staging.')
+  }
   if (!isLocal) {
     if (!staging) return die(`${host} no es local; el staging exige --staging.`)
     if (host !== `${STAGING_REF}.supabase.co`) {
@@ -1258,25 +1378,23 @@ async function main(): Promise<void> {
       }
       for (const who of ['customer', 'customer2', 'customer3'] as const) await releaseActive(ctx, who)
       const known = KNOWN_DEFECTS[sc.name]
+      const knownText = known ? `${known.why} (fila ${known.row}, paso «${known.step}»)` : ''
       const before = results.length
       try {
         await sc.run()
         if (known) {
           outcomes.push({ name: sc.name, outcome: 'defecto-corregido' })
           failed = true
-          console.log(`  FALLA  ${sc.name} pasó pero estaba marcado como defecto conocido (${known}): quita la marca`)
+          console.log(`  FALLA  ${sc.name} pasó pero estaba marcado como defecto conocido (${knownText}): quita la marca`)
         } else outcomes.push({ name: sc.name, outcome: 'ok' })
       } catch (err) {
         if (!(err instanceof StepFailure)) {
           console.error(`\nError inesperado: ${redact(err instanceof Error ? err.message : String(err))}`)
         }
-        if (known) {
-          outcomes.push({ name: sc.name, outcome: 'rojo-esperado', note: known })
-          // Los pasos fallidos de un escenario marcado no cuentan como fallo de la suite.
-          for (let i = before; i < results.length; i++) {
-            const r = results[i]
-            if (r && !r.ok) r.expected = true
-          }
+        const failedStep = results.slice(before).find((r) => !r.ok)
+        if (known && failedStep?.name === known.step) {
+          outcomes.push({ name: sc.name, outcome: 'rojo-esperado', note: knownText })
+          failedStep.expected = true
         } else {
           outcomes.push({ name: sc.name, outcome: 'falla' })
           failed = true

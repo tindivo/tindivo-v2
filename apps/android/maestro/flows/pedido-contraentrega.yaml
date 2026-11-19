@@ -37,7 +37,5 @@ env:
     timeout: 30000
 - assertVisible: "Recibido"
 - takeScreenshot: c05-seguimiento-inicial
-# --- COORDINACION con #177 (scripts/e2e/flujo-completo.ts, rama test/e2e-flujo-completo-api) ---
-# Aqui el negocio debe validar/aceptar y el motorizado avanzar el pedido. El script de #177 hoy crea SU PROPIO
-# pedido con cliente@e2e.local y no sabe continuar uno creado por la app: haria falta un modo
-# --order-id/--short-id para llevar este pedido a «Preparando» y «Entregado». Ver README, «Pendiente de coordinación».
+# Aqui termina el flujo: validar/aceptar y entregar el pedido lo hacen el negocio y el motorizado desde sus apps (ver el
+# README, «Como se cierra el ciclo de un pedido hecho por la app»).

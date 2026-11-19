@@ -48,7 +48,7 @@ Notas:
 
 ## Conteo
 
-Corrida del 2026-11-19 (`pnpm e2e:todo --reset`): 13 escenarios por la API, 80/80 pasos, 0 rojos esperados. Filas de la matriz: 19; con la API "existe" o "parcial": 14; Maestro "escrito" (sin correr): 11; "bloqueado": 5; "falta": el resto.
+Corrida del 2026-11-19 (`pnpm e2e:todo --reset`): 13 escenarios por la API, 82/82 pasos, 0 rojos esperados. Filas de la matriz: 19; con la API "existe" o "parcial": 14; Maestro "escrito" (sin correr): 11; "bloqueado": 5; "falta": el resto.
 
 ## Qué falta para el «punta a punta» completo
 
@@ -67,4 +67,4 @@ Corrida del 2026-11-19 (`pnpm e2e:todo --reset`): 13 escenarios por la API, 80/8
   `422 validation_error` con «Ya tienes un pedido activo en este restaurante». El escenario `cancela-cliente` afirma el
   bloqueo y su texto, no el código. Decide Jesús: se corrige el CA o la API (y entonces el contrato REST v1).
 - Un recojo lo cierra el mostrador con `handover`, no con `deliver` (`deliver` da 409 «No autorizado» para el negocio).
-- `no-show` exige 5 minutos desde la llegada: el escenario lo comprueba (409 antes) y envejece la marca en local.
+- `no-show` exige 5 minutos desde la llegada: el escenario lo comprueba (409 `invalid_state_transition` antes) y envejece la marca en local; lo corre un cliente nuevo propio para que el strike no contamine a los fijos.

@@ -25,9 +25,8 @@ env:
     visible: "Pedido recibido|Esperando confirmación.*"
     timeout: 30000
 - takeScreenshot: p02-seguimiento-sin-pagar
-# --- COORDINACION con #177 ---
-# El negocio acepta este pedido (POST /business/orders/{id}/accept) y recien entonces aparece «Paga tu pedido».
-# Mientras #177 no acepte pedidos ajenos, aceptarlo a mano desde la app de negocios; el flujo espera hasta 3 min.
+# El negocio acepta este pedido y recien entonces aparece «Paga tu pedido»: aceptarlo a mano desde la app de negocios;
+# el flujo espera hasta 3 min.
 - extendedWaitUntil:
     visible: "Paga tu pedido"
     timeout: 180000
