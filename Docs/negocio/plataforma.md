@@ -15,7 +15,7 @@ pedido registrado); antes funcionaba el v1.
 |---|---|
 | **Pedidos de restaurante** (con entrega o recojo en el local) | En operación: **~500 pedidos entregados en 30 días**, 7 de ellos recogidos en el local |
 | **Tindivo Entregas** | Encendido de lunes a domingo, de 18:00 a 23:00 (ADR 0035). **3 entregas** en total |
-| **Tindivo Store** | Construido y en producción, **sin productos publicados**; es un experimento (`Docs/negocio/servicios/store.md`) y en la app llega después del lanzamiento (decisión de Jesús, 2026-11-17) |
+| **Tindivo Store** | Construido y en producción, **sin productos publicados**; es un experimento (`Docs/negocio/servicios/store.md`) y en la app llega después del lanzamiento (decisión de Jesús, 2026-11-17, conversación con Claude Code) |
 
 Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 0034).
 
