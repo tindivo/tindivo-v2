@@ -1,6 +1,6 @@
 # Estándares de código de Tindivo
 
-> Verificado: 2026-10-12 · entorno: `develop@591ec569` · Aprobado por Jesús el 2026-10-12 (conversación con Claude Code) · Decisión: `Docs/decisiones/0038-estandares-de-codigo-v2.md`
+> Verificado: 2026-11-18 (ruta futura de iOS) y 2026-10-12 (el resto) · entorno: `develop@591ec569` · Aprobado por Jesús el 2026-10-12 (conversación con Claude Code) · Decisión: `Docs/decisiones/0038-estandares-de-codigo-v2.md`
 
 Este archivo define las reglas transversales. Las de cada lenguaje viven en su archivo y no se repiten aquí (una fuente por regla, `Docs/README.md` §3.1):
 
@@ -9,7 +9,7 @@ Este archivo define las reglas transversales. Las de cada lenguaje viven en su a
 | `README.md` (este) | DES, API, CLI, MIG, TST, OPS | cualquier cosa |
 | `typescript.md` | TS | `packages/backend`, `apps/api`, las apps web y el resto de `packages/` |
 | `sql.md` | DB | `supabase/`: migraciones, funciones, políticas, pruebas |
-| `swift.md` | SW | `apps/customer-ios/` |
+| `swift.md` | SW | `apps/customer-ios/` (por crear) |
 | `kotlin.md` | KT | `apps/android/` |
 
 Un agente lee este archivo y solo los de los lenguajes que toca su cambio.
@@ -157,7 +157,7 @@ Cada OBLIGATORIA con su mecanismo. «Pendiente» significa que, hasta montarlo, 
 | `oasdiff breaking` contra la rama base, versión fijada (job `contract` de `.github/workflows/ci.yml`) | DES-6, API-3 | Montado |
 | `spectral lint packages/contracts/openapi/v1.json --ruleset .spectral.yaml` | API-1, API-4, API-5, API-8 | Montado (Spectral 6 fijado, job `contract`); lo heredado que no cumple está en `excepciones.md` |
 | Regenerar el OpenAPI y comparar con el versionado | API-2 | Pendiente |
-| `scripts/sync-openapi.sh --check` (job `contract`) | CLI-1 | Montado; con efecto en `apps/android` desde que existe. El script omite las apps que aún no existen (`apps/customer-ios`) |
+| `scripts/sync-openapi.sh --check` (job `contract`) | CLI-1 | Montado; con efecto en `apps/android` desde que existe. El script omite las apps que aún no existen (`apps/customer-ios`, por crear) |
 | Contador de filas de `excepciones.md` que no puede subir, contra la rama base (`scripts/check-excepciones.sh`, job `contract`) | Excepciones | Montado |
 | Lint con información de tipos | TS-2, TS-7, TS-10 | Pendiente |
 | SwiftLint en CI (runner macOS, a diario, D-48) | SW-6, SW-14 | Pendiente |
