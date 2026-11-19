@@ -49,7 +49,7 @@ Entra con fundido y escala de 0,96 a 1 en 200 ms. Con «reducir movimiento»: ap
 
 ## Pendiente
 
-- Qué cambio es «sustancial» y obliga a reaceptar está abierto (DA-17).
+- Cualquier cambio de versión obliga a reaceptar hasta que exista la marca de «cambio sustancial» al publicar (Jesús, 2026-11-19).
 - La vigencia de los Términos v3 es el 15 de diciembre de 2026: ¿la ventana sale desde esa fecha o desde que se publican?
 - Falta una operación que diga la versión vigente y la última aceptada por la persona, y un error estructurado del
   servidor que dispare la ventana sin perder la bolsa; el cliente envía la versión que mostró (defecto 3).

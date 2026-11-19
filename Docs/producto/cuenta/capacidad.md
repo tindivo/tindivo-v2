@@ -32,7 +32,7 @@ reglas: [UpdateCustomerProfileRequestSchema, app_settings:support_whatsapp]
 - Cerrar sesión es siempre local (`movil:D-64`); «cerrar en todos» no existe todavía.
 - El interruptor «Avisos de tus pedidos» depende de las notificaciones (CUS-NOT-005, aún en `trabajo/`): sin FCM no hay qué apagar.
 - Google Play exige poder borrar la cuenta dentro de la app y desde un enlace web público; la web del cliente se
-  apaga (`movil:D-27`): dónde vive ese enlace está abierto (ver «Abierto»).
+  apaga (`movil:D-27`): una página pública mínima (Términos, Privacidad y borrado) sobrevive al apagado (Jesús, 2026-11-19, decisión 7).
 - iOS aún no empieza: `codigo.ios` vacío.
 
 ## Requisitos
@@ -75,7 +75,6 @@ reglas: [UpdateCustomerProfileRequestSchema, app_settings:support_whatsapp]
 ## Abierto
 
 - Reautenticar antes de borrar: Jesús aprobó dejar solo la sesión y escribir `BORRAR`; Codex debe confirmarlo al auditar.
-- Dónde viven los Términos, la Privacidad y la página pública de borrado cuando se apague la web del cliente: DA-19 en `Docs/trabajo/decisiones-abiertas.md`.
 
 ## Defectos
 
