@@ -14,9 +14,9 @@ class TrackingClocksTest {
 
     @Test
     fun `CA-TRK-05 la cuenta atras cuenta desde la entrada a aceptacion y redondea hacia arriba`() {
-        assertEquals(AcceptanceClock.Running(minutesLeft = 5, urgent = false), acceptanceClockOf(start, 5, start))
+        assertEquals(AcceptanceClock.Running(secondsLeft = 300, urgent = false), acceptanceClockOf(start, 5, start))
         assertEquals(
-            AcceptanceClock.Running(minutesLeft = 5, urgent = false),
+            AcceptanceClock.Running(secondsLeft = 299, urgent = false),
             acceptanceClockOf(start, 5, start.plusSeconds(1)),
         )
     }
@@ -25,22 +25,39 @@ class TrackingClocksTest {
     fun `CA-TRK-05 en el ultimo tercio queda en rojo y el tope es de tres minutos`() {
         // Plazo de 5 min: el último tercio son 100 s.
         assertEquals(
-            AcceptanceClock.Running(minutesLeft = 2, urgent = false),
+            AcceptanceClock.Running(secondsLeft = 120, urgent = false),
             acceptanceClockOf(start, 5, start.plusSeconds(180)),
         )
         assertEquals(
-            AcceptanceClock.Running(minutesLeft = 2, urgent = true),
+            AcceptanceClock.Running(secondsLeft = 100, urgent = true),
             acceptanceClockOf(start, 5, start.plusSeconds(200)),
         )
         // Plazo de 15 min: un tercio serían 5 min, el tope lo deja en 3.
         assertEquals(
-            AcceptanceClock.Running(minutesLeft = 4, urgent = false),
+            AcceptanceClock.Running(secondsLeft = 210, urgent = false),
             acceptanceClockOf(start, 15, start.plusSeconds(690L)),
         )
         assertEquals(
-            AcceptanceClock.Running(minutesLeft = 3, urgent = true),
+            AcceptanceClock.Running(secondsLeft = 180, urgent = true),
             acceptanceClockOf(start, 15, start.plusSeconds(720L)),
         )
+    }
+
+    @Test
+    fun `CA-TRK-05 el segundo que falta se redondea hacia arriba`() {
+        assertEquals(
+            AcceptanceClock.Running(secondsLeft = 299, urgent = false),
+            acceptanceClockOf(start, 5, start.plusMillis(1_500)),
+        )
+    }
+
+    @Test
+    fun `CA-TRK-05 la cuenta atras se escribe m dos puntos ss como la web`() {
+        assertEquals("5:00", clockLabel(300))
+        assertEquals("2:05", clockLabel(125))
+        assertEquals("0:07", clockLabel(7))
+        assertEquals("0:00", clockLabel(0))
+        assertEquals("12:30", clockLabel(750))
     }
 
     @Test

@@ -13,7 +13,7 @@ internal data class TravelRange(
 internal sealed interface AcceptanceClock {
     /** [urgent]: queda el último tercio del plazo, con tope de tres minutos. */
     data class Running(
-        val minutesLeft: Long,
+        val secondsLeft: Long,
         val urgent: Boolean,
     ) : AcceptanceClock
 
@@ -24,10 +24,11 @@ internal sealed interface AcceptanceClock {
 private const val URGENT_CAP_MINUTES = 3L
 private const val URGENT_FRACTION = 3L
 private const val SECONDS_PER_MINUTE = 60L
+private const val MILLIS_PER_SECOND = 1_000L
 
 /**
  * El reloj de aceptación, o `null` si falta la hora de inicio o el plazo (sin base no se inventa nada).
- * Los minutos se redondean hacia arriba para no decir «0 min» con tiempo todavía.
+ * Los segundos se redondean hacia arriba, como la web (`Math.ceil`), para no enseñar «0:00» con tiempo todavía.
  */
 internal fun acceptanceClockOf(
     start: Instant?,
@@ -39,9 +40,13 @@ internal fun acceptanceClockOf(
     val left = Duration.between(now, start.plus(total))
     if (left.isNegative || left.isZero) return AcceptanceClock.Overdue
     val urgentFrom = minOf(total.dividedBy(URGENT_FRACTION), Duration.ofMinutes(URGENT_CAP_MINUTES))
-    val minutes = (left.seconds + SECONDS_PER_MINUTE - 1) / SECONDS_PER_MINUTE
-    return AcceptanceClock.Running(minutesLeft = minutes, urgent = left <= urgentFrom)
+    val seconds = (left.toMillis() + MILLIS_PER_SECOND - 1) / MILLIS_PER_SECOND
+    return AcceptanceClock.Running(secondsLeft = seconds, urgent = left <= urgentFrom)
 }
+
+/** La cuenta atrás como la web: `m:ss`, sin texto propio (`5:00`, `0:07`). */
+internal fun clockLabel(seconds: Long): String =
+    "${seconds / SECONDS_PER_MINUTE}:${(seconds % SECONDS_PER_MINUTE).toString().padStart(2, '0')}"
 
 /** En qué punto del pedido está, para decidir si hay tiempo estimado que enseñar. */
 internal enum class EtaStage {
