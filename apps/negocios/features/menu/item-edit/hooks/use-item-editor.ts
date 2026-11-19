@@ -43,6 +43,7 @@ export function useItemEditor() {
     base_price: '',
     is_available: true,
     is_compact: false,
+    is_featured: false,
     image_url: null,
     badges: [],
     available_days: [],
@@ -245,7 +246,7 @@ export function useItemEditor() {
         const { data: item } = await supabase
           .from('menu_items')
           .select(
-            'id,name,description,category_id,base_price,is_available,is_compact,image_url,thumbnail_url,badges,available_days,available_from,available_to',
+            'id,name,description,category_id,base_price,is_available,is_compact,is_featured,image_url,thumbnail_url,badges,available_days,available_from,available_to',
           )
           .eq('id', itemId)
           .eq('business_id', biz.id)
@@ -268,6 +269,7 @@ export function useItemEditor() {
           base_price: Number(item.base_price).toFixed(2),
           is_available: item.is_available,
           is_compact: item.is_compact,
+          is_featured: item.is_featured,
           image_url: item.image_url ?? null,
           badges: item.badges ?? [],
           // `available_days` es `smallint[]`: null en la DB = sin restricción, y
@@ -682,6 +684,7 @@ export function useItemEditor() {
             base_price: priceVal,
             is_available: formData.is_available,
             is_compact: formData.is_compact,
+            is_featured: formData.is_featured,
             badges: formData.badges,
             display_order: 9999,
             // Los tres a la vez: las tres columnas son UNA sola franja, y
@@ -710,6 +713,7 @@ export function useItemEditor() {
             base_price: priceVal,
             is_available: formData.is_available,
             is_compact: formData.is_compact,
+            is_featured: formData.is_featured,
             badges: formData.badges,
             // Con foto nueva pendiente, las columnas no se tocan aquí: las cambia
             // de una vez la publicación (más abajo), nunca foto de una y miniatura

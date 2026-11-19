@@ -298,6 +298,12 @@ export function EditorForm({
                 sub: 'Se muestra primero y con badge',
                 icon: 'star',
               },
+              {
+                key: 'is_featured' as const,
+                label: 'En la sección de destacados',
+                sub: 'Sale arriba de la carta, con foto (hasta 6 platos)',
+                icon: 'restaurant_menu',
+              },
             ] as const
           ).map((t) => {
             const on = formData[t.key]
