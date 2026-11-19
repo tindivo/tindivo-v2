@@ -1,0 +1,102 @@
+---
+id: catalogo
+nombre: Catálogo y negocio
+actores: [CUS]
+lineas: [pedidos-restaurante]
+depende_de: [bolsa, direcciones]
+dinero: true
+codigo:
+  web: [apps/customer/features/catalog/**, apps/customer/lib/business-ordering.ts, apps/customer/lib/business-path.ts, apps/customer/lib/whatsapp.ts]
+  android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/**]
+  ios: []
+  backend: [apps/api/app/api/v1/public/businesses/**, apps/api/app/api/v1/public/search/**, apps/api/app/api/v1/public/schedule/**, packages/contracts/src/menu-availability.ts, packages/contracts/src/schedule.ts]
+operaciones: [searchCatalog, getOrderIntakeStatus]
+reglas: [CART_MAX_QUANTITY, CART_MAX_NOTE_LENGTH, isWithinWindow, describeWindow, getOpenStatus, checkModifierSelection, ACTIVE_ORDER_STATUSES, app_settings:platform_schedule]
+---
+
+# Catálogo y negocio
+
+> Verificado: 2026-11-18 · entorno: develop@25a6d537 (código) · Aprobado por Jesús el AAAA-MM-DD (medio) — pendiente de su visto bueno
+
+## Antes de tocar
+
+- Es lo que el cliente ve antes de pedir: el Inicio (lista de restaurantes), la carta de un negocio y la ficha de un plato
+  con sus opciones. Lo que se agrega a la bolsa es de la capacidad `bolsa`; el chip «Entregar en» abre `direcciones`.
+- `dinero: true`: la ficha calcula el precio de la línea ((base + opciones) × cantidad) y el tamaño de un plato se
+  muestra con su precio completo (CUS-CAT-009, CUS-CAT-034). Es solo para mostrar: el servidor recalcula y cobra. Aun así,
+  todo cambio aquí pasa por Codex.
+- Store (`STO`) comparte la portada pero es otra capacidad y sale después del lanzamiento: aquí solo vive el texto de su
+  tarjeta (CUS-CAT-032). El carrusel de promociones es un recorte del lanzamiento (decisión 18 de
+  `Docs/trabajo/app-cliente/README.md`).
+- Dos reglas de horario viven en `packages/contracts` y existen **también** en Kotlin, copiadas: `getOpenStatus` (negocio
+  abierto) y `isWithinWindow` (franja de un plato; Android: `DishWindow`). Si una cambia, cambian las dos y sus pruebas.
+  Por eso CUS-CAT-023 pide que el servidor las entregue ya calculadas; mientras tanto la API manda la regla y no el resultado, por la caché de 15 s (`Docs/negocio/servicios/pedidos-restaurante.md`).
+- El negocio cerrado, pausado o sin confirmar la jornada se rechaza **en el servidor** (`createOrder`, capacidad checkout);
+  la app solo lo anticipa (CUS-CAT-012). El modo catálogo (`catalog_only`) es la excepción: pedir por WhatsApp es el pedido.
+- Las decisiones del 17-nov (CUS-CAT-026 a 034) ya están aplicadas en esta ficha; el código Android aún no las sigue.
+- iOS aún no empieza: `codigo.ios` vacío. La web del cliente se apaga y no se corrige.
+
+## Requisitos
+
+| ID | Requisito | Fuente | ★ |
+|---|---|---|---|
+| CUS-CAT-001 | La app debe listar los negocios publicados con nombre, eslogan, logo, color, plazo de entrega y si están abiertos; un negocio sin horario (`is_open_now` nulo) se trata como abierto. | `Docs/trabajo/app-cliente/requisitos/CAT.md` · `listBusinesses` | |
+| CUS-CAT-002 | La app debe saludar en el Inicio y, si hay un pedido en curso, mostrarlo (el saludo, por decidir: ver Decisiones para Jesús). | `CAT.md` · Canvas v35, tablero `Main` | |
+| CUS-CAT-003 | La app debe permitir buscar negocios y platos (mínimo 2 caracteres, sin distinguir mayúsculas ni tildes; el plato lleva a su negocio). La maqueta v35 no la dibuja: por decidir si entra (ver Decisiones para Jesús). | `CAT.md` · `searchCatalog` · `DECISIONS.md §20` | |
+| CUS-CAT-004 | La app debe mostrar la página de un negocio: portada, logo, eslogan, plazo, horario semanal y secciones; el negocio se abre por id o por `slug`. | `CAT.md` · `getBusiness` | |
+| CUS-CAT-005 | La app debe mostrar la carta por secciones: las vacías no se muestran, y «Destacados» (CUS-CAT-028) va primero respetando `display_order`. | `CAT.md` (modificado por CUS-CAT-028) | |
+| CUS-CAT-006 | La app debe permitir buscar dentro de la carta del negocio, sin distinguir tildes, resaltando coincidencias; el vacío ofrece otro término. | `CAT.md` | |
+| CUS-CAT-007 | La app debe mostrar la ficha del plato con nombre, descripción, precio, foto y etiquetas; sin foto, el respaldo de marca. | `CAT.md` · Canvas v35, tableros `Plato*` | |
+| CUS-CAT-008 | La app debe permitir elegir opciones según las reglas de cada grupo: una o varias, obligatorio u opcional, tope de elecciones; las opciones no disponibles no se muestran. | `CAT.md` · `checkModifierSelection` | ★ |
+| CUS-CAT-009 | La app debe calcular el precio de la línea como (precio base + opciones) × cantidad, con cantidad hasta `CART_MAX_QUANTITY` y nota hasta `CART_MAX_NOTE_LENGTH` caracteres; el servidor recalcula y revalida. | `CAT.md` · `CART_MAX_QUANTITY` · `CART_MAX_NOTE_LENGTH` | ★ |
+| CUS-CAT-010 | La app debe mostrar «No disponible» y no permitir pedir un plato que la cajera marcó como agotado. | `CAT.md` | |
+| CUS-CAT-011 | Mientras un plato esté fuera de su franja horaria (días, hora de Lima, cruce de medianoche, falla abierta ante datos rotos), la app debe apagarlo y decir cuándo vuelve; se reevalúa sin recargar. Hoy Android lo oculta: ver Decisiones para Jesús. | `CAT.md` · `isWithinWindow` · `describeWindow` | ★ |
+| CUS-CAT-012 | Mientras el negocio esté cerrado, la app debe mostrar «Cerrado», deshabilitar el pedido y decir cuándo abre; se reevalúa cada minuto. El servidor igual lo rechaza. | `CAT.md` · `getOpenStatus` · `DECISIONS.md §19` | ★ |
+| CUS-CAT-013 | El servidor debe rechazar un pedido si el negocio no confirmó que atiende hoy (`opening_confirmed` falso); si no se pudo consultar, deja pasar. | `CAT.md` · `createOrder` | |
+| CUS-CAT-014 | El servidor debe rechazar un pedido si el negocio está pausado (`accepting_orders_until` futuro); la pausa no afecta a «Pedir por WhatsApp». | `CAT.md` · `createOrder` | |
+| CUS-CAT-015 | Cuando el negocio esté en modo catálogo (`catalog_only`), la app debe ofrecer «Pedir por WhatsApp» y «Llamar» en lugar de la bolsa; cierre y pausa no los bloquean. Su convivencia con CUS-CAT-026 está por confirmar. | `CAT.md` · `DECISIONS.md §18` | |
+| CUS-CAT-016 | La app debe resolver las capacidades del negocio (delivery, recojo) con datos frescos: nunca se guardan con la bolsa y, sin dato, el 409 del servidor es el suelo. | `CAT.md` · `getBusiness` | |
+| CUS-CAT-017 | Donde el negocio acepte delivery y recojo, la app debe mostrar el selector Delivery/Recojo; si solo acepta uno, queda fijo. | `CAT.md` · Canvas v35, tablero `Negocio` | |
+| CUS-CAT-018 | Si el cliente ya tiene un pedido activo (`ACTIVE_ORDER_STATUSES`) en un negocio, la app debe impedir crear otro en ese negocio y enlazar al existente. | `CAT.md` · `createOrder` (409 `active_order_block`) | ★ |
+| CUS-CAT-020 | La app debe mostrar un carrusel de promociones en el Inicio. Recortada del lanzamiento (promociones): sus banners hoy están escritos en la web. | `CAT.md` · decisión 18 de `Docs/trabajo/app-cliente/README.md` | |
+| CUS-CAT-021 | La app debe mostrar el horario semanal (hoy resaltado, el día sin turno dice «Cerrado») y los datos del negocio, sin contacto (CUS-CAT-026). | `CAT.md` (modificado por CUS-CAT-026) · `getBusiness` | |
+| CUS-CAT-022 | La app debe abrir un negocio desde un enlace compartido (`/negocio/{slug}`); los enlaces antiguos con id siguen funcionando. | `CAT.md` | |
+| CUS-CAT-023 | El servidor debe entregar ya calculados el estado de apertura y la disponibilidad de cada plato (`is_open_now`, `next_change_at`, `available_now` y su vigencia), para no reimplementar las dos reglas en tres lenguajes. | `CAT.md` · `Docs/planes/movil/contrato-rest.md` | |
+| CUS-CAT-026 | La app no debe mostrar contacto (ni llamar ni WhatsApp) en la información del negocio; las incidencias van por «Ayuda con este pedido» (CUS-SUP-006). | Decisión de Jesús, 2026-11-17 (decisión 4) | |
+| CUS-CAT-027 | La app no debe poner el botón «i» sobre la foto del negocio; debe poner bajo el nombre la fila «Información del negocio ›», que abre la hoja de información. | Decisión de Jesús, 2026-11-17 (decisión 4) | |
+| CUS-CAT-028 | La app debe ofrecer «Destacados» como sección reutilizable cuyos productos y nombre elige el restaurante: de 1 a 6 productos con foto y disponibles, carrusel manual sin avance automático, precios vigentes y estado de bolsa sincronizado. | Decisión de Jesús, 2026-11-17 (decisión 4) | |
+| CUS-CAT-029 | En la tarjeta del plato, la app debe poner el contador «− 1 +» fuera de la foto y no mostrar «En bolsa · 1»; un plato configurable muestra «En tu bolsa: [N]» y «Editar selección». | Decisión de Jesús, 2026-11-17 (decisión 4) | |
+| CUS-CAT-030 | La app debe mostrar en el Inicio una barra superior con el logo, el chip de dos líneas «Entregar en» / [dirección] y la bolsa con su contador (siempre visible, también vacía), y no poner nada flotando sobre las pestañas. | Decisión de Jesús, 2026-11-17 (decisión 5) | ★ |
+| CUS-CAT-031 | Cuando haya un pedido en curso, la app debe mostrarlo como tarjeta al inicio del contenido del Inicio y como punto en la pestaña Pedidos; con varios, una sola tarjeta que los cuenta. | Decisión de Jesús, 2026-11-17 (decisión 5) | |
+| CUS-CAT-032 | La tarjeta de Store del Inicio debe decir «Variedad de productos». Store sale después del lanzamiento: si la tarjeta se muestra, está por decidir. | Decisión de Jesús, 2026-11-17 (decisión 5) | |
+| CUS-CAT-033 | En la ficha del plato, solo los grupos obligatorios deben bloquear el botón, que debe decir qué grupo falta; todos los campos llevan el mismo borde. | Decisión de Jesús, 2026-11-17 (decisión 6) | |
+| CUS-CAT-034 | La app debe mostrar el tamaño de un plato con su precio completo (`price_display` total) y sumar los extras como recargo (`delta`); la línea sigue siendo (precio del tamaño + extras) × cantidad. | Decisión de Jesús, 2026-11-17 (decisión 6) · migración `0156` | ★ |
+
+## Criterios de aceptación
+
+| CA | Criterio | Requisitos |
+|---|---|---|
+| CA-CAT-01 | Dado un plato con días sábado y domingo y franja 11:00–15:00 en hora de Lima, cuando es martes 20:00, entonces el plato aparece apagado con «Solo sáb y dom, de 11:00 a 15:00» y no se puede agregar a la bolsa; cuando es sábado 12:00, se puede pedir y no aparece etiqueta. | CUS-CAT-011 |
+
+Los criterios de cada pantalla (`CA-CAT-P1` a `CA-CAT-P9`) viven en su ficha.
+
+## Reglas
+
+- Topes de la ficha: `CART_MAX_QUANTITY` y `CART_MAX_NOTE_LENGTH`.
+- Selección de opciones válida: `checkModifierSelection`.
+- Franja de un plato: `isWithinWindow` y su texto, `describeWindow`.
+- Negocio abierto: `getOpenStatus`; horario de la plataforma: `app_settings:platform_schedule`.
+- Estados de pedido activo: `ACTIVE_ORDER_STATUSES`.
+
+## Defectos
+
+| # | Requisito | Hallazgo | Dónde |
+|---|---|---|---|
+| 1 | CUS-CAT-002 | El saludo de la web es fijo («Buenas noches»); la maqueta del Inicio dice «¿Qué pedimos hoy?». | `apps/customer/features/catalog/components/home-shell.tsx` |
+| 2 | CUS-CAT-011 | Android oculta el plato fuera de su franja en lugar de apagarlo (decisión del 2026-10-24); este documento pide apagarlo. | `feature/catalog/business/MenuMapping.kt` · `DishWindow.kt` |
+| 3 | CUS-CAT-012 | Android avisa «Cerrado ahora» solo en el Inicio; la carta no deshabilita el pedido ni dice cuándo abre. | `feature/catalog/home/CatalogHomeScreen.kt` · `feature/catalog/business/BusinessScreen.kt` |
+| 4 | CUS-CAT-015 | En Android el modo catálogo es una sección «Próximamente pedidos por la plataforma» del Inicio; la carta no ofrece «Pedir por WhatsApp» ni «Llamar». | `feature/catalog/home/CatalogHomeScreen.kt` |
+| 5 | CUS-CAT-007 | Android no usa las etiquetas (`badges`) ni el color de respaldo (`image_hue`) que la API ya manda. | `feature/catalog/business/MenuMapping.kt` |
+| 6 | CUS-CAT-023 | La carta pública no trae `is_open_now` ni `available_now`; solo la lista de negocios trae `is_open_now`. | `packages/contracts/openapi/v1.json` (`getBusiness`) |
+| 7 | CUS-CAT-033 | El botón de la ficha dice «Completa [N] opciones»; el diseño pide nombrar el grupo que falta. | `feature/catalog/business/DishSheetState.kt` · `DishSheet.kt` |
+| 8 | CUS-CAT-034 | Android muestra el tamaño con su precio completo, pero no el texto «El precio es el del tamaño». | `feature/catalog/business/DishSheetState.kt` |
