@@ -26,8 +26,8 @@ export function OPTIONS(req: Request): Response {
  * deja ver los suyos, así que uno ajeno es un 404 idéntico al de un id
  * inventado (no confirma que exista). El negocio y el motorizado no son legibles
  * por el cliente por RLS: se leen con el servicio SOLO después de que el pedido
- * ya demostró ser suyo. El teléfono del motorizado sigue la regla del
- * seguimiento público: solo cuando ya llegó a la puerta.
+ * ya demostró ser suyo. El teléfono del motorizado no se lee ni se envía: el cliente
+ * nunca lo recibe.
  */
 export async function GET(
   req: Request,
@@ -49,22 +49,32 @@ export async function GET(
     const row = data as unknown as OrderDetailRow
 
     const service = createServiceClient()
-    const [{ data: biz }, { data: drv }] = await Promise.all([
+    const [{ data: biz }, { data: drv }, { data: timers }] = await Promise.all([
       service.from('businesses').select('name').eq('id', row.business_id).maybeSingle(),
       row.driver_id
-        ? service.from('drivers').select('full_name,phone').eq('id', row.driver_id).maybeSingle()
+        ? service.from('drivers').select('full_name').eq('id', row.driver_id).maybeSingle()
         : Promise.resolve({ data: null }),
+      service.from('app_settings').select('value').eq('key', 'timers').maybeSingle(),
     ])
 
     return ok(
       toOrderDetailDto(
         row,
         biz?.name ?? null,
-        drv ? { name: drv.full_name, phone: drv.phone } : null,
+        drv ? { name: drv.full_name } : null,
+        travelMinutesOf(timers?.value),
       ),
       { headers: privateHeaders(req) },
     )
   } catch (err) {
     return handleError(err, requestId, req)
   }
+}
+
+/** El trayecto de `app_settings.timers`, con los mismos respaldos que `get_tracking` (0183). */
+function travelMinutesOf(timers: unknown): { min: number; max: number } {
+  const v = (timers ?? {}) as { travelMinutesMin?: unknown; travelMinutesMax?: unknown }
+  const num = (x: unknown, fallback: number): number =>
+    typeof x === 'number' && Number.isInteger(x) ? x : fallback
+  return { min: num(v.travelMinutesMin, 20), max: num(v.travelMinutesMax, 25) }
 }

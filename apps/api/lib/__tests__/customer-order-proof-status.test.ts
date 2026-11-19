@@ -42,30 +42,34 @@ function row(extra: Partial<OrderDetailRow> = {}): OrderDetailRow {
     payment_verified_at: null,
     payment_proof_status: null,
     driver_id: null,
+    pending_acceptance_at: null,
+    validating_at: null,
     ...extra,
   }
 }
 
 describe('paymentProofStatus en el detalle del pedido', () => {
   it.each(['pending', 'verified', 'rejected'] as const)('lleva «%s» tal cual', (status) => {
-    const dto = toOrderDetailDto(row({ payment_proof_status: status }), 'La Florencia', null)
+    const dto = toOrderDetailDto(row({ payment_proof_status: status }), 'La Florencia', null, null)
     expect(dto.paymentProofStatus).toBe(status)
     expect(CustomerOrderDetailSchema.safeParse(dto).success).toBe(true)
   })
 
   it('null y ausente salen como null', () => {
-    expect(toOrderDetailDto(row(), null, null).paymentProofStatus).toBeNull()
+    expect(toOrderDetailDto(row(), null, null, null).paymentProofStatus).toBeNull()
     const sinColumna = row()
     // biome-ignore lint/performance/noDelete: simula una fila sin la columna
     delete (sinColumna as Partial<OrderDetailRow>).payment_proof_status
-    expect(toOrderDetailDto(sinColumna, null, null).paymentProofStatus).toBeNull()
+    expect(toOrderDetailDto(sinColumna, null, null, null).paymentProofStatus).toBeNull()
   })
 
   it('no filtra proof_url ni datos de quien revisó', () => {
-    const dto = toOrderDetailDto(row({ payment_proof_status: 'rejected' }), null, null) as Record<
-      string,
-      unknown
-    >
+    const dto = toOrderDetailDto(
+      row({ payment_proof_status: 'rejected' }),
+      null,
+      null,
+      null,
+    ) as Record<string, unknown>
     expect(Object.keys(dto).filter((k) => /proof(Url|_url)|reject|cashier/i.test(k))).toEqual([])
     expect(ORDER_DETAIL_COLUMNS).not.toMatch(/proof_url|reject_reason|cashier/)
   })

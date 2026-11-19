@@ -53,13 +53,15 @@ export interface OrderDetailRow extends OrderSummaryRow {
   payment_verified_at: string | null
   payment_proof_status: string | null
   driver_id: string | null
+  pending_acceptance_at: string | null
+  validating_at: string | null
 }
 
 export const ORDER_SUMMARY_COLUMNS =
   'id,short_id,order_number,status,delivery_method,payment_intent,cancel_reason,business_id,order_amount,delivery_fee,created_at,delivered_at,customer_order_items(item_name_snapshot,quantity,line_total,created_at)' as const
 
 export const ORDER_DETAIL_COLUMNS =
-  'id,short_id,order_number,status,delivery_method,payment_intent,cancel_reason,business_id,order_amount,delivery_fee,created_at,delivered_at,customer_notes,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,client_pays_with,change_to_give,estimated_ready_at,arrived_at_customer_at,proof_attempt,payment_verified_at,payment_proof_status,driver_id,customer_order_items(item_name_snapshot,quantity,line_total,note,created_at,customer_order_item_modifiers(group_name_snapshot,option_name_snapshot,additional_price_snapshot,created_at))' as const
+  'id,short_id,order_number,status,delivery_method,payment_intent,cancel_reason,business_id,order_amount,delivery_fee,created_at,delivered_at,customer_notes,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,client_pays_with,change_to_give,estimated_ready_at,arrived_at_customer_at,proof_attempt,payment_verified_at,payment_proof_status,driver_id,pending_acceptance_at,validating_at,customer_order_items(item_name_snapshot,quantity,line_total,note,created_at,customer_order_item_modifiers(group_name_snapshot,option_name_snapshot,additional_price_snapshot,created_at))' as const
 
 const byCreatedAt = <T extends { created_at?: string }>(a: T, b: T): number =>
   (a.created_at ?? '').localeCompare(b.created_at ?? '')
@@ -99,7 +101,8 @@ export function toOrderSummaryDto(row: OrderSummaryRow, businessName: string | n
 export function toOrderDetailDto(
   row: OrderDetailRow,
   businessName: string | null,
-  driver: { name: string; phone: string } | null,
+  driver: { name: string } | null,
+  travelMinutes: { min: number; max: number } | null,
 ) {
   const hasPoint = row.delivery_coordinates_lat !== null && row.delivery_coordinates_lng !== null
   return {
@@ -131,9 +134,11 @@ export function toOrderDetailDto(
     proofAttempt: row.proof_attempt,
     paymentVerifiedAt: row.payment_verified_at,
     paymentProofStatus: row.payment_proof_status ?? null,
-    // El teléfono, como en `get_tracking`: solo cuando ya llegó a la puerta.
-    driver: driver
-      ? { name: driver.name, phone: row.arrived_at_customer_at !== null ? driver.phone : null }
-      : null,
+    pendingAcceptanceAt: row.pending_acceptance_at,
+    validatingAt: row.validating_at,
+    travelMinutes,
+    // El cliente nunca recibe el teléfono del motorizado (decisión de Jesús, 2026-11-17): el campo
+    // sigue en el contrato por las apps ya instaladas y viaja siempre en null.
+    driver: driver ? { name: driver.name, phone: null } : null,
   }
 }
