@@ -4,6 +4,7 @@ import com.tindivo.core.network.AccessGrant
 import com.tindivo.core.network.RetryAfterShieldInterceptor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -217,7 +218,8 @@ internal class SupabaseSessionStore(
     // el resultado tardío se descarta y nadie lo usa.
     private suspend fun restoreWithTimeout(): Restored? {
         val work =
-            scope.async {
+            // UNDISPATCHED: empieza ya, sin saltar de hilo; si restaurar no suspende, no hay ninguna espera de más.
+            scope.async(start = CoroutineStart.UNDISPATCHED) {
                 try {
                     Restored(backend.restore())
                 } catch (e: CancellationException) {
