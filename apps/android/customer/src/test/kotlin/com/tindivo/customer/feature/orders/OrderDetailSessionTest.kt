@@ -25,6 +25,17 @@ class OrderDetailSessionTest : OrderDetailHarness() {
         }
 
     @Test
+    fun `CA-TRK-09 entrar con otra cuenta cierra solo la cuenta que abrio el pedido`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.switchAccount()
+
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
+            assertEquals(0, store.signOutCalls)
+        }
+
+    @Test
     fun `un 401 de A cuyo cierre llega con B ya en la sesion no cierra la de B`() =
         runTest {
             server.enqueue(response(401, UNAUTHORIZED))

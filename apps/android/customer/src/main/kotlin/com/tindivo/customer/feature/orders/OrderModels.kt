@@ -101,6 +101,8 @@ internal data class OrderCardUi(
     val reorderable: Boolean,
     /** Prepago esperando el pago: en la portada es «Falta tu pago», no «Pedido en curso». */
     val awaitingPayment: Boolean = false,
+    /** Cancelado por `proof_rejected_final`: la fila ofrece «Ver caso de pago» (CUS-ORD-003). */
+    val paymentCase: Boolean = false,
 )
 
 internal data class OrdersPageUi(
@@ -174,8 +176,9 @@ internal data class OrderDetailUi(
     val awaitingPrepayment: Boolean = false,
     /** Si el detalle ofrece cancelar y con qué aviso ([cancelOfferOf]). */
     val cancel: CancelOffer = CancelOffer.None,
-    /** El `status` tal cual, para los relojes y el tiempo estimado. */
-    val status: String = "",
+    /** Espera a que el negocio acepte (`pending_acceptance`): se enseña la espera con su cuenta atrás. */
+    val waitingForBusiness: Boolean = false,
+    val etaStage: EtaStage = EtaStage.InProgress,
     /** Desde cuándo espera al negocio (`pendingAcceptanceAt`); `null` si el servidor no lo manda. */
     val pendingAcceptanceAt: Instant? = null,
     val estimatedReadyAt: Instant? = null,

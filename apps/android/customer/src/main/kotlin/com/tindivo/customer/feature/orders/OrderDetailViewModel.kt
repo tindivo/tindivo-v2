@@ -125,7 +125,8 @@ internal class OrderDetailViewModel
          * olvida solo, porque el cierre pasa por [SessionWatch].
          */
         fun switchAccount() {
-            viewModelScope.launch { withContext(NonCancellable) { sessionStore.signOut() } }
+            val account = openedBy ?: return
+            viewModelScope.launch { withContext(NonCancellable) { sessionStore.signOutIf(account) } }
         }
 
         /** Vuelve a consultar desde cero (después de un error sin datos). */

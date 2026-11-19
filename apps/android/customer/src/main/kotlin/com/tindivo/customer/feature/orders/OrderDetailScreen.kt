@@ -198,7 +198,7 @@ private fun OrderBody(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         OrderTitle(order = order)
-        if (order.status == "pending_acceptance") {
+        if (order.waitingForBusiness) {
             AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
         } else {
             OrderHeadlineBlock(headline = order.headline)

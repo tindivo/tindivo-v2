@@ -43,6 +43,25 @@ internal fun acceptanceClockOf(
     return AcceptanceClock.Running(minutesLeft = minutes, urgent = left <= urgentFrom)
 }
 
+/** En qué punto del pedido está, para decidir si hay tiempo estimado que enseñar. */
+internal enum class EtaStage {
+    /** Vivo y todavía sin salir de cocina o en ruta: hay estimado si hay base. */
+    InProgress,
+
+    /** La bolsa está lista en el mostrador (`ready_for_pickup`): «Ya está listo». */
+    ReadyForPickup,
+
+    /** Entregado o cancelado: no se enseña nada. */
+    Finished,
+}
+
+internal fun etaStageOf(status: String): EtaStage =
+    when (status) {
+        "ready_for_pickup" -> EtaStage.ReadyForPickup
+        "delivered", "cancelled" -> EtaStage.Finished
+        else -> EtaStage.InProgress
+    }
+
 /** El tiempo estimado que se enseña (CUS-TRK-004): siempre un rango o un minuto, nunca una hora de reloj. */
 internal sealed interface EtaView {
     data object Ready : EtaView
@@ -64,15 +83,15 @@ internal sealed interface EtaView {
  * terminal o sin base de cálculo. En recojo no se suma trayecto. Con `ready_for_pickup`, «Ya está listo».
  */
 internal fun etaOf(
-    status: String,
+    stage: EtaStage,
     isPickup: Boolean,
     atDoor: Boolean,
     estimatedReadyAt: Instant?,
     travel: TravelRange?,
     now: Instant,
 ): EtaView? {
-    if (atDoor || status == "delivered" || status == "cancelled") return null
-    if (status == "ready_for_pickup") return EtaView.Ready
+    if (atDoor || stage == EtaStage.Finished) return null
+    if (stage == EtaStage.ReadyForPickup) return EtaView.Ready
     val ready = estimatedReadyAt ?: return null
     val minTravel = if (isPickup) 0 else (travel?.min ?: return null)
     val maxTravel = if (isPickup) 0 else (travel?.max ?: return null)

@@ -55,32 +55,35 @@ class TrackingClocksTest {
     @Test
     fun `CA-TRK-04 el estimado es un rango de minutos desde ahora`() {
         val ready = after(10)
-        assertEquals(EtaView.Range(30, 35), etaOf("preparing", false, false, ready, travel, start))
-        assertEquals(EtaView.Range(20, 25), etaOf("preparing", false, false, ready, travel, after(10)))
+        assertEquals(EtaView.Range(30, 35), etaOf(etaStageOf("preparing"), false, false, ready, travel, start))
+        assertEquals(EtaView.Range(20, 25), etaOf(etaStageOf("preparing"), false, false, ready, travel, after(10)))
     }
 
     @Test
     fun `CA-TRK-04 un rango igual es un solo valor y el minimo vencido es en cualquier momento`() {
-        assertEquals(EtaView.Single(12), etaOf("preparing", false, false, after(12), TravelRange(0, 0), start))
-        assertEquals(EtaView.Anytime, etaOf("picked_up", false, false, start, travel, after(30)))
+        assertEquals(
+            EtaView.Single(12),
+            etaOf(etaStageOf("preparing"), false, false, after(12), TravelRange(0, 0), start),
+        )
+        assertEquals(EtaView.Anytime, etaOf(etaStageOf("picked_up"), false, false, start, travel, after(30)))
     }
 
     @Test
     fun `CA-TRK-04 en recojo no se suma trayecto y listo para recoger dice ya esta listo`() {
-        assertEquals(EtaView.Single(10), etaOf("preparing", true, false, after(10), travel, start))
-        assertEquals(EtaView.Ready, etaOf("ready_for_pickup", true, false, null, null, start))
+        assertEquals(EtaView.Single(10), etaOf(etaStageOf("preparing"), true, false, after(10), travel, start))
+        assertEquals(EtaView.Ready, etaOf(etaStageOf("ready_for_pickup"), true, false, null, null, start))
     }
 
     @Test
     fun `CA-TRK-04 con el motorizado en la puerta o en un estado terminal no se muestra`() {
-        assertNull(etaOf("picked_up", false, true, after(10), travel, start))
-        assertNull(etaOf("delivered", false, false, after(10), travel, start))
-        assertNull(etaOf("cancelled", false, false, after(10), travel, start))
+        assertNull(etaOf(etaStageOf("picked_up"), false, true, after(10), travel, start))
+        assertNull(etaOf(etaStageOf("delivered"), false, false, after(10), travel, start))
+        assertNull(etaOf(etaStageOf("cancelled"), false, false, after(10), travel, start))
     }
 
     @Test
     fun `CA-TRK-04 sin base de calculo no se muestra nada`() {
-        assertNull(etaOf("preparing", false, false, null, travel, start))
-        assertNull(etaOf("preparing", false, false, after(10), null, start))
+        assertNull(etaOf(etaStageOf("preparing"), false, false, null, travel, start))
+        assertNull(etaOf(etaStageOf("preparing"), false, false, after(10), null, start))
     }
 }

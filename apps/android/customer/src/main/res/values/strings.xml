@@ -264,6 +264,7 @@
     <string name="order_back_to_menu">Volver al menú</string>
     <string name="order_support_cancelled">¿Problema con este pedido?</string>
     <string name="order_reorder">Volver a pedir</string>
+    <string name="order_payment_case">Ver caso de pago</string>
 
     <string name="order_driver_label">Tu motorizado</string>
     <string name="order_wait_title">Esperando que el negocio acepte</string>

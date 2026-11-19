@@ -56,6 +56,7 @@ private fun ListCustomerOrders200ResponseDataItemsInner.toCardUi(now: Instant): 
         total = totalText,
         businessId = businessId,
         reorderable = cancelReason != PROOF_REJECTED_FINAL,
+        paymentCase = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPayment = paymentIntent == PREPAID && status == "awaiting_payment",
     )
 }
@@ -105,7 +106,8 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
         appealViaSupport = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPrepayment = payment.prepaid && status == "awaiting_payment",
         cancel = cancelOfferOf(status, payment),
-        status = status,
+        waitingForBusiness = status == "pending_acceptance",
+        etaStage = etaStageOf(status),
         pendingAcceptanceAt = pendingAcceptanceAt?.let(::apiInstantOrNull),
         estimatedReadyAt = estimatedReadyAt?.let(::apiInstantOrNull),
         travel = travelMinutes?.let { TravelRange(it.min, it.max) },

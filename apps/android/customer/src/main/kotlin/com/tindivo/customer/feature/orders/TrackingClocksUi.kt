@@ -18,11 +18,11 @@ import java.time.Instant
 
 private const val TICK_MILLIS = 1_000L
 
-/** La hora de ahora, que avanza cada segundo mientras la pantalla está en pantalla. */
+/** La hora de ahora, que avanza cada segundo mientras [active]; con [active] en falso se queda quieta. */
 @Composable
-private fun rememberNow(): State<Instant> =
-    produceState(initialValue = Instant.now()) {
-        while (true) {
+private fun rememberNow(active: Boolean): State<Instant> =
+    produceState(initialValue = Instant.now(), active) {
+        while (active) {
             delay(TICK_MILLIS)
             value = Instant.now()
         }
@@ -34,7 +34,7 @@ internal fun AcceptanceWaitBlock(
     start: Instant?,
     acceptanceMinutes: Int?,
 ) {
-    val now = rememberNow().value
+    val now = rememberNow(active = true).value
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = stringResource(R.string.order_wait_title),
@@ -65,9 +65,9 @@ internal fun AcceptanceWaitBlock(
 /** «Llega en 18–25 min»: siempre un rango, nunca una hora exacta (CUS-TRK-004). */
 @Composable
 internal fun EtaLine(order: OrderDetailUi) {
-    val now = rememberNow().value
+    val now = rememberNow(active = order.etaStage != EtaStage.Finished).value
     val atDoor = order.driver?.atDoor == true
-    val eta = etaOf(order.status, order.isPickup, atDoor, order.estimatedReadyAt, order.travel, now) ?: return
+    val eta = etaOf(order.etaStage, order.isPickup, atDoor, order.estimatedReadyAt, order.travel, now) ?: return
     val text =
         when (eta) {
             EtaView.Ready -> stringResource(R.string.order_eta_ready)

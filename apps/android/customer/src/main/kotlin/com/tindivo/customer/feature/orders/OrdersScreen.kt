@@ -210,6 +210,11 @@ private fun OrderCard(
                     Text(text = stringResource(R.string.order_reorder))
                 }
             }
+            if (order.paymentCase) {
+                OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(text = stringResource(R.string.order_payment_case))
+                }
+            }
             if (order.phase is OrderPhase.Cancelled) {
                 SupportLink(
                     link = cancelledOrderSupportLink(actions.supportNumber, order.shortId),

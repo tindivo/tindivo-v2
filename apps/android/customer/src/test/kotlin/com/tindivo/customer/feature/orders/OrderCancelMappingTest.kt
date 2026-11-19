@@ -72,6 +72,18 @@ class OrderCancelMappingTest {
     }
 
     @Test
+    fun `CA-ORD-05 ver caso de pago solo con el comprobante rechazado del todo`() {
+        fun card(
+            status: String,
+            reason: String? = null,
+        ) = page(listItem(status = status, cancelReason = reason)).toPageUi(now)?.items?.single()
+
+        assertTrue(card("cancelled", "proof_rejected_final")?.paymentCase == true)
+        assertFalse(card("cancelled", "customer_cancelled")?.paymentCase == true)
+        assertFalse(card("delivered")?.paymentCase == true)
+    }
+
+    @Test
     fun `falta tu pago solo en un prepago esperando el pago`() {
         fun awaiting(
             status: String,

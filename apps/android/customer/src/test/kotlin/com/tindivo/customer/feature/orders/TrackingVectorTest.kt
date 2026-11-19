@@ -70,8 +70,22 @@ class TrackingVectorTest {
     }
 
     @Test
-    fun `CA-ORD-01 la etiqueta de la fila sale del paso del vector y no del estado interno`() {
-        assertEquals(R.string.order_step_received, orderPhaseOf("awaiting_payment", null).labelRes(isPickup = false))
+    fun `CA-ORD-01 la etiqueta de cada estado del vector sale de su paso y no del estado interno`() {
+        for (caso in casos) {
+            val status = caso.getValue("status").jsonPrimitive.content
+            val paso = caso.getValue("paso").jsonPrimitive.content
+            val phase = orderPhaseOf(status, null)
+            val etiquetas =
+                when (paso) {
+                    "received" -> setOf(R.string.order_step_received)
+                    "preparing" -> setOf(R.string.order_step_preparing)
+                    "ontheway" -> setOf(R.string.order_step_on_the_way, R.string.order_step_ready)
+                    "delivered" -> setOf(R.string.order_step_delivered)
+                    else -> setOf(R.string.order_card_cancelled)
+                }
+            assertTrue(status, phase.labelRes(isPickup = false) in etiquetas)
+            assertTrue(status, phase.labelRes(isPickup = true) in etiquetas)
+        }
         assertEquals(R.string.order_step_ready, orderPhaseOf("ready_for_pickup", null).labelRes(isPickup = true))
         assertEquals(R.string.order_step_on_the_way, orderPhaseOf("picked_up", null).labelRes(isPickup = false))
     }

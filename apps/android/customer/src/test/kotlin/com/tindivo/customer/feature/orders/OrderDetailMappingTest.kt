@@ -52,7 +52,7 @@ class OrderDetailMappingTest {
                     travelMinutes = GetCustomerOrder200ResponseDataTravelMinutes(min = 20, max = 25),
                 ).toDetailUi()
 
-        assertEquals("pending_acceptance", ui?.status)
+        assertEquals(true, ui?.waitingForBusiness)
         assertEquals(java.time.Instant.parse("2026-10-26T15:01:00Z"), ui?.pendingAcceptanceAt)
         assertEquals(java.time.Instant.parse("2026-10-26T15:30:00Z"), ui?.estimatedReadyAt)
         assertEquals(TravelRange(20, 25), ui?.travel)
