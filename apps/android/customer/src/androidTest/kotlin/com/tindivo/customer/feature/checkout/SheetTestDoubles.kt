@@ -37,7 +37,10 @@ internal class SheetTestSession(
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): SignInResult = SignInResult.Failed
+
+    override suspend fun confirmTerms(accountId: String): Boolean = false
 
     override suspend fun signOut() {
         mutable.value = SessionState.SignedOut

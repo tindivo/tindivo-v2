@@ -79,10 +79,11 @@ internal class SupabaseSessionStore(
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): SignInResult =
         mutex.withLock {
             try {
-                adopt(backend.signInWithGoogle(idToken, rawNonce))
+                adopt(backend.signInWithGoogle(idToken, rawNonce, termsPending))
                 // Después del estado (ver SessionStore.signInGeneration): quien lea la generación y luego el estado
                 // nunca ve la generación vieja con la cuenta nueva sin darse cuenta.
                 signIns.value += 1
@@ -92,6 +93,17 @@ internal class SupabaseSessionStore(
             } catch (_: Exception) {
                 // Cualquier fallo de Auth es «no se pudo entrar»; el detalle no sale (puede llevar datos de la cuenta).
                 SignInResult.Failed
+            }
+        }
+
+    // Sin cancelación y bajo el mismo candado: la comprobación de la cuenta y la marca van de una vez.
+    override suspend fun confirmTerms(accountId: String): Boolean =
+        withContext(NonCancellable) {
+            mutex.withLock {
+                restoreOnce()
+                if (current?.userId?.equals(accountId, ignoreCase = true) != true) return@withLock false
+                backend.markTermsAccepted()
+                true
             }
         }
 

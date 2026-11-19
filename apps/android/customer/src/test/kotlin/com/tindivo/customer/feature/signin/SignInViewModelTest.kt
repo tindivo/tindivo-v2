@@ -158,6 +158,38 @@ class SignInViewModelTest {
         }
 
     @Test
+    fun `CAX-001 entra con la aceptacion pendiente y solo la confirma despues de registrarla`() =
+        runTest {
+            viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba") }
+
+            assertEquals(listOf(true), store.signInTermsPending)
+            assertEquals(listOf("user-1"), store.confirmTermsCalls)
+            assertEquals(listOf("terms:$TERMS_VERSION:user-1", "load:user-1"), profiles.calls)
+        }
+
+    @Test
+    fun `CAX-001 si el registro falla la aceptacion no se confirma`() =
+        runTest {
+            profiles.termsResult = ApiResult.Failure(AppError.Known(ApiErrorCode.InternalError, 500, null))
+
+            viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba") }
+
+            assertTrue(store.confirmTermsCalls.isEmpty())
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
+        }
+
+    @Test
+    fun `CAX-001 si no se puede confirmar la marca no se sigue y la sesion se cierra`() =
+        runTest {
+            store.confirmTermsResult = false
+
+            viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba") }
+
+            assertEquals(SignInUiState.TermsNotSaved, viewModel.state.value)
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
+        }
+
+    @Test
     fun `si Auth falla queda en error`() =
         runTest {
             store.signInResult = SignInResult.Failed

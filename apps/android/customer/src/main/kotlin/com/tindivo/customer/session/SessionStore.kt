@@ -37,11 +37,23 @@ interface SessionStore : AccessTokenSource {
      */
     val signInGeneration: StateFlow<Long>
 
-    /** Entra con el ID token de Google. [rawNonce] es el nonce en crudo; Google recibió su SHA-256. */
+    /**
+     * Entra con el ID token de Google. [rawNonce] es el nonce en crudo; Google recibió su SHA-256. Con [termsPending] la
+     * sesión queda guardada con la marca «aceptación pendiente»: si el proceso muere antes de [confirmTerms], no se
+     * restaura al reabrir la app (nunca hay una sesión utilizable sin la aceptación registrada).
+     */
     suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean = false,
     ): SignInResult
+
+    /**
+     * La aceptación de [accountId] ya se registró en el servidor: quita la marca y la sesión pasa a restaurarse. Si la
+     * sesión vigente es de otra cuenta, no toca nada y devuelve `false`. Si no se puede guardar, lanza y la sesión sigue
+     * marcada.
+     */
+    suspend fun confirmTerms(accountId: String): Boolean
 
     /** Cierra la sesión: intenta revocarla en el servidor y, falle o no, borra lo guardado en el aparato. */
     suspend fun signOut()

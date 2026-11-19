@@ -19,10 +19,18 @@ internal interface AuthBackend {
     /** La sesión guardada en el aparato, sin refrescarla; `null` si no hay. */
     suspend fun restore(): TokenSnapshot?
 
+    /**
+     * Con [termsPending] la sesión se guarda con la marca «aceptación pendiente», en el mismo archivo y de una vez: si el
+     * proceso muere antes de [markTermsAccepted], al volver a abrir esa sesión no se restaura (CAX-001).
+     */
     suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean = false,
     ): TokenSnapshot
+
+    /** Quita la marca de aceptación pendiente de la sesión guardada: desde ahí sí se restaura. */
+    suspend fun markTermsAccepted()
 
     /** Pide un token nuevo con el refresh token de la sesión actual y guarda el resultado. */
     suspend fun refresh(): TokenSnapshot

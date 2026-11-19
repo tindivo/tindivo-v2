@@ -96,7 +96,7 @@ class SignInViewModel
             token: GoogleIdResult.Token,
             rawNonce: String,
         ): SignInUiState =
-            when (sessionStore.signInWithGoogle(token.idToken, rawNonce)) {
+            when (sessionStore.signInWithGoogle(token.idToken, rawNonce, termsPending = true)) {
                 SignInResult.Success -> acceptThenContinue(token.displayName)
                 SignInResult.Failed -> SignInUiState.Failed
             }
@@ -108,17 +108,27 @@ class SignInViewModel
         private suspend fun acceptThenContinue(displayName: String?): SignInUiState {
             val account = currentAccount() ?: return SignInUiState.Done
             // Sin cancelación: si la pantalla se va a mitad, la aceptación termina y, si falla, la sesión igual se cierra.
-            val failure =
+            // La sesión se guardó con la marca «aceptación pendiente»: solo `confirmTerms` la quita. Si el proceso muere
+            // antes, al reabrir la app esa sesión no se restaura (CAX-001).
+            val outcome =
                 withContext(NonCancellable) {
-                    val result = profiles.acceptTerms(TERMS_VERSION, account)
-                    if (result is ApiResult.Failure) sessionStore.signOutIf(account)
-                    (result as? ApiResult.Failure)?.error
+                    val failure = (profiles.acceptTerms(TERMS_VERSION, account) as? ApiResult.Failure)?.error
+                    val confirmed = failure == null && confirm(account)
+                    if (!confirmed) sessionStore.signOutIf(account)
+                    failure to confirmed
                 }
-            if (failure == null) return afterEntry(displayName)
+            if (outcome.second) return afterEntry(displayName)
             // Un 426 lleva al flujo de «Actualiza la app», como en el resto de la app.
-            if (failure is AppError.UpgradeRequired) configService.reportUpgradeRequired(failure.minVersion)
+            (outcome.first as? AppError.UpgradeRequired)?.let { configService.reportUpgradeRequired(it.minVersion) }
             return SignInUiState.TermsNotSaved
         }
+
+        private suspend fun confirm(account: String): Boolean =
+            try {
+                sessionStore.confirmTerms(account)
+            } catch (_: Exception) {
+                false
+            }
 
         /**
          * Solo el 404 `customer_profile_not_found` de la cuenta que acaba de entrar lleva a «Completa tu perfil», y solo
