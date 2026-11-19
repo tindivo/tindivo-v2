@@ -3,8 +3,8 @@
 > Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code: «oka»); alcance ampliado con
 > D-49 a D-53, aprobado por Jesús el 2026-10-13 (conversación con Claude Code) · Alcance: las
 > decisiones de la migración a apps nativas; manda la sección 1. Análisis y requisitos: `Docs/trabajo/movil/`
-> Verificado: 2026-11-17 (D-12 y D-32).
-> **Actualizado el 2026-09-20** con tus respuestas. La sección 1 es lo decidido; lo que no me correspondía decidir
+> Verificado: 2026-11-18 (movimientos de D-14, D-23, D-25 a D-27, D-29, D-31, D-32, D-30 y D-35 contra sus fuentes; D-12 sin tocar).
+> **Actualizado el 2026-11-18** (decididas movidas a la sección 1; sustituidas `D-30` y `D-35`). Escrito originalmente el 2026-09-20 con tus respuestas. La sección 1 es lo decidido; lo que no me correspondía decidir
 > sigue en las secciones 2 y 3, con opciones, una **recomendación** y de qué depende.
 
 ## 1. Decidido (registrado)
@@ -12,14 +12,13 @@
 | # | Decisión | Quién / cuándo | Consecuencias reflejadas en el análisis |
 |---|---|---|---|
 | D-00 | **Dos apps 100 % nativas: Swift (iOS) y Kotlin (Android).** Capacitor descartado. | Tú, 2026-09-20 | OpenAPI obligatorio, sin reutilizar TypeScript, el catálogo de requisitos es la especificación común (`ARQ-02/03`, `03-requisitos/`) |
-| D-01 | **Primero la app de clientes** (Customer). Admin se queda en web. | Tú, 2026-09-20 (admin: mi propuesta) | Fases M1/M2/M3/W. **Matizada por `D-30`**: Negocios pasa por delante |
+| D-01 | **Primero la app de clientes** (Customer). Admin se queda en web. | Tú, 2026-09-20 (admin: mi propuesta) | Fases M1/M2/M3/W. **Matizada por `D-30`** (sustituida; ver «Sustituidas») |
 | D-02 | Todo el análisis vive en `Docs/trabajo/movil/`. | Tú | — |
 | D-03 | **`tindivo-prod` es operación real** (1 mes y 5 días a 2026-09-20). | Tú, 2026-09-20 | Compatibilidad hacia atrás obligatoria; cambios fuera de 18:00-23:00; Ola A. **Corrige** mis notas del 2026-09-10 («no hay producción viva») |
 | D-04 | **La revisión legal la haces tú** (sin abogado por ahora). | Tú, 2026-09-20 | Textos estándar ahora y revisión profesional más adelante; no bloquea el arranque. Ver `D-23/D-24` |
 | D-10 | **Tienes Mac.** | Tú, 2026-09-20 | iOS se escribe y depura ahí; **falta modelo y macOS** para Xcode 26 (`05-arranque/01` paso 0) |
 | D-12 | **Customer: Android e iOS se lanzan a la vez.** | Tú, 2026-09-20 | Android se construye primero e iOS lo sigue de cerca con la misma especificación y vectores (lanzar a la vez ≠ construir a la vez): `05-arranque/03`. **Ratificada por Jesús el 2026-11-17: se lanzan juntos, en la misma fecha.** |
 | D-13 | **Planes gratuitos** (Supabase y Vercel); regiones EE. UU. | Tú, 2026-09-20 | Regiones confirmadas: base `us-west-2`, funciones `iad1` (`PER-02`). Sin copias y Hobby no comercial (`PRO-06`). Ver `D-37` |
-| D-30 | **App de Negocios (cajera): sube de prioridad; solo Android; es lo más urgente.** | Tú, 2026-09-20 | Primer carril de app (N). iOS de Negocios queda fuera por ahora. Ver `D-35` |
 
 
 ### Decididas el 2026-10-10
@@ -49,10 +48,29 @@
 |---|---|---|
 | D-14 | **Un solo repositorio (este monorepo)** y Android como **un proyecto Gradle con módulos** en `apps/android/`: `core` (red, sesión, modelos generados del OpenAPI, diseño, push) y uno por app (`customer` ahora; `negocios` y `motorizados` después). iOS irá en `apps/ios/`. El APK lo compila la CI y se prueba en un Android real (sin emulador local); la app en desarrollo habla con **staging** (MV6), nunca con producción | Jesús, 2026-10-21 (recomendación aceptada) |
 
+### Decididas que estaban en las secciones abiertas
+
+| # | Decisión | Quién / cuándo |
+|---|---|---|
+| D-23 | **Política de borrado de cuenta (`SEC-09`):** anonimización con retención mínima del vínculo antifraude; es la `D-44`. Pedidos anonimizados para siempre, comprobantes 90 días, directorio y antifraude por teléfono conservados | Jesús, 2026-10-10 (decidida por `D-44`) |
+| D-25 | **Motor de notificaciones (`NOT-01/05/07`):** FCM y APNs **directos**, y solo avisos de pedidos. Detalle y estado en `MV7` de `../migraciones/cola.md` | Jesús, 2026-10-19 |
+| D-26 | **Proveedor de mapas, Android:** Google Maps SDK, con carga diferida al abrir el selector; la calidad del satélite en San Jacinto se comprueba antes de publicar (ver `D-54`). **iOS (MapKit): sigue como recomendación, sin decisión registrada** | Jesús, 2026-10-24 (`D-54`) |
+| D-27 | **Alcance de la web cuando exista la app (`MOB-15`):** cliente, apagar la PWA, sin respaldo web (el foco es la app móvil; la web del cliente se apaga después). Negocios no cambia: su web sigue siendo la vía de escritorio y de iPhone | Jesús, 2026-11-18 |
+| D-29 | **Versiones mínimas de SO:** Android 8 (API 26) e iOS 17 (es la `D-47`). `targetSdk` = 36 (obligatorio en Play desde el 2026-08-31) | Jesús, 2026-10-10 (`D-47`) |
+| D-31 | **Referencia mínima de dirección (`CUS-ADR-001`):** **15** en los formularios de las apps. Vive en `ADDRESS_REFERENCE_MIN` de `packages/contracts`; Android lo copia. La API v1 sigue aceptando desde 5 (`ADDRESS_REFERENCE_API_MIN`, API-3) | Jesús, 2026-11-18 |
+| D-32 | **Formato del código de pedido:** `#TDV-` (es lo que ya usan la web y Android) | Jesús, 2026-11-17 |
+
+### Sustituidas
+
+| # | Decisión | Sustituida por |
+|---|---|---|
+| D-30 | **App de Negocios (cajera): solo Android; sube de prioridad (2026-09-20).** | Lo vigente: app del cliente en iOS y Android; app de Negocios solo en Android (decisión de Jesús, 2026-11-18, conversación con Claude Code) |
+| D-35 | **Orden de construcción:** recomendación «Negocios Android primero». | Decisión de Jesús del 2026-10-09: Customer primero, Negocios Android después y la mudanza al VPS al final (`../migraciones/cola.md`) |
+
 **Reglas aplicables que no son decisiones del plan** (ya están en los estándares de código v2, ADR 0038, y se citan sin
 número D propio): `DES-6` (el contrato es compatible hacia atrás; `oasdiff` contra la rama base en la CI) y `CLI-14`
-(toda publicación pasa por pruebas internas y sale con liberación gradual o escalonada). Los números `D-54` y `D-55`
-quedan **libres**: la siguiente decisión del plan tomaba `D-54`; desde el 2026-10-29 la siguiente es `D-65`.
+(toda publicación pasa por pruebas internas y sale con liberación gradual o escalonada). Los números `D-54` a `D-64` están
+en uso (secciones de abajo); el siguiente libre es `D-65`.
 
 ### Decididas el 2026-10-24
 
@@ -110,8 +128,6 @@ aprobación manual: «no quiero trabajo manual de aprobar cambio de número».
 | # | Decisión | Opciones | Recomendación | Bloquea |
 |---|---|---|---|---|
 | D-11 | **Cuentas de tienda**: Apple Developer Program y Google Play Console. | Crear ambas hoy · esperar. | **Hoy.** Apple: la creas ahora (guía paso a paso en `05-arranque/01-cuentas-y-firmas.md`). **Google Play: por crear** y con el **camino crítico** de 12 testers × 14 días por app para Customer. | Fecha del primer lanzamiento |
-| D-14 | **Estructura del repositorio** (`MOB-16`). | Proyectos `apps/ios` y `apps/android` en el monorepo · repos separados con la especificación como submódulo. | Monorepo: el spec OpenAPI, los vectores de conformidad y los tokens de diseño viven junto al backend y el CI los valida. **Decidido por Jesús el 2026-10-21: monorepo, con `apps/android/` en módulos (sección 1)** | Ritmo de trabajo |
-| D-35 | **Orden de construcción.** | Negocios Android primero y Customer después · en paralelo · Customer primero. | **Negocios Android primero** (lo más urgente, 4 usuarios que conoces, pista interna sin la prueba de 12 × 14). El backend (B1-B3) y la organización (O) corren **en paralelo**; Customer arranca al terminar N1, con la pista cerrada abierta cuanto antes. Ver `05-arranque/03`. **Decidido por Jesús el 2026-10-09: Customer primero, Negocios Android después y la mudanza al VPS al final** (`../../planes/migraciones/cola.md`) | Plan de fases |
 | D-36 | **Quién figura como publicador** en las tiendas. | Persona natural (hoy; tu nombre legal) · organización (empresa + D-U-N-S; semanas; exime de la prueba de 12 testers de Google). | **Persona natural ahora**; ambas tiendas permiten transferir la app a otra cuenta más adelante (con condiciones). | Fecha del primer lanzamiento |
 | D-37 | **Subir a planes de pago** (`PRO-06`). | Supabase Pro (US$ 25/mes) y Vercel Pro (US$ 20/mes) · quedarse en gratuito con el mínimo de la Ola A. | **Subir ambos antes del lanzamiento público** (copias de seguridad y términos de uso comercial). Hoy, el mínimo gratis: funciones a `pdx1`, poda de `pg_cron` y un volcado nocturno cifrado. | Fiabilidad y cumplimiento |
 
@@ -121,15 +137,8 @@ aprobación manual: «no quiero trabajo manual de aprobar cambio de número».
 |---|---|---|---|---|
 | D-20 | **Dónde vive el dominio** (`ARQ-04`). | A: base de datos (lo actual, ordenado: esquema declarativo, una función por acción, tests en CI). B: TypeScript con RPC finas. | **A, y no ahora**: conserva lo probado y es higiene de la Ola 2, no un bloqueador. | `ARQ-04` |
 | D-21 | **Superficie que consume la app** (`ARQ-01`). | A: Supabase directo (SDK de Swift/Kotlin). B: fachada REST completa (`03-superficie-api.md §4`). **C: mixto mínimo.** | **C**: lecturas simples y tiempo real directos con RLS; **escrituras con reglas** por REST/RPC **versionadas**; más `GET /config`. Ver §3.1 | Bloquea el primer *build* de Customer |
-| D-23 | **Política de borrado de cuenta** (`SEC-09`). | Anonimización con retención mínima del vínculo antifraude (hash del teléfono) · borrado total. | Anonimización; los plazos de retención los decides tú (`D-04`); una revisión profesional puntual sería lo ideal (Ley 29733). | Bloquea la publicación |
 | D-24 | **Consentimiento y marketing** (`NAT-CON`). | Texto, categorías, edad mínima, horas de silencio, frecuencia máxima. | Empezar por `order_updates` (no comercial) y añadir `promotions` tras M1; texto estándar y revisión más adelante (`D-04`). | `NAT-MKT-001` |
-| D-25 | **Motor de notificaciones** (`NOT-01/05/07`). | FCM + APNs **directos** desde un *worker* propio · servicio gestionado para campañas (OneSignal, etc.). | **Directo para lo transaccional** (control de fiabilidad y prioridad); evaluar un servicio gestionado **solo para campañas** si construir segmentos y programación cuesta más de lo que vale. | `NAT-PSH`, `NAT-MKT` |
-| D-26 | **Proveedor de mapas nativo** (`NAT-LOC-002`). | iOS: MapKit. Android: Google Maps SDK · MapLibre con teselas propias. | MapKit + Google Maps SDK; **comprobar la calidad del satélite en San Jacinto** antes de fijar. Las teselas de OSM/CARTO de la web **no** deben usarse en una app publicada. **Android: Google Maps SDK aprobado por Jesús el 2026-10-24 (D-54)**, con carga diferida al abrir el selector; la calidad del satélite en San Jacinto se comprueba antes de publicar | `CUS-ADR-008` |
-| D-27 | **Alcance de la web cuando exista la app** (`MOB-15`). | Apagar la PWA · dejarla como respaldo de enlaces, tienda y borrado de cuenta. | **Cliente: apagar** (decisión de Jesús, 2026-11-18: sin respaldo web; el foco es la app móvil y la web del cliente se apaga después). Negocios no cambia: su web sigue siendo la vía de escritorio y de iPhone. | `CUS-WEB-007` |
 | D-28 | **Sistema de diseño en nativo** (`MOB-21`). | Iconos: Material Symbols en ambas · SF Symbols en iOS + Material en Android. Modo oscuro sí/no. | Exportar los **tokens** (color, radio, tipografía Geist/JetBrains Mono) como JSON; SF Symbols en iOS; modo oscuro **fuera de M1**. | Diseño de M1 |
-| D-29 | **Versiones mínimas de SO** y presupuesto de dispositivo. | iOS 16.1+ (Live Activities) o 17+ · Android 8 (API 26) o superior. | Decidir con **datos reales de dispositivos** de la PWA (`@vercel/analytics` en el Customer) y con el móvil gama baja que se quiera soportar. `targetSdk` = 36 (obligatorio en Play desde el 2026-08-31). | Alcance de `NAT-LIV` |
-| D-31 | **Referencia mínima de dirección** (`CUS-ADR-001`). | 5 (código) · 15 (`DECISIONS.md §13`). | **15** en los formularios de las apps (decisión de Jesús, 2026-11-18). Vive en `ADDRESS_REFERENCE_MIN` de `packages/contracts`; Android lo copia. La API v1 sigue aceptando desde 5 (`ADDRESS_REFERENCE_API_MIN`, API-3; decisión de Jesús, 2026-11-18). | Validaciones |
-| D-32 | **Formato del código de pedido**: `#TND-` vs `#TDV-`. | — | **`#TDV-`** (decisión de Jesús, 2026-11-17: es lo que ya usan la web y Android). | Textos |
 | D-33 | **Canal del pedido nativo** (`ARQ-08`). | Renombrar `customer_pwa` · conservarlo y añadir `client_platform` (`ios`/`android`/`web`). | **Conservar y añadir columnas**; generalizar los CHECK con un predicado. | Antes del primer *build* |
 | D-34 | **Quién financia cupones/promos** (`NAT-MKT-003`). | Tindivo · el negocio. | Depende del modelo económico (Tindivo no retiene fondos). | `NAT-MKT-003` |
 
@@ -209,7 +218,7 @@ de la tienda.
 | **Reglas de negocio en cuatro sitios** | Iguales en la teoría, distintas en la práctica | Mover al servidor lo que dependa de hora/config/estado (`ARQ-03`); vectores para lo demás |
 | **Notificaciones: el efecto depende de cuántos instalen la app** | El techo es la adopción, no la tecnología | Embudo web → tienda (`NAT-LNK-*`), QR del mostrador, y medir (`NAT-ANA-002`) |
 | **Fabricantes Android que matan procesos o restringen avisos a pantalla completa** | La alarma de la cajera puede no sonar aun siendo nativa | Diseño de N0 con permisos guiados, servicio en primer plano y latido; probar en el móvil real de la cajera |
-| **Cajera como canal dominante (86 %)** | Si el móvil de cliente no la desplaza, poco cambia | `D-30` (Negocios primero) y medir la cuota de autoservicio (`ADM-OPE-006`) |
+| **Cajera como canal dominante (86 %)** | Si el móvil de cliente no la desplaza, poco cambia | `D-30` (sustituida: Negocios solo Android) y medir la cuota de autoservicio (`ADM-OPE-006`) |
 | **Deriva de los documentos** | Ya se ha construido sobre datos falsos antes (incluida la promesa de copias de seguridad) | Este catálogo se regenera y se revalida (`00-formato…`); los números son fotografías del 2026-09-20 |
 
 ## 6. Lo que sigue pendiente de ti (por orden de impacto)
