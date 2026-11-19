@@ -61,7 +61,7 @@ class SessionTermsPendingTest {
         .code(200)
         .addHeader("Content-Type", "application/json")
         .body(
-            """{"access_token":"$access","token_type":"bearer","expires_in":3600,""" +
+            """{"access_token":"$access","token_type":"bearer","expires_in":3600,"expires_at":2000000,""" +
                 """"refresh_token":"$refresh","user":{"id":"user-1","email":"cliente@correo.pe"}}""",
         ).build()
 
