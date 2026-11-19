@@ -222,27 +222,28 @@ describe('send-code · tope por número de destino', () => {
     return count ?? 0
   }
 
-  it('rechazo inequívoco (4xx de Twilio): libera la plaza y no cuenta el intento personal', async () => {
+  it('rechazo inequívoco (4xx de Twilio): libera la plaza del número y el cupo personal, ya reservado, no se devuelve', async () => {
     const t = tel(7)
     const v = await crearVecino()
     create.mockRejectedValueOnce(
       Object.assign(new Error('número inválido'), { code: 21211, status: 400 }),
     )
     expect((await pedir(v, t)).status).toBe(500)
-    expect(await intentos(v)).toBe(0)
+    // CAX-002: el cupo personal se reserva ANTES de Twilio y no se devuelve si Twilio falla (ante la duda se manda menos).
+    expect(await intentos(v)).toBe(1)
     expect((await pedir(v, t)).status).toBe(200)
     expect((await pedir(v, t)).status).toBe(200)
     expect((await pedir(v, t)).status).toBe(429) // cupo del número (2) lleno con los 2 aceptados
   })
 
-  it('Twilio 429 con código (20429, no procesado): libera la plaza y no cuenta el intento personal', async () => {
+  it('Twilio 429 con código (20429, no procesado): libera la plaza del número y el cupo personal no se devuelve', async () => {
     const t = tel(0)
     const v = await crearVecino()
     create.mockRejectedValueOnce(
       Object.assign(new Error('Too many requests'), { code: 20429, status: 429 }),
     )
     expect((await pedir(v, t)).status).toBe(500)
-    expect(await intentos(v)).toBe(0)
+    expect(await intentos(v)).toBe(1) // cupo reservado antes de Twilio (CAX-002)
     expect((await pedir(v, t)).status).toBe(200)
     expect((await pedir(v, t)).status).toBe(200)
     expect((await pedir(v, t)).status).toBe(429) // los 2 aceptados llenan el cupo (2): la plaza del 429 se liberó

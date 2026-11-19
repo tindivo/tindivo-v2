@@ -801,7 +801,8 @@ describe('traslado del número y avisos de seguridad', () => {
         body: { phone: number, code: DEV_OTP_CODE },
       })
       expect(refused.status).toBe(409)
-      expectConforms('verifyPhoneCode', 409, refused.body)
+      // El OpenAPI solo documenta los éxitos: el error se valida con el esquema de problemas del contrato.
+      ProblemDetailsSchema.parse(refused.body)
       expect(refused.body).not.toHaveProperty('transfer')
       await db
         .from('app_settings')

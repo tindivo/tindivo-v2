@@ -163,8 +163,9 @@ export async function POST(req: Request): Promise<Response> {
     // y va ANTES de Twilio. Un error de lectura o de reserva RECHAZA: nunca deja pasar. Si Twilio falla después, el
     // cupo reservado no se devuelve (ante la duda se manda menos); la plaza del número en Redis sí se libera.
     let allowed: boolean
+    let maxAttempts: number
     try {
-      const maxAttempts = (await loadPhoneSettings(service)).maxCodesPer24h
+      maxAttempts = (await loadPhoneSettings(service)).maxCodesPer24h
       allowed = await reservePhoneCode(service, user.id, fullPhone, maxAttempts)
     } catch (reserveErr) {
       after(phoneLimit.release)
@@ -194,7 +195,7 @@ export async function POST(req: Request): Promise<Response> {
     if (!allowed) {
       after(phoneLimit.release)
       return problem('rate_limited', {
-        detail: 'Máximo de intentos de verificación en 24 horas. Intenta de nuevo más tarde.',
+        detail: `Máximo ${maxAttempts} intentos de verificación en 24 horas. Intenta de nuevo más tarde.`,
         requestId,
         headers: corsHeaders(req),
       })
