@@ -93,13 +93,14 @@ Los criterios CA-TRK-01 y CA-TRK-02 vienen de la web y se conservan; CA-TRK-03 a
 
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
-| 1 | CUS-TRK-021 | Android muestra el nombre del motorizado solo cuando va en camino y, con el motorizado en la puerta, ofrece «Escribirle por WhatsApp»: contradice la decisión de no dar contacto. | `feature/orders/OrderMapping.kt` · `feature/orders/OrderDetailSections.kt` · `feature/orders/DriverContact.kt` |
-| 2 | CUS-TRK-021 | Hasta ahora `getCustomerOrder` mandaba `driver.phone` al llegar el motorizado; el servidor ya lo manda en `null`. | `packages/contracts/openapi/v1.json` · `apps/api/lib/mappers/customer-orders.ts` |
+| 1 | CUS-TRK-021 | Android ofrecía «Escribirle por WhatsApp» con el motorizado en la puerta; se quitó. El nombre sigue viéndose solo desde que va en camino, llegó o se entregó. | `feature/orders/OrderMapping.kt` · `feature/orders/OrderDetailSections.kt` |
+| 2 | CUS-TRK-021 | Antes de la 0292, `get_tracking` entregaba `driverPhone` con el motorizado en la puerta por la ruta pública `public/orders/{shortId}`, sin sesión, a quien tuviera el código; `getCustomerOrder` también lo mandaba. Ahora los dos lo mandan en `null` y la web del cliente, que se apaga, se queda sin botón de llamar. | `supabase/migrations/0292_el_seguimiento_publico_no_da_el_telefono.sql` · `apps/api/lib/mappers/customer-orders.ts` |
 | 3 | CUS-TRK-004, CUS-TRK-005 | `getCustomerOrder` ahora trae las horas y el trayecto; Android calcula únicamente el reloj del pago. | `feature/orders/PrepayModels.kt` |
-| 4 | CUS-TRK-019 | Android no tiene pantalla de espera: un pedido en `pending_acceptance` se pinta en el detalle, y el «Esperando confirmación de disponibilidad» solo sale en prepago. | `feature/orders/OrderHeadline.kt` · `feature/orders/OrderDetailScreen.kt` |
+| 4 | CUS-TRK-019 | Android no tiene una pantalla de espera aparte (tablero `Seguimiento-aceptacion`): la espera es un bloque del detalle, visible en `pending_acceptance` para todo pago, con título, estado y cuenta atrás; faltan la ilustración, el resumen corto y las acciones propias de esa pantalla. | `feature/orders/TrackingClocksUi.kt` · `feature/orders/OrderDetailScreen.kt` |
 | 5 | CUS-TRK-020 | La maqueta decía «Preparando» al aceptar; manda la proyección del contrato (Recibido hasta `preparing`) con otro titular. Falta el texto del titular tras aceptar en efectivo (ver «Abierto»). | `packages/contracts/src/order-status.ts` |
-| 6 | CUS-TRK-023 | Android responde a un pedido ajeno o inexistente con un texto genérico y sin acciones. | `feature/orders/OrderDetailScreen.kt` · `feature/orders/OrderErrors.kt` |
+| 6 | CUS-TRK-023 | Android dice «No puedes abrir este pedido» con «Mis pedidos» y «Entrar con otra cuenta»; sin verificar que, sin sesión, se conserve el enlace y se diga «Inicia sesión para intentar abrir este pedido». | `feature/orders/OrderDetailScreen.kt` · `feature/orders/OrderDetailViewModel.kt` |
 | 7 | CUS-TRK-010, CUS-TRK-012 | Android no avisa al cambiar el estado ni mantiene la pantalla encendida. | `feature/orders/` |
+| 8 | CUS-TRK-005 | La cuenta atrás de verificación no sale: `getPublicConfig` no trae su plazo; solo están los de aceptación y pago. | `packages/contracts/src/openapi/public-responses.ts` |
 | 9 | CUS-TRK-022 | El canon de antifraude dice que el motorizado reporta a los 5 minutos de espera y que hay falta al instante; la decisión del 2026-11-17 dice que se va y que la falta nace de noche con confirmación de Jesús (decisión para Jesús 8). No se comprobó que el admin tenga hoy esa pantalla de confirmar o anular. | `Docs/negocio/antifraude.md` · `apps/admin/app/incidentes/page.tsx` |
 
 ## Abierto
