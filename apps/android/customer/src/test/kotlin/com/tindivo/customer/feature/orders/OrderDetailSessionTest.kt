@@ -32,7 +32,19 @@ class OrderDetailSessionTest : OrderDetailHarness() {
             viewModel.switchAccount()
 
             assertEquals(listOf("user-1"), store.signOutIfCalls)
-            assertEquals(0, store.signOutCalls)
+            assertEquals(SessionState.SignedOut, store.state.value)
+        }
+
+    @Test
+    fun `CA-TRK-09 entrar con otra cuenta no cierra la sesion de otra cuenta que ya entro`() =
+        runTest {
+            val viewModel = viewModel()
+            store.switchTo("user-2")
+
+            viewModel.switchAccount()
+
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
+            assertEquals(SessionState.SignedIn("user-2"), store.state.value)
         }
 
     @Test
