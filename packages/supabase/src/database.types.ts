@@ -525,6 +525,7 @@ export type Database = {
           qr_url: string | null
           slug: string
           tagline: string | null
+          featured_title: string | null
           updated_at: string
           user_id: string
           uses_tindivo_drivers: boolean
@@ -567,6 +568,7 @@ export type Database = {
           qr_url?: string | null
           slug?: string
           tagline?: string | null
+          featured_title?: string | null
           updated_at?: string
           user_id: string
           uses_tindivo_drivers?: boolean
@@ -609,6 +611,7 @@ export type Database = {
           qr_url?: string | null
           slug?: string
           tagline?: string | null
+          featured_title?: string | null
           updated_at?: string
           user_id?: string
           uses_tindivo_drivers?: boolean
@@ -1898,6 +1901,7 @@ export type Database = {
           image_url: string | null
           is_available: boolean
           is_compact: boolean
+          is_featured: boolean
           name: string
           thumbnail_url: string | null
           updated_at: string
@@ -1921,6 +1925,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           is_compact?: boolean
+          is_featured?: boolean
           name: string
           thumbnail_url?: string | null
           updated_at?: string
@@ -1944,6 +1949,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           is_compact?: boolean
+          is_featured?: boolean
           name?: string
           thumbnail_url?: string | null
           updated_at?: string
