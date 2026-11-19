@@ -12,8 +12,11 @@ import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -41,6 +44,12 @@ class TermsGateViewModel
         private val configService: ConfigService,
     ) : ViewModel() {
         val required: StateFlow<Boolean> = sessionStore.termsRequired
+
+        /** `true` hasta que termina de restaurarse la sesión guardada: antes no se sabe si la aceptación está confirmada. */
+        val restoring: StateFlow<Boolean> =
+            sessionStore.state
+                .map { it is SessionState.Unknown }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, sessionStore.state.value is SessionState.Unknown)
 
         private val _state = MutableStateFlow<TermsGateUiState>(TermsGateUiState.Idle)
         val state: StateFlow<TermsGateUiState> = _state.asStateFlow()

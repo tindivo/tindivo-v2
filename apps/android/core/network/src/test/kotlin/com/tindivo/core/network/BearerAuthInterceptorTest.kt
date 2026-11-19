@@ -23,7 +23,7 @@ class BearerAuthInterceptorTest : HttpClientTestBase() {
 
         @Volatile var blocked = false
 
-        override val tokenOnlyForTermsAcceptance: Boolean get() = blocked
+        override suspend fun accessGrant() = AccessGrant(accessToken(), onlyForTermsAcceptance = blocked)
 
         override suspend fun accessToken(): String? = token
 

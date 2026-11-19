@@ -21,11 +21,20 @@ interface AccessTokenSource {
     suspend fun refresh(): String?
 
     /**
-     * `true` mientras la sesión está bloqueada hasta aceptar los Términos: la capa de red solo entrega el token a
-     * `POST /customer/terms-acceptance`; cualquier otra petición a la API falla en local, sin salir a la red.
+     * El token y, leído bajo el MISMO candado y DESPUÉS de restaurar la sesión, si está bloqueada hasta aceptar los
+     * Términos. Por defecto, sin bloqueo.
      */
-    val tokenOnlyForTermsAcceptance: Boolean get() = false
+    suspend fun accessGrant(): AccessGrant = AccessGrant(accessToken(), onlyForTermsAcceptance = false)
 }
+
+/**
+ * Lo que la capa de red necesita para decidir. Con [onlyForTermsAcceptance] el token solo va a
+ * `POST /customer/terms-acceptance`; cualquier otra petición a la API falla en local, sin salir a la red.
+ */
+class AccessGrant(
+    val token: String?,
+    val onlyForTermsAcceptance: Boolean,
+)
 
 /** La petición no salió: la sesión espera la aceptación de los Términos. */
 class SessionBlockedException : IOException("sesión bloqueada hasta aceptar los Términos")
@@ -73,9 +82,14 @@ class BearerAuthInterceptor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val toApi = request.url.isSameOrigin(apiOrigin)
-        if (toApi && source.tokenOnlyForTermsAcceptance && !request.isTermsAcceptance()) throw SessionBlockedException()
-        val token = if (toApi) runBlocking { source.accessToken() } else null
+        val grant = if (request.url.isSameOrigin(apiOrigin)) runBlocking { source.accessGrant() } else null
+        // La decisión se toma con el estado ya restaurado: nunca antes de saber si la aceptación está confirmada.
+        if (grant != null && grant.onlyForTermsAcceptance &&
+            !request.isTermsAcceptance()
+        ) {
+            throw SessionBlockedException()
+        }
+        val token = grant?.token
         return if (token == null) chain.proceed(request) else proceedWithToken(chain, request, token)
     }
 

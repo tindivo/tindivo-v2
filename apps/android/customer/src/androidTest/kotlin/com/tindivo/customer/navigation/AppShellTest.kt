@@ -25,7 +25,9 @@ class AppShellTest {
         compose.setContent {
             AppShell(
                 termsRequired = true,
+                restoring = false,
                 gate = { Text("pantalla de aceptación") },
+                loading = { Text("cargando") },
             ) {
                 navigationComposed++
                 Text("navegación")
@@ -38,10 +40,36 @@ class AppShellTest {
     }
 
     @Test
+    fun ca_AUT_13_con_la_restauracion_pendiente_no_se_arma_la_navegacion_y_se_muestra_la_carga() {
+        var navigationComposed = 0
+        var restoring by mutableStateOf(true)
+        compose.setContent {
+            AppShell(
+                termsRequired = false,
+                restoring = restoring,
+                gate = { },
+                loading = { Text("cargando") },
+            ) {
+                navigationComposed++
+                Text("navegación")
+            }
+        }
+
+        compose.onNodeWithText("cargando").assertIsDisplayed()
+        compose.onNodeWithText("navegación").assertDoesNotExist()
+        assertEquals(0, navigationComposed)
+
+        compose.runOnIdle { restoring = false }
+
+        compose.onNodeWithText("navegación").assertIsDisplayed()
+        compose.onNodeWithText("cargando").assertDoesNotExist()
+    }
+
+    @Test
     fun ca_AUT_13_al_confirmar_la_aceptacion_se_arma_la_navegacion() {
         var required by mutableStateOf(true)
         compose.setContent {
-            AppShell(termsRequired = required, gate = { }) { Text("navegación") }
+            AppShell(termsRequired = required, restoring = false, gate = { }, loading = { }) { Text("navegación") }
         }
         compose.onNodeWithText("navegación").assertDoesNotExist()
 

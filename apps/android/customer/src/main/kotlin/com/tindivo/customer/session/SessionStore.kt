@@ -38,8 +38,6 @@ interface SessionStore : AccessTokenSource {
      */
     val termsRequired: StateFlow<Boolean>
 
-    override val tokenOnlyForTermsAcceptance: Boolean get() = termsRequired.value
-
     /**
      * Cuántas veces se entró a una cuenta (la que sea, también la misma otra vez) desde que arrancó el proceso. Sube
      * justo DESPUÉS de que [state] muestre la cuenta que entró; restaurar al arrancar, refrescar y cerrar no la mueven.

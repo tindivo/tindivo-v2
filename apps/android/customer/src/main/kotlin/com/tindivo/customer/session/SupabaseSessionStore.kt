@@ -1,5 +1,6 @@
 package com.tindivo.customer.session
 
+import com.tindivo.core.network.AccessGrant
 import com.tindivo.core.network.RetryAfterShieldInterceptor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -65,13 +66,26 @@ internal class SupabaseSessionStore(
     override suspend fun accessToken(): String? =
         mutex.withLock {
             restoreOnce()
-            val snapshot = current
-            when {
-                snapshot == null -> null
-                snapshot.secondsLeft() > REFRESH_MARGIN_SECONDS -> snapshot.accessToken
-                else -> refreshProactively(snapshot)
-            }
+            tokenLocked()
         }
+
+    // Restaurar, token y estado de aceptación bajo UN candado: una petición lanzada en el arranque en frío espera a
+    // restaurar y decide con la aceptación ya conocida (CAX-001).
+    override suspend fun accessGrant(): AccessGrant =
+        mutex.withLock {
+            restoreOnce()
+            val token = tokenLocked()
+            AccessGrant(token, onlyForTermsAcceptance = mutableTermsRequired.value)
+        }
+
+    private suspend fun tokenLocked(): String? {
+        val snapshot = current
+        return when {
+            snapshot == null -> null
+            snapshot.secondsLeft() > REFRESH_MARGIN_SECONDS -> snapshot.accessToken
+            else -> refreshProactively(snapshot)
+        }
+    }
 
     override suspend fun refresh(): String? {
         val seen = generation.get()

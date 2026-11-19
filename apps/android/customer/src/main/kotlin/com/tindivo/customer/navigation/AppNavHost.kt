@@ -6,9 +6,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -19,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.tindivo.customer.BuildConfig
+import com.tindivo.customer.R
 import com.tindivo.customer.feature.account.AccountDestination
 import com.tindivo.customer.feature.account.ProfileLink
 import com.tindivo.customer.feature.addresses.ADDRESSES_CHANGED_KEY
@@ -97,7 +103,13 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
     }
     val termsGate: TermsGateViewModel = hiltViewModel()
     val termsRequired = termsGate.required.collectAsStateWithLifecycle().value
-    AppShell(termsRequired = termsRequired, gate = { TermsGate(termsGate) }) {
+    val restoring = termsGate.restoring.collectAsStateWithLifecycle().value
+    AppShell(
+        termsRequired = termsRequired,
+        restoring = restoring,
+        gate = { TermsGate(termsGate) },
+        loading = { StartupLoading() },
+    ) {
         Column {
             // D-58: aviso que no bloquea. Con la actualización obligatoria el ViewModel ya no lo muestra.
             if (osNoticeVisible) {
@@ -119,6 +131,15 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 composable<UpdateRoute> { UpdateScreen() }
             }
         }
+    }
+}
+
+/** La sesión guardada aún se restaura: nada de la app se arma hasta saber si la aceptación está confirmada. */
+@Composable
+private fun StartupLoading() {
+    val description = stringResource(R.string.account_loading)
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = description })
     }
 }
 
