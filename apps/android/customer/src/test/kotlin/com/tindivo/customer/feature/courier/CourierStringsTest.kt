@@ -16,9 +16,10 @@ class CourierStringsTest {
             .associate { it.groupValues[1] to it.groupValues[2] }
 
     @Test
-    fun `CA-ENT-10 · lo que no se envia incluye animales vivos y objetos robados y ya no pide receta ni refrigeracion`() {
+    fun `CA-ENT-10 · lo que no se envia incluye animales y robados y ya no pide receta`() {
         val info = courier.getValue("courier_prohibited_info")
-        for (item in listOf("alcohol", "efectivo", "drogas", "animales vivos", "objetos robados", "Los documentos sí")) {
+        val debe = listOf("alcohol", "efectivo", "drogas", "animales vivos", "objetos robados", "Los documentos sí")
+        for (item in debe) {
             assertTrue("falta «$item»", info.contains(item))
         }
         assertFalse(info.contains("receta"))

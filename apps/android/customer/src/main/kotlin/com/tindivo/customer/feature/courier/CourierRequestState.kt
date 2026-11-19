@@ -37,6 +37,7 @@ internal data class CourierPointDraft(
     val name: String = "",
 ) {
     val located: Boolean get() = lat != null && lng != null
+
     /** Largo y texto basura como el servidor y las direcciones (`isReferenceOk`, el vector compartido). */
     val referenceOk: Boolean get() = isReferenceOk(reference)
     val phoneOk: Boolean get() = isValidPePhone(phone)
