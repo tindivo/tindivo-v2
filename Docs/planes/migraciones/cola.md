@@ -2,7 +2,7 @@
 
 > Estado: **en ejecución** · Aprobado por Jesús el 2026-10-09 (lote P0.1, commit `ef31131`); alcance ampliado el
 > 2026-10-13 con los lotes MV3b y MV7 (Jesús, conversación con Claude Code) · Commit de referencia:
-> `develop@b17f63db` (producción: `main@34891de3`, base en `0271`, 2026-10-24) · Alcance: el avance: qué lote va ahora · Bitácora y debates: `Docs/trabajo/migraciones/`
+> `develop@b17f63db` (producción: `main@34891de3`, base en `0271`, desplegada el 2026-10-23) · Alcance: el avance: qué lote va ahora · Bitácora y debates: `Docs/trabajo/migraciones/`
 
 > La sesión de trabajo toma de aquí **el primer lote A desbloqueado**, de arriba abajo. Al cerrar un lote se marca
 > `[x]` con el commit o PR y se anota en la bitácora del día (`Docs/trabajo/migraciones/bitacora/AAAA-MM-DD.md`). Las reglas son las de
