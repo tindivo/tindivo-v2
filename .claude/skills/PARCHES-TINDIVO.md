@@ -14,5 +14,5 @@ auditoría de Codex del PR #185 (Ronda 1, hallazgos CAX-001 a CAX-007) pidió lo
 | `ponytail`, `ponytail-review`, `ponytail-audit` | CAX-007 | Un `shortcut:` o un self-check nunca dispensa lo que exige el canon. |
 
 **Antes de un `npx skills update`:** actualizar pisa estos parches. Toda actualización se vuelve a aplicar sobre
-esta lista y pasa otra vez por la auditoría de Codex (`.claude/rules/codex-worker.md`), porque cambia instrucciones
+esta lista y pasa otra vez por la auditoría de Codex (`Docs/operacion/codex-auditor.md`), porque cambia instrucciones
 que los agentes siguen con permisos completos.

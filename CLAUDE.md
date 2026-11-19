@@ -11,9 +11,11 @@
   con lo aprobado; si es norma, va al canon (con aprobación) y la nota se borra (estándar §6.6).
 - **Cada tarea sigue el ciclo de `Docs/README.md` §7.7** (o su ciclo corto, si califica). Al empezar, aplica la skill
   `using-agent-skills` y di qué skill usas en cada paso.
-- **Aplica siempre `.claude/rules/`** (`gemini-worker.md`: encargos y auditoría de Antigravity; `codex-worker.md`: cuándo
-  y cómo firma Codex, sus rondas y su contingencia sin cuota). Se cargan solas, pero no se aplican solas. Antes de cada
+- **Aplica siempre `.claude/rules/`**: son resúmenes que se cargan solos; el texto que manda está en `Docs/operacion/`
+  (`antigravity-worker.md`: encargos y auditoría de Antigravity; `codex-auditor.md`: cuándo y cómo firma Codex, sus
+  rondas y su contingencia sin cuota). Léelo entero antes de escribir un encargo y, el de Codex, también antes de
+  retomar una auditoría o de cerrar, marcar o integrar una entrega que pasó por él. Antes de cada
   tarea, di el reparto según la tabla de §7.6: Haiku lee y da contexto; Antigravity barre; Sonnet programa con encargo
   cerrado; tú diseñas, haces el piloto y escribes encargos; un subagente limpio revisa lo de cualquier Claude; Fable,
-  con Argon o Hydrogen como segunda opinión, decide la arquitectura; Codex firma lo que dispare `codex-worker.md` §2.
+  con Argon o Hydrogen como segunda opinión, decide la arquitectura; Codex firma lo que dispare `codex-auditor.md` §2.
   Si haces tú algo que le toca a otro, di por qué.

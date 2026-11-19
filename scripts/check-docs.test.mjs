@@ -46,3 +46,31 @@ describe('cabecera de una capacidad de Docs/producto/ (CAX-002)', () => {
     assert.equal(run({ 'Docs/negocio/a.md': `# A\n${'\n'.repeat(14)}> Verificado: 2026-11-17\n` }).status, 1)
   })
 })
+
+describe('tope de líneas del AGENTS.md raíz (decisión de Jesús, 2026-11-18)', () => {
+  const lineas = (n) => `${Array.from({ length: n }, (_, i) => `línea ${i + 1}`).join('\n')}\n`
+  test('con 150 líneas pasa', () => {
+    const r = run({ 'AGENTS.md': lineas(150) })
+    assert.equal(r.status, 0, r.out)
+  })
+  test('con 151 líneas falla y dice cuántas tiene', () => {
+    const r = run({ 'AGENTS.md': lineas(151) })
+    assert.equal(r.status, 1)
+    assert.match(r.out, /AGENTS\.md tiene 151 líneas \(tope: 150\)/)
+  })
+  test('con CRLF cuenta igual: 150 pasa y 151 falla', () => {
+    assert.equal(run({ 'AGENTS.md': lineas(150).replaceAll('\n', '\r\n') }).status, 0)
+    assert.equal(run({ 'AGENTS.md': lineas(151).replaceAll('\n', '\r\n') }).status, 1)
+  })
+  test('con CR suelto cuenta igual, con y sin salto final (CAX-002)', () => {
+    const cr = (n) => lineas(n).replaceAll('\n', '\r')
+    assert.equal(run({ 'AGENTS.md': cr(150) }).status, 0)
+    assert.equal(run({ 'AGENTS.md': cr(151) }).status, 1)
+    assert.equal(run({ 'AGENTS.md': cr(150).slice(0, -1) }).status, 0)
+    assert.equal(run({ 'AGENTS.md': cr(151).slice(0, -1) }).status, 1)
+  })
+  test('sin salto final cuenta igual: 150 pasa y 151 falla', () => {
+    assert.equal(run({ 'AGENTS.md': lineas(150).slice(0, -1) }).status, 0)
+    assert.equal(run({ 'AGENTS.md': lineas(151).slice(0, -1) }).status, 1)
+  })
+})

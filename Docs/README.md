@@ -1,6 +1,6 @@
 # Docs: cómo se documenta Tindivo y cómo se trabaja con agentes
 
-> Verificado: 2026-11-17 · entorno: `develop@946feb2e` · Estándar vigente, aprobado por Jesús el 2026-10-10; enmiendas aprobadas por Jesús el 2026-10-12 y el 2026-11-17 (`Docs/producto/`, §2.4; conversación con Claude Code) · Resumen operativo: `AGENTS.md` raíz
+> Verificado: 2026-11-17 · entorno: `develop@946feb2e` · Estándar vigente, aprobado por Jesús el 2026-10-10; enmiendas aprobadas por Jesús el 2026-10-12, el 2026-11-17 (`Docs/producto/`, §2.4) y el 2026-11-18 (tope de `AGENTS.md`, §6.2; conversaciones con Claude Code) · Resumen operativo: `AGENTS.md` raíz
 > La transición que lo implantó (el squash de ~255 documentos a este canon) terminó el 2026-10-10; su plan y el debate
 > con Codex, que firmó con cambios en dos rondas, están en la etiqueta `archive/estandar-docs` (commit `8dcf6ba`).
 
@@ -281,7 +281,8 @@ Entra en `AGENTS.md` solo lo que, si se borra, haría equivocarse a un agente:
 4. Los invariantes, en una o dos líneas cada uno, con enlace a su fuente normativa o test.
 5. Cómo se trabaja (§7) y los comandos esenciales.
 
-**Aviso** (no bloqueo) por encima de 120 líneas: lo que no cabe va al canon y se enlaza.
+**Tope** de 150 líneas: la CI falla por encima (`pnpm check:docs`; decisión de Jesús, 2026-11-18). Lo que no cabe va al
+canon y se enlaza.
 
 ### 6.3 Runbooks y skills
 
@@ -408,7 +409,7 @@ con el mismo Opus». Su aprobación de la propuesta (auditada antes por Fable): 
 | Revisar lo que escribió cualquier Claude | Subagente en contexto limpio que no recibe el plan; la CI sola, solo para lo rutinario (§7.4) | — |
 | Arquitectura y decisiones críticas | Subagente en **Fable**, con preguntas cerradas (gasta mucho) | Claude en contexto limpio |
 | Segunda opinión independiente | Antigravity en **Gemini Argon o Hydrogen** (autorizados por Jesús el 2026-11-14) | Claude en contexto limpio |
-| Atacar una decisión importante (§7.4) | Codex con razonamiento alto | Contingencia de `.claude/rules/codex-worker.md` §10 |
+| Atacar una decisión importante (§7.4) | Codex con razonamiento alto | Contingencia de `Docs/operacion/codex-auditor.md` §10 |
 | Compilar o probar la app iOS | Solo en macOS: la Mac de Jesús o CI con runner macOS. Un agente en Linux o en la nube no toca Swift | — |
 
 Una decisión crítica lleva dos opiniones independientes y la aprueba siempre Jesús. Si por el plan B las dos salen del
@@ -477,7 +478,7 @@ del PR y el 7 corre por calendario, y ninguno de los dos encaja en el disparador
    existe. Las rutas históricas, de ejemplo o futuras se marcan como tales y quedan fuera.
 2. **Cabecera de verificación** (§3.5; `pnpm check:docs`) en cada archivo del canon; **cabecera de plan** (§2.2) en cada plan.
 3. **Ninguna regla del canon tiene como fuente un archivo de `trabajo/`** (`pnpm check:docs`). Excepciones registradas.
-4. **Aviso** si `AGENTS.md` pasa de 120 líneas (`pnpm check:docs`).
+4. **Tope** de 150 líneas para `AGENTS.md`: por encima, falla (`pnpm check:docs`).
 5. **Referencias a git**: todo `<ref>:<ruta>` citado en el canon, en `planes/` o en los archivos de agentes resuelve en
    un clon limpio, y su ref es una etiqueta `archive/*` o un ancestro de `develop` (`scripts/check-archive-refs.sh`).
 6. **Impacto documental**: el PR trae la línea `Impacto documental:` completa (§5).

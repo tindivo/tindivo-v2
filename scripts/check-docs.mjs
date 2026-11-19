@@ -13,7 +13,7 @@
  *   3. Cabeceras: el canon dice contra qué se verificó («Verificado:»), un ADR su estado («Estado:») y un plan el suyo.
  *   4. El canon no toma reglas de Docs/trabajo/: solo puede enlazarlo en una línea «Discusión:».
  *
- * Y un aviso, no un error: el AGENTS.md raíz por encima de 120 líneas.
+ * Y un tope: el AGENTS.md raíz no pasa de 150 líneas (decisión de Jesús, 2026-11-18); lo que no cabe va al canon.
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, statSync } from 'node:fs'
@@ -88,8 +88,13 @@ for (const f of alcance) {
   if (esPlan(f) && !/Estado:/.test(cabeza)) errores.push(`${f} · al plan le falta «Estado: …» en la cabecera`)
 }
 
-const raiz = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8').split('\n').length
-if (raiz > 120) avisos.push(`AGENTS.md tiene ${raiz} líneas (aviso por encima de 120): lo que no cabe va al canon`)
+const AGENTS_MAX_LINEAS = 150
+// LF, CRLF y CR suelto cuentan como fin de línea (CAX-002): con solo LF, 151 líneas con CR pasarían como una.
+const raiz = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8')
+  .replace(/(\r\n|\r|\n)$/, '')
+  .split(/\r\n|\r|\n/).length
+if (raiz > AGENTS_MAX_LINEAS)
+  errores.push(`AGENTS.md tiene ${raiz} líneas (tope: ${AGENTS_MAX_LINEAS}): lo que no cabe va al canon y se enlaza`)
 
 for (const a of avisos) console.warn(`⚠ ${a}`)
 if (errores.length) {
