@@ -106,5 +106,5 @@ Los criterios CA-TRK-01 y CA-TRK-02 vienen de la web y se conservan; CA-TRK-03 a
 
 - **Foto del motorizado** (punto H): solo iniciales o foto con consentimiento. Es un dato personal de un tercero; Jesús no la resolvió el 2026-11-19. Entrada DA-19 de `Docs/trabajo/decisiones-abiertas.md`.
 - **«No se presentó» (CUS-TRK-022):** efecto de la falta, destino del dinero prepagado y el choque con `Docs/negocio/antifraude.md`. Toca el ledger: lo decide Jesús (invariante 9) y no se implementa nada antes. Entrada DA-20.
-- **«Responde en hasta [n] min» (CA-TRK-06):** el criterio aprobado dice el plazo completo; la cuenta atrás de CUS-TRK-005 muestra lo que queda en otra línea, y el texto de esa línea («Quedan [n] min») no está aprobado. Jesús decide si se muestra el plazo completo o lo que queda (DA-25).
+- **«Responde en hasta [n] min» (CA-TRK-06):** el criterio aprobado dice el plazo completo; la cuenta atrás de CUS-TRK-005 se muestra aparte, en `m:ss` y sin texto propio, como la web. Jesús decide si se muestra el plazo completo o lo que queda, y si la cuenta atrás lleva un texto (DA-25).
 - **Titular tras aceptar un pedido en efectivo:** no hay un texto aprobado distinto del de «Recibido»; se usa el existente hasta que Jesús lo defina.

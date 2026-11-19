@@ -102,6 +102,6 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 ### DA-25 · Espera del negocio: ¿el plazo completo o lo que queda?
 
 - 2026-11-19 · Bloquea: CA-TRK-06 y la cuenta atrás de la espera (CUS-TRK-019, CUS-TRK-005) · Detectó: Claude
-- **Contexto**: el criterio aprobado dice «Responde en hasta [plazo de aceptación] min», con el plazo completo; el requisito de la cuenta atrás dice que mientras corra un plazo se muestra lo que queda. Una sola línea no puede ser las dos cosas, y el texto de la segunda línea no está aprobado.
-- **Alternativas**: (a) dos líneas: «Responde en hasta [plazo] min» fija y «Quedan [n] min» con la cuenta atrás (es lo que hace hoy Android); (b) una línea que baja: «Responde en hasta [lo que queda] min»; (c) solo el plazo completo, sin cuenta atrás visible hasta el último tercio.
-- **Recomendación**: (a). Conserva lo aprobado y da la cuenta atrás; Jesús aprueba el texto «Quedan [n] min».
+- **Contexto**: el criterio aprobado dice «Responde en hasta [plazo de aceptación] min», con el plazo completo; el requisito de la cuenta atrás dice que mientras corra un plazo se muestra lo que queda. Una sola línea no puede ser las dos cosas. Hoy Android muestra, aparte, la cuenta atrás en `m:ss` y sin texto propio, igual que la web.
+- **Alternativas**: (a) dos líneas: «Responde en hasta [plazo] min» fija y la cuenta atrás en `m:ss` (es lo que hace hoy Android; Jesús decide si se le agrega un texto); (b) una línea que baja: «Responde en hasta [lo que queda] min»; (c) solo el plazo completo, sin cuenta atrás visible hasta el último tercio.
+- **Recomendación**: (a). Conserva lo aprobado y da la cuenta atrás; la cuenta atrás va sin texto hasta que Jesús apruebe uno.
