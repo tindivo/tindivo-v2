@@ -86,7 +86,7 @@ class OrderDetailMappingTest {
     }
 
     @Test
-    fun `el motivo de cancelacion elige el titulo y no_show depende del metodo`() {
+    fun `CA-TRK-10 el motivo de cancelacion elige el titulo y no_show depende del metodo`() {
         fun copy(
             reason: String?,
             method: String = "delivery",
@@ -121,7 +121,7 @@ class OrderDetailMappingTest {
     }
 
     @Test
-    fun `con el prepago ya enviado o verificado la cancelacion no dice sin costo`() {
+    fun `CA-TRK-11 con el prepago ya enviado o verificado la cancelacion no dice sin costo`() {
         fun cancelled(
             reason: String,
             intent: String = "prepaid",

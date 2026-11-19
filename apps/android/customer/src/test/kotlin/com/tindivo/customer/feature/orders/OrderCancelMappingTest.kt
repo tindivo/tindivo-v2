@@ -58,7 +58,7 @@ class OrderCancelMappingTest {
     }
 
     @Test
-    fun `volver a pedir abre el negocio del pedido salvo con el comprobante rechazado del todo`() {
+    fun `CA-ORD-05 volver a pedir abre el negocio del pedido salvo con el comprobante rechazado del todo`() {
         fun card(
             status: String,
             reason: String? = null,
@@ -88,7 +88,7 @@ class OrderCancelMappingTest {
     }
 
     @Test
-    fun `cancelar se ofrece donde lo permite cancel_customer_order`() {
+    fun `CA-TRK-01 cancelar se ofrece donde lo permite cancel_customer_order`() {
         fun offer(
             status: String,
             intent: String,
@@ -111,7 +111,7 @@ class OrderCancelMappingTest {
     }
 
     @Test
-    fun `un prepago con comprobante o pago verificado nunca ofrece cancelar sin costo`() {
+    fun `CA-TRK-01 un prepago con comprobante o pago verificado nunca ofrece cancelar sin costo`() {
         val withProof = detail(status = "pending_acceptance", paymentIntent = "prepaid", proofAttempt = 1)
         val verified =
             detail(status = "pending_acceptance", paymentIntent = "prepaid", paymentVerifiedAt = "2026-10-26T15:10:00Z")

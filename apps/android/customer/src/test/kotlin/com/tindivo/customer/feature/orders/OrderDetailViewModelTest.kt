@@ -16,7 +16,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class OrderDetailViewModelTest : OrderDetailHarness() {
     @Test
-    fun `carga el pedido y, si no es terminal, vuelve a consultar cada 8 segundos`() =
+    fun `CA-TRK-13 carga el pedido y, si no es terminal, vuelve a consultar cada 8 segundos`() =
         runTest {
             server.enqueue(response(200, detailJson("preparing")))
             server.enqueue(response(200, detailJson("picked_up")))
@@ -33,7 +33,7 @@ class OrderDetailViewModelTest : OrderDetailHarness() {
         }
 
     @Test
-    fun `al llegar a entregado deja de consultar`() =
+    fun `CA-TRK-12 al llegar a entregado deja de consultar`() =
         runTest {
             server.enqueue(response(200, detailJson("picked_up")))
             server.enqueue(response(200, detailJson("delivered")))
@@ -236,7 +236,7 @@ class OrderDetailViewModelTest : OrderDetailHarness() {
         }
 
     @Test
-    fun `al volver a la pantalla un pedido en curso se ve de inmediato y se sigue consultando`() =
+    fun `CA-TRK-13 al volver a la pantalla un pedido en curso se ve de inmediato y se sigue consultando`() =
         runTest {
             server.enqueue(response(200, detailJson("preparing")))
             server.enqueue(response(200, detailJson("picked_up")))
