@@ -206,19 +206,34 @@ internal class SupabaseSessionStore(
         return snapshot
     }
 
+    // Cuántas veces falló la limpieza local (solo el conteo, sin datos de la cuenta): quien la mire sabe que quedó
+    // trabajo pendiente sin tener que leer nada personal.
+    @Volatile
+    internal var localClearFailures = 0
+        private set
+
     // Se completa aunque la corrutina esté cancelada: dejar la sesión a medias cerrada es peor que tardar un poco.
+    // Primero se borra lo local (memoria y archivo cifrado) y solo después se publica «sin sesión»: quien reacciona a
+    // `SignedOut` (otra cuenta que entra) no puede ver todavía una sesión restaurable. Un fallo del borrado se
+    // reintenta; `EncryptedSessionFile.delete` ya vacía el archivo y destruye las claves, así que solo si ni eso
+    // pudo, el error de disco es el riesgo residual.
     private suspend fun drop() {
         current = null
         generation.incrementAndGet()
-        mutableState.value = SessionState.SignedOut
         withContext(NonCancellable) {
-            try {
-                backend.clear()
-            } catch (_: Exception) {
-                // Ya quedó cerrada en memoria. El archivo ya se vació (EncryptedSessionFile.delete) o, si ni eso, este
-                // error de disco es el riesgo residual: lo guardado seguiría siendo una sesión válida.
+            var cleared = false
+            var attempts = 0
+            while (!cleared && attempts < CLEAR_ATTEMPTS) {
+                attempts++
+                try {
+                    backend.clear()
+                    cleared = true
+                } catch (_: Exception) {
+                    localClearFailures++
+                }
             }
         }
+        mutableState.value = SessionState.SignedOut
     }
 }
 
@@ -228,6 +243,7 @@ internal class SupabaseSessionStore(
 internal fun IOException.neverReachedAuth(): Boolean =
     this is UnknownHostException || this is ConnectException || this is NoRouteToHostException
 
+private const val CLEAR_ATTEMPTS = 3
 private const val AUTH_CONNECT_TIMEOUT_SECONDS = 10L
 private const val AUTH_IO_TIMEOUT_SECONDS = 15L
 private const val AUTH_CALL_TIMEOUT_SECONDS = 20L
