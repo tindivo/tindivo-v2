@@ -156,28 +156,28 @@
   {
     "id": "ref-min-menos-uno",
     "campo": "referencia",
-    "valor": "Jr1x",
+    "valor": "Frente al pozo",
     "valido": false,
-    "motivo": "un carácter menos que el mínimo (4)"
+    "motivo": "un carácter menos que el mínimo (14)"
   },
   {
     "id": "ref-min-justo",
     "campo": "referencia",
-    "valor": "Jr1 J",
+    "valor": "Frente al pozo.",
     "valido": true,
-    "motivo": "justo en el mínimo (5)"
+    "motivo": "justo en el mínimo (15)"
   },
   {
     "id": "ref-min-con-espacios-alrededor",
     "campo": "referencia",
-    "valor": "  Jr1 J  ",
+    "valor": "  Frente al pozo.  ",
     "valido": true,
     "motivo": "los espacios de los bordes no cuentan: el recortado mide el mínimo"
   },
   {
     "id": "ref-min-menos-uno-con-espacios",
     "campo": "referencia",
-    "valor": "  Jr1x  ",
+    "valor": "  Frente al pozo  ",
     "valido": false,
     "motivo": "con espacios de relleno el recortado sigue por debajo del mínimo"
   },
@@ -198,70 +198,70 @@
   {
     "id": "ref-solo-digitos",
     "campo": "referencia",
-    "valor": "12345678",
+    "valor": "123456789012345678",
     "valido": false,
     "motivo": "solo dígitos"
   },
   {
-    "id": "ref-solo-digitos-cinco",
+    "id": "ref-solo-digitos-quince",
     "campo": "referencia",
-    "valor": "98765",
+    "valor": "987654321098765",
     "valido": false,
-    "motivo": "solo dígitos en el mínimo exacto"
+    "motivo": "solo dígitos con el largo mínimo exacto"
   },
   {
     "id": "ref-digitos-con-letras",
     "campo": "referencia",
-    "valor": "Jr 12345",
+    "valor": "Casa 12345 azul",
     "valido": true,
     "motivo": "dígitos mezclados con letras es válido"
   },
   {
     "id": "ref-caracter-repetido-cinco",
     "campo": "referencia",
-    "valor": "aaaaaa",
+    "valor": "Casa con aaaaaa",
     "valido": false,
     "motivo": "el mismo carácter seis veces seguidas"
   },
   {
     "id": "ref-caracter-repetido-cuatro",
     "campo": "referencia",
-    "valor": "xcasaaaa y",
+    "valor": "Frente a casaaaa y",
     "valido": false,
     "motivo": "cuatro caracteres iguales seguidos dentro de otro texto"
   },
   {
     "id": "ref-caracter-repetido-tres",
     "campo": "referencia",
-    "valor": "Jr. Sucre 111",
+    "valor": "Jr. Sucre 111, casa",
     "valido": true,
     "motivo": "tres iguales seguidos todavía es válido"
   },
   {
     "id": "ref-patron-repetido",
     "campo": "referencia",
-    "valor": "asdfasdf",
+    "valor": "asdfgasdfgasdfg",
     "valido": false,
     "motivo": "patrón repetido sin espacios"
   },
   {
     "id": "ref-patron-repetido-con-espacios",
     "campo": "referencia",
-    "valor": "lala lala",
+    "valor": "lala lala lala lala",
     "valido": false,
     "motivo": "patrón repetido con espacio en medio"
   },
   {
     "id": "ref-patron-palabra",
     "campo": "referencia",
-    "valor": "callecalle",
+    "valor": "callecallecalle",
     "valido": false,
     "motivo": "una palabra repetida"
   },
   {
     "id": "ref-patron-mayusculas",
     "campo": "referencia",
-    "valor": "AsDfAsDf",
+    "valor": "AsDfGaSdFgAsDfG",
     "valido": false,
     "motivo": "patrón repetido sin distinguir mayúsculas"
   },

@@ -22,7 +22,7 @@ class AddressRulesTest {
     }
 
     @Test
-    fun `CA-ADR-01 CA-ADR-02 · la referencia exige entre 5 y 140 caracteres y no ser basura`() {
+    fun `CA-ADR-01 CA-ADR-02 · la referencia exige entre 15 y 140 caracteres y no ser basura`() {
         assertFalse(isReferenceOk("casa"))
         assertTrue(isReferenceOk("Frente a la bodega de don Carlos"))
         assertFalse(isReferenceOk("lala lala"))

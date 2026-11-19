@@ -2,6 +2,7 @@
 
 import { BottomSheet, Icon } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
+import { courierReferenceError } from '../../lib/reference'
 import { useCourierStore } from '../../lib/store'
 
 const QUICK_REFS = ['Frente a…', 'Al costado de…', 'Cerca de…']
@@ -28,7 +29,8 @@ export function PinNoteSheet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const ready = text.trim().length > 0
+  const problem = courierReferenceError(text)
+  const ready = problem === null
 
   return (
     <BottomSheet open={open} onClose={() => goTo('pin-drop')} label="¿Cómo llegamos?" scrim={false}>
@@ -54,6 +56,10 @@ export function PinNoteSheet() {
           placeholder="Ej.: Casa de dos pisos, puerta azul"
           className="w-full resize-none rounded-2xl border border-transparent bg-[#F4F4F2] px-3.5 py-3 font-sans text-[15px] text-[#2E3236] outline-none focus:border-brand/40"
         />
+
+        {text.trim().length > 0 && problem && (
+          <p className="mt-1.5 text-[13px] font-semibold text-[#B45309]">{problem}</p>
+        )}
 
         <div className="mt-2.5 flex flex-wrap gap-2">
           {QUICK_REFS.map((chip) => (

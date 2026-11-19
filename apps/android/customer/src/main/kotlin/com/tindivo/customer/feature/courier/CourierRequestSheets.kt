@@ -168,7 +168,7 @@ private fun SheetSubtitle(text: String) {
 
 /**
  * Marcar el punto en el mapa con el pin fijo al centro y escribir cómo llegar (web: el `pin-drop`). Solo se confirma
- * un punto que la persona movió dentro de la zona y con una referencia de 5 a 140 letras; el ViewModel lo vuelve a
+ * un punto que la persona movió dentro de la zona y con una referencia de 15 a 140 letras; el ViewModel lo vuelve a
  * comprobar y el servidor también. Lo escrito vive solo mientras la hoja está abierta.
  */
 @Composable
