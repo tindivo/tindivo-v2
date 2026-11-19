@@ -44,7 +44,7 @@ describe('0291 · courier_service_status', () => {
   })
 
   afterAll(async () => {
-    await writeCourier(original)
+    if (original !== null) await writeCourier(original)
   })
 
   it('CA-ENT-11 · devuelve maxWeightKg con el valor de courier.maxWeightKg', async () => {

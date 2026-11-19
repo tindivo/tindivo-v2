@@ -30,9 +30,13 @@ begin
   ) || case
     -- Sin el ajuste, o con uno que no es un número positivo (null, texto, cero), no se inventa un peso:
     -- la clave se omite y la app no muestra ninguno. Nunca falla el cast: Entregas no se cierra por un ajuste mal escrito.
-    when jsonb_typeof(v_courier -> 'maxWeightKg') = 'number'
-      and (v_courier ->> 'maxWeightKg')::numeric > 0
-      then jsonb_build_object('maxWeightKg', (v_courier ->> 'maxWeightKg')::numeric)
+    -- El case anidado asegura que el cast solo se evalúa sobre un número (un `and` no garantiza el orden).
+    when jsonb_typeof(v_courier -> 'maxWeightKg') = 'number' then
+      case
+        when (v_courier ->> 'maxWeightKg')::numeric > 0
+          then jsonb_build_object('maxWeightKg', (v_courier ->> 'maxWeightKg')::numeric)
+        else '{}'::jsonb
+      end
     else '{}'::jsonb
   end;
 end;
