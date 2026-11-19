@@ -1,0 +1,140 @@
+name: Android · Maestro
+
+# Flujos de punta a punta de la app del cliente (apps/android/maestro) sobre un emulador, contra staging (`tindivo-dev`).
+#
+# ESTADO: PROPUESTA, NO PROBADA. No se corrió en local (en el PC del dueño no hay SDK de Android, emulador ni Maestro)
+# ni en GitHub. Solo se ejecuta a mano (`workflow_dispatch`): no entra en los PR hasta que alguien la corra una vez y la
+# pase a un disparador automático.
+#
+# Qué corre y qué no:
+#  - Corre `flows/invitado-hasta-identificacion.yaml`: no necesita sesión.
+#  - NO corre los flujos que piden sesión (contraentrega, prepago, Mis pedidos, cancelar, recojo, Entregas, borrar
+#    cuenta). Entran con «Continuar con Google» y un emulador de CI no tiene una cuenta de Google añadida; el SMS
+#    tampoco se automatiza. Esos flujos se corren en un dispositivo con la sesión hecha (ver apps/android/maestro/README.md).
+#    Para que corran aquí haría falta una vía de entrada de prueba en la variante `dev` de la app: decisión de producto,
+#    no de este workflow.
+#
+# Sin secretos y con permisos de solo lectura, como `android.yml`. Las acciones van fijadas por SHA, las mismas que ya usa
+# `android.yml`. Maestro va fijado por versión y por hash: el hash está SIN CALCULAR (`MAESTRO_SHA256`), y el paso de
+# instalación falla a propósito mientras no se rellene (con el zip de la release oficial: `sha256sum maestro.zip`).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-maestro-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Versión de la CLI de Maestro (release `cli-<versión>` en github.com/mobile-dev-inc/maestro). SIN VERIFICAR: elegir
+  # una release publicada y calcular su hash antes de la primera corrida.
+  MAESTRO_VERSION: 2.0.10
+  MAESTRO_SHA256: SIN_CALCULAR
+
+jobs:
+  maestro:
+    name: Maestro · invitado hasta identificación
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Preparar JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
+      - name: Instalar Maestro
+        run: |
+          if [ "${MAESTRO_SHA256}" = "SIN_CALCULAR" ]; then
+            echo "::error::Falta el sha256 de Maestro ${MAESTRO_VERSION} (MAESTRO_SHA256). Calcúlalo con la release oficial y pégalo."
+            exit 1
+          fi
+          ZIP="${RUNNER_TEMP}/maestro.zip"
+          curl --fail --silent --show-error --location --output "${ZIP}" \
+            "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_SHA256}  ${ZIP}" | sha256sum --check -
+          unzip -q "${ZIP}" -d "${RUNNER_TEMP}/maestro-cli"
+          echo "${RUNNER_TEMP}/maestro-cli/maestro/bin" >> "${GITHUB_PATH}"
+
+      - name: Preparar el SDK de Android
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${SDKMANAGER}" --licenses > /dev/null
+
+      # Sin KVM el emulador x86_64 no arranca en un tiempo razonable.
+      - name: Habilitar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Instalar el emulador y la imagen del sistema
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${SDKMANAGER}" --licenses > /dev/null
+          "${SDKMANAGER}" 'emulator' 'system-images;android-34;google_apis;x86_64'
+
+      - name: Crear el dispositivo virtual
+        run: |
+          export ANDROID_AVD_HOME="${RUNNER_TEMP}/avd"
+          mkdir -p "${ANDROID_AVD_HOME}"
+          echo "ANDROID_AVD_HOME=${ANDROID_AVD_HOME}" >> "${GITHUB_ENV}"
+          AVDMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/avdmanager"
+          echo no | "${AVDMANAGER}" create avd -n tindivo -k 'system-images;android-34;google_apis;x86_64' --device pixel_6 --force
+
+      - name: Arrancar el emulador
+        timeout-minutes: 8
+        run: |
+          export PATH="${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
+          nohup emulator -avd tindivo -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect \
+            > "${RUNNER_TEMP}/emulator.log" 2>&1 &
+          EMULATOR_PID=$!
+          adb start-server
+          booted=""
+          for _ in $(seq 1 150); do
+            if ! kill -0 "${EMULATOR_PID}" 2> /dev/null; then
+              echo "::error::El emulador terminó antes de arrancar"
+              break
+            fi
+            if [ "$(adb shell getprop sys.boot_completed 2> /dev/null | tr -d '\r')" = "1" ]; then
+              booted=1
+              break
+            fi
+            sleep 2
+          done
+          if [ -z "${booted}" ]; then
+            echo "::error::El emulador no terminó de arrancar en 300 s"
+            tail -n 80 "${RUNNER_TEMP}/emulator.log" || true
+            exit 1
+          fi
+          adb shell input keyevent 82
+
+      - name: Compilar e instalar la app (variante dev, apunta a staging)
+        working-directory: apps/android
+        run: |
+          ./gradlew :customer:assembleDevDebug
+          adb install -r customer/build/outputs/apk/dev/debug/*.apk
+
+      - name: Correr el flujo del invitado
+        working-directory: apps/android/maestro
+        run: maestro test --test-output-dir "${RUNNER_TEMP}/maestro-out" flows/invitado-hasta-identificacion.yaml
+
+      - name: Subir capturas e informe de Maestro
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-maestro-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/maestro-out
+            ${{ runner.temp }}/emulator.log
+          if-no-files-found: ignore
+          retention-days: 14
