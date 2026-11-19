@@ -20,9 +20,9 @@ codigo:
 
 ## Contenido, de arriba abajo
 
-1. **Foto** grande, parte de la página, que colapsa al hacer scroll; sobre ella, volver y compartir. Sin foto, el isotipo
+1. **Foto** grande, parte de la página, que colapsa al hacer scroll; sobre ella, volver (el botón compartir no entra: DA-17). Sin foto, el isotipo
    de Tindivo sobre `#FFF7ED`.
-2. **Barra compacta** (invisible en reposo): aparece al colapsar la foto, blanca con sombra: volver · nombre · compartir.
+2. **Barra compacta** (invisible en reposo): aparece al colapsar la foto, blanca con sombra: volver · nombre.
 3. **Nombre, descripción y precio** («S/ 46.00»).
 4. **Progreso:** «1 de 2 listas» (grupos obligatorios resueltos).
 5. **Grupos de opciones**, uno bajo otro: título y ayuda; estado «Obligatorio · elige 1» → «Listo» con check, u «Opcional ·
@@ -68,8 +68,8 @@ la foto vuela a la pastilla de bolsa. Con «reducir movimiento»: sin parallax n
 
 ## Pendiente
 
-- ¿Hoja modal (como Android hoy) o pantalla completa con foto que colapsa (como el canvas)? Ver Decisiones para Jesús.
-- «Compartir» no tiene destino ni requisito: no entra hasta que se defina.
+- Es una **pantalla completa**, como el canvas (decisión de Jesús, 2026-11-19); la hoja modal de Android se reemplaza.
+- «Compartir» no tiene destino ni requisito (DA-17 de `Docs/trabajo/decisiones-abiertas.md`): el botón no se dibuja hasta que se defina.
 - La etiqueta de la nota («Nota para el negocio» en el canvas; «Nota (opcional)» y un ejemplo con «tocar timbre» en el código):
   el ejemplo habla del motorizado, no del negocio.
 - Las opciones sin recargo dicen «Incluido» en el código; el canvas no dibuja nada.

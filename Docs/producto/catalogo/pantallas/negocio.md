@@ -15,7 +15,7 @@ codigo:
 | | |
 |---|---|
 | **Tarea de la persona** | Ver la carta de un negocio, saber si puede pedirle y agregar platos a la bolsa. |
-| **Se llega desde** | `catalogo/inicio` (tarjeta), un enlace `/negocio/{slug}` (CUS-CAT-022), «Volver a pedir» en pedidos, «Agregar más» en `bolsa/bolsa`. |
+| **Se llega desde** | `catalogo/inicio` (tarjeta), un enlace `/negocio/{slug}` (CUS-CAT-022, diferido), «Volver a pedir» en pedidos, «Agregar más» en `bolsa/bolsa`. |
 | **Se sale hacia** | Plato → `catalogo/plato`. «Ver bolsa» → `bolsa/bolsa`. Fila «Información del negocio ›» → hoja «Información». Cuadrícula → hoja «Todas las secciones». Volver → origen. |
 
 ## Contenido, de arriba abajo
@@ -79,7 +79,7 @@ rebota. Las hojas suben 250 ms con el scrim en fundido. Con «reducir movimiento
 
 ## Pendiente
 
-- «Para compartir» (distintivo): ¿lo asigna el negocio o se calcula? Sin respuesta no entra.
-- «Cómo pagas» nombra Yape y Plin, y la decisión del 2026-11-16 pide no usar marcas en la opción de pago del checkout.
+- «Para compartir» (distintivo): sin definir (DA-17 de `Docs/trabajo/decisiones-abiertas.md`); no entra.
+- «Cómo pagas» mantiene los nombres Yape y Plin: es información, no una opción de pago (decisión de Jesús, 2026-11-19).
 - La referencia «a una cuadra de la plaza» de la maqueta no tiene campo en el negocio.
 - La búsqueda dentro de la carta existe en el código y la maqueta no la dibuja: se mantiene (CUS-CAT-006).

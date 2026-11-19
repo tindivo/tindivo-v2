@@ -1,6 +1,6 @@
 ---
 canvas: [Main]
-requisitos: [CUS-CAT-001, CUS-CAT-002, CUS-CAT-003, CUS-CAT-012, CUS-CAT-015, CUS-CAT-020, CUS-CAT-030, CUS-CAT-031, CUS-CAT-032]
+requisitos: [CUS-CAT-001, CUS-CAT-002, CUS-CAT-012, CUS-CAT-015, CUS-CAT-030, CUS-CAT-031, CUS-CAT-032]
 operaciones: [listBusinesses]
 textos: []
 tokens: []
@@ -25,9 +25,9 @@ codigo:
 2. **Pedido en curso** (si lo hay), como tarjeta al inicio del contenido: «Tu pedido está en camino» · «[NEGOCIO] · llega en
    [A]–[B] min» · «Ver pedido ›». Con varios: «Tienes [N] pedidos en curso · Ver pedidos ›». Punto en la pestaña Pedidos
    mientras haya uno activo (CUS-CAT-031).
-3. **Saludo:** «¿Qué pedimos hoy?», título único sin el nombre de la persona (CUS-CAT-002; por confirmar, ver Pendiente).
-4. **Dos tarjetas de servicio**, una junto a otra: «Entregas» («De A a B, ya pagado», distintivo «ÚNICO») y «Store»
-   («Variedad de productos», CUS-CAT-032; Store sale después del lanzamiento).
+3. **Saludo:** «¿Qué pedimos hoy?», título único sin el nombre de la persona (CUS-CAT-002).
+4. **Tarjeta de servicio «Entregas»** («De A a B, ya pagado», distintivo «ÚNICO»). La tarjeta de Store **no se muestra**
+   mientras Store esté fuera del lanzamiento (CUS-CAT-032).
 5. **«Restaurantes»** · «[N] abiertos ahora». Una tarjeta por negocio: abierto, con nombre, rubro, «Abierto» y plazo;
    cerrado, atenuada y «Cerrado · abre [día] [hora]» (CUS-CAT-012). Un negocio en modo catálogo (`catalog_only`) ofrece
    «Pedidos por WhatsApp» en lugar del plazo (CUS-CAT-015).
@@ -61,8 +61,10 @@ Tarjeta de servicio: escala 0,97 y sombra baja al tocar (150–250 ms, `cubic-be
 desliza 6 px a la derecha al entrar; el contador de la bolsa rebota al agregar; el ícono del pedido en curso late suave.
 Con «reducir movimiento», todo queda estático.
 
+## Fuera del lanzamiento
+
+La búsqueda de negocios y platos (CUS-CAT-003) y el carrusel de promociones (CUS-CAT-020) no están en esta pantalla.
+
 ## Pendiente
 
-- El saludo («¿Qué pedimos hoy?» de la maqueta contra «saludar por nombre» de CUS-CAT-002) y la búsqueda y el carrusel de
-  la web, que la maqueta no dibuja (CUS-CAT-003, CUS-CAT-020): ver Decisiones para Jesús del PR.
 - Texto de cerrado: la maqueta dice «Cerrado · abre mañana 12:00 m.», el código «Cerrado ahora».
