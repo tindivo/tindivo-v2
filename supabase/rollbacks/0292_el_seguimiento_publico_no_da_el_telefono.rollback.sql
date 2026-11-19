@@ -70,3 +70,23 @@ BEGIN
   RETURN v_result;
 END;
 $function$;
+
+-- ── Comprobación: sigue habiendo UNA función y el ACL de la 0260 no se tocó ──
+do $check$
+declare
+  n int;
+begin
+  select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+   where s.nspname = 'public' and p.proname = 'get_tracking';
+  if n <> 1 then
+    raise exception 'rollback 0292: se esperaba UNA sola get_tracking y hay %', n;
+  end if;
+  if has_function_privilege('anon', 'public.get_tracking(text)', 'execute')
+     or has_function_privilege('authenticated', 'public.get_tracking(text)', 'execute') then
+    raise exception 'rollback 0292: get_tracking quedó ejecutable por anon/authenticated';
+  end if;
+  if not has_function_privilege('service_role', 'public.get_tracking(text)', 'execute') then
+    raise exception 'rollback 0292: service_role perdió EXECUTE sobre get_tracking';
+  end if;
+end
+$check$;

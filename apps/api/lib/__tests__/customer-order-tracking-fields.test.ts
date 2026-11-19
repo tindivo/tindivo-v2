@@ -1,6 +1,5 @@
 import { CustomerOrderDetailSchema } from '@tindivo/contracts/openapi'
 import { describe, expect, it } from 'vitest'
-import { travelMinutesFrom } from '../customer/order-timers'
 import { type OrderDetailRow, toOrderDetailDto } from '../mappers/customer-orders'
 
 /**
@@ -108,17 +107,5 @@ describe('los instantes y el trayecto del detalle', () => {
     expect(
       toOrderDetailDto(row({ pending_acceptance_at: null }), null, null, null).pendingAcceptanceAt,
     ).toBeNull()
-  })
-
-  it('CA-TRK-04 sin ajuste el trayecto es null y no un 20-25 inventado', () => {
-    expect(travelMinutesFrom(undefined)).toBeNull()
-    expect(travelMinutesFrom({})).toBeNull()
-    expect(travelMinutesFrom({ travelMinutesMin: 20 })).toBeNull()
-    expect(travelMinutesFrom({ travelMinutesMin: 25, travelMinutesMax: 20 })).toBeNull()
-    expect(travelMinutesFrom({ travelMinutesMin: '20', travelMinutesMax: 25 })).toBeNull()
-    expect(travelMinutesFrom({ travelMinutesMin: 15, travelMinutesMax: 30 })).toEqual({
-      min: 15,
-      max: 30,
-    })
   })
 })

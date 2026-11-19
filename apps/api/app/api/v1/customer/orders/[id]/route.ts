@@ -1,6 +1,6 @@
+import { readTravelMinutes } from '@tindivo/backend/ordering'
 import { UuidSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
-import { readTravelMinutes } from '@/lib/customer/order-timers'
 import { requireRole } from '@/lib/http/auth'
 import { handleOptions } from '@/lib/http/cors'
 import { privateHeaders } from '@/lib/http/private-response'
