@@ -54,6 +54,7 @@ import com.tindivo.customer.feature.reviews.rememberReviewController
 import com.tindivo.customer.feature.signin.SignInDestination
 import com.tindivo.customer.feature.store.StoreListRoute
 import com.tindivo.customer.feature.terms.TermsGate
+import com.tindivo.customer.feature.terms.TermsGateViewModel
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
 
@@ -94,7 +95,9 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             }
         }
     }
-    Box(modifier = Modifier.fillMaxSize()) {
+    val termsGate: TermsGateViewModel = hiltViewModel()
+    val termsRequired = termsGate.required.collectAsStateWithLifecycle().value
+    AppShell(termsRequired = termsRequired, gate = { TermsGate(termsGate) }) {
         Column {
             // D-58: aviso que no bloquea. Con la actualización obligatoria el ViewModel ya no lo muestra.
             if (osNoticeVisible) {
@@ -116,8 +119,6 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 composable<UpdateRoute> { UpdateScreen() }
             }
         }
-        // Una sesión guardada por la versión anterior no da acceso hasta aceptar los Términos (CAX-001).
-        TermsGate()
     }
 }
 

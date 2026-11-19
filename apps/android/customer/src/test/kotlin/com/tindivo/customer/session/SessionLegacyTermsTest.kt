@@ -9,8 +9,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
-import okhttp3.HttpUrl.Companion.toHttpUrl
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -42,10 +44,17 @@ class SessionLegacyTermsTest {
             .getPrimitive(RegistryConfiguration.get(), Aead::class.java)
     }
     private lateinit var file: File
+    private val server = MockWebServer()
 
     @Before
     fun setUp() {
         file = File(folder.root, "sesion.bin")
+        server.start()
+    }
+
+    @After
+    fun tearDown() {
+        server.close()
     }
 
     private fun disk() = EncryptedSessionFile(file, aead, NoKeys)
@@ -53,7 +62,7 @@ class SessionLegacyTermsTest {
     private fun TestScope.store() =
         SupabaseSessionStore(
             GoTrueAuthBackend(
-                authUrl = "http://localhost.invalid/auth/v1/".toHttpUrl(),
+                authUrl = server.url("/auth/v1/"),
                 publishableKey = "pk-prueba",
                 client = OkHttpClient(),
                 file = disk(),
@@ -122,6 +131,32 @@ class SessionLegacyTermsTest {
         }
 
     @Test
+    fun `CA-AUT-13 un archivo anterior refrescado y reiniciado sigue pidiendo la aceptacion`() =
+        runTest {
+            writeLegacy()
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .addHeader("Content-Type", "application/json")
+                    .body(
+                        """{"access_token":"acceso-2","token_type":"bearer","expires_in":3600,"expires_at":2000000,""" +
+                            """"refresh_token":"refresco-2","user":{"id":"user-1"}}""",
+                    ).build(),
+            )
+            val first = store()
+            first.accessToken()
+
+            assertEquals("acceso-2", first.refresh())
+            assertTrue(first.termsRequired.value)
+
+            val second = store()
+            assertEquals("acceso-2", second.accessToken())
+            assertTrue(second.termsRequired.value)
+            assertEquals(SessionState.SignedIn("user-1"), second.state.value)
+        }
+
+    @Test
     fun `CA-AUT-13 confirmar la aceptacion de otra cuenta no desbloquea`() =
         runTest {
             writeLegacy()
@@ -164,6 +199,7 @@ class SessionLegacyTermsTest {
             store.accessToken()
             assertTrue(store.termsRequired.value)
 
+            server.enqueue(MockResponse(code = 200))
             store.signOutIf("user-1")
 
             assertFalse(store.termsRequired.value)

@@ -731,7 +731,7 @@ class ReviewViewModelTest {
 
     private suspend fun switchToAccountB() {
         store.signInUserId = "user-2"
-        store.signInWithGoogle("token", "nonce")
+        store.signInWithGoogle("token", "nonce", termsPending = false)
     }
 
     private companion object {

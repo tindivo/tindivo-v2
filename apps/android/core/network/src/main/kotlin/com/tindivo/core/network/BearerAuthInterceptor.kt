@@ -7,6 +7,7 @@ import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
+import java.io.IOException
 
 /**
  * De dónde sale el token de acceso. La implementación vive detrás de `SessionStore` (CLI-7): aquí no se sabe nada del
@@ -18,7 +19,16 @@ interface AccessTokenSource {
 
     /** Pide un token nuevo a Auth; `null` si la sesión ya no vale (revocada, refresh caducado, sin red). */
     suspend fun refresh(): String?
+
+    /**
+     * `true` mientras la sesión está bloqueada hasta aceptar los Términos: la capa de red solo entrega el token a
+     * `POST /customer/terms-acceptance`; cualquier otra petición a la API falla en local, sin salir a la red.
+     */
+    val tokenOnlyForTermsAcceptance: Boolean get() = false
 }
+
+/** La petición no salió: la sesión espera la aceptación de los Términos. */
+class SessionBlockedException : IOException("sesión bloqueada hasta aceptar los Términos")
 
 /**
  * El refresco único de CLI-7: si varias peticiones reciben 401 con el mismo token a la vez, solo la primera refresca;
@@ -63,7 +73,9 @@ class BearerAuthInterceptor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val token = if (request.url.isSameOrigin(apiOrigin)) runBlocking { source.accessToken() } else null
+        val toApi = request.url.isSameOrigin(apiOrigin)
+        if (toApi && source.tokenOnlyForTermsAcceptance && !request.isTermsAcceptance()) throw SessionBlockedException()
+        val token = if (toApi) runBlocking { source.accessToken() } else null
         return if (token == null) chain.proceed(request) else proceedWithToken(chain, request, token)
     }
 
@@ -81,6 +93,9 @@ class BearerAuthInterceptor(
 }
 
 private const val HTTP_UNAUTHORIZED = 401
+
+private fun Request.isTermsAcceptance(): Boolean =
+    method == "POST" && url.encodedPath.endsWith("/customer/terms-acceptance")
 
 private fun Request.withBearer(token: String): Request = newBuilder().header("Authorization", "Bearer $token").build()
 

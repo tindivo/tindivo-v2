@@ -214,7 +214,7 @@ class OrdersViewModelTest : OrdersHarness() {
             viewModel.settled()
 
             store.signInUserId = "user-2"
-            store.signInWithGoogle("token", "nonce")
+            store.signInWithGoogle("token", "nonce", termsPending = false)
             viewModel.refresh()
 
             assertEquals(OrdersUiState.LoggedOut, viewModel.state.value)

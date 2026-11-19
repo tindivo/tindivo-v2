@@ -415,7 +415,7 @@ class PhoneVerifyViewModelTest {
             viewModel.toCodeStep()
 
             store.signInUserId = "user-2"
-            store.signInWithGoogle("token", "nonce")
+            store.signInWithGoogle("token", "nonce", termsPending = false)
 
             val closed = PhoneUiState(loggedOut = true)
             assertEquals(closed, viewModel.state.value)

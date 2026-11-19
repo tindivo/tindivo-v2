@@ -28,7 +28,7 @@ internal interface AuthBackend {
     suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
-        termsPending: Boolean = false,
+        termsPending: Boolean,
     ): TokenSnapshot
 
     /** Guarda la aceptación como confirmada (también si era pendiente o desconocida): desde ahí sí se restaura. */

@@ -73,7 +73,7 @@ class OrderDetailSessionTest : OrderDetailHarness() {
             backgroundScope.launch(dispatcher) { viewModel.state.collect {} }
 
             store.signOut()
-            store.signInWithGoogle("token", "nonce")
+            store.signInWithGoogle("token", "nonce", termsPending = false)
 
             assertEquals(OrderDetailUiState.LoggedOut, viewModel.state.value)
             assertEquals(1, server.requestCount)
@@ -92,7 +92,7 @@ class OrderDetailSessionTest : OrderDetailHarness() {
                 watcher.cancel()
                 advanceTimeBy(5_001)
                 store.signOut()
-                store.signInWithGoogle("token", "nonce")
+                store.signInWithGoogle("token", "nonce", termsPending = false)
                 val seen = mutableListOf<OrderDetailUiState>()
                 backgroundScope.launch(dispatcher) { viewModel.state.collect { seen += it } }
 
@@ -112,7 +112,7 @@ class OrderDetailSessionTest : OrderDetailHarness() {
             watcher.cancel()
             advanceTimeBy(5_001)
             store.signInUserId = "user-2"
-            store.signInWithGoogle("token", "nonce")
+            store.signInWithGoogle("token", "nonce", termsPending = false)
             val seen = mutableListOf<OrderDetailUiState>()
             backgroundScope.launch(dispatcher) { viewModel.state.collect { seen += it } }
 
