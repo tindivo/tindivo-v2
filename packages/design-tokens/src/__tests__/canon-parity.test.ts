@@ -113,6 +113,9 @@ describe('el JSON coincide con las tablas del canon', () => {
       expect(w.length).toBeGreaterThan(0)
       // Un rango (400–500) vale con su peso base; lo resuelto lleva "pending".
       expect(t?.weight).toBe(w[0])
+      if (/[–-]/.test(weight as string) && w.length > 1) {
+        expect(t?.pending, `${name}: un rango de peso exige "pending"`).toBeTruthy()
+      }
       found.push(name)
     }
     expect(found.sort()).toEqual(Object.keys(tokens.type).sort())
