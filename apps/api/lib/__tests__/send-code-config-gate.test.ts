@@ -15,6 +15,7 @@ vi.mock('@/lib/supabase/service', () => ({
       select: () => q,
       eq: () => q,
       gte: () => q,
+      in: () => q,
       update: () => q,
       insert: () => q,
     }
