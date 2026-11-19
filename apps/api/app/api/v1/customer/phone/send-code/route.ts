@@ -1,4 +1,8 @@
-import { claimCustomerPhone, phoneClaimProblem } from '@tindivo/backend/identity/http'
+import {
+  claimCustomerPhone,
+  loadPhoneSettings,
+  phoneClaimProblem,
+} from '@tindivo/backend/identity/http'
 import { SendPhoneCodeRequestSchema } from '@tindivo/contracts'
 import { after } from 'next/server'
 import { requireRole } from '@/lib/http/auth'
@@ -19,9 +23,6 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-/** Máximo de intentos de verificación por usuario en una ventana de 24 horas. */
-const MAX_ATTEMPTS_PER_24H = 3
-
 /**
  * ¿Twilio rechazó el envío sin ambigüedad? Solo el error de su API (el
  * `RestException` del SDK: `status` HTTP 4xx y `code` numérico de Twilio).
@@ -40,7 +41,7 @@ export function OPTIONS(req: Request): Response {
 /**
  * POST /customer/phone/send-code
  * Envía un código OTP vía Twilio Verify por SMS.
- * Rate limit: 3 intentos por usuario en las últimas 24 horas.
+ * Rate limit: tope por usuario (app_settings) en las últimas 24 horas.
  *
  * SMS Y SOLO SMS, aunque el canal caro sea ese. Aquí ponía "WhatsApp primario,
  * SMS fallback" y la llamada siempre ha dicho `channel: 'sms'`: el comentario
@@ -90,7 +91,9 @@ export async function POST(req: Request): Promise<Response> {
         )
 
         const result = await claimCustomerPhone(service, user.id, fullPhone)
-        const conflict = phoneClaimProblem(result, requestId, corsHeaders(req))
+        const conflict = phoneClaimProblem(result, requestId, corsHeaders(req), {
+          offerTransfer: (await loadPhoneSettings(service)).transferEnabled,
+        })
         if (conflict) return conflict
 
         return ok(
@@ -151,9 +154,11 @@ export async function POST(req: Request): Promise<Response> {
       .eq('user_id', user.id)
       .gte('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
-    if ((count ?? 0) >= MAX_ATTEMPTS_PER_24H) {
+    // Tope por usuario: `app_settings:phone_code_max_per_24h` (3 mientras nadie lo cambie).
+    const maxAttempts = (await loadPhoneSettings(service)).maxCodesPer24h
+    if ((count ?? 0) >= maxAttempts) {
       return problem('rate_limited', {
-        detail: `Máximo ${MAX_ATTEMPTS_PER_24H} intentos de verificación en 24 horas. Intenta de nuevo más tarde.`,
+        detail: `Máximo ${maxAttempts} intentos de verificación en 24 horas. Intenta de nuevo más tarde.`,
         requestId,
         headers: corsHeaders(req),
       })

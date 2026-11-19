@@ -1,4 +1,5 @@
 export { claimCustomerPhone } from '../infra/customer-phone'
+export { loadPhoneSettings } from '../infra/phone-settings'
 export {
   adminPhoneRestrictionsHandler,
   liftPhoneRestrictionHandler,

@@ -220,6 +220,11 @@ async function borrarPedidosDelCliente(): Promise<void> {
 }
 
 beforeAll(async () => {
+  // El traslado del celular viene apagado (migración 0293): esta prueba lo enciende y lo restaura.
+  await db
+    .from('app_settings')
+    .upsert({ key: 'phone_transfer_enabled', value: true })
+    .throwOnError()
   const email = `conformidad-${RUN}@integration.local`
   const password = 'test-password-12345'
   const { data, error } = await db.auth.admin.createUser({
@@ -255,6 +260,10 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await db
+    .from('app_settings')
+    .upsert({ key: 'phone_transfer_enabled', value: false })
+    .throwOnError()
   if (courierSettings) {
     await db
       .from('app_settings')
