@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.courier
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -18,7 +19,21 @@ class CourierStringsTest {
     @Test
     fun `CA-ENT-10 · lo que no se envia incluye animales y robados y ya no pide receta`() {
         val info = courier.getValue("courier_prohibited_info")
-        val debe = listOf("alcohol", "efectivo", "drogas", "animales vivos", "objetos robados", "Los documentos sí")
+        val debe =
+            listOf(
+                "alcohol",
+                "joyas",
+                "efectivo",
+                "armas",
+                "explosivos",
+                "drogas",
+                "material obsceno",
+                "venta restringida",
+                "animales vivos",
+                "objetos robados",
+            )
+        assertEquals(10, debe.size)
+        assertTrue(info.contains("Los documentos sí"))
         for (item in debe) {
             assertTrue("falta «$item»", info.contains(item))
         }

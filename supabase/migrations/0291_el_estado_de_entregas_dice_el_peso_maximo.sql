@@ -28,8 +28,11 @@ begin
     'price', coalesce((v_courier -> 'pricing' ->> 'basePrice')::numeric, 3.00),
     'pausedMessage', v_courier ->> 'pausedMessage'
   ) || case
-    -- Sin el ajuste no se inventa un peso: la clave se omite y la app no muestra ninguno.
-    when v_courier ? 'maxWeightKg' then jsonb_build_object('maxWeightKg', (v_courier ->> 'maxWeightKg')::numeric)
+    -- Sin el ajuste, o con uno que no es un número positivo (null, texto, cero), no se inventa un peso:
+    -- la clave se omite y la app no muestra ninguno. Nunca falla el cast: Entregas no se cierra por un ajuste mal escrito.
+    when jsonb_typeof(v_courier -> 'maxWeightKg') = 'number'
+      and (v_courier ->> 'maxWeightKg')::numeric > 0
+      then jsonb_build_object('maxWeightKg', (v_courier ->> 'maxWeightKg')::numeric)
     else '{}'::jsonb
   end;
 end;

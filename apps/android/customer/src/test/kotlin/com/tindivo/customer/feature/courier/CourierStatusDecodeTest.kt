@@ -71,6 +71,13 @@ class CourierStatusDecodeTest {
         }
 
     @Test
+    fun `CA-ENT-11 · un peso en cero o negativo no se muestra`() =
+        runTest {
+            assertNull(status(""","maxWeightKg":0""").maxWeightKg)
+            assertNull(status(""","maxWeightKg":-2""").maxWeightKg)
+        }
+
+    @Test
     fun `CA-ENT-11 · sin el campo la app no escribe un peso y el servicio se lee igual`() =
         runTest {
             val service = status("")
