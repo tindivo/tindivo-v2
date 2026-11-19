@@ -84,6 +84,9 @@ internal class SupabaseSessionStore(
         mutex.withLock {
             try {
                 adopt(backend.signInWithGoogle(idToken, rawNonce, termsPending))
+                // Entrar reemplaza lo guardado: una restauración tardía ya no debe leer el archivo (con la marca de
+                // «aceptación pendiente» lo borraría y cerraría esta sesión).
+                restored = true
                 // Después del estado (ver SessionStore.signInGeneration): quien lea la generación y luego el estado
                 // nunca ve la generación vieja con la cuenta nueva sin darse cuenta.
                 signIns.value += 1
