@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.catalog.business
+package com.tindivo.customer.dish
 
 import java.time.Instant
 import java.time.ZoneId

@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.cart
+package com.tindivo.customer.bag
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer

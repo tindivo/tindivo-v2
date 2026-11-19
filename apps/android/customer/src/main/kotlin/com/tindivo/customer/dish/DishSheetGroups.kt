@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.catalog.business
+package com.tindivo.customer.dish
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.cart.SINGLE
+import com.tindivo.customer.bag.SINGLE
 
 /** Un grupo de opciones: su cabecera con el avance y una fila por opción. */
 @Composable

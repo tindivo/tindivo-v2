@@ -2,11 +2,11 @@ package com.tindivo.customer.feature.catalog.business
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tindivo.customer.feature.cart.AddResult
-import com.tindivo.customer.feature.cart.Cart
-import com.tindivo.customer.feature.cart.CartLine
-import com.tindivo.customer.feature.cart.CartStore
-import com.tindivo.customer.feature.cart.requireAmountText
+import com.tindivo.customer.bag.AddResult
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.CartStore
+import com.tindivo.customer.bag.requireAmountText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
 
-/** Lo que enseña la barra «Ver mi bolsa»: unidades y subtotal ya formateado. */
+/** Lo que enseña la barra «Ver bolsa»: unidades y subtotal ya formateado. */
 data class CartBarUi(
     val count: Int,
     val subtotal: String,

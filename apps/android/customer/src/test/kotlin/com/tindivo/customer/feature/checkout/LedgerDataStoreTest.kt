@@ -3,8 +3,8 @@ package com.tindivo.customer.feature.checkout
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.tindivo.core.network.ApiResult
-import com.tindivo.customer.feature.cart.Cart
-import com.tindivo.customer.feature.cart.CartLine
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.CartLine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope

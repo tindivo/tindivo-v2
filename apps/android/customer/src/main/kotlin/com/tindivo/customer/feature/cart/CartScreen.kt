@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.cart
 
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -7,32 +8,41 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +53,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.DeliveryMethod
+import com.tindivo.customer.dish.DishSheet
+import com.tindivo.customer.dish.DishSheetState
 
 /** Une el ViewModel con la pantalla. [onAddMore] vuelve a la carta del negocio de la bolsa. */
 @Composable
@@ -63,9 +77,16 @@ fun CartDestination(
                 onSeeBusinesses = onSeeBusinesses,
                 onCheckout = onCheckout,
                 onChangeQuantity = viewModel::changeQuantity,
-                onRemove = viewModel::remove,
-                onClear = viewModel::clear,
+                onUndoRemove = viewModel::undoRemove,
+                onRetryCheck = viewModel::retryCheck,
+                onEdit = viewModel::startEdit,
+                onCancelEdit = viewModel::cancelEdit,
+                onSaveEdit = viewModel::saveEdit,
+                onAskClear = viewModel::askClear,
+                onCancelClear = viewModel::cancelClear,
+                onConfirmClear = viewModel::confirmClear,
             ),
+        nowMillis = viewModel::nowMillis,
     )
 }
 
@@ -74,8 +95,14 @@ class CartActions(
     val onAddMore: (String) -> Unit,
     val onSeeBusinesses: () -> Unit,
     val onChangeQuantity: (signature: String, delta: Int) -> Unit,
-    val onRemove: (String) -> Unit,
-    val onClear: () -> Unit,
+    val onUndoRemove: () -> Unit,
+    val onRetryCheck: () -> Unit,
+    val onEdit: (String) -> Unit,
+    val onCancelEdit: () -> Unit,
+    val onSaveEdit: (CartLine) -> Unit,
+    val onAskClear: () -> Unit,
+    val onCancelClear: () -> Unit,
+    val onConfirmClear: () -> Unit,
     val onCheckout: () -> Unit,
 )
 
@@ -84,16 +111,36 @@ class CartActions(
 fun CartScreen(
     state: CartUiState,
     actions: CartActions,
+    nowMillis: () -> Long = { System.currentTimeMillis() },
 ) {
-    var confirmingClear by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val undo = (state as? CartUiState.Filled)?.undo
+    UndoSnackbar(undo, snackbarHostState, actions.onUndoRemove)
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Column {
+                    Snackbar(data)
+                    undo?.let { UndoCountdown(it, nowMillis) }
+                }
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = stringResource(R.string.cart_title),
-                        modifier = Modifier.semantics { heading() },
-                    )
+                    Column {
+                        Text(
+                            text = stringResource(R.string.cart_title),
+                            modifier = Modifier.semantics { heading() },
+                        )
+                        if (state is CartUiState.Filled) {
+                            Text(
+                                text = pluralStringResource(R.plurals.cart_products, state.units, state.units),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = actions.onBack, modifier = Modifier.size(48.dp)) {
@@ -105,7 +152,7 @@ fun CartScreen(
                 },
                 actions = {
                     if (state is CartUiState.Filled) {
-                        TextButton(onClick = { confirmingClear = true }, modifier = Modifier.heightIn(min = 48.dp)) {
+                        TextButton(onClick = actions.onAskClear, modifier = Modifier.heightIn(min = 48.dp)) {
                             Text(text = stringResource(R.string.cart_clear))
                         }
                     }
@@ -114,17 +161,7 @@ fun CartScreen(
         },
         bottomBar = {
             if (state is CartUiState.Filled) {
-                Button(
-                    onClick = actions.onCheckout,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(16.dp)
-                            .heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.cart_continue))
-                }
+                CartBottomBar(cta = state.continueCta, onContinue = actions.onCheckout, onRetry = actions.onRetryCheck)
             }
         },
     ) { innerPadding ->
@@ -136,14 +173,84 @@ fun CartScreen(
             }
         }
     }
-    if (confirmingClear) {
-        ClearDialog(
-            onCancel = { confirmingClear = false },
-            onConfirm = {
-                confirmingClear = false
-                actions.onClear()
-            },
+    (state as? CartUiState.Filled)?.editing?.let {
+        DishSheet(
+            item = it.item,
+            onDismiss = actions.onCancelEdit,
+            onAdd = actions.onSaveEdit,
+            initial = DishSheetState.forLine(it.item, it.line),
         )
+    }
+    if ((state as? CartUiState.Filled)?.confirmingClear == true) {
+        ClearDialog(onCancel = actions.onCancelClear, onConfirm = actions.onConfirmClear)
+    }
+}
+
+/**
+ * El aviso «Quitaste "[plato]"» con «Deshacer». Dura lo que el ViewModel diga: cuando [undo] vuelve a `null`
+ * (pasaron 5 s, o la bolsa cambió) el efecto se cancela y el aviso se cierra solo. La clave del efecto es la identidad
+ * de la eliminación ([UndoUi.id]), no el nombre: quitar otro plato con el mismo nombre reinicia el aviso.
+ */
+@Composable
+private fun UndoSnackbar(
+    undo: UndoUi?,
+    host: SnackbarHostState,
+    onUndo: () -> Unit,
+) {
+    if (undo == null) return
+    val message = stringResource(R.string.cart_removed, undo.name)
+    val action = stringResource(R.string.cart_undo)
+    LaunchedEffect(undo.id) {
+        val result = host.showSnackbar(message, actionLabel = action, duration = SnackbarDuration.Indefinite)
+        if (result == SnackbarResult.ActionPerformed) onUndo()
+    }
+}
+
+/**
+ * La raya naranja bajo el aviso: va de llena a vacía en [UNDO_MILLIS], el mismo plazo del ViewModel (CUS-CRT-013).
+ * Parte de lo que queda desde que se quitó ([UndoUi.removedAtMillis]), no de llena: al girar la pantalla o volver a ella
+ * sigue donde iba. Con «quitar animaciones» del sistema se queda quieta; el aviso se retira igual al cumplirse el plazo.
+ */
+@Composable
+private fun UndoCountdown(
+    undo: UndoUi,
+    nowMillis: () -> Long,
+) {
+    val resolver = LocalContext.current.contentResolver
+    val still =
+        remember(resolver) {
+            Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) ==
+                0f
+        }
+    val remaining by produceState(
+        initialValue = undoRemainingFraction(nowMillis() - undo.removedAtMillis),
+        undo.id,
+        still,
+    ) {
+        if (still) return@produceState
+        val elapsedAtStart = nowMillis() - undo.removedAtMillis
+        val start = withFrameMillis { it }
+        while (value > 0f) {
+            value = undoRemainingFraction(elapsedAtStart + withFrameMillis { it } - start)
+        }
+    }
+    LinearProgressIndicator(
+        progress = { remaining },
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primary,
+        trackColor = Color.Transparent,
+    )
+}
+
+/** «Recojo», o «Delivery» con su plazo si el negocio lo informa. */
+@Composable
+private fun deliveryLabel(state: CartUiState.Filled): String {
+    val min = state.etaMin
+    val max = state.etaMax
+    return when {
+        state.deliveryMethod == DeliveryMethod.Pickup -> stringResource(R.string.cart_label_pickup)
+        min != null && max != null -> stringResource(R.string.cart_label_delivery_eta, min, max)
+        else -> stringResource(R.string.cart_label_delivery)
     }
 }
 
@@ -172,7 +279,18 @@ private fun FilledBag(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text(text = state.businessName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = state.businessName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = deliveryLabel(state),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         items(state.lines, key = { it.signature }) { line ->
             CartLineRow(line = line, actions = actions)
@@ -188,85 +306,21 @@ private fun FilledBag(
                 )
             }
         }
-        item {
-            Text(
-                text = stringResource(R.string.cart_shipping_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (state.showsShippingRow) {
+            item {
+                Text(
+                    text = stringResource(R.string.cart_shipping_row),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         item {
             OutlinedButton(
                 onClick = { actions.onAddMore(state.businessId) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             ) {
-                Text(text = stringResource(R.string.cart_add_more))
-            }
-        }
-    }
-}
-
-@Composable
-private fun CartLineRow(
-    line: CartLineUi,
-    actions: CartActions,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = line.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            Text(text = line.total, style = MaterialTheme.typography.titleMedium)
-        }
-        line.options.forEach {
-            Text(
-                text = stringResource(R.string.cart_option, it.group, it.option),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        line.note?.let {
-            Text(
-                text = stringResource(R.string.cart_line_note, it),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        QuantityControls(line = line, actions = actions)
-    }
-}
-
-@Composable
-private fun QuantityControls(
-    line: CartLineUi,
-    actions: CartActions,
-) {
-    val less = stringResource(R.string.cart_line_less, line.name)
-    val more = stringResource(R.string.cart_line_more, line.name)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(
-            onClick = { actions.onChangeQuantity(line.signature, -1) },
-            enabled = line.canDecrease,
-            modifier = Modifier.size(48.dp).semantics { contentDescription = less },
-            contentPadding = PaddingValues(0.dp),
-        ) {
-            Text(text = "−")
-        }
-        Text(text = line.quantity.toString(), style = MaterialTheme.typography.titleMedium)
-        OutlinedButton(
-            onClick = { actions.onChangeQuantity(line.signature, 1) },
-            enabled = line.canIncrease,
-            modifier = Modifier.size(48.dp).semantics { contentDescription = more },
-            contentPadding = PaddingValues(0.dp),
-        ) {
-            Text(text = "+")
-        }
-        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { actions.onRemove(line.signature) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.cart_remove))
+                Text(text = stringResource(R.string.cart_add_more, state.businessName))
             }
         }
     }
@@ -286,7 +340,11 @@ private fun ClearDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = 48.dp)) {
+            TextButton(
+                onClick = onConfirm,
+                modifier = Modifier.heightIn(min = 48.dp),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) {
                 Text(stringResource(R.string.cart_clear_confirm))
             }
         },
@@ -304,13 +362,13 @@ private fun CartPreview() {
             note = "sin ají",
             quantity = 2,
             total = "S/ 25.00",
-            canDecrease = true,
+            decreaseRemoves = false,
             canIncrease = true,
         )
     TindivoTheme {
         CartScreen(
             state = CartUiState.Filled("n", "Pollería Don Lucho", listOf(line), "S/ 25.00"),
-            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}, {}),
+            actions = CartActions({}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}, {}, {}),
         )
     }
 }

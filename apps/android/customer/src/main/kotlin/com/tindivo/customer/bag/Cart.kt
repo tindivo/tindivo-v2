@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.cart
+package com.tindivo.customer.bag
 
 import java.math.BigDecimal
 import java.util.Locale
@@ -38,11 +38,26 @@ data class CartLine(
     val total: BigDecimal get() = unitPrice * BigDecimal(quantity)
 }
 
+/** Cómo se entrega la bolsa. Se elige en el checkout; la bolsa solo lo recuerda (CUS-CRT-007). */
+enum class DeliveryMethod(
+    val wire: String,
+) {
+    Delivery("delivery"),
+    Pickup("pickup"),
+    ;
+
+    companion object {
+        /** El método de un texto guardado; uno desconocido o ausente cae a [Delivery]. */
+        fun fromWire(value: String?): DeliveryMethod = entries.firstOrNull { it.wire == value } ?: Delivery
+    }
+}
+
 /** La bolsa: platos de un solo negocio. Inmutable; cada cambio devuelve otra. */
 data class Cart(
     val businessId: String,
     val businessName: String,
     val lines: List<CartLine>,
+    val deliveryMethod: DeliveryMethod = DeliveryMethod.Delivery,
 ) {
     val subtotal: BigDecimal get() = lines.fold(BigDecimal.ZERO) { sum, line -> sum + line.total }
 
@@ -78,12 +93,22 @@ fun addToCart(
     businessName: String,
     line: CartLine,
 ): AddResult {
-    require(line.quantity in 1..MAX_QUANTITY) { "quantity fuera de 1..$MAX_QUANTITY" }
+    requireAdmissible(line)
     return when {
         cart == null || cart.isEmpty() -> AddResult.Added(Cart(businessId, businessName, listOf(line)), capped = false)
         !cart.businessId.equals(businessId, ignoreCase = true) -> AddResult.OtherBusiness(cart.businessName)
         else -> mergeInto(cart, line)
     }
+}
+
+/**
+ * Una línea que la bolsa no sabría volver a leer (cantidad, opciones o nota fuera de los límites del pedido) no entra:
+ * al leerla, `toCartOrNull` descartaría la bolsa ENTERA. Es un error de quien llama, no un dato de la red.
+ */
+private fun requireAdmissible(line: CartLine) {
+    require(line.quantity in 1..MAX_QUANTITY) { "quantity fuera de 1..$MAX_QUANTITY" }
+    require(line.modifiers.size <= MAX_MODIFIERS) { "más de $MAX_MODIFIERS opciones en una línea" }
+    require((line.note?.length ?: 0) <= MAX_NOTE_LENGTH) { "nota de más de $MAX_NOTE_LENGTH caracteres" }
 }
 
 private fun mergeInto(
@@ -105,7 +130,7 @@ fun replacedWith(
     businessName: String,
     line: CartLine,
 ): Cart {
-    require(line.quantity in 1..MAX_QUANTITY) { "quantity fuera de 1..$MAX_QUANTITY" }
+    requireAdmissible(line)
     return Cart(businessId, businessName, listOf(line))
 }
 
@@ -123,7 +148,50 @@ fun Cart.setQuantity(
 
 fun Cart.removeLine(signature: String): Cart = copy(lines = lines.filterNot { it.signature == signature })
 
-/** Lo que admite `POST /customer/orders` (`packages/contracts/src/requests.ts`): platos distintos y, por plato. */
+/**
+ * Reemplaza en su sitio la línea de firma [signature] por [line] (la que salió de editarla, CUS-CRT-014). Si [line]
+ * queda idéntica a OTRA línea, se fusionan: la que ya estaba conserva su sitio, suma las cantidades (sin pasar de
+ * [MAX_QUANTITY]) y se queda con el nombre y los precios de [line], los más recientes.
+ */
+fun Cart.replaceLine(
+    signature: String,
+    line: CartLine,
+): Cart {
+    requireAdmissible(line)
+    val index = lines.indexOfFirst { it.signature == signature }
+    if (index < 0) return this
+    val twin = lines.indexOfFirst { it.signature == line.signature && it.signature != signature }
+    if (twin < 0) return copy(lines = lines.toMutableList().apply { set(index, line) })
+    val merged = line.copy(quantity = minOf(lines[twin].quantity + line.quantity, MAX_QUANTITY))
+    return copy(
+        lines =
+            lines.mapIndexedNotNull { i, existing ->
+                when (i) {
+                    index -> null
+                    twin -> merged
+                    else -> existing
+                }
+            },
+    )
+}
+
+/**
+ * Devuelve [line] a la posición [index] (la que tenía al quitarla), con su cantidad. No hace nada si la bolsa ya tiene
+ * un plato con esa firma o si ya está en [MAX_LINES]: deshacer nunca pisa ni pasa el tope.
+ */
+fun Cart.restoreLine(
+    line: CartLine,
+    index: Int,
+): Cart {
+    if (lines.any { it.signature == line.signature } || lines.size >= MAX_LINES) return this
+    val at = index.coerceIn(0, lines.size)
+    return copy(lines = lines.take(at) + line + lines.drop(at))
+}
+
+/**
+ * Lo que admite `POST /customer/orders` (`packages/contracts/src/requests.ts`): platos distintos y, por plato,
+ * cantidad, opciones y largo de la nota.
+ */
 const val MAX_LINES = 50
 const val MAX_QUANTITY = 50
 const val MAX_NOTE_LENGTH = 140

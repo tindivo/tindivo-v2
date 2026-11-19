@@ -1,6 +1,6 @@
 package com.tindivo.customer.feature.deleteaccount
 
-import com.tindivo.customer.feature.cart.fingerprint
+import com.tindivo.customer.bag.fingerprint
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -10,7 +10,7 @@ import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.core.network.generated.model.CreateOrderRequest
 import com.tindivo.core.network.generated.model.CreateOrderRequestItemsInner
-import com.tindivo.customer.feature.cart.fingerprint
+import com.tindivo.customer.bag.fingerprint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest

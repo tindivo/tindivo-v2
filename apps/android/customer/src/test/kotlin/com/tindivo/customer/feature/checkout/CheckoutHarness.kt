@@ -12,12 +12,12 @@ import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.CartSerializer
+import com.tindivo.customer.bag.CartSnapshot
+import com.tindivo.customer.bag.CartStore
 import com.tindivo.customer.config.ConfigService
-import com.tindivo.customer.feature.cart.Cart
-import com.tindivo.customer.feature.cart.CartLine
-import com.tindivo.customer.feature.cart.CartSerializer
-import com.tindivo.customer.feature.cart.CartSnapshot
-import com.tindivo.customer.feature.cart.CartStore
 import com.tindivo.customer.session.FakeSessionStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher

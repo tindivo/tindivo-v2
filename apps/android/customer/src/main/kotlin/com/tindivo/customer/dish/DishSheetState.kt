@@ -1,19 +1,19 @@
-package com.tindivo.customer.feature.catalog.business
+package com.tindivo.customer.dish
 
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
-import com.tindivo.customer.feature.cart.CartLine
-import com.tindivo.customer.feature.cart.CartModifier
-import com.tindivo.customer.feature.cart.MAX_MODIFIERS
-import com.tindivo.customer.feature.cart.MAX_NOTE_LENGTH
-import com.tindivo.customer.feature.cart.MAX_QUANTITY
-import com.tindivo.customer.feature.cart.ModifierGroupRule
-import com.tindivo.customer.feature.cart.ModifierSelectionIssue
-import com.tindivo.customer.feature.cart.SINGLE
-import com.tindivo.customer.feature.cart.checkModifierSelection
-import com.tindivo.customer.feature.cart.formatAmount
-import com.tindivo.customer.feature.cart.normalizeNote
-import com.tindivo.customer.feature.cart.requireAmountText
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.CartModifier
+import com.tindivo.customer.bag.MAX_MODIFIERS
+import com.tindivo.customer.bag.MAX_NOTE_LENGTH
+import com.tindivo.customer.bag.MAX_QUANTITY
+import com.tindivo.customer.bag.ModifierGroupRule
+import com.tindivo.customer.bag.ModifierSelectionIssue
+import com.tindivo.customer.bag.SINGLE
+import com.tindivo.customer.bag.checkModifierSelection
+import com.tindivo.customer.bag.formatAmount
+import com.tindivo.customer.bag.normalizeNote
+import com.tindivo.customer.bag.requireAmountText
 import java.math.BigDecimal
 import java.util.Locale
 
@@ -192,6 +192,23 @@ internal data class DishSheetState(
     }
 
     companion object {
+        /**
+         * La ficha de [item] con lo que ya llevaba [line] (CUS-CRT-014). Una opción que el plato ya no ofrece no se
+         * preselecciona: si era obligatoria, la ficha no deja guardar hasta elegir otra.
+         */
+        fun forLine(
+            item: MenuItemUi,
+            line: CartLine,
+        ): DishSheetState {
+            val known = item.modifierGroups.flatMap { group -> group.options.map { it.id } }.toSet()
+            return DishSheetState(
+                item = item,
+                selectedIds = line.modifiers.map { it.optionId }.filter { it in known },
+                note = line.note.orEmpty().take(MAX_NOTE_LENGTH),
+                quantity = line.quantity.coerceIn(1, MAX_QUANTITY),
+            )
+        }
+
         /** Guarda lo elegido al girar la pantalla; las opciones que ya no existen en el plato se descartan. */
         fun saver(item: MenuItemUi): Saver<DishSheetState, Any> =
             listSaver<DishSheetState, Any>(

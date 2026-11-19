@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.tindivo.customer.R
+import com.tindivo.customer.dish.MenuItemUi
 
 /**
  * La fila de un plato. Los textos entran ya como [AnnotatedString] para que los resultados de búsqueda reusen la

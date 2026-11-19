@@ -5,7 +5,7 @@ import com.tindivo.core.network.generated.model.CreateOrderRequestCoordinates
 import com.tindivo.core.network.generated.model.CreateOrderRequestItemsInner
 import com.tindivo.core.network.generated.model.QuoteCheckoutRequest
 import com.tindivo.core.network.generated.model.QuoteCheckoutRequestItemsInner
-import com.tindivo.customer.feature.cart.Cart
+import com.tindivo.customer.bag.Cart
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID

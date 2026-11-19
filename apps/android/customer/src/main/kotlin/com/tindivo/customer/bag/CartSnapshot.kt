@@ -1,11 +1,16 @@
-package com.tindivo.customer.feature.cart
+package com.tindivo.customer.bag
 
 import kotlinx.serialization.Serializable
 import java.math.BigDecimal
 import java.util.Locale
 
-/** La versión del formato guardado en disco. Cualquier otra se descarta entera: no se migra a medias. */
-const val CART_SNAPSHOT_VERSION = 1
+/**
+ * La versión del formato guardado en disco. La 1 no guardaba el método de entrega: se lee como delivery. Cualquier otra
+ * se descarta entera: no se migra a medias.
+ */
+const val CART_SNAPSHOT_VERSION = 2
+
+private const val FIRST_SNAPSHOT_VERSION = 1
 
 /**
  * La bolsa tal como se guarda en el teléfono (KT-9). Los importes van como cadena: un número JSON pasaría por
@@ -17,6 +22,8 @@ data class CartSnapshot(
     val businessId: String,
     val businessName: String,
     val lines: List<CartLineSnapshot>,
+    /** `delivery` o `pickup` (CUS-CRT-007); la versión 1 no lo traía. Un valor desconocido se lee como delivery. */
+    val deliveryMethod: String = DeliveryMethod.Delivery.wire,
     /**
      * Con qué cuenta y qué huella se intentó enviar esta bolsa; `null` si nadie la intentó. Editar la bolsa la
      * conserva (deshacer una edición no la libera); solo vale mientras su huella sea la de la bolsa vigente.
@@ -64,6 +71,7 @@ fun Cart.toSnapshot(): CartSnapshot? =
             businessId = businessId,
             businessName = businessName,
             lines = lines.map { it.toSnapshot() },
+            deliveryMethod = deliveryMethod.wire,
         )
     }
 
@@ -88,11 +96,13 @@ private fun CartLine.toSnapshot() =
  * medias: lo que se enseñaría podría no ser lo que la persona eligió.
  */
 fun CartSnapshot.toCartOrNull(): Cart? {
-    if (version != CART_SNAPSHOT_VERSION || businessId.isBlank()) return null
+    if (version !in FIRST_SNAPSHOT_VERSION..CART_SNAPSHOT_VERSION || businessId.isBlank()) return null
     if (lines.isEmpty() || lines.size > MAX_LINES) return null
     val restored = lines.map { it.toLineOrNull() ?: return null }
     if (restored.map { it.signature }.toSet().size != restored.size) return null
-    return Cart(businessId, businessName, restored)
+    val method =
+        if (version == FIRST_SNAPSHOT_VERSION) DeliveryMethod.Delivery else DeliveryMethod.fromWire(deliveryMethod)
+    return Cart(businessId, businessName, restored, method)
 }
 
 private fun CartLineSnapshot.toLineOrNull(): CartLine? {

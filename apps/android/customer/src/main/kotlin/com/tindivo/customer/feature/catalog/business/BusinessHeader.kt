@@ -21,6 +21,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.tindivo.customer.dish.BusinessDetailUi
+import com.tindivo.customer.dish.MenuCategoryUi
 
 @Composable
 internal fun BusinessHeader(business: BusinessDetailUi) {

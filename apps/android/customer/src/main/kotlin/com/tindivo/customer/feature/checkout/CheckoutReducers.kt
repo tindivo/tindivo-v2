@@ -2,7 +2,8 @@ package com.tindivo.customer.feature.checkout
 
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
-import com.tindivo.customer.feature.cart.Cart
+import com.tindivo.customer.bag.Cart
+import com.tindivo.customer.bag.DeliveryMethod
 
 /** Espera entre un cambio y la cotización siguiente. Se inyecta para probar sin esperar de verdad (KT-4). */
 fun interface QuoteDebounce {
@@ -121,7 +122,7 @@ internal fun CheckoutUiState.withLoaded(
         etaMax = business?.estimatedEtaMax,
         acceptsDelivery = acceptsDelivery,
         acceptsPickup = acceptsPickup,
-        method = if (!acceptsDelivery && acceptsPickup) DeliveryChoice.Pickup else DeliveryChoice.Delivery,
+        method = startingMethod(cart.deliveryMethod, acceptsDelivery, acceptsPickup),
         addresses = data.addresses,
         selectedAddressId = data.addresses.preferred()?.id,
         name = data.profile.fullName.take(MAX_NAME_LENGTH),
@@ -155,3 +156,18 @@ internal fun CheckoutUiState.preferring(prefer: String?): CheckoutUiState =
 /** El perfil leído de nuevo después de verificar el celular: solo cambia el teléfono; el nombre escrito se queda. */
 internal fun CheckoutUiState.withPhoneFrom(profile: GetCustomerProfile200ResponseData): CheckoutUiState =
     copy(phone = profile.phone, phoneVerified = profile.phoneVerified && profile.phone != null)
+
+/**
+ * Con qué método abre el checkout: el que la bolsa recuerda (CUS-CRT-007) si el negocio lo admite; si no, el único que
+ * admite. Sin datos del negocio manda delivery, como antes.
+ */
+internal fun startingMethod(
+    remembered: DeliveryMethod,
+    acceptsDelivery: Boolean,
+    acceptsPickup: Boolean,
+): DeliveryChoice =
+    when {
+        !acceptsDelivery && acceptsPickup -> DeliveryChoice.Pickup
+        remembered == DeliveryMethod.Pickup && acceptsPickup -> DeliveryChoice.Pickup
+        else -> DeliveryChoice.Delivery
+    }

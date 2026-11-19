@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.cart
+package com.tindivo.customer.bag
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

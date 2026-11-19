@@ -1,8 +1,9 @@
-package com.tindivo.customer.feature.cart
+package com.tindivo.customer.bag
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
@@ -146,5 +147,89 @@ class CartTest {
         val merged = added(addToCart(full, "n", "Negocio", line("p0")))
         assertEquals(MAX_LINES, merged.cart.lines.size)
         assertEquals(2, merged.cart.lines[0].quantity)
+    }
+
+    @Test
+    fun `CA-CRT-10 · devolver una linea la pone en su posicion con su cantidad`() {
+        val cart = Cart("n", "Negocio", listOf(line("a"), line("c")))
+        val back = cart.restoreLine(line("b", quantity = 3), index = 1)
+        assertEquals(listOf("a", "b", "c"), back.lines.map { it.itemId })
+        assertEquals(3, back.lines[1].quantity)
+        // Una posición fuera de rango la deja al final.
+        assertEquals(listOf("a", "c", "z"), cart.restoreLine(line("z"), index = 9).lines.map { it.itemId })
+    }
+
+    @Test
+    fun `devolver una linea que ya esta o con la bolsa llena no cambia nada`() {
+        val cart = Cart("n", "Negocio", listOf(line("a")))
+        assertEquals(cart, cart.restoreLine(line("a", quantity = 4), index = 0))
+        val full = Cart("n", "Negocio", List(MAX_LINES) { line("p$it") })
+        assertEquals(full, full.restoreLine(line("otro"), index = 0))
+    }
+
+    @Test
+    fun `CA-CRT-11 · editar una linea la cambia en su sitio`() {
+        val cart = Cart("n", "Negocio", listOf(line("a"), line("b", modifiers = listOf(mod("x", "1.00"))), line("c")))
+        val old = cart.lines[1].signature
+        val edited = line("b", modifiers = listOf(mod("y", "2.00")), quantity = 2)
+
+        val result = cart.replaceLine(old, edited)
+
+        assertEquals(listOf("a", "b", "c"), result.lines.map { it.itemId })
+        assertEquals(listOf("y"), result.lines[1].modifiers.map { it.optionId })
+        assertEquals(2, result.lines[1].quantity)
+    }
+
+    @Test
+    fun `CA-CRT-11 · si la linea editada queda identica a otra se fusionan sumando cantidades`() {
+        val first = line("b", modifiers = listOf(mod("x", "1.00")), quantity = 2)
+        val second = line("b", modifiers = listOf(mod("y", "1.00")), quantity = 3)
+        val cart = Cart("n", "Negocio", listOf(line("a"), first, second))
+
+        // Se edita la primera para que elija lo mismo que la segunda.
+        val result = cart.replaceLine(first.signature, line("b", modifiers = listOf(mod("y", "1.00")), quantity = 1))
+
+        assertEquals(listOf("a", "b"), result.lines.map { it.itemId })
+        assertEquals(4, result.lines[1].quantity)
+        assertEquals(1, result.lines[1].modifiers.size)
+    }
+
+    @Test
+    fun `al fusionar la cantidad no pasa de 50`() {
+        val first = line("b", modifiers = listOf(mod("x", "1.00")), quantity = 30)
+        val second = line("b", modifiers = listOf(mod("y", "1.00")), quantity = 40)
+        val result =
+            Cart("n", "Negocio", listOf(first, second))
+                .replaceLine(first.signature, line("b", modifiers = listOf(mod("y", "1.00")), quantity = 30))
+        assertEquals(MAX_QUANTITY, result.lines.single().quantity)
+    }
+
+    @Test
+    fun `editar una linea que ya no esta no cambia nada`() {
+        val cart = Cart("n", "Negocio", listOf(line("a")))
+        assertEquals(cart, cart.replaceLine("fantasma", line("z")))
+    }
+
+    @Test
+    fun `una linea que la bolsa no sabria volver a leer no se agrega ni se reemplaza`() {
+        val tooManyOptions = List(MAX_MODIFIERS + 1) { mod("o$it", "0.10") }
+        val longNote = "x".repeat(MAX_NOTE_LENGTH + 1)
+        val cart = Cart("n", "Negocio", listOf(line("a")))
+        val signature = cart.lines.single().signature
+        val bad = listOf(line("b", modifiers = tooManyOptions), line("b", note = longNote))
+        for (candidate in bad) {
+            assertThrows(IllegalArgumentException::class.java) { addToCart(cart, "n", "Negocio", candidate) }
+            assertThrows(IllegalArgumentException::class.java) { replacedWith("n", "Negocio", candidate) }
+            assertThrows(IllegalArgumentException::class.java) { cart.replaceLine(signature, candidate) }
+        }
+        for (quantity in listOf(0, MAX_QUANTITY + 1)) {
+            assertThrows(IllegalArgumentException::class.java) {
+                cart.replaceLine(signature, line("b", quantity = quantity))
+            }
+        }
+        // En el límite sí entra.
+        val options = List(MAX_MODIFIERS) { mod("o$it", "0.10") }
+        val limit = line("b", modifiers = options, note = "x".repeat(MAX_NOTE_LENGTH))
+        assertEquals(2, added(addToCart(cart, "n", "Negocio", limit)).cart.lines.size)
     }
 }

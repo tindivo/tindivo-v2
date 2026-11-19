@@ -18,7 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.tindivo.customer.R
 
-/** La barra fija «Ver mi bolsa» con las unidades y el subtotal de la carta de este negocio. */
+/** La barra fija «Ver bolsa» con las unidades y el subtotal de la carta de este negocio. */
 @Composable
 internal fun CartBar(
     bar: CartBarUi,

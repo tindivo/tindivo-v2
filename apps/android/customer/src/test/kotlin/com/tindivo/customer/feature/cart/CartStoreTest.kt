@@ -2,6 +2,19 @@ package com.tindivo.customer.feature.cart
 
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import com.tindivo.customer.bag.AddResult
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.CartLineSnapshot
+import com.tindivo.customer.bag.CartModifier
+import com.tindivo.customer.bag.CartModifierSnapshot
+import com.tindivo.customer.bag.CartSerializer
+import com.tindivo.customer.bag.CartSnapshot
+import com.tindivo.customer.bag.CartStore
+import com.tindivo.customer.bag.MAX_LINES
+import com.tindivo.customer.bag.MAX_MODIFIERS
+import com.tindivo.customer.bag.MAX_QUANTITY
+import com.tindivo.customer.bag.QuantityResult
+import com.tindivo.customer.bag.fingerprint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -186,6 +199,50 @@ class CartStoreTest {
 
             assertTrue(store.clearIf { true })
             assertNull(store.cart.first())
+        }
+
+    @Test
+    fun `CA-CRT-03 · dos toques seguidos en mas suman dos, sin esperar a que la pantalla emita`() =
+        runTest {
+            val store = store()
+            store.add("n", "Pollería", line(quantity = 1))
+            val signature = line().signature
+
+            // Dos llamadas sin leer la bolsa entre ellas: cada una suma sobre lo guardado, no sobre lo que se veía.
+            listOf(
+                async { store.changeQuantity(signature, 1) },
+                async { store.changeQuantity(signature, 1) },
+            ).awaitAll()
+
+            assertEquals(3, checkNotNull(store.cart.first()).lines.single().quantity)
+        }
+
+    @Test
+    fun `CA-CRT-03 · con cantidad 1 el menos quita la linea en la misma escritura y devuelve lo del deshacer`() =
+        runTest {
+            val store = store()
+            store.add("n", "Pollería", line("a"))
+            store.add("n", "Pollería", line("b", quantity = 2))
+
+            val removed = store.changeQuantity(line("a").signature, -1)
+
+            assertEquals(QuantityResult.Removed("n", line("a"), index = 0, remaining = 1), removed)
+            assertEquals(listOf("b"), checkNotNull(store.cart.first()).lines.map { it.itemId })
+            // La de 2 unidades solo baja a 1; y una firma que ya no está no cambia nada.
+            assertEquals(QuantityResult.Updated, store.changeQuantity(line("b").signature, -1))
+            assertEquals(QuantityResult.Missing, store.changeQuantity("fantasma", 1))
+            assertEquals(1, checkNotNull(store.cart.first()).lines.single().quantity)
+        }
+
+    @Test
+    fun `la cantidad no pasa de 50 al sumar`() =
+        runTest {
+            val store = store()
+            store.add("n", "Pollería", line(quantity = MAX_QUANTITY))
+
+            assertEquals(QuantityResult.Updated, store.changeQuantity(line().signature, 1))
+
+            assertEquals(MAX_QUANTITY, checkNotNull(store.cart.first()).lines.single().quantity)
         }
 
     @Test

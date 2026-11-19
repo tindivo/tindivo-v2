@@ -54,6 +54,7 @@
     <string name="dish_quantity_less">Una menos</string>
     <string name="dish_quantity_more">Una más</string>
     <string name="dish_add_cta">Agregar · %1$s</string>
+    <string name="dish_save_cta">Guardar · %1$s</string>
     <plurals name="dish_complete_cta">
         <item quantity="one">Completa %1$d opción</item>
         <item quantity="other">Completa %1$d opciones</item>
@@ -67,23 +68,34 @@
     <string name="dish_new_bag_keep">Mantener</string>
     <string name="dish_new_bag_replace">Vaciar y empezar</string>
 
-    <string name="cart_bar_label">Ver mi bolsa</string>
+    <string name="cart_bar_label">Ver bolsa</string>
     <string name="cart_bar_summary">%1$s · %2$s</string>
     <plurals name="cart_units">
         <item quantity="one">%1$d unidad</item>
         <item quantity="other">%1$d unidades</item>
     </plurals>
-    <string name="cart_title">Mi bolsa</string>
+    <string name="cart_title">Tu bolsa</string>
+    <plurals name="cart_products">
+        <item quantity="one">%1$d producto</item>
+        <item quantity="other">%1$d productos</item>
+    </plurals>
+    <string name="cart_label_delivery">Delivery</string>
+    <string name="cart_label_delivery_eta">Delivery · %1$d–%2$d min</string>
+    <string name="cart_label_pickup">Recojo</string>
     <string name="cart_clear">Vaciar</string>
     <string name="cart_clear_title">¿Vaciar tu bolsa?</string>
     <string name="cart_clear_cancel">Cancelar</string>
     <string name="cart_clear_confirm">Vaciar</string>
     <string name="cart_subtotal">Subtotal</string>
-    <string name="cart_shipping_note">El envío y el total final se calculan al confirmar el pedido.</string>
-    <string name="cart_add_more">+ Agregar más</string>
+    <string name="cart_shipping_row">Delivery · Se calcula con tu dirección</string>
+    <string name="cart_add_more">Agregar más de %1$s</string>
     <string name="cart_empty">Tu bolsa está vacía</string>
     <string name="cart_see_businesses">Ver negocios</string>
-    <string name="cart_remove">Quitar</string>
+    <string name="cart_removed">Quitaste \"%1$s\"</string>
+    <string name="cart_undo">Deshacer</string>
+    <string name="cart_edit">Editar</string>
+    <string name="cart_edit_line">Editar %1$s</string>
+    <string name="cart_line_remove">Quitar %1$s de la bolsa</string>
     <string name="cart_line_less">Quitar una unidad de %1$s</string>
     <string name="cart_line_more">Agregar una unidad de %1$s</string>
     <string name="cart_option">%1$s: %2$s</string>
@@ -314,6 +326,17 @@
 
     <!-- Checkout: «Revisar → Confirmar» (D-49). Textos de la web del cliente, ajustados al contrato nativo. -->
     <string name="cart_continue">Continuar</string>
+    <string name="cart_continue_checking">Cargando…</string>
+    <string name="cart_continue_check_failed">No pudimos revisar tu bolsa con la carta. Revisa tu conexión.</string>
+    <string name="cart_continue_closed">El restaurante está cerrado ahora</string>
+    <string name="cart_retry">Reintentar</string>
+    <string name="cart_issue_removed">Este producto ya no está en la carta</string>
+    <string name="cart_issue_unavailable">Agotado por ahora</string>
+    <string name="cart_issue_out_of_window">Hoy no se sirve a esta hora</string>
+    <string name="cart_issue_price_changed">El precio cambió. Quítalo y vuelve a agregarlo.</string>
+    <string name="cart_issue_option_removed">Una opción que elegiste ya no está disponible</string>
+    <string name="cart_issue_invalid_selection">El negocio cambió las opciones de este plato. Vuelve a elegirlas.</string>
+    <string name="cart_continue_invalid">Quita los productos marcados para continuar</string>
     <string name="checkout_title">Confirmar pedido</string>
     <string name="checkout_eta">Llega en %1$d–%2$d min</string>
     <string name="checkout_loading">Cargando tu pedido</string>

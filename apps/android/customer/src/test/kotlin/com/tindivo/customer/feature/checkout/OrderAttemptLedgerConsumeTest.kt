@@ -1,7 +1,7 @@
 package com.tindivo.customer.feature.checkout
 
 import com.tindivo.core.network.ApiErrorCode
-import com.tindivo.customer.feature.cart.fingerprint
+import com.tindivo.customer.bag.fingerprint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

@@ -1,11 +1,10 @@
-package com.tindivo.customer.feature.catalog.business
+package com.tindivo.customer.dish
 
 import com.tindivo.core.network.generated.model.GetBusiness200ResponseData
 import com.tindivo.core.network.generated.model.GetBusiness200ResponseDataCategoriesInner
 import com.tindivo.core.network.generated.model.GetBusiness200ResponseDataCategoriesInnerItemsInner
-import com.tindivo.customer.feature.cart.formatSoles
-import com.tindivo.customer.feature.cart.menuPriceOrNull
-import com.tindivo.customer.feature.catalog.home.parseAccent
+import com.tindivo.customer.bag.formatSoles
+import com.tindivo.customer.bag.menuPriceOrNull
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.Locale
@@ -94,13 +93,6 @@ private fun List<ModifierGroupUi>.hasRepeatedIds(): Boolean {
     val optionIds = flatMap { group -> group.options.map { it.id.lowercase(Locale.ROOT) } }
     return groupIds.toSet().size != groupIds.size || optionIds.toSet().size != optionIds.size
 }
-
-/**
- * Quita los platos fuera de su franja en el instante [now] y las categorías que se quedan sin platos. Los agotados
- * (`available = false`) no se tocan: esos se siguen mostrando atenuados. Se aplica a la carta ya validada.
- */
-internal fun BusinessUiState.visibleAt(now: Instant): BusinessUiState =
-    if (this is BusinessUiState.Loaded) BusinessUiState.Loaded(business.visibleAt(now)) else this
 
 internal fun BusinessDetailUi.visibleAt(now: Instant): BusinessDetailUi =
     copy(

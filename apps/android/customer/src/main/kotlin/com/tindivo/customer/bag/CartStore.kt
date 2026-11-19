@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.cart
+package com.tindivo.customer.bag
 
 import androidx.datastore.core.DataStore
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +14,23 @@ enum class ReserveResult {
 
     /** La bolsa está reservada por otra cuenta: no se toca. */
     Foreign,
+}
+
+/** Qué pasó al cambiar la cantidad de una línea ([CartStore.changeQuantity]). */
+sealed interface QuantityResult {
+    /** La línea ya no está (o no hay bolsa): no se tocó nada. */
+    data object Missing : QuantityResult
+
+    /** La cantidad cambió (o ya estaba en el tope). */
+    data object Updated : QuantityResult
+
+    /** Se quitó la línea [line], que estaba en [index] de la bolsa de [businessId]; quedan [remaining] líneas. */
+    data class Removed(
+        val businessId: String,
+        val line: CartLine,
+        val index: Int,
+        val remaining: Int,
+    ) : QuantityResult
 }
 
 /**
@@ -66,11 +83,92 @@ class CartStore(
         }
     }
 
+    /**
+     * Suma [delta] unidades a la línea de firma [signature], dentro de 1..[MAX_QUANTITY], en UNA escritura: dos toques
+     * seguidos suman dos porque cada uno parte de lo guardado, no de lo que la pantalla alcanzó a mostrar. Con una
+     * sola unidad y un [delta] negativo la línea se quita en esa misma escritura y se devuelve lo necesario para
+     * «Deshacer» ([QuantityResult.Removed]).
+     */
+    suspend fun changeQuantity(
+        signature: String,
+        delta: Int,
+    ): QuantityResult {
+        var result: QuantityResult = QuantityResult.Missing
+        store.updateData { current ->
+            val cart = current?.toCartOrNull()
+            val index = cart?.lines?.indexOfFirst { it.signature == signature } ?: -1
+            if (cart == null || index < 0) {
+                result = QuantityResult.Missing
+                current
+            } else {
+                val line = cart.lines[index]
+                val next =
+                    if (line.quantity + delta < 1) {
+                        result = QuantityResult.Removed(cart.businessId, line, index, remaining = cart.lines.size - 1)
+                        cart.removeLine(signature)
+                    } else {
+                        result = QuantityResult.Updated
+                        cart.setQuantity(signature, line.quantity + delta)
+                    }
+                next.toSnapshot()?.keepingReservationOf(current)
+            }
+        }
+        return result
+    }
+
+    /** Recuerda cómo se entrega la bolsa. Sin bolsa no hace nada: el método es de una bolsa, no de la app. */
+    suspend fun setDeliveryMethod(method: DeliveryMethod) {
+        store.updateData { current ->
+            current
+                ?.toCartOrNull()
+                ?.copy(deliveryMethod = method)
+                ?.toSnapshot()
+                ?.keepingReservationOf(current)
+        }
+    }
+
     suspend fun remove(signature: String) {
         store.updateData { current ->
             current
                 ?.toCartOrNull()
                 ?.removeLine(signature)
+                ?.toSnapshot()
+                ?.keepingReservationOf(current)
+        }
+    }
+
+    /**
+     * Devuelve [line] a la posición [index] de la bolsa de [businessId] (deshacer, CUS-CRT-013). No hace nada si la
+     * bolsa ya es de otro negocio, está vacía o ya tiene ese plato; devuelve si la devolvió.
+     */
+    suspend fun restoreLine(
+        businessId: String,
+        line: CartLine,
+        index: Int,
+    ): Boolean {
+        var restored = false
+        store.updateData { current ->
+            val cart = current?.toCartOrNull()
+            if (cart == null || !cart.businessId.equals(businessId, ignoreCase = true)) {
+                current
+            } else {
+                val next = cart.restoreLine(line, index)
+                restored = next != cart
+                next.toSnapshot()?.keepingReservationOf(current)
+            }
+        }
+        return restored
+    }
+
+    /** Cambia la línea de firma [signature] por [line], editada (CUS-CRT-014); ver [replaceLine]. */
+    suspend fun replaceLine(
+        signature: String,
+        line: CartLine,
+    ) {
+        store.updateData { current ->
+            current
+                ?.toCartOrNull()
+                ?.replaceLine(signature, line)
                 ?.toSnapshot()
                 ?.keepingReservationOf(current)
         }

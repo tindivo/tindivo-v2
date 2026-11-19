@@ -9,9 +9,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.cart.CartLine
-import com.tindivo.customer.feature.cart.MAX_LINES
-import com.tindivo.customer.feature.cart.MAX_QUANTITY
+import com.tindivo.customer.bag.CartLine
+import com.tindivo.customer.bag.MAX_LINES
+import com.tindivo.customer.bag.MAX_QUANTITY
+import com.tindivo.customer.dish.BusinessDetailUi
+import com.tindivo.customer.dish.MenuItemUi
+import com.tindivo.customer.dish.NewBagDialog
 import kotlinx.coroutines.launch
 
 /** Une los ViewModels con la pantalla; es lo único de este archivo que conoce Hilt. */

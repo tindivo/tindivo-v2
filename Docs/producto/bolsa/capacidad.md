@@ -7,7 +7,7 @@ depende_de: []
 dinero: true
 codigo:
   web: [apps/customer/lib/cart.ts, apps/customer/lib/cart-refresh.ts, apps/customer/lib/cart-validation.ts]
-  android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/Cart.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/CartStore.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/CartSnapshot.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/CartSerializer.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/ModifierSelection.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/cart/Money.kt]
+  android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/bag/Cart.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/bag/CartStore.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/bag/CartSnapshot.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/bag/CartSerializer.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/bag/ModifierSelection.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/bag/Money.kt]
   ios: []
   backend: [packages/contracts/src/cart.ts, packages/contracts/src/requests.ts, packages/contracts/src/client-requests.ts]
 operaciones: []

@@ -1,5 +1,7 @@
 package com.tindivo.customer.feature.catalog.business
 
+import com.tindivo.customer.dish.MenuCategoryUi
+import com.tindivo.customer.dish.MenuItemUi
 import java.text.Normalizer
 import java.util.Locale
 
