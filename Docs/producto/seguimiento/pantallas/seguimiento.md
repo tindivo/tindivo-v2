@@ -38,7 +38,7 @@ El pago de este seguimiento (efectivo con vuelto, Yape o Plin con su tarjeta, y 
 | Cargando | Esqueleto del titular y de la tira | CUS-TRK-001 |
 | Esperando que el negocio acepte | La pantalla `seguimiento/esperando-aceptacion` | CUS-TRK-019 |
 | Recibido (`validando`, `pending_acceptance`, `awaiting_payment`, `confirmed`) | «Pedido recibido» · «Estamos confirmándolo con el restaurante» | CUS-TRK-002, CUS-TRK-003 |
-| Cualquier pago en `pending_acceptance` | La pantalla de espera, con «Responde en hasta [n] min» y su cuenta atrás; «Esperando confirmación de disponibilidad» queda solo para un prepago en `validando` sin comprobante | CUS-TRK-019, CUS-TRK-005 |
+| Cualquier pago en `pending_acceptance` | La pantalla de espera, con «Responde en hasta [plazo] min» y, aparte, su cuenta atrás; «Esperando confirmación de disponibilidad» queda solo para un prepago en `validando` sin comprobante | CUS-TRK-019, CUS-TRK-005 |
 | Prepago, turno del cliente | «Restaurante confirmó. Paga ahora», con el bloque de `pagos` | CUS-TRK-003, CUS-TRK-020 |
 | Prepago, verificando | «Verificando tu comprobante de pago» | CUS-TRK-003 |
 | Prepago verificado | «Pago verificado. En preparación» | CUS-TRK-003 |
