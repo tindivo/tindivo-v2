@@ -21,11 +21,10 @@ function inicial(nombre: string): string {
  * que un importe. Aquí tiene su propio sitio y aparece cuando empieza a
  * importar, que es cuando el pedido ya salió.
  *
- * No se enseña placa, ni foto, ni teléfono. El teléfono lo decide `get_tracking`,
- * que solo lo publica cuando `arrived_at_customer_at` está puesto — el motorizado
- * en la puerta sin encontrar al cliente es el único caso en que hace falta, y
- * mantenerlo cerrado el resto del tiempo evita que un enlace de seguimiento
- * reenviado por WhatsApp reparta el número de un trabajador.
+ * No se enseña placa, ni foto, ni teléfono. Desde la 0292 `get_tracking` manda
+ * `driverPhone` siempre en null (decisión de Jesús, 2026-11-17): sin número no hay
+ * botón de WhatsApp y el aviso «Ya está en tu domicilio» se queda sin acción. Un
+ * enlace de seguimiento reenviado nunca reparte el número de un trabajador.
  */
 export function TrackingDriver({ data, enRuta }: TrackingDriverProps) {
   const llego = Boolean(data.arrivedAtCustomerAt) && data.status !== 'delivered'
