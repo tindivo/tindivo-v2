@@ -133,9 +133,14 @@ private fun GetCustomerOrder200ResponseData.cashPaymentOf(): CashPaymentUi? {
     return CashPaymentUi(paysWith = paysWithText, change = change)
 }
 
-/** El motorizado, solo con su nombre: el teléfono que pudiera traer la respuesta no se lee (CUS-TRK-021). */
+/**
+ * El motorizado es un dato personal: su nombre completo solo cuando ya va en camino, ya entregó o llegó a la puerta, y
+ * ningún dato de contacto: el teléfono que pudiera traer la respuesta no se lee (CUS-TRK-021).
+ */
 private fun GetCustomerOrder200ResponseData.driverOf(phase: OrderPhase): DriverUi? {
     val driver = driver ?: return null
+    val onTheWay = phase is OrderPhase.Active && phase.step == TrackingStep.OnTheWay
     val atDoor = arrivedAtCustomerAt != null && phase !is OrderPhase.Delivered
-    return DriverUi(name = driver.name, atDoor = atDoor)
+    val nameVisible = onTheWay || phase is OrderPhase.Delivered || arrivedAtCustomerAt != null
+    return if (nameVisible) DriverUi(name = driver.name, atDoor = atDoor) else null
 }

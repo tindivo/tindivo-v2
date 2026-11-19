@@ -13,7 +13,8 @@ class OrderDetailMappingTest {
     fun `CA-TRK-08 el cliente ve el nombre completo del motorizado y nada de contacto aunque llegue un telefono`() {
         val driver = GetCustomerOrder200ResponseDataDriver(name = "Carlos Ramírez", phone = "+51 987-654-321")
 
-        for (status in listOf("preparing", "picked_up", "delivered")) {
+        assertEquals(null, detail(status = "preparing", driver = driver).toDetailUi()?.driver)
+        for (status in listOf("picked_up", "delivered")) {
             val ui = detail(status = status, driver = driver).toDetailUi()?.driver
             assertEquals("Carlos Ramírez", ui?.name)
         }
