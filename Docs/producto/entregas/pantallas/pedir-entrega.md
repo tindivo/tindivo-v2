@@ -25,16 +25,17 @@ codigo:
    datos propios. Se elige entre «Mis direcciones», «Sitios anteriores», «Agregar una dirección» o «Marcar en el mapa»
    («Confirmar recojo» / «Confirmar entrega»; «Dentro de la zona de reparto» o «Esta ubicación está fuera de la zona de
    reparto de San Jacinto»).
-2. **«¿Qué llevamos?»** con descripción («Ej.: Un sobre con documentos») y categoría. Las categorías no pueden
-   contradecir la lista del canon (CUS-ENT-022; «Medicinas» está por decidir).
+2. **«¿Qué llevamos?»** con descripción («Ej.: Un sobre con documentos») y categoría (Documentos, Comida, Medicinas, Ropa).
+   Las categorías no pueden contradecir la lista del canon (CUS-ENT-022; los medicamentos de venta libre sí van).
 3. **«¿Quién paga?»**: «Quien entrega · Al recoger» o «Quien recibe · Al entregar»; «Al motorizado: efectivo exacto o
    Yape. Transporte desde [tarifa].»
 4. «Indicaciones para el motorizado (opcional)».
-5. Confirmaciones: «Ya está listo y pagado. Tindivo no compra ni adelanta dinero.» y que lo que se envía está permitido
-   (CUS-ENT-008), con el texto de lo que cabe en la mochila y pesa hasta [peso] kg (CUS-ENT-010) y la lista del canon
+5. Dos casillas, cada una con su propio valor (CUS-ENT-008): «Ya está listo y pagado. Tindivo no compra ni adelanta
+   dinero.» (`prepaidConfirmed`) y «Lo que envío está permitido, cabe en la mochila y pesa hasta [peso] kg»
+   (`weightConfirmed`; el peso lo manda el servidor, CUS-ENT-010), con la lista de lo que no se envía del canon
    (CUS-ENT-022). El motorizado puede rechazar la entrega si al recoger no cumple.
 6. Botón «Pedir entrega · [tarifa]». Lo que falta se dice sobre el botón, en este orden: dónde recogemos, dónde
-   entregamos, cómo llegar a cada uno, qué llevamos, celular de quien entrega, celular de quien recibe, listo y pagado,
+   entregamos, cómo llegar a cada uno, qué llevamos, celular de quien entrega, celular de quien recibe, listo y pagado, permitido,
    celular verificado de quien pide. La tarifa es la del servidor.
 
 ## Estados
@@ -45,7 +46,7 @@ codigo:
 | Falta nombre | «Para pedir, dinos cómo te llamas.» + «Completar mi nombre» | CUS-ENT-009 |
 | Falta celular | «Verifica tu número de WhatsApp antes de hacer un pedido.» + «Verificar mi celular» | CUS-ENT-009 |
 | Cerrado | «Cerrado ahora» o «Abre a las [hora]»; no se puede pedir | CUS-ENT-002, CA-ENT-04 |
-| Falta algo | «Falta elegir dónde recogemos / entregamos», «Falta cómo llegar a donde recogemos / entregamos», «Falta decir qué llevamos», «Falta el celular de quien entrega / recibe», «Marca que está listo y pagado» | CUS-ENT-004, CUS-ENT-008, CA-ENT-01 |
+| Falta algo | «Falta elegir dónde recogemos / entregamos», «Falta cómo llegar a donde recogemos / entregamos», «Falta decir qué llevamos», «Falta el celular de quien entrega / recibe», «Marca que está listo y pagado», «Marca que lo que envías está permitido» | CUS-ENT-004, CUS-ENT-008, CA-ENT-01 |
 | Referencia o pin inválido | La referencia no llega a `ADDRESS_REFERENCE_MIN` o es basura; el pin está fuera de zona y no se elige | CUS-ENT-004, CA-ENT-02, CA-ENT-03 |
 | Enviando | «Enviando…»; no se puede tocar dos veces | CUS-ENT-019 |
 | Sin red al pedir | «No pudimos conectarnos. Revisa tu señal y vuelve a tocar «Pedir entrega».» | CUS-ENT-019, CA-ENT-07 |
@@ -58,5 +59,4 @@ codigo:
 
 - El cuerpo del pedido no lleva importes: la tarifa la pone el servidor (CA-ENT-05).
 - `isFragile` viaja en `false`; lo frágil se dice en las indicaciones (CUS-ENT-006).
-- Hoy Android tiene una sola casilla de confirmación y envía las dos en `true` (CUS-ENT-008); no hay búsqueda de lugares
-  ni negocios del directorio (CUS-ENT-005); el texto de lo permitido es el anterior a la decisión del 2026-11-17 (CUS-ENT-022).
+- No hay búsqueda de lugares por nombre ni negocios del directorio: diferidos, el lanzamiento sale sin ellos (CUS-ENT-005).

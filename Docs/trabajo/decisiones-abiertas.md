@@ -84,3 +84,10 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 - **Contexto**: el motorizado tiene que poder llevar 4 pedidos y no 3; va como arreglo urgente desde `main`, sin migración. Jesús lo retoma cuando acabe el servicio en curso.
 - **Decidir**: (1) si Vercel despliega `motorizados` a producción desde `main`; (2) traspaso por silencio: (a) `UPDATE` de `assignment_rules.maxOccupancySlotsPerDriver` en producción, revisado por Codex, o (b) esperar al lote 0248–0266; (3) si el tope cuenta espacios de mochila o pedidos.
 - **Recomendación**: (2a), para que el traspaso por silencio no se quede en 3; y (3) espacios, que es lo que la app ya cuenta.
+
+### DA-17 · Soporte de WhatsApp y responsabilidad por daños en Entregas
+
+- 2026-11-19 · Bloquea: CUS-ENT-020 · Detectó: Claude
+- **Contexto**: la decisión de Jesús del 2026-11-16 dice que los daños y pérdidas se atienden por el soporte de WhatsApp y que Tindivo responde por la conducta de sus motorizados; la redacción y el tope económico (S/ 200 en el borrador de 2026-09) esperan la revisión legal. Android no tiene ese texto.
+- **Alternativas**: (a) esperar a la revisión legal; (b) publicar un aviso mínimo sin tope.
+- **Recomendación**: (a). Jesús aprobó el 2026-11-19 dejarla abierta.

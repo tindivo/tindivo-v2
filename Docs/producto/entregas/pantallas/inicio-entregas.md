@@ -43,6 +43,5 @@ codigo:
 
 ## Diferencias por plataforma
 
-- Hoy Android muestra «Hasta 5 kg» escrito en el texto; el peso debe leerse de `courier.maxWeightKg` (CUS-ENT-003,
-  CUS-ENT-010; ver `capacidad.md`, defecto 2).
+- El peso sale de `maxWeightKg` del servidor, no del texto (CUS-ENT-003, CUS-ENT-010, CA-ENT-11).
 - La maqueta `Entregas` del canvas es de la versión anterior: no manda hasta que se rediseñe.
