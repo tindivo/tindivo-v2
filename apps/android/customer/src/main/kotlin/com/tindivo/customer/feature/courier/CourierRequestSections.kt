@@ -165,7 +165,7 @@ internal fun ItemSection(
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            text = stringResource(R.string.courier_allowed_info),
+            text = stringResource(R.string.courier_prohibited_info),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -210,8 +210,31 @@ internal fun PayerSection(
 }
 
 @Composable
-internal fun ReadyAndPaid(
+internal fun PrepaidCheck(
     checked: Boolean,
+    onChange: (Boolean) -> Unit,
+) = ConfirmRow(checked, stringResource(R.string.courier_ready_paid), onChange)
+
+/** «Lo que envío está permitido…»; con el peso del servidor si lo mandó, sin él no se escribe uno. */
+@Composable
+internal fun AllowedCheck(
+    checked: Boolean,
+    maxWeightKg: String?,
+    onChange: (Boolean) -> Unit,
+) = ConfirmRow(
+    checked,
+    if (maxWeightKg != null) {
+        stringResource(R.string.courier_allowed_check_weight, maxWeightKg)
+    } else {
+        stringResource(R.string.courier_allowed_check)
+    },
+    onChange,
+)
+
+@Composable
+private fun ConfirmRow(
+    checked: Boolean,
+    text: String,
     onChange: (Boolean) -> Unit,
 ) {
     Row(
@@ -224,7 +247,7 @@ internal fun ReadyAndPaid(
         horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
     ) {
         Checkbox(checked = checked, onCheckedChange = null)
-        Text(text = stringResource(R.string.courier_ready_paid), style = MaterialTheme.typography.bodyMedium)
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

@@ -61,7 +61,12 @@ internal fun CourierRequestForm(
                 placeholder = { Text(stringResource(R.string.courier_note_hint)) },
                 modifier = Modifier.fillMaxWidth(),
             )
-            ReadyAndPaid(checked = state.draft.readyAndPaid, onChange = form.onReadyAndPaid)
+            PrepaidCheck(checked = state.draft.prepaidConfirmed, onChange = form.onPrepaid)
+            AllowedCheck(
+                checked = state.draft.weightConfirmed,
+                maxWeightKg = state.service?.maxWeightKg,
+                onChange = form.onAllowed,
+            )
         }
     }
 }
