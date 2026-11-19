@@ -89,3 +89,4 @@ Estado en Android contrastado el 2026-11-19 contra `develop@25a6d537`. Solo lo q
 | 7 | CUS-PAY-008 | FALTA | No hay compuerta de caso de pago sin resolver; hoy la regla solo existe calculada en el cliente web. | `apps/customer/lib/payment-block.ts` |
 | 8 | CUS-PAY-010 | FALTA | No hay resumen de reclamos ni comprobante de devolución. | `feature/orders/` |
 | 9 | CUS-PAY-001 | FALTA | La sección solo pinta la cuenta atrás del pago; no pinta las etapas 1, 2, 3 ni las otras dos esperas. | `feature/orders/PrepayModels.kt` |
+| 10 | CUS-PAY-016 | FALTA | No existe «Ayuda con este pedido»; los textos de cancelación dicen «escríbenos por WhatsApp» y llevan al contacto de soporte. | `feature/orders/SupportContact.kt` · `res/values/strings.xml` |

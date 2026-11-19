@@ -101,7 +101,7 @@ Estado en Android contrastado el 2026-11-19 contra `develop@25a6d537`. Solo lo q
 
 | # | Requisito | Estado | Hallazgo | Dónde |
 |---|---|---|---|---|
-| 1 | CUS-CHK-028, CUS-CHK-013, CUS-ADR-014 | FALTA | Android todavía pregunta «¿Vas al local ahora?» y manda `pickupTiming` según la respuesta; el botón dice «Responde si vas ahora». | `feature/checkout/CheckoutDeliverySection.kt` · `CheckoutUiState.kt` · `CheckoutRequests.kt` |
+| 1 | CUS-CHK-028, CUS-CHK-013, CUS-CHK-018 | FALTA | Android todavía pregunta «¿Vas al local ahora?» y manda `pickupTiming` según la respuesta; el botón dice «Responde si vas ahora». | `feature/checkout/CheckoutDeliverySection.kt` · `CheckoutUiState.kt` · `CheckoutRequests.kt` |
 | 2 | CUS-CHK-024, CUS-CHK-006, CUS-CHK-025 | FALTA | Las opciones se agrupan «Al recibir» / «Antes de recibir» y «Yape o Plin» al motorizado sigue existiendo; sin logos ni rediseño de «¿Cómo pagas?». | `feature/checkout/CheckoutPaymentSection.kt` · `PaymentChoice.kt` |
 | 3 | CUS-CHK-023 | FALTA | Cada opción apagada repite su motivo; falta decirlo una sola vez, con candado y vibración. | `feature/checkout/CheckoutPaymentSection.kt` |
 | 4 | CUS-CHK-026 | FALTA | El resumen rotula la fila «Delivery» y no «Envío». | `feature/checkout/CheckoutTotalsSection.kt` |
