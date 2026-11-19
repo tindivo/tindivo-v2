@@ -114,12 +114,12 @@ describe('0293 · reserve_phone_code', () => {
     expect(t2Done).toBe(false)
 
     // T1 confirma: T2 se libera, cuenta el envío de T1 y se deniega.
+    order.push('T1 confirma')
     t1.stdin.end('commit;\n')
     expect(await t1Exit).toBe(0)
-    order.push('T1 confirmó')
     const result = await t2
 
-    expect(order).toEqual(['T1 reservó', 'T1 confirmó', 'T2 respondió'])
+    expect(order).toEqual(['T1 reservó', 'T1 confirma', 'T2 respondió'])
     expect(output).toMatch(/T1_RESERVED:[0-9a-f-]{36}/)
     expect(result.error).toBeNull()
     expect(result.data).toBeNull()
