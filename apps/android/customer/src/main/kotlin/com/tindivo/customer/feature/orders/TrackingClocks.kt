@@ -22,6 +22,7 @@ internal sealed interface AcceptanceClock {
 }
 
 private const val URGENT_CAP_MINUTES = 3L
+private const val URGENT_FRACTION = 3L
 private const val SECONDS_PER_MINUTE = 60L
 
 /**
@@ -37,7 +38,7 @@ internal fun acceptanceClockOf(
     val total = Duration.ofMinutes(acceptanceMinutes.toLong())
     val left = Duration.between(now, start.plus(total))
     if (left.isNegative || left.isZero) return AcceptanceClock.Overdue
-    val urgentFrom = minOf(total.dividedBy(3), Duration.ofMinutes(URGENT_CAP_MINUTES))
+    val urgentFrom = minOf(total.dividedBy(URGENT_FRACTION), Duration.ofMinutes(URGENT_CAP_MINUTES))
     val minutes = (left.seconds + SECONDS_PER_MINUTE - 1) / SECONDS_PER_MINUTE
     return AcceptanceClock.Running(minutesLeft = minutes, urgent = left <= urgentFrom)
 }

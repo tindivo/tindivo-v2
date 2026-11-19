@@ -34,9 +34,17 @@ class TrackingVectorTest {
                 }
             }
 
-            OrderPhase.Delivered -> "delivered"
-            is OrderPhase.Cancelled -> "cancelled"
-            OrderPhase.Unknown -> "unknown"
+            OrderPhase.Delivered -> {
+                "delivered"
+            }
+
+            is OrderPhase.Cancelled -> {
+                "cancelled"
+            }
+
+            OrderPhase.Unknown -> {
+                "unknown"
+            }
         }
 
     @Test
