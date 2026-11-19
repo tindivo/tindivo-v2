@@ -1,6 +1,6 @@
 # DEPLOY.md — Runbook de go-live (Tindivo 2.0)
 
-> Verificado: 2026-10-10 · solo que las rutas y comandos existen; los pasos de go-live no se han vuelto a ejecutar
+> Verificado: 2026-11-18 · erratas de `app_settings` contra `supabase/migrations` (0077, 0087, 0123, 0125); solo que las rutas y comandos existen; los pasos de go-live no se han vuelto a ejecutar
 > desde el lanzamiento de agosto **(sin verificar)**. Antes de seguirlo, contrástalo con `Docs/planes/migraciones/`.
 
 Checklist accionable para llevar el piloto a producción (San Jacinto · La Florencia · 1 moto).
@@ -281,7 +281,7 @@ configuración manual en dashboards:
    - Crear **OAuth 2.0 Client ID** tipo "Web application".
    - Authorized JavaScript origins: `http://localhost:3000` y `https://tindivo.com`.
    - Authorized redirect URI: `https://zpnipajgwfthxhdtzhly.supabase.co/auth/v1/callback`.
-2. **Supabase dashboard** (proyecto Web v2):
+2. **Supabase dashboard** (proyecto `tindivo-prod`):
    - Authentication → Sign In / Providers → **Google: ON** (pegar Client ID + Secret del paso 1).
    - Authentication → Sign In / Providers → Email: **desactivar "Confirm email"**
      (el flujo es "sin verificación de correo; empiezas a pedir al instante").
@@ -328,21 +328,21 @@ Apunta el apex `tindivo.com` + los CNAME `api`/`negocios`/`motorizados`/`admin` 
 
 ## 6. Seeds de go-live
 
-Parámetros operativos (`app_settings`) ya sembrados: `commissions` (3.00/3.50/0.50), `delivery_bands`,
-`timers`, `prepay_threshold` (100), `validation` (80), `strikes` (2), `contingency_fund` (250),
-`platform_schedule` (mar–sáb 18:00–23:00), `coverage` (San Jacinto). Ajusta desde **Admin → Configuración**.
+Parámetros operativos (`app_settings`) ya sembrados: `commissions` (delivery 1.50, pickup 1.00; migración `0125`), `delivery_bands`,
+`timers`, `prepay_threshold` (80; DECISIONS §4), `validation` (`amountThreshold` 80), `strikes` (2),
+`platform_schedule` (lunes a domingo 18:00–23:00; migración `0087`), `coverage` (San Jacinto). El fondo de contingencia
+ya no existe (migraciones `0077` y `0123`). Ajusta desde **Admin → Configuración**.
 
 Crear los actores del piloto (necesitan cuenta Auth → vía Admin, no SQL puro):
 
 1. **Admin → + Negocio**: crea *La Florencia* (capacidades: publica catálogo + delivery + recojo + usa moto Tindivo). Luego, como negocio, en **/configuracion** carga Yape/QR, ETA y horario; en **/menu** carga la carta.
 2. **Admin → + Motorizado**: crea el motorizado del piloto.
 3. **[tú]** Setea `NEXT_PUBLIC_SUPPORT_WHATSAPP` y `app_settings.support_whatsapp` con el número real (Admin → Configuración).
-4. **[tú]** Confirma el fondo de contingencia real disponible en el Yape del admin (S/200–300).
 
 ## 7. Contenido legal **[tú]**
 
 `/terminos` y `/privacidad` (Ley 29733) ya tienen contenido base en la app cliente. Revisa con
-asesoría legal antes de operar (cláusula de adelanto del fondo para restaurantes, política de strikes).
+asesoría legal antes de operar (política de strikes).
 
 ## 8. Smoke post-deploy
 
