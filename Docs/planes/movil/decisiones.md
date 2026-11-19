@@ -3,7 +3,7 @@
 > Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code: «oka»); alcance ampliado con
 > D-49 a D-53, aprobado por Jesús el 2026-10-13 (conversación con Claude Code) · Alcance: las
 > decisiones de la migración a apps nativas; manda la sección 1. Análisis y requisitos: `Docs/trabajo/movil/`
-> Verificado: 2026-11-18 (movimientos de D-14, D-23, D-25 a D-27, D-29, D-31, D-32, D-30 y D-35 contra sus fuentes; D-12 sin tocar).
+> Verificado: 2026-11-18 (movimientos de D-14, D-23, D-25 a D-27, D-29, D-31, D-32, D-30 y D-35, y las nuevas D-21 y D-65, contra sus fuentes; D-12 sin tocar).
 > **Actualizado el 2026-11-18** (decididas movidas a la sección 1; sustituidas `D-30` y `D-35`). Escrito originalmente el 2026-09-20 con tus respuestas. La sección 1 es lo decidido; lo que no me correspondía decidir
 > sigue en las secciones 2 y 3, con opciones, una **recomendación** y de qué depende.
 
@@ -54,7 +54,7 @@
 |---|---|---|
 | D-23 | **Política de borrado de cuenta (`SEC-09`):** anonimización con retención mínima del vínculo antifraude; es la `D-44`. Pedidos anonimizados para siempre, comprobantes 90 días, directorio y antifraude por teléfono conservados | Jesús, 2026-10-10 (decidida por `D-44`) |
 | D-25 | **Motor de notificaciones (`NOT-01/05/07`):** FCM y APNs **directos**, y solo avisos de pedidos. Detalle y estado en `MV7` de `../migraciones/cola.md` | Jesús, 2026-10-19 |
-| D-26 | **Proveedor de mapas, Android:** Google Maps SDK, con carga diferida al abrir el selector; la calidad del satélite en San Jacinto se comprueba antes de publicar (ver `D-54`). **iOS (MapKit): sigue como recomendación, sin decisión registrada** | Jesús, 2026-10-24 (`D-54`) |
+| D-26 | **Proveedor de mapas, Android:** Google Maps SDK, con carga diferida al abrir el selector; la calidad del satélite en San Jacinto se comprueba antes de publicar (ver `D-54`). Las teselas de OSM/CARTO de la web **no** se usan en una app publicada. **iOS (MapKit): sigue como recomendación, sin decisión registrada** | Jesús, 2026-10-24 (`D-54`) |
 | D-27 | **Alcance de la web cuando exista la app (`MOB-15`):** cliente, apagar la PWA, sin respaldo web (el foco es la app móvil; la web del cliente se apaga después). Negocios no cambia: su web sigue siendo la vía de escritorio y de iPhone | Jesús, 2026-11-18 |
 | D-29 | **Versiones mínimas de SO:** Android 8 (API 26) e iOS 17 (es la `D-47`). `targetSdk` = 36 (obligatorio en Play desde el 2026-08-31) | Jesús, 2026-10-10 (`D-47`) |
 | D-31 | **Referencia mínima de dirección (`CUS-ADR-001`):** **15** en los formularios de las apps. Vive en `ADDRESS_REFERENCE_MIN` de `packages/contracts`; Android lo copia. La API v1 sigue aceptando desde 5 (`ADDRESS_REFERENCE_API_MIN`, API-3) | Jesús, 2026-11-18 |
