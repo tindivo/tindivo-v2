@@ -229,11 +229,15 @@ class BusinessViewModelTest {
         }
 
     @Test
-    fun `un plato fuera de su franja no aparece`() =
+    fun `CA-CAT-01 un plato fuera de su franja sigue en la carta, apagado`() =
         runTest {
             server.enqueue(response(200, menu(dish(1, "Ceviche", from = "13:00", to = "15:00"), dish(2, "Chicha"))))
 
-            assertEquals(listOf("Chicha"), newViewModel().names())
+            val viewModel = newViewModel()
+
+            assertEquals(listOf("Ceviche", "Chicha"), viewModel.names())
+            val dishes = (viewModel.visible() as BusinessUiState.Loaded).business.categories.flatMap { it.items }
+            assertEquals(listOf(false, true), dishes.map { it.orderable })
         }
 
     @Test
