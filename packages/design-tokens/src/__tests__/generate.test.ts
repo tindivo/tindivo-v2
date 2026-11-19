@@ -115,7 +115,7 @@ describe('parseTokens (rechaza lo malformado)', () => {
 
   it('tolera "pending" (texto) y lo rechaza si no es texto o está vacío', () => {
     const ok = clone()
-    ok.type.body.pending = 'motivo'
+    ok.type.body?.pending = 'motivo'
     expect(parseTokens(ok).type.body.pending).toBe('motivo')
     for (const bad of [5, '']) {
       const t = clone()
