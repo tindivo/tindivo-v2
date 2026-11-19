@@ -329,7 +329,7 @@ Apunta el apex `tindivo.com` + los CNAME `api`/`negocios`/`motorizados`/`admin` 
 ## 6. Seeds de go-live
 
 Parámetros operativos (`app_settings`) ya sembrados: `commissions` (delivery 1.50, pickup 1.00; migración `0125`), `delivery_bands`,
-`timers`, `prepay_threshold` (80; DECISIONS §4), `validation` (`amountThreshold` 80), `strikes` (2),
+`timers`, `prepay_threshold` (80; DECISIONS §7; `0087`), `validation` (`amountThreshold` 80), `strikes` (2),
 `platform_schedule` (lunes a domingo 18:00–23:00; migración `0087`), `coverage` (San Jacinto). El fondo de contingencia
 ya no existe (migraciones `0077` y `0123`). Ajusta desde **Admin → Configuración**.
 
@@ -342,7 +342,7 @@ Crear los actores del piloto (necesitan cuenta Auth → vía Admin, no SQL puro)
 ## 7. Contenido legal **[tú]**
 
 `/terminos` y `/privacidad` (Ley 29733) ya tienen contenido base en la app cliente. Revisa con
-asesoría legal antes de operar (política de strikes).
+asesoría legal antes de operar (cláusula de adelanto por apelación aprobada, ADR 0036; política de strikes).
 
 ## 8. Smoke post-deploy
 
