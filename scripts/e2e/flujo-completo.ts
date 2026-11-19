@@ -34,6 +34,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { exigirCandado, assertUploadUrl, fetchSinRedireccion } from './guardas.mjs'
 
 // ── Constantes del mundo e2e (espejo de apps/api/scripts/e2e-fixtures.ts) ─────────────────────────
 const E2E_PASSWORD = 'e2e-password-12345'
@@ -127,7 +128,8 @@ async function http(
     headers['content-type'] = 'application/json'
     payload = JSON.stringify(opts.body)
   }
-  const res = await fetch(url, { method, headers, body: payload })
+  // Nunca se sigue una redirección: el Bearer viajaría a otro host. Un 3xx es un error.
+  const res = await fetchSinRedireccion(url, { method, headers, body: payload })
   const text = await res.text()
   let body: Json = {}
   try {
@@ -136,6 +138,12 @@ async function http(
     body = { _raw: text.slice(0, 300) }
   }
   return { status: res.status, body, text: redact(text), headers: res.headers }
+}
+
+/** PUT a la URL firmada de subida: solo al origen de la Supabase permitida y sin seguir redirecciones. */
+async function putUpload(ctx: Ctx, uploadUrl: string, init: RequestInit): Promise<Response> {
+  assertUploadUrl(uploadUrl, ctx.supabase)
+  return fetchSinRedireccion(uploadUrl, init)
 }
 
 /** Respuestas `{data: …}` o planas. */
@@ -472,22 +480,13 @@ async function scenarioContraentrega(ctx: Ctx, prep: number): Promise<string> {
   )
   const id = created.id
   console.log(`        pedido ${created.shortId} (${id}) nace en ${created.status}`)
+  // Dinero esperado, calculado AQUÍ desde la entrada y desde `app_settings.delivery_bands` (la tarifa que el seed y las
+  // migraciones fijan para la banda cercana); nunca desde la fila que se está comprobando ni desde la cotización.
+  const feeCents = await expectedFeeCents(ctx)
+  const totalCents = SUBTOTAL * 100 + feeCents
+  const changeCents = PAYS_WITH * 100 - totalCents
+  expect(changeCents > 0, `el escenario necesita vuelto: paga con ${PAYS_WITH} y el total es ${totalCents / 100}`)
   await step('dinero como cadena (API-8): amount, deliveryFee, total, paysWith, changeToGive', async () => {
-    // El envío esperado sale de la cotización (otra ruta), no de la misma fila; el resto, de los datos de entrada.
-    const q = await call(ctx, 'customer', 'POST', '/customer/checkout/quote', {
-      businessId: BUSINESS_ID,
-      deliveryMethod: 'delivery',
-      coordinates: { lat: DELIVERY.lat, lng: DELIVERY.lng },
-      items: [
-        { menuItemId: ITEM_MEDIO_ID, quantity: 1 },
-        { menuItemId: ITEM_GASEOSA_ID, quantity: 1 },
-      ],
-    })
-    expect(q.status === 200, `quote: ${describeHttp(q)}`)
-    const feeText = unwrap(q.body).deliveryFee
-    expect(typeof feeText === 'string' && /^\d+\.\d{2}$/.test(feeText), `quote.deliveryFee: ${JSON.stringify(feeText)}`)
-    const feeCents = Math.round(Number(feeText) * 100)
-    const totalCents = SUBTOTAL * 100 + feeCents
     const r = await call(ctx, 'customer', 'GET', `/customer/orders/${id}`)
     expect(r.status === 200, `GET order: ${describeHttp(r)}`)
     const o = unwrap(r.body)
@@ -495,7 +494,7 @@ async function scenarioContraentrega(ctx: Ctx, prep: number): Promise<string> {
     expectMoney('deliveryFee', o.deliveryFee, feeCents)
     expectMoney('total', o.total, totalCents)
     expectMoney('paysWith', o.paysWith, PAYS_WITH * 100)
-    expectMoney('changeToGive', o.changeToGive, PAYS_WITH * 100 - totalCents)
+    expectMoney('changeToGive', o.changeToGive, changeCents)
   })
   await step(`vistas: ${created.status}`, async () => {
     await assertViews(ctx, id, created.status, { driverMustSee: false })
@@ -521,21 +520,18 @@ async function scenarioContraentrega(ctx: Ctx, prep: number): Promise<string> {
       await assertViews(ctx, id, 'preparing', { driverMustSee: false })
     })
   }
-  const total = SUBTOTAL + Number((await businessView(ctx, id)).row.delivery_fee)
   const row = await readyAndDeliver(ctx, id, {
     paymentReal: 'paid_cash',
     clientPaysWith: PAYS_WITH,
-    cashAmount: total,
+    cashAmount: totalCents / 100,
   })
-  await step('dinero: efectivo cobrado y a rendir cuadran', async () => {
+  await step('dinero: efectivo cobrado, vuelto y a rendir salen de la fórmula, no de la fila', async () => {
     expect(row.payment_real === 'paid_cash', `payment_real "${String(row.payment_real)}"`)
-    const owed = Number(row.cash_owed_at_delivery)
-    const change = Number(row.change_to_give ?? 0)
-    // Regla 0146: rendir = adelanto de vuelto + parte en efectivo del pedido.
-    expect(
-      Math.abs(owed - (total + change)) < 0.005,
-      `cash_owed_at_delivery ${owed}, esperado ${(total + change).toFixed(2)} (total ${total} + vuelto ${change})`,
-    )
+    expectMoneyNumber('client_pays_with', row.client_pays_with, PAYS_WITH * 100)
+    expectMoneyNumber('change_to_give', row.change_to_give, changeCents)
+    // Regla 0146: rendir = adelanto de vuelto + parte en efectivo del pedido. Con paga-con 50 y total T:
+    // vuelto = 50 − T y a rendir = (50 − T) + T = 50. Una regresión coordinada (vuelto 0 y rendir = T) rompe las dos.
+    expectMoneyNumber('cash_owed_at_delivery', row.cash_owed_at_delivery, changeCents + totalCents)
   })
   return id
 }
@@ -573,7 +569,7 @@ async function scenarioPrepago(ctx: Ctx, prep: number): Promise<string> {
       typeof u.path === 'string' && typeof u.uploadUrl === 'string',
       `upload-url sin path/uploadUrl: ${r.text.slice(0, 200)}`,
     )
-    const put = await fetch(String(u.uploadUrl), {
+    const put = await putUpload(ctx, String(u.uploadUrl), {
       method: 'PUT',
       headers: { 'content-type': 'image/png' },
       body: new Blob([PNG_1X1], { type: 'image/png' }),
@@ -605,6 +601,28 @@ async function scenarioPrepago(ctx: Ctx, prep: number): Promise<string> {
   return id
 }
 
+
+/** Dinero de una columna numérica de la base (llega como número o cadena) contra centavos esperados. */
+function expectMoneyNumber(label: string, got: unknown, expectedCents: number): void {
+  expect(
+    got !== null && got !== undefined && Math.round(Number(got) * 100) === expectedCents,
+    `${label} = ${String(got)}; se esperaba ${(expectedCents / 100).toFixed(2)}`,
+  )
+}
+
+/** Tarifa de envío esperada para la banda cercana: `app_settings.delivery_bands.near` (legible por cualquier sesión). */
+async function expectedFeeCents(ctx: Ctx): Promise<number> {
+  const r = await http(
+    ctx,
+    'GET',
+    `${ctx.supabase}/rest/v1/app_settings?key=eq.delivery_bands&select=value`,
+    { actor: 'customer', headers: { apikey: ctx.anonKey } },
+  )
+  const rows = JSON.parse(r.text || '[]') as { value?: { near?: unknown } }[]
+  const near = Number(rows[0]?.value?.near)
+  expect(r.status === 200 && Number.isFinite(near), `app_settings.delivery_bands.near: ${describeHttp(r)}`)
+  return Math.round(near * 100)
+}
 
 // ── Escenarios 3 en adelante (ver Docs/trabajo/e2e/escenarios.md) ─────────────────────────────────
 async function call(
@@ -834,7 +852,7 @@ async function scenarioRecojo(ctx: Ctx): Promise<string> {
     })
     expect(up.status === 200 || up.status === 201, `upload-url: ${describeHttp(up)}`)
     const u = unwrap(up.body)
-    const put = await fetch(String(u.uploadUrl), {
+    const put = await putUpload(ctx, String(u.uploadUrl), {
       method: 'PUT',
       headers: { 'content-type': 'image/png' },
       body: new Blob([PNG_1X1], { type: 'image/png' }),
@@ -870,7 +888,7 @@ async function scenarioPrepagoHeic(ctx: Ctx): Promise<string> {
     })
     expect(up.status === 200 || up.status === 201, `upload-url heic: ${describeHttp(up)}`)
     const u = unwrap(up.body)
-    const put = await fetch(String(u.uploadUrl), {
+    const put = await putUpload(ctx, String(u.uploadUrl), {
       method: 'PUT',
       headers: { 'content-type': 'image/heic' },
       body: new Blob([HEIC], { type: 'image/heic' }),
@@ -929,10 +947,7 @@ async function scenarioMisPedidos(ctx: Ctx, deliveredId: string): Promise<void> 
       rating: 4,
       tags: [],
     })
-    expect(
-      again.status >= 400 && again.status < 500,
-      `la 2.ª reseña debía fallar: ${describeHttp(again)}`,
-    )
+    expectProblem(again, 409, 'conflict', 'la 2.ª reseña del mismo pedido')
   })
 }
 
@@ -1227,6 +1242,8 @@ async function main(): Promise<void> {
     )
   }
   const isLocal = host === '127.0.0.1' || host === 'localhost'
+  // Todo escenario local escribe en la base compartida: solo bajo `pnpm db:lock run` / `db:cycle`.
+  if (isLocal) exigirCandado()
   // La API también se restringe: localhost, o el staging conocido y solo con --staging. Nunca una URL libre.
   let apiHost: string
   try {
@@ -1301,6 +1318,22 @@ async function main(): Promise<void> {
     await step('API viva: GET /health', async () => {
       const r = await http(ctx, 'GET', `${api}/health`)
       expect(r.status === 200, `health: ${describeHttp(r)}`)
+    })
+    // Next en desarrollo compila cada ruta en su primera visita y, mientras tanto, responde una 404 HTML
+    // (Docs/operacion/trampas.md, «Los rojos intermitentes de e2e son Next compilando»). Se calienta la ruta de
+    // subida con un pedido que no existe: hasta que conteste el 404 JSON de la API, no es un resultado.
+    await step('API caliente: la ruta de subida del comprobante responde JSON', async () => {
+      for (let i = 0; i < 10; i++) {
+        const r = await http(
+          ctx,
+          'POST',
+          `${api}/customer/orders/${randomUUID()}/prepay-proof/upload-url`,
+          { actor: 'customer', body: { contentType: 'image/png' } },
+        )
+        if (r.status === 404 && r.body.code === 'not_found') return
+        await new Promise((res) => setTimeout(res, 1500))
+      }
+      throw new Error('la ruta de subida no respondió con el 404 JSON de la API tras 10 intentos')
     })
     const serviceKey = process.env.TINDIVO_E2E_SERVICE_KEY ?? apiEnv.SUPABASE_SERVICE_ROLE_KEY
     if (isLocal) {

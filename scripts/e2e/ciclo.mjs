@@ -8,9 +8,13 @@
 import { spawnSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { exigirCandado } from './guardas.mjs'
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const isWin = process.platform === 'win32'
+
+// Antes de cualquier paso (el reset incluido): sin el candado de la base compartida no se toca nada.
+exigirCandado()
 
 function paso(titulo, cmd, args, { cmdShim = false } = {}) {
   console.log(`\n▶ ${titulo}`)

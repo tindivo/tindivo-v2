@@ -22,7 +22,7 @@ const isWin = process.platform === 'win32'
 const pnpm = isWin ? 'pnpm.cmd' : 'pnpm'
 
 function run(cmd, cmdArgs) {
-  const r = spawnSync(cmd, cmdArgs, { cwd: REPO, stdio: 'inherit', shell: isWin })
+  const r = spawnSync(cmd, cmdArgs, { cwd: REPO, stdio: 'inherit', shell: isWin && cmd === pnpm })
   return r.status ?? 1
 }
 
@@ -35,6 +35,9 @@ async function healthy() {
 }
 
 async function main() {
+  console.log('\n> pruebas negativas de las guardas (node --test)')
+  const guardas = run(process.execPath, ['--test', 'scripts/e2e/guardas.test.mjs'])
+  if (guardas !== 0) process.exit(guardas)
   let api = null
   if (!(await healthy())) {
     console.log('> API local apagada: arrancando `pnpm --filter @tindivo/api dev`')
