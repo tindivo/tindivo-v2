@@ -29,7 +29,7 @@ Es la pestaña «Pedidos» de la barra inferior (la barra la define `catalogo`).
 5. Hoja de detalle, al tocar una fila: productos, el motivo si se canceló y «Calificar» si aún no se calificó (CUS-ORD-010).
 6. En todos los lugares el código se muestra como «#TDV-» y los 8 caracteres (CUS-ORD-007).
 
-Variante vacía: ilustración, «Sin pedidos todavía» y el botón «Hacer un pedido».
+Variante vacía (la del tablero `Pedidos-vacio`, aprobada el 2026-11-19): ilustración, «Sin pedidos todavía» y el botón «Hacer un pedido».
 
 ## Estados
 
@@ -56,5 +56,4 @@ Al abrir, la tarjeta en curso entra con fundido y una subida de 8 px (200 ms, cu
 
 ## Pendiente
 
-- Título y vacío: el tablero dice «Mis pedidos» y el código «Historial de pedidos»; el vacío tiene tres textos («Sin pedidos todavía» de `Pedidos-vacio`, «Aún no tienes pedidos» de `Estados` y el del código). Hay que elegir uno (decisión para Jesús 9).
 - ¿«Calificar» de la hoja y la pregunta posterior a la entrega son la misma ventana de `resenas`? El tablero no lo aclara.

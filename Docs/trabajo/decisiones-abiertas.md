@@ -84,3 +84,17 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 - **Contexto**: el motorizado tiene que poder llevar 4 pedidos y no 3; va como arreglo urgente desde `main`, sin migración. Jesús lo retoma cuando acabe el servicio en curso.
 - **Decidir**: (1) si Vercel despliega `motorizados` a producción desde `main`; (2) traspaso por silencio: (a) `UPDATE` de `assignment_rules.maxOccupancySlotsPerDriver` en producción, revisado por Codex, o (b) esperar al lote 0248–0266; (3) si el tope cuenta espacios de mochila o pedidos.
 - **Recomendación**: (2a), para que el traspaso por silencio no se quede en 3; y (3) espacios, que es lo que la app ya cuenta.
+
+### DA-17 · Foto del motorizado en el seguimiento
+
+- 2026-11-19 · Bloquea: el avatar de `seguimiento` (CUS-TRK-021) · Detectó: Claude
+- **Contexto**: la maqueta dibuja un avatar con foto o iniciales; la foto es un dato personal de un tercero (Ley 29733, a verificar). Jesús aprobó el resto de decisiones del 2026-11-19 pero no esta.
+- **Alternativas**: (a) solo iniciales; (b) foto si existe, está vigente y el motorizado dio su consentimiento; si no, iniciales.
+- **Recomendación**: (b) con política de datos, o (a) si al lanzar no hay consentimiento registrado. Mientras tanto la app muestra iniciales.
+
+### DA-18 · «No se presentó»: efecto de la falta y dinero prepagado
+
+- 2026-11-19 · Bloquea: CUS-TRK-022 · Detectó: Claude · **Dinero** (invariante 9): requiere la revisión explícita de Jesús y de Codex.
+- **Contexto**: `Docs/negocio/antifraude.md` dice que el motorizado espera 5 minutos y reporta, con falta al instante; la decisión del 2026-11-17 dice que el motorizado se va y la falta nace de noche, con confirmación de Jesús en el admin. Sin decidir: si la falta cuenta antes de confirmarse, qué pasa con el dinero de un pedido prepagado que termina en `no_show` y si el admin tiene hoy la pantalla de confirmar o anular. Todo ajuste de dinero se escribe solo en `business_charges`.
+- **Alternativas**: (a) la falta nace «en revisión» y sin efecto hasta que Jesús la confirme; (b) cuenta al instante y se anula si Jesús lo decide.
+- **Recomendación**: (a), y actualizar `antifraude.md` con la aprobación de Jesús. El destino del dinero prepagado, sin recomendación hasta tener la política.

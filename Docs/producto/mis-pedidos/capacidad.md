@@ -16,7 +16,7 @@ reglas: [ACTIVE_ORDER_STATUSES, isActiveOrderStatus, STATUS_TO_TRACKING]
 
 # Mis pedidos
 
-> Verificado: 2026-11-18 · entorno: develop@25a6d537 (código) · Aprobado por Jesús el AAAA-MM-DD (medio) — pendiente de su visto bueno
+> Verificado: 2026-11-18 · entorno: develop@25a6d537 (código) · Aprobado por Jesús el 2026-11-19 (conversación con Claude Code: «apruebo las recomendaciones de los cuatro»)
 
 ## Antes de tocar
 
@@ -31,7 +31,7 @@ reglas: [ACTIVE_ORDER_STATUSES, isActiveOrderStatus, STATUS_TO_TRACKING]
 - «Volver a pedir» repone la bolsa: lo define `bolsa` (CUS-CRT-012). Esta capacidad solo pone el botón.
 - La pregunta de calificar al entregar es de `resenas`; la pastilla y el punto del pedido en curso en el Inicio, de `catalogo`.
 - Android comparte `feature/orders` con `seguimiento`, `pagos` y `soporte`: esta capacidad solo es dueña de la lista.
-- Las entregas (Tindivo Entregas) hoy viven en una lista aparte; el tablero las junta con filtros (decisión para Jesús 7).
+- Las entregas (Tindivo Entregas) hoy viven en una lista aparte; el tablero las junta con filtros (CUS-ORD-008).
 - iOS aún no empieza: `codigo.ios` vacío.
 
 ## Requisitos
@@ -43,17 +43,17 @@ reglas: [ACTIVE_ORDER_STATUSES, isActiveOrderStatus, STATUS_TO_TRACKING]
 | CUS-ORD-003 | La app debe ofrecer, según el pedido, «Ver seguimiento» si está activo, «Ver caso de pago» si se canceló por `proof_rejected_final`, calificar y «Volver a pedir». | `ORD.md` | |
 | CUS-ORD-004 | La app debe ofrecer ayuda por WhatsApp en un pedido cancelado, con un mensaje que lleve el código del pedido. | `ORD.md` · Decisión de Jesús, 2026-11-17 | |
 | CUS-ORD-005 | La app debe mantener el contador de pedidos activos con una sola consulta compartida, y descartar la respuesta vieja si llega una nueva. | `ORD.md` · `apps/customer/lib/active-orders.ts` · `packages/contracts/src/enums.ts` (`ACTIVE_ORDER_STATUSES`) | |
-| CUS-ORD-006 | El servidor debe paginar el historial por cursor y devolver el estado ya proyectado. | `ORD.md` | |
+| CUS-ORD-006 | El servidor debe paginar el historial por cursor, y cada app debe proyectar el estado con el vector compartido de `packages/contracts/fixtures/vectores/`. | `ORD.md` · Decisión de Jesús, 2026-11-19 | |
 | CUS-ORD-007 | La app debe mostrar el código del pedido como «#TDV-» seguido de los 8 caracteres, en el seguimiento, en «Mis pedidos», en los mensajes de WhatsApp y en el soporte. | Decisión de Jesús, 2026-11-17 (decisión 15) | |
-| CUS-ORD-008 | La app debe permitir filtrar la lista con «Todos», «Restaurantes» y «Entregas», sin repetir la consulta al volver a «Todos». | Canvas v35, tablero `Pedidos` (requisito nuevo del tablero; decisión para Jesús 7) | |
-| CUS-ORD-009 | La app debe mostrar el pedido en curso arriba, en una tarjeta con una sola acción («Ver seguimiento»), y los anteriores debajo, sin botones salvo «Volver a pedir» en el último entregado. | Canvas v35, tablero `Pedidos` (requisito nuevo del tablero; decisión para Jesús 7) | |
-| CUS-ORD-010 | La app debe abrir, al tocar un pedido anterior, una hoja con sus productos, el motivo si se canceló y «Calificar» si aún no se calificó. | Canvas v35, tablero `Pedidos` (requisito nuevo del tablero; decisión para Jesús 7) | |
+| CUS-ORD-008 | La app debe permitir filtrar la lista con «Todos», «Restaurantes» y «Entregas», sin repetir la consulta al volver a «Todos». | Canvas v35, tablero `Pedidos` (requisito del tablero, numerado con la aprobación de Jesús del 2026-11-19) | |
+| CUS-ORD-009 | La app debe mostrar el pedido en curso arriba, en una tarjeta con una sola acción («Ver seguimiento»), y los anteriores debajo, sin botones salvo «Volver a pedir» en el último entregado. | Canvas v35, tablero `Pedidos` (requisito del tablero, numerado con la aprobación de Jesús del 2026-11-19) | |
+| CUS-ORD-010 | La app debe abrir, al tocar un pedido anterior, una hoja con sus productos, el motivo si se canceló y «Calificar» si aún no se calificó. | Canvas v35, tablero `Pedidos` (requisito del tablero, numerado con la aprobación de Jesús del 2026-11-19) | |
 
 ## Criterios de aceptación
 
 | CA | Criterio | Requisitos |
 |---|---|---|
-| CA-ORD-01 | Dado un pedido en `awaiting_payment` o en `ready_for_pickup`, entonces la fila muestra la etiqueta del paso que le da la proyección del seguimiento y nunca el texto interno del estado. | CUS-ORD-002 |
+| CA-ORD-01 | Dado cada estado del vector compartido de proyección (incluidos `awaiting_payment` y `ready_for_pickup`), entonces la fila muestra la etiqueta del paso que dice el vector y nunca el texto interno del estado. | CUS-ORD-002, CUS-ORD-006 |
 | CA-ORD-02 | Dado más pedidos que una página, cuando se llega al final, entonces la app pide la página siguiente con el cursor del servidor; si esa página falla, conserva la lista y avisa del error sin perder lo cargado. | CUS-ORD-001, CUS-ORD-006 |
 | CA-ORD-03 | Dado un importe que no tiene la forma del contrato, entonces la lista entera falla con un error genérico y no se muestra un total inventado. | CUS-ORD-001 |
 | CA-ORD-04 | Dado un pedido cancelado, entonces la fila ofrece ayuda por WhatsApp con el mensaje que lleva «#TDV-» y el código; sin número de soporte, no se muestra el enlace. | CUS-ORD-004, CUS-ORD-007 |
@@ -75,5 +75,5 @@ reglas: [ACTIVE_ORDER_STATUSES, isActiveOrderStatus, STATUS_TO_TRACKING]
 |---|---|---|---|
 | 1 | CUS-ORD-007 | Android muestra el código como «#» y los 8 caracteres en la lista, en el seguimiento y en el mensaje de ayuda del detalle; solo el mensaje de la fila cancelada lleva «#TDV-». | `feature/orders/SupportContact.kt` · `res/values/strings.xml` |
 | 2 | CUS-ORD-003 | «Volver a pedir» solo abre el negocio; «Ver caso de pago» y «Calificar» no están en la lista de Android. | `feature/orders/OrdersScreen.kt` |
-| 3 | CUS-ORD-006 | El servidor ya pagina por cursor, pero devuelve `status` y `cancelReason` en crudo: cada app proyecta por su cuenta (decisión para Jesús 6). | `apps/api/lib/mappers/customer-orders.ts` |
+| 3 | CUS-ORD-006 | El servidor manda `status` y `cancelReason` en crudo y cada app proyecta: el vector compartido las mantiene iguales. | `packages/contracts/fixtures/vectores/` |
 | 4 | CUS-ORD-005, CUS-ORD-008, CUS-ORD-009, CUS-ORD-010 | Android no tiene contador de activos, filtros, tarjeta en curso ni hoja de detalle; la lista es una sola. | `feature/orders/OrdersScreen.kt` |

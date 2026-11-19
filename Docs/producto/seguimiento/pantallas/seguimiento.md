@@ -1,6 +1,6 @@
 ---
 canvas: [Seguimiento, Seguimiento-recogiendo, Seguimiento-llego, Seguimiento-pago]
-requisitos: [CUS-TRK-001, CUS-TRK-002, CUS-TRK-003, CUS-TRK-004, CUS-TRK-005, CUS-TRK-006, CUS-TRK-008, CUS-TRK-009, CUS-TRK-010, CUS-TRK-011, CUS-TRK-012, CUS-TRK-014, CUS-TRK-015, CUS-TRK-020, CUS-TRK-021, CUS-TRK-022, CUS-TRK-023, CUS-TRK-024, CUS-ORD-007]
+requisitos: [CUS-TRK-001, CUS-TRK-002, CUS-TRK-003, CUS-TRK-004, CUS-TRK-005, CUS-TRK-006, CUS-TRK-008, CUS-TRK-009, CUS-TRK-010, CUS-TRK-012, CUS-TRK-014, CUS-TRK-015, CUS-TRK-020, CUS-TRK-021, CUS-TRK-022, CUS-TRK-023, CUS-TRK-024, CUS-ORD-007]
 operaciones: [getCustomerOrder, cancelOrder]
 textos: []
 tokens: []
@@ -26,7 +26,7 @@ El pago de este seguimiento (efectivo con vuelto, Yape o Plin con su tarjeta, y 
 2. Titular del estado: «Preparando tu pedido», «En camino» y los de cada fase. Sobre la ruta, la moto avanza: en «Preparando» se acerca al local y, al recoger, salta al tramo hacia la casa (CUS-TRK-024).
 3. Progreso en cuatro etapas: Recibido, Preparando, En camino, Entregado. La activa late; la pendiente va en gris. En recojo la tercera dice «Listo» (CUS-TRK-002).
 4. «Llega en» y un rango de minutos, nunca una hora exacta; en recojo no se suma trayecto (CUS-TRK-004).
-5. Motorizado: nombre completo y «Tu motorizado». Sin teléfono, WhatsApp ni placa en ningún estado (CUS-TRK-021). Avatar con foto solo si existe y está permitido; si no, iniciales (decisión para Jesús 5).
+5. Motorizado: nombre completo y «Tu motorizado». Sin teléfono, WhatsApp ni placa en ningún estado (CUS-TRK-021). Foto: abierta (DA-17); mientras tanto, iniciales.
 6. Lugar reservado, sin tarjeta, para las 5 estrellas al entregar: lo define `resenas`.
 7. Bloque de pago, según la forma de pago elegida: lo define `pagos` y aparece cuando el negocio acepta (CUS-TRK-020).
 8. «Ver resumen del pedido» (fila de texto) y «Ayuda con este pedido» (acción de texto con ícono).
@@ -60,10 +60,10 @@ El pago de este seguimiento (efectivo con vuelto, Yape o Plin con su tarjeta, y 
 ## Diferencias por plataforma
 
 - Mantener la pantalla encendida: en Android, la bandera de pantalla de la ventana; en iOS, el bloqueo de inactividad (CUS-TRK-012). La web usaba el Wake Lock del navegador.
-- Avisos: en nativo, las notificaciones de `notificaciones` cubren la app cerrada; los avisos con tono y sonido de CUS-TRK-010 y CUS-TRK-011 son los de la app abierta.
+- Avisos: solo la notificación del sistema de `notificaciones` (CUS-TRK-010); no hay tono ni interruptor propios.
 - Movimiento: la moto se acerca al local (250 ms por actualización) y el segmento activo late; con «reducir movimiento», sin animaciones.
 
 ## Pendiente
 
-- «Cambiar monto» del efectivo, que dibuja el tablero y no existe en el código ni en la API: toca dinero, lo ve Jesús y lo define `pagos` (decisión para Jesús 7).
+- «Cambiar monto» del efectivo, que dibuja el tablero y no existe en el código ni en la API: toca dinero y no entra: lo ve Jesús en `pagos`.
 - Si «El motorizado va al local» o «está esperando en el local» se ven dentro de «Preparando» como línea de detalle, sin paso nuevo (propuesta de la junta del 17-nov, aún sin ratificar por Jesús).
