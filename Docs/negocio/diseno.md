@@ -15,7 +15,8 @@
 - **Blanco sobre naranja**, aunque el manual de marca (edición 02) pida carbón sobre naranja: Jesús lo descartó. El
   contraste es de 3,25:1, así que el blanco sobre `primary` va solo en letra de 18 px en negrita o de 24 px o más;
   **la letra pequeña nunca va en blanco sobre naranja**.
-- **Geist en todo**, títulos y botones en 600-800, también los precios.
+- **Geist en todo**, pesos 400 a 700: los títulos (`titleScreen`, `titleSection`) y el CTA en 700, también los precios
+  (sistema de diseño del 16-nov, aprobado por Jesús; valores en `Docs/negocio/sistema-de-diseno.md`).
 - **El logo es un dibujo** (vectores del manual): nunca se escribe «Tindivo» con una fuente.
 - Nada dorado, ámbar ni beige; el mapa, en gris frío.
 
@@ -29,6 +30,6 @@
 
 ## Componentes
 
-- Botones en píldora, blanco sobre naranja, extra-negrita. En la web, los de `packages/ui`, que la CI vigila
+- Botones en píldora, blanco sobre naranja, en negrita (700, el peso de `cta`). En la web, los de `packages/ui`, que la CI vigila
   (`pnpm check:ds`).
 - En `apps/negocios` y `apps/motorizados`, solo los iconos del subset cerrado (`apps/negocios/AGENTS.md`).

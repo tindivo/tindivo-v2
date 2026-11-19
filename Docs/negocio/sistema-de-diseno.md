@@ -1,10 +1,10 @@
 # Sistema de diseño: tokens de las apps nativas
 
-> Verificado: 2026-11-19 · entorno: `develop@25a6d537` (contrastes recalculados con la fórmula WCAG 2.x el 2026-11-17; valores en `packages/design-tokens/tokens.json`, que se genera desde este documento)
+> Verificado: 2026-11-19 · entorno: `develop@25a6d537` (contrastes recalculados con la fórmula WCAG 2.x el 2026-11-17; `packages/design-tokens/tokens.json` se escribe a mano a partir de este documento y un test compara sus valores con las tablas de §2 a §5)
 > Fuente: decisión de Jesús, 2026-11-18 (manda el sistema de diseño del 16-nov; iOS y Android salen de aquí, no de los valores previos de Android)
 > La marca y los principios: `Docs/negocio/diseno.md`. Este documento es la fuente de los **tokens**; los componentes, el movimiento y las imágenes siguen en `Docs/trabajo/app-cliente/de-arquitectura/sistema-de-diseno.md` (§6 en adelante) hasta que se promuevan.
 
-Cómo se genera: `packages/design-tokens/tokens.json` (mismos nombres que aquí) produce CSS, Kotlin y Swift con
+Cómo se usa: `packages/design-tokens/tokens.json` (escrito a mano, con los mismos nombres que aquí; un test lo compara con las tablas) produce CSS, Kotlin y Swift con
 `pnpm tokens:build`. Android hoy no los consume y difiere en lo que lista `packages/design-tokens/src/__tests__/android-parity.test.ts`;
 se ajusta en sus PRs de diseño.
 
@@ -66,7 +66,7 @@ Contrastes **medidos** (WCAG 2.x, luminancia relativa) el 2026-11-17.
    umbral. **(Pendiente de crear: no existe hoy.)**
 6. Los **avatares de negocio sin logo** usan el respaldo del isotipo sobre `primaryContainer`, no un color inventado.
 7. Solo tema claro: no hay modo oscuro definido.
-8. **Un solo naranja.** Restaurantes, Entregas y Store usan `primary`; ningún servicio lleva azul (ni la moto). `info` es
+8. **Un solo naranja (alcance a confirmar por Jesús).** Restaurantes, Entregas y Store usan `primary`; ningún servicio lleva azul (ni la moto). `info` es
    solo para avisos informativos, nunca color de un servicio.
 
 ## 3. Forma y elevación
@@ -118,3 +118,23 @@ altura fija: el tamaño de letra del sistema (Dynamic Type, `fontScale`) debe po
 | `secondaryHeight` | 48–52 | Alto del botón secundario |
 | `chipHeight` | 40 mínimo, dentro de un área táctil de 48 | Chip |
 | `bottomBarInset` | 24 | Aire inferior de la barra de CTA para la barra de gestos |
+
+- **Toda pantalla desplaza.** La maqueta es de 390 × 844, pero se diseña como si el contenido siguiera; el contenido deja
+  un hueco inferior igual a la altura de lo fijo + 16.
+- **Lo que es fijo, y nada más:**
+  1. Barra superior de pantallas internas (volver, título, acciones); en Negocio se compacta al hacer scroll.
+  2. Selector de secciones del menú (Negocio), pegado bajo la barra superior; tocar una sección **lleva** a ella y la
+     visible se resalta sola.
+  3. Barra de acción inferior (CTA) en Plato, Bolsa, Confirmar pedido y Comprobante.
+  4. Barra de navegación inferior (Inicio, Entregas, Pedidos, Cuenta), **solo** en las 4 pestañas raíz.
+  5. Pastilla de bolsa activa (Inicio y Negocio) y pastilla de pedido en curso (Inicio), sobre la barra inferior.
+- Barra de CTA inferior: `surface`, `elevation2`, relleno 12/16, respeta la barra de gestos.
+- Nada queda bajo la barra del sistema ni tapado por el teclado (3 botones, gestos, tablets).
+
+## Pendientes de confirmar por Jesús
+
+El canon da un rango o no da un dato; `tokens.json` toma un valor y lo marca con `"pending"` hasta que Jesús lo confirme:
+
+- `body`: el canon dice peso 400–500; el JSON toma 400.
+- `secondaryHeight`: el canon dice 48–52; el JSON toma 48.
+- `chip`: el canon no fija interlineado (solo 14 / 600); el JSON no lo trae.
