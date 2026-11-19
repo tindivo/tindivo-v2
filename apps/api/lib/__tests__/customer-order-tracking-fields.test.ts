@@ -1,5 +1,6 @@
 import { CustomerOrderDetailSchema } from '@tindivo/contracts/openapi'
 import { describe, expect, it } from 'vitest'
+import { travelMinutesFrom } from '../customer/order-timers'
 import { type OrderDetailRow, toOrderDetailDto } from '../mappers/customer-orders'
 
 /**
@@ -88,5 +89,36 @@ describe('los plazos y el trayecto en el detalle del pedido', () => {
   it('CA-TRK-04 la respuesta cumple el contrato OpenAPI', () => {
     const dto = toOrderDetailDto(row(), 'La Florencia', null, TRAVEL)
     expect(CustomerOrderDetailSchema.safeParse(dto).success).toBe(true)
+  })
+})
+
+describe('los instantes y el trayecto del detalle', () => {
+  it('CA-TRK-05 los instantes con +00:00 salen en UTC con Z', () => {
+    const dto = toOrderDetailDto(
+      row({
+        pending_acceptance_at: '2026-11-16T15:01:00.123456+00:00',
+        validating_at: '2026-11-16T10:00:30-05:00',
+      }),
+      null,
+      null,
+      null,
+    )
+    expect(dto.pendingAcceptanceAt).toBe('2026-11-16T15:01:00.123Z')
+    expect(dto.validatingAt).toBe('2026-11-16T15:00:30.000Z')
+    expect(
+      toOrderDetailDto(row({ pending_acceptance_at: null }), null, null, null).pendingAcceptanceAt,
+    ).toBeNull()
+  })
+
+  it('CA-TRK-04 sin ajuste el trayecto es null y no un 20-25 inventado', () => {
+    expect(travelMinutesFrom(undefined)).toBeNull()
+    expect(travelMinutesFrom({})).toBeNull()
+    expect(travelMinutesFrom({ travelMinutesMin: 20 })).toBeNull()
+    expect(travelMinutesFrom({ travelMinutesMin: 25, travelMinutesMax: 20 })).toBeNull()
+    expect(travelMinutesFrom({ travelMinutesMin: '20', travelMinutesMax: 25 })).toBeNull()
+    expect(travelMinutesFrom({ travelMinutesMin: 15, travelMinutesMax: 30 })).toEqual({
+      min: 15,
+      max: 30,
+    })
   })
 })

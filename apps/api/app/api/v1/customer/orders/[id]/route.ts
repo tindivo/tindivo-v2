@@ -1,5 +1,6 @@
 import { UuidSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
+import { readTravelMinutes } from '@/lib/customer/order-timers'
 import { requireRole } from '@/lib/http/auth'
 import { handleOptions } from '@/lib/http/cors'
 import { privateHeaders } from '@/lib/http/private-response'
@@ -49,32 +50,19 @@ export async function GET(
     const row = data as unknown as OrderDetailRow
 
     const service = createServiceClient()
-    const [{ data: biz }, { data: drv }, { data: timers }] = await Promise.all([
+    const [{ data: biz }, { data: drv }, travel] = await Promise.all([
       service.from('businesses').select('name').eq('id', row.business_id).maybeSingle(),
       row.driver_id
         ? service.from('drivers').select('full_name').eq('id', row.driver_id).maybeSingle()
         : Promise.resolve({ data: null }),
-      service.from('app_settings').select('value').eq('key', 'timers').maybeSingle(),
+      readTravelMinutes(service),
     ])
 
     return ok(
-      toOrderDetailDto(
-        row,
-        biz?.name ?? null,
-        drv ? { name: drv.full_name } : null,
-        travelMinutesOf(timers?.value),
-      ),
+      toOrderDetailDto(row, biz?.name ?? null, drv ? { name: drv.full_name } : null, travel),
       { headers: privateHeaders(req) },
     )
   } catch (err) {
     return handleError(err, requestId, req)
   }
-}
-
-/** El trayecto de `app_settings.timers`, con los mismos respaldos que `get_tracking` (0183). */
-function travelMinutesOf(timers: unknown): { min: number; max: number } {
-  const v = (timers ?? {}) as { travelMinutesMin?: unknown; travelMinutesMax?: unknown }
-  const num = (x: unknown, fallback: number): number =>
-    typeof x === 'number' && Number.isInteger(x) ? x : fallback
-  return { min: num(v.travelMinutesMin, 20), max: num(v.travelMinutesMax, 25) }
 }

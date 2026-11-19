@@ -63,6 +63,10 @@ export const ORDER_SUMMARY_COLUMNS =
 export const ORDER_DETAIL_COLUMNS =
   'id,short_id,order_number,status,delivery_method,payment_intent,cancel_reason,business_id,order_amount,delivery_fee,created_at,delivered_at,customer_notes,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,client_pays_with,change_to_give,estimated_ready_at,arrived_at_customer_at,proof_attempt,payment_verified_at,payment_proof_status,driver_id,pending_acceptance_at,validating_at,customer_order_items(item_name_snapshot,quantity,line_total,note,created_at,customer_order_item_modifiers(group_name_snapshot,option_name_snapshot,additional_price_snapshot,created_at))' as const
 
+/** Un instante de la base (`+00:00`, microsegundos) como UTC con `Z` (API-8); `null` se queda en `null`. */
+const utcOrNull = (value: string | null): string | null =>
+  value === null ? null : new Date(value).toISOString()
+
 const byCreatedAt = <T extends { created_at?: string }>(a: T, b: T): number =>
   (a.created_at ?? '').localeCompare(b.created_at ?? '')
 
@@ -134,8 +138,8 @@ export function toOrderDetailDto(
     proofAttempt: row.proof_attempt,
     paymentVerifiedAt: row.payment_verified_at,
     paymentProofStatus: row.payment_proof_status ?? null,
-    pendingAcceptanceAt: row.pending_acceptance_at,
-    validatingAt: row.validating_at,
+    pendingAcceptanceAt: utcOrNull(row.pending_acceptance_at),
+    validatingAt: utcOrNull(row.validating_at),
     travelMinutes,
     // El cliente nunca recibe el teléfono del motorizado (decisión de Jesús, 2026-11-17): el campo
     // sigue en el contrato por las apps ya instaladas y viaja siempre en null.
