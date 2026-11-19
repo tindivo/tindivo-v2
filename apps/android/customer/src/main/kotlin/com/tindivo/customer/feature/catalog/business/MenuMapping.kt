@@ -23,7 +23,12 @@ internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi? {
             .map { it.toCategory() ?: return null }
             .filter { it.items.isNotEmpty() }
     val byId = menu.flatMap { it.items }.associateBy { it.id }
-    val featuredItems = featured?.itemIds.orEmpty().mapNotNull { byId[it.toString()] }.take(FEATURED_MAX)
+    val featuredItems =
+        featured
+            ?.itemIds
+            .orEmpty()
+            .mapNotNull { byId[it.toString()] }
+            .take(FEATURED_MAX)
     return BusinessDetailUi(
         id = business.id.toString(),
         name = business.name,
@@ -50,8 +55,10 @@ internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi? {
 
 /** Tope de platos de «Destacados» (`FEATURED_MAX_ITEMS` de `packages/contracts`). */
 private const val FEATURED_MAX = 6
+
 /** El id de la sección «Destacados»: sus platos ya están en su sección de la carta y no se cuentan dos veces. */
 internal const val FEATURED_ID = "featured"
+
 private const val FEATURED_TITLE = "Destacados"
 private const val CATALOG_ONLY = "catalog_only"
 

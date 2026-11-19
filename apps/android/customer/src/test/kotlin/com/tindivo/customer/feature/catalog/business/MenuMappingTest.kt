@@ -126,7 +126,8 @@ class MenuMappingTest {
     fun `CA-CAT-02 «Destacados» sale primero con el nombre del restaurante y sus platos de la carta`() =
         runTest {
             val featured =
-                "\"featured\":{\"title\":\"Los más pedidos\",\"item_ids\":[\"00000000-0000-4000-8000-000000000001\"]}," +
+                "\"featured\":{\"title\":\"Los más pedidos\"," +
+                    "\"item_ids\":[\"00000000-0000-4000-8000-000000000001\"]}," +
                     "\"schedule\":[],\"opening_confirmed\":null"
 
             val state = load(menuWith(featured)) as BusinessUiState.Loaded

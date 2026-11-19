@@ -251,7 +251,11 @@ class BusinessViewModelTest {
 
             val state = newViewModel().visible() as BusinessUiState.Loaded
 
-            val ceviche = state.business.categories.single().items.single()
+            val ceviche =
+                state.business.categories
+                    .single()
+                    .items
+                    .single()
             assertEquals("Solo de 13:00 a 15:00", ceviche.outsideWindow)
             assertFalse(ceviche.orderable)
             assertTrue(ceviche.available)

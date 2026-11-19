@@ -35,7 +35,8 @@ class DishWindowTest {
         assertEquals("Solo lun a sáb, de 18:00 a 23:30", noche.describe())
         assertEquals("Solo sáb y dom", win(days = listOf(5, 6)).describe())
         assertEquals("Solo de 11:00 a 15:00", win(from = "11:00", to = "15:00").describe())
-        assertEquals("Solo de 11:00 a 15:00", win(days = listOf(0, 1, 2, 3, 4, 5, 6), from = "11:00", to = "15:00").describe())
+        val todosLosDias = win(days = listOf(0, 1, 2, 3, 4, 5, 6), from = "11:00", to = "15:00")
+        assertEquals("Solo de 11:00 a 15:00", todosLosDias.describe())
         assertEquals("Solo lun, mié y vie", win(days = listOf(0, 2, 4)).describe())
         assertNull(siempre.describe())
     }
