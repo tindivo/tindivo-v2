@@ -16,7 +16,7 @@ reglas: [UpdateCustomerProfileRequestSchema, app_settings:support_whatsapp]
 
 # Cuenta y borrado de cuenta
 
-> Verificado: 2026-11-18 · entorno: develop@25a6d537 (código) · Aprobado por Jesús el AAAA-MM-DD (medio) — pendiente de su visto bueno
+> Verificado: 2026-11-18 · entorno: develop@25a6d537 (código) · Aprobado por Jesús el 2026-11-19 (conversación con Claude Code: «apruebo las recomendaciones de los cuatro»)
 
 ## Antes de tocar
 
@@ -27,12 +27,12 @@ reglas: [UpdateCustomerProfileRequestSchema, app_settings:support_whatsapp]
 - Borrar es inmediato y sin vuelta atrás: anonimiza los pedidos, borra lo personal y la identidad. La app exige
   escribir `BORRAR` y el servidor responde 409 con el motivo si hay un pedido en curso, dinero sin resolver o un rol que no
   es de cliente (apps de negocio o motorizado: lo cierra soporte).
-- Lo que se conserva y por qué: `Docs/operacion/retencion-de-datos.md`. Ese canon dice hoy que el comentario de una
-  reseña **se borra**; CUS-ACC-008 pide conservarlo anonimizado (decisión 6 del PR): no lo cambies sin aprobación.
+- Lo que se conserva y por qué: `Docs/operacion/retencion-de-datos.md`. Al borrar la cuenta, de una reseña
+  quedan nota y etiquetas, sin autor y **sin comentario** (Jesús, 2026-11-19, opción C): no lo cambies sin aprobación.
 - Cerrar sesión es siempre local (`movil:D-64`); «cerrar en todos» no existe todavía.
 - El interruptor «Avisos de tus pedidos» depende de las notificaciones (CUS-NOT-005, aún en `trabajo/`): sin FCM no hay qué apagar.
 - Google Play exige poder borrar la cuenta dentro de la app y desde un enlace web público; la web del cliente se
-  apaga (`movil:D-27`): ver la decisión 7 del PR.
+  apaga (`movil:D-27`): dónde vive ese enlace está abierto (ver «Abierto»).
 - iOS aún no empieza: `codigo.ios` vacío.
 
 ## Requisitos
@@ -46,7 +46,7 @@ reglas: [UpdateCustomerProfileRequestSchema, app_settings:support_whatsapp]
 | CUS-ACC-005 | La app debe ofrecer en Cuenta un solo interruptor de notificaciones, «Avisos de tus pedidos»; es el mismo control de CUS-NOT-002. Sin interruptor de promociones. | Jesús, 2026-11-17 (decisiones A y P) | |
 | CUS-ACC-006 | La app debe dar a «Mis direcciones» un lugar de primer nivel en Cuenta, con más peso que los accesos secundarios. | Jesús, 2026-11-16 · `Docs/trabajo/app-cliente/requisitos/ACC.md` | |
 | CUS-ACC-007 | Cuando falten datos del perfil, la app debe mostrar el aviso «Completa tu perfil» con un botón por cada paso pendiente (nombre, celular, dirección). Cada botón abre su hoja dentro de Cuenta; nunca obliga a salir. | Jesús, 2026-11-16 | |
-| CUS-ACC-008 | Cuando el cliente borra su cuenta, el sistema debe conservar sus reseñas anonimizadas («Cliente de Tindivo»), con el comentario y sin vínculo con el autor. **Cambia la retención de datos: requiere la revisión de Jesús y de Codex antes de aplicarse.** | Jesús, 2026-11-16 (T3 de la ronda 2) · `Docs/operacion/retencion-de-datos.md` | |
+| CUS-ACC-008 | Cuando el cliente borra su cuenta, el sistema debe conservar la nota y las etiquetas de sus reseñas, sin vínculo con el autor y **sin el comentario**; el texto de la app debe decirlo así. | Jesús, 2026-11-19 (opción C, sustituye a la T3 del 2026-11-16) · `Docs/operacion/retencion-de-datos.md` | |
 | CUS-AUT-013 | La app debe ofrecer «cerrar sesión en este dispositivo» y, aparte, «cerrar en todos». | `apps/customer/features/account/components/account-menu.tsx` · `apps/customer/lib/sign-out.ts` | |
 | CUS-AUT-014 | La app debe permitir editar el nombre del perfil, con el mismo largo y los mismos caracteres que valida el servidor. | `apps/customer/features/account/hooks/use-account-page.ts` · `UpdateCustomerProfileRequestSchema` | |
 | CUS-AUT-015 | La app debe mostrar el progreso del perfil (nombre, celular verificado, dirección) y llevar al paso que falta. | `apps/customer/features/account/components/profile-hero.tsx` | |
@@ -65,12 +65,17 @@ reglas: [UpdateCustomerProfileRequestSchema, app_settings:support_whatsapp]
 | CA-ACC-04 | Dado una cuenta con un pedido en curso, cuando intenta borrarla, entonces el servidor responde 409, la app muestra el motivo en español, la sesión sigue abierta y nada cambia. Prueba: `apps/api/lib/__tests__/account-deletion.integration.test.ts` («con un pedido en curso: 409…»). | CUS-AUT-017 |
 | CA-ACC-05 | Dado una cuenta sin pedidos en curso, cuando se borra, entonces los pedidos quedan sin la persona, el ledger no se toca y repetir la petición con el mismo token da 401. Prueba: `apps/api/lib/__tests__/account-deletion.integration.test.ts` («borra lo personal…» y «repetirla…»). | CUS-AUT-017 |
 | CA-ACC-06 | Dado una cuenta que borró sus datos, entonces ninguna otra cuenta cambia. Prueba: `apps/api/lib/__tests__/account-deletion.integration.test.ts` («no toca a las demás cuentas»). | CUS-AUT-017 |
-| CA-ACC-07 | Dado una cuenta con reseñas, cuando se borra, entonces cada reseña queda como «Cliente de Tindivo», con su comentario y sin vínculo con el autor. Solo vale cuando Jesús y Codex aprueben el cambio de retención. | CUS-ACC-008 |
+| CA-ACC-07 | Dado una cuenta con reseñas, cuando se borra, entonces cada reseña conserva nota y etiquetas, sin autor y sin comentario, y la pantalla de borrado dice que el comentario se elimina. | CUS-ACC-008 |
 
 ## Reglas
 
 - Nombre del perfil (largo y caracteres): `UpdateCustomerProfileRequestSchema`.
 - Soporte por WhatsApp (ayuda y cuentas que solo cierra soporte): `app_settings:support_whatsapp`.
+
+## Abierto
+
+- Reautenticar antes de borrar: Jesús aprobó dejar solo la sesión y escribir `BORRAR`; Codex debe confirmarlo al auditar.
+- Dónde viven los Términos, la Privacidad y la página pública de borrado cuando se apague la web del cliente: DA-19 en `Docs/trabajo/decisiones-abiertas.md`.
 
 ## Defectos
 
@@ -80,6 +85,5 @@ reglas: [UpdateCustomerProfileRequestSchema, app_settings:support_whatsapp]
 | 2 | CUS-AUT-013 | Solo existe «Cerrar sesión» (local); falta «cerrar en todos». | `feature/account/AccountScreen.kt` · `feature/account/AccountViewModel.kt` |
 | 3 | CUS-ACC-003, CUS-ACC-005, CUS-ACC-006 | Cuenta es una columna de botones: sin pedidos recientes ni reclamos, sin interruptor de avisos y sin la lista de direcciones. | `feature/account/AccountScreen.kt` |
 | 4 | CUS-ACC-007, CUS-AUT-015 | Solo el nombre tiene aviso; el celular tiene su botón aparte y no hay progreso ni paso de dirección. | `feature/account/AccountScreen.kt` · `feature/account/AccountViewModel.kt` |
-| 5 | CUS-ACC-008 | El texto de borrado dice «Las reseñas se quedan sin tu nombre», pero la migración anula al autor **y borra el comentario**, y la retención vigente lo dice así. | `res/values/strings.xml` (`delete_account_kept_body`) · `Docs/operacion/retencion-de-datos.md` |
+| 5 | CUS-ACC-008 | El texto de borrado dice «Las reseñas se quedan sin tu nombre», pero no avisa de que el comentario se borra. | `res/values/strings.xml` (`delete_account_kept_body`) · `Docs/operacion/retencion-de-datos.md` |
 | 6 | CUS-AUT-017 | La pantalla de borrado nombra «Google, Apple o correo» como inicio de sesión; en Android solo hay Google. | `res/values/strings.xml` (`delete_account_removed_login`) |
-| 7 | CUS-AUT-017 | No se pide reautenticar antes de borrar: basta la sesión y escribir `BORRAR`. | `feature/deleteaccount/DeleteAccountViewModel.kt` |

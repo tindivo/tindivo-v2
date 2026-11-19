@@ -27,8 +27,8 @@ vacía con el botón deshabilitado, y `Onboarding-3-entrar-aceptado`, la casilla
 2. Subtítulo «Solo con tu cuenta de Google.» En iOS no vale: lleva también Apple (CUS-AUT-003).
 3. Casilla «Acepto los Términos y la Política de privacidad», desmarcada. «Términos» y «Privacidad» son enlaces de 48 dp
    de alto que abren la web en el navegador.
-4. Botón «Continuar con Google»: sin efecto mientras la casilla está vacía (se ve apagado, sin sombra); con la casilla
-   marcada pasa a blanco con borde y se habilita.
+4. Botón «Continuar con Google»: con la casilla vacía se ve apagado, sin sombra, pero responde al toque (explica que falta
+   marcarla); con la casilla marcada pasa a blanco con borde y se habilita.
 5. «Ahora no»: texto; vuelve a donde estaba la persona, como invitado.
 6. Enlace de ayuda a soporte por WhatsApp para quien perdió su cuenta de Google (CUS-AUT-025).
 
@@ -36,7 +36,7 @@ vacía con el botón deshabilitado, y `Onboarding-3-entrar-aceptado`, la casilla
 
 | Estado | Qué se ve | Requisito o CA |
 |---|---|---|
-| Casilla vacía | El botón no abre el selector; tocarlo sacude la casilla y deja el foco en ella (TalkBack: «Acepta los Términos para continuar») | CUS-AUT-020, CA-AUT-P1 |
+| Casilla vacía | El botón no abre el selector; tocarlo muestra «Marca la casilla para entrar», sacude la casilla y deja el foco en ella (TalkBack: «Acepta los Términos para continuar») | CUS-AUT-020, CA-AUT-P1 |
 | Casilla marcada | Botón blanco con borde, habilitado | CUS-AUT-020 |
 | Entrando | Indicador de progreso en el botón; botón bloqueado | CUS-AUT-002 |
 | Google cancelado | La pantalla queda como estaba, sin mensaje | CUS-AUT-002 |
@@ -58,7 +58,4 @@ pedido confirmado. Con «reducir movimiento»: sin sacudida, solo cambio de colo
 
 - Hoja «¿Cómo te llamas?»: el código la tiene (nombre con el largo y los caracteres del contrato) pero no tiene tablero.
   Falta la hoja diseñada dentro del checkout.
-- Textos de la casilla: la maqueta dice «Acepto los Términos y la Privacidad»; el requisito y la decisión de Jesús, «Acepto
-  los Términos y la Política de privacidad». Se escribe la segunda hasta que Jesús decida (decisión 2 del PR).
-- Cómo se ve «sin efecto» el botón con la casilla vacía: apagado pero que responde al toque (CA-AUT-P1), o realmente
-  deshabilitado (decisión 1 del PR).
+- El tablero dice «Acepto los Términos y la Privacidad»; manda el requisito, «…y la Política de privacidad» (Jesús, 2026-11-19).

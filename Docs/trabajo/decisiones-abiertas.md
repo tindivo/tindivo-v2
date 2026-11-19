@@ -84,3 +84,31 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 - **Contexto**: el motorizado tiene que poder llevar 4 pedidos y no 3; va como arreglo urgente desde `main`, sin migración. Jesús lo retoma cuando acabe el servicio en curso.
 - **Decidir**: (1) si Vercel despliega `motorizados` a producción desde `main`; (2) traspaso por silencio: (a) `UPDATE` de `assignment_rules.maxOccupancySlotsPerDriver` en producción, revisado por Codex, o (b) esperar al lote 0248–0266; (3) si el tope cuenta espacios de mochila o pedidos.
 - **Recomendación**: (2a), para que el traspaso por silencio no se quede en 3; y (3) espacios, que es lo que la app ya cuenta.
+
+### DA-17 · Qué cambio de Términos o Privacidad obliga a reaceptar
+
+- 2026-11-19 · Bloquea: la ventana de reaceptación (CUS-AUT-027, `Docs/producto/acceso/`) · Detectó: Claude
+- **Contexto**: Jesús decidió reaceptar al actuar, no al abrir. Falta definir qué cambio de versión obliga. Hoy la app ni conoce la versión vigente (`TERMS_VERSION` fija, `app_settings:terms_version` sin publicar).
+- **Alternativas**: (a) cualquier cambio de versión; (b) solo los que Jesús marque como sustanciales, con asesoría legal.
+- **Recomendación**: (b), con una marca explícita al publicar; mientras no exista, (a).
+
+### DA-18 · Cómo comprueba la app la edad mínima de 18 años
+
+- 2026-11-19 · Bloquea: nada del lanzamiento si se deja (a) · Detectó: Claude
+- **Contexto**: `D-46` fija 18 años; ninguna ficha dice cómo se comprueba.
+- **Alternativas**: (a) solo el texto de los Términos; (b) la casilla incluye «Tengo 18 años o más».
+- **Recomendación**: (a) para el lanzamiento y confirmar que los Términos v3 la fijan.
+
+### DA-19 · Dónde viven los enlaces legales y la página de borrado cuando se apague la web del cliente
+
+- 2026-11-19 · Bloquea: publicación en las tiendas (URL pública de borrado) · Detectó: Claude
+- **Contexto**: Términos, Privacidad y `apps/customer/app/borrar-cuenta` viven en la web que `D-27` apaga.
+- **Alternativas**: (a) una página mínima que sobreviva; (b) alojarlos fuera de `apps/customer`.
+- **Recomendación**: (a), decidido antes del lanzamiento.
+
+### DA-20 · Apple con correo oculto en iOS
+
+- 2026-11-19 · Bloquea: el inicio de iOS · Detectó: Claude
+- **Contexto**: el correo oculto de Apple puede crear una segunda cuenta que choque con «un celular, una cuenta» (`D-63`). Sin verificar contra las tiendas.
+- **Alternativas**: se miran al empezar iOS.
+- **Recomendación**: sin acción ahora.
