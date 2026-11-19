@@ -20,7 +20,7 @@ import java.net.SocketTimeoutException
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DeleteAccountViewModelTest : DeleteAccountHarness() {
     @Test
-    fun `sin escribir la palabra no se puede borrar`() =
+    fun `CA-ACC-P3 sin escribir la palabra no se puede borrar`() =
         runTest {
             val vm = viewModel()
 
