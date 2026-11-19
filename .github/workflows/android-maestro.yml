@@ -122,7 +122,12 @@ jobs:
         working-directory: apps/android
         run: |
           ./gradlew :customer:assembleDevDebug
-          adb install -r customer/build/outputs/apk/dev/debug/*.apk
+          mapfile -t APKS < <(ls customer/build/outputs/apk/dev/debug/*.apk)
+          if [ "${#APKS[@]}" -ne 1 ]; then
+            echo "::error::Se esperaba un solo APK de devDebug y hay ${#APKS[@]}"
+            exit 1
+          fi
+          adb install -r "${APKS[0]}"
 
       - name: Correr el flujo del invitado
         working-directory: apps/android/maestro

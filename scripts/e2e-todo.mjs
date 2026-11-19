@@ -54,8 +54,7 @@ async function main() {
   let code = 0
   try {
     const full = ['db:lock', 'run', '--', 'node', 'scripts/e2e/ciclo.mjs', ...(args.has('--reset') ? ['--reset'] : [])]
-    console.log(`
-> ${pnpm} ${full.join(' ')}`)
+    console.log(`\n> ${pnpm} ${full.join(' ')}`)
     code = run(pnpm, full)
     if (code === 0 && args.has('--playwright')) {
       console.log('\n> pnpm test:e2e')

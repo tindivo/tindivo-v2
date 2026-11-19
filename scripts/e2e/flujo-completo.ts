@@ -1167,7 +1167,7 @@ async function scenarioCompatV1(ctx: Ctx): Promise<void> {
     expect(unwrap(again.body).id === unwrap(first.body).id, 'la repetición devolvió otro pedido')
     expect(again.headers.get('idempotency-replayed') === 'true', 'falta idempotency-replayed: true')
     const list = await call(ctx, 'customer3', 'GET', '/customer/orders')
-    const ids = (unwrap(list.body).items as Json[]).filter((i) => i.id === unwrap(first.body).id)
+    const ids = (Array.isArray(unwrap(list.body).items) ? (unwrap(list.body).items as unknown[]) : []).filter((i): i is Json => typeof i === 'object' && i !== null).filter((i) => i.id === unwrap(first.body).id)
     expect(ids.length === 1, `el pedido aparece ${ids.length} veces en Mis pedidos`)
     await releaseActive(ctx, 'customer3')
   })
