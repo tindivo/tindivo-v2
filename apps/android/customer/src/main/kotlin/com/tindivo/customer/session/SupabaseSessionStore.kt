@@ -5,6 +5,7 @@ import com.tindivo.core.network.RetryAfterShieldInterceptor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Authenticator
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -28,6 +30,13 @@ import kotlin.coroutines.cancellation.CancellationException
 private const val REFRESH_MARGIN_SECONDS = 60L
 
 /**
+ * Cuánto se espera a restaurar la sesión guardada (archivo cifrado y Keystore). Vencido, la app queda como invitada sin
+ * borrar nada: el siguiente arranque lo vuelve a intentar. Una constante, no un parámetro de `app_settings`: se necesita
+ * antes de tener red ni configuración.
+ */
+internal const val RESTORE_TIMEOUT_MILLIS = 5_000L
+
+/**
  * La sesión del cliente sobre Auth (CLI-7). Todo lo que cambia la sesión (restaurar, entrar, refrescar, salir) pasa
  * por UN [Mutex]: nunca hay dos llamadas a Auth a la vez, y como Auth rota el refresh token, dos refrescos
  * simultáneos dejarían a uno con un token ya gastado.
@@ -38,7 +47,7 @@ private const val REFRESH_MARGIN_SECONDS = 60L
 internal class SupabaseSessionStore(
     private val backend: AuthBackend,
     private val clock: Clock,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
 ) : SessionStore {
     private val mutex = Mutex()
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Unknown)
@@ -180,15 +189,15 @@ internal class SupabaseSessionStore(
 
     private suspend fun restoreOnce() {
         if (restored) return
-        val snapshot =
-            try {
-                backend.restore()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                null
-            }
+        val outcome = restoreWithTimeout()
         restored = true
+        if (outcome == null) {
+            // Venció: invitado, sin tocar lo guardado (ni siquiera se vuelve a leer) y sin ningún token en memoria.
+            mutableClosePending.value = false
+            mutableState.value = SessionState.SignedOut
+            return
+        }
+        val snapshot = outcome.snapshot
         mutableClosePending.value =
             try {
                 backend.closePending()
@@ -198,6 +207,28 @@ internal class SupabaseSessionStore(
                 false
             }
         if (snapshot != null) adopt(snapshot, countsAsChange = false) else mutableState.value = SessionState.SignedOut
+    }
+
+    private class Restored(
+        val snapshot: TokenSnapshot?,
+    )
+
+    // Lo bloqueante (disco, Keystore) no responde a la cancelación: se corre aparte y solo se espera un tiempo. Si vence,
+    // el resultado tardío se descarta y nadie lo usa.
+    private suspend fun restoreWithTimeout(): Restored? {
+        val work =
+            scope.async {
+                try {
+                    Restored(backend.restore())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    Restored(null)
+                }
+            }
+        val outcome = withTimeoutOrNull(RESTORE_TIMEOUT_MILLIS) { work.await() }
+        if (outcome == null) work.cancel()
+        return outcome
     }
 
     // «Reintentar» tras un cierre fallido: vuelve a borrar lo guardado. Bajo el mismo candado y sin cancelarse a medias.
