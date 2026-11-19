@@ -53,13 +53,24 @@ internal fun openStatus(
     val minutes = lima.hour * HOUR_MIN + lima.minute
 
     // Un turno de AYER que cruza medianoche cubre la madrugada de hoy, aunque hoy esté cerrado.
-    shiftsOf(byDay[(today + WEEK_DAYS - 1) % WEEK_DAYS]).firstOrNull { it.crossesMidnight && minutes < it.end }?.let {
-        return confirmed(OpenStatus.Open(it.endLabel), openingConfirmed)
-    }
-    shiftsOf(byDay[today])
-        .firstOrNull { minutes >= it.start && minutes < (if (it.crossesMidnight) DAY_MIN else it.end) }
-        ?.let { return confirmed(OpenStatus.Open(it.endLabel), openingConfirmed) }
+    val yesterday =
+        shiftsOf(byDay[(today + WEEK_DAYS - 1) % WEEK_DAYS])
+            .firstOrNull { it.crossesMidnight && minutes < it.end }
+    val current =
+        yesterday
+            ?: shiftsOf(byDay[today]).firstOrNull {
+                minutes >= it.start && minutes < (if (it.crossesMidnight) DAY_MIN else it.end)
+            }
+    if (current != null) return confirmed(OpenStatus.Open(current.endLabel), openingConfirmed)
+    return nextOpening(byDay, today, minutes)
+}
 
+/** La próxima apertura: hoy, los turnos que aún no empiezan; si no, los días siguientes (hasta una semana). */
+private fun nextOpening(
+    byDay: Map<Int, ScheduleDayUi>,
+    today: Int,
+    minutes: Int,
+): OpenStatus.Closed {
     for (offset in 0..WEEK_DAYS) {
         val next =
             shiftsOf(byDay[(today + offset) % WEEK_DAYS])
