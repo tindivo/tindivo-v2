@@ -226,7 +226,8 @@ internal class SupabaseSessionStore(
                     Restored(null)
                 }
             }
-        val outcome = withTimeoutOrNull(RESTORE_TIMEOUT_MILLIS) { work.await() }
+        // Sin cancelación del que llama: restaurar no se corta a medias (como antes); solo lo acota el tiempo límite.
+        val outcome = withContext(NonCancellable) { withTimeoutOrNull(RESTORE_TIMEOUT_MILLIS) { work.await() } }
         if (outcome == null) work.cancel()
         return outcome
     }
