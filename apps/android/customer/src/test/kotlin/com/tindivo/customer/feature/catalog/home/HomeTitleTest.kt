@@ -8,7 +8,11 @@ import java.io.File
 class HomeTitleTest {
     private fun string(name: String): String {
         val xml = File("src/main/res/values/strings.xml").readText()
-        return Regex("""<string name="$name">(.*?)</string>""").find(xml)?.groupValues?.get(1).orEmpty()
+        val match = Regex("""<string name="$name">(.*?)</string>""").find(xml)
+        return match
+            ?.groupValues
+            ?.get(1)
+            .orEmpty()
     }
 
     @Test
