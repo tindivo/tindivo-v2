@@ -116,7 +116,7 @@ class SessionLegacyTermsCloseTest {
         }
 
     @Test
-    fun `CA-AUT-13 con el cierre pendiente el reinicio no restaura la sesion ni con la aceptacion desconocida ni con la confirmada`() =
+    fun `CA-AUT-13 con el cierre pendiente el reinicio no restaura ni con la aceptacion desconocida ni confirmada`() =
         runTest {
             val file = legacy()
             closeFailing(file)
