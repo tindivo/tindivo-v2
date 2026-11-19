@@ -26,7 +26,7 @@ El pago de este seguimiento (efectivo con vuelto, Yape o Plin con su tarjeta, y 
 2. Titular del estado: «Preparando tu pedido», «En camino» y los de cada fase. Sobre la ruta, la moto avanza: en «Preparando» se acerca al local y, al recoger, salta al tramo hacia la casa (CUS-TRK-024).
 3. Progreso en cuatro etapas: Recibido, Preparando, En camino, Entregado. La activa late; la pendiente va en gris. En recojo la tercera dice «Listo» (CUS-TRK-002).
 4. «Llega en» y un rango de minutos, nunca una hora exacta; en recojo no se suma trayecto (CUS-TRK-004).
-5. Motorizado: nombre completo y «Tu motorizado». Sin teléfono, WhatsApp ni placa en ningún estado (CUS-TRK-021). Foto: abierta (DA-17); mientras tanto, iniciales.
+5. Motorizado: nombre completo y «Tu motorizado». Sin teléfono, WhatsApp ni placa en ningún estado (CUS-TRK-021). Foto: abierta (DA-19); mientras tanto, iniciales.
 6. Lugar reservado, sin tarjeta, para las 5 estrellas al entregar: lo define `resenas`.
 7. Bloque de pago, según la forma de pago elegida: lo define `pagos` y aparece cuando el negocio acepta (CUS-TRK-020).
 8. «Ver resumen del pedido» (fila de texto) y «Ayuda con este pedido» (acción de texto con ícono).
@@ -38,7 +38,7 @@ El pago de este seguimiento (efectivo con vuelto, Yape o Plin con su tarjeta, y 
 | Cargando | Esqueleto del titular y de la tira | CUS-TRK-001 |
 | Esperando que el negocio acepte | La pantalla `seguimiento/esperando-aceptacion` | CUS-TRK-019 |
 | Recibido (`validando`, `pending_acceptance`, `awaiting_payment`, `confirmed`) | «Pedido recibido» · «Estamos confirmándolo con el restaurante» | CUS-TRK-002, CUS-TRK-003 |
-| Prepago, esperando al negocio | «Esperando confirmación de disponibilidad» con la cuenta atrás del plazo de aceptación | CUS-TRK-005 |
+| Cualquier pago en `pending_acceptance` | La pantalla de espera, con «Responde en hasta [n] min» y su cuenta atrás; «Esperando confirmación de disponibilidad» queda solo para un prepago en `validando` sin comprobante | CUS-TRK-019, CUS-TRK-005 |
 | Prepago, turno del cliente | «Restaurante confirmó. Paga ahora», con el bloque de `pagos` | CUS-TRK-003, CUS-TRK-020 |
 | Prepago, verificando | «Verificando tu comprobante de pago» | CUS-TRK-003 |
 | Prepago verificado | «Pago verificado. En preparación» | CUS-TRK-003 |
