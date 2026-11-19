@@ -81,6 +81,8 @@ reglas: [FEATURED_MAX_ITEMS, CART_MAX_QUANTITY, CART_MAX_NOTE_LENGTH, isWithinWi
 | CA-CAT-03 | Dado un negocio cerrado, cuando se abre su carta, entonces los platos se ven, agregar queda deshabilitado y se dice cuándo abre. | CUS-CAT-012 |
 | CA-CAT-04 | Dado un negocio en modo catálogo, entonces la carta ofrece «Pedir por WhatsApp» y «Llamar» en lugar de la bolsa, también si está cerrado. | CUS-CAT-015 |
 | CA-CAT-05 | Dado el Inicio, entonces el título dice «¿Qué pedimos hoy?» y no aparece la tarjeta de Store. | CUS-CAT-002, CUS-CAT-032 |
+| CA-CAT-06 | Dado un plato con un grupo de opciones obligatorio y otro opcional, cuando se elige una opción, entonces en un grupo de una sola elección la nueva reemplaza a la anterior, el botón sigue pidiendo completar lo obligatorio y solo los grupos obligatorios bloquean. | CUS-CAT-008, CUS-CAT-033 |
+| CA-CAT-07 | Dado un plato con precio base, un grupo de tamaño con precio completo y extras con recargo, entonces el tamaño se muestra con su precio y los extras con «+ S/ x», y el precio de la línea es (precio del tamaño + extras) × cantidad, sin redondear. | CUS-CAT-009, CUS-CAT-034 |
 
 Los criterios de cada pantalla (`CA-CAT-P1` a `CA-CAT-P9`) viven en su ficha.
 
