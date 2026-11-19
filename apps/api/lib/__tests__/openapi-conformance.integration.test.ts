@@ -790,6 +790,23 @@ describe('traslado del número y avisos de seguridad', () => {
         bearer: a,
         body: { phone: number, code: DEV_OTP_CODE },
       })
+      // Con el traslado apagado (el valor del lanzamiento) el 409 no lleva `transfer` y sigue conforme al contrato.
+      await db
+        .from('app_settings')
+        .upsert({ key: 'phone_transfer_enabled', value: false })
+        .throwOnError()
+      const refused = await call(verifyPhoneCode, {
+        method: 'POST',
+        bearer: b,
+        body: { phone: number, code: DEV_OTP_CODE },
+      })
+      expect(refused.status).toBe(409)
+      expectConforms('verifyPhoneCode', 409, refused.body)
+      expect(refused.body).not.toHaveProperty('transfer')
+      await db
+        .from('app_settings')
+        .upsert({ key: 'phone_transfer_enabled', value: true })
+        .throwOnError()
       const pending = await call(verifyPhoneCode, {
         method: 'POST',
         bearer: b,

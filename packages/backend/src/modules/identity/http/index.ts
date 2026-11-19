@@ -1,4 +1,9 @@
 export { claimCustomerPhone } from '../infra/customer-phone'
+export {
+  AccountDeletedError,
+  maskPhone,
+  reservePhoneCode,
+} from '../infra/phone-code-reservation'
 export { loadPhoneSettings } from '../infra/phone-settings'
 export {
   adminPhoneRestrictionsHandler,

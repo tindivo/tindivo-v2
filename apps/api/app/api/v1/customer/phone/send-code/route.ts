@@ -1,7 +1,10 @@
 import {
+  AccountDeletedError,
   claimCustomerPhone,
   loadPhoneSettings,
+  maskPhone,
   phoneClaimProblem,
+  reservePhoneCode,
 } from '@tindivo/backend/identity/http'
 import { SendPhoneCodeRequestSchema } from '@tindivo/contracts'
 import { after } from 'next/server'
@@ -14,12 +17,7 @@ import { alertOps } from '@/lib/ops/alert-ops'
 import { getPhoneLogStore, otpPhoneSecret, reserveOtpPhone } from '@/lib/otp/phone-limit'
 import { missingPhoneLimitConfig } from '@/lib/otp/sms-guard.mjs'
 import { createServiceClient } from '@/lib/supabase/service'
-import {
-  DEV_OTP_CODE,
-  OTP_DEV_SIMULATION,
-  twilioClient,
-  VERIFY_SERVICE_SID,
-} from '@/lib/twilio/client'
+import { OTP_DEV_SIMULATION, twilioClient, VERIFY_SERVICE_SID } from '@/lib/twilio/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,9 +84,7 @@ export async function POST(req: Request): Promise<Response> {
        * lea una respuesta y tenga que saber si aquí hubo un SMS de verdad.
        */
       if (OTP_DEV_SIMULATION) {
-        console.warn(
-          `[twilio] simulacro · ${fullPhone} verificado sin código (el maestro sigue siendo ${DEV_OTP_CODE})`,
-        )
+        console.warn(`[twilio] simulacro · ${maskPhone(fullPhone)} verificado sin código`)
 
         const result = await claimCustomerPhone(service, user.id, fullPhone)
         const conflict = phoneClaimProblem(result, requestId, corsHeaders(req), {
@@ -145,25 +141,6 @@ export async function POST(req: Request): Promise<Response> {
       )
     }
 
-    // Rate limiting: ventana de 24h (no día calendario) para evitar
-    // desfase UTC vs Perú (UTC-5). Un intento a las 7:30pm hora local
-    // no debe reiniciar el contador a las 7:00pm (medianoche UTC).
-    const { count } = await service
-      .from('customer_otp_attempts')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-
-    // Tope por usuario: `app_settings:phone_code_max_per_24h` (3 mientras nadie lo cambie).
-    const maxAttempts = (await loadPhoneSettings(service)).maxCodesPer24h
-    if ((count ?? 0) >= maxAttempts) {
-      return problem('rate_limited', {
-        detail: `Máximo ${maxAttempts} intentos de verificación en 24 horas. Intenta de nuevo más tarde.`,
-        requestId,
-        headers: corsHeaders(req),
-      })
-    }
-
     // Tope por NÚMERO de destino (SEC-03), además del de arriba por usuario:
     // quien crea cuentas gratis no puede disparar SMS a un número ajeno.
     // Ventana móvil de 24 h y solo cuentan los envíos que Twilio acepta: se
@@ -179,6 +156,47 @@ export async function POST(req: Request): Promise<Response> {
         detail: `Ya se pidieron demasiados códigos para este número. Intenta de nuevo en ${phoneLimit.retryAfterSec} s o escríbenos por WhatsApp.`,
         requestId,
         headers: { ...corsHeaders(req), 'retry-after': String(phoneLimit.retryAfterSec) },
+      })
+    }
+
+    // Tope por USUARIO en 24 h: la reserva es atómica en la base (bloquea por usuario, cuenta y apunta de una vez)
+    // y va ANTES de Twilio. Un error de lectura o de reserva RECHAZA: nunca deja pasar. Si Twilio falla después, el
+    // cupo reservado no se devuelve (ante la duda se manda menos); la plaza del número en Redis sí se libera.
+    let allowed: boolean
+    try {
+      const maxAttempts = (await loadPhoneSettings(service)).maxCodesPer24h
+      allowed = await reservePhoneCode(service, user.id, fullPhone, maxAttempts)
+    } catch (reserveErr) {
+      after(phoneLimit.release)
+      if (reserveErr instanceof AccountDeletedError) {
+        return problem('unauthorized', {
+          detail: 'Esta cuenta ya fue borrada.',
+          requestId,
+          headers: corsHeaders(req),
+        })
+      }
+      console.error('[send-code] no se pudo reservar el envío; se rechaza')
+      return Response.json(
+        {
+          type: 'about:blank',
+          title: 'Servicio no disponible',
+          status: 503,
+          code: 'internal_error',
+          detail: 'Verificación de teléfono no disponible temporalmente.',
+          requestId,
+        },
+        {
+          status: 503,
+          headers: { 'content-type': 'application/problem+json', ...corsHeaders(req) },
+        },
+      )
+    }
+    if (!allowed) {
+      after(phoneLimit.release)
+      return problem('rate_limited', {
+        detail: 'Máximo de intentos de verificación en 24 horas. Intenta de nuevo más tarde.',
+        requestId,
+        headers: corsHeaders(req),
       })
     }
 
@@ -202,13 +220,10 @@ export async function POST(req: Request): Promise<Response> {
         })
     } catch (twilioErr) {
       const e = twilioErr as { code?: number; status?: number; message?: string }
-      // El 60200 de Twilio dice "Invalid parameter" y NO dice cuál, así que el
-      // log tiene que enseñar los tres candidatos. El teléfono va entero (es del
-      // propio usuario y ya está en la petición); del SID solo el prefijo y el
-      // largo, que basta para reconocer un valor equivocado sin filtrarlo.
+      // Solo el código y el estado de Twilio (el mensaje es libre y puede citar el número) y el número enmascarado.
       console.error(
-        `[twilio] verificación rechazada · code=${e.code} status=${e.status} · ${e.message}` +
-          ` · to=${fullPhone} channel=sms locale=es` +
+        `[twilio] verificación rechazada · code=${e.code} status=${e.status}` +
+          ` · to=${maskPhone(fullPhone)} channel=sms locale=es` +
           ` · serviceSid=${VERIFY_SERVICE_SID.slice(0, 2)}…(${VERIFY_SERVICE_SID.length})`,
       )
       if (isTwilioRejection(e)) {
@@ -223,34 +238,11 @@ export async function POST(req: Request): Promise<Response> {
           headers: corsHeaders(req),
         })
       }
-      // RESULTADO INCIERTO (timeout, red caída, 5xx): Twilio pudo aceptar el
-      // envío y el SMS llegar. Se conserva la plaza del número y se apunta el
-      // intento personal como si hubiera salido: ante la duda se manda MENOS.
-      await service.from('customer_otp_attempts').insert({
-        user_id: user.id,
-        phone: fullPhone,
-      })
+      // RESULTADO INCIERTO (timeout, red caída, 5xx): Twilio pudo aceptar el envío y el SMS llegar. Se conserva la
+      // plaza del número y el cupo del usuario, ya reservado: ante la duda se manda MENOS.
       return problem('internal_error', {
         detail:
           'No pudimos confirmar el envío del SMS. Si el código te llega, úsalo; si no, escríbenos por WhatsApp y te verificamos el número a mano.',
-        requestId,
-        headers: corsHeaders(req),
-      })
-    }
-
-    // Registrar intento para rate limiting.
-    //
-    // Aquí se vuelve a comprobar la cuenta: mientras Twilio respondía, la persona
-    // pudo borrarla (0259). La tabla no tiene FK, y el disparador
-    // `reject_deleted_account` es lo que impide sellar un intento con teléfono
-    // sobre una cuenta ya borrada.
-    const { error: attemptErr } = await service.from('customer_otp_attempts').insert({
-      user_id: user.id,
-      phone: fullPhone,
-    })
-    if (attemptErr?.message.includes('account was deleted')) {
-      return problem('unauthorized', {
-        detail: 'Esta cuenta ya fue borrada.',
         requestId,
         headers: corsHeaders(req),
       })
