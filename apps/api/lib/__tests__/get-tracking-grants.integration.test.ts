@@ -5,6 +5,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { E2E as FIXTURES } from '../../scripts/e2e-fixtures'
 import {
   cleanupLedgerWorld,
   type LedgerWorld,
@@ -82,6 +83,28 @@ describe('0260 · get_tracking solo por la API', () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as { shortId?: string }
     expect(body.shortId).toBe(shortId)
+  })
+
+  it('CA-TRK-08 · 0292: con el motorizado en la puerta el seguimiento público no da su teléfono', async () => {
+    const orderId = await seedOrder(world)
+    const { error: upErr } = await service
+      .from('orders')
+      .update({ driver_id: FIXTURES.DRIVER_ID, arrived_at_customer_at: new Date().toISOString() })
+      .eq('id', orderId)
+    expect(upErr).toBeNull()
+    const { data: row } = await service.from('orders').select('short_id').eq('id', orderId).single()
+    const id = (row as { short_id: string }).short_id
+
+    const rpc = await service.rpc('get_tracking', { p_short_id: id })
+    const dato = rpc.data as { driverName?: string | null; driverPhone?: string | null }
+    expect(dato.driverName).toEqual(expect.any(String))
+    expect(dato.driverPhone).toBeNull()
+
+    const res = await getTracking(new Request(`http://localhost:3001/api/v1/public/orders/${id}`), {
+      params: Promise.resolve({ shortId: id }),
+    })
+    const body = (await res.json()) as { driverPhone?: string | null }
+    expect(body.driverPhone).toBeNull()
   })
 
   it('un short_id inexistente sigue dando 404 por la API (no un 500 por permisos)', async () => {

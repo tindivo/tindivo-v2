@@ -50,6 +50,7 @@ fun SignInDestination(
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val termsChecked by viewModel.termsChecked.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
+    val closePending = viewModel.closePending.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     val google = remember(context) { CredentialManagerGoogleSource(context, BuildConfig.GOOGLE_WEB_CLIENT_ID) }
     LaunchedEffect(state) {
@@ -67,6 +68,8 @@ fun SignInDestination(
         termsChecked = termsChecked,
         onTermsChecked = viewModel::onTermsChecked,
         onOpenLink = { path -> uriHandler.openUri(BuildConfig.WEB_BASE_URL + path) },
+        closePending = closePending,
+        onRetryClose = viewModel::retryClose,
     )
 }
 
@@ -79,6 +82,8 @@ fun SignInScreen(
     termsChecked: Boolean = false,
     onTermsChecked: (Boolean) -> Unit = {},
     onOpenLink: (String) -> Unit = {},
+    closePending: Boolean = false,
+    onRetryClose: () -> Unit = {},
 ) {
     val checkboxFocus = remember { FocusRequester() }
     // Mientras entra y registra la aceptación, «atrás» no hace nada: no se abandona a medias.
@@ -94,6 +99,16 @@ fun SignInScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(text = stringResource(R.string.signin_title), style = MaterialTheme.typography.headlineMedium)
+            if (closePending) {
+                Text(
+                    text = stringResource(R.string.signin_close_pending),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+                TextButton(onClick = onRetryClose, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(text = stringResource(R.string.signin_close_retry))
+                }
+            }
             if (googleAvailable) {
                 TermsCheckbox(
                     checked = termsChecked,

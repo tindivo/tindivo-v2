@@ -56,6 +56,7 @@ private fun ListCustomerOrders200ResponseDataItemsInner.toCardUi(now: Instant): 
         total = totalText,
         businessId = businessId,
         reorderable = cancelReason != PROOF_REJECTED_FINAL,
+        paymentCase = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPayment = paymentIntent == PREPAID && status == "awaiting_payment",
     )
 }
@@ -66,7 +67,16 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
     val totalText = apiMoneyTextOrNull(total) ?: return null
     val lineUis = items.mapAllOrNull { it.toLineUi() } ?: return null
     val moneyOk = allReadable(listOf(amount, paysWith, changeToGive), ::apiMoneyTextOrNull)
-    val dates = listOf(createdAt, deliveredAt, estimatedReadyAt, arrivedAtCustomerAt, paymentVerifiedAt)
+    val dates =
+        listOf(
+            createdAt,
+            deliveredAt,
+            estimatedReadyAt,
+            arrivedAtCustomerAt,
+            paymentVerifiedAt,
+            pendingAcceptanceAt,
+            validatingAt,
+        )
     if (!moneyOk || !allReadable(dates, ::apiInstantOrNull)) return null
     val phase = orderPhaseOf(status, cancelReason)
     val pickup = deliveryMethod == PICKUP
@@ -96,6 +106,11 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
         appealViaSupport = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPrepayment = payment.prepaid && status == "awaiting_payment",
         cancel = cancelOfferOf(status, payment),
+        waitingForBusiness = status == "pending_acceptance",
+        etaStage = etaStageOf(status),
+        pendingAcceptanceAt = pendingAcceptanceAt?.let(::apiInstantOrNull),
+        estimatedReadyAt = estimatedReadyAt?.let(::apiInstantOrNull),
+        travel = travelMinutes?.let { TravelRange(it.min, it.max) },
     )
 }
 
@@ -121,22 +136,13 @@ private fun GetCustomerOrder200ResponseData.cashPaymentOf(): CashPaymentUi? {
 }
 
 /**
- * El motorizado es un dato personal: el nombre solo cuando ya va en camino, ya entregó o llegó a la puerta; el
- * teléfono nunca como texto, solo como botón de WhatsApp con el motorizado en la puerta y el pedido sin entregar, como
- * la web (`tracking-driver.tsx`). El servidor solo manda el teléfono en ese caso; la app lo exige igual.
+ * El motorizado es un dato personal: su nombre completo solo cuando ya va en camino, ya entregó o llegó a la puerta, y
+ * ningún dato de contacto: el teléfono que pudiera traer la respuesta no se lee (CUS-TRK-021).
  */
 private fun GetCustomerOrder200ResponseData.driverOf(phase: OrderPhase): DriverUi? {
     val driver = driver ?: return null
     val onTheWay = phase is OrderPhase.Active && phase.step == TrackingStep.OnTheWay
     val atDoor = arrivedAtCustomerAt != null && phase !is OrderPhase.Delivered
     val nameVisible = onTheWay || phase is OrderPhase.Delivered || arrivedAtCustomerAt != null
-    val link = driver.phone?.takeIf { atDoor }?.let { driverWhatsappLink(it, businessName, shortId) }
-    val shownName = driver.name.takeIf { nameVisible }
-    return if (shownName == null &&
-        link == null
-    ) {
-        null
-    } else {
-        DriverUi(name = shownName, atDoor = atDoor, whatsappLink = link)
-    }
+    return if (nameVisible) DriverUi(name = driver.name, atDoor = atDoor) else null
 }

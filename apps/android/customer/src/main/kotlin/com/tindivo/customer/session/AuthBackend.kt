@@ -42,4 +42,10 @@ internal interface AuthBackend {
 
     /** Borra la sesión del aparato. */
     suspend fun clear()
+
+    /** Anota que cerrar la sesión no pudo borrar lo guardado (ver [SessionFile.markClosePending]); lanza si falla. */
+    suspend fun markClosePending() = Unit
+
+    /** `true` si quedó un cierre pendiente: lo guardado no se restaura hasta poder borrarlo. */
+    suspend fun closePending(): Boolean = false
 }

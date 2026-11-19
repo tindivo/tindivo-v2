@@ -68,6 +68,13 @@ class SignInViewModel
             if (_state.value is SignInUiState.TermsMissing) _state.value = SignInUiState.Idle
         }
 
+        /** Un cierre de sesión anterior no pudo borrar lo guardado: la pantalla lo avisa y ofrece reintentar. */
+        val closePending: StateFlow<Boolean> = sessionStore.closePending
+
+        fun retryClose() {
+            viewModelScope.launch { sessionStore.retryClose() }
+        }
+
         /**
          * Pide la cuenta a Google con un nonce nuevo y, con el ID token, entra. Cancelar el selector no es un error:
          * la pantalla queda como estaba. Ya dentro, mira si la cuenta tiene perfil: si no, pide completarlo. No crea ni

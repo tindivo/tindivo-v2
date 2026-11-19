@@ -25,6 +25,29 @@ class OrderDetailSessionTest : OrderDetailHarness() {
         }
 
     @Test
+    fun `CA-TRK-09 entrar con otra cuenta cierra solo la cuenta que abrio el pedido`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.switchAccount()
+
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
+            assertEquals(SessionState.SignedOut, store.state.value)
+        }
+
+    @Test
+    fun `CA-TRK-09 entrar con otra cuenta no cierra la sesion de otra cuenta que ya entro`() =
+        runTest {
+            val viewModel = viewModel()
+            store.switchTo("user-2")
+
+            viewModel.switchAccount()
+
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
+            assertEquals(SessionState.SignedIn("user-2"), store.state.value)
+        }
+
+    @Test
     fun `un 401 de A cuyo cierre llega con B ya en la sesion no cierra la de B`() =
         runTest {
             server.enqueue(response(401, UNAUTHORIZED))

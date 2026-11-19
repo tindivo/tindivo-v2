@@ -13,10 +13,12 @@
 | [bolsa](bolsa/capacidad.md) | Bolsa | CUS | pedidos-restaurante | — | sí | 1 | 15 | 13 |
 | [cuenta](cuenta/capacidad.md) | Cuenta y borrado de cuenta | CUS | pedidos-restaurante, entregas | acceso, direcciones | no | 1 | 12 | 10 |
 | [direcciones](direcciones/capacidad.md) | Direcciones y mapa | CUS | pedidos-restaurante, entregas | — | no | 2 | 14 | 7 |
+| [mis-pedidos](mis-pedidos/capacidad.md) | Mis pedidos | CUS | pedidos-restaurante, entregas | seguimiento | sí | 1 | 10 | 10 |
+| [seguimiento](seguimiento/capacidad.md) | Seguimiento del pedido | CUS | pedidos-restaurante | — | sí | 2 | 20 | 15 |
 
 ## Capacidades por línea de negocio
 
-| Línea | acceso | bolsa | cuenta | direcciones |
-|---|---|---|---|---|
-| entregas | ● |  | ● | ● |
-| pedidos-restaurante | ● | ● | ● | ● |
+| Línea | acceso | bolsa | cuenta | direcciones | mis-pedidos | seguimiento |
+|---|---|---|---|---|---|---|
+| entregas | ● |  | ● | ● | ● |  |
+| pedidos-restaurante | ● | ● | ● | ● | ● | ● |

@@ -272,6 +272,12 @@ private fun NavGraphBuilder.ordersGraph(navController: NavHostController) {
             onBack = { navController.popBackStack() },
             // «Volver al menú» de un pedido cancelado: la portada siempre está debajo.
             onBackToMenu = { navController.popBackStack<CatalogHomeRoute>(inclusive = false) },
+            onOpenOrders = {
+                navController.navigate(OrdersRoute) { popUpTo<OrderDetailRoute> { inclusive = true } }
+            },
+            onSignIn = {
+                navController.navigate(SignInRoute) { popUpTo<OrderDetailRoute> { inclusive = true } }
+            },
         )
     }
 }
@@ -310,11 +316,15 @@ private fun NavBackStackEntry.profileCompleted(): Boolean =
 private fun OrderDetailWithReview(
     onBack: () -> Unit,
     onBackToMenu: () -> Unit,
+    onOpenOrders: () -> Unit,
+    onSignIn: () -> Unit,
 ) {
     val review = rememberReviewController(autoPrompt = false)
     OrderDetailDestination(
         onBack = onBack,
         onBackToMenu = onBackToMenu,
+        onOpenOrders = onOpenOrders,
+        onSignIn = onSignIn,
         canRate = { id -> review.state.pending?.orderId == id },
         onRate = review.openForm,
     )

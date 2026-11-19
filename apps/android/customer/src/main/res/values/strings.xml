@@ -106,6 +106,8 @@
     <string name="signin_terms_talkback">Acepta los Términos para continuar</string>
     <string name="signin_terms_missing">Marca la casilla para entrar</string>
     <string name="signin_terms_not_saved">No pudimos guardar. Reintenta.</string>
+    <string name="signin_close_pending">No pudimos cerrar la sesión anterior en este aparato.</string>
+    <string name="signin_close_retry">Reintentar</string>
     <string name="signin_title">Entrar a Tindivo</string>
     <string name="signin_google">Continuar con Google</string>
     <string name="signin_error">No se pudo entrar. Inténtalo otra vez.</string>
@@ -186,16 +188,15 @@
     <string name="address_form_locate_no_fix">No pudimos obtener tu ubicación a tiempo. Intenta de nuevo o mueve el pin.</string>
     <string name="address_form_locate_unavailable">Tu dispositivo no permite geolocalización. Mueve el pin manualmente.</string>
 
-    <string name="orders_title">Historial de pedidos</string>
+    <string name="orders_title">Mis pedidos</string>
     <string name="orders_back">Volver</string>
     <string name="orders_loading">Cargando</string>
     <string name="orders_retry">Reintentar</string>
     <string name="orders_load_more">Ver más pedidos</string>
-    <string name="orders_empty_title">Aún no tienes pedidos</string>
-    <string name="orders_empty_body">Cuando hagas tu primera compra aparecerá aquí para que la revises cuando quieras.</string>
-    <string name="orders_empty_action">Explorar restaurantes</string>
+    <string name="orders_empty_title">Sin pedidos todavía</string>
+    <string name="orders_empty_action">Hacer un pedido</string>
     <string name="order_business_fallback">Restaurante</string>
-    <string name="order_short_id">#%1$s</string>
+    <string name="order_short_id">#TDV-%1$s</string>
     <string name="order_card_cancelled">Cancelado</string>
     <string name="order_ago_now">hace un momento</string>
     <string name="order_ago_minutes">hace %1$d min</string>
@@ -280,10 +281,21 @@
     <string name="order_back_to_menu">Volver al menú</string>
     <string name="order_support_cancelled">¿Problema con este pedido?</string>
     <string name="order_reorder">Volver a pedir</string>
+    <string name="order_payment_case">Ver caso de pago</string>
 
     <string name="order_driver_label">Tu motorizado</string>
-    <string name="order_driver_at_door">Ya está en tu domicilio y no logra ubicarte.</string>
-    <string name="order_driver_whatsapp">Escribirle por WhatsApp</string>
+    <string name="order_wait_title">Esperando que el negocio acepte</string>
+    <string name="order_wait_status">Esperando al negocio</string>
+    <string name="order_wait_respond">Responde en hasta %1$d min</string>
+    <string name="order_wait_confirming">Confirmando…</string>
+    <string name="order_eta_range">Llega en %1$d–%2$d min</string>
+    <string name="order_eta_single">Llega en %1$d min</string>
+    <string name="order_eta_anytime">En cualquier momento</string>
+    <string name="order_eta_ready">Ya está listo</string>
+    <string name="order_not_yours_title">No puedes abrir este pedido</string>
+    <string name="order_not_yours_orders">Mis pedidos</string>
+    <string name="order_not_yours_switch">Entrar con otra cuenta</string>
+    <string name="order_driver_arrived">%1$s llegó · Sal a recibir tu pedido</string>
     <string name="order_delivery_fee">Delivery</string>
     <string name="order_total">Total</string>
     <string name="order_total_paid">Total pagado</string>
