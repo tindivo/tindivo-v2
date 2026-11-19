@@ -180,6 +180,37 @@ class PhoneVerifyViewModelTest {
         }
 
     @Test
+    fun `CA-AUT-P8 el sexto digito verifica solo y con menos de seis no sale nada`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+
+            viewModel.onCodeTyped("12345")
+            assertEquals(1, server.requestCount)
+            assertEquals(PhoneStep.Code, viewModel.state.value.step)
+
+            viewModel.onCodeTyped("123456")
+
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+            assertEquals(2, server.requestCount)
+        }
+
+    @Test
+    fun `CA-AUT-09 un celular de otra cuenta sin traslado da el aviso de soporte y no ofrece trasladar`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(409, CONFLICT_OTHER_ACCOUNT))
+
+            viewModel.onCodeTyped("123456")
+
+            val state = viewModel.state.value
+            assertEquals(PhoneError.OtherAccount, state.error)
+            assertNull(state.transfer)
+        }
+
+    @Test
     fun `un 429 al enviar muestra el detail del servidor`() =
         runTest {
             server.enqueue(response(429, RATE_LIMITED))
@@ -647,6 +678,10 @@ class PhoneVerifyViewModelTest {
         const val CONFLICT_PLAIN = """
             {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",
              "detail":"El código ya no sirve. Pide uno nuevo."}
+        """
+        const val CONFLICT_OTHER_ACCOUNT = """
+            {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",
+             "detail":"Este número ya está asociado a otra cuenta."}
         """
         const val CONFLICT_TRANSFER = """
             {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",

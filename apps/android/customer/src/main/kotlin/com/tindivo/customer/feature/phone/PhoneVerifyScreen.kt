@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentType
@@ -36,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.checkout.SUPPORT_WHATSAPP_URL
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -53,7 +55,7 @@ internal fun PhoneVerifyDestination(
         actions =
             PhoneActions(
                 onPhoneChanged = viewModel::onPhoneChanged,
-                onCodeChanged = viewModel::onCodeChanged,
+                onCodeChanged = viewModel::onCodeTyped,
                 onSendCode = viewModel::sendCode,
                 onVerify = viewModel::verify,
                 onResend = viewModel::resend,
@@ -142,7 +144,7 @@ private fun NumberStep(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
     )
-    ErrorLine(state.error)
+    ErrorLine(state.error, actions)
     ActionButton(
         text = stringResource(if (state.sending) R.string.phone_sending else R.string.phone_send_code),
         enabled = !state.sending,
@@ -169,7 +171,7 @@ private fun CodeStep(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.SmsOtpCode },
     )
-    ErrorLine(state.error)
+    ErrorLine(state.error, actions)
     ActionButton(
         text = stringResource(if (state.sending) R.string.phone_sending else R.string.phone_verify),
         enabled = !state.sending,
@@ -261,14 +263,22 @@ private fun ActionButton(
 }
 
 @Composable
-private fun ErrorLine(error: PhoneError?) {
+private fun ErrorLine(
+    error: PhoneError?,
+    actions: PhoneActions,
+) {
     if (error == null) return
+    if (error == PhoneError.OtherAccount) {
+        OtherAccountNotice(actions)
+        return
+    }
     val text =
         when (error) {
             is PhoneError.Server -> error.text
             PhoneError.InvalidNumber -> stringResource(R.string.phone_error_number)
             PhoneError.InvalidCode -> stringResource(R.string.phone_error_code)
             PhoneError.ChallengeExpired -> stringResource(R.string.phone_error_expired)
+            PhoneError.OtherAccount -> stringResource(R.string.phone_other_account)
             PhoneError.Network -> stringResource(R.string.error_network)
             PhoneError.Generic -> stringResource(R.string.error_generic)
         }
@@ -278,6 +288,28 @@ private fun ErrorLine(error: PhoneError?) {
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
     )
+}
+
+/** El celular es de otra cuenta: no se traslada; se escribe a soporte por WhatsApp o se prueba otro número. */
+@Composable
+private fun OtherAccountNotice(actions: PhoneActions) {
+    val uriHandler = LocalUriHandler.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.phone_other_account),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        ActionButton(
+            text = stringResource(R.string.phone_contact_support),
+            enabled = true,
+            onClick = { uriHandler.openUri(SUPPORT_WHATSAPP_URL) },
+        )
+        TextButton(onClick = actions.onChangeNumber, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(text = stringResource(R.string.phone_use_other_number))
+        }
+    }
 }
 
 @Preview(showBackground = true)

@@ -6,6 +6,7 @@ import com.tindivo.core.network.AppError
 import com.tindivo.customer.feature.profile.FakeProfileGateway
 import com.tindivo.customer.feature.profile.GoogleNameHint
 import com.tindivo.customer.feature.profile.PROFILE_MISSING
+import com.tindivo.customer.feature.profile.TERMS_VERSION
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SignInResult
@@ -37,6 +38,7 @@ class SignInViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         viewModel = SignInViewModel(store, profiles, hint)
+        viewModel.onTermsChecked(true)
     }
 
     @After
@@ -58,6 +60,59 @@ class SignInViewModelTest {
             val (idToken, rawNonce) = store.signInCalls.single()
             assertEquals("id-token-de-prueba", idToken)
             assertEquals(sha256Hex(rawNonce), hashGiven)
+        }
+
+    @Test
+    fun `CA-AUT-P1 sin la casilla marcada no se abre el selector y se avisa que falta`() =
+        runTest {
+            var opened = false
+            val google =
+                GoogleIdSource {
+                    opened = true
+                    GoogleIdResult.Cancelled
+                }
+            val vm = SignInViewModel(store, profiles, hint)
+
+            vm.signIn(google)
+            assertEquals(SignInUiState.TermsMissing(1), vm.state.value)
+            vm.signIn(google)
+            assertEquals(SignInUiState.TermsMissing(2), vm.state.value)
+
+            assertTrue(!opened)
+            assertTrue(store.signInCalls.isEmpty())
+        }
+
+    @Test
+    fun `CA-AUT-P1 al marcar la casilla se quita el aviso`() =
+        runTest {
+            val vm = SignInViewModel(store, profiles, hint)
+            vm.signIn { GoogleIdResult.Cancelled }
+
+            vm.onTermsChecked(true)
+
+            assertEquals(SignInUiState.Idle, vm.state.value)
+            assertTrue(vm.termsChecked.value)
+        }
+
+    @Test
+    fun `CA-AUT-P2 con la casilla marcada y el acceso completo se registra la aceptacion de la version vigente`() =
+        runTest {
+            viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba") }
+
+            assertEquals(SignInUiState.Done, viewModel.state.value)
+            assertEquals("terms:$TERMS_VERSION:user-1", profiles.calls.first())
+        }
+
+    @Test
+    fun `CA-AUT-03 si no se pudo guardar la aceptacion no se sigue y la sesion se cierra`() =
+        runTest {
+            profiles.termsResult = ApiResult.Failure(AppError.Known(ApiErrorCode.InternalError, 500, null))
+
+            viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba") }
+
+            assertEquals(SignInUiState.TermsNotSaved, viewModel.state.value)
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
+            assertEquals(listOf("terms:$TERMS_VERSION:user-1"), profiles.calls)
         }
 
     @Test
@@ -111,7 +166,7 @@ class SignInViewModelTest {
             viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba", "Rosa Quispe") }
 
             assertEquals(SignInUiState.Done, viewModel.state.value)
-            assertEquals(listOf("load:user-1"), profiles.calls)
+            assertEquals(listOf("terms:$TERMS_VERSION:user-1", "load:user-1"), profiles.calls)
             assertNull(hint.take("user-1"))
         }
 
@@ -123,7 +178,7 @@ class SignInViewModelTest {
             viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba", "Rosa Quispe") }
 
             assertEquals(SignInUiState.NeedsProfile, viewModel.state.value)
-            assertEquals(listOf("load:user-1"), profiles.calls)
+            assertEquals(listOf("terms:$TERMS_VERSION:user-1", "load:user-1"), profiles.calls)
             assertNull(hint.take("user-2"))
         }
 
@@ -145,6 +200,7 @@ class SignInViewModelTest {
             assertEquals(SignInUiState.Done, viewModel.state.value)
 
             val again = SignInViewModel(store, profiles, hint)
+            again.onTermsChecked(true)
             profiles.loadResult = ApiResult.Failure(AppError.Known(ApiErrorCode.InternalError, 500, null))
             again.signIn { GoogleIdResult.Token("id-token-de-prueba", "Rosa Quispe") }
 

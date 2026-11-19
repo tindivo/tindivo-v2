@@ -23,6 +23,7 @@ import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -185,8 +186,63 @@ class AccountViewModelTest {
             assertTrue(state is AccountUiState.Failed)
         }
 
-    private fun profile(verified: Boolean) =
-        "{\"data\":{\"fullName\":\"Rosa Quispe\",\"phone\":\"+51987654321\",\"phoneVerified\":$verified," +
+    @Test
+    fun `CA-ACC-02 editar el nombre guarda el recortado y la cuenta lo muestra`() =
+        runTest {
+            server.enqueue(response(200, profile(verified = true)))
+            val viewModel = AccountViewModel(customer, store, configService)
+            viewModel.settled()
+            server.enqueue(response(200, profile(verified = true, name = "Rosa Maria")))
+
+            viewModel.saveName("  Rosa Maria ")
+
+            assertEquals(NameEditState.Done, viewModel.nameEdit.value)
+            val loaded = viewModel.state.value as AccountUiState.Loaded
+            assertEquals("Rosa Maria", loaded.profile.fullName)
+            server.takeRequest()
+            val put = server.takeRequest()
+            assertEquals("PUT", put.method)
+            assertEquals("""{"fullName":"Rosa Maria"}""", put.body?.utf8())
+        }
+
+    @Test
+    fun `CA-ACC-02 un nombre invalido no sale a la red ni cambia el perfil`() =
+        runTest {
+            server.enqueue(response(200, profile(verified = true)))
+            val viewModel = AccountViewModel(customer, store, configService)
+            viewModel.settled()
+
+            for (bad in listOf("", "R", "Rosa 2", "x".repeat(41))) {
+                viewModel.saveName(bad)
+                assertEquals(NameEditState.Invalid, viewModel.nameEdit.value)
+            }
+
+            assertEquals(1, server.requestCount)
+            assertEquals("Rosa Quispe", (viewModel.state.value as AccountUiState.Loaded).profile.fullName)
+        }
+
+    @Test
+    fun `CA-ACC-02 si el servidor falla el nombre sigue igual y se puede reintentar`() =
+        runTest {
+            server.enqueue(response(200, profile(verified = true)))
+            val viewModel = AccountViewModel(customer, store, configService)
+            viewModel.settled()
+            server.enqueue(response(500, "{\"type\":\"about:blank\",\"title\":\"Error\",\"status\":500,\"code\":\"internal_error\"}"))
+
+            viewModel.saveName("Rosa Maria")
+
+            assertEquals(NameEditState.Failed, viewModel.nameEdit.value)
+            assertEquals("Rosa Quispe", (viewModel.state.value as AccountUiState.Loaded).profile.fullName)
+            viewModel.dismissNameEdit()
+            assertEquals(NameEditState.Idle, viewModel.nameEdit.value)
+            assertNotNull(viewModel.state.value)
+        }
+
+    private fun profile(
+        verified: Boolean,
+        name: String = "Rosa Quispe",
+    ) =
+        "{\"data\":{\"fullName\":\"$name\",\"phone\":\"+51987654321\",\"phoneVerified\":$verified," +
             "\"phoneVerifiedAt\":null,\"contraentregaBlocked\":false,\"blockedUntil\":null,\"blocked\":false}}"
 
     private companion object {

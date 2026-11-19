@@ -11,7 +11,7 @@ codigo:
   ios: []
   backend: [apps/api/app/api/v1/customer/phone/**, apps/api/app/api/v1/customer/terms-acceptance/**, apps/api/app/api/v1/customer/profile/**]
 operaciones: [transferCustomerPhone]
-reglas: [PHONE_PE_RE, UpdateCustomerProfileRequestSchema, app_settings:terms_version, app_settings:support_whatsapp]
+reglas: [PHONE_PE_RE, UpdateCustomerProfileRequestSchema, app_settings:terms_version, app_settings:support_whatsapp, app_settings:phone_code_max_per_24h, app_settings:phone_transfer_enabled]
 ---
 
 # Acceso, términos y celular
@@ -97,6 +97,8 @@ reglas: [PHONE_PE_RE, UpdateCustomerProfileRequestSchema, app_settings:terms_ver
 - Nombre del perfil (largo y caracteres): `UpdateCustomerProfileRequestSchema`.
 - Versión vigente de los Términos: `app_settings:terms_version`.
 - Soporte por WhatsApp: `app_settings:support_whatsapp`.
+- Tope de envíos de código SMS por usuario en un día: `app_settings:phone_code_max_per_24h`.
+- Traslado del celular entre cuentas, apagado en el lanzamiento: `app_settings:phone_transfer_enabled`.
 
 ## Abierto
 
@@ -109,14 +111,11 @@ reglas: [PHONE_PE_RE, UpdateCustomerProfileRequestSchema, app_settings:terms_ver
 
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
-| 1 | CUS-AUT-020, CUS-AUT-021 | Android no tiene casilla ni «Ahora no»; la aceptación se registra después, en «¿Cómo te llamas?», y solo si falta el perfil. Una cuenta con perfil nunca la registra. | `feature/signin/SignInScreen.kt` · `feature/profile/ProfileViewModel.kt` |
 | 2 | CUS-AUT-021 | Solo viaja la versión de los Términos; la versión de la Privacidad y la huella no existen. El servidor guarda versión y fecha de aceptación. | `core/network/.../CustomerRepository.kt` · `apps/api/app/api/v1/customer/terms-acceptance/route.ts` |
 | 3 | CUS-AUT-027 | La versión vigente es una constante de la app (`TERMS_VERSION`) y ninguna operación del contrato la publica; tampoco hay un error estructurado del servidor que dispare la ventana. | `feature/profile/ProfileName.kt` · `packages/contracts/openapi/v1.json` |
-| 4 | CUS-AUT-024 | La verificación exige tocar «Verificar»; no se envía sola al sexto dígito. | `feature/phone/PhoneVerifyViewModel.kt` · `feature/phone/PhoneVerifyScreen.kt` |
 | 5 | CUS-AUT-007 | El número solo admite nueve dígitos escritos: pegar «+51…» lo rechaza. La cuenta atrás del reenvío se reinicia al reabrir la app; el servidor solo limita el cupo. | `feature/phone/PhoneVerifyViewModel.kt` |
-| 6 | CUS-AUT-007 | El tope de envíos por usuario era una constante local de la ruta; pasa a `app_settings:phone_code_max_per_24h` (migración 0293). | `apps/api/app/api/v1/customer/phone/send-code/route.ts` |
-| 7 | CUS-AUT-028 | Android ofrece el traslado («Usar en esta cuenta») y el servidor lo permite; el lanzamiento exige soporte por WhatsApp. | `feature/phone/PhoneVerifyViewModel.kt` · `apps/api/app/api/v1/customer/phone/verify/route.ts` |
 | 8 | CUS-AUT-009 | El checkout muestra el celular verificado del perfil, sin «Cambiar» junto a él. | `feature/checkout/CheckoutDeliverySection.kt` |
 | 9 | CUS-AUT-025 | La pantalla de acceso no tiene el enlace de ayuda a WhatsApp. | `feature/signin/SignInScreen.kt` |
 | 10 | CUS-AUT-026 | El Inicio es el destino de arranque, pero no existe la franja «Pide en San Jacinto · Pagas directo al negocio». | `navigation/AppNavHost.kt` · `feature/catalog/home/` |
 | 11 | CUS-AUT-023 | La app no compara versiones al arrancar ni al actuar: no hay forma de saber qué cuentas tienen aceptación implícita. | `feature/profile/ProfileViewModel.kt` |
+| 12 | CUS-AUT-020 | Al tocar el botón con la casilla vacía, la casilla toma el foco y se avisa; todavía no se sacude. | `feature/signin/SignInScreen.kt` |
