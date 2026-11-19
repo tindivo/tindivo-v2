@@ -16,6 +16,16 @@ interface SessionFile {
 
     /** Borra lo guardado; si no lo puede borrar, lo vacía (vale como sin sesión); si tampoco, lanza [IOException]. */
     fun delete()
+
+    /**
+     * Deja anotado, FUERA del archivo cifrado y de sus claves, que cerrar la sesión no pudo borrarlos: mientras la nota
+     * exista no se restaura nada guardado. Lanza [IOException] si ni la nota se puede escribir. [write] y un [delete]
+     * que llega al final la quitan.
+     */
+    fun markClosePending() = Unit
+
+    /** `true` si hay una nota de cierre pendiente. */
+    fun closePending(): Boolean = false
 }
 
 private const val ASSOCIATED_DATA = "tindivo-session-v1"
@@ -53,12 +63,24 @@ class EncryptedSessionFile(
         }
     }
 
+    // La nota de cierre pendiente es un archivo vacío al lado del cifrado: no lleva nada de la cuenta, y si el disco deja
+    // escribir una nota de cero bytes pero no borrar el archivo, esa nota es lo que evita restaurar la sesión.
+    private val closeMarker = File(file.parentFile, "${file.name}.closing")
+
+    override fun markClosePending() {
+        closeMarker.writeBytes(ByteArray(0))
+    }
+
+    override fun closePending(): Boolean = closeMarker.exists()
+
     override fun write(plain: String) {
         val encrypted = aead.encrypt(plain.toByteArray(Charsets.UTF_8), associatedData)
         // Se escribe en un temporal y se renombra: un corte a medias no deja un archivo cortado en lugar del bueno.
         val temp = File(file.parentFile, "${file.name}.tmp")
         temp.writeBytes(encrypted)
         Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        // La sesión nueva reemplazó a la que quedó pendiente de cerrar: ya no hay nada que esa nota proteja.
+        closeMarker.delete()
     }
 
     override fun delete() {
@@ -81,6 +103,7 @@ class EncryptedSessionFile(
                 false
             }
         if (fileFailure != null && !keysDestroyed) throw IOException("no se pudo invalidar la sesión guardada")
+        closeMarker.delete()
     }
 
     // Si no se puede borrar, se vacía: un archivo de 0 bytes no se restaura y vale como sin sesión. Si ni eso, se avisa.

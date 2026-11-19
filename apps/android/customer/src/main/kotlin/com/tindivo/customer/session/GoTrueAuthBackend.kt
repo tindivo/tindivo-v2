@@ -74,6 +74,16 @@ internal class GoTrueAuthBackend(
 
     override suspend fun restore(): TokenSnapshot? =
         withContext(io) {
+            // Un cierre quedó a medias: la sesión guardada no se restaura nunca; se intenta borrarla otra vez.
+            if (file.closePending()) {
+                stored = null
+                try {
+                    file.delete()
+                } catch (_: IOException) {
+                    // Sigue pendiente: la nota se queda y el próximo arranque (o «Reintentar») lo vuelve a intentar.
+                }
+                return@withContext null
+            }
             val plain = file.read() ?: return@withContext null
             val session =
                 try {
@@ -155,6 +165,12 @@ internal class GoTrueAuthBackend(
         stored = null
         withContext(io) { file.delete() }
     }
+
+    override suspend fun markClosePending() {
+        withContext(io) { file.markClosePending() }
+    }
+
+    override suspend fun closePending(): Boolean = withContext(io) { file.closePending() }
 
     private suspend fun token(
         grantType: String,

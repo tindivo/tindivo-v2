@@ -121,4 +121,38 @@ class EncryptedSessionFileTest {
         assertNull(EncryptedSessionFile(path, newAead(), NoKeys).read())
         assertFalse(path.exists())
     }
+
+    @Test
+    fun `CA-TRK-09 la nota de cierre pendiente vive aparte, no lleva la sesion y la quita una sesion nueva`() {
+        val file = java.io.File(folder.root, "sesion.bin")
+        val store = EncryptedSessionFile(file, newAead(), NoKeys)
+        store.write(session)
+
+        assertFalse(store.closePending())
+        store.markClosePending()
+
+        assertTrue(store.closePending())
+        val note = java.io.File(folder.root, "sesion.bin.closing")
+        assertTrue(note.exists())
+        assertEquals(0L, note.length())
+        // La nota no borra la sesión: eso lo decide quien restaura.
+        assertEquals(session, store.read())
+
+        store.write(session)
+
+        assertFalse(store.closePending())
+    }
+
+    @Test
+    fun `CA-TRK-09 borrar la sesion guardada quita la nota de cierre pendiente`() {
+        val file = java.io.File(folder.root, "sesion.bin")
+        val store = EncryptedSessionFile(file, newAead(), NoKeys)
+        store.write(session)
+        store.markClosePending()
+
+        store.delete()
+
+        assertFalse(store.closePending())
+        assertNull(store.read())
+    }
 }
