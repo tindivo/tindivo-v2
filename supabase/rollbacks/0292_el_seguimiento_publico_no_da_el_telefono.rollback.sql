@@ -1,3 +1,7 @@
+-- ============================================================================
+-- NO APLICAR SIN DECISIÓN DE JESÚS: este rollback vuelve a publicar el teléfono del motorizado por la ruta
+-- pública (sin sesión) y reabre CUS-TRK-021.
+-- ============================================================================
 -- Rollback de 0292: `get_tracking` vuelve al cuerpo de la 0183 (con `driverPhone` en la puerta).
 -- CREATE OR REPLACE conserva el ACL de la 0260.
 
