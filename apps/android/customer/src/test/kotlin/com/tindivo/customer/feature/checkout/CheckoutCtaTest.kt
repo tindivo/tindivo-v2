@@ -69,6 +69,15 @@ class CheckoutCtaTest {
     }
 
     @Test
+    fun `una direccion guardada con el minimo anterior sigue sirviendo para pedir`() {
+        // La API v1 acepta desde ADDRESS_REFERENCE_API_MIN (5); solo el formulario pide 15 (D-31, API-3).
+        val catorce = ready().copy(addresses = listOf(home.copy(reference = "Frente al pozo")))
+        val cuatro = ready().copy(addresses = listOf(home.copy(reference = "cerc")))
+        assertEquals(Cta.Ready(BigDecimal("30.00")), catorce.cta)
+        assertEquals(Cta.NeedReference, cuatro.cta)
+    }
+
+    @Test
     fun `un recojo no pide direccion pero si saber si va ahora`() {
         val pickup = ready().copy(method = DeliveryChoice.Pickup, selectedAddressId = null, pay = PayMethod.Prepaid)
         assertEquals(Cta.NeedPickupAnswer, pickup.cta)

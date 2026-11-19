@@ -14,6 +14,7 @@ import {
   normalizePePhoneInput,
   stripPeCountryCode,
 } from '../lib/phone'
+import { courierReferenceError } from '../lib/reference'
 import { useCourierStore } from '../lib/store'
 import type { CourierEditingPoint, CourierPoint } from '../types'
 import { PayerField } from './payer-field'
@@ -65,33 +66,54 @@ export function TripDetailsSheet() {
   const [infoOpen, setInfoOpen] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
 
+  const originRefReady = courierReferenceError(draft.origin.referenceText) === null
+  const destinationRefReady = courierReferenceError(draft.destination.referenceText) === null
   const itemReady = draft.itemDescription.trim().length > 0
   const originReady = isValidPePhone(draft.origin.contactPhone)
   const destinationReady = isValidPePhone(draft.destination.contactPhone)
-  const ready = itemReady && originReady && destinationReady && draft.weightConfirmed
+  const ready =
+    originRefReady &&
+    destinationRefReady &&
+    itemReady &&
+    originReady &&
+    destinationReady &&
+    draft.weightConfirmed
 
   // Una sola línea, siempre: si el aviso creciera, el pie se movería.
-  const missing: { text: string; cta: string; target: string } | null = !itemReady
-    ? { text: 'Falta decir qué llevamos', cta: 'Completar: qué llevamos', target: 'item' }
-    : !originReady
+  // El mismo orden que Android (`CourierDraft.firstMissing`): primero cómo llegar a cada punto.
+  const missing: { text: string; cta: string; target: string } | null = !originRefReady
+    ? {
+        text: 'Falta cómo llegar a donde recogemos',
+        cta: 'Completar: cómo llegar a donde recogemos',
+        target: 'origin-reference',
+      }
+    : !destinationRefReady
       ? {
-          text: 'Falta el celular de quien entrega',
-          cta: 'Completar: celular de quien entrega',
-          target: 'origin-phone',
+          text: 'Falta cómo llegar a donde entregamos',
+          cta: 'Completar: cómo llegar a donde entregamos',
+          target: 'destination-reference',
         }
-      : !destinationReady
-        ? {
-            text: 'Falta el celular de quien recibe',
-            cta: 'Completar: celular de quien recibe',
-            target: 'destination-phone',
-          }
-        : !draft.weightConfirmed
+      : !itemReady
+        ? { text: 'Falta decir qué llevamos', cta: 'Completar: qué llevamos', target: 'item' }
+        : !originReady
           ? {
-              text: 'Marca que está listo y pagado',
-              cta: 'Marcar: listo y pagado',
-              target: 'ready',
+              text: 'Falta el celular de quien entrega',
+              cta: 'Completar: celular de quien entrega',
+              target: 'origin-phone',
             }
-          : null
+          : !destinationReady
+            ? {
+                text: 'Falta el celular de quien recibe',
+                cta: 'Completar: celular de quien recibe',
+                target: 'destination-phone',
+              }
+            : !draft.weightConfirmed
+              ? {
+                  text: 'Marca que está listo y pagado',
+                  cta: 'Marcar: listo y pagado',
+                  target: 'ready',
+                }
+              : null
 
   function pickCategory(c: (typeof CATEGORIES)[number]) {
     setCategory(c.id)
@@ -379,6 +401,7 @@ function PointCard({
           value={point.referenceText}
           onChange={(e) => onChange({ referenceText: e.target.value })}
           aria-label={`Referencia de ${title.toLowerCase()}`}
+          data-field={`${which}-reference`}
           className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold text-[#2E3236] outline-none"
         />
         <button

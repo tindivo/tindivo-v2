@@ -62,10 +62,14 @@ export const CoordinatesSchema = z.object({
 export type Coordinates = z.infer<typeof CoordinatesSchema>
 
 /**
- * Límites de la referencia de dirección (fuente única; consumida por UI y backend).
- * Mínimo 5 chars.
+ * Límites de la referencia de dirección (fuente única).
+ * - `ADDRESS_REFERENCE_MIN` (15): lo que exigen los formularios de las apps al escribir o editar una referencia
+ *   (D-31). Android lo copia.
+ * - `ADDRESS_REFERENCE_API_MIN` (5): lo que acepta la API v1. No sube sin una versión nueva del contrato (API-3):
+ *   una app instalada no se rompe y una dirección guardada con el mínimo anterior sigue sirviendo para pedir.
  */
-export const ADDRESS_REFERENCE_MIN = 5
+export const ADDRESS_REFERENCE_MIN = 15
+export const ADDRESS_REFERENCE_API_MIN = 5
 export const ADDRESS_REFERENCE_MAX = 140
 export const ADDRESS_LINE_MIN = 5
 export const ADDRESS_LINE_MAX = 200
@@ -87,20 +91,28 @@ export function isGarbageText(val: string): boolean {
   return false
 }
 
-export const AddressReferenceSchema = z
-  .string()
-  .trim()
-  .min(ADDRESS_REFERENCE_MIN, {
-    message: `La referencia debe tener al menos ${ADDRESS_REFERENCE_MIN} caracteres`,
-  })
-  .max(ADDRESS_REFERENCE_MAX, {
-    message: `La referencia no puede superar ${ADDRESS_REFERENCE_MAX} caracteres`,
-  })
-  .refine((v) => !isGarbageText(v), {
-    message:
-      'Ingresa una referencia válida y descriptiva (evita números solos o patrones repetitivos)',
-  })
+function addressReferenceSchema(min: number) {
+  return z
+    .string()
+    .trim()
+    .min(min, {
+      message: `La referencia debe tener al menos ${min} caracteres`,
+    })
+    .max(ADDRESS_REFERENCE_MAX, {
+      message: `La referencia no puede superar ${ADDRESS_REFERENCE_MAX} caracteres`,
+    })
+    .refine((v) => !isGarbageText(v), {
+      message:
+        'Ingresa una referencia válida y descriptiva (evita números solos o patrones repetitivos)',
+    })
+}
+
+/** Lo que acepta la API v1 (piso `ADDRESS_REFERENCE_API_MIN`). Va en los esquemas de las peticiones. */
+export const AddressReferenceSchema = addressReferenceSchema(ADDRESS_REFERENCE_API_MIN)
 export type AddressReference = z.infer<typeof AddressReferenceSchema>
+
+/** Lo que exige un formulario de las apps al escribir una referencia (`ADDRESS_REFERENCE_MIN`). */
+export const AddressReferenceFormSchema = addressReferenceSchema(ADDRESS_REFERENCE_MIN)
 
 export const AddressLineSchema = z
   .string()
