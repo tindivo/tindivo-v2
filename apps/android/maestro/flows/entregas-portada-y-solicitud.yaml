@@ -1,0 +1,29 @@
+# Tindivo Entregas (llevar de A a B algo ya pagado): portada → «Pedir una entrega» → formulario de la solicitud.
+# No crea nada. Cubre el escenario «entregas» de Docs/trabajo/e2e/escenarios.md (el ciclo completo con motorizado lo
+# cubre scripts/e2e por la API). Requiere celular verificado; con el servicio cerrado sale «Tindivo Entregas no está
+# disponible ahora.» y el flujo falla a propósito: es el estado que hay que ver.
+# ESTADO: NO_EJECUTADO en dispositivo. Uso: maestro --device <serial> test -e GOOGLE_EMAIL=<cuenta> flows/entregas-portada-y-solicitud.yaml
+appId: com.tindivo.customer.dev
+---
+- launchApp
+- tapOn:
+    text: "Reintentar"
+    optional: true
+- extendedWaitUntil:
+    visible: "Mi cuenta|Entrar"
+    timeout: 30000
+- runFlow: ../subflows/identificarse-google.yaml
+- scrollUntilVisible:
+    element: "Llevar algo de un lugar a otro"
+    timeout: 15000
+- tapOn: "Llevar algo de un lugar a otro"
+- extendedWaitUntil:
+    visible: "Tindivo Entregas"
+    timeout: 15000
+- assertNotVisible: "Tindivo Entregas no está disponible ahora."
+- takeScreenshot: e01-portada
+- tapOn: "Pedir una entrega"
+- extendedWaitUntil:
+    visible: "Detalles de la entrega"
+    timeout: 15000
+- takeScreenshot: e02-solicitud

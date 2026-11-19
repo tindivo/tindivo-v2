@@ -1,0 +1,24 @@
+# Pedido para RECOJO en el local: en el checkout se elige «Recojo» y desaparecen domicilio y tarifa de envío.
+# Cubre el escenario «recojo» de Docs/trabajo/e2e/escenarios.md (el lado del servidor lo cubre scripts/e2e).
+# ESTADO: NO_EJECUTADO en dispositivo. No confirma el pedido: llega hasta la elección del pago y se detiene.
+# Uso (desde apps/android/maestro): maestro --device <serial> test -e GOOGLE_EMAIL=<cuenta> flows/recojo-hasta-pago.yaml
+appId: com.tindivo.customer.dev
+env:
+  NEGOCIO: "La Florencia E2E"
+  PLATO: "Medio pollo"
+  NOMBRE_CLIENTE: "Cliente Maestro"
+---
+- launchApp
+- tapOn:
+    text: "Reintentar"
+    optional: true
+- runFlow: ../subflows/agregar-plato-a-bolsa.yaml
+- runFlow: ../subflows/checkout-hasta-pago.yaml
+- scrollUntilVisible:
+    element: "Recojo"
+    direction: UP
+    timeout: 10000
+- tapOn: "Recojo"
+- assertVisible: "Punto de recojo"
+- assertNotVisible: "Agrega tu dirección"
+- takeScreenshot: r01-recojo

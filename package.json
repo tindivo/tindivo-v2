@@ -43,6 +43,7 @@
     "db:seed:lugares": "node apps/api/scripts/seed-map-landmarks.ts",
     "pdf:assets": "node apps/api/scripts/build-pdf-assets.ts",
     "test:e2e": "playwright test --ignore-snapshots",
+    "e2e:todo": "node scripts/e2e-todo.mjs",
     "test:e2e:visual": "playwright test --project=visual",
     "graphify:update": "graphify update .",
     "graphify:cluster": "graphify cluster-only .",
