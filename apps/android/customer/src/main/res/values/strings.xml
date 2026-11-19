@@ -94,6 +94,11 @@
     <string name="error_code">Código: %1$s</string>
 
     <string name="signin_entry">Entrar</string>
+    <string name="terms_gate_title">Actualizamos los términos</string>
+    <string name="terms_gate_message">Léelos y acéptalos para seguir pidiendo.</string>
+    <string name="terms_gate_accept">Aceptar y continuar</string>
+    <string name="terms_gate_sign_out">Cerrar sesión</string>
+    <string name="terms_gate_error">Algo salió mal. Inténtalo de nuevo.</string>
     <string name="signin_not_now">Ahora no</string>
     <string name="signin_terms_label">Acepto los Términos y la Política de privacidad</string>
     <string name="signin_terms_link">Términos</string>

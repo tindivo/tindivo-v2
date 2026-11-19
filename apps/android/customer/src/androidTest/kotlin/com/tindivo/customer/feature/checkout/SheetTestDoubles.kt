@@ -30,6 +30,8 @@ internal class SheetTestSession(
     /** Una sola entrada, la de la apertura: la prueba no vuelve a entrar. */
     override val signInGeneration: StateFlow<Long> = MutableStateFlow(1L).asStateFlow()
 
+    override val termsRequired: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+
     override suspend fun accessToken(): String? = null
 
     override suspend fun refresh(): String? = null

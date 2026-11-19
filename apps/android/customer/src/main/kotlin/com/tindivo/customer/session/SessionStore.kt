@@ -28,6 +28,13 @@ interface SessionStore : AccessTokenSource {
     val state: StateFlow<SessionState>
 
     /**
+     * `true` mientras la sesión restaurada no tiene la aceptación de los Términos confirmada (la guardó la versión anterior,
+     * sin esa marca): la app no da acceso y muestra la pantalla de aceptación. No cierra la sesión; [confirmTerms] la
+     * desbloquea. Una entrada nueva nunca la deja en `true`.
+     */
+    val termsRequired: StateFlow<Boolean>
+
+    /**
      * Cuántas veces se entró a una cuenta (la que sea, también la misma otra vez) desde que arrancó el proceso. Sube
      * justo DESPUÉS de que [state] muestre la cuenta que entró; restaurar al arrancar, refrescar y cerrar no la mueven.
      *

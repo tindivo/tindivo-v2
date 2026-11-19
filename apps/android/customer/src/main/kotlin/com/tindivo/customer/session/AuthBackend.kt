@@ -7,6 +7,8 @@ internal class TokenSnapshot(
     val accessToken: String,
     val userId: String,
     val expiresAtEpochSeconds: Long,
+    /** La sesión es de un archivo anterior a la marca de aceptación: no se sabe si la persona aceptó los Términos. */
+    val termsUnknown: Boolean = false,
 ) {
     override fun toString(): String = "TokenSnapshot(userId=$userId)"
 }
@@ -29,7 +31,7 @@ internal interface AuthBackend {
         termsPending: Boolean = false,
     ): TokenSnapshot
 
-    /** Quita la marca de aceptación pendiente de la sesión guardada: desde ahí sí se restaura. */
+    /** Guarda la aceptación como confirmada (también si era pendiente o desconocida): desde ahí sí se restaura. */
     suspend fun markTermsAccepted()
 
     /** Pide un token nuevo con el refresh token de la sesión actual y guarda el resultado. */

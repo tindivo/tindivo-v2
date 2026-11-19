@@ -117,6 +117,7 @@ class AccountDeletedNoticeContentTest {
 private class NoticeTestSession : SessionStore {
     private val mutableState = MutableStateFlow<SessionState>(SessionState.SignedOut)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    override val termsRequired: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
     private val signIns = MutableStateFlow(0L)
     override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 

@@ -42,6 +42,8 @@ internal class SupabaseSessionStore(
     private val mutex = Mutex()
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Unknown)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    private val mutableTermsRequired = MutableStateFlow(false)
+    override val termsRequired: StateFlow<Boolean> = mutableTermsRequired.asStateFlow()
     private val signIns = MutableStateFlow(0L)
     override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 
@@ -106,6 +108,7 @@ internal class SupabaseSessionStore(
                 restoreOnce()
                 if (current?.userId?.equals(accountId, ignoreCase = true) != true) return@withLock false
                 backend.markTermsAccepted()
+                mutableTermsRequired.value = false
                 true
             }
         }
@@ -216,6 +219,7 @@ internal class SupabaseSessionStore(
         countsAsChange: Boolean = true,
     ): TokenSnapshot {
         current = snapshot
+        mutableTermsRequired.value = snapshot.termsUnknown
         if (countsAsChange) generation.incrementAndGet()
         mutableState.value = SessionState.SignedIn(snapshot.userId)
         return snapshot
@@ -224,6 +228,7 @@ internal class SupabaseSessionStore(
     // Se completa aunque la corrutina esté cancelada: dejar la sesión a medias cerrada es peor que tardar un poco.
     private suspend fun drop() {
         current = null
+        mutableTermsRequired.value = false
         generation.incrementAndGet()
         mutableState.value = SessionState.SignedOut
         withContext(NonCancellable) {

@@ -25,8 +25,9 @@ internal class StoredSession(
     val expiresAtEpochSeconds: Long,
     // Con valor por defecto: lo guardado sin este campo sigue leyéndose. Solo se escribe cuando es `true`.
     val refreshSpent: Boolean = false,
-    // Igual: solo se escribe cuando es `true`. La sesión se guardó antes de registrar la aceptación de los Términos.
-    val termsPending: Boolean = false,
+    // Tres valores (CAX-001): `true` confirmada, `false` pendiente (la sesión se guardó antes de registrar la aceptación) y
+    // `null` DESCONOCIDA: lo guardado por la versión anterior no trae el campo y nunca vale como confirmada.
+    val termsAccepted: Boolean? = null,
 ) {
     fun isComplete(): Boolean = accessToken.isNotBlank() && refreshToken.isNotBlank() && userId.isNotBlank()
 
@@ -87,8 +88,9 @@ internal class GoTrueAuthBackend(
                 }
             // Lo guardado que no se entiende vale como sin sesión, y se borra para no volver a leerlo. Igual si está
             // marcado como gastado: el refresco anterior pudo gastar ese token en Auth y la respuesta no llegó a guardarse.
-            // También si la aceptación de los Términos quedó pendiente: nunca se restaura una sesión sin ella (CAX-001).
-            if (session == null || session.refreshSpent || session.termsPending) {
+            // También si la aceptación de los Términos quedó pendiente: esa sesión no se restaura (CAX-001). Una DESCONOCIDA
+            // (archivo anterior) sí se restaura, pero la app queda bloqueada hasta que la persona acepte.
+            if (session == null || session.refreshSpent || session.termsAccepted == false) {
                 file.delete()
                 stored = null
                 return@withContext null
@@ -108,7 +110,7 @@ internal class GoTrueAuthBackend(
                 put("id_token", idToken)
                 put("nonce", rawNonce)
             }
-        return adopt(token("id_token", body.toString()), termsPending)
+        return adopt(token("id_token", body.toString()), accepted = !termsPending)
     }
 
     override suspend fun refresh(): TokenSnapshot {
@@ -125,12 +127,12 @@ internal class GoTrueAuthBackend(
                 if (e.neverReachedAuth()) save(current, spent = false)
                 throw e
             }
-        return adopt(response, current.termsPending)
+        return adopt(response, current.termsAccepted)
     }
 
     override suspend fun markTermsAccepted() {
         val current = stored ?: return
-        if (!current.termsPending) return
+        if (current.termsAccepted == true) return
         val accepted =
             StoredSession(
                 current.accessToken,
@@ -138,6 +140,7 @@ internal class GoTrueAuthBackend(
                 current.userId,
                 current.expiresAtEpochSeconds,
                 refreshSpent = current.refreshSpent,
+                termsAccepted = true,
             )
         withContext(io) { file.write(json.encodeToString(accepted)) }
         stored = accepted
@@ -154,7 +157,7 @@ internal class GoTrueAuthBackend(
                 session.userId,
                 session.expiresAtEpochSeconds,
                 refreshSpent = spent,
-                termsPending = session.termsPending,
+                termsAccepted = session.termsAccepted,
             )
         withContext(io) { file.write(json.encodeToString(toWrite)) }
     }
@@ -199,7 +202,7 @@ internal class GoTrueAuthBackend(
 
     private suspend fun adopt(
         response: TokenResponse,
-        termsPending: Boolean = false,
+        accepted: Boolean?,
     ): TokenSnapshot {
         val expiresAt = response.expiresAt ?: (clock.instant().epochSecond + response.expiresIn)
         val session =
@@ -208,7 +211,7 @@ internal class GoTrueAuthBackend(
                 response.refreshToken,
                 response.user.id,
                 expiresAt,
-                termsPending = termsPending,
+                termsAccepted = accepted,
             )
         if (!session.isComplete()) throw IOException("Auth devolvió una sesión incompleta")
         withContext(io) { file.write(json.encodeToString(session)) }
@@ -236,5 +239,6 @@ internal class GoTrueAuthBackend(
             }
         }
 
-    private fun StoredSession.toSnapshot() = TokenSnapshot(accessToken, userId, expiresAtEpochSeconds)
+    private fun StoredSession.toSnapshot() =
+        TokenSnapshot(accessToken, userId, expiresAtEpochSeconds, termsUnknown = termsAccepted == null)
 }

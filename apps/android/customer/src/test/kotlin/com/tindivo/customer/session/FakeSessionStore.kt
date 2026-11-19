@@ -10,6 +10,8 @@ class FakeSessionStore(
 ) : SessionStore {
     private val mutableState = MutableStateFlow(initial)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    val termsRequiredState = MutableStateFlow(false)
+    override val termsRequired: StateFlow<Boolean> = termsRequiredState.asStateFlow()
     private val signIns = MutableStateFlow(0L)
     override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 

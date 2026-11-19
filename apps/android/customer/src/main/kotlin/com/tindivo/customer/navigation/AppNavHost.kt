@@ -1,8 +1,10 @@
 package com.tindivo.customer.navigation
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +53,7 @@ import com.tindivo.customer.feature.reviews.ReviewHost
 import com.tindivo.customer.feature.reviews.rememberReviewController
 import com.tindivo.customer.feature.signin.SignInDestination
 import com.tindivo.customer.feature.store.StoreListRoute
+import com.tindivo.customer.feature.terms.TermsGate
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
 
@@ -91,26 +94,30 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             }
         }
     }
-    Column {
-        // D-58: aviso que no bloquea. Con la actualización obligatoria el ViewModel ya no lo muestra.
-        if (osNoticeVisible) {
-            OsNotice(onDismiss = appViewModel::dismissOsNotice)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column {
+            // D-58: aviso que no bloquea. Con la actualización obligatoria el ViewModel ya no lo muestra.
+            if (osNoticeVisible) {
+                OsNotice(onDismiss = appViewModel::dismissOsNotice)
+            }
+            // El aviso ya cubre la barra de estado: el contenido no la vuelve a reservar.
+            val contentModifier =
+                if (osNoticeVisible) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier
+            NavHost(
+                navController = navController,
+                startDestination = CatalogHomeRoute,
+                modifier = contentModifier,
+            ) {
+                catalogGraph(navController)
+                accountGraph(navController)
+                addressesGraph(navController)
+                ordersGraph(navController)
+                if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
+                composable<UpdateRoute> { UpdateScreen() }
+            }
         }
-        // El aviso ya cubre la barra de estado: el contenido no la vuelve a reservar.
-        val contentModifier =
-            if (osNoticeVisible) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier
-        NavHost(
-            navController = navController,
-            startDestination = CatalogHomeRoute,
-            modifier = contentModifier,
-        ) {
-            catalogGraph(navController)
-            accountGraph(navController)
-            addressesGraph(navController)
-            ordersGraph(navController)
-            if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
-            composable<UpdateRoute> { UpdateScreen() }
-        }
+        // Una sesión guardada por la versión anterior no da acceso hasta aceptar los Términos (CAX-001).
+        TermsGate()
     }
 }
 
