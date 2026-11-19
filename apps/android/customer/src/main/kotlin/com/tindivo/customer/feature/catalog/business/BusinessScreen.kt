@@ -50,6 +50,7 @@ internal fun BusinessScreen(
     onBack: () -> Unit,
     cart: BusinessCartState = BusinessCartState(),
     cartActions: BusinessCartActions = BusinessCartActions({}, {}, {}, {}),
+    ordering: OrderingMode = OrderingMode.Open,
 ) {
     // La posición de la carta vive aquí y no en MenuList: al buscar, la lista se reemplaza por los resultados y, al
     // salir, tiene que reaparecer donde estaba.
@@ -70,6 +71,8 @@ internal fun BusinessScreen(
     var openDishId by rememberSaveable { mutableStateOf<String?>(null) }
     val openDish = remember(business, openDishId) { business.findDish(openDishId) }
     val snackbarHostState = remember { SnackbarHostState() }
+    // Cerrado o en modo catálogo la carta se ve, pero no se abre la ficha para agregar (CUS-CAT-012, CUS-CAT-015).
+    val onDishClick: ((MenuItemUi) -> Unit)? = if (ordering.allowsBag) ({ openDishId = it.id }) else null
     BagFeedback(
         outcome = cart.outcome,
         snackbarHostState = snackbarHostState,
@@ -79,7 +82,7 @@ internal fun BusinessScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = { cart.bar?.let { CartBar(bar = it, onClick = cartActions.onOpenCart) } },
+        bottomBar = { OrderingBottomBar(ordering, cart.bar, cartActions.onOpenCart) },
         topBar = {
             MenuTopBar(
                 business = business,
@@ -104,9 +107,9 @@ internal fun BusinessScreen(
                 is BusinessUiState.Loaded -> {
                     val text = query.orEmpty()
                     if (parseTerms(text).isNotEmpty()) {
-                        MenuSearchResults(business = state.business, query = text, onDishClick = { openDishId = it.id })
+                        MenuSearchResults(business = state.business, query = text, onDishClick = onDishClick)
                     } else {
-                        MenuList(rows = rows, listState = listState, onDishClick = { openDishId = it.id })
+                        MenuList(rows = rows, listState = listState, onDishClick = onDishClick)
                     }
                 }
             }
@@ -121,7 +124,7 @@ internal fun BusinessScreen(
 private fun MenuList(
     rows: List<MenuRow>,
     listState: LazyListState,
-    onDishClick: (MenuItemUi) -> Unit,
+    onDishClick: ((MenuItemUi) -> Unit)?,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -148,8 +151,12 @@ private fun MenuList(
                     CategoryHeader(row.category)
                 }
 
+                is MenuRow.Carousel -> {
+                    FeaturedCarousel(items = row.items, onDishClick = onDishClick)
+                }
+
                 is MenuRow.Dish -> {
-                    MenuItemRow(row.item, onClick = { onDishClick(row.item) })
+                    MenuItemRow(row.item, onClick = onDishClick?.let { click -> { click(row.item) } })
                 }
             }
         }

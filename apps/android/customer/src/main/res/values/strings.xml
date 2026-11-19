@@ -14,7 +14,8 @@
     <string name="diagnostics_config_api_version">Versión del contrato</string>
     <string name="diagnostics_config_server_time">Hora del servidor</string>
 
-    <string name="catalog_home_title">Restaurantes</string>
+    <string name="catalog_home_title">¿Qué pedimos hoy?</string>
+    <string name="catalog_home_restaurants">Restaurantes</string>
     <string name="catalog_home_empty">Aún no hay restaurantes disponibles.</string>
     <string name="catalog_home_whatsapp_title">Próximamente pedidos por la plataforma</string>
     <string name="catalog_home_whatsapp_subtitle">Pide directo por WhatsApp mientras preparamos su integración completa a la plataforma.</string>
@@ -27,6 +28,14 @@
     <string name="business_item_unavailable">No disponible</string>
     <string name="business_loading">Cargando</string>
     <string name="business_retry">Reintentar</string>
+    <string name="business_closed_title">Cerrado ahora</string>
+    <string name="business_opens_today">Abre hoy a las %1$s</string>
+    <string name="business_opens_tomorrow">Abre mañana a las %1$s</string>
+    <string name="business_opens_day">Abre el %1$s a las %2$s</string>
+    <string name="business_closed_unconfirmed">Hoy este restaurante no ha confirmado que atiende</string>
+    <string name="business_closed_no_next">Consulta su horario más tarde</string>
+    <string name="business_order_whatsapp">Pedir por WhatsApp</string>
+    <string name="business_call">Llamar</string>
     <string name="business_search_open">Buscar en la carta</string>
     <string name="business_search_placeholder">Buscar en %1$s</string>
     <string name="business_search_clear">Limpiar búsqueda</string>

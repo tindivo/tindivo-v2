@@ -119,6 +119,59 @@ class MenuMappingTest {
             assertEquals(BigDecimal("0.00"), group.options[1].price)
         }
 
+    private fun menuWith(extra: String) =
+        menu(option(1, "2.5")).replace("\"schedule\":[],\"opening_confirmed\":null}}", extra + "}}")
+
+    @Test
+    fun `CA-CAT-02 «Destacados» sale primero con el nombre del restaurante y sus platos de la carta`() =
+        runTest {
+            val featured =
+                "\"featured\":{\"title\":\"Los más pedidos\",\"item_ids\":[\"00000000-0000-4000-8000-000000000001\"]}," +
+                    "\"schedule\":[],\"opening_confirmed\":null"
+
+            val state = load(menuWith(featured)) as BusinessUiState.Loaded
+
+            val section = state.business.featured
+            assertEquals("Los más pedidos", section?.name)
+            assertEquals(listOf("Pollo"), section?.items?.map { it.name })
+            assertEquals(listOf("Los más pedidos", "Pollos"), state.business.sections.map { it.name })
+        }
+
+    @Test
+    fun `CA-CAT-02 sin sección destacada, o con un plato que ya no está en la carta, no hay sección`() =
+        runTest {
+            assertEquals(null, (load(menu(option(1, "1"))) as BusinessUiState.Loaded).business.featured)
+
+            val stale =
+                "\"featured\":{\"title\":\"X\",\"item_ids\":[\"99999999-0000-4000-8000-000000000009\"]}," +
+                    "\"schedule\":[],\"opening_confirmed\":null"
+            assertEquals(null, (load(menuWith(stale)) as BusinessUiState.Loaded).business.featured)
+        }
+
+    @Test
+    fun `CA-CAT-02 «Destacados» sin nombre usa Destacados`() =
+        runTest {
+            val featured =
+                "\"featured\":{\"title\":\" \",\"item_ids\":[\"00000000-0000-4000-8000-000000000001\"]}," +
+                    "\"schedule\":[],\"opening_confirmed\":null"
+
+            assertEquals("Destacados", (load(menuWith(featured)) as BusinessUiState.Loaded).business.featured?.name)
+        }
+
+    @Test
+    fun `CA-CAT-04 el modo catálogo y su WhatsApp llegan al modelo`() =
+        runTest {
+            val json =
+                menu(option(1, "1"))
+                    .replace("catalog_full", "catalog_only")
+                    .replace("\"whatsapp_number\":null", "\"whatsapp_number\":\"+51987654321\"")
+
+            val business = (load(json) as BusinessUiState.Loaded).business
+
+            assertTrue(business.catalogOnly)
+            assertEquals("+51987654321", business.whatsappNumber)
+        }
+
     @Test
     fun `una opcion con tres decimales, negativa o enorme deja la carta entera en Failed`() =
         runTest {

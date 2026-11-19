@@ -110,10 +110,10 @@ class BusinessViewModelTest {
         (visible() as BusinessUiState.Loaded).business.categories.flatMap { c -> c.items.map { it.name } }
 
     /** La carga vigente filtrada por franja en el minuto actual, como la pinta la pantalla. */
-    private suspend fun BusinessViewModel.visible(): BusinessUiState = settled().visibleAt(now.value)
+    private suspend fun BusinessViewModel.visible(): BusinessUiState = settled().atInstant(now.value)
 
     /** Lo que pinta `BusinessDestination`, emisión por emisión. */
-    private fun BusinessViewModel.screen() = combine(state, now) { state, now -> state.visibleAt(now) }
+    private fun BusinessViewModel.screen() = combine(state, now) { state, now -> state.atInstant(now) }
 
     private fun BusinessUiState.dishes(): List<MenuItemUi> =
         (this as? BusinessUiState.Loaded)
@@ -245,13 +245,16 @@ class BusinessViewModelTest {
         }
 
     @Test
-    fun `una categoria cuyo unico plato esta fuera de franja no aparece`() =
+    fun `CA-CAT-01 un plato fuera de franja se ve apagado y dice cuando vuelve`() =
         runTest {
             server.enqueue(response(200, menu(dish(1, "Ceviche", from = "13:00", to = "15:00"))))
 
             val state = newViewModel().visible() as BusinessUiState.Loaded
 
-            assertTrue(state.business.categories.isEmpty())
+            val ceviche = state.business.categories.single().items.single()
+            assertEquals("Solo de 13:00 a 15:00", ceviche.outsideWindow)
+            assertFalse(ceviche.orderable)
+            assertTrue(ceviche.available)
         }
 
     @Test
@@ -288,7 +291,7 @@ class BusinessViewModelTest {
         }
 
     @Test
-    fun `al pasar el minuto el plato fuera de franja desaparece sin recargar`() =
+    fun `CA-CAT-01 al pasar el minuto el plato se apaga sin recargar`() =
         runTest {
             server.enqueue(response(200, menu(dish(1, "Ceviche", from = "11:00", to = "15:00"))))
             // 14:59:30 en Lima (UTC-5): el plato aún se sirve.
@@ -303,7 +306,7 @@ class BusinessViewModelTest {
             dispatcher.scheduler.advanceTimeBy(61_000L)
 
             assertTrue(seen.last() is BusinessUiState.Loaded)
-            assertTrue(seen.last().dishes().isEmpty())
+            assertEquals(listOf("Solo de 11:00 a 15:00"), seen.last().dishes().map { it.outsideWindow })
             assertEquals(1, server.requestCount)
         }
 
@@ -356,7 +359,7 @@ class BusinessViewModelTest {
         }
 
     @Test
-    fun `visibleAt quita platos fuera de franja y categorias vacias, y deja los agotados`() {
+    fun `atInstant apaga los platos fuera de franja con su texto, no quita categorias y deja los agotados`() {
         fun item(
             id: String,
             window: DishWindow,
@@ -380,23 +383,13 @@ class BusinessViewModelTest {
                     ),
             )
 
-        val visible = detail.visibleAt(LUNES_MEDIODIA)
+        val at = detail.atInstant(LUNES_MEDIODIA)
 
-        assertEquals(listOf("c1"), visible.categories.map { it.id })
-        assertEquals(
-            listOf("a"),
-            visible.categories
-                .single()
-                .items
-                .map { it.id },
-        )
-        assertFalse(
-            visible.categories
-                .single()
-                .items
-                .single()
-                .available,
-        )
+        assertEquals(listOf("c1", "c2"), at.categories.map { it.id })
+        assertEquals(listOf(null, "Solo de 13:00 a 15:00"), at.categories[0].items.map { it.outsideWindow })
+        assertEquals(listOf(false, true), at.categories[0].items.map { it.available })
+        assertEquals(listOf(false, false), at.categories[0].items.map { it.orderable })
+        assertEquals(listOf("Solo de 13:00 a 15:00"), at.categories[1].items.map { it.outsideWindow })
     }
 
     /** El formato es-PE separa el símbolo con un espacio duro (U+00A0); las aserciones lo comparan como espacio. */

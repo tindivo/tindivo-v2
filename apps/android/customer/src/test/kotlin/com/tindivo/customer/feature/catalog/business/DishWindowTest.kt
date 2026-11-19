@@ -1,6 +1,8 @@
 package com.tindivo.customer.feature.catalog.business
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.OffsetDateTime
@@ -26,6 +28,23 @@ class DishWindowTest {
     private val mediodia = win(days = listOf(5, 6), from = "11:00", to = "15:00")
     private val noche = win(days = listOf(0, 1, 2, 3, 4, 5), from = "18:00", to = "23:30")
     private val trasnoche = win(days = listOf(5), from = "22:00", to = "02:00")
+
+    @Test
+    fun `CA-CAT-01 la franja se cuenta en una frase, la de describeWindow`() {
+        assertEquals("Solo sáb y dom, de 11:00 a 15:00", mediodia.describe())
+        assertEquals("Solo lun a sáb, de 18:00 a 23:30", noche.describe())
+        assertEquals("Solo sáb y dom", win(days = listOf(5, 6)).describe())
+        assertEquals("Solo de 11:00 a 15:00", win(from = "11:00", to = "15:00").describe())
+        assertEquals("Solo de 11:00 a 15:00", win(days = listOf(0, 1, 2, 3, 4, 5, 6), from = "11:00", to = "15:00").describe())
+        assertEquals("Solo lun, mié y vie", win(days = listOf(0, 2, 4)).describe())
+        assertNull(siempre.describe())
+    }
+
+    @Test
+    fun `CA-CAT-01 el martes a las 20 la carta de mediodia esta fuera y el sabado a las 12 dentro`() {
+        assertFalse(mediodia.isOpenAt(at(TUE, "20:00")))
+        assertTrue(mediodia.isOpenAt(at(SAT, "12:00")))
+    }
 
     @Test
     fun `sin restriccion el plato siempre se ve`() {

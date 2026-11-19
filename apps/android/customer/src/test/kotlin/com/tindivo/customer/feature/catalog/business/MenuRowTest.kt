@@ -44,6 +44,18 @@ class MenuRowTest {
     private val postres = category("Postres", "Flan", "Helado", "Torta")
 
     @Test
+    fun `CA-CAT-02 la sección destacada va primero y sus platos no repiten la clave de su sección`() {
+        val destacados = MenuCategoryUi(id = "featured", name = "Destacados", blurb = null, items = pizzas.items.take(1))
+        val rows = menuRows(business(null, pizzas, bebidas).copy(featured = destacados))
+
+        // cabecera, Destacados, carrusel, Pizzas, 2 platos, Bebidas, 1 plato
+        assertEquals(listOf(1, 3, 6), categoryHeaderIndices(rows))
+        assertTrue(rows[2] is MenuRow.Carousel)
+        val keys = rows.map { it.key }
+        assertEquals(keys.size, keys.toSet().size)
+    }
+
+    @Test
     fun `sin banner la cabecera del negocio es la primera fila y las categorias siguen a sus platos`() {
         val rows = menuRows(business(null, pizzas, bebidas))
 

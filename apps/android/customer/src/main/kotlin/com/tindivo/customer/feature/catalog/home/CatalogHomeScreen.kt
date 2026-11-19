@@ -150,9 +150,20 @@ private fun BusinessList(
             }
         }
         // Primero qué se quiere hacer (llevar algo de un lugar a otro), después dónde comer (como la web).
-        item { CourierEntryCard(onClick = onOpenCourier) }
-        // Store va antes de los negocios: es otra cosa que se puede hacer, no un negocio más.
-        item { StoreEntryCard(onClick = onOpenStore) }
+        // La tarjeta de Store no está mientras Store esté fuera del lanzamiento (CUS-CAT-032).
+        items(serviceCards(), key = { it.name }) { card ->
+            when (card) {
+                ServiceCard.Courier -> CourierEntryCard(onClick = onOpenCourier)
+                ServiceCard.Store -> StoreEntryCard(onClick = onOpenStore)
+            }
+        }
+        item {
+            Text(
+                text = stringResource(R.string.catalog_home_restaurants),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.semantics { heading() },
+            )
+        }
         state.refreshFailed?.let { error ->
             item { Text(text = errorMessage(error), color = MaterialTheme.colorScheme.error) }
         }

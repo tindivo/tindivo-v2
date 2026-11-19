@@ -15,8 +15,8 @@ import java.time.ZoneId
  * - **Falla abierta**: un campo ausente, una hora ilegible o un día fuera de rango hacen que el plato se vea.
  *   Esconder un plato por un dato roto es una venta perdida que nadie llega a diagnosticar.
  *
- * Fuera de su franja, el plato no se muestra (decisión de Jesús, 2026-10-24). El servidor lo rechaza igual al
- * crear el pedido, así que esto solo decide qué se pinta.
+ * Fuera de su franja, el plato se apaga y dice cuándo vuelve ([describe]); no se oculta (decisión de Jesús, 2026-11-19,
+ * que sustituye a D-59). El servidor lo rechaza igual al crear el pedido, así que esto solo decide qué se pinta.
  */
 data class DishWindow(
     val days: List<Int>?,
@@ -45,7 +45,47 @@ data class DishWindow(
         }
     }
 
+    /**
+     * La franja en una frase («Solo sáb y dom, de 11:00 a 15:00»), o `null` si no restringe nada. Es `describeWindow` de
+     * `packages/contracts/src/menu-availability.ts`.
+     */
+    fun describe(): String? {
+        val days = effectiveDays(days)
+        val span = timeSpan(from, to)
+        if (days == null && span == null) return null
+        val hours = span?.let { (start, length) -> "de ${hhmm(start)} a ${hhmm((start + length) % DAY_MIN)}" }
+        val daysText = days?.let { describeDays(it.sorted()) }
+        return if (daysText != null && hours != null) "Solo $daysText, $hours" else "Solo ${daysText ?: hours}"
+    }
+
     private companion object {
+        const val MIN_RUN = 3
+        val DAY_LABELS = listOf("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
+
+        fun hhmm(minutes: Int): String = "%02d:%02d".format(minutes / HOUR_MIN, minutes % HOUR_MIN)
+
+        /** 'sáb y dom', 'lun a vie', 'lun a mié y vie': las rachas de tres o más se colapsan. */
+        fun describeDays(sorted: List<Int>): String {
+            val runs = mutableListOf<MutableList<Int>>()
+            for (day in sorted) {
+                val last = runs.lastOrNull()
+                if (last != null && day == last.last() + 1) last.add(day) else runs.add(mutableListOf(day))
+            }
+            val tokens =
+                runs.flatMap { run ->
+                    if (run.size >= MIN_RUN) {
+                        listOf("${DAY_LABELS[run.first()]} a ${DAY_LABELS[run.last()]}")
+                    } else {
+                        run.map { DAY_LABELS[it] }
+                    }
+                }
+            return if (tokens.size <= 1) {
+                tokens.joinToString(", ")
+            } else {
+                "${tokens.dropLast(1).joinToString(", ")} y ${tokens.last()}"
+            }
+        }
+
         const val WEEK_DAYS = 7
         const val HOUR_MIN = 60
         const val DAY_MIN = 24 * HOUR_MIN

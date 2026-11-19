@@ -26,16 +26,25 @@ internal sealed interface MenuRow {
         override val key = "header"
     }
 
+    /** Los platos de «Destacados» en un carrusel: una sola fila, no una por plato. */
+    data class Carousel(
+        val items: List<MenuItemUi>,
+    ) : MenuRow {
+        override val key = "carousel"
+    }
+
     data class Category(
         val category: MenuCategoryUi,
     ) : MenuRow {
         override val key = "category-${category.id}"
     }
 
+    /** [sectionId] va en la clave porque un plato destacado sale dos veces: en «Destacados» y en su sección. */
     data class Dish(
         val item: MenuItemUi,
+        val sectionId: String,
     ) : MenuRow {
-        override val key = item.id
+        override val key = "$sectionId-${item.id}"
     }
 }
 
@@ -44,9 +53,13 @@ internal fun menuRows(business: BusinessDetailUi): List<MenuRow> =
     buildList {
         business.bannerUrl?.let { add(MenuRow.Banner(it)) }
         add(MenuRow.Header(business))
+        business.featured?.let { featured ->
+            add(MenuRow.Category(featured))
+            add(MenuRow.Carousel(featured.items))
+        }
         business.categories.forEach { category ->
             add(MenuRow.Category(category))
-            category.items.forEach { add(MenuRow.Dish(it)) }
+            category.items.forEach { add(MenuRow.Dish(it, category.id)) }
         }
     }
 
