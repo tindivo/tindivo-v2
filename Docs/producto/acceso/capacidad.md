@@ -26,7 +26,7 @@ reglas: [PHONE_PE_RE, UpdateCustomerProfileRequestSchema, app_settings:terms_ver
   pasa por Codex (`codex-worker.md` §2, S02 y S04). Este documento no lleva secretos ni valores reales.
 - En nativo se entra **solo con Google** (`movil:D-22`); correo y contraseña quedan retirados. En iOS se suma Apple.
 - La casilla de Términos va **siempre**, desmarcada, antes de «Continuar con Google» (Jesús, 2026-11-17).
-- Edad mínima de uso: 18 años (`movil:D-46`). Cómo la comprueba la app está abierto (ver «Abierto»).
+- Edad mínima de uso: 18 años (`movil:D-46`). La fija el texto de los Términos; la app no la pregunta (Jesús, 2026-11-19, aprobó las recomendaciones de los PR #198 a #201).
 - Un número verificado pertenece a una sola cuenta (`movil:D-63`). En el lanzamiento **no hay traslado automático**:
   lo resuelve soporte por WhatsApp (CUS-AUT-028). `transferCustomerPhone` sigue en la API v1: hay apps instaladas.
 - La sesión de Android vive cifrada en el aparato (`session/`). Cerrar sesión es siempre local; borra el archivo y
@@ -61,7 +61,7 @@ reglas: [PHONE_PE_RE, UpdateCustomerProfileRequestSchema, app_settings:terms_ver
 | CUS-AUT-024 | Cuando el cliente escribe el código SMS, la app debe verificarlo solo al completar los 6 dígitos; con menos no envía nada. | Jesús, 2026-11-16 | |
 | CUS-AUT-025 | Si el cliente pierde su cuenta de Google, la app debe indicarle que escriba a soporte por WhatsApp, donde se verifica su celular. | Jesús, 2026-11-16 · `app_settings:support_whatsapp` | |
 | CUS-AUT-026 | Cuando el cliente abre la app por primera vez, la app debe mostrar el Inicio de restaurantes como invitado, sin pantallas previas ni introducción, con la franja descartable «Pide en San Jacinto · Pagas directo al negocio» y «¿Cómo pago?» opcional. | Jesús, 2026-11-16 | |
-| CUS-AUT-027 | Cuando cambian los Términos o la Privacidad, la app debe pedir la reaceptación **al actuar** (pedir o editar datos de Cuenta), no al abrir, y nunca debe bloquear un pedido en curso, su cancelación en los primeros minutos, el soporte, cerrar sesión ni consultar Cuenta. Las salidas de la ventana son «Aceptar y continuar» y «Cerrar sesión». | Jesús, 2026-11-17 (decisión N) | ★ |
+| CUS-AUT-027 | Cuando cambian los Términos o la Privacidad, la app debe pedir la reaceptación **al actuar** (pedir o editar datos de Cuenta), no al abrir, y nunca debe bloquear un pedido en curso, su cancelación en los primeros minutos, el soporte, cerrar sesión ni consultar Cuenta. Las salidas de la ventana son «Aceptar y continuar» y «Cerrar sesión». Obliga a reaceptar cualquier cambio de versión mientras no exista una marca de «cambio sustancial» al publicar; con ella, solo los que Jesús marque con asesoría legal. | Jesús, 2026-11-17 (decisión N) y 2026-11-19 (alcance del cambio) | ★ |
 | CUS-AUT-028 | Cuando el celular ya pertenece a otra cuenta, la app debe mandar a soporte por WhatsApp y no ofrecer el traslado automático; sin revelar pedidos ni faltas de la otra cuenta. El servidor deja de ofrecer el traslado y lo responde como un conflicto simple, sin romper a los clientes instalados. | Jesús, 2026-11-17 (decisión Q) · `movil:D-63` | |
 
 ## Criterios de aceptación
@@ -100,10 +100,8 @@ reglas: [PHONE_PE_RE, UpdateCustomerProfileRequestSchema, app_settings:terms_ver
 
 ## Abierto
 
-- Qué cambio de Términos o Privacidad obliga a reaceptar (CUS-AUT-027): sin recomendación clara; DA-17 en `Docs/trabajo/decisiones-abiertas.md`.
-- Cómo comprueba la app la edad mínima de 18 años (`movil:D-46`): DA-18.
-- Dónde viven los Términos, la Privacidad y la página de borrado cuando se apague la web del cliente: DA-19.
-- Apple con correo oculto en iOS (un celular, una cuenta): se mira al empezar iOS; DA-20.
+- Apple con correo oculto en iOS (un celular, una cuenta): sin recomendación; se mira al empezar iOS (DA-21 en `Docs/trabajo/decisiones-abiertas.md`).
+- Si se reabre el traslado del celular, el conflicto «ya está asociado a otra cuenta» debe llevar un `code` estructurado: hoy la app lo reconoce por el texto del servidor (`Este número ya está asociado a otra cuenta.`) y una prueba de contrato fija ese texto en ambos lados.
 
 ## Defectos
 
