@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.catalog.business
 
 import java.time.Instant
 import java.time.ZoneId
+import java.util.Locale
 
 /**
  * Franja horaria de un plato (0226): «el ceviche solo se sirve sábados y domingos de 11:00 a 15:00».
@@ -62,7 +63,7 @@ data class DishWindow(
         const val MIN_RUN = 3
         val DAY_LABELS = listOf("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
 
-        fun hhmm(minutes: Int): String = "%02d:%02d".format(minutes / HOUR_MIN, minutes % HOUR_MIN)
+        fun hhmm(minutes: Int): String = String.format(Locale.ROOT, "%02d:%02d", minutes / HOUR_MIN, minutes % HOUR_MIN)
 
         /** 'sáb y dom', 'lun a vie', 'lun a mié y vie': las rachas de tres o más se colapsan. */
         fun describeDays(sorted: List<Int>): String {

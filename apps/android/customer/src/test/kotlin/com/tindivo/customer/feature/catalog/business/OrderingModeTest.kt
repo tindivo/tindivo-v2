@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 
 /** Qué permite hacer el negocio con su carta ahora: pedir, solo mirar (cerrado) o contactar (modo catálogo). */
@@ -52,6 +53,31 @@ class OrderingModeTest {
 
         assertEquals("mar", (mode as OrderingMode.Closed).opensDay)
         assertEquals(2, mode.status.daysAhead)
+    }
+
+    @Test
+    fun `CA-CAT-03 tocar un plato abre la ficha solo si el negocio deja pedir`() {
+        val opened = mutableListOf<String>()
+        val dish =
+            MenuItemUi(
+                "p1",
+                "Pollo",
+                null,
+                "S/ 18.00",
+                BigDecimal("18.00"),
+                emptyList(),
+                null,
+                true,
+                DishWindow(null, null, null),
+            )
+
+        requireNotNull(dishClickFor(OrderingMode.Open) { opened += it.id })(dish)
+        assertEquals(listOf("p1"), opened)
+
+        val closed = OrderingMode.Closed(OpenStatus.Closed("18:00", 0), null)
+        assertNull(dishClickFor(closed) { opened += it.id })
+        assertNull(dishClickFor(OrderingMode.Contact("+51987654321")) { opened += it.id })
+        assertEquals(listOf("p1"), opened)
     }
 
     @Test

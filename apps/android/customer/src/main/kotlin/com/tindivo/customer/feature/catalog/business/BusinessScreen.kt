@@ -72,7 +72,7 @@ internal fun BusinessScreen(
     val openDish = remember(business, openDishId) { business.findDish(openDishId) }
     val snackbarHostState = remember { SnackbarHostState() }
     // Cerrado o en modo catálogo la carta se ve, pero no se abre la ficha para agregar (CUS-CAT-012, CUS-CAT-015).
-    val onDishClick: ((MenuItemUi) -> Unit)? = if (ordering.allowsBag) ({ openDishId = it.id }) else null
+    val onDishClick = dishClickFor(ordering) { openDishId = it.id }
     BagFeedback(
         outcome = cart.outcome,
         snackbarHostState = snackbarHostState,

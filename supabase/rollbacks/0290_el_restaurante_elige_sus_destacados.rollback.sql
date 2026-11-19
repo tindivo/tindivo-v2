@@ -2,6 +2,8 @@
 -- ROLLBACK 0290 — el restaurante elige sus destacados
 -- ============================================================================
 --
+-- ANTES de correrlo, revierte primero el código de la API y de Negocios: leen y escriben estas columnas y fallarían.
+--
 -- Borra las dos columnas: se pierde lo que cada restaurante marcó como destacado y el nombre de su sección. Solo es
 -- seguro mientras ninguna app dependa del campo `featured` de la carta (es opcional y aditivo).
 -- ============================================================================

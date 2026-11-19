@@ -14,6 +14,9 @@
 -- las policies de la fila (`mi_owner_all` de la carta; el nombre lo escribe la API con `service_role`, como el resto
 -- del perfil). No es dinero. El tope de seis platos lo aplica la API al servir la carta.
 --
+-- ORDEN DE DESPLIEGUE: esta migración va a producción ANTES de desplegar la API (la carta pública y el perfil leen y
+-- escriben las columnas nuevas).
+--
 -- Idempotente. Rollback: supabase/rollbacks/0290_el_restaurante_elige_sus_destacados.rollback.sql
 -- ============================================================================
 
@@ -23,7 +26,10 @@ alter table public.businesses add column if not exists featured_title text;
 
 alter table public.businesses drop constraint if exists businesses_featured_title_check;
 alter table public.businesses add constraint businesses_featured_title_check
-  check (featured_title is null or (char_length(btrim(featured_title)) between 1 and 30));
+  check (
+    featured_title is null
+    or (featured_title = btrim(featured_title) and char_length(featured_title) between 1 and 30)
+  );
 
 comment on column public.menu_items.is_featured is
   'true = el plato va en la sección «Destacados» de la carta (CUS-CAT-028). Distinto de is_compact, que solo ordena dentro de su sección. La API sirve hasta 6, disponibles y con foto.';

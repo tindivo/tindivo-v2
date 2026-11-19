@@ -62,6 +62,7 @@ export function useItemEditor() {
   const [schedule, setSchedule] = useState<ScheduleDayRow[]>([])
   /** Cuántos platos hay por categoría, para rotular el botón de aplicar en bloque. */
   const [catItemCounts, setCatItemCounts] = useState<Record<string, number>>({})
+  const [featuredOthers, setFeaturedOthers] = useState(0)
   const [applyingToCategory, setApplyingToCategory] = useState(false)
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
   // Miniatura de la misma foto (D-55). Null con foto pendiente = no se pudo generar.
@@ -141,7 +142,7 @@ export function useItemEditor() {
         // pintar nada. Traer el resto de columnas sería descargar el menú entero.
         supabase
           .from('menu_items')
-          .select('category_id')
+          .select('id,category_id,is_featured')
           .eq('business_id', biz.id)
           .is('deleted_at', null),
       ])
@@ -154,6 +155,10 @@ export function useItemEditor() {
         counts[row.category_id] = (counts[row.category_id] ?? 0) + 1
       }
       setCatItemCounts(counts)
+      // Los demás platos ya destacados: el panel no deja pasar de FEATURED_MAX_ITEMS.
+      setFeaturedOthers(
+        (siblingsRes.data ?? []).filter((row) => row.is_featured && row.id !== itemId).length,
+      )
 
       const allGroupsData = allGroupsRes.data ?? []
       const allGroupIds = allGroupsData.map((g) => g.id)
@@ -1079,6 +1084,7 @@ export function useItemEditor() {
     formData,
     schedule,
     catItemCounts,
+    featuredOthers,
     applyingToCategory,
     applyToCategory,
     groups,

@@ -54,6 +54,12 @@ internal fun orderingModeFor(
     return OrderingMode.Closed(status, DAY_NAMES[(today + status.daysAhead) % DAY_NAMES.size])
 }
 
+/** Qué hace tocar un plato: abrir su ficha si el negocio deja pedir; si no (cerrado o modo catálogo), nada. */
+internal fun dishClickFor(
+    ordering: OrderingMode,
+    open: (MenuItemUi) -> Unit,
+): ((MenuItemUi) -> Unit)? = if (ordering.allowsBag) open else null
+
 /** `https://wa.me/51987654321` desde `+51987654321`; `null` si no queda ningún dígito. */
 internal fun whatsappUri(number: String): String? =
     number.filter { it.isDigit() }.takeIf { it.isNotEmpty() }?.let { "https://wa.me/$it" }

@@ -509,6 +509,7 @@ export type Database = {
           delivery_fee: number
           estimated_eta_max: number
           estimated_eta_min: number
+          featured_title: string | null
           id: string
           is_active: boolean
           is_blocked: boolean
@@ -525,7 +526,6 @@ export type Database = {
           qr_url: string | null
           slug: string
           tagline: string | null
-          featured_title: string | null
           updated_at: string
           user_id: string
           uses_tindivo_drivers: boolean
@@ -552,6 +552,7 @@ export type Database = {
           delivery_fee?: number
           estimated_eta_max?: number
           estimated_eta_min?: number
+          featured_title?: string | null
           id?: string
           is_active?: boolean
           is_blocked?: boolean
@@ -568,7 +569,6 @@ export type Database = {
           qr_url?: string | null
           slug?: string
           tagline?: string | null
-          featured_title?: string | null
           updated_at?: string
           user_id: string
           uses_tindivo_drivers?: boolean
@@ -595,6 +595,7 @@ export type Database = {
           delivery_fee?: number
           estimated_eta_max?: number
           estimated_eta_min?: number
+          featured_title?: string | null
           id?: string
           is_active?: boolean
           is_blocked?: boolean
@@ -611,7 +612,6 @@ export type Database = {
           qr_url?: string | null
           slug?: string
           tagline?: string | null
-          featured_title?: string | null
           updated_at?: string
           user_id?: string
           uses_tindivo_drivers?: boolean
