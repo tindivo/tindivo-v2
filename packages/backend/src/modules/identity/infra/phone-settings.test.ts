@@ -15,9 +15,17 @@ function dbWith(result: { data: unknown; error: unknown }): TypedSupabaseClient 
 describe('CA-AUT-12 · el tope de envíos de código sale de app_settings', () => {
   it('sin fila o con un valor roto, rige el tope de siempre', () => {
     expect(PHONE_CODE_MAX_PER_24H_DEFAULT).toBe(3)
-    for (const raw of [undefined, null, 'x', 0, -1, 2.5, 21, Number.NaN, true]) {
+    for (const raw of [undefined, null, 'x', 0, -1, 2.5, Number.NaN, true]) {
       expect(parsePhoneCodeMax(raw)).toBe(PHONE_CODE_MAX_PER_24H_DEFAULT)
     }
+  })
+
+  it('un valor sobre el techo se acota a 20 y se registra', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(parsePhoneCodeMax(21)).toBe(20)
+    expect(parsePhoneCodeMax(1000)).toBe(20)
+    expect(warn).toHaveBeenCalledTimes(2)
+    warn.mockRestore()
   })
 
   it('un entero positivo razonable cambia el tope sin tocar el código', () => {
@@ -39,8 +47,11 @@ describe('CA-AUT-12 · el tope de envíos de código sale de app_settings', () =
   })
 
   it('si la lectura falla, cae al tope de siempre y no ofrece el traslado', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const settings = await loadPhoneSettings(dbWith({ data: null, error: { message: 'caído' } }))
     expect(settings).toEqual({ maxCodesPer24h: 3, transferEnabled: false })
+    expect(error).toHaveBeenCalledTimes(1)
+    error.mockRestore()
   })
 })
 

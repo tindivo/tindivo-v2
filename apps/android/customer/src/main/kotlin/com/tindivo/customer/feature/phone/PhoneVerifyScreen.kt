@@ -37,7 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.checkout.SUPPORT_WHATSAPP_URL
+import com.tindivo.customer.config.SUPPORT_WHATSAPP_URL
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -167,6 +167,7 @@ private fun CodeStep(
         onValueChange = actions.onCodeChanged,
         label = { Text(text = stringResource(R.string.phone_code_label)) },
         singleLine = true,
+        enabled = !state.sending,
         isError = state.error != null,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.SmsOtpCode },

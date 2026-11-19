@@ -197,6 +197,29 @@ class PhoneVerifyViewModelTest {
         }
 
     @Test
+    fun `CA-AUT-09 el texto que la app reconoce es el del vector compartido con el servidor`() {
+        val vector =
+            requireNotNull(javaClass.getResourceAsStream("/fixtures/vectores/celular-otra-cuenta.json")) {
+                "falta el recurso fixtures/vectores/celular-otra-cuenta.json"
+            }.bufferedReader().readText()
+        assertTrue(vector.contains("\"detail\": \"$OTHER_ACCOUNT_DETAIL\""))
+    }
+
+    @Test
+    fun `CA-AUT-P8 repetir el mismo codigo de seis digitos tras un fallo no vuelve a verificar`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(409, CONFLICT_PLAIN))
+
+            viewModel.onCodeTyped("123456")
+            assertEquals(2, server.requestCount)
+            viewModel.onCodeTyped("123456")
+
+            assertEquals(2, server.requestCount)
+        }
+
+    @Test
     fun `CA-AUT-09 un celular de otra cuenta sin traslado da el aviso de soporte y no ofrece trasladar`() =
         runTest {
             val viewModel = viewModel()
@@ -679,10 +702,10 @@ class PhoneVerifyViewModelTest {
             {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",
              "detail":"El código ya no sirve. Pide uno nuevo."}
         """
-        const val CONFLICT_OTHER_ACCOUNT = """
-            {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",
-             "detail":"Este número ya está asociado a otra cuenta."}
-        """
+
+        // El texto lo fija el vector compartido con el servidor (celular-otra-cuenta.json).
+        val CONFLICT_OTHER_ACCOUNT =
+            """{"type":"about:blank","title":"Conflicto","status":409,"code":"conflict","detail":"$OTHER_ACCOUNT_DETAIL"}"""
         const val CONFLICT_TRANSFER = """
             {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",
              "detail":"Ese número ya está verificado en otra cuenta.",

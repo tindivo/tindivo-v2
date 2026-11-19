@@ -98,6 +98,7 @@
     <string name="signin_terms_label">Acepto los Términos y la Política de privacidad</string>
     <string name="signin_terms_link">Términos</string>
     <string name="signin_privacy_link">Política de privacidad</string>
+    <string name="signin_terms_talkback">Acepta los Términos para continuar</string>
     <string name="signin_terms_missing">Marca la casilla para entrar</string>
     <string name="signin_terms_not_saved">No pudimos guardar. Reintenta.</string>
     <string name="signin_title">Entrar a Tindivo</string>

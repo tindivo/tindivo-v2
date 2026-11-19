@@ -144,8 +144,10 @@ internal class PhoneVerifyViewModel
 
         /** Escribir el sexto dígito verifica solo (CUS-AUT-024); con menos no sale nada. */
         fun onCodeTyped(text: String) {
+            val before = _state.value.code
             onCodeChanged(text)
-            if (_state.value.code.length == CODE_LENGTH && !_state.value.sending) verify()
+            val now = _state.value
+            if (now.code.length == CODE_LENGTH && now.code != before && !now.sending) verify()
         }
 
         /** «Enviar código» (primer envío). */
@@ -392,7 +394,7 @@ private val PERU_MOBILE = Regex("^9[0-9]{8}$")
 private const val PREFIX = "+51"
 
 /** El `detail` con el que el servidor dice que el número ya es de otra cuenta (`phoneClaimProblem`). */
-private const val OTHER_ACCOUNT_DETAIL = "Este número ya está asociado a otra cuenta."
+internal const val OTHER_ACCOUNT_DETAIL = "Este número ya está asociado a otra cuenta."
 
 private fun String.digitsOnly(max: Int): String = filter { it in '0'..'9' }.take(max)
 

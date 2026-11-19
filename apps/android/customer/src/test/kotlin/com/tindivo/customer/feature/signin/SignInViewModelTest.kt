@@ -1,8 +1,14 @@
 package com.tindivo.customer.feature.signin
 
+import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
+import com.tindivo.core.network.ClientInfo
+import com.tindivo.core.network.SystemRepository
+import com.tindivo.core.network.createOkHttpClient
+import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.config.ConfigState
 import com.tindivo.customer.feature.profile.FakeProfileGateway
 import com.tindivo.customer.feature.profile.GoogleNameHint
 import com.tindivo.customer.feature.profile.PROFILE_MISSING
@@ -15,6 +21,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -32,12 +39,22 @@ class SignInViewModelTest {
     private val profiles = FakeProfileGateway()
     private val dispatcher = UnconfinedTestDispatcher()
     private val hint = GoogleNameHint(store, CoroutineScope(dispatcher))
+    private val configService =
+        ConfigService(
+            SystemRepository(
+                "http://localhost.invalid/api/v1",
+                createOkHttpClient(ClientInfo("customer", "0.1.0", "1")),
+                dispatcher,
+            ),
+            "0.1.0",
+            CoroutineScope(dispatcher),
+        )
     private lateinit var viewModel: SignInViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        viewModel = SignInViewModel(store, profiles, hint)
+        viewModel = SignInViewModel(store, profiles, hint, configService)
         viewModel.onTermsChecked(true)
     }
 
@@ -71,7 +88,7 @@ class SignInViewModelTest {
                     opened = true
                     GoogleIdResult.Cancelled
                 }
-            val vm = SignInViewModel(store, profiles, hint)
+            val vm = SignInViewModel(store, profiles, hint, configService)
 
             vm.signIn(google)
             assertEquals(SignInUiState.TermsMissing(1), vm.state.value)
@@ -85,7 +102,7 @@ class SignInViewModelTest {
     @Test
     fun `CA-AUT-P1 al marcar la casilla se quita el aviso`() =
         runTest {
-            val vm = SignInViewModel(store, profiles, hint)
+            val vm = SignInViewModel(store, profiles, hint, configService)
             vm.signIn { GoogleIdResult.Cancelled }
 
             vm.onTermsChecked(true)
@@ -113,6 +130,31 @@ class SignInViewModelTest {
             assertEquals(SignInUiState.TermsNotSaved, viewModel.state.value)
             assertEquals(listOf("user-1"), store.signOutIfCalls)
             assertEquals(listOf("terms:$TERMS_VERSION:user-1"), profiles.calls)
+        }
+
+    @Test
+    fun `CA-AUT-03 si la pantalla se va a mitad del registro, la aceptacion termina y la sesion igual se cierra`() =
+        runTest {
+            profiles.termsResult = ApiResult.Failure(AppError.Known(ApiErrorCode.InternalError, 500, null))
+            profiles.termsGate = CompletableDeferred()
+
+            viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba") }
+            viewModel.viewModelScope.coroutineContext[Job]?.cancel()
+            profiles.termsGate?.complete(Unit)
+
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
+        }
+
+    @Test
+    fun `CA-AUT-03 un 426 al registrar la aceptacion lleva al flujo de actualizar la app`() =
+        runTest {
+            profiles.termsResult = ApiResult.Failure(AppError.UpgradeRequired("2.0.0"))
+
+            viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba") }
+
+            assertEquals(SignInUiState.TermsNotSaved, viewModel.state.value)
+            assertEquals(ConfigState.UpgradeRequired("2.0.0"), configService.state.value)
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
         }
 
     @Test
@@ -199,7 +241,7 @@ class SignInViewModelTest {
             viewModel.signIn { GoogleIdResult.Token("id-token-de-prueba", "Rosa Quispe") }
             assertEquals(SignInUiState.Done, viewModel.state.value)
 
-            val again = SignInViewModel(store, profiles, hint)
+            val again = SignInViewModel(store, profiles, hint, configService)
             again.onTermsChecked(true)
             profiles.loadResult = ApiResult.Failure(AppError.Known(ApiErrorCode.InternalError, 500, null))
             again.signIn { GoogleIdResult.Token("id-token-de-prueba", "Rosa Quispe") }

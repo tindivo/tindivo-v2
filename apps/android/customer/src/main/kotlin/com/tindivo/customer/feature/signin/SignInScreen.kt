@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.signin
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -80,6 +81,9 @@ fun SignInScreen(
     onOpenLink: (String) -> Unit = {},
 ) {
     val checkboxFocus = remember { FocusRequester() }
+    // Mientras entra y registra la aceptación, «atrás» no hace nada: no se abandona a medias.
+    val busy = state is SignInUiState.Loading || state is SignInUiState.NeedsProfile
+    BackHandler(enabled = busy) {}
     // Cada toque sin la casilla deja el foco en ella (TalkBack lee el aviso); `taps` cambia aunque el estado «se repita».
     LaunchedEffect((state as? SignInUiState.TermsMissing)?.taps) {
         if (state is SignInUiState.TermsMissing) checkboxFocus.requestFocus()
@@ -127,7 +131,7 @@ fun SignInScreen(
             } else {
                 Text(text = stringResource(R.string.signin_unavailable), style = MaterialTheme.typography.bodyLarge)
             }
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
+            TextButton(onClick = onBack, enabled = !busy, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(text = stringResource(R.string.signin_not_now))
             }
         }
@@ -172,7 +176,7 @@ private fun GoogleButton(
     onClick: () -> Unit,
 ) {
     // Con la casilla vacía el botón se ve apagado pero responde al toque: avisa que falta marcarla (CA-AUT-P1).
-    val offHint = stringResource(R.string.signin_terms_missing)
+    val offHint = stringResource(R.string.signin_terms_talkback)
     Button(
         onClick = onClick,
         enabled = !loading,

@@ -59,7 +59,7 @@ puede todavía; pide escribir `BORRAR` y recién entonces habilita «Borrar mi c
 | Avisos desactivados | Interruptor apagado; con el permiso del sistema denegado, el interruptor lleva a Ajustes | CUS-ACC-005, CA-ACC-P2 |
 | Sesión terminada por otra cuenta | La pantalla se cierra sin tocar la sesión nueva | CUS-AUT-013 |
 | Borrar con pedido en curso | «Si tienes un pedido en curso, o una apelación o devolución sin resolver, tienes que esperar a que termine.»; la sesión sigue abierta | CUS-AUT-017, CA-ACC-04 |
-| Borrar: escribir | El botón está deshabilitado hasta escribir `BORRAR` (sin importar mayúsculas ni espacios) | CUS-AUT-017, CA-ACC-P3 |
+| Borrar: escribir | El botón está deshabilitado hasta escribir exactamente `BORRAR` | CUS-AUT-017, CA-ACC-P3 |
 | Cuenta borrada | «Tu cuenta fue borrada», en la portada y solo si la sesión que la borró sigue siendo la actual | CUS-AUT-017, CA-ACC-05 |
 
 ## Movimiento

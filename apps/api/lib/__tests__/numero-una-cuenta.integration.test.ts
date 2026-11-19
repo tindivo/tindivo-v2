@@ -486,13 +486,14 @@ describe('0277 · un número, una cuenta', () => {
         detail: 'Este número ya está asociado a otra cuenta.',
       })
       expect(body).not.toHaveProperty('transfer')
-      // Un desafío creado antes de apagarlo tampoco sirve.
+      // El servidor crea el desafío pero no lo ofrece; aun así `transfer` lo rechaza mientras esté apagado.
       const { data } = await db
         .from('phone_transfer_challenges')
         .select('id')
         .eq('user_id', b.id)
         .maybeSingle()
-      const stale = await call(transfer, b, { challengeId: data?.id ?? crypto.randomUUID() })
+      expect(data).not.toBeNull()
+      const stale = await call(transfer, b, { challengeId: data?.id ?? '' })
       expect(stale.status).toBe(409)
       expect(await profile(a)).toMatchObject({ phone_verified_at: expect.any(String) })
     } finally {

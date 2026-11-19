@@ -3,7 +3,9 @@ package com.tindivo.customer.feature.signin
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiResult
+import com.tindivo.core.network.AppError
 import com.tindivo.core.network.isProfileMissing
+import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.profile.GoogleNameHint
 import com.tindivo.customer.feature.profile.ProfileGateway
 import com.tindivo.customer.feature.profile.TERMS_VERSION
@@ -12,10 +14,12 @@ import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SignInResult
 import com.tindivo.customer.session.newGoogleNonce
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.security.SecureRandom
 import javax.inject.Inject
 
@@ -49,6 +53,7 @@ class SignInViewModel
         private val sessionStore: SessionStore,
         private val profiles: ProfileGateway,
         private val nameHint: GoogleNameHint,
+        private val configService: ConfigService,
     ) : ViewModel() {
         private val random = SecureRandom()
         private val _state = MutableStateFlow<SignInUiState>(SignInUiState.Idle)
@@ -102,11 +107,17 @@ class SignInViewModel
          */
         private suspend fun acceptThenContinue(displayName: String?): SignInUiState {
             val account = currentAccount() ?: return SignInUiState.Done
-            if (profiles.acceptTerms(TERMS_VERSION, account) is ApiResult.Failure) {
-                sessionStore.signOutIf(account)
-                return SignInUiState.TermsNotSaved
-            }
-            return afterEntry(displayName)
+            // Sin cancelación: si la pantalla se va a mitad, la aceptación termina y, si falla, la sesión igual se cierra.
+            val failure =
+                withContext(NonCancellable) {
+                    val result = profiles.acceptTerms(TERMS_VERSION, account)
+                    if (result is ApiResult.Failure) sessionStore.signOutIf(account)
+                    (result as? ApiResult.Failure)?.error
+                }
+            if (failure == null) return afterEntry(displayName)
+            // Un 426 lleva al flujo de «Actualiza la app», como en el resto de la app.
+            if (failure is AppError.UpgradeRequired) configService.reportUpgradeRequired(failure.minVersion)
+            return SignInUiState.TermsNotSaved
         }
 
         /**

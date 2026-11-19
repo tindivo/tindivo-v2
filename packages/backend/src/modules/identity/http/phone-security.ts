@@ -21,6 +21,8 @@ function customerId(actor: Actor | null): string {
   return actor.userId
 }
 
+/** Lo reconoce la app por texto (vector `celular-otra-cuenta.json`); si se reabre el traslado, el error lleva un `code`. */
+export const PHONE_OTHER_ACCOUNT_DETAIL = 'Este número ya está asociado a otra cuenta.'
 export const PHONE_WAIT_DETAIL = 'Ese número tiene un pedido en curso. Intenta cuando termine.'
 export const PHONE_INVALID_DETAIL = 'El código ya no sirve. Pide uno nuevo.'
 
@@ -43,7 +45,7 @@ export function phoneClaimProblem(
           ? PHONE_WAIT_DETAIL
           : result.status === 'challenge_invalid'
             ? PHONE_INVALID_DETAIL
-            : 'Este número ya está asociado a otra cuenta.',
+            : PHONE_OTHER_ACCOUNT_DETAIL,
     ...(options.offerTransfer && result.status === 'transfer_required' && result.challengeId
       ? {
           transfer: { challengeId: result.challengeId, expiresAt: result.expiresAt },
@@ -65,7 +67,7 @@ export const transferPhoneHandler = defineHandler(
   },
   async ({ actor, body, deps }) => {
     if (!(await loadPhoneSettings(deps.supabase())).transferEnabled) {
-      throw new DomainError('Este número ya está asociado a otra cuenta.', 'conflict')
+      throw new DomainError(PHONE_OTHER_ACCOUNT_DETAIL, 'conflict')
     }
     const { result, phone } = await transferCustomerPhone(
       deps.supabase(),

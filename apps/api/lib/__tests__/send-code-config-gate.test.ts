@@ -4,25 +4,39 @@ const alertOps = vi.hoisted(() => vi.fn(async (..._a: unknown[]) => true))
 const reserve = vi.hoisted(() => vi.fn())
 const verifyCreate = vi.hoisted(() => vi.fn())
 const twilioState = vi.hoisted(() => ({ client: null as unknown, sim: false }))
+// Lo que responde la base simulada: los envíos de las últimas 24 h y las filas de `app_settings` del celular.
+const dbState = vi.hoisted(() => ({
+  attempts: 0,
+  settings: [] as { key: string; value: unknown }[],
+}))
 
 vi.mock('@/lib/ops/alert-ops', () => ({ alertOps }))
 vi.mock('@/lib/http/auth', () => ({ requireRole: async () => ({ user: { id: 'u1' } }) }))
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => {
     // Encadenable y «esperable»: cada .eq/.gte/.update devuelve algo que también se espera.
-    const result = { count: 0, data: [{ user_id: 'u1' }], error: null }
-    const chain = {
-      select: () => q,
-      eq: () => q,
-      gte: () => q,
-      in: () => q,
-      update: () => q,
-      insert: () => q,
+    const make = (table: string) => {
+      const result =
+        table === 'app_settings'
+          ? { count: null, data: dbState.settings, error: null }
+          : { count: dbState.attempts, data: [{ user_id: 'u1' }], error: null }
+      const chain = {
+        select: () => q,
+        eq: () => q,
+        gte: () => q,
+        in: () => q,
+        update: () => q,
+        insert: () => q,
+      }
+      // Una promesa REAL con los métodos encadenables, para poder hacerle `await`.
+      const q: typeof chain & Promise<typeof result> = Object.assign(Promise.resolve(result), chain)
+      return q
     }
-    // Una promesa REAL con los métodos encadenables, para poder hacerle `await`.
-    const q: typeof chain & Promise<typeof result> = Object.assign(Promise.resolve(result), chain)
     // El simulacro sella con la misma RPC que /verify (0277).
-    return { from: () => q, rpc: async () => ({ data: { status: 'verified' }, error: null }) }
+    return {
+      from: (table: string) => make(table),
+      rpc: async () => ({ data: { status: 'verified' }, error: null }),
+    }
   },
 }))
 vi.mock('@/lib/otp/phone-limit', async (orig) => ({
@@ -74,6 +88,8 @@ describe('send-code · segunda defensa de configuración', () => {
       vi.stubEnv(k, '')
     }
     alertOps.mockClear()
+    dbState.attempts = 0
+    dbState.settings = []
     reserve.mockReset().mockResolvedValue({ allowed: true, release: async () => {} })
     verifyCreate.mockReset().mockResolvedValue({ channel: 'sms' })
     twilioState.client = {
@@ -105,6 +121,29 @@ describe('send-code · segunda defensa de configuración', () => {
     expect(res.status).toBe(200)
     expect(verifyCreate).toHaveBeenCalledTimes(1)
     expect(alertOps).not.toHaveBeenCalled()
+  })
+
+  it('CA-AUT-12 · con el tope de app_settings en 1, el segundo envío da 429 y no manda SMS', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    dbState.settings = [{ key: 'phone_code_max_per_24h', value: 1 }]
+    dbState.attempts = 1
+    const res = await call()
+    expect(res.status).toBe(429)
+    expect(verifyCreate).not.toHaveBeenCalled()
+  })
+
+  it('CA-AUT-12 · sin la fila de app_settings rige el tope de siempre: el cuarto envío da 429 y el tercero pasa', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    dbState.attempts = 2
+    expect((await call()).status).toBe(200)
+    dbState.attempts = 3
+    expect((await call()).status).toBe(429)
   })
 
   it('no puede mandar SMS reales (simulacro): comportamiento actual, sin 503 ni alerta', async () => {
