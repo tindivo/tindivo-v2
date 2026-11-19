@@ -92,7 +92,7 @@ reglas: [COURIER_ITEM_DESCRIPTION_MAX, COURIER_MAX_WEIGHT_KG, COURIER_DRIVER_HIN
 
 ## Abierto
 
-- **CUS-ENT-020** (soporte de WhatsApp y responsabilidad por daños): espera la revisión legal; está en `Docs/trabajo/decisiones-abiertas.md` (DA-17).
+- **CUS-ENT-020** (soporte de WhatsApp y responsabilidad por daños): espera la revisión legal; está en `Docs/trabajo/decisiones-abiertas.md` (DA-18).
 - **Flujo de «pedir»**: se mantiene el de Android (portada y formulario con hojas) **si** el canvas v35 lo dibuja así; el agente no pudo abrir el canvas, así que Jesús lo confirma al revisar la ficha. Si el canvas muestra «mapa primero», la ficha cambia.
 
 ## Brecha con Android
