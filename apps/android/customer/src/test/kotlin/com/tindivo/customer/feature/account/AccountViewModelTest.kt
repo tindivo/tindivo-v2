@@ -227,7 +227,12 @@ class AccountViewModelTest {
             server.enqueue(response(200, profile(verified = true)))
             val viewModel = AccountViewModel(customer, store, configService)
             viewModel.settled()
-            server.enqueue(response(500, "{\"type\":\"about:blank\",\"title\":\"Error\",\"status\":500,\"code\":\"internal_error\"}"))
+            server.enqueue(
+                response(
+                    500,
+                    "{\"type\":\"about:blank\",\"title\":\"Error\",\"status\":500,\"code\":\"internal_error\"}",
+                ),
+            )
 
             viewModel.saveName("Rosa Maria")
 
@@ -241,9 +246,8 @@ class AccountViewModelTest {
     private fun profile(
         verified: Boolean,
         name: String = "Rosa Quispe",
-    ) =
-        "{\"data\":{\"fullName\":\"$name\",\"phone\":\"+51987654321\",\"phoneVerified\":$verified," +
-            "\"phoneVerifiedAt\":null,\"contraentregaBlocked\":false,\"blockedUntil\":null,\"blocked\":false}}"
+    ) = "{\"data\":{\"fullName\":\"$name\",\"phone\":\"+51987654321\",\"phoneVerified\":$verified," +
+        "\"phoneVerifiedAt\":null,\"contraentregaBlocked\":false,\"blockedUntil\":null,\"blocked\":false}}"
 
     private companion object {
         const val UNAUTHORIZED =
