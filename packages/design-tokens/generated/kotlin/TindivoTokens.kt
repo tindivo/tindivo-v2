@@ -1,5 +1,5 @@
-// GENERADO por packages/design-tokens/src/cli.ts desde packages/design-tokens/tokens.json.
-// No se edita a mano: se cambia tokens.json y se corre `pnpm tokens:build`.
+// GENERADO por packages/design-tokens/src/cli.ts desde packages/design-tokens/tokens.json
+// (que refleja Docs/negocio/sistema-de-diseno.md). No se edita a mano: se cambia el JSON y se corre `pnpm tokens:build`.
 
 package com.tindivo.core.designsystem.tokens
 
@@ -15,71 +15,87 @@ data class TypeToken(
     val size: TextUnit,
     val line: TextUnit,
     val weight: FontWeight,
-    val tracking: TextUnit,
+)
+
+/** Una capa de sombra; una elevación es una lista de capas. */
+data class ShadowLayer(
+    val x: Dp,
+    val y: Dp,
+    val blur: Dp,
+    val color: Color,
 )
 
 object TindivoTokens {
     const val FONT_FAMILY = "Geist"
 
     object Colors {
-        val brand: Color = Color(0xFFF97316)
-        val brandDark: Color = Color(0xFFC2410C)
-        val brandDeep: Color = Color(0xFF9A3412)
-        val brandSoft: Color = Color(0xFFFFF7ED)
-        val brandInverse: Color = Color(0xFFFDBA74)
-        val ink: Color = Color(0xFF1A1614)
-        val inkMuted: Color = Color(0xFF57534E)
-        val inkSubtle: Color = Color(0xFFA8A29E)
-        val surface: Color = Color(0xFFFAF6F1)
-        val surfaceLow: Color = Color(0xFFF0EBE3)
-        val surfaceMid: Color = Color(0xFFF5F1EB)
-        val card: Color = Color(0xFFFFFFFF)
-        val border: Color = Color(0xFFEAE7E2)
-        val success: Color = Color(0xFF15803D)
-        val successSoft: Color = Color(0xFFDCFCE7)
-        val successDeep: Color = Color(0xFF166534)
-        val warning: Color = Color(0xFFB45309)
-        val warningSoft: Color = Color(0xFFFEF3C7)
-        val warningDeep: Color = Color(0xFF92400E)
-        val danger: Color = Color(0xFFDC2626)
-        val dangerSoft: Color = Color(0xFFFEE2E2)
-        val dangerDeep: Color = Color(0xFF991B1B)
+        val primary: Color = Color(0xFFEE6417)
+        val primaryPressed: Color = Color(0xFFCF4A0C)
+        val onPrimary: Color = Color(0xFFFFFFFF)
+        val primaryText: Color = Color(0xFFC2410C)
+        val brand: Color = Color(0xFFFA7020)
+        val primaryContainer: Color = Color(0xFFFFF7ED)
+        val onPrimaryContainer: Color = Color(0xFF9A3412)
+        val secondary: Color = Color(0xFF2E3236)
+        val onSecondary: Color = Color(0xFFFFFFFF)
+        val ink: Color = Color(0xFF2E3236)
+        val inkSecondary: Color = Color(0xFF50565D)
+        val inkTertiary: Color = Color(0xFF636B73)
+        val background: Color = Color(0xFFF7F8FA)
+        val surface: Color = Color(0xFFFFFFFF)
+        val surfaceSunken: Color = Color(0xFFEFF1F4)
+        val outline: Color = Color(0xFF7A828C)
+        val outlineVariant: Color = Color(0xFFE0E4E8)
+        val success: Color = Color(0xFF166534)
+        val successContainer: Color = Color(0xFFDCFCE7)
+        val warning: Color = Color(0xFF92400E)
+        val warningContainer: Color = Color(0xFFFEF3C7)
+        val error: Color = Color(0xFF991B1B)
+        val errorContainer: Color = Color(0xFFFEE2E2)
+        val info: Color = Color(0xFF075985)
+        val infoContainer: Color = Color(0xFFE0F2FE)
+        val focus: Color = Color(0xFF075985)
+        val disabled: Color = Color(0xFFE0E4E8)
+        val onDisabled: Color = Color(0xFF50565D)
+        val scrim: Color = Color(0x7A2E3236)
+        val gradientCtaStart: Color = Color(0xFFFA7020)
+        val gradientCtaMid: Color = Color(0xFFEE6417)
+        val gradientCtaEnd: Color = Color(0xFFE8590C)
     }
 
     object Radius {
-        val extraSmall: Dp = 8.dp
-        val small: Dp = 12.dp
-        val medium: Dp = 16.dp
-        val large: Dp = 20.dp
-        val extraLarge: Dp = 28.dp
+        val radiusCard: Dp = 20.dp
+        val radiusSheet: Dp = 28.dp
+        val radiusField: Dp = 16.dp
+        val radiusPill: Dp = 999.dp
+        val radiusThumb: Dp = 14.dp
     }
 
     object Spacing {
-        val hairline: Dp = 4.dp
-        val tight: Dp = 8.dp
-        val item: Dp = 12.dp
-        val screen: Dp = 16.dp
-        val section: Dp = 24.dp
-        val hero: Dp = 32.dp
         val touchTarget: Dp = 48.dp
-        val primaryButtonHeight: Dp = 52.dp
+        val touchGap: Dp = 8.dp
+        val spaceScreen: Dp = 16.dp
+        val spaceGroup: Dp = 24.dp
+        val spaceInner: Dp = 12.dp
+        val grid: Dp = 8.dp
+        val ctaHeight: Dp = 56.dp
+        val secondaryHeight: Dp = 48.dp
+        val chipHeight: Dp = 40.dp
+        val bottomBarInset: Dp = 24.dp
     }
 
     object Typography {
-        val displayLarge = TypeToken(size = 36.sp, line = 42.sp, weight = FontWeight.Bold, tracking = -0.5.sp)
-        val displayMedium = TypeToken(size = 32.sp, line = 38.sp, weight = FontWeight.Bold, tracking = -0.4.sp)
-        val displaySmall = TypeToken(size = 28.sp, line = 34.sp, weight = FontWeight.Bold, tracking = -0.3.sp)
-        val headlineLarge = TypeToken(size = 28.sp, line = 34.sp, weight = FontWeight.Bold, tracking = -0.3.sp)
-        val headlineMedium = TypeToken(size = 24.sp, line = 30.sp, weight = FontWeight.Bold, tracking = -0.2.sp)
-        val headlineSmall = TypeToken(size = 22.sp, line = 28.sp, weight = FontWeight.Bold, tracking = -0.2.sp)
-        val titleLarge = TypeToken(size = 20.sp, line = 26.sp, weight = FontWeight.SemiBold, tracking = -0.1.sp)
-        val titleMedium = TypeToken(size = 17.sp, line = 24.sp, weight = FontWeight.SemiBold, tracking = 0.sp)
-        val titleSmall = TypeToken(size = 15.sp, line = 20.sp, weight = FontWeight.SemiBold, tracking = 0.sp)
-        val bodyLarge = TypeToken(size = 16.sp, line = 24.sp, weight = FontWeight.Normal, tracking = 0.sp)
-        val bodyMedium = TypeToken(size = 14.sp, line = 20.sp, weight = FontWeight.Normal, tracking = 0.sp)
-        val bodySmall = TypeToken(size = 12.sp, line = 16.sp, weight = FontWeight.Normal, tracking = 0.sp)
-        val labelLarge = TypeToken(size = 15.sp, line = 20.sp, weight = FontWeight.Bold, tracking = 0.sp)
-        val labelMedium = TypeToken(size = 12.sp, line = 16.sp, weight = FontWeight.SemiBold, tracking = 0.sp)
-        val labelSmall = TypeToken(size = 11.sp, line = 16.sp, weight = FontWeight.Medium, tracking = 0.1.sp)
+        val titleScreen = TypeToken(size = 26.sp, line = 32.sp, weight = FontWeight.Bold)
+        val titleSection = TypeToken(size = 18.sp, line = 24.sp, weight = FontWeight.Bold)
+        val body = TypeToken(size = 15.sp, line = 22.sp, weight = FontWeight.Normal)
+        val bodySecondary = TypeToken(size = 13.sp, line = 18.sp, weight = FontWeight.Normal)
+        val cta = TypeToken(size = 18.sp, line = 24.sp, weight = FontWeight.Bold)
+        val chip = TypeToken(size = 14.sp, line = TextUnit.Unspecified, weight = FontWeight.SemiBold)
+    }
+
+    object Elevation {
+        val elevation1 = listOf(ShadowLayer(x = 0.dp, y = 1.dp, blur = 2.dp, color = Color(0x0F2E3236)), ShadowLayer(x = 0.dp, y = 4.dp, blur = 12.dp, color = Color(0x0F2E3236)))
+        val elevation2 = listOf(ShadowLayer(x = 0.dp, y = 2.dp, blur = 6.dp, color = Color(0x142E3236)), ShadowLayer(x = 0.dp, y = 10.dp, blur = 24.dp, color = Color(0x1A2E3236)))
+        val elevation3 = listOf(ShadowLayer(x = 0.dp, y = 6.dp, blur = 16.dp, color = Color(0x59EE6417)))
     }
 }

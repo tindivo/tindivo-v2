@@ -20,32 +20,53 @@ describe('render', () => {
     ])
   })
 
-  it('CSS: variables con prefijo --tindivo- (no pisan theme.css)', () => {
+  it('CSS: variables --tindivo-<nombre del canon>, sin pisar theme.css', () => {
     const css = render(tokens)['generated/css/tokens.css']
-    expect(css).toContain('--tindivo-color-brand: #f97316;')
-    expect(css).toContain('--tindivo-color-brand-dark: #c2410c;')
-    expect(css).toContain('--tindivo-radius-extra-large: 28px;')
-    expect(css).toContain('--tindivo-spacing-primary-button-height: 52px;')
-    expect(css).toContain('--tindivo-type-title-large-size: 20px;')
-    expect(css).toContain('--tindivo-type-display-large-tracking: -0.5px;')
+    expect(css).toContain('--tindivo-primary: #ee6417;')
+    expect(css).toContain('--tindivo-primary-pressed: #cf4a0c;')
+    expect(css).toContain('--tindivo-scrim: rgba(46, 50, 54, 0.48);')
+    expect(css).toContain('--tindivo-radius-sheet: 28px;')
+    expect(css).toContain('--tindivo-radius-pill: 999px;')
+    expect(css).toContain('--tindivo-cta-height: 56px;')
+    expect(css).toContain('--tindivo-title-screen-size: 26px;')
+    expect(css).toContain('--tindivo-title-screen-line: 32px;')
+    expect(css).toContain('--tindivo-chip-line: normal;')
+    expect(css).toContain(
+      '--tindivo-elevation1: 0 1px 2px rgba(46, 50, 54, 0.06), 0 4px 12px rgba(46, 50, 54, 0.06);',
+    )
     expect(css).not.toMatch(/--color-/)
   })
 
   it('Kotlin: Compose con Color, dp y sp', () => {
     const kt = render(tokens)['generated/kotlin/TindivoTokens.kt']
     expect(kt).toContain('package com.tindivo.core.designsystem.tokens')
-    expect(kt).toContain('val brand: Color = Color(0xFFF97316)')
-    expect(kt).toContain('val extraLarge: Dp = 28.dp')
-    expect(kt).toContain('val bodyLarge = TypeToken(size = 16.sp, line = 24.sp')
+    expect(kt).toContain('val primary: Color = Color(0xFFEE6417)')
+    expect(kt).toContain('val scrim: Color = Color(0x7A2E3236)')
+    expect(kt).toContain('val radiusSheet: Dp = 28.dp')
+    expect(kt).toContain(
+      'val titleScreen = TypeToken(size = 26.sp, line = 32.sp, weight = FontWeight.Bold)',
+    )
+    expect(kt).toContain('val chip = TypeToken(size = 14.sp, line = TextUnit.Unspecified')
+    expect(kt).toContain(
+      'val elevation3 = listOf(ShadowLayer(x = 0.dp, y = 6.dp, blur = 16.dp, color = Color(0x59EE6417)))',
+    )
   })
 
   it('Swift: SwiftUI con tipos public', () => {
     const sw = render(tokens)['generated/swift/TindivoTokens.swift']
     expect(sw).toContain('import SwiftUI')
-    expect(sw).toContain('public static let brand = Color(hex: 0xF97316)')
-    expect(sw).toContain('public static let extraLarge: CGFloat = 28')
-    expect(sw).toContain('public static let bodyLarge = TypeToken(size: 16, line: 24')
-    expect(sw).toContain('weight: .semibold')
+    expect(sw).toContain('public static let primary = Color(hex: 0xEE6417)')
+    expect(sw).toContain('public static let scrim = Color(hex: 0x2E3236, opacity: 0.48)')
+    expect(sw).toContain('public static let radiusSheet: CGFloat = 28')
+    expect(sw).toContain(
+      'public static let titleScreen = TypeToken(size: 26, line: 32, weight: .bold)',
+    )
+    expect(sw).toContain(
+      'public static let chip = TypeToken(size: 14, line: nil, weight: .semibold)',
+    )
+    expect(sw).toContain(
+      'ShadowLayer(x: 0, y: 6, blur: 16, color: Color(hex: 0xEE6417, opacity: 0.35))',
+    )
   })
 
   it('todas las salidas dicen que están generadas y de dónde', () => {
@@ -66,10 +87,22 @@ describe('parseTokens (rechaza lo malformado)', () => {
     expect(() => parseTokens(bad)).toThrow(/color\.brand/)
   })
 
+  it('un nombre repetido entre grupos', () => {
+    const bad = clone()
+    bad.spacing.primary = { value: 1 }
+    expect(() => parseTokens(bad)).toThrow(/primary/)
+  })
+
+  it('un alfa fuera de 0 a 1', () => {
+    const bad = clone()
+    bad.color.scrim.alpha = 2
+    expect(() => parseTokens(bad)).toThrow(/color.scrim/)
+  })
+
   it('un peso fuera de 400-700', () => {
     const bad = clone()
-    bad.type.bodyLarge.weight = 300
-    expect(() => parseTokens(bad)).toThrow(/type\.bodyLarge/)
+    bad.type.body.weight = 300
+    expect(() => parseTokens(bad)).toThrow(/type.body/)
   })
 
   it('un nombre que no es camelCase', () => {

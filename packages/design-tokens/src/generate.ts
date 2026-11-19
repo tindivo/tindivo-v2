@@ -1,23 +1,33 @@
 /**
- * Genera las salidas de diseño de Tindivo (CSS, Kotlin, Swift) desde `tokens.json`, la única fuente.
- * Es una función pura de los tokens: mismo JSON, mismos bytes. Sin dependencias.
+ * Genera las salidas de diseño de Tindivo (CSS, Kotlin, Swift) desde `tokens.json`, que a su vez refleja
+ * `Docs/negocio/sistema-de-diseno.md`. Es una función pura de los tokens: mismo JSON, mismos bytes. Sin dependencias.
  */
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 export interface ColorToken {
   value: string
-  discrepancy?: string
+  /** 0 a 1; si falta, opaco. */
+  alpha?: number
 }
 export interface NumberToken {
   value: number
-  discrepancy?: string
 }
 export interface TypeToken {
   size: number
-  line: number
+  /** Si falta, el canon no fija interlínea. */
+  line?: number
   weight: 400 | 500 | 600 | 700
-  tracking: number
+}
+export interface ShadowLayer {
+  x: number
+  y: number
+  blur: number
+  color: string
+  alpha: number
+}
+export interface ElevationToken {
+  layers: ShadowLayer[]
 }
 export interface Tokens {
   version: number
@@ -27,6 +37,7 @@ export interface Tokens {
   radius: Record<string, NumberToken>
   spacing: Record<string, NumberToken>
   type: Record<string, TypeToken>
+  elevation: Record<string, ElevationToken>
 }
 
 export const PACKAGE_ROOT = fileURLToPath(new URL('../', import.meta.url))
@@ -39,22 +50,26 @@ function fail(path: string, why: string): never {
   throw new Error(`tokens.json: ${path} ${why}`)
 }
 
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+const isAlpha = (v: unknown): v is number => isNum(v) && v >= 0 && v <= 1
+
 function group<T>(
   raw: unknown,
   name: string,
+  seen: Set<string>,
   check: (path: string, v: Record<string, unknown>) => void,
 ): Record<string, T> {
   if (typeof raw !== 'object' || raw === null) fail(name, 'debe ser un objeto')
   for (const [key, v] of Object.entries(raw)) {
     const path = `${name}.${key}`
     if (!NAME.test(key)) fail(path, 'el nombre debe ser camelCase')
+    if (seen.has(key)) fail(path, 'el nombre ya existe en otro grupo (los nombres son únicos)')
+    seen.add(key)
     if (typeof v !== 'object' || v === null) fail(path, 'debe ser un objeto')
     check(path, v as Record<string, unknown>)
   }
   return raw as Record<string, T>
 }
-
-const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 /** Valida la forma de `tokens.json`; lanza con la ruta del token que falla. */
 export function parseTokens(raw: unknown): Tokens {
@@ -62,20 +77,30 @@ export function parseTokens(raw: unknown): Tokens {
   if (r?.version !== 1) fail('version', 'debe ser 1')
   const font = r.font as { family?: unknown } | undefined
   if (typeof font?.family !== 'string' || font.family === '') fail('font.family', 'falta')
-  const color = group<ColorToken>(r.color, 'color', (p, v) => {
+  const seen = new Set<string>()
+  const color = group<ColorToken>(r.color, 'color', seen, (p, v) => {
     if (typeof v.value !== 'string' || !HEX.test(v.value)) fail(p, 'debe ser #RRGGBB en mayúsculas')
+    if (v.alpha !== undefined && !isAlpha(v.alpha)) fail(p, 'el alfa va de 0 a 1')
   })
   const num = (p: string, v: Record<string, unknown>) => {
     if (!isNum(v.value) || v.value < 0) fail(p, 'debe ser un número >= 0')
   }
-  const radius = group<NumberToken>(r.radius, 'radius', num)
-  const spacing = group<NumberToken>(r.spacing, 'spacing', num)
-  const type = group<TypeToken>(r.type, 'type', (p, v) => {
-    if (!isNum(v.size) || !isNum(v.line) || !isNum(v.tracking)) {
-      fail(p, 'size, line y tracking son números')
-    }
+  const radius = group<NumberToken>(r.radius, 'radius', seen, num)
+  const spacing = group<NumberToken>(r.spacing, 'spacing', seen, num)
+  const type = group<TypeToken>(r.type, 'type', seen, (p, v) => {
+    if (!isNum(v.size)) fail(p, 'size debe ser un número')
+    if (v.line !== undefined && !isNum(v.line)) fail(p, 'line debe ser un número')
     if (!WEIGHTS.includes(v.weight as number)) {
       fail(p, 'el peso debe ser 400, 500, 600 o 700 (la fuente variable)')
+    }
+  })
+  const elevation = group<ElevationToken>(r.elevation, 'elevation', seen, (p, v) => {
+    if (!Array.isArray(v.layers) || v.layers.length === 0) fail(p, 'necesita al menos una capa')
+    for (const layer of v.layers as Record<string, unknown>[]) {
+      const ok = [layer.x, layer.y, layer.blur].every(isNum) && isAlpha(layer.alpha)
+      if (!ok || typeof layer.color !== 'string' || !HEX.test(layer.color)) {
+        fail(p, 'cada capa lleva x, y, blur, color #RRGGBB y alpha de 0 a 1')
+      }
     }
   })
   return {
@@ -86,6 +111,7 @@ export function parseTokens(raw: unknown): Tokens {
     radius,
     spacing,
     type,
+    elevation,
   }
 }
 
@@ -94,11 +120,22 @@ export function loadTokens(): Tokens {
 }
 
 const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
+const rgb = (hex: string) => [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16))
+const alphaByte = (a: number) =>
+  Math.round(a * 255)
+    .toString(16)
+    .toUpperCase()
+    .padStart(2, '0')
 
 const HEADER = [
-  'GENERADO por packages/design-tokens/src/cli.ts desde packages/design-tokens/tokens.json.',
-  'No se edita a mano: se cambia tokens.json y se corre `pnpm tokens:build`.',
+  'GENERADO por packages/design-tokens/src/cli.ts desde packages/design-tokens/tokens.json',
+  '(que refleja Docs/negocio/sistema-de-diseno.md). No se edita a mano: se cambia el JSON y se corre `pnpm tokens:build`.',
 ]
+
+function cssColor(hex: string, alpha?: number): string {
+  if (alpha === undefined) return hex.toLowerCase()
+  return `rgba(${rgb(hex).join(', ')}, ${alpha})`
+}
 
 function css(t: Tokens): string {
   const l = [
@@ -109,17 +146,21 @@ function css(t: Tokens): string {
     `  --tindivo-font-family: '${t.font.family}';`,
   ]
   for (const [k, v] of Object.entries(t.color)) {
-    l.push(`  --tindivo-color-${kebab(k)}: ${v.value.toLowerCase()};`)
+    l.push(`  --tindivo-${kebab(k)}: ${cssColor(v.value, v.alpha)};`)
   }
-  for (const [k, v] of Object.entries(t.radius))
-    l.push(`  --tindivo-radius-${kebab(k)}: ${v.value}px;`)
-  for (const [k, v] of Object.entries(t.spacing)) {
-    l.push(`  --tindivo-spacing-${kebab(k)}: ${v.value}px;`)
-  }
+  for (const [k, v] of Object.entries(t.radius)) l.push(`  --tindivo-${kebab(k)}: ${v.value}px;`)
+  for (const [k, v] of Object.entries(t.spacing)) l.push(`  --tindivo-${kebab(k)}: ${v.value}px;`)
   for (const [k, v] of Object.entries(t.type)) {
-    const p = `--tindivo-type-${kebab(k)}`
-    l.push(`  ${p}-size: ${v.size}px;`, `  ${p}-line: ${v.line}px;`)
-    l.push(`  ${p}-weight: ${v.weight};`, `  ${p}-tracking: ${v.tracking}px;`)
+    const p = `--tindivo-${kebab(k)}`
+    l.push(`  ${p}-size: ${v.size}px;`)
+    l.push(`  ${p}-line: ${v.line === undefined ? 'normal' : `${v.line}px`};`)
+    l.push(`  ${p}-weight: ${v.weight};`)
+  }
+  for (const [k, v] of Object.entries(t.elevation)) {
+    const layers = v.layers.map(
+      (s) => `${s.x}${s.x ? 'px' : ''} ${s.y}px ${s.blur}px ${cssColor(s.color, s.alpha)}`,
+    )
+    l.push(`  --tindivo-${kebab(k)}: ${layers.join(', ')};`)
   }
   l.push('}', '')
   return l.join('\n')
@@ -151,7 +192,14 @@ function kotlin(t: Tokens): string {
     '    val size: TextUnit,',
     '    val line: TextUnit,',
     '    val weight: FontWeight,',
-    '    val tracking: TextUnit,',
+    ')',
+    '',
+    '/** Una capa de sombra; una elevación es una lista de capas. */',
+    'data class ShadowLayer(',
+    '    val x: Dp,',
+    '    val y: Dp,',
+    '    val blur: Dp,',
+    '    val color: Color,',
     ')',
     '',
     'object TindivoTokens {',
@@ -160,7 +208,8 @@ function kotlin(t: Tokens): string {
     '    object Colors {',
   ]
   for (const [k, v] of Object.entries(t.color)) {
-    l.push(`        val ${k}: Color = Color(0xFF${v.value.slice(1)})`)
+    const a = v.alpha === undefined ? 'FF' : alphaByte(v.alpha)
+    l.push(`        val ${k}: Color = Color(0x${a}${v.value.slice(1)})`)
   }
   l.push('    }', '', '    object Radius {')
   for (const [k, v] of Object.entries(t.radius)) l.push(`        val ${k}: Dp = ${v.value}.dp`)
@@ -168,10 +217,18 @@ function kotlin(t: Tokens): string {
   for (const [k, v] of Object.entries(t.spacing)) l.push(`        val ${k}: Dp = ${v.value}.dp`)
   l.push('    }', '', '    object Typography {')
   for (const [k, v] of Object.entries(t.type)) {
-    const w = `FontWeight.${KT_WEIGHT[v.weight]}`
+    const line = v.line === undefined ? 'TextUnit.Unspecified' : `${v.line}.sp`
     l.push(
-      `        val ${k} = TypeToken(size = ${v.size}.sp, line = ${v.line}.sp, weight = ${w}, tracking = ${v.tracking}.sp)`,
+      `        val ${k} = TypeToken(size = ${v.size}.sp, line = ${line}, weight = FontWeight.${KT_WEIGHT[v.weight]})`,
     )
+  }
+  l.push('    }', '', '    object Elevation {')
+  for (const [k, v] of Object.entries(t.elevation)) {
+    const layers = v.layers.map(
+      (s) =>
+        `ShadowLayer(x = ${s.x}.dp, y = ${s.y}.dp, blur = ${s.blur}.dp, color = Color(0x${alphaByte(s.alpha)}${s.color.slice(1)}))`,
+    )
+    l.push(`        val ${k} = listOf(${layers.join(', ')})`)
   }
   l.push('    }', '}', '')
   return l.join('\n')
@@ -191,22 +248,29 @@ function swift(t: Tokens): string {
     '',
     'import SwiftUI',
     '',
-    '/// Un estilo de texto: la familia (Geist) la pone quien lo usa.',
+    '/// Un estilo de texto: la familia (Geist) la pone quien lo usa. `line` es nil si el canon no la fija.',
     'public struct TypeToken: Sendable {',
     '    public let size: CGFloat',
-    '    public let line: CGFloat',
+    '    public let line: CGFloat?',
     '    public let weight: Font.Weight',
-    '    public let tracking: CGFloat',
+    '}',
+    '',
+    '/// Una capa de sombra; una elevación es un arreglo de capas.',
+    'public struct ShadowLayer: Sendable {',
+    '    public let x: CGFloat',
+    '    public let y: CGFloat',
+    '    public let blur: CGFloat',
+    '    public let color: Color',
     '}',
     '',
     'extension Color {',
-    '    fileprivate init(hex: UInt32) {',
+    '    fileprivate init(hex: UInt32, opacity: Double = 1) {',
     '        self.init(',
     '            .sRGB,',
     '            red: Double((hex >> 16) & 0xFF) / 255,',
     '            green: Double((hex >> 8) & 0xFF) / 255,',
     '            blue: Double(hex & 0xFF) / 255,',
-    '            opacity: 1',
+    '            opacity: opacity',
     '        )',
     '    }',
     '}',
@@ -217,7 +281,8 @@ function swift(t: Tokens): string {
     '    public enum Colors {',
   ]
   for (const [k, v] of Object.entries(t.color)) {
-    l.push(`        public static let ${k} = Color(hex: 0x${v.value.slice(1)})`)
+    const o = v.alpha === undefined ? '' : `, opacity: ${v.alpha}`
+    l.push(`        public static let ${k} = Color(hex: 0x${v.value.slice(1)}${o})`)
   }
   l.push('    }', '', '    public enum Radius {')
   for (const [k, v] of Object.entries(t.radius)) {
@@ -229,9 +294,18 @@ function swift(t: Tokens): string {
   }
   l.push('    }', '', '    public enum Typography {')
   for (const [k, v] of Object.entries(t.type)) {
+    const line = v.line === undefined ? 'nil' : String(v.line)
     l.push(
-      `        public static let ${k} = TypeToken(size: ${v.size}, line: ${v.line}, weight: .${SW_WEIGHT[v.weight]}, tracking: ${v.tracking})`,
+      `        public static let ${k} = TypeToken(size: ${v.size}, line: ${line}, weight: .${SW_WEIGHT[v.weight]})`,
     )
+  }
+  l.push('    }', '', '    public enum Elevation {')
+  for (const [k, v] of Object.entries(t.elevation)) {
+    const layers = v.layers.map(
+      (s) =>
+        `ShadowLayer(x: ${s.x}, y: ${s.y}, blur: ${s.blur}, color: Color(hex: 0x${s.color.slice(1)}, opacity: ${s.alpha}))`,
+    )
+    l.push(`        public static let ${k}: [ShadowLayer] = [${layers.join(', ')}]`)
   }
   l.push('    }', '}', '')
   return l.join('\n')
