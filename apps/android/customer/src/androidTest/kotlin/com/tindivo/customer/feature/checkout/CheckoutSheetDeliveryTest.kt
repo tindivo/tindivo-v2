@@ -304,6 +304,7 @@ class CheckoutSheetDeliveryTest {
                         configService = config,
                         sessionStore = session,
                         debounce = QuoteDebounce { },
+                        gps = CheckoutGps { null },
                     )
                 }
             }

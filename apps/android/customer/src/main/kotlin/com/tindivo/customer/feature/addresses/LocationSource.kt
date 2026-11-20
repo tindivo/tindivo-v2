@@ -4,6 +4,8 @@ package com.tindivo.customer.feature.addresses
 internal sealed interface LocationReading {
     data class Found(
         val point: GeoPoint,
+        /** La precisión en metros que dio el proveedor; `null` si no la dio. */
+        val accuracyM: Float? = null,
     ) : LocationReading
 
     /** El GPS está encendido pero no dio una posición a tiempo. */

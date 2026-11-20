@@ -81,7 +81,11 @@ internal class FusedLocationSource
     }
 
 private fun Location?.toReading(): LocationReading =
-    if (this == null) LocationReading.NoFix else LocationReading.Found(GeoPoint(latitude, longitude))
+    if (this == null) {
+        LocationReading.NoFix
+    } else {
+        LocationReading.Found(GeoPoint(latitude, longitude), if (hasAccuracy()) accuracy else null)
+    }
 
 /** Cómo falló la lectura: sin permiso (lo quitaron en pleno vuelo), sin Play services útil o sin posición. */
 private fun Exception.toReading(): LocationReading =

@@ -7,6 +7,7 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.core.network.generated.model.CreateOrder201ResponseData
 import com.tindivo.core.network.generated.model.CreateOrderRequest
+import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartStore
@@ -46,6 +47,7 @@ class CheckoutViewModel
         private val sessionStore: SessionStore,
         private val debounce: QuoteDebounce,
         private val configService: ConfigService,
+        private val gps: CheckoutGps,
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(CheckoutUiState())
         val state: StateFlow<CheckoutUiState> = mutableState.asStateFlow()
@@ -55,6 +57,13 @@ class CheckoutViewModel
         private var lastIntent: String? = null
         private var loadedFor: String? = null
         private var lastFingerprint: String? = null
+
+        /**
+         * La evidencia de ubicación ya leída para un intento. Un reintento del mismo pedido (misma cuenta, misma bolsa,
+         * mismo método de pago) reusa la lectura: la clave de idempotencia es la misma y el servidor rechaza esa clave
+         * con un cuerpo distinto. Se olvida al cambiar de cuenta y al crearse el pedido.
+         */
+        private var gpsCapture: GpsCapture? = null
 
         /**
          * Cambia con cada cierre o cambio de cuenta. La carga, las cotizaciones y el envío anotan la que vieron al
@@ -126,6 +135,7 @@ class CheckoutViewModel
             loadJob = null
             lastIntent = null
             loadedFor = null
+            gpsCapture = null
             val empty = cart?.isEmpty() != false
             mutableState.update {
                 CheckoutUiState(
@@ -485,7 +495,10 @@ class CheckoutViewModel
             form: CheckoutUiState,
             quote: QuoteView,
         ) {
-            val request = if (current == null) null else buildOrderRequest(form, current, quote)
+            // La ubicación es evidencia, nunca un requisito: sin permiso o sin señal el pedido sale igual (CUS-CHK-009).
+            val evidence = if (current == null) null else evidenceFor(account, current, form.pay)
+            if (!isCurrent(started, account)) return
+            val request = if (current == null) null else buildOrderRequest(form, current, quote, evidence)
             if (current == null || request == null) {
                 stop(CheckoutMessage.Generic)
                 return
@@ -521,6 +534,18 @@ class CheckoutViewModel
                     }
                 }
             }
+        }
+
+        private suspend fun evidenceFor(
+            account: String,
+            bag: Cart,
+            pay: PayMethod?,
+        ): CreateOrderRequestGpsValidation? {
+            val key = GpsKey(account, bag.fingerprint(), pay)
+            gpsCapture?.takeIf { it.key == key }?.let { return it.evidence }
+            val evidence = gps.capture(pay)
+            gpsCapture = GpsCapture(key, evidence)
+            return evidence
         }
 
         /**
@@ -583,6 +608,7 @@ class CheckoutViewModel
 
         // El pedido existe y el libro ya vació la bolsa (con `sending` aún activo, así que no parpadeó «bolsa vacía»).
         private fun opened(orderId: String) {
+            gpsCapture = null
             mutableState.update { it.copy(phase = CheckoutPhase.Opening, createdOrderId = orderId, sending = false) }
         }
 
@@ -604,3 +630,16 @@ class CheckoutViewModel
             }
         }
     }
+
+private data class GpsKey(
+    val account: String,
+    val fingerprint: String,
+    val pay: PayMethod?,
+)
+
+private class GpsCapture(
+    val key: GpsKey,
+    val evidence: CreateOrderRequestGpsValidation?,
+) {
+    override fun toString(): String = "GpsCapture(***)"
+}

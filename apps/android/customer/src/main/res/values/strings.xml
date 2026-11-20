@@ -199,6 +199,7 @@
 
     <string name="order_hero_received">Pedido recibido</string>
     <string name="order_hero_received_sub">Estamos confirmándolo con el restaurante</string>
+    <string name="order_hero_call_to_confirm_sub">Te llamaremos para confirmar tu pedido</string>
     <string name="order_hero_awaiting_availability_sub">Esperando confirmación de disponibilidad</string>
     <string name="order_hero_pay_now_sub">Restaurante confirmó. Paga ahora</string>
     <string name="order_hero_verifying_proof_sub">Verificando tu comprobante de pago</string>

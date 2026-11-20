@@ -12,6 +12,7 @@ import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
+import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartLine
@@ -171,6 +172,12 @@ abstract class CheckoutHarness {
 
     protected fun cart(quantity: Int = 2) = Cart(BUSINESS_ID, "Pollería Don Lucho", listOf(line(quantity)))
 
+    /** Lo que contesta la lectura de ubicación de la prueba; por defecto, sin permiso: nada que mandar. */
+    protected var gpsAnswer: (PayMethod?) -> CreateOrderRequestGpsValidation? = { null }
+
+    /** Con qué método de pago se leyó la ubicación, en orden. */
+    protected val gpsReads = mutableListOf<PayMethod?>()
+
     /** Cada llamada arma un libro nuevo sobre el mismo almacén: así se simula reabrir la pantalla o la app. */
     protected fun viewModel(): CheckoutViewModel =
         CheckoutViewModel(
@@ -181,6 +188,11 @@ abstract class CheckoutHarness {
             sessionStore = session,
             debounce = QuoteDebounce { },
             configService = configService,
+            gps =
+                CheckoutGps { pay ->
+                    gpsReads += pay
+                    gpsAnswer(pay)
+                },
         )
 
     protected companion object {
