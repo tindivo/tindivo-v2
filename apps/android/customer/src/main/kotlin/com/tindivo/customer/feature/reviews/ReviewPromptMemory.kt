@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.reviews
 
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,15 +14,15 @@ import javax.inject.Singleton
 internal class ReviewPromptMemory
     @Inject
     constructor() {
-        private val asked: MutableSet<String> = ConcurrentHashMap.newKeySet()
+        private val asked: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
 
-        fun wasAsked(orderId: String): Boolean = orderId in asked
+        fun wasAsked(orderId: UUID): Boolean = orderId in asked
 
-        fun markAsked(orderId: String) {
+        fun markAsked(orderId: UUID) {
             asked.add(orderId)
         }
 
-        fun forget(orderId: String) {
+        fun forget(orderId: UUID) {
             asked.remove(orderId)
         }
     }
