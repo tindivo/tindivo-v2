@@ -17,7 +17,11 @@ internal const val PROOF_JPEG_QUALITY = 85
  * 10) hasta que quepa. Si ni a la última cabe, es [EncodedProof.TooLarge]. El peso objetivo (150 a 500 KB) lo da la
  * calidad 85 en una captura de pantalla: no se fuerza hacia arriba ni hacia abajo.
  */
-internal val PROOF_QUALITY_STEPS = listOf(PROOF_JPEG_QUALITY, 75, 65, 55, 45)
+internal val PROOF_QUALITY_STEPS: List<Int> =
+    generateSequence(PROOF_JPEG_QUALITY) { it - QUALITY_STEP }.take(QUALITY_STEP_COUNT).toList()
+
+private const val QUALITY_STEP = 10
+private const val QUALITY_STEP_COUNT = 5
 
 /** El tope del comprobante que sale de la app (CUS-PAY-003): 1,5 MB. El servidor admite hasta 15 MB (D-40). */
 internal const val MAX_PROOF_BYTES = 1_500_000L

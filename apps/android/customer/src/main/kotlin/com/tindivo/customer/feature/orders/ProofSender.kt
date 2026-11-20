@@ -94,6 +94,9 @@ internal class ProofSender(
         override fun toString(): String = "Uploaded($REDACTED)"
     }
 
+    /** El PUT se cortó por la red: no es un resultado final, [putToStorage] decide si se reintenta. */
+    internal data object Dropped : UploadResult
+
     internal data class Halted(
         val step: SendStep,
     ) : UploadResult
@@ -117,31 +120,46 @@ internal class ProofSender(
         jpeg: ByteArray,
         stillCurrent: () -> Boolean,
     ): UploadResult {
+        var result = uploadOnce(account, orderId, photo, jpeg, stillCurrent)
         var attempt = 1
-        while (true) {
-            val slot =
-                when (val result = gateway.uploadSlot(account, orderId)) {
-                    is ApiResult.Success -> result.data
-                    is ApiResult.Failure -> return Halted(SendStep.ApiFailed(result.error, confirming = false))
-                }
-            if (!stillCurrent()) return Halted(SendStep.Abandoned)
-            when (gateway.upload(slot, jpeg)) {
-                UploadOutcome.Uploaded -> {
-                    if (stillCurrent()) pending = PendingConfirmation(photo, slot.path)
-                    return Uploaded(slot.path)
-                }
+        // Una caída de red se reintenta UNA vez sola (CUS-PAY-003), con otra URL firmada: la anterior es de un solo uso.
+        while (result == Dropped && attempt < MAX_UPLOAD_ATTEMPTS && stillCurrent()) {
+            attempt++
+            result = uploadOnce(account, orderId, photo, jpeg, stillCurrent)
+        }
+        return when {
+            result != Dropped -> result
+            !stillCurrent() -> Halted(SendStep.Abandoned)
+            else -> Halted(SendStep.Stopped(SendProblem.Offline))
+        }
+    }
 
-                // Sin saber si llegó: se pide otra URL (la firmada es de un solo uso) y se sube de nuevo, UNA vez
-                // sola (CUS-PAY-003); si vuelve a fallar, queda para que la persona reintente.
-                is UploadOutcome.Network -> {
-                    if (attempt >= MAX_UPLOAD_ATTEMPTS) return Halted(SendStep.Stopped(SendProblem.Offline))
-                    attempt++
-                    if (!stillCurrent()) return Halted(SendStep.Abandoned)
-                }
+    /** Un intento: pide la URL firmada y hace el PUT. [Dropped] es una caída de red, sin saber si el archivo llegó. */
+    private suspend fun uploadOnce(
+        account: String,
+        orderId: UUID,
+        photo: String,
+        jpeg: ByteArray,
+        stillCurrent: () -> Boolean,
+    ): UploadResult {
+        val slot =
+            when (val result = gateway.uploadSlot(account, orderId)) {
+                is ApiResult.Success -> result.data
+                is ApiResult.Failure -> return Halted(SendStep.ApiFailed(result.error, confirming = false))
+            }
+        if (!stillCurrent()) return Halted(SendStep.Abandoned)
+        return when (gateway.upload(slot, jpeg)) {
+            UploadOutcome.Uploaded -> {
+                if (stillCurrent()) pending = PendingConfirmation(photo, slot.path)
+                Uploaded(slot.path)
+            }
 
-                is UploadOutcome.Rejected -> {
-                    return Halted(SendStep.Stopped(SendProblem.Generic))
-                }
+            is UploadOutcome.Network -> {
+                Dropped
+            }
+
+            is UploadOutcome.Rejected -> {
+                Halted(SendStep.Stopped(SendProblem.Generic))
             }
         }
     }
