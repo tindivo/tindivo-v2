@@ -22,7 +22,7 @@ codigo:
 
 La tarjeta vive dentro del seguimiento; no es una pantalla aparte. Qué ofrece depende de quién es el cliente, y eso lo decide el servidor:
 
-- **Cliente confiable** (eligió «Yape o Plin»): «Subir captura» es opcional. La alternativa es «Pagaré al motorizado al llegar». El pedido avanza igual sin captura (CUS-PAY-014).
+- **Cliente confiable** (puede pagar con «Efectivo» o con «Yape o Plin»; esto es cuando eligió «Yape o Plin»): «Subir captura» es opcional. La alternativa es «Pagaré al motorizado al llegar». El pedido avanza igual sin captura (CUS-PAY-014).
 - **Cliente no confiable** (prepago): la captura es obligatoria y se sube en `pagos/comprobante`.
 
 ## Contenido, de arriba abajo
@@ -57,4 +57,4 @@ La tarjeta entra con subida de 8 px y fundido en 200 ms. «Copiar» cambia a «C
 
 ## Diferencias por plataforma
 
-- Hoy Android no tiene esta tarjeta: el cliente confiable con «Yape o Plin» paga al motorizado en la puerta (intención de pago `pending_yape`) y no ve ninguna cuenta del negocio. Que el confiable pague al negocio y pueda subir captura necesita el servidor del pago único (PR #112), que todavía no está en `develop`.
+- Hoy Android no tiene esta tarjeta: el cliente confiable con «Yape o Plin» paga al motorizado en la puerta (intención de pago `pending_yape`) y no ve ninguna cuenta del negocio. Que el confiable pague al negocio y pueda subir captura necesita el servidor del pago único (PR #112), que todavía no está en `develop`; Jesús decidió el 2026-11-19 (opción A) que ese servidor se construye antes que la app. La captura del confiable la ven el negocio, el motorizado y el admin; solo el negocio confirma el ingreso.

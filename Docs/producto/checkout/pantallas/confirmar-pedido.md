@@ -21,7 +21,7 @@ codigo:
 | **Se sale hacia** | Pedido creado: el seguimiento, **reemplazando** esta pantalla (CUS-CHK-011); mientras el negocio no acepte, `TRK-esperando-aceptacion`. Volver: la bolsa. |
 
 - Las hojas de dirección y de celular viven dentro del checkout: `direcciones/elegir-direccion` para «Cambiar» la dirección y la hoja de verificación del celular de la capacidad de acceso. Cambiar el celular exige verificarlo de nuevo.
-- Con un caso de pago sin resolver no se entra: se lleva al caso (CUS-CHK-019, capacidad `pagos`).
+- Con un caso de pago sin resolver, `createOrder` devuelve un código de error y la app solo lo muestra y lleva al caso (CUS-CHK-019, capacidad `pagos`); no hay regla en el cliente.
 
 ## Contenido, de arriba abajo
 
@@ -38,6 +38,7 @@ codigo:
    | **No confiable** por faltas o riesgo (`risk_blocked`) | «Yape o Plin por adelantado» y «Pagas apenas el local acepte» | «Efectivo», con candado y el motivo **una sola vez**: «Por pedidos anteriores sin recibir» |
    | **No confiable por monto** (total con envío sobre el umbral) | igual | motivo: «Pedido mayor a S/ [umbral]» |
    | **Sin historial con GPS en cobertura** (`no_history`) | las del confiable; el pedido pasa a `validando` (la cajera llama) | ninguna; bajo el botón: «Te llamaremos para confirmar tu pedido» y, debajo, el número verificado (CUS-CHK-027) |
+   | **Sin historial y sin GPS** (permiso negado o sin señal) | prepago, o llamada (regla 6 de [`antifraude.md`](../../../negocio/antifraude.md)); **nunca se le impide pedir** | «Efectivo», con el motivo una sola vez, si le toca prepago |
 
    - La opción elegida se expande; las demás quedan en una línea.
    - **Efectivo elegido:** «¿Con cuánto pagas?» con chips «Exacto», «S/ 20», «S/ 50», «S/ 100» y «Otro», y las reglas de billete y vuelto de CUS-CHK-008. Si el vuelto de la noche es cero: «Esta noche el negocio no tiene vuelto». El chip «S/ 20» sigue como está hasta que Jesús lo decida (punto Y de `Docs/trabajo/app-cliente/decisiones-abiertas.md`).
@@ -55,8 +56,9 @@ codigo:
 | Revalidando la bolsa | Botón deshabilitado con «Estamos verificando tu bolsa con el menú actual.» | CUS-CHK-014 |
 | Falta un dato | Botón con la acción («Agrega tu dirección», «Verifica tu celular», «¿Con cuánto pagas?») | CUS-CHK-013 |
 | GPS dudoso con historial y pago al recibir | Hoja de bloqueo: «Reintentar» o «Pagar por adelantado» | CUS-CHK-009 |
+| Permiso de ubicación negado o sin GPS | El pedido sigue; el cliente pasa a prepago o a llamada según el servidor | CUS-CHK-009 |
 | Negocio cerrado o pausado | Aviso y botón deshabilitado | CUS-CAT-012 y CUS-CAT-014 (catálogo, aún sin migrar) |
-| Caso de pago sin resolver | No se entra: se lleva al caso | CUS-CHK-019 |
+| Caso de pago sin resolver | El servidor responde con un código de error al crear el pedido; la app lo muestra y lleva al caso, sin decidir nada | CUS-CHK-019 |
 | Cuenta bloqueada | Vista de bloqueo con soporte por WhatsApp | CUS-CHK-012 |
 | Error del servidor | Mensaje comprensible según el `code`, nunca el texto crudo | CUS-CHK-020 |
 | El total o las opciones cambiaron | La app lo dice y pide revisar antes de volver a confirmar | CUS-CHK-007 |
@@ -70,4 +72,4 @@ Botón: escala 0,97 al tocar. Opción elegida: se expande en 200 ms. Opciones en
 ## Diferencias por plataforma
 
 - La web del cliente se apaga: no recibe el rediseño.
-- En Android el recojo hoy conserva la pregunta «¿Vas al local ahora?», y la app aún no lee el GPS; ambas cosas están en los defectos de la capacidad.
+- En Android el recojo hoy conserva la pregunta «¿Vas al local ahora?», y la app aún no lee el GPS (se implementará: CUS-CHK-009 y CUS-CHK-027 siguen vigentes); ambas cosas están en los defectos de la capacidad.

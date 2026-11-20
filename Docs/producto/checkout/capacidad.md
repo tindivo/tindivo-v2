@@ -27,15 +27,16 @@ reglas: [customerPaymentIntents, isCustomerPaymentAllowed, pickupForcesPrepay, a
 - Los textos de monto («Subtotal», «Envío», «Total», el motivo del umbral, el vuelto) los revisa Jesús antes de implementar.
 - Reintento seguro: cada intento lleva su `Idempotency-Key`; Android guarda los intentos en un libro propio y se aparta a propósito de la web, que regenera la clave ante cualquier 4xx (CUS-CHK-010).
 - Trampa conocida: la vista de bloqueo se detecta hoy por el texto del error, no por un código (CUS-CHK-012); el servidor debe devolver un `code` y la app decidir por él.
-- Trampa conocida: la regla «caso de pago sin resolver» (CUS-CHK-019) solo existe calculada en el cliente web; las apps nativas necesitan que la decida el servidor (decisión para Jesús).
-- El pago único del cliente de confianza (PR #112) vale mientras siga el diseño aprobado; su parte de servidor aún no existe en el repo (ver `pagos`).
+- Trampa conocida: la regla «caso de pago sin resolver» (CUS-CHK-019) solo existe calculada en el cliente web. Decidido por Jesús el 2026-11-19 (opción A): `createOrder` devuelve un código de error con ese caso y la app solo lo muestra; no hay ninguna regla en el cliente. Ese código aún no existe en el servidor.
+- El pago único del cliente de confianza (PR #112) vale mientras siga el diseño aprobado: Jesús decidió el 2026-11-19 que su servidor se construye **antes** que la app; hoy aún no existe en el repo (ver `pagos`). El confiable puede pagar con «Efectivo» o con «Yape o Plin».
+- La app lee el GPS (CUS-CHK-009 y CUS-CHK-027 siguen vigentes). Las reglas de confianza son las de [`Docs/negocio/antifraude.md`](../../negocio/antifraude.md); aquí no se repiten. **Negar o no tener el GPS nunca impide pedir.**
 - iOS aún no empieza: `codigo.ios` vacío. La web del cliente se apaga y no se corrige.
 
 ## Requisitos
 
 | ID | Requisito | Fuente | ★ |
 |---|---|---|---|
-| CUS-CRT-008 | Antes de abrir el checkout, la app debe comprobar en orden: sesión, celular verificado, dirección válida (solo en delivery) y sin caso de pago pendiente. | `Docs/trabajo/app-cliente/requisitos/CRT.md` · `apps/customer/lib/order-gates.ts` | ★ |
+| CUS-CRT-008 | Antes de abrir el checkout, la app debe comprobar en orden: sesión, celular verificado y dirección válida (solo en delivery). El caso de pago sin resolver no lo calcula la app: lo informa el servidor al crear el pedido (CUS-CHK-019). | `Docs/trabajo/app-cliente/requisitos/CRT.md` · `apps/customer/lib/order-gates.ts` | ★ |
 | CUS-CHK-001 | La app debe mostrar el resumen: productos con sus opciones y nota. | `Docs/trabajo/app-cliente/requisitos/CHK.md` · `apps/customer/features/checkout/components/order-detail.tsx` | |
 | CUS-CHK-002 | La app debe exigir nombre y celular válidos antes de confirmar. | `CHK.md` · `packages/contracts/src/requests.ts` | ★ |
 | CUS-CHK-003 | La app debe ofrecer solo el método de entrega que admite el negocio. | `CHK.md` · `CUS-CAT-016` y `CUS-CAT-017` | |
@@ -43,7 +44,7 @@ reglas: [customerPaymentIntents, isCustomerPaymentAllowed, pickupForcesPrepay, a
 | CUS-CHK-006 | La app debe ofrecer solo las formas de pago que permite la regla del contrato para ese método de entrega, sin selector «Al recibir» / «Pagar ahora». | `CHK.md` (modificado por CUS-CHK-024 y CUS-CHK-028) · `customerPaymentIntents` | ★ |
 | CUS-CHK-007 | Cuando el servidor decide que el pago debe ser adelantado (total con envío sobre el umbral, faltas del cliente o recojo), la app debe forzar el prepago, apagar el efectivo y decir el motivo. | `CHK.md` · `Docs/negocio/antifraude.md` · `app_settings:prepay_threshold` · `app_settings:strikes` | ★ |
 | CUS-CHK-008 | Cuando el pago es efectivo en delivery, la app debe pedir con cuánto paga y validar el billete y el vuelto contra el tope del negocio esa noche, y volver a consultarlo al confirmar. | `CHK.md` · `app_settings:max_cash_bill` · `Docs/negocio/dinero.md` | ★ |
-| CUS-CHK-009 | La app debe capturar la ubicación en vivo al pedir, enviarla como evidencia del pedido y, si el cliente tiene historial y paga al recibir con una lectura dudosa, mostrar la hoja «reintentar / pagar por adelantado». En recojo el GPS no bloquea. | `CHK.md` (modificado por CUS-CHK-028) · `Docs/negocio/antifraude.md` | ★ |
+| CUS-CHK-009 | La app debe capturar la ubicación en vivo al pedir, enviarla como evidencia del pedido y, si el cliente tiene historial y paga al recibir con una lectura dudosa, mostrar la hoja «reintentar / pagar por adelantado». En recojo el GPS no bloquea. **Si el cliente niega el permiso o no hay GPS, nunca se le impide pedir: pasa a prepago (o a llamada) según la regla 6 de `Docs/negocio/antifraude.md`.** Qué cliente puede pagar al recibir lo decide el servidor con las reglas de ese documento (bloqueado, strikes, monto sobre S/ 80, compra previa, GPS en vivo dentro de San Jacinto con llamada, y si no hay nada, prepago o llamada); la app no las copia. | `CHK.md` (modificado por CUS-CHK-028) · [`Docs/negocio/antifraude.md`](../../negocio/antifraude.md) · Decisión de Jesús, 2026-11-19 (opción B) | ★ |
 | CUS-CHK-010 | La app debe crear el pedido con una clave de idempotencia por intento: la conserva si no sabe qué pasó (red, 5xx, plazo) y la cambia solo cuando el servidor confirma que no creó nada. | `CHK.md` · `Docs/planes/movil/contrato-rest.md` (`Idempotency-Key`) | ★ |
 | CUS-CHK-011 | Cuando se crea el pedido, la app debe vaciar la bolsa, sonar y abrir el seguimiento reemplazando esta pantalla. | `CHK.md` | |
 | CUS-CHK-012 | Cuando el servidor responde que la cuenta está bloqueada, la app debe mostrar la vista de bloqueo con el WhatsApp de soporte, decidiéndolo por el código de error y no por el texto. | `CHK.md` (defecto 3) | |
@@ -53,7 +54,7 @@ reglas: [customerPaymentIntents, isCustomerPaymentAllowed, pickupForcesPrepay, a
 | CUS-CHK-016 | La app debe mostrar el envío gratis de un plato cuando la bolsa lo incluya; solo lo pinta, decide el servidor. | `CHK.md` | |
 | CUS-CHK-017 | La app debe mostrar la promoción de envío gratis de lanzamiento cuando esté vigente. Diferido: la promoción venció el 2026-09-05 y se retoma con las promociones. | `CHK.md` · `app_settings:promo_free_delivery` | |
 | CUS-CHK-018 | Cuando el método es recojo, la app no debe enviar billete, dirección, referencia, notas ni coordenadas, y sí el `pickupTiming` que el servidor exige hoy (valor por decidir, ver «Decisiones para Jesús»). | `CHK.md` (modificado por CUS-CHK-028) · `packages/contracts/src/client-requests.ts` | ★ |
-| CUS-CHK-019 | Cuando el cliente tiene un caso de pago sin resolver, la app debe impedir el checkout y llevarlo al caso (CUS-PAY-008). | `CHK.md` · capacidad `pagos` | |
+| CUS-CHK-019 | Cuando el cliente tiene un caso de pago sin resolver, `createOrder` debe devolver un código de error propio y la app debe mostrarlo y llevar al cliente al caso (CUS-PAY-008); la app no aplica ninguna regla de plazo, apelación ni devolución. | `CHK.md` · capacidad `pagos` · Decisión de Jesús, 2026-11-19 (opción A) | |
 | CUS-CHK-020 | La app debe mostrar los errores del servidor con un mensaje comprensible escrito por la app y decidido por el `code`, nunca el texto crudo. | `CHK.md` (defecto 3) | |
 | CUS-CHK-023 | Cuando una forma de pago está en gris, la app debe decir el motivo una sola vez, con candado: «Por pedidos anteriores sin recibir» (faltas) o «Pedido mayor a S/ [umbral]» (monto). Al tocar una opción en gris, la línea del motivo vibra 150 ms. | `CHK.md` · Decisión de Jesús, 2026-11-16 | |
 | CUS-CHK-024 | La app debe presentar «¿Cómo pagas?» según la confianza que decide el servidor: al cliente confiable, «Efectivo» y «Yape o Plin»; al no confiable, «Yape o Plin por adelantado». El número se ve en el seguimiento cuando el negocio acepta. | `CHK.md` · Decisión de Jesús, 2026-11-17 (decisión 1) | ★ |
@@ -80,6 +81,8 @@ Retirados el 2026-11-17: CUS-CHK-004 (la pregunta «¿Vas al local ahora?», ree
 | CA-CHK-07 | Dado una bolsa en modo recojo, cuando el cliente abre «¿Cómo pagas?», entonces solo ve «Yape o Plin por adelantado», la app no pregunta «¿Vas al local ahora?» y crear el pedido con un pago al recibir devuelve 422. | CUS-CHK-028, CUS-CHK-006, CUS-ADR-014 |
 | CA-CHK-08 | Dado un pedido a domicilio con envío de S/ 2,50 y subtotal de S/ 31,00, entonces el resumen muestra Subtotal S/ 31.00, Envío S/ 2.50 y Total S/ 33.50. | CUS-CHK-026 |
 | CA-CHK-09 | Dado un cliente con decisión `trusted`, entonces «¿Cómo pagas?» muestra «Efectivo» y «Yape o Plin» y ningún selector «Al recibir» / «Pagar ahora». | CUS-CHK-024, CUS-CHK-006 |
+| CA-CHK-10 | Dado un cliente que niega el permiso de ubicación o sin GPS, cuando confirma el pedido, entonces la app lo envía igual (nunca queda bloqueado por no tener GPS) y ese cliente pasa a prepago, o a llamada según la regla 6 de `Docs/negocio/antifraude.md`; y dado un cliente con compra previa, entonces paga al recibir sin llamada aunque no haya GPS. | CUS-CHK-009 |
+| CA-CHK-11 | Dado un cliente con un caso de pago sin resolver, cuando confirma el pedido, entonces `createOrder` responde con el código de error de ese caso, la app muestra su mensaje y lleva al caso, y no hay ninguna regla de plazo ni de apelación en el cliente. | CUS-CHK-019, CUS-CRT-008 |
 | CA-CHK-P2 | Dado un cliente con decisión `risk_blocked`, cuando abre «¿Cómo pagas?», entonces solo «Yape o Plin por adelantado» se puede elegir, «Efectivo» aparece en gris con candado y el texto «Por pedidos anteriores sin recibir» aparece exactamente una vez. | CUS-CHK-023, CUS-CHK-024 |
 | CA-CHK-P3 | Dado «Efectivo» elegido, entonces «Yape o Plin» se muestra en una sola fila, sin subtítulo. | CUS-CHK-024 |
 
@@ -90,7 +93,7 @@ Retirados: CA-CHK-01 (recojo «más tarde» solo prepago) y CA-CHK-02 (pregunta 
 - Formas de pago permitidas por método de entrega: `customerPaymentIntents` y `isCustomerPaymentAllowed`.
 - Todo recojo desde la app es prepago: `pickupForcesPrepay`.
 - Umbral de prepago por monto: `app_settings:prepay_threshold`; lo aplica el servidor al cotizar y al crear el pedido.
-- Faltas que obligan al prepago y al bloqueo: `app_settings:strikes`; las lee el servidor (`Docs/negocio/antifraude.md`).
+- Faltas que obligan al prepago y al bloqueo: `app_settings:strikes`; las lee el servidor. Quién puede pagar al recibir: las seis reglas de [`Docs/negocio/antifraude.md`](../../negocio/antifraude.md).
 - Billete máximo del efectivo: `app_settings:max_cash_bill`; el vuelto de la noche lo devuelve la cotización.
 - Plazos del prepago (aceptación, pago, revisión): `app_settings:timers`.
 - Promoción de envío gratis de lanzamiento: `app_settings:promo_free_delivery`.
@@ -105,11 +108,11 @@ Estado en Android contrastado el 2026-11-19 contra `develop@25a6d537`. Solo lo q
 | 2 | CUS-CHK-024, CUS-CHK-006, CUS-CHK-025 | FALTA | Las opciones se agrupan «Al recibir» / «Antes de recibir» y «Yape o Plin» al motorizado sigue existiendo; sin logos ni rediseño de «¿Cómo pagas?». | `feature/checkout/CheckoutPaymentSection.kt` · `PaymentChoice.kt` |
 | 3 | CUS-CHK-023 | FALTA | Cada opción apagada repite su motivo; falta decirlo una sola vez, con candado y vibración. | `feature/checkout/CheckoutPaymentSection.kt` |
 | 4 | CUS-CHK-026 | FALTA | El resumen rotula la fila «Delivery» y no «Envío». | `feature/checkout/CheckoutTotalsSection.kt` |
-| 5 | CUS-CHK-009 | FALTA | No hay lectura de GPS ni hoja de bloqueo en el checkout. | `feature/checkout/` |
+| 5 | CUS-CHK-009 | FALTA | No hay lectura de GPS ni hoja de bloqueo en el checkout. Decidido el 2026-11-19: se implementa (no se difiere), y negar el GPS nunca impide pedir. | `feature/checkout/` |
 | 6 | CUS-CHK-027 | FALTA | No existe el texto de `validando`; la app tampoco manda GPS, así que un cliente sin historial no llega a ese estado. | `feature/checkout/` |
 | 7 | CUS-CHK-011 | FALTA | La bolsa se consume y se abre el seguimiento, pero no suena. | `feature/checkout/CheckoutViewModel.kt` |
 | 8 | CUS-CHK-012, CUS-CHK-020 | FALTA | El bloqueo se detecta con una expresión regular sobre el texto del error; los mensajes por código no cubren todos los códigos. | `feature/checkout/CheckoutReducers.kt` · `res/values/strings.xml` |
 | 9 | CUS-CHK-014 | FALTA | Solo hay «Calculando tu pedido…»; falta «Estamos verificando tu bolsa con el menú actual.». | `res/values/strings.xml` · `feature/checkout/CheckoutUiState.kt` |
 | 10 | CUS-CHK-015 | FALTA | La explicación del prepago cuenta los tres pasos pero no dice los plazos, y la app conserva el texto del recojo «más tarde» («no se devuelve»), que ya no existe. | `res/values/strings.xml` |
-| 11 | CUS-CHK-019, CUS-CRT-008 | FALTA | No hay compuerta de caso de pago sin resolver; la regla solo existe en el cliente web y debe decidirla el servidor. | `apps/customer/lib/payment-block.ts` |
+| 11 | CUS-CHK-019, CUS-CRT-008 | FALTA | No hay compuerta de caso de pago sin resolver; la regla solo existe en el cliente web. Decidido el 2026-11-19: `createOrder` devuelve un código de error y la app solo lo muestra; falta el código en el servidor y mostrarlo en la app. | `apps/customer/lib/payment-block.ts` |
 | 12 | CUS-CHK-017 | DIFIERE | Promoción vencida; se retoma con las promociones. | `res/values/strings.xml` (`checkout_promo_launch`) |

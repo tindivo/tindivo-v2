@@ -47,6 +47,8 @@ Es la pantalla de la **captura obligatoria**: la del cliente no confiable, o la 
 | Plazo vencido | «Se acabó el tiempo para pagar» y «Estamos revisando en qué quedó tu pedido.» | CUS-PAY-001 |
 | Sin conexión al enviar | «No pudimos enviarlo: revisa tu conexión. Tu captura sigue aquí.» | CUS-PAY-004 |
 | Imagen ilegible o muy pesada | «No pudimos leer esa imagen. Elige otra captura.» o «La imagen es demasiado pesada. Elige otra captura.» y «Elegir otra captura» | CUS-PAY-003 |
+| Android 8 con una foto HEIC | «No pudimos leer esa foto. Haz una captura de pantalla del pago y súbela de nuevo.» | CUS-PAY-003 |
+| Corte de red durante la subida (Android) | La app reintenta una vez sola; si vuelve a fallar: «No pudimos enviarlo: revisa tu conexión. Tu captura sigue aquí.» | CUS-PAY-003, CUS-PAY-004 |
 | El pedido ya no espera pago | Se retira la pantalla y se refresca el seguimiento: «Tu pedido ya no está esperando el pago. Estamos actualizando su estado.» | CUS-PAY-001 |
 | Sin cuenta publicada | «Todavía no vemos a qué número pagar. Vuelve a abrir tu pedido en un momento.» | CUS-PAY-002 |
 
@@ -56,4 +58,5 @@ Al abrir, la tarjeta de cuenta entra con subida de 8 px y fundido en 200 ms. «C
 
 ## Diferencias por plataforma
 
+- La captura sale siempre en JPEG, sin ubicación, en Android e iOS (CUS-PAY-003). iOS elige con PHPicker y recodifica a JPEG.
 - Hoy Android no tiene pantalla propia: la sección vive dentro del detalle del pedido y solo para el pedido que espera el pago. «Guardar» el QR necesita permiso o la API de medios: sin definir.
