@@ -27,6 +27,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
+import com.tindivo.customer.support.SupportViewModel
+import com.tindivo.customer.support.orderHelpLink
 import java.util.UUID
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */

@@ -433,7 +433,7 @@
     <string name="checkout_msg_options_changed">Cambiaron las opciones de tu pedido. Revísalas y vuelve a confirmar.</string>
 
     <string name="checkout_blocked_title">Cuenta en pausa</string>
-    <string name="checkout_blocked_message">Tu cuenta está temporalmente pausada por incidentes reiterados en las entregas. Escríbenos para regularizar tu situación y reactivarla.</string>
+    <string name="checkout_blocked_message">Tu cuenta está temporalmente pausada por incidentes reiterados en las entregas.</string>
     <string name="support_error_phrase">Si crees que hubo un error, escríbenos por WhatsApp.</string>
     <string name="checkout_blocked_whatsapp">Escribir por WhatsApp</string>
     <string name="checkout_blocked_home">Volver al inicio</string>

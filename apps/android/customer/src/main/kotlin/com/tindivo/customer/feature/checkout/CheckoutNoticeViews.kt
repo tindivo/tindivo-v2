@@ -16,8 +16,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.orders.SupportViewModel
-import com.tindivo.customer.feature.orders.accountErrorHelpLink
+import com.tindivo.customer.support.SupportViewModel
+import com.tindivo.customer.support.accountErrorHelpLink
+import com.tindivo.customer.support.openSafely
 
 @Composable
 internal fun SignInRequiredView(actions: CheckoutActions) {
@@ -73,7 +74,7 @@ internal fun BlockedView(
         Text(stringResource(R.string.checkout_blocked_message))
         Text(stringResource(R.string.support_error_phrase))
         reason?.let { Text(it) }
-        BigButton(R.string.checkout_blocked_whatsapp) { uriHandler.openUri(accountErrorHelpLink(number)) }
+        BigButton(R.string.checkout_blocked_whatsapp) { uriHandler.openSafely(accountErrorHelpLink(number)) }
         TextButton(onClick = actions.onSeeBusinesses, modifier = Modifier.heightIn(min = 48.dp)) {
             Text(stringResource(R.string.checkout_blocked_home))
         }

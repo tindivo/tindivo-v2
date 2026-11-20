@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.orders
+package com.tindivo.customer.support
 
 import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.ClientInfo
@@ -129,14 +129,13 @@ class SupportContactTest {
         }
 
     @Test
-    fun `CA-SUP-04 el respaldo es 51906550166 y esta escrito en un solo archivo de la app`() {
+    fun `CA-SUP-04 el respaldo es 51906550166 y su numero esta escrito en un solo archivo`() {
         assertEquals("51906550166", SUPPORT_FALLBACK_WHATSAPP)
-        val files =
-            File("src/main/kotlin")
-                .walkTopDown()
-                .filter { it.isFile && it.extension == "kt" && "51906550166" in it.readText() }
-                .map { it.name }
-                .toList()
+        val sources =
+            listOf(File("src/main/kotlin"), File("src/main/res"), File("build.gradle.kts"))
+                .flatMap { it.walkTopDown().filter(File::isFile).toList() }
+        // Con y sin el 51: el 906550166 suelto también cuenta como un número escrito a mano.
+        val files = sources.filter { "906550166" in it.readText() }.map { it.name }
         assertEquals(listOf("SupportContact.kt"), files)
     }
 
@@ -154,7 +153,7 @@ class SupportContactTest {
     }
 
     @Test
-    fun `CA-SUP-07 Ejercer mis derechos nombra los cuatro derechos`() {
+    fun `el mensaje de Ejercer mis derechos nombra los cuatro derechos`() {
         val text = URLDecoder.decode(arcoRightsLink("51987654321").substringAfter("?text="), "UTF-8")
 
         listOf("acceso", "rectificación", "cancelación", "oposición").forEach { assertTrue(it in text) }
@@ -162,13 +161,13 @@ class SupportContactTest {
     }
 
     @Test
-    fun `CA-SUP-05 los Terminos y la Privacidad abren la web estatica`() {
+    fun `las direcciones de Terminos y Privacidad son las de la web estatica`() {
         assertEquals("https://www.tindivo.com/terminos", termsUrl("https://www.tindivo.com"))
         assertEquals("https://www.tindivo.com/privacidad", privacyUrl("https://www.tindivo.com/"))
     }
 
     @Test
-    fun `CA-SUP-08 la ayuda por error y la general abren wa me con el numero dado`() {
+    fun `la ayuda por error y la general abren wa me con el numero dado`() {
         assertTrue(accountErrorHelpLink("51987654321").startsWith("https://wa.me/51987654321?text="))
         assertTrue(generalHelpLink("51987654321").startsWith("https://wa.me/51987654321?text="))
     }
@@ -185,7 +184,7 @@ class SupportContactTest {
     private val strings = File("src/main/res/values/strings.xml").readText()
 
     @Test
-    fun `CA-SUP-08 la cuenta en pausa y el pago adelantado dicen la frase del error`() {
+    fun `los textos de la cuenta en pausa y del pago adelantado llevan la frase del error`() {
         val phrase = "Si crees que hubo un error, escríbenos por WhatsApp"
         assertTrue(strings.contains("""name="support_error_phrase">$phrase."""))
         assertTrue(
@@ -196,12 +195,12 @@ class SupportContactTest {
     }
 
     @Test
-    fun `CA-SUP-03 el detalle ofrece Ayuda con este pedido`() {
+    fun `el texto de la fila del detalle es Ayuda con este pedido`() {
         assertTrue(strings.contains("""name="order_help_with_order">Ayuda con este pedido<"""))
     }
 
     @Test
-    fun `CA-REV-07 la pantalla de borrado dice que la nota y las etiquetas se conservan y el comentario se borra`() {
+    fun `el texto de la pantalla de borrado dice que la nota y las etiquetas se conservan y el comentario se borra`() {
         assertTrue(
             strings.contains(
                 "De tus reseñas se conservan la nota y las etiquetas, sin tu nombre; tu comentario se borra.",

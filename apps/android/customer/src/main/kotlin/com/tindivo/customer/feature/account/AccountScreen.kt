@@ -34,12 +34,13 @@ import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.orders.SUPPORT_FALLBACK_WHATSAPP
-import com.tindivo.customer.feature.orders.SupportViewModel
-import com.tindivo.customer.feature.orders.arcoRightsLink
-import com.tindivo.customer.feature.orders.generalHelpLink
-import com.tindivo.customer.feature.orders.privacyUrl
-import com.tindivo.customer.feature.orders.termsUrl
+import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
+import com.tindivo.customer.support.SupportViewModel
+import com.tindivo.customer.support.arcoRightsLink
+import com.tindivo.customer.support.generalHelpLink
+import com.tindivo.customer.support.openSafely
+import com.tindivo.customer.support.privacyUrl
+import com.tindivo.customer.support.termsUrl
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -300,13 +301,7 @@ private fun Profile(
 @Composable
 private fun HelpAndLegalSection(supportNumber: String) {
     val uriHandler = LocalUriHandler.current
-    val open: (String) -> Unit = { link ->
-        try {
-            uriHandler.openUri(link)
-        } catch (_: IllegalArgumentException) {
-            // Sin app que abra el enlace: se queda en la pantalla.
-        }
-    }
+    val open: (String) -> Unit = uriHandler::openSafely
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = stringResource(R.string.account_help_title),

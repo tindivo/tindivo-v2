@@ -1,4 +1,4 @@
-package com.tindivo.customer.feature.orders
+package com.tindivo.customer.support
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -122,3 +123,13 @@ internal fun arcoRightsLink(number: String): String =
 internal fun termsUrl(webBase: String): String = webBase.trimEnd('/') + "/terminos"
 
 internal fun privacyUrl(webBase: String): String = webBase.trimEnd('/') + "/privacidad"
+
+/** `https://wa.me/<digits>?text=…` con [text] codificado como `encodeURIComponent` de la web. */
+internal fun whatsappLink(
+    digits: String,
+    text: String,
+): String {
+    // `URLEncoder` deja el espacio como «+»; `encodeURIComponent` lo deja como «%20».
+    val encoded = URLEncoder.encode(text, "UTF-8").replace("+", "%20")
+    return "https://wa.me/$digits?text=$encoded"
+}

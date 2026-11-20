@@ -23,8 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.orders.SupportViewModel
-import com.tindivo.customer.feature.orders.accountErrorHelpLink
+import com.tindivo.customer.support.SupportViewModel
+import com.tindivo.customer.support.accountErrorHelpLink
+import com.tindivo.customer.support.openSafely
 
 /** «¿Cómo pagas?»: las opciones de la cotización, en su orden, agrupadas por momento. */
 internal fun LazyListScope.paymentSection(
@@ -123,7 +124,7 @@ private fun PrepayErrorHelp(supportViewModel: SupportViewModel = hiltViewModel()
     val number = supportViewModel.number.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
     TextButton(
-        onClick = { uriHandler.openUri(accountErrorHelpLink(number)) },
+        onClick = { uriHandler.openSafely(accountErrorHelpLink(number)) },
         modifier = Modifier.heightIn(min = 48.dp),
     ) {
         Text(text = stringResource(R.string.checkout_blocked_whatsapp))
