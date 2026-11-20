@@ -23,7 +23,7 @@ class ProofJpegTest {
     fun `el submuestreo no baja del tamano final en ningun lado`() {
         assertEquals(1, proofSampleSize(4000, 3000))
         assertEquals(2, proofSampleSize(4400, 3300))
-        assertEquals(2, proofSampleSize(8800, 6600))
+        assertEquals(4, proofSampleSize(8800, 6600))
         assertEquals(1, proofSampleSize(1080, 2400))
         assertEquals(1, proofSampleSize(1000, 800))
         assertEquals(1, proofSampleSize(0, 800))
