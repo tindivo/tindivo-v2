@@ -27,7 +27,7 @@ reglas: [app_settings:reviews]
 - Las reglas de quién puede reseñar y cuándo las decide el servidor (`getCustomerPendingReview`, `createCustomerReview`, `dismissCustomerReview`); la app solo muestra lo que él responde.
 - **Al borrar la cuenta se conservan la nota y las etiquetas, sin autor y sin comentario** (opción C, aprobada por Jesús el 2026-11-19 en el PR #201). Lo hace la base (migración de retención); esta capacidad solo debe decirlo con claridad en la app.
 - `dinero: false`. Lo que toque retención de datos pasa por Jesús y por Codex.
-- Trampa conocida: «Ahora no» saca al pedido de los pendientes; ver la decisión abierta del PR sobre cómo vuelve a ofrecerse «Calificar».
+- Trampa conocida: «Ahora no» saca al pedido de los pendientes. Decidido por Jesús el 2026-11-19: «Calificar» **sigue ofreciéndose en el historial** tras «Ahora no»; eso necesita un dato en el detalle del pedido (cambio aditivo de la API, aún sin hacer).
 - iOS aún no empieza: `codigo.ios` vacío.
 
 ## Requisitos
