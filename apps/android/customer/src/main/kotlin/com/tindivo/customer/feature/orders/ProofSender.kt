@@ -38,8 +38,8 @@ internal data class PendingConfirmation(
  * El envío del comprobante, en este orden y sin saltarse ninguno: recodificar la foto, pedir la URL firmada, subirla
  * con un PUT y confirmar el `path`. Si el PUT falla, no se confirma. Si la confirmación falla después de un PUT
  * correcto, el `path` queda pendiente y el próximo envío de la misma foto solo confirma: el servidor admite repetir el
- * mismo archivo sin gastar intento (0248). Un 4xx al confirmar dice que ese `path` ya no sirve: se olvida. Nada se
- * reintenta solo.
+ * mismo archivo sin gastar intento (0248). Un 4xx al confirmar dice que ese `path` ya no sirve: se olvida. Solo
+ * se reintenta solo, una vez, el PUT que cae por la red.
  *
  * Antes de cada paso se pregunta a `stillCurrent` (la sesión del principio sigue vigente): si no, se para sin seguir.
  * Vive dentro de un ViewModel y se usa desde el hilo principal: no está pensado para llamadas concurrentes.
@@ -117,25 +117,31 @@ internal class ProofSender(
         jpeg: ByteArray,
         stillCurrent: () -> Boolean,
     ): UploadResult {
-        val slot =
-            when (val result = gateway.uploadSlot(account, orderId)) {
-                is ApiResult.Success -> result.data
-                is ApiResult.Failure -> return Halted(SendStep.ApiFailed(result.error, confirming = false))
-            }
-        if (!stillCurrent()) return Halted(SendStep.Abandoned)
-        return when (gateway.upload(slot, jpeg)) {
-            UploadOutcome.Uploaded -> {
-                if (stillCurrent()) pending = PendingConfirmation(photo, slot.path)
-                Uploaded(slot.path)
-            }
+        var attempt = 1
+        while (true) {
+            val slot =
+                when (val result = gateway.uploadSlot(account, orderId)) {
+                    is ApiResult.Success -> result.data
+                    is ApiResult.Failure -> return Halted(SendStep.ApiFailed(result.error, confirming = false))
+                }
+            if (!stillCurrent()) return Halted(SendStep.Abandoned)
+            when (gateway.upload(slot, jpeg)) {
+                UploadOutcome.Uploaded -> {
+                    if (stillCurrent()) pending = PendingConfirmation(photo, slot.path)
+                    return Uploaded(slot.path)
+                }
 
-            // Sin saber si llegó: el reintento pide otra URL (la firmada es de un solo uso) y sube de nuevo.
-            is UploadOutcome.Network -> {
-                Halted(SendStep.Stopped(SendProblem.Offline))
-            }
+                // Sin saber si llegó: se pide otra URL (la firmada es de un solo uso) y se sube de nuevo, UNA vez
+                // sola (CUS-PAY-003); si vuelve a fallar, queda para que la persona reintente.
+                is UploadOutcome.Network -> {
+                    if (attempt >= MAX_UPLOAD_ATTEMPTS) return Halted(SendStep.Stopped(SendProblem.Offline))
+                    attempt++
+                    if (!stillCurrent()) return Halted(SendStep.Abandoned)
+                }
 
-            is UploadOutcome.Rejected -> {
-                Halted(SendStep.Stopped(SendProblem.Generic))
+                is UploadOutcome.Rejected -> {
+                    return Halted(SendStep.Stopped(SendProblem.Generic))
+                }
             }
         }
     }
@@ -149,6 +155,9 @@ internal class ProofSender(
 
     private companion object {
         val CLIENT_ERRORS = 400..499
+
+        /** El PUT y un único reintento automático ante una caída de red (CUS-PAY-003). */
+        const val MAX_UPLOAD_ATTEMPTS = 2
     }
 }
 
@@ -156,5 +165,6 @@ private fun EncodedProof.toProblem(): SendProblem =
     when (this) {
         EncodedProof.TooLarge -> SendProblem.TooLarge
         EncodedProof.Unreadable -> SendProblem.Unreadable
+        EncodedProof.HeicUnsupported -> SendProblem.HeicUnsupported
         is EncodedProof.Ready -> SendProblem.Generic
     }
