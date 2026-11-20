@@ -1,12 +1,10 @@
+import { GeistSans } from 'geist/font/sans'
 import type { Metadata, Viewport } from 'next'
-import { Geist } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { SiteFooter } from '@/components/site-footer'
 import { SiteHeader } from '@/components/site-header'
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site'
 import './globals.css'
-
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' })
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -43,7 +41,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es-PE" className={geist.variable}>
+    <html lang="es-PE" className={GeistSans.variable}>
       <body className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased">
         <a
           href="#contenido"

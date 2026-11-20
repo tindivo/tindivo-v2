@@ -26,7 +26,7 @@ export default function BorrarCuentaPage() {
           <h2 className={H2}>Cómo borrarla desde la app</h2>
           <ol className="mt-1 list-decimal space-y-1 pl-5 text-ink-2">
             <li>Abre la app de Tindivo e inicia sesión.</li>
-            <li>Entra a «Cuenta».</li>
+            <li>Entra a «Mi cuenta».</li>
             <li>Toca «Borrar mi cuenta» y confirma.</li>
           </ol>
           <p className={P}>

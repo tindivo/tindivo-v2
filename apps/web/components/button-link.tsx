@@ -3,8 +3,8 @@ import type { ReactNode } from 'react'
 type Variant = 'primary' | 'secondary'
 
 const STYLES: Record<Variant, string> = {
-  // Blanco sobre naranja solo desde 18 px en negrita (contraste).
-  primary: 'bg-brand text-lg font-bold text-white hover:bg-brand-pressed active:bg-brand-pressed',
+  // Blanco sobre #EE6417 da 3,25:1: solo vale como texto grande (negrita desde 18,66 px), por eso 20 px.
+  primary: 'bg-brand text-xl font-bold text-white hover:bg-brand-pressed active:bg-brand-pressed',
   secondary:
     'border border-divider bg-card text-base font-semibold text-brand-text shadow-card hover:bg-page',
 }

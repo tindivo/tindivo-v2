@@ -13,6 +13,19 @@ const SUPPORT_WHATSAPP = '51906550166'
 const html = (route: string) =>
   readFileSync(join(OUT, route === '' ? 'index.html' : `${route}/index.html`), 'utf8')
 
+/** Contenido de `<main>`: sin cabecera, pie ni título del documento. */
+function mainOf(page: string): string {
+  const match = /<main\b[^>]*>([\s\S]*)<\/main>/.exec(page)
+  if (!match) throw new Error('La página no tiene <main>')
+  return match[1] as string
+}
+
+function visibleText(page: string): string {
+  return page
+    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ')
+    .replace(/<[^>]*>/g, ' ')
+}
+
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name)
@@ -66,9 +79,18 @@ describe('export estático (CA-WPU-01)', () => {
     expect(missing).toEqual([])
   })
 
-  it('el 404 lleva a la landing', () => {
-    const page = readFileSync(join(OUT, '404.html'), 'utf8')
-    expect(page).toContain('href="/"')
+  it('el 404 lleva a la landing con el botón de not-found.tsx, dentro de <main>', () => {
+    const source = readFileSync(join(APP_DIR, 'app/not-found.tsx'), 'utf8')
+    const button = /<ButtonLink href="([^"]+)">([^<]+)<\/ButtonLink>/.exec(source)
+    expect(button, 'not-found.tsx debe tener un <ButtonLink href>').not.toBeNull()
+    const [, href, label] = button as RegExpExecArray
+    expect(href).toBe('/')
+    const anchors = [
+      ...mainOf(readFileSync(join(OUT, '404.html'), 'utf8')).matchAll(/<a\s[^>]*>[^<]*<\/a>/g),
+    ]
+    expect(
+      anchors.some((a) => a[0].includes(`href="${href}"`) && a[0].includes(label as string)),
+    ).toBe(true)
   })
 })
 
@@ -102,8 +124,15 @@ describe('landing (CA-WPU-03)', () => {
 
   it('no escribe ningún otro teléfono', () => {
     for (const route of ['', ...ROUTES]) {
-      const withoutSupport = html(route).replaceAll(SUPPORT_WHATSAPP, '')
-      expect(withoutSupport.match(/\d{9,}/g), route).toBeNull()
+      // Se mira el texto visible y los enlaces; espacios y guiones entre dígitos no esconden un teléfono.
+      const text = visibleText(html(route)).replaceAll(SUPPORT_WHATSAPP, '')
+      const joined = text.replace(/(?<=\d)[\s\-‐-―.()]+(?=\d)/g, '')
+      expect(joined.match(/\d{9,}/g), route).toBeNull()
+      const hrefs = [...html(route).matchAll(/href="([^"]+)"/g)].map((m) => m[1] as string)
+      for (const href of hrefs.filter((h) => /^(tel|https:\/\/wa\.me)/.test(h))) {
+        const number = (href.split('?')[0] ?? '').replace(/\D/g, '')
+        expect([SUPPORT_WHATSAPP, '']).toContain(number)
+      }
     }
   })
 
@@ -135,11 +164,40 @@ describe('Términos y Privacidad desde el markdown (CA-WPU-04)', () => {
 
 describe('/borrar-cuenta (CA-WPU-05)', () => {
   it('describe el camino por la app y el de WhatsApp, sin pedir sesión', () => {
-    const page = html('borrar-cuenta')
-    expect(page).toContain('Cómo borrarla desde la app')
-    expect(page).toContain('Borrar mi cuenta')
-    expect(page).toContain(`https://wa.me/${SUPPORT_WHATSAPP}?text=`)
-    expect(page).not.toMatch(/<form|<input|href="\/entrar/)
+    const main = mainOf(html('borrar-cuenta'))
+    expect(main).toContain('Cómo borrarla desde la app')
+    // Los nombres exactos de la app: `account_entry` y `account_delete` en strings.xml.
+    expect(main).toContain('<li>Entra a «Mi cuenta».</li>')
+    expect(main).toContain('<li>Toca «Borrar mi cuenta» y confirma.</li>')
+    expect(main).toContain('Si no puedes entrar a la app')
+    expect(main).toMatch(
+      new RegExp(
+        `<a href="https://wa\\.me/${SUPPORT_WHATSAPP}\\?text=[^"]*"[^>]*>Pedir el borrado por WhatsApp</a>`,
+      ),
+    )
+    expect(main).not.toMatch(/<form|<input|href="\/entrar/)
+  })
+})
+
+describe('build sin red', () => {
+  it('la letra no se descarga de Google en el build (next/font/google)', () => {
+    const layout = readFileSync(join(APP_DIR, 'app/layout.tsx'), 'utf8')
+    expect(layout).not.toContain('next/font/google')
+  })
+})
+
+describe('contraste del botón primario (CA-WPU-09, parte estática)', () => {
+  it('el texto blanco sobre naranja es negrita y de al menos 19 px (blanco/#EE6417 = 3,25:1: solo vale como texto grande)', () => {
+    const offenders: string[] = []
+    for (const route of ['', ...ROUTES]) {
+      for (const match of html(route).matchAll(/<a\s[^>]*>/g)) {
+        const tag = match[0]
+        if (!tag.includes('text-white')) continue
+        const bigEnough = /\btext-(xl|2xl|3xl|4xl|\[(19|2\d)px\])\b/.test(tag)
+        if (!tag.includes('font-bold') || !bigEnough) offenders.push(`${route || '/'}: ${tag}`)
+      }
+    }
+    expect(offenders).toEqual([])
   })
 })
 

@@ -21,8 +21,15 @@ function commit(file: string, content: string) {
   git('commit', '-q', '-m', `cambia ${file}`)
 }
 
-function runIgnoreStep(): number | null {
-  return spawnSync('bash', [SCRIPT], { cwd: repo, encoding: 'utf8' }).status
+function head(): string {
+  return spawnSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).stdout.trim()
+}
+
+function runIgnoreStep(previousSha?: string): number | null {
+  const env = { ...process.env }
+  env.VERCEL_GIT_PREVIOUS_SHA = previousSha
+  if (previousSha === undefined) delete env.VERCEL_GIT_PREVIOUS_SHA
+  return spawnSync('bash', [SCRIPT], { cwd: repo, encoding: 'utf8', env }).status
 }
 
 beforeAll(() => {
@@ -48,9 +55,33 @@ describe('Ignored Build Step de tindivo.com (CA-WPU-10)', () => {
     'apps/web/app/page.tsx',
     'packages/legal/content/terminos.md',
     'pnpm-lock.yaml',
+    'pnpm-workspace.yaml',
+    'package.json',
+    'turbo.json',
+    'tsconfig.base.json',
+    'packages/tsconfig/base.json',
   ])('despliega cuando cambia %s (sale 1)', (file) => {
     commit(file, `cambio ${Math.random()}`)
     expect(runIgnoreStep()).toBe(1)
+  })
+
+  it('despliega si apps/web cambió en un commit anterior de un push de varios (sale 1)', () => {
+    const previous = head()
+    commit('apps/web/app/layout.tsx', 'primero')
+    commit('apps/negocios/otra.tsx', 'segundo')
+    expect(runIgnoreStep(previous)).toBe(1)
+  })
+
+  it('no despliega si en todo el push solo cambió otra app (sale 0)', () => {
+    const previous = head()
+    commit('apps/negocios/a.tsx', 'a')
+    commit('apps/admin/b.tsx', 'b')
+    expect(runIgnoreStep(previous)).toBe(0)
+  })
+
+  it('si VERCEL_GIT_PREVIOUS_SHA no es alcanzable, cae a HEAD^ (sale 0 si solo cambió otra app)', () => {
+    commit('apps/admin/c.tsx', 'c')
+    expect(runIgnoreStep('0123456789abcdef0123456789abcdef01234567')).toBe(0)
   })
 
   it('despliega si no puede saber qué cambió: sin commit anterior (sale 1)', () => {
