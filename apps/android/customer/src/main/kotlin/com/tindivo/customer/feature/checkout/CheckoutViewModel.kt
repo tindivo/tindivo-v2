@@ -497,10 +497,15 @@ class CheckoutViewModel
         ) {
             // La ubicación es evidencia, nunca un requisito: sin permiso o sin señal el pedido sale igual (CUS-CHK-009).
             val evidence = if (current == null) null else evidenceFor(account, current, form.pay)
-            if (!isCurrent(started, account)) return
-            val request = if (current == null) null else buildOrderRequest(form, current, quote, evidence)
+            // Si la cuenta cambió mientras se leía la ubicación no se arma ni se envía nada.
+            val request =
+                if (current == null || !isCurrent(started, account)) {
+                    null
+                } else {
+                    buildOrderRequest(form, current, quote, evidence)
+                }
             if (current == null || request == null) {
-                stop(CheckoutMessage.Generic)
+                if (isCurrent(started, account)) stop(CheckoutMessage.Generic)
                 return
             }
             val result = reserveAndSend(started, account, current, request) ?: return
