@@ -94,9 +94,6 @@ internal class ProofSender(
         override fun toString(): String = "Uploaded($REDACTED)"
     }
 
-    /** El PUT se cortó por la red: no es un resultado final, [putToStorage] decide si se reintenta. */
-    internal data object Dropped : UploadResult
-
     internal data class Halted(
         val step: SendStep,
     ) : UploadResult
@@ -123,18 +120,14 @@ internal class ProofSender(
         var result = uploadOnce(account, orderId, photo, jpeg, stillCurrent)
         var attempt = 1
         // Una caída de red se reintenta UNA vez sola (CUS-PAY-003), con otra URL firmada: la anterior es de un solo uso.
-        while (result == Dropped && attempt < MAX_UPLOAD_ATTEMPTS && stillCurrent()) {
+        while (result == DROPPED && attempt < MAX_UPLOAD_ATTEMPTS && stillCurrent()) {
             attempt++
             result = uploadOnce(account, orderId, photo, jpeg, stillCurrent)
         }
-        return when {
-            result != Dropped -> result
-            !stillCurrent() -> Halted(SendStep.Abandoned)
-            else -> Halted(SendStep.Stopped(SendProblem.Offline))
-        }
+        return if (result == DROPPED && !stillCurrent()) Halted(SendStep.Abandoned) else result
     }
 
-    /** Un intento: pide la URL firmada y hace el PUT. [Dropped] es una caída de red, sin saber si el archivo llegó. */
+    /** Un intento: pide la URL firmada y hace el PUT. [DROPPED] es una caída de red, sin saber si el archivo llegó. */
     private suspend fun uploadOnce(
         account: String,
         orderId: UUID,
@@ -155,7 +148,7 @@ internal class ProofSender(
             }
 
             is UploadOutcome.Network -> {
-                Dropped
+                DROPPED
             }
 
             is UploadOutcome.Rejected -> {
@@ -173,6 +166,9 @@ internal class ProofSender(
 
     private companion object {
         val CLIENT_ERRORS = 400..499
+
+        /** La caída de red: si es el último intento, es lo que ve la persona; si no, [putToStorage] reintenta. */
+        val DROPPED = Halted(SendStep.Stopped(SendProblem.Offline))
 
         /** El PUT y un único reintento automático ante una caída de red (CUS-PAY-003). */
         const val MAX_UPLOAD_ATTEMPTS = 2
