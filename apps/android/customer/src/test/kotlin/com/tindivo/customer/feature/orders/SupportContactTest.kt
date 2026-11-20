@@ -19,9 +19,11 @@ import mockwebserver3.MockWebServer
 import mockwebserver3.SocketEffect
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
+import java.net.URLDecoder
 
 /** El WhatsApp de soporte: de `GET /public/config`, solo dígitos, y el enlace con los textos de la web. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -74,30 +76,30 @@ class SupportContactTest {
         }
 
     @Test
-    fun `sin numero en el servidor no hay enlace y no se vuelve a preguntar`() =
+    fun `CA-SUP-04 sin numero en el servidor se usa el de respaldo y no se vuelve a preguntar`() =
         runTest {
             server.enqueue(config(null))
 
-            assertNull(support.number())
-            assertNull(support.number())
+            assertEquals(SUPPORT_FALLBACK_WHATSAPP, support.number())
+            assertEquals(SUPPORT_FALLBACK_WHATSAPP, support.number())
             assertEquals(1, server.requestCount)
         }
 
     @Test
-    fun `un numero sin digitos cuenta como sin numero`() =
+    fun `un numero sin digitos cuenta como sin numero y cae al respaldo`() =
         runTest {
             server.enqueue(config("+ -"))
 
-            assertNull(support.number())
+            assertEquals(SUPPORT_FALLBACK_WHATSAPP, support.number())
         }
 
     @Test
-    fun `sin conexion no hay numero y la siguiente pantalla vuelve a intentarlo`() =
+    fun `CA-SUP-04 sin conexion se usa el respaldo y la siguiente pantalla vuelve a intentarlo`() =
         runTest {
             repeat(3) { server.enqueue(MockResponse.Builder().onRequestStart(SocketEffect.CloseSocket()).build()) }
             server.enqueue(config("51987654321"))
 
-            assertNull(support.number())
+            assertEquals(SUPPORT_FALLBACK_WHATSAPP, support.number())
             assertEquals("51987654321", support.number())
         }
 
@@ -114,7 +116,7 @@ class SupportContactTest {
                     .build(),
             )
 
-            assertNull(support.number())
+            assertEquals(SUPPORT_FALLBACK_WHATSAPP, support.number())
             assertEquals(ConfigState.UpgradeRequired("1.2.0"), configService.state.value)
         }
 
@@ -127,17 +129,83 @@ class SupportContactTest {
         }
 
     @Test
-    fun `los enlaces llevan los textos de la web codificados y nada sin numero`() {
+    fun `CA-SUP-04 el respaldo es 51906550166 y esta escrito en un solo archivo de la app`() {
+        assertEquals("51906550166", SUPPORT_FALLBACK_WHATSAPP)
+        val files =
+            File("src/main/kotlin")
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" && "51906550166" in it.readText() }
+                .map { it.name }
+                .toList()
+        assertEquals(listOf("SupportContact.kt"), files)
+    }
+
+    @Test
+    fun `CA-SUP-02 Ayuda con este pedido lleva TDV el codigo y el negocio`() {
         assertEquals(
-            "https://wa.me/51987654321?text=Hola%2C%20necesito%20ayuda%20con%20mi%20pedido%20%23ABCD2345",
-            orderSupportLink("51987654321", "ABCD2345"),
+            "https://wa.me/51987654321?text=Hola%2C%20necesito%20ayuda%20con%20mi%20pedido%20%23TDV-ABCD2345" +
+                "%20de%20Poller%C3%ADa%20Don%20Beto.",
+            orderHelpLink("51987654321", "ABCD2345", "Pollería Don Beto"),
         )
+        assertEquals(
+            "https://wa.me/51987654321?text=Hola%2C%20necesito%20ayuda%20con%20mi%20pedido%20%23TDV-ABCD2345.",
+            orderHelpLink("51987654321", "ABCD2345", null),
+        )
+    }
+
+    @Test
+    fun `CA-SUP-07 Ejercer mis derechos nombra los cuatro derechos`() {
+        val text = URLDecoder.decode(arcoRightsLink("51987654321").substringAfter("?text="), "UTF-8")
+
+        listOf("acceso", "rectificación", "cancelación", "oposición").forEach { assertTrue(it in text) }
+        assertTrue(arcoRightsLink("51987654321").startsWith("https://wa.me/51987654321?text="))
+    }
+
+    @Test
+    fun `CA-SUP-05 los Terminos y la Privacidad abren la web estatica`() {
+        assertEquals("https://www.tindivo.com/terminos", termsUrl("https://www.tindivo.com"))
+        assertEquals("https://www.tindivo.com/privacidad", privacyUrl("https://www.tindivo.com/"))
+    }
+
+    @Test
+    fun `CA-SUP-08 la ayuda por error y la general abren wa me con el numero dado`() {
+        assertTrue(accountErrorHelpLink("51987654321").startsWith("https://wa.me/51987654321?text="))
+        assertTrue(generalHelpLink("51987654321").startsWith("https://wa.me/51987654321?text="))
+    }
+
+    @Test
+    fun `los enlaces del historial llevan los textos de la web codificados`() {
         assertEquals(
             "https://wa.me/51987654321?text=Hola%2C%20tengo%20un%20problema%20con%20mi%20pedido%20%23TDV-ABCD2345." +
                 "%20Motivo%3A%20",
             cancelledOrderSupportLink("51987654321", "ABCD2345"),
         )
-        assertNull(orderSupportLink(null, "ABCD2345"))
-        assertNull(cancelledOrderSupportLink(null, "ABCD2345"))
+    }
+
+    private val strings = File("src/main/res/values/strings.xml").readText()
+
+    @Test
+    fun `CA-SUP-08 la cuenta en pausa y el pago adelantado dicen la frase del error`() {
+        val phrase = "Si crees que hubo un error, escríbenos por WhatsApp"
+        assertTrue(strings.contains("""name="support_error_phrase">$phrase."""))
+        assertTrue(
+            strings.contains(
+                """name="checkout_pay_reason_required">Por ahora tus pedidos van con pago adelantado. $phrase.""",
+            ),
+        )
+    }
+
+    @Test
+    fun `CA-SUP-03 el detalle ofrece Ayuda con este pedido`() {
+        assertTrue(strings.contains("""name="order_help_with_order">Ayuda con este pedido<"""))
+    }
+
+    @Test
+    fun `CA-REV-07 la pantalla de borrado dice que la nota y las etiquetas se conservan y el comentario se borra`() {
+        assertTrue(
+            strings.contains(
+                "De tus reseñas se conservan la nota y las etiquetas, sin tu nombre; tu comentario se borra.",
+            ),
+        )
     }
 }

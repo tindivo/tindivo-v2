@@ -13,10 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.customer.R
-
-/** El WhatsApp de soporte de Tindivo (el mismo de la web, `TINDIVO_SUPPORT_WHATSAPP`). */
-internal const val SUPPORT_WHATSAPP_URL = "https://wa.me/51906550166"
+import com.tindivo.customer.feature.orders.SupportViewModel
+import com.tindivo.customer.feature.orders.accountErrorHelpLink
 
 @Composable
 internal fun SignInRequiredView(actions: CheckoutActions) {
@@ -63,13 +64,16 @@ internal fun EmptyBagView(actions: CheckoutActions) {
 internal fun BlockedView(
     reason: String?,
     actions: CheckoutActions,
+    supportViewModel: SupportViewModel = hiltViewModel(),
 ) {
     val uriHandler = LocalUriHandler.current
+    val number = supportViewModel.number.collectAsStateWithLifecycle().value
     CheckoutFrame(actions.onBack) {
         Text(stringResource(R.string.checkout_blocked_title), style = MaterialTheme.typography.titleLarge)
         Text(stringResource(R.string.checkout_blocked_message))
+        Text(stringResource(R.string.support_error_phrase))
         reason?.let { Text(it) }
-        BigButton(R.string.checkout_blocked_whatsapp) { uriHandler.openUri(SUPPORT_WHATSAPP_URL) }
+        BigButton(R.string.checkout_blocked_whatsapp) { uriHandler.openUri(accountErrorHelpLink(number)) }
         TextButton(onClick = actions.onSeeBusinesses, modifier = Modifier.heightIn(min = 48.dp)) {
             Text(stringResource(R.string.checkout_blocked_home))
         }

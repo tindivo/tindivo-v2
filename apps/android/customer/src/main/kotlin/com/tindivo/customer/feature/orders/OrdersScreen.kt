@@ -45,6 +45,7 @@ internal fun OrdersDestination(
     onOpenOrder: (id: String) -> Unit,
     onExplore: () -> Unit,
     onReorder: (businessId: String) -> Unit = {},
+    onReviewMoment: () -> Unit = {},
     viewModel: OrdersViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
 ) {
@@ -53,6 +54,11 @@ internal fun OrdersDestination(
     val uriHandler = LocalUriHandler.current
     LaunchedEffect(state) {
         if (state is OrdersUiState.LoggedOut) onBack()
+    }
+    // CUS-REV-001: en el historial la pregunta de la reseña sale si no hay un pedido activo a la vista.
+    val reviewMoment = state.allowsReviewPrompt()
+    LaunchedEffect(reviewMoment) {
+        if (reviewMoment) onReviewMoment()
     }
     OrdersScreen(
         state = state,
@@ -78,7 +84,7 @@ internal fun OrdersDestination(
 
 /** Lo que una tarjeta del historial puede hacer además de abrir el pedido. */
 internal data class OrderCardActions(
-    val supportNumber: String? = null,
+    val supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
     val onReorder: (businessId: String) -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
 )

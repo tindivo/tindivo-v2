@@ -252,12 +252,16 @@ private fun NavGraphBuilder.addressesGraph(navController: NavHostController) {
 /** Mis pedidos y el detalle de un pedido. */
 private fun NavGraphBuilder.ordersGraph(navController: NavHostController) {
     composable<OrdersRoute> {
+        // CUS-REV-001: en el historial la reseña pendiente se pregunta cuando no hay un pedido activo a la vista.
+        val review = rememberReviewController(autoPrompt = false)
         OrdersDestination(
             onBack = { navController.popBackStack() },
             onOpenOrder = { id -> navController.navigate(OrderDetailRoute(id)) },
             onExplore = { navController.popBackStack(CatalogHomeRoute, inclusive = false) },
             onReorder = { businessId -> navController.navigate(BusinessRoute(businessId)) },
+            onReviewMoment = review.enableAutoPrompt,
         )
+        ReviewHost(review)
     }
     composable<OrderDetailRoute> {
         OrderDetailWithReview(

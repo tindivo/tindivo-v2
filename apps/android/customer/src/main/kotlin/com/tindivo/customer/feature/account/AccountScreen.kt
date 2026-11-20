@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.account
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,6 +8,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -28,7 +32,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
+import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.orders.SUPPORT_FALLBACK_WHATSAPP
+import com.tindivo.customer.feature.orders.SupportViewModel
+import com.tindivo.customer.feature.orders.arcoRightsLink
+import com.tindivo.customer.feature.orders.generalHelpLink
+import com.tindivo.customer.feature.orders.privacyUrl
+import com.tindivo.customer.feature.orders.termsUrl
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -44,6 +55,7 @@ fun AccountDestination(
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val supportNumber = hiltViewModel<SupportViewModel>().number.collectAsStateWithLifecycle().value
     // Volvió de «Completa tu perfil» con el perfil ya creado: se carga la cuenta.
     LaunchedEffect(profile.completed) {
         if (profile.completed) {
@@ -78,6 +90,7 @@ fun AccountDestination(
         onBack = onLeave,
         onCompleteProfile = profile.onOpen,
         onDeleteAccount = onDeleteAccount,
+        supportNumber = supportNumber,
     )
 }
 
@@ -99,6 +112,7 @@ fun AccountScreen(
     onBack: () -> Unit,
     onCompleteProfile: () -> Unit = {},
     onDeleteAccount: () -> Unit = {},
+    supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -127,6 +141,7 @@ fun AccountScreen(
                         onCompleteProfile = onCompleteProfile,
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
+                        supportNumber = supportNumber,
                     )
                 }
 
@@ -138,6 +153,7 @@ fun AccountScreen(
                         onVerifyPhone = onVerifyPhone,
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
+                        supportNumber = supportNumber,
                     )
                 }
             }
@@ -183,8 +199,12 @@ private fun ProfileMissing(
     onCompleteProfile: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
+    supportNumber: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(text = stringResource(R.string.account_profile_missing_title), style = MaterialTheme.typography.titleLarge)
         Text(
             text = stringResource(R.string.account_profile_missing_message),
@@ -204,6 +224,7 @@ private fun ProfileMissing(
         ) {
             Text(text = stringResource(R.string.account_sign_out))
         }
+        HelpAndLegalSection(supportNumber = supportNumber)
         // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
         DeleteAccountButton(onDeleteAccount = onDeleteAccount)
     }
@@ -217,8 +238,12 @@ private fun Profile(
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
+    supportNumber: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(text = profile.fullName, style = MaterialTheme.typography.titleLarge)
         Text(
             text =
@@ -263,7 +288,45 @@ private fun Profile(
         ) {
             Text(text = stringResource(R.string.account_sign_out))
         }
+        HelpAndLegalSection(supportNumber = supportNumber)
         DeleteAccountButton(onDeleteAccount = onDeleteAccount)
+    }
+}
+
+/**
+ * «Ayuda y legal» (CUS-SUP-001/002/003): ayuda por WhatsApp, Términos, Privacidad y «Ejercer mis derechos». Todo abre
+ * fuera de la app (la web estática de tindivo.com o WhatsApp con el mensaje prellenado y revisable).
+ */
+@Composable
+private fun HelpAndLegalSection(supportNumber: String) {
+    val uriHandler = LocalUriHandler.current
+    val open: (String) -> Unit = { link ->
+        try {
+            uriHandler.openUri(link)
+        } catch (_: IllegalArgumentException) {
+            // Sin app que abra el enlace: se queda en la pantalla.
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = stringResource(R.string.account_help_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        LinkRow(R.string.account_help_whatsapp) { open(generalHelpLink(supportNumber)) }
+        LinkRow(R.string.account_terms) { open(termsUrl(BuildConfig.WEB_BASE_URL)) }
+        LinkRow(R.string.account_privacy) { open(privacyUrl(BuildConfig.WEB_BASE_URL)) }
+        LinkRow(R.string.account_arco) { open(arcoRightsLink(supportNumber)) }
+    }
+}
+
+@Composable
+private fun LinkRow(
+    @StringRes label: Int,
+    onClick: () -> Unit,
+) {
+    TextButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp)) {
+        Text(text = stringResource(label))
     }
 }
 
