@@ -59,7 +59,10 @@ class AccountHelpContentTest {
     private fun tap(
         @StringRes id: Int,
     ) {
-        compose.onNodeWithText(text(id)).performScrollTo().assertIsDisplayed().performClick()
+        val node = compose.onNodeWithText(text(id))
+        node.performScrollTo()
+        node.assertIsDisplayed()
+        node.performClick()
     }
 
     @Test
