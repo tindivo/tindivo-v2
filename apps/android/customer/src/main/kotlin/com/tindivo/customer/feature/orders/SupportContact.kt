@@ -86,7 +86,8 @@ internal fun orderHelpLink(
     shortId: String,
     businessName: String?,
 ): String {
-    val business = businessName?.trim()?.takeIf { it.isNotEmpty() }?.let { " de $it" }.orEmpty()
+    val name = businessName.orEmpty().trim()
+    val business = if (name.isEmpty()) "" else " de $name"
     return whatsappLink(number, "Hola, necesito ayuda con mi pedido #TDV-$shortId$business.")
 }
 
