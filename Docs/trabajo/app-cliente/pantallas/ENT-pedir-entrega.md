@@ -1,5 +1,7 @@
 # ENT · Tindivo Entregas (pedir, mis entregas y seguimiento)
 
+> **Migrado a `Docs/producto/entregas/` (2026-11-18).** Lo vigente está allí; este archivo queda como borrador de origen.
+
 > **Decisiones de Jesús del 2026-11-17 que cambian esta pantalla** (donde choquen con el texto de abajo, manda esto):
 > - Se prohíbe lo que prohíbe inDrive: alcohol, tabaco y vapeadores; joyas, metales y piedras preciosas; efectivo, billetes y moneda; armas, municiones y armas blancas; explosivos, pólvora, fuegos artificiales y venenos; drogas; material obsceno; artículos de venta restringida. Los documentos sí (CUS-ENT-022).
 > - El texto «Sin alcohol, sin nada que necesite receta especial ni refrigeración» (punto 5 de «Contenido») y la categoría «Medicinas» se ajustan a esa lista; medicamentos queda por decidir (punto X). Se retira la declaración de efectivo o joyas al pedir.

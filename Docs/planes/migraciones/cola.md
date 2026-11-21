@@ -2,7 +2,7 @@
 
 > Estado: **en ejecución** · Aprobado por Jesús el 2026-10-09 (lote P0.1, commit `ef31131`); alcance ampliado el
 > 2026-10-13 con los lotes MV3b y MV7 (Jesús, conversación con Claude Code) · Commit de referencia:
-> `develop@b17f63db` (producción: `main@34891de3`, base en `0271`, 2026-10-24) · Alcance: el avance: qué lote va ahora · Bitácora y debates: `Docs/trabajo/migraciones/`
+> `develop@b17f63db` (producción: `main@34891de3`, base en `0271`, desplegada el 2026-10-23) · Alcance: el avance: qué lote va ahora · Bitácora y debates: `Docs/trabajo/migraciones/`
 
 > La sesión de trabajo toma de aquí **el primer lote A desbloqueado**, de arriba abajo. Al cerrar un lote se marca
 > `[x]` con el commit o PR y se anota en la bitácora del día (`Docs/trabajo/migraciones/bitacora/AAAA-MM-DD.md`). Las reglas son las de
@@ -33,9 +33,9 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 - [x] **C2** · Comprobante (a): `UPDATE` condicionado y 409 — integrado en `develop` junto con C3 (PR #36)
 - [x] **C3a-d** · Comprobante (b), transaccional (migraciones `0248`, `0249` y `0258`) — integrado en `develop` (PR #36)
 - [x] **C4a-d** · Idempotencia (c): clave por usuario en `creation_idempotency`, registrada en la misma transacción que el pedido (`create_order_idempotently`, migraciones `0250`-`0252`); replay antes de los guards, 409 para payload distinto o reserva vieja en vuelo, 422 para clave no UUID, purga a los 7 días. 28 pruebas nuevas; Codex firmó en tres rondas; CI completa en verde (PR #31). **Retención de 7 días: aprobada por Jesús el 2026-10-31** (el comentario de `0252` que la llama propuesta es anterior; una migración aplicada no se edita). Desplegado el 2026-10-19 (C6).
-- [x] **C5** · Bucket `payment-proofs`: JPEG, PNG, WebP y HEIC/HEIF, 15 MB (migración `0254`, 8 pruebas; PR #33). Desplegado el 2026-10-19 (C6). Nota: la app hoy solo sube JPEG, PNG y WebP (`validateImageInput`); HEIC se rechaza en el cliente.
+- [~] **C5** · *(reabierta 2026-11-18: la app no cumple D-40 (rechaza HEIC); se corrige en la capacidad pagos. D-40 sigue vigente como se decidió el 2026-10-09: `Docs/planes/movil/contrato-rest.md`, JPEG, PNG, WebP y HEIC/HEIF, hasta 15 MB. Decisión de Jesús, 2026-11-19, conversación con Claude Code.)* Bucket `payment-proofs`: JPEG, PNG, WebP y HEIC/HEIF, 15 MB (migración `0254`, 8 pruebas; PR #33). Desplegado el 2026-10-19 (C6). Nota: la app hoy solo sube JPEG, PNG y WebP (`validateImageInput`); HEIC se rechaza en el cliente.
 - [x] **C6** · Despliegue de C2-C5 — hecho el 2026-10-19 con la guía firmada por Codex (paquete `0248`-`0266`, Ronda 3/3 `firmo`; expediente `tindivo-auditorias/2026-10-16-prod-0248-0265/`). `main` pasó por fast-forward a `70eaa62d`, el merge del #64 sobre el candidato firmado `8b0025da`, con su mismo árbol; las migraciones de la `0248` a la `0266` (sin la `0257`) figuran aplicadas en producción. Según informó Jesús ese día (sin registro crudo en el expediente): `send-push` v15, el corte `push_claim_since` (18:46:49 UTC) y smoke de `/health`, `/config` y `send-push` en verde. Además de C2-C5 entraron la `0259` (MV5), la `0260` (SEC-03b), de la `0261` a la `0263`, la `0264` (`send-push`), la `0265` (MV3b) y la `0266`
-- [~] **C7** · Una semana de observación — del 2026-10-19 al 2026-10-26. Lo primero: que el push del primer servicio real (mar 20-oct) llegue a negocio y motorizado
+- [x] **C7** · *(observación del 19 al 26-oct sin incidentes; cerrada por Jesús el 2026-11-18, conversación con Claude Code)* Una semana de observación — del 2026-10-19 al 2026-10-26. Lo primero: que el push del primer servicio real (mar 20-oct) llegue a negocio y motorizado
 
 ## Carril móvil · customer
 

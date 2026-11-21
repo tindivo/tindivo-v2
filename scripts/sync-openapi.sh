@@ -11,7 +11,7 @@ cd "$ROOT"
 SRC="packages/contracts/openapi/v1.json"
 # El nombre del archivo en iOS sigue la documentación de swift-openapi-generator: verificar al montarlo.
 TARGETS=(
-  "apps/customer-ios/Packages/TindivoAPI/Sources/TindivoAPI/openapi.json"
+  "apps/ios/Packages/TindivoAPI/Sources/TindivoAPI/openapi.json"
   "apps/android/core/network/openapi/v1.json"
 )
 
