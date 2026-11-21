@@ -1,5 +1,6 @@
 package com.tindivo.customer.session
 
+import com.tindivo.core.network.AccessGrant
 import com.tindivo.core.network.RetryAfterShieldInterceptor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -7,6 +8,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -42,10 +44,19 @@ internal class SupabaseSessionStore(
     private val mutex = Mutex()
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Unknown)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    private val mutableTermsRequired = MutableStateFlow(false)
+    override val termsRequired: StateFlow<Boolean> = mutableTermsRequired.asStateFlow()
     private val signIns = MutableStateFlow(0L)
     override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 
     private var current: TokenSnapshot? = null
+
+    // Para la red: el token solo sale hacia el registro de la aceptación mientras ésta esté pendiente O desconocida
+    // (CAX-001). Distinto de [termsRequired], que es solo lo que muestra la puerta de la interfaz.
+    private var termsRestricted = false
+
+    // Solo la entrada nueva sin su 2xx: las peticiones en vuelo esperan a que baje (confirmar o cerrar la sesión).
+    private val termsPending = MutableStateFlow(false)
     private var restored = false
 
     private val mutableClosePending = MutableStateFlow(false)
@@ -63,13 +74,33 @@ internal class SupabaseSessionStore(
     override suspend fun accessToken(): String? =
         mutex.withLock {
             restoreOnce()
-            val snapshot = current
-            when {
-                snapshot == null -> null
-                snapshot.secondsLeft() > REFRESH_MARGIN_SECONDS -> snapshot.accessToken
-                else -> refreshProactively(snapshot)
-            }
+            tokenLocked()
         }
+
+    // Restaurar, token y estado de aceptación bajo UN candado: una petición lanzada en el arranque en frío espera a
+    // restaurar y decide con la aceptación ya conocida (CAX-001).
+    override suspend fun accessGrant(): AccessGrant =
+        mutex.withLock {
+            restoreOnce()
+            val token = tokenLocked()
+            AccessGrant(token, onlyForTermsAcceptance = termsRestricted, termsPending = termsPending.value)
+        }
+
+    // La espera es FUERA del candado: confirmTerms y signOut lo necesitan para resolverla. Al despertar se vuelve a
+    // evaluar con el candado, así que decide el estado vigente (confirmada: token; cerrada: sin token).
+    override suspend fun awaitTermsResolution(): AccessGrant {
+        termsPending.first { !it }
+        return accessGrant()
+    }
+
+    private suspend fun tokenLocked(): String? {
+        val snapshot = current
+        return when {
+            snapshot == null -> null
+            snapshot.secondsLeft() > REFRESH_MARGIN_SECONDS -> snapshot.accessToken
+            else -> refreshProactively(snapshot)
+        }
+    }
 
     override suspend fun refresh(): String? {
         val seen = generation.get()
@@ -82,10 +113,14 @@ internal class SupabaseSessionStore(
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): SignInResult =
         mutex.withLock {
             try {
-                adopt(backend.signInWithGoogle(idToken, rawNonce))
+                adopt(backend.signInWithGoogle(idToken, rawNonce, termsPending))
+                // Entrar reemplaza lo guardado: una restauración tardía ya no debe leer el archivo (con la marca de
+                // «aceptación pendiente» lo borraría y cerraría esta sesión).
+                restored = true
                 // La sesión nueva reemplazó a la que quedó pendiente de cerrar (el archivo lo escribe el backend).
                 mutableClosePending.value = false
                 // Después del estado (ver SessionStore.signInGeneration): quien lea la generación y luego el estado
@@ -97,6 +132,20 @@ internal class SupabaseSessionStore(
             } catch (_: Exception) {
                 // Cualquier fallo de Auth es «no se pudo entrar»; el detalle no sale (puede llevar datos de la cuenta).
                 SignInResult.Failed
+            }
+        }
+
+    // Sin cancelación y bajo el mismo candado: la comprobación de la cuenta y la marca van de una vez.
+    override suspend fun confirmTerms(accountId: String): Boolean =
+        withContext(NonCancellable) {
+            mutex.withLock {
+                restoreOnce()
+                if (current?.userId?.equals(accountId, ignoreCase = true) != true) return@withLock false
+                backend.markTermsAccepted()
+                mutableTermsRequired.value = false
+                termsRestricted = false
+                termsPending.value = false
+                true
             }
         }
 
@@ -146,6 +195,11 @@ internal class SupabaseSessionStore(
             }
         }
 
+    // La restauración se espera BAJO el candado y sin tiempo límite. Riesgo residual declarado: si el Keystore o el disco
+    // no responden, la app se queda en «Cargando» hasta que vuelva la E/S. Es un problema de disponibilidad, no de
+    // seguridad: nunca se expone una sesión ni sale ningún token. Un tiempo límite se descartó a propósito: dejaría una
+    // restauración huérfana corriendo fuera del candado que, al terminar, podría pisar `GoTrueAuthBackend.stored` de otra
+    // cuenta (refrescar, revocar o borrar el archivo de la sesión equivocada).
     private suspend fun restoreOnce() {
         if (restored) return
         val snapshot =
@@ -221,6 +275,9 @@ internal class SupabaseSessionStore(
         countsAsChange: Boolean = true,
     ): TokenSnapshot {
         current = snapshot
+        mutableTermsRequired.value = snapshot.termsUnknown
+        termsRestricted = snapshot.termsUnknown || snapshot.termsPending
+        termsPending.value = snapshot.termsPending
         if (countsAsChange) generation.incrementAndGet()
         mutableState.value = SessionState.SignedIn(snapshot.userId)
         return snapshot
@@ -245,6 +302,9 @@ internal class SupabaseSessionStore(
     // entonces el próximo arranque restauraría la cuenta anterior. [localClearFailures] cuenta esos fallos.
     private suspend fun drop(): Boolean {
         current = null
+        mutableTermsRequired.value = false
+        termsRestricted = false
+        termsPending.value = false
         generation.incrementAndGet()
         var cleared = false
         withContext(NonCancellable) {

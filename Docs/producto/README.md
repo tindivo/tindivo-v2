@@ -9,9 +9,11 @@
 
 | Capacidad | Nombre | Actores | Líneas | Depende de | Dinero | Pantallas | Requisitos | Criterios |
 |---|---|---|---|---|---|---|---|---|
+| [acceso](acceso/capacidad.md) | Acceso, términos y celular | CUS | pedidos-restaurante, entregas | — | no | 3 | 24 | 25 |
 | [bolsa](bolsa/capacidad.md) | Bolsa | CUS | pedidos-restaurante | — | sí | 1 | 15 | 13 |
 | [catalogo](catalogo/capacidad.md) | Catálogo y negocio | CUS | pedidos-restaurante | bolsa, direcciones | sí | 3 | 31 | 7 |
 | [checkout](checkout/capacidad.md) | Confirmar pedido | CUS | pedidos-restaurante | bolsa, direcciones, pagos | sí | 1 | 31 | 12 |
+| [cuenta](cuenta/capacidad.md) | Cuenta y borrado de cuenta | CUS | pedidos-restaurante, entregas | acceso, direcciones | no | 1 | 12 | 10 |
 | [direcciones](direcciones/capacidad.md) | Direcciones y mapa | CUS | pedidos-restaurante, entregas | — | no | 2 | 14 | 7 |
 | [entregas](entregas/capacidad.md) | Tindivo Entregas | CUS | entregas | direcciones | sí | 3 | 21 | 11 |
 | [libro-reclamaciones](libro-reclamaciones/capacidad.md) | Libro de Reclamaciones virtual | CUS, ADM | pedidos-restaurante, entregas, store | web-publica | no | 0 | 16 | 13 |
@@ -24,8 +26,8 @@
 
 ## Capacidades por línea de negocio
 
-| Línea | bolsa | catalogo | checkout | direcciones | entregas | libro-reclamaciones | mis-pedidos | pagos | resenas | seguimiento | soporte | web-publica |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| entregas |  |  |  | ● | ● | ● | ● |  |  |  | ● | ● |
-| pedidos-restaurante | ● | ● | ● | ● |  | ● | ● | ● | ● | ● | ● | ● |
-| store |  |  |  |  |  | ● |  |  |  |  | ● | ● |
+| Línea | acceso | bolsa | catalogo | checkout | cuenta | direcciones | entregas | libro-reclamaciones | mis-pedidos | pagos | resenas | seguimiento | soporte | web-publica |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| entregas | ● |  |  |  | ● | ● | ● | ● | ● |  |  |  | ● | ● |
+| pedidos-restaurante | ● | ● | ● | ● | ● | ● |  | ● | ● | ● | ● | ● | ● | ● |
+| store |  |  |  |  |  |  |  | ● |  |  |  |  | ● | ● |

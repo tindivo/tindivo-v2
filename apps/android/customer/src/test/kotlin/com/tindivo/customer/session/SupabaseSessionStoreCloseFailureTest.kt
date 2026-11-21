@@ -111,7 +111,7 @@ class SupabaseSessionStoreCloseFailureTest {
     /** La cuenta A ya entró y quedó guardada en [file]. */
     private suspend fun TestScope.signedInAsA(file: FlakyFile) {
         server.enqueue(tokens("acceso-a", "user-a"))
-        backend(file).signInWithGoogle("id", "nonce")
+        backend(file).signInWithGoogle("id", "nonce", termsPending = false)
         server.takeRequest()
     }
 
@@ -179,7 +179,7 @@ class SupabaseSessionStoreCloseFailureTest {
 
             val second = store(file)
             server.enqueue(tokens("acceso-b", "user-b"))
-            assertEquals(SignInResult.Success, second.signInWithGoogle("id-b", "nonce-b"))
+            assertEquals(SignInResult.Success, second.signInWithGoogle("id-b", "nonce-b", termsPending = false))
             advanceUntilIdle()
 
             assertEquals(SessionState.SignedIn("user-b"), second.state.value)

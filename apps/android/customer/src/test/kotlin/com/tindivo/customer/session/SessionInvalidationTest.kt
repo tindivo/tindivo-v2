@@ -160,7 +160,7 @@ class SessionInvalidationTest {
                     .build(),
             )
             val first = store(EncryptedSessionFile(UndeletableFile(path), aead, keys))
-            assertEquals(SignInResult.Success, first.signInWithGoogle("id-token", "nonce"))
+            assertEquals(SignInResult.Success, first.signInWithGoogle("id-token", "nonce", termsPending = false))
             assumeReadOnly(path)
 
             first.signOut()

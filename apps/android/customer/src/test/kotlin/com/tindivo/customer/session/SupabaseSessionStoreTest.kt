@@ -131,11 +131,11 @@ class SupabaseSessionStoreTest {
             backend.signInResult = { error("nonce incorrecto") }
             runCurrent()
 
-            assertEquals(SignInResult.Failed, store.signInWithGoogle("id", "nonce"))
+            assertEquals(SignInResult.Failed, store.signInWithGoogle("id", "nonce", termsPending = false))
             assertEquals(SessionState.SignedOut, store.state.value)
 
             backend.signInResult = { snapshot("t-nuevo") }
-            assertEquals(SignInResult.Success, store.signInWithGoogle("id", "nonce"))
+            assertEquals(SignInResult.Success, store.signInWithGoogle("id", "nonce", termsPending = false))
             assertEquals(SessionState.SignedIn("user-1"), store.state.value)
             assertEquals("t-nuevo", store.accessToken())
         }

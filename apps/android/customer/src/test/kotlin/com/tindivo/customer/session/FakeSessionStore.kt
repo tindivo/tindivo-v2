@@ -10,6 +10,8 @@ class FakeSessionStore(
 ) : SessionStore {
     private val mutableState = MutableStateFlow(initial)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    val termsRequiredState = MutableStateFlow(false)
+    override val termsRequired: StateFlow<Boolean> = termsRequiredState.asStateFlow()
     private val signIns = MutableStateFlow(0L)
     override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 
@@ -41,10 +43,24 @@ class FakeSessionStore(
 
     override suspend fun refresh(): String? = null
 
+    /** Las entradas que pidieron la marca «aceptación pendiente», en orden. */
+    val signInTermsPending = mutableListOf<Boolean>()
+
+    /** Las cuentas cuya aceptación se confirmó (`confirmTerms`), y lo que responde. */
+    val confirmTermsCalls = mutableListOf<String>()
+    var confirmTermsResult = true
+
+    override suspend fun confirmTerms(accountId: String): Boolean {
+        confirmTermsCalls += accountId
+        return confirmTermsResult
+    }
+
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): SignInResult {
+        signInTermsPending += termsPending
         signInCalls += idToken to rawNonce
         if (signInResult == SignInResult.Success) enter(signInUserId)
         return signInResult

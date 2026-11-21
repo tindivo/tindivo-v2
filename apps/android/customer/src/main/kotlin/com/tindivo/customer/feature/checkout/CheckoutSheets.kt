@@ -253,7 +253,7 @@ internal fun PhoneSheet(
                 actions =
                     PhoneActions(
                         onPhoneChanged = viewModel::onPhoneChanged,
-                        onCodeChanged = viewModel::onCodeChanged,
+                        onCodeChanged = viewModel::onCodeTyped,
                         onSendCode = viewModel::sendCode,
                         onVerify = viewModel::verify,
                         onResend = viewModel::resend,

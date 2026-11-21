@@ -32,6 +32,13 @@ interface SessionStore : AccessTokenSource {
     val state: StateFlow<SessionState>
 
     /**
+     * `true` mientras la sesión restaurada no tiene la aceptación de los Términos confirmada (la guardó la versión anterior,
+     * sin esa marca): la app no da acceso y muestra la pantalla de aceptación. No cierra la sesión; [confirmTerms] la
+     * desbloquea. Una entrada nueva nunca la deja en `true`.
+     */
+    val termsRequired: StateFlow<Boolean>
+
+    /**
      * Cuántas veces se entró a una cuenta (la que sea, también la misma otra vez) desde que arrancó el proceso. Sube
      * justo DESPUÉS de que [state] muestre la cuenta que entró; restaurar al arrancar, refrescar y cerrar no la mueven.
      *
@@ -41,11 +48,23 @@ interface SessionStore : AccessTokenSource {
      */
     val signInGeneration: StateFlow<Long>
 
-    /** Entra con el ID token de Google. [rawNonce] es el nonce en crudo; Google recibió su SHA-256. */
+    /**
+     * Entra con el ID token de Google. [rawNonce] es el nonce en crudo; Google recibió su SHA-256. Con [termsPending] la
+     * sesión queda guardada con la marca «aceptación pendiente»: si el proceso muere antes de [confirmTerms], no se
+     * restaura al reabrir la app (nunca hay una sesión utilizable sin la aceptación registrada).
+     */
     suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): SignInResult
+
+    /**
+     * La aceptación de [accountId] ya se registró en el servidor: quita la marca y la sesión pasa a restaurarse. Si la
+     * sesión vigente es de otra cuenta, no toca nada y devuelve `false`. Si no se puede guardar, lanza y la sesión sigue
+     * marcada.
+     */
+    suspend fun confirmTerms(accountId: String): Boolean
 
     /**
      * `true` mientras un cierre de sesión no pudo borrar lo guardado en el aparato: no hay sesión (nadie recibe un
