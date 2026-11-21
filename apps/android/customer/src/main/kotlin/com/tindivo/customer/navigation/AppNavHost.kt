@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -79,9 +78,6 @@ data object CheckoutRoute
 data object DiagnosticsRoute
 
 @Serializable
-data object UpdateRoute
-
-@Serializable
 data object SignInRoute
 
 @Serializable
@@ -92,23 +88,17 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
     val navController = rememberNavController()
     val upgradeRequired = appViewModel.upgradeRequired.collectAsStateWithLifecycle().value
     val osNoticeVisible = appViewModel.osNoticeVisible.collectAsStateWithLifecycle().value
-    // Un 426 llegue de donde llegue: se vacía la pila y se muestra la actualización, sin vuelta atrás (CLI-4).
-    LaunchedEffect(upgradeRequired) {
-        if (upgradeRequired) {
-            navController.navigate(UpdateRoute) {
-                popUpTo(navController.graph.id) { inclusive = true }
-                launchSingleTop = true
-            }
-        }
-    }
     val termsGate: TermsGateViewModel = hiltViewModel()
     val termsRequired = termsGate.required.collectAsStateWithLifecycle().value
     val restoring = termsGate.restoring.collectAsStateWithLifecycle().value
     AppShell(
         termsRequired = termsRequired,
+        upgradeRequired = upgradeRequired,
         restoring = restoring,
         gate = { TermsGate(termsGate) },
         loading = { StartupLoading() },
+        // Un 426 llegue de donde llegue: solo la actualización, sin vuelta atrás (CLI-4), con o sin puerta de Términos.
+        update = { UpdateScreen() },
     ) {
         Column {
             // D-58: aviso que no bloquea. Con la actualización obligatoria el ViewModel ya no lo muestra.
@@ -128,7 +118,6 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 addressesGraph(navController)
                 ordersGraph(navController)
                 if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
-                composable<UpdateRoute> { UpdateScreen() }
             }
         }
     }
