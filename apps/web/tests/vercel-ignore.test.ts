@@ -46,9 +46,10 @@ afterAll(() => {
 })
 
 describe('Ignored Build Step de tindivo.com (CA-WPU-10)', () => {
-  it('no despliega cuando solo cambia otra app (sale 0)', () => {
+  it('no despliega cuando, desde el último despliegue, solo cambia otra app (sale 0)', () => {
+    const previous = head()
     commit('apps/negocios/page.tsx', 'x')
-    expect(runIgnoreStep()).toBe(0)
+    expect(runIgnoreStep(previous)).toBe(0)
   })
 
   it.each([
@@ -61,8 +62,9 @@ describe('Ignored Build Step de tindivo.com (CA-WPU-10)', () => {
     'tsconfig.base.json',
     'packages/tsconfig/base.json',
   ])('despliega cuando cambia %s (sale 1)', (file) => {
+    const previous = head()
     commit(file, `cambio ${Math.random()}`)
-    expect(runIgnoreStep()).toBe(1)
+    expect(runIgnoreStep(previous)).toBe(1)
   })
 
   it('despliega si apps/web cambió en un commit anterior de un push de varios (sale 1)', () => {
@@ -79,9 +81,48 @@ describe('Ignored Build Step de tindivo.com (CA-WPU-10)', () => {
     expect(runIgnoreStep(previous)).toBe(0)
   })
 
-  it('si VERCEL_GIT_PREVIOUS_SHA no es alcanzable, cae a HEAD^ (sale 0 si solo cambió otra app)', () => {
-    commit('apps/admin/c.tsx', 'c')
-    expect(runIgnoreStep('0123456789abcdef0123456789abcdef01234567')).toBe(0)
+  // CAX-001: sin una base del último despliegue en la que confiar, se despliega. Nunca se sustituye por HEAD^, que en un
+  // push de varios commits esconde los anteriores (A cambia los legales, B otra app: HEAD^ = A no ve el cambio).
+  describe('sin una base válida del último despliegue, despliega (sale 1)', () => {
+    let beforePush: string
+    beforeAll(() => {
+      beforePush = head()
+      commit('packages/legal/content/terminos.md', `A ${Math.random()}`)
+      commit('apps/negocios/b.tsx', `B ${Math.random()}`)
+    })
+
+    it('sin VERCEL_GIT_PREVIOUS_SHA', () => {
+      expect(runIgnoreStep()).toBe(1)
+    })
+
+    it('con VERCEL_GIT_PREVIOUS_SHA vacío', () => {
+      expect(runIgnoreStep('')).toBe(1)
+    })
+
+    it('con un VERCEL_GIT_PREVIOUS_SHA que no existe en el clon', () => {
+      expect(runIgnoreStep('0123456789abcdef0123456789abcdef01234567')).toBe(1)
+    })
+
+    it('con VERCEL_GIT_PREVIOUS_SHA igual a HEAD', () => {
+      expect(runIgnoreStep(head())).toBe(1)
+    })
+
+    it('con VERCEL_GIT_PREVIOUS_SHA que no es un antecesor de HEAD', () => {
+      git('checkout', '-q', '-b', 'lateral', beforePush)
+      commit('apps/admin/lateral.tsx', 'lateral')
+      const lateral = head()
+      git('checkout', '-q', '-')
+      expect(runIgnoreStep(lateral)).toBe(1)
+    })
+
+    it('con una expresión o un SHA abreviado en vez de un SHA completo', () => {
+      expect(runIgnoreStep('HEAD^')).toBe(1)
+      expect(runIgnoreStep(beforePush.slice(0, 12))).toBe(1)
+    })
+
+    it('con la base válida anterior a A también despliega', () => {
+      expect(runIgnoreStep(beforePush)).toBe(1)
+    })
   })
 
   it('despliega si no puede saber qué cambió: sin commit anterior (sale 1)', () => {

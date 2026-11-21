@@ -4,22 +4,24 @@
 #
 #   Sale 0 (no desplegar): nada de lo desplegado desde el último despliegue tocó apps/web, packages/legal ni lo que arrastra
 #                          todo el monorepo (lockfile, workspace, raíz, turbo, tsconfig base).
-#   Sale 1 (desplegar):    cambió alguno de esos, o no se puede saber (sin base alcanzable, historial superficial).
+#   Sale 1 (desplegar):    cambió alguno de esos, o no hay una base del último despliegue en la que confiar.
+#
+# La base es solo VERCEL_GIT_PREVIOUS_SHA (el último despliegue de la rama), y tiene que ser un SHA completo, alcanzable,
+# distinto de HEAD y antecesor suyo. Si no, se despliega: nunca se sustituye por HEAD^, que en un push de varios commits
+# esconde los anteriores (CAX-001).
 set -u
 
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 1
 cd "$root" || exit 1
 
-# Base de la comparación: el último despliegue de esta rama (cubre un push de varios commits);
-# si Vercel no la da o no es alcanzable, el commit anterior; si tampoco hay, se despliega.
-base=""
-if [ -n "${VERCEL_GIT_PREVIOUS_SHA:-}" ] && git cat-file -e "${VERCEL_GIT_PREVIOUS_SHA}^{commit}" 2>/dev/null; then
-  base="$VERCEL_GIT_PREVIOUS_SHA"
-elif git rev-parse --verify --quiet HEAD^ >/dev/null; then
-  base="HEAD^"
-else
-  exit 1
-fi
+base="${VERCEL_GIT_PREVIOUS_SHA:-}"
+case "$base" in
+  *[!0-9a-f]* | "") exit 1 ;;
+esac
+[ "${#base}" -eq 40 ] || exit 1
+git cat-file -e "${base}^{commit}" 2>/dev/null || exit 1
+[ "$base" != "$(git rev-parse HEAD)" ] || exit 1
+git merge-base --is-ancestor "$base" HEAD || exit 1
 
 if git diff --quiet "$base" HEAD -- \
   apps/web \
