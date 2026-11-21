@@ -218,6 +218,9 @@ class NewSignInTermsPendingNetworkTest {
         return InFlight(store, backend, dispatcher, first, release, CountDownLatch(1))
     }
 
+    private fun InFlight.getProfile(outcome: (Result<Int>) -> Unit) =
+        asyncGet(store, "/api/v1/customer/profile", SignalingSource(store, waiting), outcome)
+
     private fun InFlight.publishPendingAndRelease(newToken: String) {
         assertTrue(first.await(10, TimeUnit.SECONDS))
         backend.signInResult = { TokenSnapshot(newToken, "user-1", 2_000_000L, termsPending = true) }
@@ -229,7 +232,7 @@ class NewSignInTermsPendingNetworkTest {
     fun `CAX-001 el reenvio tras el 401 espera la aceptacion pendiente y sale con el token nuevo`() {
         val s = inFlight(refreshed = null)
         var outcome: Result<Int>? = null
-        val request = asyncGet(s.store, "/api/v1/customer/profile", SignalingSource(s.store, s.waiting)) { outcome = it }
+        val request = s.getProfile { outcome = it }
         s.publishPendingAndRelease("nuevo")
 
         assertTrue(s.waiting.await(10, TimeUnit.SECONDS))
@@ -247,7 +250,7 @@ class NewSignInTermsPendingNetworkTest {
     fun `CAX-001 la rama del refresco tambien espera la aceptacion antes de reenviar`() {
         val s = inFlight(refreshed = TokenSnapshot("refrescado", "user-1", 2_000_000L, termsPending = true))
         var outcome: Result<Int>? = null
-        val request = asyncGet(s.store, "/api/v1/customer/profile", SignalingSource(s.store, s.waiting)) { outcome = it }
+        val request = s.getProfile { outcome = it }
         // Misma credencial rechazada: el 401 obliga a refrescar, y el refresco trae una sesión aún pendiente.
         s.publishPendingAndRelease("acceso")
 
@@ -266,7 +269,7 @@ class NewSignInTermsPendingNetworkTest {
     fun `CAX-001 si la sesion se cierra durante la espera del reenvio no sale la segunda peticion`() {
         val s = inFlight(refreshed = null)
         var outcome: Result<Int>? = null
-        val request = asyncGet(s.store, "/api/v1/customer/profile", SignalingSource(s.store, s.waiting)) { outcome = it }
+        val request = s.getProfile { outcome = it }
         s.publishPendingAndRelease("nuevo")
         assertTrue(s.waiting.await(10, TimeUnit.SECONDS))
 
