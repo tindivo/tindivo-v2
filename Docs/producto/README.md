@@ -12,6 +12,7 @@
 | [bolsa](bolsa/capacidad.md) | Bolsa | CUS | pedidos-restaurante | — | sí | 1 | 15 | 13 |
 | [catalogo](catalogo/capacidad.md) | Catálogo y negocio | CUS | pedidos-restaurante | bolsa, direcciones | sí | 3 | 31 | 7 |
 | [direcciones](direcciones/capacidad.md) | Direcciones y mapa | CUS | pedidos-restaurante, entregas | — | no | 2 | 14 | 7 |
+| [entregas](entregas/capacidad.md) | Tindivo Entregas | CUS | entregas | direcciones | sí | 3 | 21 | 11 |
 | [mis-pedidos](mis-pedidos/capacidad.md) | Mis pedidos | CUS | pedidos-restaurante, entregas | seguimiento | sí | 1 | 10 | 10 |
 | [resenas](resenas/capacidad.md) | Reseñas | CUS | pedidos-restaurante | — | no | 1 | 4 | 7 |
 | [seguimiento](seguimiento/capacidad.md) | Seguimiento del pedido | CUS | pedidos-restaurante | — | sí | 2 | 20 | 15 |
@@ -19,8 +20,8 @@
 
 ## Capacidades por línea de negocio
 
-| Línea | bolsa | direcciones | mis-pedidos | resenas | seguimiento | soporte |
-|---|---|---|---|---|---|---|
-| entregas |  | ● | ● |  |  | ● |
-| pedidos-restaurante | ● | ● | ● | ● | ● | ● |
-| store |  |  |  |  |  | ● |
+| Línea | bolsa | catalogo | direcciones | entregas | mis-pedidos | resenas | seguimiento | soporte |
+|---|---|---|---|---|---|---|---|---|
+| entregas |  |  | ● | ● | ● |  |  | ● |
+| pedidos-restaurante | ● | ● | ● |  | ● | ● | ● | ● |
+| store |  |  |  |  |  |  |  | ● |
