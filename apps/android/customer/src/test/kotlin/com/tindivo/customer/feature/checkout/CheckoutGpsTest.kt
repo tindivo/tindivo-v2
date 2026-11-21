@@ -287,6 +287,7 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             advanceUntilIdle()
 
             assertEquals(2, orders().size)
+            assertEquals(orders()[0].headers["Idempotency-Key"], orders()[1].headers["Idempotency-Key"])
             assertTrue(body(1).absent("gpsValidation"))
             assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
         }
