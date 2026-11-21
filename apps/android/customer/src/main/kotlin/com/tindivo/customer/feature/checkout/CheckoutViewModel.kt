@@ -565,7 +565,7 @@ class CheckoutViewModel
                 if (current == null || blocked || !isCurrent(started, account)) {
                     null
                 } else {
-                    buildOrderRequest(form, current, quote, evidence)
+                    buildOrderRequest(form, current, quote, withTrustedFallback(form, evidence))
                 }
             if (current == null || request == null) {
                 if (!blocked && isCurrent(started, account)) stop(CheckoutMessage.Generic)
@@ -669,6 +669,8 @@ class CheckoutViewModel
             val evidence = request.gpsValidation ?: return request
             // Pagar por adelantado no lee ubicación: no depende del permiso.
             if (evidence.method == CreateOrderRequestGpsValidation.Method.manual_skip_prepaid) return request
+            // `failed` no lleva coordenadas: la falta de ubicación se guarda igual con o sin permiso.
+            if (evidence.method == CreateOrderRequestGpsValidation.Method.failed) return request
             if (gps.permissionGranted()) return request
             gpsCapture = null
             gps.reset()

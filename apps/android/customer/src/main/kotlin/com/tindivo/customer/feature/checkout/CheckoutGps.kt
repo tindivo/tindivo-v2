@@ -145,6 +145,26 @@ internal fun gpsBlocks(
         form.pay != PayMethod.Prepaid &&
         (evidence == null || evidence.method == CreateOrderRequestGpsValidation.Method.failed)
 
+/**
+ * Quien tiene compra previa ([CheckoutUiState.previousPurchase]) paga al recibir sin hoja de GPS; para que el pedido
+ * guarde la misma evidencia que en la web, la falta de ubicación (sin permiso, `null`) viaja como `failed`, igual que
+ * la falta de señal. Solo en un delivery que se paga al recibir; una lectura real no se toca.
+ */
+internal fun withTrustedFallback(
+    form: CheckoutUiState,
+    evidence: CreateOrderRequestGpsValidation?,
+): CreateOrderRequestGpsValidation? =
+    if (evidence == null &&
+        form.previousPurchase &&
+        form.method == DeliveryChoice.Delivery &&
+        form.pay != null &&
+        form.pay != PayMethod.Prepaid
+    ) {
+        CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.failed)
+    } else {
+        evidence
+    }
+
 private fun found(
     reading: LocationReading.Found,
     config: GpsConfig,

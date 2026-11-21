@@ -225,7 +225,22 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
         }
 
     @Test
-    fun `con compra previa y sin permiso el pedido sale sin gpsValidation y sin hoja`() =
+    fun `con compra previa la falta de ubicacion viaja como failed igual que en la web`() {
+        val failed = CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.failed)
+        val trusted = CheckoutUiState(method = DeliveryChoice.Delivery, pay = PayMethod.Cash, previousPurchase = true)
+        // Sin permiso (null) y sin senal (failed): en los dos casos sale failed.
+        assertEquals(failed, withTrustedFallback(trusted, null))
+        assertEquals(failed, withTrustedFallback(trusted, failed))
+        // Con lectura, no se toca.
+        assertEquals(preciseFix(), withTrustedFallback(trusted, preciseFix()))
+        // Sin compra previa, prepago o recojo: igual que antes.
+        assertNull(withTrustedFallback(trusted.copy(previousPurchase = false), null))
+        assertNull(withTrustedFallback(trusted.copy(pay = PayMethod.Prepaid), null))
+        assertNull(withTrustedFallback(trusted.copy(method = DeliveryChoice.Pickup), null))
+    }
+
+    @Test
+    fun `con compra previa y sin permiso el pedido sale con gpsValidation failed y sin hoja`() =
         runTest(dispatcher) {
             trustedBuyer()
             gpsAnswer = noGps()
@@ -236,7 +251,7 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
 
             assertEquals(1, orders().size)
             assertNull(vm.state.value.sheet)
-            assertNull(body().get("gpsValidation"))
+            assertEquals("failed", body()["gpsValidation"]!!.jsonObject["method"]!!.jsonPrimitive.content)
         }
 
     @Test
