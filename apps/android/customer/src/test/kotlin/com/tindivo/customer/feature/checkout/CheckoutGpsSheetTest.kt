@@ -20,8 +20,6 @@ import org.junit.Test
 class CheckoutGpsSheetTest : CheckoutHarness() {
     private fun orders() = sent("POST", "/customer/orders")
 
-    private fun JsonObject.absent(key: String) = this[key] == null || this[key] is JsonNull
-
     private fun body(index: Int = 0): JsonObject = Json.parseToJsonElement(bodyOf(orders()[index])).jsonObject
 
     private suspend fun TestScope.cashReady(): CheckoutViewModel {
