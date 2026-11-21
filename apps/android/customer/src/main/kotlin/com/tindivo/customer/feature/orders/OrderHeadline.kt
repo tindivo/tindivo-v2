@@ -45,6 +45,7 @@ private fun receivedHeroOf(
     payment: PaymentFacts,
 ): OrderHero =
     when {
+        !payment.prepaid && status == "validando" -> OrderHero.CallToConfirm
         !payment.prepaid -> OrderHero.Received
         status == "pending_acceptance" -> OrderHero.AwaitingAvailability
         status == "validando" && !payment.proofSent -> OrderHero.AwaitingAvailability

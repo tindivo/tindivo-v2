@@ -30,6 +30,7 @@ internal fun CheckoutBottomBar(
     openSheet: (CheckoutSheet) -> Unit,
 ) {
     val cta = state.cta
+    val confirm = rememberConfirmWithLocation(state, form.onConfirm)
     Surface(shadowElevation = 8.dp) {
         Column(
             modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
@@ -44,8 +45,8 @@ internal fun CheckoutBottomBar(
                 )
             }
             Button(
-                onClick = { onCta(cta, state.selectedAddressId, form, openSheet) },
-                enabled = cta != Cta.Sending,
+                onClick = { onCta(cta, state.selectedAddressId, confirm, form, openSheet) },
+                enabled = cta != Cta.Sending && cta != Cta.Locating,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             ) {
                 Text(text = cta.label())
@@ -65,12 +66,13 @@ internal fun CheckoutBottomBar(
 private fun onCta(
     cta: Cta,
     selectedAddressId: String?,
+    confirm: () -> Unit,
     form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
 ) {
     val sheet = cta.sheet(selectedAddressId)
     when {
-        cta.canConfirm -> form.onConfirm()
+        cta.canConfirm -> confirm()
         sheet != null -> openSheet(sheet)
         cta == Cta.QuoteProblem -> form.onRetryQuote()
     }

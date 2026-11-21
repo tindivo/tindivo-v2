@@ -25,6 +25,7 @@ internal fun CheckoutMessage.text(): String =
 internal fun Cta.label(): String =
     when (this) {
         Cta.Sending -> stringResource(R.string.checkout_cta_sending)
+        Cta.Locating -> stringResource(R.string.checkout_cta_locating)
         Cta.Calculating -> stringResource(R.string.checkout_cta_calculating)
         Cta.QuoteProblem -> stringResource(R.string.checkout_cta_quote_problem)
         Cta.NeedName -> stringResource(R.string.checkout_cta_name)
