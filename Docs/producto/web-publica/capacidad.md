@@ -24,7 +24,7 @@ reglas: []
 - Mismos tokens y letra Geist que la app: primario #EE6417, texto naranja #C2410C, tinta #2E3236, página #F7F8FA, tarjetas blancas; blanco sobre naranja solo desde 18 px en negrita; toque mínimo 48 px.
 - Páginas: landing, `/terminos`, `/privacidad`, `/libro-de-reclamaciones` y `/borrar-cuenta` (Google Play exige esta última URL). El Libro tiene su propia capacidad: `libro-reclamaciones`.
 - Soporte por WhatsApp: **un solo número, 51906550166**, el mismo de la capacidad de soporte. La landing no escribe ningún otro.
-- Alojamiento: el proyecto de Vercel que hoy sirve `tindivo.com` (el dominio no se mueve), con «Ignored Build Step» para desplegar solo cuando cambie `apps/web` o lo que importe. Riesgo anotado: el límite de despliegues de Vercel.
+- Alojamiento: el proyecto de Vercel que hoy sirve `tindivo.com` (el dominio no se mueve); se despliega en cada push, sin «Ignored Build Step» (una base manipulable podría saltarse un cambio legal).
 - **La tienda web sigue viva hasta que salgan Android e iOS.** Hasta entonces conviven; el corte es un cambio aparte, con su propio PR. Al cortar, los enlaces viejos (`/negocio/*`, `/pedido/*`, `/store`, etc.) redirigen a la landing: nunca 404.
 - Términos y Privacidad: se publica el texto vigente hoy (el de `apps/customer/app/terminos` y `/privacidad`) y se reemplaza cuando Jesús apruebe la v2 (PR #194). Una sola fuente en markdown versionado (ver CUS-WPU-006).
 - Ninguna página depende de sesión, de la API ni de cookies. La excepción es el formulario del Libro, que vive en su capacidad.
@@ -45,7 +45,7 @@ reglas: []
 | CUS-WPU-008 | Cuando se apague la tienda web, toda ruta vieja (`/negocio/*`, `/pedido/*`, `/store` y las demás de `apps/customer`) debe redirigir a la landing; ninguna puede responder 404. | Decisión de Jesús, 2026-11-19 · `movil:D-27` | ★ |
 | CUS-WPU-009 | Cada página debe verse y usarse bien desde 360 px de ancho, con toques de al menos 48 px y texto naranja solo con el tono #C2410C. | Decisión de Jesús, 2026-11-19 | |
 | CUS-WPU-010 | Cada página debe cumplir accesibilidad: puntaje de accesibilidad de Lighthouse de al menos 95 (el repo no tiene umbral propio). | Decisión de Jesús, 2026-11-19 | |
-| CUS-WPU-011 | La web debe desplegarse en el proyecto de Vercel actual de `tindivo.com` y solo cuando cambie `apps/web` o lo que importe. | Decisión de Jesús, 2026-11-19 | |
+| CUS-WPU-011 | La web debe desplegarse en el proyecto de Vercel actual de `tindivo.com` en cada push, sin «Ignored Build Step»: una base manipulable podría saltarse un cambio legal. | Decisión de Jesús, 2026-11-19; ajustada el 2026-11-20 (Vercel Pro y auditoría de Codex) | |
 
 ## Criterios de aceptación
 
@@ -60,7 +60,7 @@ reglas: []
 | CA-WPU-07 | Dado el corte de la tienda web, cuando se pide `/negocio/cualquiera`, `/pedido/cualquiera` o `/store`, entonces la respuesta es una redirección a la landing y no un 404. | CUS-WPU-008 |
 | CA-WPU-08 | Dado un ancho de 360 px, cuando se recorre cada página, entonces no hay desplazamiento horizontal y todo control mide al menos 48 px. | CUS-WPU-009 |
 | CA-WPU-09 | Dada cada página, cuando se corre Lighthouse, entonces la accesibilidad es de al menos 95. | CUS-WPU-010 |
-| CA-WPU-10 | Dado un cambio que solo toca otra app (por ejemplo `apps/negocios`), cuando Vercel evalúa el «Ignored Build Step», entonces no despliega `tindivo.com`. | CUS-WPU-011 |
+| CA-WPU-10 | Dado cualquier push a la rama de producción, cuando Vercel lo recibe, entonces despliega `tindivo.com` (el `vercel.json` no declara `ignoreCommand`). | CUS-WPU-011 |
 
 ## Matriz de paridad
 
