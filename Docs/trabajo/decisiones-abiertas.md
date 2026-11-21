@@ -84,3 +84,11 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 - **Contexto**: el motorizado tiene que poder llevar 4 pedidos y no 3; va como arreglo urgente desde `main`, sin migración. Jesús lo retoma cuando acabe el servicio en curso.
 - **Decidir**: (1) si Vercel despliega `motorizados` a producción desde `main`; (2) traspaso por silencio: (a) `UPDATE` de `assignment_rules.maxOccupancySlotsPerDriver` en producción, revisado por Codex, o (b) esperar al lote 0248–0266; (3) si el tope cuenta espacios de mochila o pedidos.
 - **Recomendación**: (2a), para que el traspaso por silencio no se quede en 3; y (3) espacios, que es lo que la app ya cuenta.
+
+### DA-17 · Compartir plato y distintivo «Para compartir» (app cliente)
+
+- 2026-11-19 · No bloquea el lanzamiento · Detectó: Claude (PR #198, capacidad `catalogo`)
+- **Contexto**: el canvas dibuja un botón de compartir en la ficha del plato y un distintivo «Para compartir» en las filas de la carta. Sin enlaces compartidos (CUS-CAT-022 diferido) no hay destino, y nadie definió quién asigna el distintivo.
+- **Decidir**: (1) a dónde lleva «compartir»; (2) si el distintivo lo marca el negocio o se calcula.
+- **Alternativas**: (a) quitarlos hasta tener enlaces; (b) el negocio marca el distintivo en el panel; (c) calcularlo por reglas.
+- **Recomendación**: (a). Jesús no respondió a esta decisión el 2026-11-19: queda abierta y no entra en la app.
