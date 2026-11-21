@@ -52,11 +52,18 @@ fun interface CheckoutGps {
     fun elapsedMs(): Long = 0L
 
     /**
-     * Cuándo se leyó (en [elapsedMs]) la ubicación que devolvió la última [capture]: el instante de la lectura, que en
-     * una lectura adelantada es anterior al de confirmar. Por defecto, ahora.
+     * Como [capture], pero con el instante (en [elapsedMs]) en que se leyó la ubicación: en una lectura adelantada es
+     * anterior al de confirmar, y es el que caduca a los 2 minutos. Viaja junto con la evidencia, sin estado compartido.
+     * Por defecto, ahora.
      */
-    fun lastReadAtMs(): Long = elapsedMs()
+    suspend fun captureFix(pay: PayMethod?): CapturedFix = CapturedFix(capture(pay), elapsedMs())
 }
+
+/** La evidencia de una captura y cuándo se leyó (en [CheckoutGps.elapsedMs]). */
+class CapturedFix(
+    val evidence: CreateOrderRequestGpsValidation?,
+    val readAtMs: Long,
+)
 
 /** Lo que hace falta de la configuración pública para describir una lectura: el centro y la precisión aceptable. */
 internal data class GpsConfig(
@@ -184,13 +191,10 @@ internal class LiveCheckoutGps(
         )
 
     private var cachedConfig: GpsConfig? = null
-    private var prefetched: Deferred<LocationReading>? = null
+    private var prefetched: Deferred<Pair<LocationReading, Long>>? = null
 
     /** Cuándo terminó de leerse la lectura adelantada (en [now]); `null` mientras no ha terminado. */
     private var prefetchedAt: Long? = null
-
-    /** Cuándo se leyó la ubicación de la última captura (en [now]). */
-    private var lastReadAt = 0L
 
     /**
      * Adelanta la lectura al abrir el checkout (como `takePrefetchedGpsFix` de la web): sigue siendo una lectura en
@@ -199,7 +203,8 @@ internal class LiveCheckoutGps(
     override fun prefetch(scope: CoroutineScope) {
         if (prefetched != null) return
         prefetchedAt = null
-        prefetched = scope.async { read().also { prefetchedAt = now() } }
+        // La lectura lleva su hora: quien la use sabe cuándo se leyó, aunque el estado de esta clase cambie después.
+        prefetched = scope.async { read().let { reading -> reading to now().also { prefetchedAt = it } } }
         scope.launch { config() }
     }
 
@@ -216,33 +221,39 @@ internal class LiveCheckoutGps(
 
     override fun elapsedMs(): Long = now()
 
-    override fun lastReadAtMs(): Long = lastReadAt
+    override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? = captureFix(pay).evidence
 
-    override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
-        lastReadAt = now()
-        if (pay == PayMethod.Prepaid) return gpsEvidence(null, GpsConfig.Fallback, prepaid = true)
+    override suspend fun captureFix(pay: PayMethod?): CapturedFix {
+        if (pay == PayMethod.Prepaid) {
+            return CapturedFix(gpsEvidence(null, GpsConfig.Fallback, prepaid = true), now())
+        }
         // Una posición ya adelantada no sale si el permiso se revocó después: se descarta y no se manda nada.
         if (!permissionGranted()) {
             reset()
-            return null
+            return CapturedFix(null, now())
         }
         return coroutineScope {
             val config = async { config() }
             // Una lectura adelantada que ya caducó se descarta: se lee de nuevo, como la web.
-            val early = prefetched?.takeUnless { prefetchedExpired() }
-            var reading = early?.await() ?: read()
-            // Una lectura adelantada se fecha cuando terminó de leerse, no cuando se confirma; una nueva, ahora.
-            lastReadAt = if (early != null) prefetchedAt ?: now() else now()
-            prefetched = null
-            prefetchedAt = null
+            val current = prefetched
+            val early = current?.takeUnless { prefetchedExpired() }
+            val fix = early?.await() ?: read().let { it to now() }
+            // Solo se suelta la lectura adelantada si sigue siendo la que esta captura usó: un reset() y un prefetch()
+            // nuevos mientras se esperaba no pierden su lectura.
+            if (prefetched === current) {
+                prefetched = null
+                prefetchedAt = null
+            }
+            var reading = fix.first
+            var readAt = fix.second
             // Sin permiso al abrir: pudo darlo al tocar «Confirmar», así que se lee de nuevo.
             if (early != null && reading == LocationReading.NoPermission) {
                 reading = read()
-                lastReadAt = now()
+                readAt = now()
             }
             val gpsConfig = config.await()
             // Revalidado tras las esperas: si el permiso se revocó mientras tanto, no sale ninguna coordenada.
-            if (permissionGranted()) gpsEvidence(reading, gpsConfig, prepaid = false) else null
+            CapturedFix(if (permissionGranted()) gpsEvidence(reading, gpsConfig, prepaid = false) else null, readAt)
         }
     }
 

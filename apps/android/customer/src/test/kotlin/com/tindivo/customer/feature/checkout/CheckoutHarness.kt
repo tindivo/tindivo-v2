@@ -244,7 +244,8 @@ abstract class CheckoutHarness {
 
             override fun elapsedMs(): Long = gpsClockMs
 
-            override fun lastReadAtMs(): Long = gpsClockMs - gpsReadAgeMs
+            override suspend fun captureFix(pay: PayMethod?): CapturedFix =
+                CapturedFix(capture(pay), gpsClockMs - gpsReadAgeMs)
         }
 
     protected companion object {

@@ -621,14 +621,15 @@ class CheckoutViewModel
             // Mientras se espera la lectura el botón lo dice («Verificando tu ubicación…»); pagar por adelantado no lee.
             val waits = pay != PayMethod.Prepaid
             if (waits) mutableState.update { it.copy(locating = true) }
-            val evidence =
+            val fix =
                 try {
-                    gps.capture(pay)
+                    gps.captureFix(pay)
                 } finally {
                     if (waits) mutableState.update { it.copy(locating = false) }
                 }
-            gpsCapture = GpsCapture(key, evidence, gps.lastReadAtMs())
-            return evidence
+            // La captura se fecha con la hora de la lectura que devolvió la propia captura, no con la de confirmar.
+            gpsCapture = GpsCapture(key, fix.evidence, fix.readAtMs)
+            return fix.evidence
         }
 
         /**
