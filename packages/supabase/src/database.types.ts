@@ -509,6 +509,7 @@ export type Database = {
           delivery_fee: number
           estimated_eta_max: number
           estimated_eta_min: number
+          featured_title: string | null
           id: string
           is_active: boolean
           is_blocked: boolean
@@ -551,6 +552,7 @@ export type Database = {
           delivery_fee?: number
           estimated_eta_max?: number
           estimated_eta_min?: number
+          featured_title?: string | null
           id?: string
           is_active?: boolean
           is_blocked?: boolean
@@ -593,6 +595,7 @@ export type Database = {
           delivery_fee?: number
           estimated_eta_max?: number
           estimated_eta_min?: number
+          featured_title?: string | null
           id?: string
           is_active?: boolean
           is_blocked?: boolean
@@ -1898,6 +1901,7 @@ export type Database = {
           image_url: string | null
           is_available: boolean
           is_compact: boolean
+          is_featured: boolean
           name: string
           thumbnail_url: string | null
           updated_at: string
@@ -1921,6 +1925,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           is_compact?: boolean
+          is_featured?: boolean
           name: string
           thumbnail_url?: string | null
           updated_at?: string
@@ -1944,6 +1949,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           is_compact?: boolean
+          is_featured?: boolean
           name?: string
           thumbnail_url?: string | null
           updated_at?: string

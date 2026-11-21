@@ -22,6 +22,13 @@ internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi? {
             .sortedBy { it.displayOrder }
             .map { it.toCategory() ?: return null }
             .filter { it.items.isNotEmpty() }
+    val byId = menu.flatMap { it.items }.associateBy { it.id }
+    val featuredItems =
+        featured
+            ?.itemIds
+            .orEmpty()
+            .mapNotNull { byId[it.toString()] }
+            .take(FEATURED_MAX)
     return BusinessDetailUi(
         id = business.id.toString(),
         name = business.name,
@@ -30,8 +37,30 @@ internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi? {
         bannerUrl = business.bannerUrl?.takeIf { it.isNotBlank() },
         accent = parseAccent(business.accentColor),
         categories = menu,
+        // Un plato que el servidor mandó destacado pero ya no está en la carta se descarta; sin platos no hay sección.
+        featured =
+            featuredItems.takeIf { it.isNotEmpty() }?.let { items ->
+                val title = featured?.title?.takeIf { it.isNotBlank() } ?: FEATURED_TITLE
+                MenuCategoryUi(FEATURED_ID, title, null, items)
+            },
+        schedule =
+            schedule.map {
+                ScheduleDayUi(it.dayOfWeek, it.isOpen, it.shift1Start, it.shift1End, it.shift2Start, it.shift2End)
+            },
+        openingConfirmed = openingConfirmed,
+        catalogOnly = business.primaryCapability == CATALOG_ONLY,
+        whatsappNumber = business.whatsappNumber?.takeIf { it.isNotBlank() },
     )
 }
+
+/** Tope de platos de «Destacados» (`FEATURED_MAX_ITEMS` de `packages/contracts`). */
+private const val FEATURED_MAX = 6
+
+/** El id de la sección «Destacados»: sus platos ya están en su sección de la carta y no se cuentan dos veces. */
+internal const val FEATURED_ID = "featured"
+
+private const val FEATURED_TITLE = "Destacados"
+private const val CATALOG_ONLY = "catalog_only"
 
 private fun GetBusiness200ResponseDataCategoriesInner.toCategory(): MenuCategoryUi? {
     val menu = items.sortedBy { it.displayOrder }.map { it.toItem() ?: return null }
@@ -96,18 +125,22 @@ private fun List<ModifierGroupUi>.hasRepeatedIds(): Boolean {
 }
 
 /**
- * Quita los platos fuera de su franja en el instante [now] y las categorías que se quedan sin platos. Los agotados
- * (`available = false`) no se tocan: esos se siguen mostrando atenuados. Se aplica a la carta ya validada.
+ * Marca los platos fuera de su franja en el instante [now] con su texto de vuelta («Solo sáb y dom, de 11:00 a 15:00»):
+ * se siguen viendo, apagados (decisión de Jesús, 2026-11-19, que sustituye a D-59). Los agotados (`available = false`)
+ * no se tocan. Se aplica a la carta ya validada.
  */
-internal fun BusinessUiState.visibleAt(now: Instant): BusinessUiState =
-    if (this is BusinessUiState.Loaded) BusinessUiState.Loaded(business.visibleAt(now)) else this
+internal fun BusinessUiState.atInstant(now: Instant): BusinessUiState =
+    if (this is BusinessUiState.Loaded) BusinessUiState.Loaded(business.atInstant(now)) else this
 
-internal fun BusinessDetailUi.visibleAt(now: Instant): BusinessDetailUi =
+internal fun BusinessDetailUi.atInstant(now: Instant): BusinessDetailUi =
+    copy(categories = categories.map { it.atInstant(now) }, featured = featured?.atInstant(now))
+
+private fun MenuCategoryUi.atInstant(now: Instant): MenuCategoryUi =
     copy(
-        categories =
-            categories
-                .map { category -> category.copy(items = category.items.filter { it.window.isOpenAt(now) }) }
-                .filter { it.items.isNotEmpty() },
+        items =
+            items.map { item ->
+                item.copy(outsideWindow = if (item.window.isOpenAt(now)) null else item.window.describe())
+            },
     )
 
 /**

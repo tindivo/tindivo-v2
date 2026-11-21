@@ -214,3 +214,16 @@ export function motivoDeSoloLectura(
   if (group.isLibrary) return 'biblioteca'
   return null
 }
+
+/**
+ * El tope de la sección «Destacados» (`FEATURED_MAX_ITEMS` de `@tindivo/contracts`): lo aplica este panel al marcar y el
+ * servidor recorta al servir. No hay trigger en la base (CUS-CAT-028).
+ */
+export function featuredToggle(
+  others: number,
+  isOn: boolean,
+  max: number,
+): { count: number; blocked: boolean } {
+  const count = others + (isOn ? 1 : 0)
+  return { count, blocked: !isOn && count >= max }
+}
