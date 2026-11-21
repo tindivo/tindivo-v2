@@ -50,6 +50,9 @@ private const val COORDINATE_SCALE = 7
 private const val ACCURACY_SCALE = 1
 private const val DISTANCE_SCALE = 3
 
+/** El tope que acepta `CustomerGpsValidationSchema` (`packages/contracts/src/requests.ts`). */
+private const val MAX_ACCURACY_M = 100_000f
+
 /**
  * Arma el `gpsValidation` de una lectura, con las mismas reglas de método que la web:
  * - Con posición: `gps_high_accuracy` si la precisión es de hasta [GpsConfig.maxAccuracyM]; si no (o si el proveedor
@@ -98,7 +101,11 @@ private fun found(
             },
         lat = BigDecimal(reading.point.lat).setScale(COORDINATE_SCALE, RoundingMode.HALF_UP),
         lng = BigDecimal(reading.point.lng).setScale(COORDINATE_SCALE, RoundingMode.HALF_UP),
-        accuracyM = accuracy?.let { BigDecimal(it.toDouble()).setScale(ACCURACY_SCALE, RoundingMode.HALF_UP) },
+        // Más de 100 000 m el servidor lo rechaza: se omite (es opcional) y el pedido sale igual como `gps_low_accuracy`.
+        accuracyM =
+            accuracy?.takeIf { it <= MAX_ACCURACY_M }?.let {
+                BigDecimal(it.toDouble()).setScale(ACCURACY_SCALE, RoundingMode.HALF_UP)
+            },
         distanceToCenterKm = BigDecimal(distanceKm).setScale(DISTANCE_SCALE, RoundingMode.HALF_UP),
     )
 }

@@ -65,6 +65,18 @@ class GpsEvidenceTest {
     }
 
     @Test
+    fun `una precision por encima de lo que el servidor acepta sale como gps_low_accuracy sin precision`() {
+        // El servidor rechaza accuracyM > 100000 (CustomerGpsValidationSchema): el pedido no puede perderse por eso.
+        val huge = checkNotNull(evidence(LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 150_000f)))
+        val limit = checkNotNull(evidence(LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 100_000f)))
+
+        assertEquals(CreateOrderRequestGpsValidation.Method.gps_low_accuracy, huge.method)
+        assertNull(huge.accuracyM)
+        assertNotNull(huge.lat)
+        assertEquals(BigDecimal("100000.0"), limit.accuracyM)
+    }
+
+    @Test
     fun `CA-CHK-10 sin permiso no hay evidencia y el pedido sale sin gpsValidation`() {
         assertNull(evidence(LocationReading.NoPermission))
     }
