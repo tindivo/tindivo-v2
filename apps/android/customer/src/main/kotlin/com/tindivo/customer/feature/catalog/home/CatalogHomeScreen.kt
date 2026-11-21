@@ -43,7 +43,6 @@ import com.tindivo.customer.R
 @Composable
 fun CatalogHomeDestination(
     onOpenBusiness: (id: String) -> Unit,
-    onOpenDiagnostics: (() -> Unit)?,
     onOpenCart: () -> Unit,
     onOpenCourier: () -> Unit,
     onOpenStore: () -> Unit,
@@ -56,7 +55,6 @@ fun CatalogHomeDestination(
         state = state,
         onRefresh = viewModel::refresh,
         onOpenBusiness = onOpenBusiness,
-        onOpenDiagnostics = onOpenDiagnostics,
         bagCount = bagCount,
         onOpenCart = onOpenCart,
         onOpenCourier = onOpenCourier,
@@ -70,7 +68,6 @@ fun CatalogHomeScreen(
     state: CatalogHomeUiState,
     onRefresh: () -> Unit,
     onOpenBusiness: (id: String) -> Unit,
-    onOpenDiagnostics: (() -> Unit)? = null,
     bagCount: Int = 0,
     onOpenCart: () -> Unit = {},
     onOpenCourier: () -> Unit = {},
@@ -92,7 +89,6 @@ fun CatalogHomeScreen(
                         BusinessList(
                             state = state,
                             onOpenBusiness = onOpenBusiness,
-                            onOpenDiagnostics = onOpenDiagnostics,
                             onOpenCourier = onOpenCourier,
                             onOpenStore = onOpenStore,
                         )
@@ -107,7 +103,6 @@ fun CatalogHomeScreen(
 private fun BusinessList(
     state: CatalogHomeUiState.Loaded,
     onOpenBusiness: (id: String) -> Unit,
-    onOpenDiagnostics: (() -> Unit)?,
     onOpenCourier: () -> Unit,
     onOpenStore: () -> Unit,
 ) {
@@ -172,18 +167,6 @@ private fun BusinessList(
             }
             items(state.whatsapp, key = { it.id }) { business ->
                 BusinessCard(business = business, whatsapp = true, onClick = { onOpenBusiness(business.id) })
-            }
-        }
-        onOpenDiagnostics?.let {
-            // Herramienta de desarrollo (solo builds DEBUG): discreta, al final de la lista.
-            item {
-                TextButton(onClick = it, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(
-                        text = stringResource(R.string.diagnostics_title),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TindivoColors.textMuted,
-                    )
-                }
             }
         }
     }

@@ -54,6 +54,7 @@ fun AccountDestination(
     onPhoneChangeHandled: () -> Unit,
     profile: ProfileLink,
     onDeleteAccount: () -> Unit,
+    onOpenDiagnostics: (() -> Unit)? = null,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
@@ -91,6 +92,7 @@ fun AccountDestination(
         onSignOut = viewModel::signOut,
         onCompleteProfile = profile.onOpen,
         onDeleteAccount = onDeleteAccount,
+        onOpenDiagnostics = onOpenDiagnostics,
         supportNumber = supportNumber,
         nameEdit = nameEdit,
         onSaveName = viewModel::saveName,
@@ -114,6 +116,7 @@ fun AccountScreen(
     onSignOut: () -> Unit,
     onCompleteProfile: () -> Unit = {},
     onDeleteAccount: () -> Unit = {},
+    onOpenDiagnostics: (() -> Unit)? = null,
     supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
     nameEdit: NameEditState = NameEditState.Idle,
     onSaveName: (String) -> Unit = {},
@@ -144,6 +147,7 @@ fun AccountScreen(
                         onOpenAddresses = onOpenAddresses,
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
+                        onOpenDiagnostics = onOpenDiagnostics,
                         supportNumber = supportNumber,
                     )
                 }
@@ -155,6 +159,7 @@ fun AccountScreen(
                         onVerifyPhone = onVerifyPhone,
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
+                        onOpenDiagnostics = onOpenDiagnostics,
                         supportNumber = supportNumber,
                         nameEdit = nameEdit,
                         onSaveName = onSaveName,
@@ -215,6 +220,7 @@ private fun ProfileMissing(
     onOpenAddresses: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
+    onOpenDiagnostics: (() -> Unit)?,
     supportNumber: String,
 ) {
     AccountColumn {
@@ -242,7 +248,7 @@ private fun ProfileMissing(
         AddressesCard(onOpenAddresses = onOpenAddresses)
         SettingsCard(supportNumber = supportNumber, onSignOut = onSignOut)
         // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
-        AccountFooter(onDeleteAccount = onDeleteAccount)
+        AccountFooter(onDeleteAccount = onDeleteAccount, onOpenDiagnostics = onOpenDiagnostics)
     }
 }
 
@@ -253,6 +259,7 @@ private fun Profile(
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
+    onOpenDiagnostics: (() -> Unit)?,
     supportNumber: String,
     nameEdit: NameEditState,
     onSaveName: (String) -> Unit,
@@ -280,7 +287,7 @@ private fun Profile(
         ProfileCard(profile = profile, onEditName = { editing = true }, onVerifyPhone = onVerifyPhone)
         AddressesCard(onOpenAddresses = onOpenAddresses)
         SettingsCard(supportNumber = supportNumber, onSignOut = onSignOut)
-        AccountFooter(onDeleteAccount = onDeleteAccount)
+        AccountFooter(onDeleteAccount = onDeleteAccount, onOpenDiagnostics = onOpenDiagnostics)
     }
 }
 

@@ -166,13 +166,6 @@ private fun NavGraphBuilder.catalogGraph(navController: NavHostController) {
             onOpenCart = { navController.navigate(CartRoute) },
             onOpenCourier = { navController.navigate(CourierHomeRoute()) { launchSingleTop = true } },
             onOpenStore = { navController.navigate(StoreListRoute()) { launchSingleTop = true } },
-            // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
-            onOpenDiagnostics =
-                if (BuildConfig.DEBUG) {
-                    { navController.navigate(DiagnosticsRoute) }
-                } else {
-                    null
-                },
         )
         // «¿Cómo estuvo tu pedido?»: sale sola si hay una reseña pendiente. Sin sesión no consulta nada.
         ReviewHost(rememberReviewController(autoPrompt = true))
@@ -234,6 +227,13 @@ private fun NavGraphBuilder.accountGraph(navController: NavHostController) {
                     onOpen = { navController.navigate(ProfileRoute) },
                 ),
             onDeleteAccount = { navController.navigate(DeleteAccountRoute) },
+            // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
+            onOpenDiagnostics =
+                if (BuildConfig.DEBUG) {
+                    { navController.navigate(DiagnosticsRoute) }
+                } else {
+                    null
+                },
         )
     }
     composable<DeleteAccountRoute> {

@@ -268,7 +268,10 @@ private fun SettingsRow(
 
 /** «Borrar mi cuenta» en rojo, discreto pero siempre a la vista (Google Play lo exige), y la versión de la app. */
 @Composable
-internal fun AccountFooter(onDeleteAccount: () -> Unit) {
+internal fun AccountFooter(
+    onDeleteAccount: () -> Unit,
+    onOpenDiagnostics: (() -> Unit)? = null,
+) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         TextButton(onClick = onDeleteAccount, modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget)) {
             Text(
@@ -283,5 +286,15 @@ internal fun AccountFooter(onDeleteAccount: () -> Unit) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        // Herramienta de desarrollo: solo llega aquí en builds DEBUG (en release es null).
+        onOpenDiagnostics?.let {
+            TextButton(onClick = it, modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget)) {
+                Text(
+                    text = stringResource(R.string.diagnostics_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
