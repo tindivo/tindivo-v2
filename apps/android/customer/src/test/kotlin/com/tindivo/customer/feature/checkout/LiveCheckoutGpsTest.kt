@@ -5,6 +5,8 @@ import com.tindivo.core.network.generated.model.GetPublicConfig200ResponseData
 import com.tindivo.customer.feature.addresses.FakeLocationSource
 import com.tindivo.customer.feature.addresses.GeoPoint
 import com.tindivo.customer.feature.addresses.LocationReading
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -136,5 +138,96 @@ class LiveCheckoutGpsTest {
             assertNull(gps.capture(PayMethod.Cash))
             assertEquals(false, gps.permissionGranted())
             assertEquals(1, location.calls)
+        }
+
+    @Test
+    fun `ENC-d una lectura adelantada vale menos de 2 minutos, antes se usa sin leer otra vez`() =
+        runTest {
+            var clock = 0L
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = LiveCheckoutGps(location, now = { clock }) { null }
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            clock = GPS_FIX_MAX_AGE_MS - 1
+            gps.capture(PayMethod.Cash)
+
+            assertEquals(1, location.calls)
+        }
+
+    @Test
+    fun `ENC-d una lectura adelantada de 2 minutos ya caduco y al confirmar se lee de nuevo`() =
+        runTest {
+            var clock = 0L
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = LiveCheckoutGps(location, now = { clock }) { null }
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            location.next = LocationReading.Found(GeoPoint(-9.2, -78.6), accuracyM = 10f)
+            clock = GPS_FIX_MAX_AGE_MS
+            val evidence = gps.capture(PayMethod.Cash)
+
+            assertEquals(2, location.calls)
+            assertEquals(java.math.BigDecimal("-9.2000000"), evidence?.lat)
+        }
+
+    @Test
+    fun `ENC-d el plazo de la lectura adelantada es de 2 minutos`() {
+        assertEquals(120_000L, GPS_FIX_MAX_AGE_MS)
+    }
+
+    @Test
+    fun `ENC-d la captura dice cuando se leyo la lectura adelantada, no cuando se confirmo`() =
+        runTest {
+            var clock = 0L
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = LiveCheckoutGps(location, now = { clock }) { null }
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            clock = GPS_FIX_MAX_AGE_MS - 1
+            val fix = gps.captureFix(PayMethod.Cash)
+
+            assertEquals(0L, fix.readAtMs)
+            assertEquals(GPS_FIX_MAX_AGE_MS - 1, gps.elapsedMs())
+        }
+
+    @Test
+    fun `ENC-d una lectura hecha al confirmar se fecha al confirmar`() =
+        runTest {
+            val clock = 5_000L
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = LiveCheckoutGps(location, now = { clock }) { null }
+
+            assertEquals(5_000L, gps.captureFix(PayMethod.Cash).readAtMs)
+        }
+
+    @Test
+    fun `ENC-d una captura vieja reanudada tras reset y prefetch no rejuvenece su lectura ni pierde la nueva`() =
+        runTest {
+            var clock = 0L
+            val gate = CompletableDeferred<GetPublicConfig200ResponseData?>()
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = LiveCheckoutGps(location, now = { clock }) { gate.await() }
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            clock = 100_000L
+            val old = async { gps.captureFix(PayMethod.Cash) }
+            runCurrent() // la captura ya uso la lectura adelantada y espera la configuracion
+
+            // Mientras espera: otra cuenta, otro adelanto de lectura.
+            gps.reset()
+            clock = 110_000L
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            gate.complete(null)
+
+            assertEquals(0L, old.await().readAtMs)
+            // La lectura nueva sigue ahi, con su propia hora, y no se leyo una tercera vez.
+            clock = 111_000L
+            assertEquals(110_000L, gps.captureFix(PayMethod.Cash).readAtMs)
+            assertEquals(2, location.calls)
         }
 }

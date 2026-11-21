@@ -127,7 +127,7 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
     }
 
     @Test
-    fun `CA-CHK-10 con el permiso negado el pedido se envia igual y sin gpsValidation`() =
+    fun `CA-CHK-10 con el permiso negado no hay pedido al recibir, la hoja ofrece pagar por adelantado`() =
         runTest(dispatcher) {
             gpsAnswer = { null }
             val vm = ready()
@@ -136,11 +136,23 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
 
             vm.confirm()
             advanceUntilIdle()
+            // Sin ubicación se abre la hoja y no sale nada; «Pedir sin ubicación» envía igual (nunca impide pedir).
+            assertEquals(0, orders().size)
+            assertEquals(CheckoutSheet.GpsBlock(noPermission = true, afterRetry = false), vm.state.value.sheet)
+            assertEquals(listOf<PayMethod?>(PayMethod.Cash), gpsReads)
+
+            // La salida es pagar por adelantado: el pedido sale como prepago, sin leer ubicacion.
+            gpsAnswer = { pay ->
+                CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.manual_skip_prepaid)
+                    .takeIf { pay == PayMethod.Prepaid }
+            }
+            vm.gpsPrepay()
+            vm.confirm()
+            advanceUntilIdle()
 
             assertEquals(1, orders().size)
-            assertTrue(body().absent("gpsValidation"))
+            assertEquals("prepaid", body().getValue("paymentIntent").jsonPrimitive.content)
             assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
-            assertEquals(listOf<PayMethod?>(PayMethod.Cash), gpsReads)
         }
 
     @Test
@@ -247,7 +259,7 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
     private fun fix() = LocationReading.Found(GeoPoint(-9.1547, -78.5042), accuracyM = 12f)
 
     @Test
-    fun `CAX-001 una lectura adelantada no sale si el permiso se revoca antes de confirmar`() =
+    fun `CAX-001 una lectura adelantada no sale si el permiso se revoca antes de confirmar, sale la hoja`() =
         runTest(dispatcher) {
             val location = FakeLocationSource(next = fix())
             gpsOverride = LiveCheckoutGps(location) { null }
@@ -259,14 +271,13 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             vm.confirm()
             advanceUntilIdle()
 
-            assertEquals(1, orders().size)
-            assertTrue(body().absent("gpsValidation"))
+            assertEquals(0, orders().size)
+            assertTrue(vm.state.value.sheet is CheckoutSheet.GpsBlock)
             assertEquals(1, location.calls)
-            assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
         }
 
     @Test
-    fun `CAX-001 la evidencia guardada de un intento no sale en el reintento si el permiso se revoca`() =
+    fun `CAX-001 la evidencia guardada de un intento no sale en el reintento si el permiso se revoca, sale la hoja`() =
         runTest(dispatcher) {
             val location = FakeLocationSource(next = fix())
             gpsOverride = LiveCheckoutGps(location) { null }
@@ -286,14 +297,13 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             vm.confirm()
             advanceUntilIdle()
 
-            assertEquals(2, orders().size)
-            assertEquals(orders()[0].headers["Idempotency-Key"], orders()[1].headers["Idempotency-Key"])
-            assertTrue(body(1).absent("gpsValidation"))
-            assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
+            // Sin permiso no sale ninguna coordenada guardada: se abre la hoja y no hay segundo envio.
+            assertEquals(1, orders().size)
+            assertTrue(vm.state.value.sheet is CheckoutSheet.GpsBlock)
         }
 
     @Test
-    fun `CAX-001 si el permiso se revoca mientras se espera la configuracion, el pedido sale sin evidencia`() =
+    fun `CAX-001 si el permiso se revoca mientras se espera la configuracion, sale la hoja y nada se envia`() =
         runTest(dispatcher) {
             val location = FakeLocationSource(next = fix())
             val config = CompletableDeferred<Unit>()
@@ -313,9 +323,8 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             config.complete(Unit)
             advanceUntilIdle()
 
-            assertEquals(1, orders().size)
-            assertTrue(body().absent("gpsValidation"))
-            assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
+            assertEquals(0, orders().size)
+            assertTrue(vm.state.value.sheet is CheckoutSheet.GpsBlock)
         }
 
     @Test

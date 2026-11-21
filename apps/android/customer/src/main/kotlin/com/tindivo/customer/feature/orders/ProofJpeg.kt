@@ -9,6 +9,12 @@ internal const val MAX_PROOF_SIDE = 2200
  */
 internal const val MIN_PROOF_WIDTH = 1080
 
+/**
+ * El tope duro del lado mayor (CUS-PAY-003, CA-PAY-11): 4400 px. Si una imagen muy larga no puede cumplir a la vez el
+ * ancho mínimo [MIN_PROOF_WIDTH] y este tope, gana el tope y el lado menor baja de 1080.
+ */
+internal const val PROOF_HARD_SIDE_CAP = 4400
+
 /** Calidad JPEG de la foto que se sube (CUS-PAY-003): 85. */
 internal const val PROOF_JPEG_QUALITY = 85
 
@@ -50,7 +56,8 @@ internal fun proofSampleSize(
 
 /**
  * El tamaño final: el lado mayor no pasa de [MAX_PROOF_SIDE], salvo que eso deje el lado menor por debajo de
- * [MIN_PROOF_WIDTH] (entonces manda el ancho mínimo). Se conserva la proporción y nunca se agranda.
+ * [MIN_PROOF_WIDTH] (entonces manda el ancho mínimo); y en ningún caso pasa de [PROOF_HARD_SIDE_CAP], que gana al
+ * ancho mínimo. Se conserva la proporción y nunca se agranda.
  */
 internal fun proofTargetSize(
     width: Int,
@@ -62,8 +69,13 @@ internal fun proofTargetSize(
     // La escala es max(MAX_PROOF_SIDE / longest, MIN_PROOF_WIDTH / shortest), como fracción: sin redondeos de coma
     // flotante que dejen un lado un píxel por encima o por debajo.
     val bySide = MAX_PROOF_SIDE * shortest >= MIN_PROOF_WIDTH * longest
-    val num = if (bySide) MAX_PROOF_SIDE.toLong() else MIN_PROOF_WIDTH.toLong()
-    val den = if (bySide) longest else shortest
+    var num = if (bySide) MAX_PROOF_SIDE.toLong() else MIN_PROOF_WIDTH.toLong()
+    var den = if (bySide) longest else shortest
+    // El tope duro gana al ancho mínimo: si la escala deja el lado mayor por encima de él, se escala a él.
+    if (num * longest > PROOF_HARD_SIDE_CAP * den) {
+        num = PROOF_HARD_SIDE_CAP.toLong()
+        den = longest
+    }
     if (num >= den) return PixelSize(width, height)
     return PixelSize((width * num / den).toInt().coerceAtLeast(1), (height * num / den).toInt().coerceAtLeast(1))
 }
@@ -89,7 +101,8 @@ internal sealed interface EncodedProof {
 /**
  * El último paso antes de subir: [raw] (lo que escribió el codificador) sin metadatos, comprobado como JPEG completo
  * (de SOI a EOI, con sus escaneos) con el tamaño de [proofTargetSize] (lado mayor de hasta [MAX_PROOF_SIDE] o lado
- * menor de hasta [MIN_PROOF_WIDTH]) y que cabe en [MAX_PROOF_BYTES]. Cualquier otra cosa no se sube.
+ * menor de hasta [MIN_PROOF_WIDTH], y en ningún caso con el lado mayor por encima de [PROOF_HARD_SIDE_CAP]) y que
+ * cabe en [MAX_PROOF_BYTES]. Cualquier otra cosa no se sube.
  */
 internal fun finishProofJpeg(
     raw: ByteArray,
@@ -99,6 +112,10 @@ internal fun finishProofJpeg(
     // Lo que se sube se vuelve a recorrer entero: tiene que ser un JPEG admitido y no quedarle ningún metadato.
     val size = jpegDimensions(jpeg)?.takeUnless { hasJpegMetadata(jpeg) } ?: return EncodedProof.Unreadable
     return when {
+        maxOf(size.width, size.height) > PROOF_HARD_SIDE_CAP -> {
+            EncodedProof.Unreadable
+        }
+
         maxOf(size.width, size.height) > MAX_PROOF_SIDE && minOf(size.width, size.height) > MIN_PROOF_WIDTH -> {
             EncodedProof.Unreadable
         }

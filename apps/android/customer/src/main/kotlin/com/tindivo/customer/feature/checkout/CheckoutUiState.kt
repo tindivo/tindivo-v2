@@ -121,6 +121,15 @@ sealed interface CheckoutSheet {
     /** La cuenta aún no tiene perfil: falta el nombre. */
     data object CompleteProfile : CheckoutSheet
 
+    /**
+     * Sin ubicación al confirmar un pedido a domicilio que se paga al recibir. [noPermission]: sin permiso (si no,
+     * sin señal); [afterRetry]: es el resultado de un «Intentar de nuevo».
+     */
+    data class GpsBlock(
+        val noPermission: Boolean,
+        val afterRetry: Boolean,
+    ) : CheckoutSheet
+
     /** La fase del checkout en la que esta hoja tiene sentido: fuera de ella no se abre ni se aplica. */
     val phase: CheckoutPhase
         get() = if (this == CompleteProfile) CheckoutPhase.ProfileRequired else CheckoutPhase.Form

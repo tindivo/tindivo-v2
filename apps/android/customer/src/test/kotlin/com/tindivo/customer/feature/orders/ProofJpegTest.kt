@@ -67,6 +67,37 @@ class ProofJpegTest {
     }
 
     @Test
+    fun `CA-PAY-11 el lado mayor nunca pasa de 4400 y gana al ancho minimo`() {
+        // Larga: el minimo de 1080 y el tope no caben juntos, gana el tope y el lado menor baja de 1080.
+        assertEquals(PixelSize(792, 4400), proofTargetSize(1080, 6000))
+        // Apaisada: igual, con los lados cambiados.
+        assertEquals(PixelSize(4400, 792), proofTargetSize(6000, 1080))
+        // Una captura normal no se toca.
+        assertEquals(PixelSize(1080, 2400), proofTargetSize(1080, 2400))
+        // En el borde del tope (1080x4400) el minimo todavia cabe.
+        assertEquals(PixelSize(1080, 4400), proofTargetSize(1080, 4400))
+        assertEquals(PixelSize(1079, 4400), proofTargetSize(1080, 4401))
+        for (width in listOf(1, 500, 1080, 1500, 4032, 9999)) {
+            for (height in listOf(1, 1080, 2400, 4400, 4401, 6000, 20000)) {
+                val size = proofTargetSize(width, height)
+                assertTrue("$width×$height dio $size", maxOf(size.width, size.height) <= PROOF_HARD_SIDE_CAP)
+            }
+        }
+    }
+
+    @Test
+    fun `una imagen cuadrada de 3000x3000 baja a 2200x2200`() {
+        assertEquals(PixelSize(2200, 2200), proofTargetSize(3000, 3000))
+    }
+
+    @Test
+    fun `un JPEG con el lado mayor por encima de 4400 no se sube aunque su lado menor sea chico`() {
+        assertTrue(finishProofJpeg(jpeg(792, 4400)) is EncodedProof.Ready)
+        assertEquals(EncodedProof.Unreadable, finishProofJpeg(jpeg(1080, 4401)))
+        assertEquals(EncodedProof.Unreadable, finishProofJpeg(jpeg(4401, 800)))
+    }
+
+    @Test
     fun `quitar metadatos elimina el EXIF con GPS y deja la imagen intacta`() {
         val clean = jpeg(1200, 800)
         val withExif = insertAfterSoi(clean, exifSegment(), commentSegment())
