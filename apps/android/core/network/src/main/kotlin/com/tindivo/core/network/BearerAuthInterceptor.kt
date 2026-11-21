@@ -1,8 +1,10 @@
 package com.tindivo.core.network
 
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Request
@@ -25,15 +27,23 @@ interface AccessTokenSource {
      * Términos. Por defecto, sin bloqueo.
      */
     suspend fun accessGrant(): AccessGrant = AccessGrant(accessToken(), onlyForTermsAcceptance = false)
+
+    /**
+     * Espera, FUERA de cualquier candado, a que se resuelva la aceptación pendiente de una entrada nueva y devuelve el
+     * permiso vigente: con la aceptación confirmada, el token; si la sesión se cerró, sin token. Por defecto no espera.
+     */
+    suspend fun awaitTermsResolution(): AccessGrant = accessGrant()
 }
 
 /**
  * Lo que la capa de red necesita para decidir. Con [onlyForTermsAcceptance] el token solo va a
- * `POST /customer/terms-acceptance`; cualquier otra petición a la API falla en local, sin salir a la red.
+ * `POST /customer/terms-acceptance`; cualquier otra petición a la API falla en local, sin salir a la red. Si además
+ * [termsPending] (entrada nueva a la espera del 2xx de la aceptación), la petición espera ese 2xx en vez de fallar.
  */
 class AccessGrant(
     val token: String?,
     val onlyForTermsAcceptance: Boolean,
+    val termsPending: Boolean = false,
 )
 
 /** La petición no salió: la sesión espera la aceptación de los Términos. */
@@ -82,15 +92,29 @@ class BearerAuthInterceptor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val grant = if (request.url.isSameOrigin(apiOrigin)) runBlocking { source.accessGrant() } else null
+        var grant = if (request.url.isSameOrigin(apiOrigin)) runBlocking { source.accessGrant() } else null
         // La decisión se toma con el estado ya restaurado: nunca antes de saber si la aceptación está confirmada.
-        if (grant != null && grant.onlyForTermsAcceptance &&
-            !request.isTermsAcceptance()
-        ) {
-            throw SessionBlockedException()
+        if (grant != null && grant.onlyForTermsAcceptance && !request.isTermsAcceptance()) {
+            if (!grant.termsPending) throw SessionBlockedException()
+            grant = awaitAcceptance()
         }
         val token = grant?.token
         return if (token == null) chain.proceed(request) else proceedWithToken(chain, request, token)
+    }
+
+    // Las pantallas que esperan a la sesión cargan en cuanto la entrada se publica, antes del 2xx de la aceptación: esa
+    // petición espera aquí (fuera del candado de la sesión) en vez de fallar. runBlocking es válido porque OkHttp corre
+    // los interceptores en sus propios hilos, nunca en el principal. Si la aceptación no se confirma o la sesión se
+    // cierra, o vence el tope, falla como siempre y no sale a la red.
+    private fun awaitAcceptance(): AccessGrant {
+        val resolved =
+            try {
+                runBlocking { withTimeout(TERMS_WAIT_MILLIS) { source.awaitTermsResolution() } }
+            } catch (_: TimeoutCancellationException) {
+                throw SessionBlockedException()
+            }
+        if (resolved.token == null || resolved.onlyForTermsAcceptance) throw SessionBlockedException()
+        return resolved
     }
 
     private fun proceedWithToken(
@@ -107,6 +131,7 @@ class BearerAuthInterceptor(
 }
 
 private const val HTTP_UNAUTHORIZED = 401
+private const val TERMS_WAIT_MILLIS = 30_000L
 
 private fun Request.isTermsAcceptance(): Boolean =
     method == "POST" && url.encodedPath.endsWith("/customer/terms-acceptance")

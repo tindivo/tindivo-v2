@@ -8,6 +8,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -53,6 +54,9 @@ internal class SupabaseSessionStore(
     // Para la red: el token solo sale hacia el registro de la aceptación mientras ésta esté pendiente O desconocida
     // (CAX-001). Distinto de [termsRequired], que es solo lo que muestra la puerta de la interfaz.
     private var termsRestricted = false
+
+    // Solo la entrada nueva sin su 2xx: las peticiones en vuelo esperan a que baje (confirmar o cerrar la sesión).
+    private val termsPending = MutableStateFlow(false)
     private var restored = false
 
     private val mutableClosePending = MutableStateFlow(false)
@@ -79,8 +83,15 @@ internal class SupabaseSessionStore(
         mutex.withLock {
             restoreOnce()
             val token = tokenLocked()
-            AccessGrant(token, onlyForTermsAcceptance = termsRestricted)
+            AccessGrant(token, onlyForTermsAcceptance = termsRestricted, termsPending = termsPending.value)
         }
+
+    // La espera es FUERA del candado: confirmTerms y signOut lo necesitan para resolverla. Al despertar se vuelve a
+    // evaluar con el candado, así que decide el estado vigente (confirmada: token; cerrada: sin token).
+    override suspend fun awaitTermsResolution(): AccessGrant {
+        termsPending.first { !it }
+        return accessGrant()
+    }
 
     private suspend fun tokenLocked(): String? {
         val snapshot = current
@@ -133,6 +144,7 @@ internal class SupabaseSessionStore(
                 backend.markTermsAccepted()
                 mutableTermsRequired.value = false
                 termsRestricted = false
+                termsPending.value = false
                 true
             }
         }
@@ -265,6 +277,7 @@ internal class SupabaseSessionStore(
         current = snapshot
         mutableTermsRequired.value = snapshot.termsUnknown
         termsRestricted = snapshot.termsUnknown || snapshot.termsPending
+        termsPending.value = snapshot.termsPending
         if (countsAsChange) generation.incrementAndGet()
         mutableState.value = SessionState.SignedIn(snapshot.userId)
         return snapshot
@@ -291,6 +304,7 @@ internal class SupabaseSessionStore(
         current = null
         mutableTermsRequired.value = false
         termsRestricted = false
+        termsPending.value = false
         generation.incrementAndGet()
         var cleared = false
         withContext(NonCancellable) {
