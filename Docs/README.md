@@ -1,6 +1,6 @@
 # Docs: cómo se documenta Tindivo y cómo se trabaja con agentes
 
-> Verificado: 2026-11-17 · entorno: `develop@946feb2e` · Estándar vigente, aprobado por Jesús el 2026-10-10; enmiendas aprobadas por Jesús el 2026-10-12, el 2026-11-17 (`Docs/producto/`, §2.4) y el 2026-11-18 (tope de `AGENTS.md`, §6.2; conversaciones con Claude Code) · Resumen operativo: `AGENTS.md` raíz
+> Verificado: 2026-11-18 (ruta de iOS en §6.2) y 2026-11-17 (el resto) · entorno: `develop@946feb2e` · Estándar vigente, aprobado por Jesús el 2026-10-10; enmiendas aprobadas por Jesús el 2026-10-12, el 2026-11-17 (`Docs/producto/`, §2.4) y el 2026-11-18 (tope de `AGENTS.md`, §6.2; conversaciones con Claude Code) · Resumen operativo: `AGENTS.md` raíz
 > La transición que lo implantó (el squash de ~255 documentos a este canon) terminó el 2026-10-10; su plan y el debate
 > con Codex, que firmó con cambios en dos rondas, están en la etiqueta `archive/estandar-docs` (commit `8dcf6ba`).
 
@@ -269,8 +269,8 @@ inspeccionó su registro de sesión.
 - **`AGENTS.md` raíz es la entrada común**, y la leen las tres herramientas. `CLAUDE.md` = `@AGENTS.md` + lo exclusivo
   de Claude. No hay `GEMINI.md` ni `.agents/AGENTS.md` con reglas propias. Sin copias de texto.
 - **El `AGENTS.md` raíz incluye un mapa de instrucciones locales** («antes de editar en `apps/negocios/` o
-  `packages/ui/`, lee `apps/negocios/AGENTS.md`»; «antes de editar en `apps/customer-ios/`, lee
-  `apps/customer-ios/AGENTS.md`»). El mapa es obligatorio porque Codex, lanzado desde la raíz, no carga los locales.
+  `packages/ui/`, lee `apps/negocios/AGENTS.md`»; «antes de editar en `apps/ios/`, lee
+  `apps/ios/AGENTS.md`»). El mapa es obligatorio porque Codex, lanzado desde la raíz, no carga los locales.
 - `.agents/AGENTS.md` desaparece: su contenido se reparte entre `AGENTS.md`, el canon y los mecanismos (§6.4).
 
 Entra en `AGENTS.md` solo lo que, si se borra, haría equivocarse a un agente:

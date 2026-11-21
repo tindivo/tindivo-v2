@@ -1,8 +1,10 @@
 # Diseño: la marca y cómo se ve Tindivo
 
+
 > Verificado: 2026-11-19 · entorno: `develop@25a6d537` · Decisiones de Jesús del 19 y 20 de septiembre de 2026 y del 18 de
 > noviembre de 2026 · Los **valores** (color, tipografía, radios, espaciados, sombras) están en `Docs/negocio/sistema-de-diseno.md`
 > · Reglas técnicas del tema web: `DECISIONS.md §16`, `§21`, `§27`
+
 
 ## La marca
 
@@ -28,6 +30,9 @@
 - **Precio de Entregas: «Desde S/ 3»** en tarjetas y botones; el importe exacto solo con el pedido hecho.
 - La vara de calidad es **«nivel inDrive», primero el celular**. Lo mejorable que se vea por el camino se anota para la
   siguiente iteración en `Docs/trabajo/entregas-ux/iteraciones-ux-pin.md`.
+- **Entregas va sin azul, con un solo color de marca**, tampoco en la moto (decidido por Jesús el 2026-09-20 y ratificado el
+  2026-11-18, conversación con Claude Code). Hoy el código aún pinta Entregas de azul (`apps/customer/features/courier/components/courier-home.tsx`
+  y la app del motorizado): es una desviación por corregir en un cambio de código aparte, no una excepción.
 
 ## Componentes
 

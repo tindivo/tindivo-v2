@@ -1,6 +1,6 @@
 # Cómo se llama a cada agente en esta máquina
 
-> Verificado: 2026-10-15 (Codex) y 2026-10-10 (resto) · entorno: Windows de Jesús, Codex CLI 0.162.0, Antigravity CLI (`agy`) 1.3.3, Claude Code 2.1.296
+> Verificado: 2026-11-18 (modelos de Antigravity), 2026-10-15 (Codex) y 2026-10-10 (resto) · entorno: Windows de Jesús, Codex CLI 0.162.0, Antigravity CLI (`agy`) 1.3.3, Claude Code 2.1.296
 
 Quién hace qué y con qué modelo lo fija el estándar (`Docs/README.md` §7). Aquí, solo cómo se
 invoca cada uno sin que falle.
@@ -51,7 +51,8 @@ después de cada ronda `node scripts/codex-audit-scope-check.mjs <eventos.jsonl>
 ```
 
 - **No está en el PATH de Git Bash**: se llama por su ruta. En PowerShell, recargando el PATH del usuario, sí aparece.
-- **Modelo: solo `gemini-3.8-flash-high`** (decisión de Jesús, 2026-10-10; los demás Gemini están «Leaving Soon»).
+- **Modelo para barrer y leer: solo `gemini-3.8-flash-high`** (decisión de Jesús, 2026-10-10; los demás Gemini están «Leaving Soon»).
+  Para **segundas opiniones** están autorizados además Gemini Argon e Hydrogen (decisión de Jesús, 2026-11-14; `Docs/README.md` §7.6).
   `agy models` lista los disponibles; también ofrece Claude Opus/Sonnet 5.5 sobre la cuota de Google.
 - `--mode plan` para que no edite. **Nunca `--dangerously-skip-permissions`.**
 - **En modo `-p` no puede pedir permiso para comandos de terminal:** si intenta uno, lo deniega y termina **sin salida**
