@@ -73,7 +73,6 @@ reglas: [ACTIVE_ORDER_STATUSES, isActiveOrderStatus, STATUS_TO_TRACKING]
 
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
-| 1 | CUS-ORD-007 | Android muestra el código como «#» y los 8 caracteres en la lista, en el seguimiento y en el mensaje de ayuda del detalle; solo el mensaje de la fila cancelada lleva «#TDV-». | `feature/orders/SupportContact.kt` · `res/values/strings.xml` |
-| 2 | CUS-ORD-003 | «Volver a pedir» solo abre el negocio; «Ver caso de pago» y «Calificar» no están en la lista de Android. | `feature/orders/OrdersScreen.kt` |
+| 2 | CUS-ORD-003 | La fila ofrece «Ver caso de pago» y «Volver a pedir»; «Calificar» no está en la lista de Android. | `feature/orders/OrdersScreen.kt` |
 | 3 | CUS-ORD-006 | El servidor manda `status` y `cancelReason` en crudo y cada app proyecta: el vector compartido las mantiene iguales. | `packages/contracts/fixtures/vectores/` |
 | 4 | CUS-ORD-005, CUS-ORD-008, CUS-ORD-009, CUS-ORD-010 | Android no tiene contador de activos, filtros, tarjeta en curso ni hoja de detalle; la lista es una sola. | `feature/orders/OrdersScreen.kt` |

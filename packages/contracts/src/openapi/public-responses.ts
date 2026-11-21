@@ -309,7 +309,8 @@ export const OrderTrackingSchema = z.object({
   acceptanceMinutes: z.number().int(),
   paymentMinutes: z.number().int(),
   driverPhone: z.string().nullable().meta({
-    description: 'Solo cuando el motorizado ya llegó a la puerta del cliente',
+    description:
+      'Siempre null (0292): el seguimiento público no entrega el teléfono del motorizado. El campo se conserva por las apps ya instaladas',
   }),
   amount: legacyMoney,
   deliveryFee: legacyMoney,

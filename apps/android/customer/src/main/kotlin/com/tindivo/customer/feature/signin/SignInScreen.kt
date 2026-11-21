@@ -38,6 +38,7 @@ fun SignInDestination(
     viewModel: SignInViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val closePending = viewModel.closePending.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     val google = remember(context) { CredentialManagerGoogleSource(context, BuildConfig.GOOGLE_WEB_CLIENT_ID) }
     LaunchedEffect(state) {
@@ -52,6 +53,8 @@ fun SignInDestination(
         googleAvailable = BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank(),
         onGoogle = { viewModel.signIn(google) },
         onBack = onBack,
+        closePending = closePending,
+        onRetryClose = viewModel::retryClose,
     )
 }
 
@@ -61,6 +64,8 @@ fun SignInScreen(
     googleAvailable: Boolean,
     onGoogle: () -> Unit,
     onBack: () -> Unit,
+    closePending: Boolean = false,
+    onRetryClose: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -71,6 +76,16 @@ fun SignInScreen(
                 Text(text = stringResource(R.string.signin_back))
             }
             Text(text = stringResource(R.string.signin_title), style = MaterialTheme.typography.headlineMedium)
+            if (closePending) {
+                Text(
+                    text = stringResource(R.string.signin_close_pending),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+                TextButton(onClick = onRetryClose, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(text = stringResource(R.string.signin_close_retry))
+                }
+            }
             if (googleAvailable) {
                 // Mientras se abre «Completa tu perfil» el botón sigue ocupado: un toque más no vuelve a entrar.
                 GoogleButton(
