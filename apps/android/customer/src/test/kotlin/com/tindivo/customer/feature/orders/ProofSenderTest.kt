@@ -127,6 +127,31 @@ class ProofSenderTest {
         }
 
     @Test
+    fun `el reintento espera un momento antes de pedir otra URL firmada`() =
+        runTest {
+            gateway.uploadOutcomes += UploadOutcome.Network(IOException("corte"))
+
+            val step = deliver()
+
+            assertEquals(SendStep.Done, step)
+            // La espera es de tiempo virtual: el reintento no sale pegado al corte (CUS-PAY-003).
+            assertEquals(1_500L, testScheduler.currentTime)
+        }
+
+    @Test
+    fun `si la segunda URL firmada tampoco llega por la red, es Offline y no un fallo de la API`() =
+        runTest {
+            gateway.uploadOutcomes += UploadOutcome.Network(IOException("corte"))
+            gateway.slotResults += ApiResult.Success(prepaySlot(prepayPath(1)))
+            gateway.slotResults += ApiResult.Failure(AppError.Network(IOException("sin red")))
+
+            val step = deliver()
+
+            assertEquals(SendStep.Stopped(SendProblem.Offline), step)
+            assertEquals(0, gateway.count("confirm"))
+        }
+
+    @Test
     fun `si la sesion cambia entre el corte y el reintento no se vuelve a subir`() =
         runTest {
             gateway.uploadOutcomes += UploadOutcome.Network(IOException("corte"))

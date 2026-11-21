@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.orders
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.UploadOutcome
+import kotlinx.coroutines.delay
 import java.util.UUID
 
 /** Hasta dónde llegó un envío y por qué paró. */
@@ -122,7 +123,10 @@ internal class ProofSender(
         // Una caída de red se reintenta UNA vez sola (CUS-PAY-003), con otra URL firmada: la anterior es de un solo uso.
         while (result == DROPPED && attempt < MAX_UPLOAD_ATTEMPTS && stillCurrent()) {
             attempt++
-            result = uploadOnce(account, orderId, photo, jpeg, stillCurrent)
+            // Un respiro antes del reintento: pegado al corte casi siempre vuelve a caer. `delay` es cancelable.
+            delay(RETRY_DELAY_MS)
+            if (!stillCurrent()) return Halted(SendStep.Abandoned)
+            result = uploadOnce(account, orderId, photo, jpeg, stillCurrent, retry = true)
         }
         return if (result == DROPPED && !stillCurrent()) Halted(SendStep.Abandoned) else result
     }
@@ -134,11 +138,18 @@ internal class ProofSender(
         photo: String,
         jpeg: ByteArray,
         stillCurrent: () -> Boolean,
+        retry: Boolean = false,
     ): UploadResult {
         val slot =
             when (val result = gateway.uploadSlot(account, orderId)) {
                 is ApiResult.Success -> result.data
-                is ApiResult.Failure -> return Halted(SendStep.ApiFailed(result.error, confirming = false))
+                // En el reintento, si tampoco hay red para pedir la URL, es la misma caída: «revisa tu conexión».
+                is ApiResult.Failure ->
+                    return if (retry && result.error is AppError.Network) {
+                        DROPPED
+                    } else {
+                        Halted(SendStep.ApiFailed(result.error, confirming = false))
+                    }
             }
         if (!stillCurrent()) return Halted(SendStep.Abandoned)
         return when (gateway.upload(slot, jpeg)) {
@@ -172,6 +183,9 @@ internal class ProofSender(
 
         /** El PUT y un único reintento automático ante una caída de red (CUS-PAY-003). */
         const val MAX_UPLOAD_ATTEMPTS = 2
+
+        /** La pausa antes del único reintento automático. */
+        const val RETRY_DELAY_MS = 1_500L
     }
 }
 
