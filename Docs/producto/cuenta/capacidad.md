@@ -80,9 +80,7 @@ reglas: [UpdateCustomerProfileRequestSchema, app_settings:support_whatsapp]
 
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
-| 1 | CUS-AUT-014 | Con el perfil completo no hay cómo editar el nombre: la hoja solo se abre cuando falta. | `feature/account/AccountScreen.kt` · `navigation/AppNavHost.kt` |
 | 2 | CUS-AUT-013 | Solo existe «Cerrar sesión» (local); falta «cerrar en todos». | `feature/account/AccountScreen.kt` · `feature/account/AccountViewModel.kt` |
 | 3 | CUS-ACC-003, CUS-ACC-005, CUS-ACC-006 | Cuenta es una columna de botones: sin pedidos recientes ni reclamos, sin interruptor de avisos y sin la lista de direcciones. | `feature/account/AccountScreen.kt` |
 | 4 | CUS-ACC-007, CUS-AUT-015 | Solo el nombre tiene aviso; el celular tiene su botón aparte y no hay progreso ni paso de dirección. | `feature/account/AccountScreen.kt` · `feature/account/AccountViewModel.kt` |
-| 5 | CUS-ACC-008 | El texto de borrado dice «Las reseñas se quedan sin tu nombre», pero no avisa de que el comentario se borra. | `res/values/strings.xml` (`delete_account_kept_body`) · `Docs/operacion/retencion-de-datos.md` |
 | 6 | CUS-AUT-017 | La pantalla de borrado nombra «Google, Apple o correo» como inicio de sesión; en Android solo hay Google. | `res/values/strings.xml` (`delete_account_removed_login`) |

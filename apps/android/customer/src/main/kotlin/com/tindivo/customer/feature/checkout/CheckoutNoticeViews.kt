@@ -14,9 +14,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.tindivo.customer.R
-
-/** El WhatsApp de soporte de Tindivo (el mismo de la web, `TINDIVO_SUPPORT_WHATSAPP`). */
-internal const val SUPPORT_WHATSAPP_URL = "https://wa.me/51906550166"
+import com.tindivo.customer.config.SUPPORT_WHATSAPP_URL
 
 @Composable
 internal fun SignInRequiredView(actions: CheckoutActions) {

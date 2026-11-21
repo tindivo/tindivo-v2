@@ -10,6 +10,8 @@ import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
 import com.tindivo.core.network.isProfileMissing
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.profile.cleanName
+import com.tindivo.customer.feature.profile.nameProblem
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,6 +58,9 @@ sealed interface AccountUiState {
     data object LoggedOut : AccountUiState
 }
 
+/** Cómo va el cambio de nombre desde Cuenta (CUS-AUT-014). */
+enum class NameEditState { Idle, Saving, Invalid, Failed, Done }
+
 /**
  * «Mi cuenta». Todo va atado a la cuenta con la que se abrió la pantalla: el perfil se pide solo con su token
  * (`boundTo` en [CustomerRepository]) y un resultado que llega cuando la sesión vigente ya no es esa cuenta no se
@@ -71,6 +76,9 @@ class AccountViewModel
     ) : ViewModel() {
         private val _state = MutableStateFlow<AccountUiState>(AccountUiState.Loading)
         val state: StateFlow<AccountUiState> = _state.asStateFlow()
+
+        private val _nameEdit = MutableStateFlow(NameEditState.Idle)
+        val nameEdit: StateFlow<NameEditState> = _nameEdit.asStateFlow()
 
         private var loadJob: Job? = null
         private var profilePromptOpened = false
@@ -121,6 +129,44 @@ class AccountViewModel
                         is ApiResult.Failure -> onFailure(result.error, account)
                     }
                 }
+        }
+
+        /**
+         * Cambia el nombre del perfil con `PUT /customer/profile`, con la misma regla del servidor. Un nombre inválido no
+         * sale a la red; si el servidor falla, el nombre sigue igual y se puede reintentar.
+         */
+        fun saveName(raw: String) {
+            val account = owner ?: return
+            if (ended || _nameEdit.value == NameEditState.Saving) return
+            if (nameProblem(raw) != null) {
+                _nameEdit.value = NameEditState.Invalid
+                return
+            }
+            _nameEdit.value = NameEditState.Saving
+            viewModelScope.launch {
+                val result = customer.updateProfile(cleanName(raw), account)
+                if (!isCurrent(account)) return@launch end()
+                when (result) {
+                    is ApiResult.Success -> {
+                        _state.value = AccountUiState.Loaded(result.data.toUi())
+                        _nameEdit.value = NameEditState.Done
+                    }
+
+                    is ApiResult.Failure -> {
+                        _nameEdit.value =
+                            if ((result.error as? AppError.Known)?.code == ApiErrorCode.ValidationError) {
+                                NameEditState.Invalid
+                            } else {
+                                NameEditState.Failed
+                            }
+                    }
+                }
+            }
+        }
+
+        /** Cierra el cambio de nombre sin guardar, o recoge su resultado. */
+        fun dismissNameEdit() {
+            if (_nameEdit.value != NameEditState.Saving) _nameEdit.value = NameEditState.Idle
         }
 
         /** La pantalla ya abrió «Completa tu perfil» sola: no la vuelve a abrir. */

@@ -1,3 +1,4 @@
+import { readTravelMinutes } from '@tindivo/backend/ordering'
 import { UuidSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { requireRole } from '@/lib/http/auth'
@@ -26,8 +27,8 @@ export function OPTIONS(req: Request): Response {
  * deja ver los suyos, así que uno ajeno es un 404 idéntico al de un id
  * inventado (no confirma que exista). El negocio y el motorizado no son legibles
  * por el cliente por RLS: se leen con el servicio SOLO después de que el pedido
- * ya demostró ser suyo. El teléfono del motorizado sigue la regla del
- * seguimiento público: solo cuando ya llegó a la puerta.
+ * ya demostró ser suyo. El teléfono del motorizado no se lee ni se envía: el cliente
+ * nunca lo recibe.
  */
 export async function GET(
   req: Request,
@@ -49,19 +50,16 @@ export async function GET(
     const row = data as unknown as OrderDetailRow
 
     const service = createServiceClient()
-    const [{ data: biz }, { data: drv }] = await Promise.all([
+    const [{ data: biz }, { data: drv }, travel] = await Promise.all([
       service.from('businesses').select('name').eq('id', row.business_id).maybeSingle(),
       row.driver_id
-        ? service.from('drivers').select('full_name,phone').eq('id', row.driver_id).maybeSingle()
+        ? service.from('drivers').select('full_name').eq('id', row.driver_id).maybeSingle()
         : Promise.resolve({ data: null }),
+      readTravelMinutes(service),
     ])
 
     return ok(
-      toOrderDetailDto(
-        row,
-        biz?.name ?? null,
-        drv ? { name: drv.full_name, phone: drv.phone } : null,
-      ),
+      toOrderDetailDto(row, biz?.name ?? null, drv ? { name: drv.full_name } : null, travel),
       { headers: privateHeaders(req) },
     )
   } catch (err) {

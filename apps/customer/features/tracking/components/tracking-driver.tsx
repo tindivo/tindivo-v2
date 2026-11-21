@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Icon } from '@tindivo/ui'
+import { Icon } from '@tindivo/ui'
 import type { Tracking } from '@/features/tracking/types'
 
 interface TrackingDriverProps {
@@ -21,21 +21,14 @@ function inicial(nombre: string): string {
  * que un importe. Aquí tiene su propio sitio y aparece cuando empieza a
  * importar, que es cuando el pedido ya salió.
  *
- * No se enseña placa, ni foto, ni teléfono. El teléfono lo decide `get_tracking`,
- * que solo lo publica cuando `arrived_at_customer_at` está puesto — el motorizado
- * en la puerta sin encontrar al cliente es el único caso en que hace falta, y
- * mantenerlo cerrado el resto del tiempo evita que un enlace de seguimiento
- * reenviado por WhatsApp reparta el número de un trabajador.
+ * No se enseña placa, ni foto, ni teléfono, y este componente no lee ningún campo de
+ * contacto (decisión de Jesús, 2026-11-17, CUS-TRK-021). El aviso «Ya está en tu
+ * domicilio» no tiene acción. Un enlace de seguimiento reenviado nunca reparte el
+ * número de un trabajador.
  */
 export function TrackingDriver({ data, enRuta }: TrackingDriverProps) {
   const llego = Boolean(data.arrivedAtCustomerAt) && data.status !== 'delivered'
   if (!data.driverName || (!enRuta && !llego)) return null
-
-  const whatsapp = data.driverPhone
-    ? `https://wa.me/${data.driverPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
-        `Hola, te escribo por mi pedido de ${data.businessName} (#${data.shortId}). Estás en mi domicilio.`,
-      )}`
-    : null
 
   return (
     <div
@@ -74,22 +67,6 @@ export function TrackingDriver({ data, enRuta }: TrackingDriverProps) {
           <p className="text-[13px] leading-relaxed text-amber-900">
             <strong>Ya está en tu domicilio</strong> y no logra ubicarte.
           </p>
-          {whatsapp && (
-            <Button
-              size="sm"
-              as="a"
-              href={whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              // Sin `bg-emerald-*`: el `Button` gana con su variante y esas
-              // clases nunca llegaron a pintar nada. Se quitan en vez de
-              // dejarlas mintiendo sobre el color del botón.
-              className="mt-2.5 w-full"
-            >
-              <Icon name="chat" size={18} />
-              Escribirle por WhatsApp
-            </Button>
-          )}
         </div>
       )}
     </div>

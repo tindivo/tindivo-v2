@@ -11,11 +11,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -36,18 +41,26 @@ internal fun OrderDetailDestination(
     canRate: (UUID) -> Boolean = { false },
     onRate: () -> Unit = {},
     onBackToMenu: () -> Unit = onBack,
+    onOpenOrders: () -> Unit = onBack,
+    onSignIn: () -> Unit = onBack,
     viewModel: OrderDetailViewModel = hiltViewModel(),
     prepayViewModel: PrepayViewModel = hiltViewModel(),
     cancelViewModel: CancelOrderViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
+    timersViewModel: OrderTimersViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val acceptanceMinutes = timersViewModel.acceptanceMinutes.collectAsStateWithLifecycle().value
     val prepay = prepayViewModel.state.collectAsStateWithLifecycle().value
     val cancel = cancelViewModel.state.collectAsStateWithLifecycle().value
     val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
+    // «Entrar con otra cuenta»: al cerrarse la sesión se va a entrar; en cualquier otro cierre, se vuelve atrás.
+    var switching by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state) {
-        if (state is OrderDetailUiState.LoggedOut) onBack()
+        if (state is OrderDetailUiState.LoggedOut) {
+            if (switching) onSignIn() else onBack()
+        }
     }
     // El comprobante llegó, o el servidor dijo que el pedido cambió: el detalle se vuelve a consultar.
     LaunchedEffect(prepay.refreshRequests) {
@@ -91,6 +104,12 @@ internal fun OrderDetailDestination(
             ),
         supportNumber = supportNumber,
         onBackToMenu = onBackToMenu,
+        acceptanceMinutes = acceptanceMinutes,
+        onOpenOrders = onOpenOrders,
+        onSwitchAccount = {
+            switching = true
+            viewModel.switchAccount()
+        },
     )
 }
 
@@ -107,6 +126,9 @@ internal fun OrderDetailScreen(
     cancel: CancelSection = CancelSection(),
     supportNumber: String? = null,
     onBackToMenu: () -> Unit = {},
+    acceptanceMinutes: Int? = null,
+    onOpenOrders: () -> Unit = {},
+    onSwitchAccount: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
@@ -118,9 +140,9 @@ internal fun OrderDetailScreen(
                     OrdersLoading()
                 }
 
-                // El pedido no existe o no es de esta persona: no hay nada que reintentar.
+                // El pedido no existe o no es de esta persona (el servidor responde igual): sin ningún dato del pedido.
                 OrderDetailUiState.NotFound -> {
-                    Text(text = stringResource(R.string.error_generic), style = MaterialTheme.typography.bodyLarge)
+                    NotYourOrder(onOpenOrders = onOpenOrders, onSwitchAccount = onSwitchAccount)
                 }
 
                 is OrderDetailUiState.Failed -> {
@@ -148,6 +170,7 @@ internal fun OrderDetailScreen(
                             prepay = PrepayParts(prepay, prepayActions),
                             cancel = cancel,
                             supportLink = supportLink,
+                            acceptanceMinutes = acceptanceMinutes,
                         )
                     }
                 }
@@ -164,7 +187,9 @@ private fun OrderBody(
     prepay: PrepayParts,
     cancel: CancelSection,
     supportLink: String?,
+    acceptanceMinutes: Int?,
 ) {
+    KeepScreenOn(keepOn = !order.phase.isTerminal())
     LaunchedEffect(order.awaitingPrepayment) {
         if (order.awaitingPrepayment) prepay.actions.load()
     }
@@ -173,7 +198,11 @@ private fun OrderBody(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         OrderTitle(order = order)
-        OrderHeadlineBlock(headline = order.headline)
+        if (order.waitingForBusiness) {
+            AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
+        } else {
+            OrderHeadlineBlock(headline = order.headline)
+        }
         CancelRow(offer = order.cancel, section = cancel, supportLink = supportLink, onOpenLink = onOpenLink)
         cancel.state.problem?.let { CancelProblemText(problem = it) }
         if (onRate != null) {
@@ -184,6 +213,7 @@ private fun OrderBody(
         if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
             OrderSteps(phase = order.phase, isPickup = order.isPickup)
         }
+        EtaLine(order = order)
         if (order.awaitingPrepayment) {
             PrepaySection(state = prepay.state, amount = order.total, actions = prepay.actions)
         } else if (prepay.state.send is SendState.Sent &&
@@ -191,11 +221,32 @@ private fun OrderBody(
         ) {
             SentNotice()
         }
-        order.driver?.let { DriverBlock(driver = it, onOpenLink = onOpenLink) }
+        order.driver?.let { DriverBlock(driver = it) }
         OrderLines(lines = order.lines)
         OrderTotals(order = order)
         OrderDelivery(order = order)
         SupportLink(link = supportLink, onOpenLink = onOpenLink)
+    }
+}
+
+/** «No puedes abrir este pedido» (CUS-TRK-023): sin nombre, negocio, monto ni estado, con dos salidas. */
+@Composable
+private fun NotYourOrder(
+    onOpenOrders: () -> Unit,
+    onSwitchAccount: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 8.dp)) {
+        Text(
+            text = stringResource(R.string.order_not_yours_title),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.semantics { heading() },
+        )
+        Button(onClick = onOpenOrders, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Text(text = stringResource(R.string.order_not_yours_orders))
+        }
+        OutlinedButton(onClick = onSwitchAccount, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Text(text = stringResource(R.string.order_not_yours_switch))
+        }
     }
 }
 
@@ -249,7 +300,7 @@ private fun OrderDetailPreview() {
             address = "Jr. Lima 123",
             reference = "Frente al parque",
             customerNotes = "Tocar el timbre",
-            driver = DriverUi(name = "Luis", atDoor = false, whatsappLink = null),
+            driver = DriverUi(name = "Luis Quispe", atDoor = false),
             appealViaSupport = false,
         )
     TindivoTheme {

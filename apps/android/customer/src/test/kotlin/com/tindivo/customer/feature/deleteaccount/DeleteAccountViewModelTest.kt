@@ -20,7 +20,7 @@ import java.net.SocketTimeoutException
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DeleteAccountViewModelTest : DeleteAccountHarness() {
     @Test
-    fun `sin escribir la palabra no se puede borrar`() =
+    fun `CA-ACC-P3 sin escribir la palabra no se puede borrar`() =
         runTest {
             val vm = viewModel()
 
@@ -31,8 +31,14 @@ internal class DeleteAccountViewModelTest : DeleteAccountHarness() {
 
             assertTrue(calls.isEmpty())
             assertFalse(vm.state.value.canDelete)
-            // Mayúsculas y espacios no importan, como en la web.
+            // Exactamente BORRAR: ni minúsculas ni espacios alrededor valen (ficha de Cuenta).
             vm.onTyped("  borrar ")
+            assertFalse(vm.state.value.canDelete)
+            vm.onTyped("borrar")
+            assertFalse(vm.state.value.canDelete)
+            vm.onTyped("BORRAR ")
+            assertFalse(vm.state.value.canDelete)
+            vm.onTyped("BORRAR")
             assertTrue(vm.state.value.canDelete)
         }
 

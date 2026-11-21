@@ -1669,7 +1669,7 @@
                     },
                     "driverPhone": {
                       "nullable": true,
-                      "description": "Solo cuando el motorizado ya llegó a la puerta del cliente",
+                      "description": "Siempre null (0292): el seguimiento público no entrega el teléfono del motorizado. El campo se conserva por las apps ya instaladas",
                       "type": "string"
                     },
                     "amount": {
@@ -10786,13 +10786,43 @@
                             },
                             "phone": {
                               "nullable": true,
-                              "description": "Solo cuando el motorizado ya llegó a la puerta del cliente",
+                              "description": "Siempre null: el cliente no recibe el teléfono del motorizado. El campo se conserva por las apps ya instaladas",
                               "type": "string"
                             }
                           },
                           "required": [
                             "name",
                             "phone"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "pendingAcceptanceAt": {
+                          "description": "Cuándo el pedido pasó a esperar al negocio; de ahí corre el plazo de aceptación",
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "validatingAt": {
+                          "description": "Cuándo el pedido pasó a validación; de ahí corre el plazo de verificación",
+                          "nullable": true,
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "travelMinutes": {
+                          "description": "Rango de minutos del trayecto, de app_settings.timers",
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "integer"
+                            },
+                            "max": {
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
                           ],
                           "additionalProperties": false
                         }

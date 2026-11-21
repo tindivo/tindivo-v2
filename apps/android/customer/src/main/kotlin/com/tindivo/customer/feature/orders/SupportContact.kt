@@ -78,7 +78,7 @@ internal fun whatsappDigits(phone: String): String? = phone.filter { it in '0'..
 internal fun orderSupportLink(
     number: String?,
     shortId: String,
-): String? = number?.let { whatsappLink(it, "Hola, necesito ayuda con mi pedido #$shortId") }
+): String? = number?.let { whatsappLink(it, "Hola, necesito ayuda con mi pedido #TDV-$shortId") }
 
 /**
  * «¿Problema con este pedido?» de un pedido cancelado en el historial: el texto de la web (`pedidos/page.tsx`), que

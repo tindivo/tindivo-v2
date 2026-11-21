@@ -691,7 +691,13 @@ describe('GET /customer/orders y /{id}', () => {
       .update({ arrived_at_customer_at: new Date().toISOString() })
       .eq('id', id)
     const llegado = await pedir(getOrder, { bearer: c.token, params: { id } })
-    expect(llegado.body.data.driver.phone).toEqual(expect.any(String))
+    // CA-TRK-08: ni con el motorizado en la puerta recibe el cliente su teléfono.
+    expect(llegado.body.data.driver).toEqual({ name: expect.any(String), phone: null })
+    expect(llegado.body.data.pendingAcceptanceAt).toBeDefined()
+    expect(llegado.body.data.travelMinutes).toEqual({
+      min: expect.any(Number),
+      max: expect.any(Number),
+    })
   })
 })
 

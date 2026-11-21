@@ -39,7 +39,7 @@ class OrdersViewModelTest : OrdersHarness() {
         }
 
     @Test
-    fun `cargar mas manda el cursor, agrega la pagina y al llegar null ya no hay boton`() =
+    fun `CA-ORD-02 cargar mas manda el cursor, agrega la pagina y al llegar null ya no hay boton`() =
         runTest {
             server.enqueue(response(200, pageJson(ids(1, 2), next = "c2")))
             server.enqueue(response(200, pageJson(ids(3), next = null)))
@@ -98,7 +98,7 @@ class OrdersViewModelTest : OrdersHarness() {
         }
 
     @Test
-    fun `un importe ilegible en la pagina deja la pantalla entera en error`() =
+    fun `CA-ORD-03 un importe ilegible en la pagina deja la pantalla entera en error`() =
         runTest {
             server.enqueue(response(200, pageJson(ids(1), next = null, total = "48.5")))
 
@@ -122,7 +122,7 @@ class OrdersViewModelTest : OrdersHarness() {
         }
 
     @Test
-    fun `un 401 cierra la sesion y pide volver al inicio`() =
+    fun `CA-ORD-09 un 401 cierra la sesion y pide volver al inicio`() =
         runTest {
             server.enqueue(response(401, UNAUTHORIZED))
 
@@ -214,7 +214,7 @@ class OrdersViewModelTest : OrdersHarness() {
             viewModel.settled()
 
             store.signInUserId = "user-2"
-            store.signInWithGoogle("token", "nonce")
+            store.signInWithGoogle("token", "nonce", termsPending = false)
             viewModel.refresh()
 
             assertEquals(OrdersUiState.LoggedOut, viewModel.state.value)
