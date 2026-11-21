@@ -1,7 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.tindivo.core.network.AccessTokenSource
 import com.tindivo.core.network.AddressRepository
@@ -20,6 +19,7 @@ import com.tindivo.customer.feature.cart.CartSerializer
 import com.tindivo.customer.feature.cart.CartSnapshot
 import com.tindivo.customer.feature.cart.CartStore
 import com.tindivo.customer.session.FakeSessionStore
+import com.tindivo.customer.support.testDataStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -83,7 +83,7 @@ abstract class CheckoutHarness {
         wire(dispatcher)
         cartDisk =
             FlakyCartData(
-                DataStoreFactory.create(
+                testDataStore(
                     serializer = CartSerializer,
                     corruptionHandler = ReplaceFileCorruptionHandler<CartSnapshot?>(produceNewData = { null }),
                     scope = CoroutineScope(dispatcher),
