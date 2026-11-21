@@ -43,6 +43,11 @@ mapsCompose = "9.0.1"
 # 21.4.0 es la última publicada (maven-metadata de Google: 2026-06-25), con más de dos semanas; pide play-services-base y
 # -basement 18.9.0, la misma basement que ya trae play-services-maps.
 playServicesLocation = "21.4.0"
+# Pruebas de capturas en JVM (KT-16, Jesús, 2026-11-21; workflow de pruebas de UI, capa L3). Solo de prueba: no entran al APK.
+# Robolectric 4.17 (2026-09-10) es la estable más reciente con más de dos semanas y dice soportar el SDK 37; la 4.18
+# (2026-11-13) aún no cumple la regla. Roborazzi 1.77.0 (2026-10-22) es la última con más de dos semanas.
+robolectric = "4.17"
+roborazzi = "1.77.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -80,6 +85,10 @@ googleid = { module = "com.google.android.libraries.identity.googleid:googleid",
 tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
+roborazzi-junit-rule = { module = "io.github.takahirom.roborazzi:roborazzi-junit-rule", version.ref = "roborazzi" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
@@ -92,3 +101,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 openapi-generator = { id = "org.openapi.generator", version.ref = "openapiGenerator" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
+roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
