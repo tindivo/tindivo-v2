@@ -1,7 +1,8 @@
 # Antifraude: a quién se le fía la comida
 
-> Enmienda 2026-11-21 (Jesús): reglas 4 y 6 (sin GPS; sin compra previa, solo prepago). Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: `app_settings`, funciones de riesgo, conteos) +
-> `develop@7d00aa4` · Fuente de las reglas: `DECISIONS.md §8` · Pedidos: `Docs/negocio/servicios/pedidos-restaurante.md`
+> Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: `app_settings`, funciones de riesgo, conteos) +
+> `develop@7d00aa4` · Fuente de las reglas: `DECISIONS.md §8` · Pedidos: `Docs/negocio/servicios/pedidos-restaurante.md` ·
+> Enmienda 2026-11-21 (Jesús): reglas 4 y 6 (sin GPS; sin compra previa, solo prepago)
 
 ## Qué se protege
 
