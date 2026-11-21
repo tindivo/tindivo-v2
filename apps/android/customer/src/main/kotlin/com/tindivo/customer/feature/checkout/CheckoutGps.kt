@@ -64,9 +64,17 @@ internal data class GpsConfig(
     }
 }
 
+private const val NANOS_PER_MS = 1_000_000L
 private const val COORDINATE_SCALE = 7
 private const val ACCURACY_SCALE = 1
 private const val DISTANCE_SCALE = 3
+
+/**
+ * Cuánto vale una lectura adelantada (ENC-d): 2 minutos. La web lee en el momento de confirmar y sin posición guardada
+ * (`maximumAge: 0`); una lectura que no caduca permitiría validar desde un sitio y pedir desde otro. Pasado el plazo,
+ * al confirmar se lee de nuevo.
+ */
+internal const val GPS_FIX_MAX_AGE_MS = 120_000L
 
 /** El tope que acepta `CustomerGpsValidationSchema` (`packages/contracts/src/requests.ts`). */
 private const val MAX_ACCURACY_M = 100_000f
@@ -103,6 +111,20 @@ internal fun gpsEvidence(
         }
     }
 
+/**
+ * ¿Abre la hoja de GPS? Solo en un pedido a domicilio que se paga al recibir ([PayMethod.Cash] o [PayMethod.Yape]) y
+ * sin ubicación utilizable: [evidence] es `null` (sin permiso) o `failed` (sin señal). Pagar por adelantado y el recojo
+ * nunca la abren. Es solo un aviso con salidas: pedir sin ubicación sigue siendo posible (CA-CHK-10).
+ */
+internal fun gpsBlocks(
+    form: CheckoutUiState,
+    evidence: CreateOrderRequestGpsValidation?,
+): Boolean =
+    form.method == DeliveryChoice.Delivery &&
+        form.pay != null &&
+        form.pay != PayMethod.Prepaid &&
+        (evidence == null || evidence.method == CreateOrderRequestGpsValidation.Method.failed)
+
 private fun found(
     reading: LocationReading.Found,
     config: GpsConfig,
@@ -137,14 +159,19 @@ private fun found(
  */
 internal class LiveCheckoutGps(
     private val location: LocationSource,
+    /** Un reloj monótono en milisegundos; las pruebas inyectan el suyo (sin esperas reales). */
+    private val now: () -> Long = { System.nanoTime() / NANOS_PER_MS },
     private val loadConfig: suspend () -> GetPublicConfig200ResponseData?,
 ) : CheckoutGps {
     @Inject
     constructor(location: LocationSource, catalog: CatalogRepository) :
-        this(location, { (catalog.publicConfig() as? ApiResult.Success)?.data })
+        this(location, loadConfig = { (catalog.publicConfig() as? ApiResult.Success)?.data })
 
     private var cachedConfig: GpsConfig? = null
     private var prefetched: Deferred<LocationReading>? = null
+
+    /** Cuándo terminó de leerse la lectura adelantada (en [now]); `null` mientras no ha terminado. */
+    private var prefetchedAt: Long? = null
 
     /**
      * Adelanta la lectura al abrir el checkout (como `takePrefetchedGpsFix` de la web): sigue siendo una lectura en
@@ -152,14 +179,19 @@ internal class LiveCheckoutGps(
      */
     override fun prefetch(scope: CoroutineScope) {
         if (prefetched != null) return
-        prefetched = scope.async { read() }
+        prefetchedAt = null
+        prefetched = scope.async { read().also { prefetchedAt = now() } }
         scope.launch { config() }
     }
 
     override fun reset() {
         prefetched?.cancel()
         prefetched = null
+        prefetchedAt = null
     }
+
+    /** ¿Ya pasaron [GPS_FIX_MAX_AGE_MS] desde que terminó la lectura adelantada? */
+    private fun prefetchedExpired(): Boolean = prefetchedAt?.let { now() - it >= GPS_FIX_MAX_AGE_MS } == true
 
     override fun permissionGranted(): Boolean = location.hasPermission()
 
@@ -172,9 +204,11 @@ internal class LiveCheckoutGps(
         }
         return coroutineScope {
             val config = async { config() }
-            val early = prefetched
+            // Una lectura adelantada que ya caducó se descarta: se lee de nuevo, como la web.
+            val early = prefetched?.takeUnless { prefetchedExpired() }
             var reading = early?.await() ?: read()
             prefetched = null
+            prefetchedAt = null
             // Sin permiso al abrir: pudo darlo al tocar «Confirmar», así que se lee de nuevo.
             if (early != null && reading == LocationReading.NoPermission) reading = read()
             val gpsConfig = config.await()

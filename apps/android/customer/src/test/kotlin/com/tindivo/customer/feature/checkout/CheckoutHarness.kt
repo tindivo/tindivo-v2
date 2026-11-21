@@ -172,8 +172,22 @@ abstract class CheckoutHarness {
 
     protected fun cart(quantity: Int = 2) = Cart(BUSINESS_ID, "Pollería Don Lucho", listOf(line(quantity)))
 
-    /** Lo que contesta la lectura de ubicación de la prueba; por defecto, sin permiso: nada que mandar. */
-    protected var gpsAnswer: (PayMethod?) -> CreateOrderRequestGpsValidation? = { null }
+    /**
+     * Lo que contesta la lectura de ubicación de la prueba; por defecto, una posición precisa (y nada al pagar por
+     * adelantado, que no lee). Una prueba de «sin ubicación» pone `{ null }` y ve la hoja de GPS.
+     */
+    protected var gpsAnswer: (PayMethod?) -> CreateOrderRequestGpsValidation? = { pay ->
+        if (pay == PayMethod.Prepaid) null else preciseFix()
+    }
+
+    protected fun preciseFix() =
+        CreateOrderRequestGpsValidation(
+            method = CreateOrderRequestGpsValidation.Method.gps_high_accuracy,
+            lat = BigDecimal("-9.1547000"),
+            lng = BigDecimal("-78.5042000"),
+            accuracyM = BigDecimal("12.0"),
+            distanceToCenterKm = BigDecimal("0.000"),
+        )
 
     /** Con qué método de pago se leyó la ubicación, en orden. */
     protected val gpsReads = mutableListOf<PayMethod?>()

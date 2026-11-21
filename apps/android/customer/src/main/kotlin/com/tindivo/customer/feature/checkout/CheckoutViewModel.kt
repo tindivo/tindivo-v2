@@ -80,6 +80,12 @@ class CheckoutViewModel
         private var sheetOwner: String? = null
         private var sheetGeneration = -1
 
+        /** «Pedir sin ubicación» (hoja de GPS): vale solo para el siguiente envío. */
+        private var gpsWaived = false
+
+        /** «Intentar de nuevo» (hoja de GPS): la hoja del siguiente fallo lo dice. */
+        private var gpsRetried = false
+
         init {
             viewModelScope.launch { sessionStore.state.collect { onSession(it) } }
             viewModelScope.launch { cartStore.cart.collect { onCart(it) } }
@@ -205,6 +211,27 @@ class CheckoutViewModel
             sheetOwner = account
             sheetGeneration = generation
             mutableState.update { it.copy(sheet = sheet) }
+        }
+
+        /** «Intentar de nuevo»: se descarta lo leído y se vuelve a confirmar, que lee de nuevo. */
+        fun gpsRetry() {
+            if (!takeSheet { it is CheckoutSheet.GpsBlock }) return
+            gpsRetried = true
+            gpsCapture = null
+            gps.reset()
+            confirm()
+        }
+
+        /** «Cambiar a pago por adelantado»: solo cambia el método; la persona vuelve a confirmar. */
+        fun gpsPrepay() {
+            if (takeSheet { it is CheckoutSheet.GpsBlock }) selectPay(PayMethod.Prepaid)
+        }
+
+        /** «Pedir sin ubicación»: negar el GPS nunca impide pedir (CA-CHK-10); el servidor decide. */
+        fun gpsContinue() {
+            if (!takeSheet { it is CheckoutSheet.GpsBlock }) return
+            gpsWaived = true
+            confirm()
         }
 
         /** Atrás, tocar fuera o «Cerrar»: la hoja se va sin aplicar nada. */
@@ -494,6 +521,25 @@ class CheckoutViewModel
 
         private fun stop(message: CheckoutMessage) = mutableState.update { it.copy(sending = false, message = message) }
 
+        /** Abre la hoja de GPS si hace falta (CUS-CHK-009) y dice si la abrió; consume «Pedir sin ubicación» y el reintento. */
+        private fun openGpsSheetIfNeeded(
+            started: Int,
+            account: String,
+            form: CheckoutUiState,
+            evidence: CreateOrderRequestGpsValidation?,
+        ): Boolean {
+            val waived = gpsWaived
+            val retried = gpsRetried
+            gpsWaived = false
+            gpsRetried = false
+            if (waived || !gpsBlocks(form, evidence)) return false
+            sheetOwner = account
+            sheetGeneration = started
+            val sheet = CheckoutSheet.GpsBlock(noPermission = evidence == null, afterRetry = retried)
+            mutableState.update { it.copy(sending = false, sheet = sheet) }
+            return true
+        }
+
         private suspend fun place(
             started: Int,
             account: String,
@@ -503,15 +549,18 @@ class CheckoutViewModel
         ) {
             // La ubicación es evidencia, nunca un requisito: sin permiso o sin señal el pedido sale igual (CUS-CHK-009).
             val evidence = if (current == null) null else evidenceFor(account, current, form.pay)
+            // Sin ubicación en un pedido a domicilio que se paga al recibir: se abre la hoja y no sale nada.
+            val blocked =
+                current != null && isCurrent(started, account) && openGpsSheetIfNeeded(started, account, form, evidence)
             // Si la cuenta cambió mientras se leía la ubicación no se arma ni se envía nada.
             val request =
-                if (current == null || !isCurrent(started, account)) {
+                if (current == null || blocked || !isCurrent(started, account)) {
                     null
                 } else {
                     buildOrderRequest(form, current, quote, evidence)
                 }
             if (current == null || request == null) {
-                if (isCurrent(started, account)) stop(CheckoutMessage.Generic)
+                if (!blocked && isCurrent(started, account)) stop(CheckoutMessage.Generic)
                 return
             }
             val result = reserveAndSend(started, account, current, request) ?: return

@@ -136,6 +136,11 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
 
             vm.confirm()
             advanceUntilIdle()
+            // Sin ubicación se abre la hoja y no sale nada; «Pedir sin ubicación» envía igual (nunca impide pedir).
+            assertEquals(0, orders().size)
+            assertEquals(CheckoutSheet.GpsBlock(noPermission = true, afterRetry = false), vm.state.value.sheet)
+            vm.gpsContinue()
+            advanceUntilIdle()
 
             assertEquals(1, orders().size)
             assertTrue(body().absent("gpsValidation"))
@@ -258,6 +263,8 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             vm.selectPay(PayMethod.Yape)
             vm.confirm()
             advanceUntilIdle()
+            vm.gpsContinue()
+            advanceUntilIdle()
 
             assertEquals(1, orders().size)
             assertTrue(body().absent("gpsValidation"))
@@ -285,6 +292,8 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             handlers["POST /customer/orders"] = { reply(201, CREATED_JSON) }
             vm.confirm()
             advanceUntilIdle()
+            vm.gpsContinue()
+            advanceUntilIdle()
 
             assertEquals(2, orders().size)
             assertEquals(orders()[0].headers["Idempotency-Key"], orders()[1].headers["Idempotency-Key"])
@@ -311,6 +320,8 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
 
             location.permission = false
             config.complete(Unit)
+            advanceUntilIdle()
+            vm.gpsContinue()
             advanceUntilIdle()
 
             assertEquals(1, orders().size)

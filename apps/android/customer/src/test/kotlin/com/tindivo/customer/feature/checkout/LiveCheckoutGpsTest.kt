@@ -137,4 +137,41 @@ class LiveCheckoutGpsTest {
             assertEquals(false, gps.permissionGranted())
             assertEquals(1, location.calls)
         }
+
+    @Test
+    fun `ENC-d una lectura adelantada vale menos de 2 minutos, antes se usa sin leer otra vez`() =
+        runTest {
+            var clock = 0L
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = LiveCheckoutGps(location, now = { clock }) { null }
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            clock = GPS_FIX_MAX_AGE_MS - 1
+            gps.capture(PayMethod.Cash)
+
+            assertEquals(1, location.calls)
+        }
+
+    @Test
+    fun `ENC-d una lectura adelantada de 2 minutos ya caduco y al confirmar se lee de nuevo`() =
+        runTest {
+            var clock = 0L
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = LiveCheckoutGps(location, now = { clock }) { null }
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            location.next = LocationReading.Found(GeoPoint(-9.2, -78.6), accuracyM = 10f)
+            clock = GPS_FIX_MAX_AGE_MS
+            val evidence = gps.capture(PayMethod.Cash)
+
+            assertEquals(2, location.calls)
+            assertEquals(java.math.BigDecimal("-9.2000000"), evidence?.lat)
+        }
+
+    @Test
+    fun `ENC-d el plazo de la lectura adelantada es de 2 minutos`() {
+        assertEquals(120_000L, GPS_FIX_MAX_AGE_MS)
+    }
 }
