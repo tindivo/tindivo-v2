@@ -291,4 +291,61 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             assertTrue(body(1).absent("gpsValidation"))
             assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
         }
+
+    @Test
+    fun `CAX-001 si el permiso se revoca mientras se espera la configuracion, el pedido sale sin evidencia`() =
+        runTest(dispatcher) {
+            val location = FakeLocationSource(next = fix())
+            val config = CompletableDeferred<Unit>()
+            gpsOverride =
+                LiveCheckoutGps(location) {
+                    config.await()
+                    null
+                }
+            val vm = ready()
+            vm.selectPay(PayMethod.Yape)
+
+            vm.confirm()
+            advanceUntilIdle() // la captura ya tiene la posición y espera la configuración
+            assertEquals(0, orders().size)
+
+            location.permission = false
+            config.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            assertTrue(body().absent("gpsValidation"))
+            assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
+        }
+
+    @Test
+    fun `CAX-001 revocar el permiso durante la consulta del libro quita la evidencia y conserva la clave`() =
+        runTest(dispatcher) {
+            val location = FakeLocationSource(next = fix())
+            gpsOverride = LiveCheckoutGps(location) { null }
+            handlers["POST /customer/orders"] = { reply(409, problem(409, "conflict", "El pedido sigue en proceso.")) }
+            val vm = ready()
+            vm.selectPay(PayMethod.Yape)
+            vm.confirm()
+            advanceUntilIdle()
+            assertNotNull(body(0)["gpsValidation"])
+
+            // Pasa la ventana de vuelo y el reintento consulta la clave; la consulta tarda y mientras tanto se revoca.
+            val later = System.currentTimeMillis() + DEFAULT_FLIGHT_WINDOW_MS + 1
+            ledgerClock = { later }
+            val gate = CompletableDeferred<Unit>()
+            lookup.gate = gate
+            handlers["POST /customer/orders"] = { reply(201, CREATED_JSON) }
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(1, orders().size)
+
+            location.permission = false
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(2, orders().size)
+            assertEquals(orders()[0].headers["Idempotency-Key"], orders()[1].headers["Idempotency-Key"])
+            assertTrue(body(1).absent("gpsValidation"))
+        }
 }
