@@ -92,14 +92,26 @@ class BearerAuthInterceptor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        var grant = if (request.url.isSameOrigin(apiOrigin)) runBlocking { source.accessGrant() } else null
-        // La decisión se toma con el estado ya restaurado: nunca antes de saber si la aceptación está confirmada.
-        if (grant != null && grant.onlyForTermsAcceptance && !request.isTermsAcceptance()) {
+        if (!request.url.isSameOrigin(apiOrigin)) return chain.proceed(request)
+        // El presupuesto de espera es UNO por llamada: el reenvío tras un 401 gasta el mismo, no lo reinicia.
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TERMS_WAIT_MILLIS)
+        val token = authorize(chain, request, deadline)
+        return if (token == null) chain.proceed(request) else proceedWithToken(chain, request, token, deadline)
+    }
+
+    // La decisión de autorización, la misma para la salida inicial y para el reenvío (CAX-001): con el estado ya
+    // restaurado y vigente, nunca antes de saber si la aceptación está confirmada.
+    private fun authorize(
+        chain: Interceptor.Chain,
+        request: Request,
+        deadline: Long,
+    ): String? {
+        var grant = runBlocking { source.accessGrant() }
+        if (grant.onlyForTermsAcceptance && !request.isTermsAcceptance()) {
             if (!grant.termsPending) throw SessionBlockedException()
-            grant = awaitAcceptance(chain)
+            grant = awaitAcceptance(chain, deadline)
         }
-        val token = grant?.token
-        return if (token == null) chain.proceed(request) else proceedWithToken(chain, request, token)
+        return grant.token
     }
 
     // Las pantallas que esperan a la sesión cargan en cuanto la entrada se publica, antes del 2xx de la aceptación: esa
@@ -107,8 +119,10 @@ class BearerAuthInterceptor(
     // los interceptores en sus propios hilos, nunca en el principal. La espera va en tramos cortos para notar si se
     // canceló la llamada (runBlocking no se entera) y soltar el hilo. Si la aceptación no se confirma, la sesión se
     // cierra o vence el tope, falla como siempre y no sale a la red.
-    private fun awaitAcceptance(chain: Interceptor.Chain): AccessGrant {
-        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TERMS_WAIT_MILLIS)
+    private fun awaitAcceptance(
+        chain: Interceptor.Chain,
+        deadline: Long,
+    ): AccessGrant {
         var resolved: AccessGrant? = null
         while (resolved == null && System.nanoTime() < deadline) {
             resolved = runBlocking { withTimeoutOrNull(WAIT_SLICE_MILLIS) { source.awaitTermsResolution() } }
@@ -123,12 +137,22 @@ class BearerAuthInterceptor(
         chain: Interceptor.Chain,
         request: Request,
         token: String,
+        deadline: Long,
     ): Response {
         val response = chain.proceed(request.withBearer(token))
         if (response.code != HTTP_UNAUTHORIZED) return response
-        val replacement = runBlocking { gate.replacementFor(token) } ?: return response
-        response.close()
-        return chain.proceed(request.withBearer(replacement))
+        // El reenvío pasa por la misma decisión que la salida inicial, con el estado de ahora: una entrada pendiente
+        // publicada mientras la petición volaba la hace esperar el 2xx (o fallar si la sesión se cierra).
+        return try {
+            val replaced = runBlocking { gate.replacementFor(token) } != null
+            val fresh = if (replaced) authorize(chain, request, deadline) else null
+            if (fresh == null) return response
+            response.close()
+            chain.proceed(request.withBearer(fresh))
+        } catch (e: IOException) {
+            response.close()
+            throw e
+        }
     }
 }
 
