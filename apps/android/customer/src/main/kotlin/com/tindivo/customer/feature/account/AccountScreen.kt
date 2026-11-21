@@ -364,6 +364,8 @@ private fun LinkRow(
     TextButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp)) {
         Text(text = stringResource(label))
     }
+}
+
 /** Cambiar el nombre del perfil sin salir de Cuenta (CUS-AUT-014): el mismo largo y los mismos caracteres que el servidor. */
 @Composable
 private fun NameEditDialog(

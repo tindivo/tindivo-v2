@@ -37,7 +37,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
-import com.tindivo.customer.config.SUPPORT_WHATSAPP_URL
+import com.tindivo.customer.support.SupportViewModel
+import com.tindivo.customer.support.generalHelpLink
+import com.tindivo.customer.support.openSafely
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -293,8 +295,12 @@ private fun ErrorLine(
 
 /** El celular es de otra cuenta: no se traslada; se escribe a soporte por WhatsApp o se prueba otro número. */
 @Composable
-private fun OtherAccountNotice(actions: PhoneActions) {
+private fun OtherAccountNotice(
+    actions: PhoneActions,
+    supportViewModel: SupportViewModel = hiltViewModel(),
+) {
     val uriHandler = LocalUriHandler.current
+    val number = supportViewModel.number.collectAsStateWithLifecycle().value
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.phone_other_account),
@@ -305,7 +311,7 @@ private fun OtherAccountNotice(actions: PhoneActions) {
         ActionButton(
             text = stringResource(R.string.phone_contact_support),
             enabled = true,
-            onClick = { uriHandler.openUri(SUPPORT_WHATSAPP_URL) },
+            onClick = { uriHandler.openSafely(generalHelpLink(number)) },
         )
         TextButton(onClick = actions.onChangeNumber, modifier = Modifier.heightIn(min = 48.dp)) {
             Text(text = stringResource(R.string.phone_use_other_number))
