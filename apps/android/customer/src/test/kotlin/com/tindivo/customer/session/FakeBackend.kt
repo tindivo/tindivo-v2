@@ -17,6 +17,15 @@ internal class FakeBackend : AuthBackend {
     var signOutFails = false
     var refreshCalls = 0
     var clearCalls = 0
+
+    /** Cuántas llamadas a [clear] lanzan antes de que una funcione (el disco falla y se reintenta). */
+    var clearFailuresLeft = 0
+
+    /** Corre dentro de [clear], antes de borrar: la prueba mira qué ve el resto de la app en ese instante. */
+    var onClear: (() -> Unit)? = null
+
+    /** Con `true`, [clear] borra lo guardado, como el archivo cifrado de verdad: lo que ve un reinicio. */
+    var clearErasesStored = false
     var signOutCalls = 0
 
     override suspend fun restore(): TokenSnapshot? {
@@ -45,6 +54,12 @@ internal class FakeBackend : AuthBackend {
 
     override suspend fun clear() {
         clearCalls++
+        onClear?.invoke()
+        if (clearFailuresLeft > 0) {
+            clearFailuresLeft--
+            error("disco")
+        }
+        if (clearErasesStored) stored = null
     }
 
     private companion object {

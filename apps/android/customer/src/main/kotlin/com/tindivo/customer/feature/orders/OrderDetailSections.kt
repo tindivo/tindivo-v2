@@ -3,14 +3,11 @@ package com.tindivo.customer.feature.orders
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -96,33 +93,22 @@ internal fun OrderSteps(
     }
 }
 
-/** Quién trae el pedido. El teléfono nunca se escribe: solo el botón, con el motorizado en la puerta. */
+/** Quién trae el pedido: su nombre completo y, en la puerta, «[Nombre] llegó». Ningún dato de contacto. */
 @Composable
-internal fun DriverBlock(
-    driver: DriverUi,
-    onOpenLink: (String) -> Unit,
-) {
+internal fun DriverBlock(driver: DriverUi) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            driver.name?.let { name ->
-                Text(
-                    text = stringResource(R.string.order_driver_label),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(text = name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            }
+            Text(
+                text = stringResource(R.string.order_driver_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(text = driver.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             if (driver.atDoor) {
-                Text(text = stringResource(R.string.order_driver_at_door), style = MaterialTheme.typography.bodyMedium)
-            }
-            driver.whatsappLink?.let { link ->
-                Button(
-                    onClick = { onOpenLink(link) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-                ) {
-                    Text(text = stringResource(R.string.order_driver_whatsapp))
-                }
+                Text(
+                    text = stringResource(R.string.order_driver_arrived, driver.name),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }

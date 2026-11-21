@@ -129,7 +129,7 @@ class SupportContactTest {
     @Test
     fun `los enlaces llevan los textos de la web codificados y nada sin numero`() {
         assertEquals(
-            "https://wa.me/51987654321?text=Hola%2C%20necesito%20ayuda%20con%20mi%20pedido%20%23ABCD2345",
+            "https://wa.me/51987654321?text=Hola%2C%20necesito%20ayuda%20con%20mi%20pedido%20%23TDV-ABCD2345",
             orderSupportLink("51987654321", "ABCD2345"),
         )
         assertEquals(

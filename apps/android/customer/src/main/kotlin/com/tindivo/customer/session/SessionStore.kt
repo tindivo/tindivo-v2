@@ -1,7 +1,11 @@
 package com.tindivo.customer.session
 
 import com.tindivo.core.network.AccessTokenSource
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+private val NEVER_PENDING: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
 sealed interface SessionState {
     /** Todavía no se leyó lo guardado en el aparato. */
@@ -43,13 +47,23 @@ interface SessionStore : AccessTokenSource {
         rawNonce: String,
     ): SignInResult
 
+    /**
+     * `true` mientras un cierre de sesión no pudo borrar lo guardado en el aparato: no hay sesión (nadie recibe un
+     * token) pero lo guardado sigue ahí y no se restaura. La pantalla de entrar lo avisa y ofrece [retryClose].
+     */
+    val closePending: StateFlow<Boolean> get() = NEVER_PENDING
+
+    /** Vuelve a borrar lo guardado de un cierre pendiente. Devuelve `true` si ya no queda nada pendiente. */
+    suspend fun retryClose(): Boolean = true
+
     /** Cierra la sesión: intenta revocarla en el servidor y, falle o no, borra lo guardado en el aparato. */
     suspend fun signOut()
 
     /**
      * Como [signOut], pero solo si la sesión vigente sigue siendo la de [accountId]: la comprobación y el cierre van de
      * una vez, sin que un cambio de cuenta pueda colarse entre ambos. Es el cierre ante un 401 de una llamada de
-     * [accountId]: si para entonces la sesión ya es de otra cuenta, esa no se toca. Devuelve si cerró.
+     * [accountId]: si para entonces la sesión ya es de otra cuenta, esa no se toca. Devuelve `true` solo si cerró de verdad: con
+     * el borrado local fallido devuelve `false` y [closePending] sube.
      */
     suspend fun signOutIf(accountId: String): Boolean
 
@@ -57,6 +71,7 @@ interface SessionStore : AccessTokenSource {
      * Cierra en el aparato la sesión de [accountId] sin llamar a Auth (la cuenta ya no existe en el servidor, así que
      * no hay nada que revocar). Si la sesión vigente es de otra cuenta, o no hay ninguna, no toca nada y devuelve
      * `false`. Comprobar la cuenta y cerrar es un solo paso: una entrada de otra cuenta no puede colarse en medio.
+     * Devuelve `true` solo si lo guardado quedó borrado; con el borrado fallido devuelve `false` y [closePending] sube.
      */
     suspend fun signOutLocally(accountId: String): Boolean
 }

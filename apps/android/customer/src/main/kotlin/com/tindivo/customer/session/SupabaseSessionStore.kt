@@ -48,6 +48,9 @@ internal class SupabaseSessionStore(
     private var current: TokenSnapshot? = null
     private var restored = false
 
+    private val mutableClosePending = MutableStateFlow(false)
+    override val closePending: StateFlow<Boolean> = mutableClosePending.asStateFlow()
+
     // Cuenta los cambios de sesión (entrar, refrescar, cerrar; restaurar al arrancar no cuenta): un refresh() que
     // esperaba el candado y ve que el contador cambió no repite la llamada, porque quien entró primero ya dejó la
     // sesión al día (o la cerró).
@@ -83,6 +86,8 @@ internal class SupabaseSessionStore(
         mutex.withLock {
             try {
                 adopt(backend.signInWithGoogle(idToken, rawNonce))
+                // La sesión nueva reemplazó a la que quedó pendiente de cerrar (el archivo lo escribe el backend).
+                mutableClosePending.value = false
                 // Después del estado (ver SessionStore.signInGeneration): quien lea la generación y luego el estado
                 // nunca ve la generación vieja con la cuenta nueva sin darse cuenta.
                 signIns.value += 1
@@ -125,7 +130,6 @@ internal class SupabaseSessionStore(
                     // Sin red o sesión ya revocada: igual se cierra en el aparato.
                 }
                 drop()
-                true
             }
         }
 
@@ -136,7 +140,6 @@ internal class SupabaseSessionStore(
                 restoreOnce()
                 if (current?.userId == accountId) {
                     drop()
-                    true
                 } else {
                     false
                 }
@@ -154,8 +157,25 @@ internal class SupabaseSessionStore(
                 null
             }
         restored = true
+        mutableClosePending.value =
+            try {
+                backend.closePending()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                false
+            }
         if (snapshot != null) adopt(snapshot, countsAsChange = false) else mutableState.value = SessionState.SignedOut
     }
+
+    // «Reintentar» tras un cierre fallido: vuelve a borrar lo guardado. Bajo el mismo candado y sin cancelarse a medias.
+    override suspend fun retryClose(): Boolean =
+        withContext(NonCancellable) {
+            mutex.withLock {
+                restoreOnce()
+                if (!mutableClosePending.value) true else drop()
+            }
+        }
 
     // El token está por vencer. Una vez enviado el refresh token, Auth puede haberlo gastado: solo si el error prueba
     // que la petición nunca llegó a Auth (y el token aún no venció) se sigue con el token actual (si el servidor lo
@@ -206,19 +226,49 @@ internal class SupabaseSessionStore(
         return snapshot
     }
 
+    // Cuántas veces falló la limpieza local (solo el conteo, sin datos de la cuenta): quien la mire sabe que quedó
+    // trabajo pendiente sin tener que leer nada personal.
+    @Volatile
+    internal var localClearFailures = 0
+        private set
+
     // Se completa aunque la corrutina esté cancelada: dejar la sesión a medias cerrada es peor que tardar un poco.
-    private suspend fun drop() {
+    // Primero se borra lo local (memoria y archivo cifrado) y solo después se publica «sin sesión»: quien reacciona a
+    // `SignedOut` (otra cuenta que entra) no puede ver todavía una sesión restaurable. Un fallo del borrado se
+    // reintenta; `EncryptedSessionFile.delete` ya vacía el archivo y destruye las claves, así que solo si ni eso
+    // pudo, el error de disco es el riesgo residual.
+    // Devuelve `true` solo si lo guardado quedó borrado. Si se agotan los intentos, no hay sesión en memoria (nadie
+    // recibe un token) pero tampoco se declara éxito: [closePending] sube y se intenta dejar una nota APARTE del archivo
+    // cifrado (y destruir la clave por su alias). La nota es la segunda barrera, no una garantía: con ella puesta, el
+    // próximo arranque no restaura nada y vuelve a intentar borrar; «Reintentar» hace lo mismo sin reiniciar. Queda un
+    // riesgo residual cuando fallan TODOS a la vez (borrado, vaciado, destrucción de la clave y escritura de la nota):
+    // entonces el próximo arranque restauraría la cuenta anterior. [localClearFailures] cuenta esos fallos.
+    private suspend fun drop(): Boolean {
         current = null
         generation.incrementAndGet()
-        mutableState.value = SessionState.SignedOut
+        var cleared = false
         withContext(NonCancellable) {
-            try {
-                backend.clear()
-            } catch (_: Exception) {
-                // Ya quedó cerrada en memoria. El archivo ya se vació (EncryptedSessionFile.delete) o, si ni eso, este
-                // error de disco es el riesgo residual: lo guardado seguiría siendo una sesión válida.
+            var attempts = 0
+            while (!cleared && attempts < CLEAR_ATTEMPTS) {
+                attempts++
+                try {
+                    backend.clear()
+                    cleared = true
+                } catch (_: Exception) {
+                    localClearFailures++
+                }
+            }
+            if (!cleared) {
+                try {
+                    backend.markClosePending()
+                } catch (_: Exception) {
+                    localClearFailures++
+                }
             }
         }
+        mutableClosePending.value = !cleared
+        mutableState.value = SessionState.SignedOut
+        return cleared
     }
 }
 
@@ -228,6 +278,7 @@ internal class SupabaseSessionStore(
 internal fun IOException.neverReachedAuth(): Boolean =
     this is UnknownHostException || this is ConnectException || this is NoRouteToHostException
 
+private const val CLEAR_ATTEMPTS = 3
 private const val AUTH_CONNECT_TIMEOUT_SECONDS = 10L
 private const val AUTH_IO_TIMEOUT_SECONDS = 15L
 private const val AUTH_CALL_TIMEOUT_SECONDS = 20L
