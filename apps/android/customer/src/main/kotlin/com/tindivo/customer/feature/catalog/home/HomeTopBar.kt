@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
@@ -66,7 +67,7 @@ internal fun HomeTopBar(
                 bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_mark),
                 contentDescription = stringResource(R.string.home_logo_description),
                 modifier = Modifier.size(MARK_SIZE),
-                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                colorFilter = ColorFilter.tint(TindivoColors.brand),
             )
             Box(modifier = Modifier.weight(1f))
             BagButton(count = bagCount, onClick = onOpenBag)

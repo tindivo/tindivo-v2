@@ -25,7 +25,7 @@ const WEIGHTS: Record<string, number> = { Normal: 400, Medium: 500, SemiBold: 60
 
 // token del canon -> nombre en Android (o null si Android no lo tiene)
 const COLOR_MAP: Record<string, string | null> = {
-  primary: 'Brand',
+  primary: 'BrandDark',
   primaryPressed: 'BrandPressed',
   onPrimary: 'White',
   primaryText: 'BrandDark',
@@ -174,7 +174,8 @@ const androidOnly = [
 
 // DIFERENCIAS CONOCIDAS: token · canon · Android hoy. Se borra una fila cuando Android se alinea.
 const KNOWN_DIFFS: string[] = [
-  'primary · #EE6417 · #F97316',
+  'primary · #EE6417 · #C2410C',
+  'primaryPressed · #CF4A0C · #9A3412',
   'success · #166534 · #15803D',
   'warning · #92400E · #B45309',
   'error · #991B1B · #DC2626',
@@ -200,6 +201,7 @@ const KNOWN_DIFFS: string[] = [
   'elevation3 · sombra del canon · no existe',
 ]
 const KNOWN_ANDROID_ONLY: string[] = [
+  'color Brand',
   'color SurfaceMid',
   'color SuccessDeep',
   'color WarningDeep',

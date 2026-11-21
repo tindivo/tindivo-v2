@@ -131,7 +131,7 @@ private fun BusinessLogo(business: BusinessCardUi) {
                 bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_mark),
                 contentDescription = null,
                 modifier = Modifier.size(LOGO_SIZE / 2),
-                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                colorFilter = ColorFilter.tint(TindivoColors.brand),
                 alpha = if (business.closed) CLOSED_ALPHA else 1f,
             )
         }

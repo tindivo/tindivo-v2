@@ -16,7 +16,7 @@ internal object Palette {
     val BrandDark = Color(color = 0xFFC2410C)
     val BrandDeep = Color(color = 0xFF9A3412)
     val BrandSoft = Color(color = 0xFFFFF7ED)
-    val BrandPressed = Color(color = 0xFFCF4A0C)
+    val BrandPressed = Color(color = 0xFF9A3412)
     val BrandMark = Color(color = 0xFFFA7020)
     val CtaMid = Color(color = 0xFFEE6417)
     val CtaEnd = Color(color = 0xFFE8590C)
@@ -46,16 +46,16 @@ internal object Palette {
 /**
  * El esquema de Material 3 con la paleta de Tindivo.
  *
- * - `primary` es el naranja de los botones, con texto blanco (decisión de Jesús, 2026-09-19: blanco sobre naranja).
- *   Blanco sobre `#F97316` da 2.8:1: sirve para la etiqueta gruesa de un botón, NO para texto corrido. Para texto o
- *   enlaces en naranja se usa [TindivoColors.brandText] (`#C2410C`, 5.2:1 sobre blanco).
+ * - `primary` es el fondo de los botones con texto blanco: `#C2410C`, que con blanco da 5,2:1 (decisión de Jesús,
+ *   2026-11-21). El naranja de marca `#F97316` ([TindivoColors.brand]) queda para el degradado de Entregas, el isotipo
+ *   y los acentos decorativos: no lleva texto encima. Para texto o enlaces en naranja se usa [TindivoColors.brandText].
  * - `secondary` es la tinta: el botón oscuro de la web.
  * - `tertiary` es el verde de «todo bien» (entregado, verificado).
  * - Las tarjetas van en blanco sobre el fondo, con sombra suave y sin borde: ver [TindivoCard].
  */
 internal val TindivoLightColors: ColorScheme =
     lightColorScheme(
-        primary = Palette.Brand,
+        primary = Palette.BrandDark,
         onPrimary = Color.White,
         primaryContainer = Palette.BrandSoft,
         onPrimaryContainer = Palette.BrandDeep,
@@ -93,6 +93,9 @@ internal val TindivoLightColors: ColorScheme =
 
 /** Lo que la paleta de Tindivo tiene y Material 3 no. Todo par texto/fondo de aquí pasa 4.5:1. */
 object TindivoColors {
+    /** Naranja de marca (`#F97316`): isotipo, acentos y degradados; nunca fondo de texto. */
+    val brand: Color = Palette.Brand
+
     /** Naranja para TEXTO y enlaces sobre fondo claro. Nunca `colorScheme.primary` como color de letra. */
     val brandText: Color = Palette.BrandDark
 
@@ -104,7 +107,7 @@ object TindivoColors {
     /** Texto apagado: etiquetas, placeholder y metadatos (`inkTertiary`, 5,41:1 sobre el fondo). */
     val textMuted: Color = Palette.InkTertiary
 
-    /** Presionado del CTA (`primaryPressed`). */
+    /** Presionado del CTA (`primaryPressed`): más oscuro que `primary`, ahora `#C2410C`. */
     val primaryPressed: Color = Palette.BrandPressed
 
     /** Degradado decorativo de las tarjetas de servicio (`gradientCta`): el texto blanco va en la mitad oscura. */
