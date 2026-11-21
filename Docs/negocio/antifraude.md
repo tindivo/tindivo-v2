@@ -1,6 +1,6 @@
 # Antifraude: a quién se le fía la comida
 
-> Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: `app_settings`, funciones de riesgo, conteos) +
+> Enmienda 2026-11-21 (Jesús): reglas 4 y 6 (sin GPS; sin compra previa, solo prepago). Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: `app_settings`, funciones de riesgo, conteos) +
 > `develop@7d00aa4` · Fuente de las reglas: `DECISIONS.md §8` · Pedidos: `Docs/negocio/servicios/pedidos-restaurante.md`
 
 ## Qué se protege
@@ -25,11 +25,12 @@ strikes. En este orden; el riesgo manda sobre cualquier historial:
 4. **Compra previa** (`customer_trusted_for_contraentrega`), resuelta por el teléfono verificado por SMS: basta una
    entrega de esta cuenta, una entrega a este teléfono (también las manuales de la cajera) o cualquier fila de este
    teléfono en el directorio de direcciones. Con eso, contraentrega **sin llamada**. La tercera vía se puede conseguir
-   llamando al restaurante y cancelando: se acepta a propósito, porque los strikes se evalúan antes.
+   llamando al restaurante y cancelando: se acepta a propósito, porque los strikes se evalúan antes. **Sin GPS** (permiso
+   negado o sin señal) la compra previa sigue dando contraentrega sin llamada: negar el GPS o no tenerlo nunca impide pedir.
 5. **Sin historial pero con GPS en vivo dentro de San Jacinto**: puede pagar al recibir, **con llamada** (`validando`).
    **Por qué no sin llamada:** el GPS del navegador se falsifica fácil; tratarlo como compra previa regalaría
    contraentrega libre a un primer pedido falso.
-6. **Cliente nuevo sin nada de lo anterior**: prepago, o llamada.
+6. **Cliente nuevo sin nada de lo anterior**: solo prepago (el servidor ya lo hace así; decisión de Jesús, 2026-11-21).
 
 Los pedidos manuales de la cajera no pasan por estas reglas: ella tiene al cliente al teléfono.
 
