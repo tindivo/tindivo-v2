@@ -37,7 +37,7 @@ private val ButtonSpinnerStroke = 2.dp
 private val SecondaryBorderWidth = 1.dp
 
 /**
- * El botón principal de una pantalla: píldora naranja de ancho completo, etiqueta blanca en `labelLarge`.
+ * El botón principal de una pantalla: píldora `#C2410C` de ancho completo, etiqueta blanca en `titleLarge` (18/24, el token `cta`).
  *
  * Con [loading] la etiqueta se oculta (sin cambiar el tamaño del botón) y en su lugar gira un indicador; el botón deja
  * de responder, conserva su color y TalkBack sigue leyendo la etiqueta, anuncia que está en curso y que no se puede
@@ -78,7 +78,7 @@ fun TindivoPrimaryButton(
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.alpha(if (loading) 0f else 1f),

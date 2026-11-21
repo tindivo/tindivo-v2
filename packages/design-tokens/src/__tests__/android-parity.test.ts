@@ -78,11 +78,11 @@ const SPACING_MAP: Record<string, string | null> = {
   bottomBarInset: null,
 }
 const TYPE_MAP: Record<string, string | null> = {
-  titleScreen: 'headlineSmall',
-  titleSection: 'titleMedium',
+  titleScreen: 'headlineMedium',
+  titleSection: 'titleLarge',
   body: 'bodyLarge',
   bodySecondary: 'bodySmall',
-  cta: 'labelLarge',
+  cta: 'titleLarge',
   chip: 'labelMedium',
 }
 
@@ -190,11 +190,7 @@ const KNOWN_DIFFS: string[] = [
   'secondaryHeight · 48 · no existe',
   'chipHeight · 40 · no existe',
   'bottomBarInset · 24 · no existe',
-  'titleScreen · 26/32 700 · 22/28 700',
-  'titleSection · 18/24 700 · 17/24 600',
   'body · 15/22 400 · 16/24 400',
-  'bodySecondary · 13/18 400 · 12/16 400',
-  'cta · 18/24 700 · 15/20 700',
   'chip · 14/- 600 · 12/16 600',
   'elevation1 · sombra del canon · no existe',
   'elevation2 · sombra del canon · no existe',
@@ -215,10 +211,11 @@ const KNOWN_ANDROID_ONLY: string[] = [
   'texto displayMedium',
   'texto displaySmall',
   'texto headlineLarge',
-  'texto headlineMedium',
-  'texto titleLarge',
+  'texto headlineSmall',
+  'texto titleMedium',
   'texto titleSmall',
   'texto bodyMedium',
+  'texto labelLarge',
   'texto labelSmall',
 ]
 
