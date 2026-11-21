@@ -64,7 +64,10 @@ async function sembrarEntrega(tel9: string) {
 }
 
 /** Delivery, efectivo, `failed` y sin coordenadas de GPS: lo que manda el checkout. */
-function pedir(c: { id: string; tel9: string }) {
+function pedir(
+  c: { id: string; tel9: string },
+  gps: Record<string, unknown> = { p_customer_gps_method: 'failed' },
+) {
   return db.rpc('create_customer_order', {
     p_customer_user_id: c.id,
     p_business_id: BUSINESS_ID,
@@ -79,7 +82,7 @@ function pedir(c: { id: string; tel9: string }) {
     p_items: [{ menu_item_id: ITEM_POLLO_ID, quantity: 1, modifiers: [] }],
     p_source: 'customer_pwa',
     p_client_pays_with: 50,
-    p_customer_gps_method: 'failed',
+    ...gps,
   })
 }
 
@@ -142,5 +145,44 @@ describe('contraentrega sin GPS (`failed` sin coordenadas)', () => {
     // 0230:266-271: `no_history` y `customer_gps_in_coverage(..., 'failed')` = false -> raise
     // P0001; la route lo devuelve como 422 con este texto.
     expect(error?.message).toContain('Pago adelantado requerido')
+  })
+
+  // 0230:289-300 y 0230:664-668: con compra previa y GPS enviado a > 400 m de la entrega, el
+  // pedido va a la llamada; con `failed` ese disparador no se evalúa. Dos clientes distintos
+  // para no chocar con «un pedido activo por negocio».
+  it('compra previa: GPS a > 400 m va a `validando` (gps_warning_zone); sin GPS entra directo', async () => {
+    const conGps = await crearCliente()
+    await sembrarEntrega(conGps.tel9)
+    const { data: lejos, error: e1 } = await pedir(conGps, {
+      p_customer_gps_method: 'gps_high_accuracy',
+      p_customer_gps_lat: LAT + 0.01, // ~1,1 km al norte de la entrega
+      p_customer_gps_lng: LNG,
+      p_customer_gps_accuracy_m: 10,
+    })
+    expect(e1, `debería entrar: ${e1?.message}`).toBeNull()
+    const idLejos = (lejos as { id: string }).id
+    pedidos.push(idLejos)
+    const { data: a } = await db
+      .from('orders')
+      .select('status, requires_validation, validation_reason_code')
+      .eq('id', idLejos)
+      .single()
+    expect(a?.status).toBe('validando')
+    expect(a?.requires_validation).toBe(true)
+    expect(a?.validation_reason_code).toBe('gps_warning_zone')
+
+    const sinGps = await crearCliente()
+    await sembrarEntrega(sinGps.tel9)
+    const { data: libre, error: e2 } = await pedir(sinGps)
+    expect(e2, `debería entrar: ${e2?.message}`).toBeNull()
+    const idLibre = (libre as { id: string }).id
+    pedidos.push(idLibre)
+    const { data: b } = await db
+      .from('orders')
+      .select('status, requires_validation')
+      .eq('id', idLibre)
+      .single()
+    expect(b?.status).toBe('pending_acceptance')
+    expect(b?.requires_validation).toBe(false)
   })
 })

@@ -6,7 +6,8 @@ import type { GeoBlockKind, GpsValidationPayload } from '@/features/checkout/typ
  *
  * Regla de negocio (antifraude.md, reglas 4 y 6): negar el GPS o no tenerlo
  * NUNCA impide pedir a quien tiene compra previa. Se manda `failed` y decide el
- * servidor (`create_customer_order`, 0230: con `trusted` no mira el GPS). Sin
+ * servidor (`create_customer_order`, 0230: el GPS no condiciona la elegibilidad por compra previa; con `failed` no se evalúa
+ * `gps_warning_zone` (>400 m al punto de entrega), el único disparador de GPS que queda). Sin
  * compra previa y sin GPS, el servidor exige prepago, así que aquí se ofrece
  * la hoja de reintentar / pagar por adelantado.
  */

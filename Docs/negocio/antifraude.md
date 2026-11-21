@@ -26,11 +26,12 @@ strikes. En este orden; el riesgo manda sobre cualquier historial:
    entrega de esta cuenta, una entrega a este teléfono (también las manuales de la cajera) o cualquier fila de este
    teléfono en el directorio de direcciones. Con eso, contraentrega **sin llamada**. La tercera vía se puede conseguir
    llamando al restaurante y cancelando: se acepta a propósito, porque los strikes se evalúan antes. **Sin GPS** (permiso
-   negado o sin señal), la compra previa sigue pudiendo pagar al recibir: negarlo nunca impide pedir. El servidor no
-   mira el GPS de quien tiene compra previa; si el pedido pasa por la llamada (`validando`) lo deciden las reglas
-   generales de validación (`app_settings.validation`: teléfono sin otros pedidos, strikes, monto), igual que con GPS.
-   Consecuencia aceptada (Jesús, 2026-11-21): a quien tiene compra previa, negar el GPS le evita la hoja de «lejos» o
-   «señal mala» de la app; esa hoja nunca fue una regla del servidor.
+   negado o sin señal), la compra previa sigue pudiendo pagar al recibir: negarlo nunca impide pedir. El GPS no condiciona la
+   **elegibilidad** por compra previa, pero si se envía, una distancia de más de 400 m al punto de entrega pasa el pedido a la
+   llamada (`validando`, `gps_warning_zone`). Sin GPS (`failed`) ese disparador no se evalúa; siguen el bloqueo, los
+   strikes, el tope de S/ 80, la zona de entrega y las reglas generales de validación (`app_settings.validation`).
+   Consecuencia aceptada (Jesús, 2026-11-21): a quien tiene compra previa, negar el GPS le evita esa llamada por distancia
+   y las hojas «lejos» y «señal mala» de la app.
 5. **Sin historial pero con GPS en vivo dentro de San Jacinto**: puede pagar al recibir, **con llamada** (`validando`).
    **Por qué no sin llamada:** el GPS del navegador se falsifica fácil; tratarlo como compra previa regalaría
    contraentrega libre a un primer pedido falso.
