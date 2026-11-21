@@ -47,6 +47,13 @@ internal sealed interface OrdersUiState {
     data object LoggedOut : OrdersUiState
 }
 
+/**
+ * CUS-REV-001: la pregunta de la reseña puede salir en el historial solo cuando ya cargó y ningún pedido sigue activo
+ * (nunca junto al banner de un pedido en curso).
+ */
+internal fun OrdersUiState.allowsReviewPrompt(): Boolean =
+    this is OrdersUiState.Loaded && items.none { it.phase is OrderPhase.Active }
+
 /** El historial de pedidos del cliente, de 20 en 20 con el cursor que manda la API. */
 @HiltViewModel
 internal class OrdersViewModel

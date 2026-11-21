@@ -153,12 +153,12 @@ internal fun CancelProblemText(problem: CancelProblem) {
     Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
 }
 
-/** «¿Algún problema? Escríbenos»: abre WhatsApp de soporte. Sin número de soporte no se muestra. */
+/** «Ayuda con este pedido»: abre WhatsApp de soporte con el pedido en el mensaje (CUS-SUP-006). */
 @Composable
 internal fun SupportLink(
     link: String?,
     onOpenLink: (String) -> Unit,
-    @StringRes label: Int = R.string.order_support_link,
+    @StringRes label: Int = R.string.order_help_with_order,
 ) {
     if (link == null) return
     TextButton(onClick = { onOpenLink(link) }, modifier = Modifier.heightIn(min = 48.dp)) {
