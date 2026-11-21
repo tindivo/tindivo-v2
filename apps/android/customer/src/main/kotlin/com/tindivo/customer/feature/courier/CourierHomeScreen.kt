@@ -66,7 +66,9 @@ internal fun CourierHomeScreen(
     val title = if (listOnly) R.string.courier_my_title else R.string.courier_entry_title
     // Las tarjetas son de la cuenta de la lista: el seguimiento se abre atado a ella.
     val open: (CourierCardUi) -> Unit = { card -> state.accountId?.let { actions.onOpen(card, it) } }
-    Scaffold(topBar = { CourierTopBar(title = stringResource(title), onBack = actions.onBack) }) { padding ->
+    Scaffold(topBar = {
+        CourierTopBar(title = stringResource(title), onBack = actions.onBack.takeIf { listOnly })
+    }) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding =
