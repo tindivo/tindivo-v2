@@ -1,15 +1,15 @@
 package com.tindivo.core.network
 
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
  * De dónde sale el token de acceso. La implementación vive detrás de `SessionStore` (CLI-7): aquí no se sabe nada del
@@ -96,7 +96,7 @@ class BearerAuthInterceptor(
         // La decisión se toma con el estado ya restaurado: nunca antes de saber si la aceptación está confirmada.
         if (grant != null && grant.onlyForTermsAcceptance && !request.isTermsAcceptance()) {
             if (!grant.termsPending) throw SessionBlockedException()
-            grant = awaitAcceptance()
+            grant = awaitAcceptance(chain)
         }
         val token = grant?.token
         return if (token == null) chain.proceed(request) else proceedWithToken(chain, request, token)
@@ -104,17 +104,20 @@ class BearerAuthInterceptor(
 
     // Las pantallas que esperan a la sesión cargan en cuanto la entrada se publica, antes del 2xx de la aceptación: esa
     // petición espera aquí (fuera del candado de la sesión) en vez de fallar. runBlocking es válido porque OkHttp corre
-    // los interceptores en sus propios hilos, nunca en el principal. Si la aceptación no se confirma o la sesión se
-    // cierra, o vence el tope, falla como siempre y no sale a la red.
-    private fun awaitAcceptance(): AccessGrant {
-        val resolved =
-            try {
-                runBlocking { withTimeout(TERMS_WAIT_MILLIS) { source.awaitTermsResolution() } }
-            } catch (_: TimeoutCancellationException) {
-                throw SessionBlockedException()
+    // los interceptores en sus propios hilos, nunca en el principal. La espera va en tramos cortos para notar si se
+    // canceló la llamada (runBlocking no se entera) y soltar el hilo. Si la aceptación no se confirma, la sesión se
+    // cierra o vence el tope, falla como siempre y no sale a la red.
+    private fun awaitAcceptance(chain: Interceptor.Chain): AccessGrant {
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TERMS_WAIT_MILLIS)
+        while (System.nanoTime() < deadline) {
+            val resolved = runBlocking { withTimeoutOrNull(WAIT_SLICE_MILLIS) { source.awaitTermsResolution() } }
+            if (resolved != null) {
+                if (resolved.token == null || resolved.onlyForTermsAcceptance) throw SessionBlockedException()
+                return resolved
             }
-        if (resolved.token == null || resolved.onlyForTermsAcceptance) throw SessionBlockedException()
-        return resolved
+            if (chain.call().isCanceled()) throw IOException("Canceled")
+        }
+        throw SessionBlockedException()
     }
 
     private fun proceedWithToken(
@@ -132,6 +135,7 @@ class BearerAuthInterceptor(
 
 private const val HTTP_UNAUTHORIZED = 401
 private const val TERMS_WAIT_MILLIS = 30_000L
+private const val WAIT_SLICE_MILLIS = 250L
 
 private fun Request.isTermsAcceptance(): Boolean =
     method == "POST" && url.encodedPath.endsWith("/customer/terms-acceptance")

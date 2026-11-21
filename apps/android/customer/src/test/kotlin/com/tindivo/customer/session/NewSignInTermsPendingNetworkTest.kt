@@ -21,6 +21,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant
+import java.io.IOException
 import java.time.ZoneOffset
 import kotlin.concurrent.thread
 
@@ -105,6 +106,25 @@ class NewSignInTermsPendingNetworkTest {
         request.join(10_000)
 
         assertTrue(outcome?.exceptionOrNull() is SessionBlockedException)
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `CA-AUT-13 con la aceptacion pendiente cancelar la llamada libera la espera en menos de 1 s`() {
+        val store = store()
+        runBlocking { store.signInWithGoogle("id", "nonce", termsPending = true) }
+        server.enqueue(MockResponse(code = 200))
+        val call =
+            client(store).newCall(Request.Builder().url(server.url("/api/v1/customer/orders")).build())
+        var outcome: Result<Int>? = null
+        val request = thread { outcome = runCatching { call.execute().use { it.code } } }
+        request.join(300)
+        assertNull(outcome)
+
+        call.cancel()
+        request.join(1_000)
+
+        assertTrue(outcome?.exceptionOrNull() is IOException)
         assertEquals(0, server.requestCount)
     }
 
