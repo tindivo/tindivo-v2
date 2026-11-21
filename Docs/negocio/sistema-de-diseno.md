@@ -67,7 +67,8 @@ Contrastes **medidos** (WCAG 2.x, luminancia relativa) el 2026-11-17.
 6. Los **avatares de negocio sin logo** usan el respaldo del isotipo sobre `primaryContainer`, no un color inventado.
 7. Solo tema claro: no hay modo oscuro definido.
 8. **Un solo naranja.** Restaurantes, Entregas y Store usan `primary`; ningún servicio lleva azul (ni la moto). `info` es
-   solo para avisos informativos, nunca color de un servicio. Confirmada completa por la junta con la delegación de Jesús (2026-11-21); las apps nativas nacen así. Excepción: la web del cliente congelada (`Docs/arquitectura/excepciones.md`).
+   solo para avisos informativos, nunca color de un servicio. Confirmada completa por la junta con la delegación de Jesús (2026-11-21); las apps nativas nacen así.
+   Nota: la web del cliente, congelada y por apagarse (D-27), conserva azules en `apps/customer/features/courier/` (degradados y acentos, en `components/` y `map/`); no se retoca, y las apps nativas nacen sin azul.
 
 ## 3. Forma y elevación
 
