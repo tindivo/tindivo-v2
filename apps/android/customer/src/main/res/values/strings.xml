@@ -117,6 +117,7 @@
     <string name="cart_subtotal">Subtotal</string>
     <string name="cart_shipping_note">El envío y el total final se calculan al confirmar el pedido.</string>
     <string name="cart_add_more">+ Agregar más</string>
+    <string name="cart_add_more_from">Agregar más de %1$s</string>
     <string name="cart_empty">Tu bolsa está vacía</string>
     <string name="cart_see_businesses">Ver negocios</string>
     <string name="cart_remove">Quitar</string>
