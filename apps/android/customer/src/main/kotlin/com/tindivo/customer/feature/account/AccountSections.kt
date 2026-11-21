@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -109,13 +111,16 @@ internal fun ProfileCard(
     }
 }
 
+/** El número y la píldora van en la misma línea si caben; si no, la píldora baja entera (nunca se parte). */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PhoneLine(profile: AccountProfileUi) {
     if (profile.phoneVerified && profile.phone != null) {
-        Row(
+        FlowRow(
             modifier = Modifier.padding(top = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
         ) {
             Text(text = profile.phone, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             Surface(
@@ -133,6 +138,8 @@ private fun PhoneLine(profile: AccountProfileUi) {
                         text = stringResource(R.string.account_verified),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
             }
