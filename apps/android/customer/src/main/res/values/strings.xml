@@ -222,6 +222,10 @@
     <string name="orders_load_more">Ver más pedidos</string>
     <string name="orders_empty_title">Sin pedidos todavía</string>
     <string name="orders_empty_action">Hacer un pedido</string>
+    <string name="orders_in_progress">En curso</string>
+    <string name="orders_previous">Anteriores</string>
+    <string name="orders_track">Ver seguimiento</string>
+    <string name="orders_step_progress">Etapa %1$d de %2$d: %3$s</string>
     <string name="order_business_fallback">Restaurante</string>
     <string name="order_short_id">#TDV-%1$s</string>
     <string name="order_card_cancelled">Cancelado</string>
