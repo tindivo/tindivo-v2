@@ -5,8 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -21,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.pluralStringResource
@@ -30,14 +32,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 
 private val BAR_HEIGHT = 56.dp
-private val MARK_SIZE = 28.dp
+private val MARK_HEIGHT = 28.dp
+private val BADGE_SIZE = 18.dp
+
+/** Proporción del isotipo bicolor (`ic_tindivo_isotipo`, 158×93). */
+private const val MARK_RATIO = 158f / 93f
 private const val BADGE_MAX = 99
 
 /**
@@ -63,11 +68,11 @@ internal fun HomeTopBar(
                     .padding(start = TindivoSpacing.screen, end = TindivoSpacing.hairline),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // El isotipo en sus dos colores, 28 dp de alto (el ancho sale de su proporción), como en el tablero.
             Image(
-                bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_mark),
+                bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_isotipo),
                 contentDescription = stringResource(R.string.home_logo_description),
-                modifier = Modifier.size(MARK_SIZE),
-                colorFilter = ColorFilter.tint(TindivoColors.brand),
+                modifier = Modifier.height(MARK_HEIGHT).aspectRatio(MARK_RATIO),
             )
             Box(modifier = Modifier.weight(1f))
             BagButton(count = bagCount, onClick = onOpenBag)
@@ -92,22 +97,25 @@ private fun BagButton(
                 imageVector = TindivoIcons.ShoppingBag,
                 contentDescription = description,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(24.dp),
             )
             if (count > 0) {
-                // Tinta con letra blanca (12,9:1): el blanco sobre el naranja no pasa para letra pequeña.
+                // `#C2410C` con letra blanca (5,2:1), como el tablero.
                 Box(
                     modifier =
                         Modifier
                             .align(Alignment.TopEnd)
+                            .offset(x = 8.dp, y = (-6).dp)
+                            .defaultMinSize(minWidth = BADGE_SIZE, minHeight = BADGE_SIZE)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.secondary)
-                            .padding(horizontal = 5.dp),
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = if (count > BADGE_MAX) "$BADGE_MAX+" else count.toString(),
-                        color = MaterialTheme.colorScheme.onSecondary,
-                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }

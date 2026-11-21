@@ -127,7 +127,12 @@ private fun BusinessList(
         // La tarjeta de Store no está mientras Store esté fuera del lanzamiento (CUS-CAT-032).
         item { ServiceGrid(cards = serviceCards(), onOpenCourier = onOpenCourier, onOpenStore = onOpenStore) }
         item {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Como el tablero: 22 dp sobre el encabezado y el conteo de abiertos alineado a la derecha.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Text(
                     text = stringResource(R.string.catalog_home_restaurants),
                     style = MaterialTheme.typography.titleLarge,

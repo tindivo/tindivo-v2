@@ -29,6 +29,8 @@
     </plurals>
     <string name="home_courier_tagline">De A a B, ya pagado</string>
     <string name="home_store_tagline">Variedad de productos</string>
+    <string name="home_courier_title">Entregas</string>
+    <string name="home_store_title">Store</string>
     <string name="catalog_open_now">Abierto</string>
     <string name="catalog_home_title">¿Qué pedimos hoy?</string>
     <string name="catalog_home_restaurants">Restaurantes</string>

@@ -6,12 +6,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,11 +36,14 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.core.designsystem.TindivoColors
+import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
 
 private val LOGO_SIZE = 72.dp
 private val CARD_MIN_HEIGHT = 92.dp
 private const val CLOSED_ALPHA = 0.45f
+private val MARK_HEIGHT = 26.dp
+private const val MARK_RATIO = 158f / 93f
 
 /** Gris para el logo de un negocio cerrado: es la señal grande de «hoy no»; el chip la confirma. */
 private val Grayscale = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
@@ -55,7 +61,7 @@ internal fun BusinessCard(
         containerColor = if (business.closed) MaterialTheme.colorScheme.surfaceVariant else Color.Unspecified,
     ) {
         Row(
-            modifier = Modifier.heightIn(min = CARD_MIN_HEIGHT).padding(12.dp),
+            modifier = Modifier.heightIn(min = CARD_MIN_HEIGHT).padding(10.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -102,6 +108,15 @@ internal fun BusinessCard(
                     }
                 }
             }
+            if (!business.closed) {
+                // Decorativo: la tarjeta entera ya es el botón que abre el negocio.
+                Icon(
+                    imageVector = TindivoIcons.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }
@@ -114,7 +129,9 @@ private fun BusinessLogo(business: BusinessCardUi) {
             Modifier
                 .size(LOGO_SIZE)
                 .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .background(
+                    if (business.closed) TindivoColors.border else MaterialTheme.colorScheme.primaryContainer,
+                ),
         contentAlignment = Alignment.Center,
     ) {
         if (business.logoUrl != null) {
@@ -128,10 +145,10 @@ private fun BusinessLogo(business: BusinessCardUi) {
             )
         } else {
             Image(
-                bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_mark),
+                bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_isotipo),
                 contentDescription = null,
-                modifier = Modifier.size(LOGO_SIZE / 2),
-                colorFilter = ColorFilter.tint(TindivoColors.brand),
+                modifier = Modifier.height(MARK_HEIGHT).aspectRatio(MARK_RATIO),
+                colorFilter = if (business.closed) Grayscale else null,
                 alpha = if (business.closed) CLOSED_ALPHA else 1f,
             )
         }
@@ -157,7 +174,7 @@ private fun Chip(
             text = text,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
         )
     }
 }
