@@ -1,6 +1,5 @@
 package com.tindivo.customer.support
 
-import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.InterProcessCoordinator
@@ -9,8 +8,8 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.core.Storage
 import androidx.datastore.core.StorageConnection
 import androidx.datastore.core.WriteScope
-import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.core.createSingleProcessCoordinator
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -21,10 +20,10 @@ import java.nio.file.StandardCopyOption
 /**
  * DataStore para tests de JVM que también corre en Windows.
  *
- * `FileStorage` de DataStore 1.2.1 guarda con `scratch.renameTo(file)`. En Linux y en Android (POSIX) eso reemplaza
- * el destino; en Windows `File.renameTo` devuelve `false` si el destino ya existe, así que la segunda escritura
- * lanza «Unable to rename …». Aquí se escribe el temporal y se mueve con `REPLACE_EXISTING`. Solo para tests: la
- * app real corre sobre Android, donde `FileStorage` funciona.
+ * `FileStorage` de DataStore 1.2.1 mueve el temporal con `atomicMoveTo`: con API 26 o más usa `Files.move` con
+ * `REPLACE_EXISTING`, y si no, `File.renameTo`. En un test de JVM `SDK_INT` vale 0, así que usa `renameTo`, que en
+ * Windows devuelve `false` si el destino ya existe: la segunda escritura lanza «Unable to rename …». En Linux y macOS
+ * `renameTo` reemplaza (POSIX). Aquí se escribe el temporal y se mueve con `REPLACE_EXISTING`. Solo para tests.
  */
 internal fun <T> testDataStore(
     serializer: Serializer<T>,
