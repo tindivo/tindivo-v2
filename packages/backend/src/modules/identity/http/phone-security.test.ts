@@ -10,7 +10,12 @@ describe('respuesta del reclamo del teléfono', () => {
       challengeId: 'be26f55a-b8c0-4f2d-bd9a-520634669599',
       expiresAt: '2026-10-26T12:00:00Z',
     }
-    const response = phoneClaimProblem({ status: 'transfer_required', ...proof }, 'request', {})
+    const response = phoneClaimProblem(
+      { status: 'transfer_required', ...proof },
+      'request',
+      {},
+      { offerTransfer: true },
+    )
     expect(response?.status).toBe(409)
     const body = await response?.json()
     expect(ProblemDetailsSchema.parse(body)).toMatchObject({

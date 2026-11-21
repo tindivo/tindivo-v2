@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.checkout
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import com.tindivo.core.network.AccessTokenSource
 import com.tindivo.core.network.AddressRepository
 import com.tindivo.core.network.BearerAuthInterceptor
 import com.tindivo.core.network.CatalogRepository
@@ -99,13 +100,16 @@ abstract class CheckoutHarness {
      * una prueba que necesita ver una respuesta ya terminada con su reanudación aún pendiente le pasa uno propio y lo
      * llama antes de [viewModel].
      */
-    protected fun wire(io: CoroutineDispatcher) {
+    protected fun wire(
+        io: CoroutineDispatcher,
+        source: AccessTokenSource = tokens,
+    ) {
         val baseUrl = server.url("/api/v1").toString().trimEnd('/')
         val client =
             createOkHttpClient(
                 ClientInfo("customer", "0.1.0", "1"),
                 retry = RetryInterceptor(sleeper = { _, _ -> }),
-                auth = BearerAuthInterceptor(server.url("/"), tokens),
+                auth = BearerAuthInterceptor(server.url("/"), source),
             )
         checkout = CheckoutRepository(baseUrl, client, io)
         loader =

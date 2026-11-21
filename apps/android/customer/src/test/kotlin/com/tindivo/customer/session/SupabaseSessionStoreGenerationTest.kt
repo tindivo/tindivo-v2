@@ -29,7 +29,7 @@ class SupabaseSessionStoreGenerationTest {
             store.refresh()
             assertEquals(0L, store.signInGeneration.value)
 
-            store.signInWithGoogle("id", "nonce")
+            store.signInWithGoogle("id", "nonce", termsPending = false)
             assertEquals(SessionState.SignedIn("user-b"), store.state.value)
             assertEquals(1L, store.signInGeneration.value)
 
@@ -37,7 +37,7 @@ class SupabaseSessionStoreGenerationTest {
             assertEquals(1L, store.signInGeneration.value)
 
             backend.signInResult = { testSnapshot("t3") }
-            store.signInWithGoogle("id", "nonce")
+            store.signInWithGoogle("id", "nonce", termsPending = false)
             store.signOut()
             assertEquals(2L, store.signInGeneration.value)
         }
@@ -49,7 +49,7 @@ class SupabaseSessionStoreGenerationTest {
             val store = store(backend)
             runCurrent()
 
-            store.signInWithGoogle("id", "nonce")
+            store.signInWithGoogle("id", "nonce", termsPending = false)
 
             assertEquals(SessionState.SignedOut, store.state.value)
             assertEquals(0L, store.signInGeneration.value)

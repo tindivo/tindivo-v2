@@ -6,19 +6,26 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -57,6 +64,7 @@ fun AccountDestination(
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val supportNumber = hiltViewModel<SupportViewModel>().number.collectAsStateWithLifecycle().value
+    val nameEdit = viewModel.nameEdit.collectAsStateWithLifecycle().value
     // Volvió de «Completa tu perfil» con el perfil ya creado: se carga la cuenta.
     LaunchedEffect(profile.completed) {
         if (profile.completed) {
@@ -92,6 +100,9 @@ fun AccountDestination(
         onCompleteProfile = profile.onOpen,
         onDeleteAccount = onDeleteAccount,
         supportNumber = supportNumber,
+        nameEdit = nameEdit,
+        onSaveName = viewModel::saveName,
+        onDismissNameEdit = viewModel::dismissNameEdit,
     )
 }
 
@@ -114,6 +125,9 @@ fun AccountScreen(
     onCompleteProfile: () -> Unit = {},
     onDeleteAccount: () -> Unit = {},
     supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
+    nameEdit: NameEditState = NameEditState.Idle,
+    onSaveName: (String) -> Unit = {},
+    onDismissNameEdit: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -155,6 +169,9 @@ fun AccountScreen(
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
                         supportNumber = supportNumber,
+                        nameEdit = nameEdit,
+                        onSaveName = onSaveName,
+                        onDismissNameEdit = onDismissNameEdit,
                     )
                 }
             }
@@ -240,12 +257,36 @@ private fun Profile(
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
     supportNumber: String,
+    nameEdit: NameEditState,
+    onSaveName: (String) -> Unit,
+    onDismissNameEdit: () -> Unit,
 ) {
+    var editing by remember { mutableStateOf(false) }
+    LaunchedEffect(nameEdit) {
+        if (nameEdit == NameEditState.Done) {
+            editing = false
+            onDismissNameEdit()
+        }
+    }
+    if (editing) {
+        NameEditDialog(
+            current = profile.fullName,
+            state = nameEdit,
+            onSave = onSaveName,
+            onCancel = {
+                editing = false
+                onDismissNameEdit()
+            },
+        )
+    }
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(text = profile.fullName, style = MaterialTheme.typography.titleLarge)
+        TextButton(onClick = { editing = true }, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(text = stringResource(R.string.account_name_edit))
+        }
         Text(
             text =
                 stringResource(
@@ -323,6 +364,63 @@ private fun LinkRow(
     TextButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp)) {
         Text(text = stringResource(label))
     }
+}
+
+/** Cambiar el nombre del perfil sin salir de Cuenta (CUS-AUT-014): el mismo largo y los mismos caracteres que el servidor. */
+@Composable
+private fun NameEditDialog(
+    current: String,
+    state: NameEditState,
+    onSave: (String) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var text by remember { mutableStateOf(current) }
+    val saving = state == NameEditState.Saving
+    AlertDialog(
+        onDismissRequest = { if (!saving) onCancel() },
+        title = { Text(text = stringResource(R.string.account_name_edit_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text(text = stringResource(R.string.profile_name_label)) },
+                    singleLine = true,
+                    enabled = !saving,
+                    isError = state == NameEditState.Invalid,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                when (state) {
+                    NameEditState.Invalid -> NameEditError(R.string.profile_name_error)
+                    NameEditState.Failed -> NameEditError(R.string.profile_error_generic)
+                    else -> Unit
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(text) },
+                enabled = !saving,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
+                Text(text = stringResource(if (saving) R.string.profile_saving else R.string.account_name_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel, enabled = !saving, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(text = stringResource(R.string.account_name_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun NameEditError(message: Int) {
+    Text(
+        text = stringResource(message),
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
 
 /** Discreto a propósito, pero siempre a la vista: Google Play exige poder borrar la cuenta dentro de la app. */

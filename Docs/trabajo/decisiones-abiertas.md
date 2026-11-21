@@ -125,3 +125,11 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 - **Contexto**: la fuente decía 409 `active_order_block`. En el código, `active_order_block:<id>:<shortId>:<estado>` es el `details` interno de la RPC `create_customer_order`; la API lo traduce a 422 `validation_error` con el texto «Ya tienes un pedido activo…» (`apps/api/app/api/v1/customer/orders/route.ts`). `contrato-rest.md` y el OpenAPI no definen este caso. El cliente web arma su aviso con su propia lista de pedidos activos, sin leer el 422 ni su texto por regex; Android aún no lo maneja.
 - **Alternativas**: (a) dejar 422 y documentarlo en el contrato, con un campo `blocking_order` (id y estado) en el problema; (b) pasar a 409 con un código estable, aditivo y sin romper al cliente web (que muestra el texto).
 - **Recomendación**: (a), porque no cambia el comportamiento que ya sirve y evita tocar el contrato v1 (API-3). No elijo ganador: decide Jesús.
+
+
+### DA-21 · Apple con correo oculto en iOS
+
+- 2026-11-19 · Bloquea: el inicio de iOS · Detectó: Claude
+- **Contexto**: el correo oculto de Apple puede crear una segunda cuenta que choque con «un celular, una cuenta» (`D-63`). Sin verificar contra las tiendas. Es la única decisión del PR de Acceso y Cuenta que no traía una recomendación.
+- **Alternativas**: se miran al empezar iOS.
+- **Recomendación**: ninguna todavía.

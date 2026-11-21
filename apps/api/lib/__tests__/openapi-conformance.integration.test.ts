@@ -220,6 +220,11 @@ async function borrarPedidosDelCliente(): Promise<void> {
 }
 
 beforeAll(async () => {
+  // El traslado del celular viene apagado (migración 0293): esta prueba lo enciende y lo restaura.
+  await db
+    .from('app_settings')
+    .upsert({ key: 'phone_transfer_enabled', value: true })
+    .throwOnError()
   const email = `conformidad-${RUN}@integration.local`
   const password = 'test-password-12345'
   const { data, error } = await db.auth.admin.createUser({
@@ -255,6 +260,10 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await db
+    .from('app_settings')
+    .upsert({ key: 'phone_transfer_enabled', value: false })
+    .throwOnError()
   if (courierSettings) {
     await db
       .from('app_settings')
@@ -829,6 +838,24 @@ describe('traslado del número y avisos de seguridad', () => {
         bearer: a,
         body: { phone: number, code: DEV_OTP_CODE },
       })
+      // Con el traslado apagado (el valor del lanzamiento) el 409 no lleva `transfer` y sigue conforme al contrato.
+      await db
+        .from('app_settings')
+        .upsert({ key: 'phone_transfer_enabled', value: false })
+        .throwOnError()
+      const refused = await call(verifyPhoneCode, {
+        method: 'POST',
+        bearer: b,
+        body: { phone: number, code: DEV_OTP_CODE },
+      })
+      expect(refused.status).toBe(409)
+      // El OpenAPI solo documenta los éxitos: el error se valida con el esquema de problemas del contrato.
+      ProblemDetailsSchema.parse(refused.body)
+      expect(refused.body).not.toHaveProperty('transfer')
+      await db
+        .from('app_settings')
+        .upsert({ key: 'phone_transfer_enabled', value: true })
+        .throwOnError()
       const pending = await call(verifyPhoneCode, {
         method: 'POST',
         bearer: b,

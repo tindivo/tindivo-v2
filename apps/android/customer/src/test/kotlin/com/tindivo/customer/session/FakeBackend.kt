@@ -33,9 +33,16 @@ internal class FakeBackend : AuthBackend {
         return stored
     }
 
+    var markTermsCalls = 0
+
+    override suspend fun markTermsAccepted() {
+        markTermsCalls++
+    }
+
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): TokenSnapshot {
         signInGate?.invoke()
         return signInResult()

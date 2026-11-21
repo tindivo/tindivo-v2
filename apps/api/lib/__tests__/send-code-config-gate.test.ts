@@ -4,24 +4,53 @@ const alertOps = vi.hoisted(() => vi.fn(async (..._a: unknown[]) => true))
 const reserve = vi.hoisted(() => vi.fn())
 const verifyCreate = vi.hoisted(() => vi.fn())
 const twilioState = vi.hoisted(() => ({ client: null as unknown, sim: false }))
+// Lo que responde la base simulada: los envíos de las últimas 24 h y las filas de `app_settings` del celular.
+const dbState = vi.hoisted(() => ({
+  settings: [] as { key: string; value: unknown }[],
+  // Lo que responde `reserve_phone_code`: permitido, denegado o con error.
+  reserve: { data: 'attempt-1' as unknown, error: null as null | { message: string } },
+  reserveCalls: [] as Record<string, unknown>[],
+  release: { data: true as unknown, error: null as null | { message: string } },
+  releaseCalls: [] as Record<string, unknown>[],
+}))
 
 vi.mock('@/lib/ops/alert-ops', () => ({ alertOps }))
 vi.mock('@/lib/http/auth', () => ({ requireRole: async () => ({ user: { id: 'u1' } }) }))
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => {
     // Encadenable y «esperable»: cada .eq/.gte/.update devuelve algo que también se espera.
-    const result = { count: 0, data: [{ user_id: 'u1' }], error: null }
-    const chain = {
-      select: () => q,
-      eq: () => q,
-      gte: () => q,
-      update: () => q,
-      insert: () => q,
+    const make = (table: string) => {
+      const result =
+        table === 'app_settings'
+          ? { count: null, data: dbState.settings, error: null }
+          : { count: 0, data: [{ user_id: 'u1' }], error: null }
+      const chain = {
+        select: () => q,
+        eq: () => q,
+        gte: () => q,
+        in: () => q,
+        update: () => q,
+        insert: () => q,
+      }
+      // Una promesa REAL con los métodos encadenables, para poder hacerle `await`.
+      const q: typeof chain & Promise<typeof result> = Object.assign(Promise.resolve(result), chain)
+      return q
     }
-    // Una promesa REAL con los métodos encadenables, para poder hacerle `await`.
-    const q: typeof chain & Promise<typeof result> = Object.assign(Promise.resolve(result), chain)
     // El simulacro sella con la misma RPC que /verify (0277).
-    return { from: () => q, rpc: async () => ({ data: { status: 'verified' }, error: null }) }
+    return {
+      from: (table: string) => make(table),
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name === 'release_phone_code') {
+          dbState.releaseCalls.push(args)
+          return dbState.release
+        }
+        if (name === 'reserve_phone_code') {
+          dbState.reserveCalls.push(args)
+          return dbState.reserve
+        }
+        return { data: { status: 'verified' }, error: null }
+      },
+    }
   },
 }))
 vi.mock('@/lib/otp/phone-limit', async (orig) => ({
@@ -73,6 +102,11 @@ describe('send-code · segunda defensa de configuración', () => {
       vi.stubEnv(k, '')
     }
     alertOps.mockClear()
+    dbState.reserve = { data: 'attempt-1', error: null }
+    dbState.reserveCalls = []
+    dbState.release = { data: true, error: null }
+    dbState.releaseCalls = []
+    dbState.settings = []
     reserve.mockReset().mockResolvedValue({ allowed: true, release: async () => {} })
     verifyCreate.mockReset().mockResolvedValue({ channel: 'sms' })
     twilioState.client = {
@@ -104,6 +138,153 @@ describe('send-code · segunda defensa de configuración', () => {
     expect(res.status).toBe(200)
     expect(verifyCreate).toHaveBeenCalledTimes(1)
     expect(alertOps).not.toHaveBeenCalled()
+  })
+
+  it('CA-AUT-12 · el tope de app_settings llega a la reserva: con 1 el segundo envío da 429 y no manda SMS', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    dbState.settings = [{ key: 'phone_code_max_per_24h', value: 1 }]
+    dbState.reserve = { data: null, error: null }
+    const res = await call()
+    expect(res.status).toBe(429)
+    expect(dbState.reserveCalls).toEqual([{ p_user_id: 'u1', p_phone: '+51987654321', p_max: 1 }])
+    expect(verifyCreate).not.toHaveBeenCalled()
+  })
+
+  it('CA-AUT-12 · sin la fila de app_settings rige el tope de siempre (3)', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    expect((await call()).status).toBe(200)
+    expect(dbState.reserveCalls.map((c) => c.p_max)).toEqual([3])
+  })
+
+  it('CA-AUT-14 · la reserva va antes de Twilio y un envío permitido lo manda', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    const order: string[] = []
+    verifyCreate.mockImplementation(async () => {
+      order.push('twilio')
+      return { channel: 'sms' }
+    })
+    const before = dbState.reserveCalls.length
+    expect((await call()).status).toBe(200)
+    expect(dbState.reserveCalls.length).toBe(before + 1)
+    expect(order).toEqual(['twilio'])
+  })
+
+  it('CA-AUT-14 · un error de reserva rechaza con 503, no manda SMS y libera la plaza del número', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    dbState.reserve = { data: null, error: { message: 'conexión perdida' } }
+    const release = vi.fn(async () => {})
+    reserve.mockReset().mockResolvedValue({ allowed: true, release })
+    const res = await call()
+    expect(res.status).toBe(503)
+    expect(verifyCreate).not.toHaveBeenCalled()
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+
+  it('CA-AUT-14 · una respuesta de reserva que no es booleana también rechaza', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    dbState.reserve = { data: true, error: null }
+    expect((await call()).status).toBe(503)
+    expect(verifyCreate).not.toHaveBeenCalled()
+  })
+
+  it('CA-AUT-14 · si la cuenta se borró mientras tanto, 401 y no se manda SMS', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    dbState.reserve = { data: null, error: { message: 'account was deleted' } }
+    expect((await call()).status).toBe(401)
+    expect(verifyCreate).not.toHaveBeenCalled()
+  })
+
+  it('CA-AUT-14 · un rechazo inequívoco de Twilio (4xx con código) devuelve el cupo reservado', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    verifyCreate.mockRejectedValue({ code: 21211, status: 400, message: 'x' })
+    expect((await call()).status).toBe(500)
+    expect(dbState.releaseCalls).toEqual([{ p_user_id: 'u1', p_attempt_id: 'attempt-1' }])
+  })
+
+  it('CA-AUT-14 · un error ambiguo (5xx, timeout, 4xx sin código) NO devuelve el cupo', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    for (const failure of [
+      { code: 20500, status: 503, message: 'x' },
+      { code: 'ECONNABORTED', message: 'timeout' },
+      { status: 403, message: 'proxy' },
+    ]) {
+      verifyCreate.mockRejectedValueOnce(failure)
+      expect((await call()).status).toBe(500)
+    }
+    expect(dbState.releaseCalls).toEqual([])
+  })
+
+  it('CA-AUT-14 · si no se puede devolver el cupo, falla cerrado: igual responde, lo registra y no cuenta como libre', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    dbState.release = { data: null, error: { message: 'caído +51987654321' } }
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    verifyCreate.mockRejectedValue({ code: 21211, status: 400, message: 'x' })
+    const res = await call()
+    const logged = error.mock.calls.map((c) => c.map(String).join(' ')).join('\n')
+    error.mockRestore()
+    expect(res.status).toBe(500)
+    expect(logged).toContain('no se pudo liberar el cupo')
+    expect(logged).not.toContain('987654321')
+  })
+
+  it('CA-AUT-15 · ningún log lleva el teléfono entero, el código maestro ni el mensaje de Twilio', async () => {
+    for (const [k, v] of Object.entries(TWILIO)) vi.stubEnv(k, v)
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://x.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 't')
+    const lines: string[] = []
+    const spies = (['error', 'warn', 'log', 'info'] as const).map((m) =>
+      vi
+        .spyOn(console, m)
+        .mockImplementation((...a: unknown[]) => void lines.push(a.map(String).join(' '))),
+    )
+    verifyCreate.mockRejectedValue({
+      code: 60200,
+      status: 400,
+      message: 'Invalid parameter To: +51987654321 código 000000',
+    })
+    await call()
+    dbState.reserve = { data: null, error: { message: 'fallo con +51987654321' } }
+    await call()
+    twilioState.client = null
+    twilioState.sim = true
+    vi.stubEnv('OTP_PHONE_HMAC_SECRET', 's')
+    dbState.reserve = { data: 'attempt-1', error: null }
+    await call()
+    for (const s of spies) s.mockRestore()
+    const all = lines.join('\n')
+    expect(all).toContain('code=60200')
+    expect(all).toContain('+51******321')
+    expect(all).not.toContain('987654321')
+    expect(all).not.toContain('000000')
+    expect(all).not.toContain('Invalid parameter')
   })
 
   it('no puede mandar SMS reales (simulacro): comportamiento actual, sin 503 ni alerta', async () => {
