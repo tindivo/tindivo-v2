@@ -57,7 +57,7 @@ reglas: [FEATURED_MAX_ITEMS, CART_MAX_QUANTITY, CART_MAX_NOTE_LENGTH, isWithinWi
 | CUS-CAT-015 | Cuando el negocio esté en modo catálogo (`catalog_only`), la app debe ofrecer «Pedir por WhatsApp» y «Llamar» en lugar de la bolsa; cierre y pausa no los bloquean. Conviven con CUS-CAT-026: sin contacto en la hoja de información, pero en modo catálogo pedir por WhatsApp es el pedido (decisión de Jesús, 2026-11-19). | `CAT.md` · `DECISIONS.md §18` | |
 | CUS-CAT-016 | La app debe resolver las capacidades del negocio (delivery, recojo) con datos frescos: nunca se guardan con la bolsa y, sin dato, el 409 del servidor es el suelo. | `CAT.md` · `getBusiness` | |
 | CUS-CAT-017 | Donde el negocio acepte delivery y recojo, la app debe mostrar el selector Delivery/Recojo; si solo acepta uno, queda fijo. | `CAT.md` · Canvas v35, tablero `Negocio` | |
-| CUS-CAT-018 | Si el cliente ya tiene un pedido activo (`ACTIVE_ORDER_STATUSES`) en un negocio, la app debe impedir crear otro en ese negocio y enlazar al existente. | `CAT.md` · `createOrder` (hoy 422 `validation_error`; ver Abierto) | ★ |
+| CUS-CAT-018 | Si el cliente ya tiene un pedido activo (`ACTIVE_ORDER_STATUSES`) en un negocio, la app debe impedir crear otro en ese negocio y enlazar al existente. | `CAT.md` · `createOrder` (responde 422 `validation_error`, DA-24 resuelta) | ★ |
 | CUS-CAT-020 | La app debe mostrar un carrusel de promociones en el Inicio. Recortada del lanzamiento (promociones): sus banners hoy están escritos en la web. | `CAT.md` · decisión 18 de `Docs/trabajo/app-cliente/README.md` | |
 | CUS-CAT-021 | La app debe mostrar el horario semanal (hoy resaltado, el día sin turno dice «Cerrado») y los datos del negocio, sin contacto (CUS-CAT-026). | `CAT.md` (modificado por CUS-CAT-026) · `getBusiness` | |
 | CUS-CAT-022 | **Diferido a después del lanzamiento** (decisión de Jesús, 2026-11-19): la app debe abrir un negocio desde un enlace compartido (`/negocio/{slug}`); los enlaces antiguos con id siguen funcionando. | `CAT.md` | |
@@ -90,7 +90,7 @@ Los criterios de cada pantalla (`CA-CAT-P1` a `CA-CAT-P9`) viven en su ficha.
 
 - **Compartir plato y «Para compartir»** (decisión 9 del PR #198): sin recomendación ni decisión de Jesús; no entran. Registrado en `Docs/trabajo/decisiones-abiertas.md` (DA-17).
 
-- **Código HTTP del bloqueo por pedido activo** (CUS-CAT-018): el requisito decía 409 `active_order_block`, pero `active_order_block` es solo un marcador interno (`details` de la RPC `create_customer_order`) y la API responde 422 `validation_error` con «Ya tienes un pedido activo…». `contrato-rest.md` y el OpenAPI no lo definen. Sin elegir ganador: DA-24 en `Docs/trabajo/decisiones-abiertas.md`.
+- **Código HTTP del bloqueo por pedido activo** (CUS-CAT-018): resuelto el 2026-11-21 por la junta con la delegación de Jesús (DA-24): se queda el **422 `validation_error`** con su mensaje legible, no 409. `active_order_block` es solo un marcador interno (`details` de la RPC `create_customer_order`). Si la app necesita distinguirlo, se añade un campo aditivo en el cuerpo, sin cambiar el código HTTP.
 
 ## Reglas
 
