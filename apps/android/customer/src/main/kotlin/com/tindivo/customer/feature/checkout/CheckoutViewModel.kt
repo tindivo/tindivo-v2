@@ -219,6 +219,14 @@ class CheckoutViewModel
             confirm()
         }
 
+        /**
+         * «Continuar sin ubicación»: envía el pedido al recibir con lo que haya (sin `gpsValidation` si no hay permiso,
+         * `failed` si no hubo señal) y decide el servidor (CA-CHK-10). Vale para un único envío.
+         */
+        fun gpsContinue() {
+            if (takeSheet { it is CheckoutSheet.GpsBlock }) startConfirm(skipGpsSheet = true)
+        }
+
         /** «Cambiar a pago por adelantado»: solo cambia el método; la persona vuelve a confirmar. */
         fun gpsPrepay() {
             if (takeSheet { it is CheckoutSheet.GpsBlock }) selectPay(PayMethod.Prepaid)
@@ -441,7 +449,14 @@ class CheckoutViewModel
         }
 
         /** El botón fijo. Un segundo toque mientras se envía no hace nada (además del `Busy` del libro). */
-        fun confirm() {
+        fun confirm() = startConfirm(skipGpsSheet = false)
+
+        /**
+         * [skipGpsSheet] («Continuar sin ubicación») vale para ESTE envío y no se guarda en el ViewModel: viaja como
+         * argumento hasta [place], así que cualquier parada antes de enviar (total o opciones cambiadas, sin conexión,
+         * un 422 que se recotiza) la descarta y el siguiente «Confirmar» vuelve a abrir la hoja.
+         */
+        private fun startConfirm(skipGpsSheet: Boolean) {
             val current = mutableState.value
             if (current.phase != CheckoutPhase.Form || current.sending || !current.cta.canConfirm) return
             // La cuenta se captura UNA vez aqui y firma el pedido hasta el POST: la sesion no se vuelve a leer.
@@ -451,7 +466,7 @@ class CheckoutViewModel
             val started = generation
             mutableState.update { it.copy(sending = true, message = null) }
             viewModelScope.launch {
-                submit(started, account, bag)
+                submit(started, account, bag, skipGpsSheet)
                 emptyBagIfNothingLeft()
             }
         }
@@ -460,6 +475,7 @@ class CheckoutViewModel
             started: Int,
             account: String?,
             bag: Cart?,
+            skipGpsSheet: Boolean = false,
         ) {
             if (started == generation) quoteJob?.cancel()
             if (account == null) {
@@ -486,7 +502,7 @@ class CheckoutViewModel
 
                 next.pay != before.pay || !ready -> stop(CheckoutMessage.OptionsChanged)
 
-                else -> place(started, account, bag, next, fresh)
+                else -> place(started, account, bag, next, fresh, skipGpsSheet)
             }
         }
 
@@ -517,10 +533,11 @@ class CheckoutViewModel
             account: String,
             form: CheckoutUiState,
             evidence: CreateOrderRequestGpsValidation?,
+            skipGpsSheet: Boolean,
         ): Boolean {
             val retried = gpsRetried
             gpsRetried = false
-            if (!gpsBlocks(form, evidence)) return false
+            if (skipGpsSheet || !gpsBlocks(form, evidence)) return false
             sheetOwner = account
             sheetGeneration = started
             val sheet = CheckoutSheet.GpsBlock(noPermission = evidence == null, afterRetry = retried)
@@ -534,12 +551,14 @@ class CheckoutViewModel
             current: Cart?,
             form: CheckoutUiState,
             quote: QuoteView,
+            skipGpsSheet: Boolean,
         ) {
             // La ubicación es evidencia, nunca un requisito: sin permiso o sin señal el pedido sale igual (CUS-CHK-009).
             val evidence = if (current == null) null else evidenceFor(account, current, form.pay)
             // Sin ubicación en un pedido a domicilio que se paga al recibir: se abre la hoja y no sale nada.
             val blocked =
-                current != null && isCurrent(started, account) && openGpsSheetIfNeeded(started, account, form, evidence)
+                current != null && isCurrent(started, account) &&
+                    openGpsSheetIfNeeded(started, account, form, evidence, skipGpsSheet)
             // Si la cuenta cambió mientras se leía la ubicación no se arma ni se envía nada.
             val request =
                 if (current == null || blocked || !isCurrent(started, account)) {

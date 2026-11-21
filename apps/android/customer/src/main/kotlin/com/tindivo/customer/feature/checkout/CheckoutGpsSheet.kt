@@ -8,6 +8,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -16,8 +17,9 @@ import com.tindivo.customer.R
 
 /**
  * La hoja que sale al confirmar un pedido a domicilio que se paga al recibir cuando no hay ubicación (sin permiso o
- * sin señal), como la `GeoBlockSheet` de la web: solo «Intentar de nuevo» (primero, no le cuesta nada) y «Cambiar a
- * pago por adelantado». Negar el GPS nunca impide pedir (CA-CHK-10): el pedido sale como prepago.
+ * sin señal), como la `GeoBlockSheet` de la web más una salida que la web no tiene: «Intentar de nuevo» (primero, no le
+ * cuesta nada), «Cambiar a pago por adelantado» y «Continuar sin ubicación». Negar el GPS nunca impide pedir
+ * (CA-CHK-10): el pedido sale igual y decide el servidor.
  */
 @Composable
 internal fun GpsBlockSheet(
@@ -49,6 +51,12 @@ internal fun GpsBlockSheet(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(top = 8.dp),
                 ) {
                     Text(text = stringResource(R.string.checkout_gps_prepay))
+                }
+                TextButton(
+                    onClick = actions.onGpsContinue,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(top = 8.dp),
+                ) {
+                    Text(text = stringResource(R.string.checkout_gps_continue))
                 }
             }
         }

@@ -6,6 +6,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -63,7 +64,7 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
         }
 
     @Test
-    fun `no hay salida que envie un pedido al recibir sin ubicacion, volver a confirmar abre la hoja otra vez`() =
+    fun `cerrar la hoja no deja pasar el pedido, volver a confirmar la abre otra vez`() =
         runTest(dispatcher) {
             gpsAnswer = noGps()
             val vm = cashReady()
@@ -207,5 +208,68 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
             vm.confirm()
             advanceUntilIdle()
             assertEquals(2, gpsReads.size)
+        }
+
+    @Test
+    fun `Continuar sin ubicacion de un cliente con compra previa sale al recibir y sin gpsValidation`() =
+        runTest(dispatcher) {
+            gpsAnswer = noGps()
+            val vm = cashReady()
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(0, orders().size)
+
+            // El servidor (con compra previa, sin llamada) acepta el efectivo: el doble contesta 201.
+            vm.gpsContinue()
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            assertEquals("pending_cash", body().getValue("paymentIntent").jsonPrimitive.content)
+            assertTrue(body()["gpsValidation"] == null || body()["gpsValidation"] is JsonNull)
+            assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
+        }
+
+    @Test
+    fun `Continuar sin ubicacion de un cliente sin historial recibe el 422 y pasa a prepago`() =
+        runTest(dispatcher) {
+            val detail = "Pago adelantado requerido para primer pedido."
+            handlers["POST /customer/orders"] = { reply(422, problem(422, "validation_error", detail)) }
+            gpsAnswer = noGps()
+            val vm = cashReady()
+            vm.confirm()
+            advanceUntilIdle()
+
+            vm.gpsContinue()
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            assertEquals(PayMethod.Prepaid, vm.state.value.pay)
+            assertEquals(CheckoutMessage.Server(detail), vm.state.value.message)
+            assertNull(vm.state.value.sheet)
+        }
+
+    @Test
+    fun `la salida Continuar sin ubicacion vale para un solo envio, tras una parada Confirmar abre la hoja otra vez`() =
+        runTest(dispatcher) {
+            gpsAnswer = noGps()
+            val vm = cashReady()
+            vm.confirm()
+            advanceUntilIdle()
+
+            // El envio se para antes de salir (la cotizacion falla): la exencion se descarta.
+            handlers["POST /customer/checkout/quote"] = { reply(500, problem(500, "internal_error", "x")) }
+            vm.gpsContinue()
+            advanceUntilIdle()
+            assertEquals(0, orders().size)
+            assertNull(vm.state.value.sheet)
+
+            handlers["POST /customer/checkout/quote"] = { reply(200, quoteJson()) }
+            vm.retryQuote()
+            advanceUntilIdle()
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertEquals(0, orders().size)
+            assertTrue(vm.state.value.sheet is CheckoutSheet.GpsBlock)
         }
 }
