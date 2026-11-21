@@ -86,6 +86,11 @@ class ProofJpegTest {
     }
 
     @Test
+    fun `una imagen cuadrada de 3000x3000 baja a 2200x2200`() {
+        assertEquals(PixelSize(2200, 2200), proofTargetSize(3000, 3000))
+    }
+
+    @Test
     fun `un JPEG con el lado mayor por encima de 4400 no se sube aunque su lado menor sea chico`() {
         assertTrue(finishProofJpeg(jpeg(792, 4400)) is EncodedProof.Ready)
         assertEquals(EncodedProof.Unreadable, finishProofJpeg(jpeg(1080, 4401)))

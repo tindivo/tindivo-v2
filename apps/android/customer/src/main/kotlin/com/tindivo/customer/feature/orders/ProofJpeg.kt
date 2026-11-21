@@ -10,7 +10,7 @@ internal const val MAX_PROOF_SIDE = 2200
 internal const val MIN_PROOF_WIDTH = 1080
 
 /**
- * El tope duro del lado mayor (CUS-PAY-003, CA-PAY-09): 4400 px. Si una imagen muy larga no puede cumplir a la vez el
+ * El tope duro del lado mayor (CUS-PAY-003, CA-PAY-11): 4400 px. Si una imagen muy larga no puede cumplir a la vez el
  * ancho mínimo [MIN_PROOF_WIDTH] y este tope, gana el tope y el lado menor baja de 1080.
  */
 internal const val PROOF_HARD_SIDE_CAP = 4400
@@ -101,7 +101,8 @@ internal sealed interface EncodedProof {
 /**
  * El último paso antes de subir: [raw] (lo que escribió el codificador) sin metadatos, comprobado como JPEG completo
  * (de SOI a EOI, con sus escaneos) con el tamaño de [proofTargetSize] (lado mayor de hasta [MAX_PROOF_SIDE] o lado
- * menor de hasta [MIN_PROOF_WIDTH]) y que cabe en [MAX_PROOF_BYTES]. Cualquier otra cosa no se sube.
+ * menor de hasta [MIN_PROOF_WIDTH], y en ningún caso con el lado mayor por encima de [PROOF_HARD_SIDE_CAP]) y que
+ * cabe en [MAX_PROOF_BYTES]. Cualquier otra cosa no se sube.
  */
 internal fun finishProofJpeg(
     raw: ByteArray,
