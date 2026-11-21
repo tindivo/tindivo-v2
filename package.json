@@ -49,7 +49,9 @@
     "graphify:query": "graphify query",
     "graphify:path": "graphify path",
     "graphify:explain": "graphify explain",
-    "graphify:hooks": "graphify hook install"
+    "graphify:hooks": "graphify hook install",
+    "tokens:build": "node packages/design-tokens/src/cli.ts",
+    "tokens:check": "node packages/design-tokens/src/cli.ts --check"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
