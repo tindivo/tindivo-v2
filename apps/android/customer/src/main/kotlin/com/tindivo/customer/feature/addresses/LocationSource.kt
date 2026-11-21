@@ -30,6 +30,9 @@ internal interface LocationSource {
     /** ¿Hay Google Play services para pedir la ubicación? Sin él, el botón no se muestra. */
     fun isAvailable(): Boolean
 
+    /** ¿Hay permiso de ubicación AHORA (preciso o aproximado)? Se mira al usar una lectura, no solo al pedirla. */
+    fun hasPermission(): Boolean = true
+
     /**
      * Una sola lectura de alta precisión. Si la corrutina se cancela (la persona salió del formulario), la lectura se
      * cancela también. Nunca lanza otra cosa que la cancelación.

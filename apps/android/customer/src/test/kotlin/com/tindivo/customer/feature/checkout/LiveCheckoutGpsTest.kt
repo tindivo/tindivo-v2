@@ -122,4 +122,19 @@ class LiveCheckoutGpsTest {
             assertEquals(2, location.calls)
             assertEquals(CreateOrderRequestGpsValidation.Method.gps_high_accuracy, evidence?.method)
         }
+
+    @Test
+    fun `CAX-001 con la lectura adelantada lista, revocar el permiso hace que no salga nada`() =
+        runTest {
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = live(location)
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            location.permission = false
+
+            assertNull(gps.capture(PayMethod.Cash))
+            assertEquals(false, gps.permissionGranted())
+            assertEquals(1, location.calls)
+        }
 }

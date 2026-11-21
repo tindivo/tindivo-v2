@@ -37,6 +37,12 @@ fun interface CheckoutGps {
 
     /** Descarta la lectura adelantada: es de una cuenta que ya no es la de la pantalla. Por defecto no hace nada. */
     fun reset() = Unit
+
+    /**
+     * ¿Sigue habiendo permiso de ubicación AHORA? Se mira justo antes de usar cualquier evidencia (adelantada o
+     * guardada de un intento): si lo revocaron, no sale ninguna coordenada. Por defecto, sí.
+     */
+    fun permissionGranted(): Boolean = true
 }
 
 /** Lo que hace falta de la configuración pública para describir una lectura: el centro y la precisión aceptable. */
@@ -155,8 +161,15 @@ internal class LiveCheckoutGps(
         prefetched = null
     }
 
+    override fun permissionGranted(): Boolean = location.hasPermission()
+
     override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
         if (pay == PayMethod.Prepaid) return gpsEvidence(null, GpsConfig.Fallback, prepaid = true)
+        // Una posición ya adelantada no sale si el permiso se revocó después: se descarta y no se manda nada.
+        if (!permissionGranted()) {
+            reset()
+            return null
+        }
         return coroutineScope {
             val config = async { config() }
             val early = prefetched

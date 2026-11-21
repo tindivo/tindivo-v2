@@ -553,6 +553,12 @@ class CheckoutViewModel
             pay: PayMethod?,
         ): CreateOrderRequestGpsValidation? {
             val key = GpsKey(account, bag.fingerprint(), pay)
+            // El permiso VIGENTE manda sobre cualquier evidencia ya leída (guardada o adelantada): sin él no sale nada.
+            if (pay != PayMethod.Prepaid && !gps.permissionGranted()) {
+                gpsCapture = null
+                gps.reset()
+                return null
+            }
             gpsCapture?.takeIf { it.key == key }?.let { return it.evidence }
             // Mientras se espera la lectura el botón lo dice («Verificando tu ubicación…»); pagar por adelantado no lee.
             val waits = pay != PayMethod.Prepaid

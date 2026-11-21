@@ -1,6 +1,7 @@
 package com.tindivo.customer.feature.checkout
 
 import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
+import com.tindivo.customer.feature.addresses.FakeLocationSource
 import com.tindivo.customer.feature.addresses.GeoPoint
 import com.tindivo.customer.feature.addresses.LocationReading
 import kotlinx.coroutines.CompletableDeferred
@@ -241,5 +242,52 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             assertEquals(1, gpsReads.size)
             val latitudes = orders().indices.map { body(it).getValue("gpsValidation").jsonObject.getValue("lat") }
             assertEquals(1, latitudes.toSet().size)
+        }
+
+    private fun fix() = LocationReading.Found(GeoPoint(-9.1547, -78.5042), accuracyM = 12f)
+
+    @Test
+    fun `CAX-001 una lectura adelantada no sale si el permiso se revoca antes de confirmar`() =
+        runTest(dispatcher) {
+            val location = FakeLocationSource(next = fix())
+            gpsOverride = LiveCheckoutGps(location) { null }
+            val vm = ready()
+            assertEquals(1, location.calls) // el adelanto terminó bien al abrir
+
+            location.permission = false
+            vm.selectPay(PayMethod.Yape)
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            assertTrue(body().absent("gpsValidation"))
+            assertEquals(1, location.calls)
+            assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
+        }
+
+    @Test
+    fun `CAX-001 la evidencia guardada de un intento no sale en el reintento si el permiso se revoca`() =
+        runTest(dispatcher) {
+            val location = FakeLocationSource(next = fix())
+            gpsOverride = LiveCheckoutGps(location) { null }
+            handlers["POST /customer/orders"] = { reply(500, problem(500, "internal_error", "x")) }
+            val vm = ready()
+            vm.selectPay(PayMethod.Yape)
+
+            vm.confirm()
+            advanceUntilIdle()
+            assertNotNull(body(0)["gpsValidation"])
+
+            // Pasa la ventana de vuelo: el reintento vuelve a enviar. Ahora ya no hay permiso.
+            val later = System.currentTimeMillis() + DEFAULT_FLIGHT_WINDOW_MS + 1
+            ledgerClock = { later }
+            location.permission = false
+            handlers["POST /customer/orders"] = { reply(201, CREATED_JSON) }
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertEquals(2, orders().size)
+            assertTrue(body(1).absent("gpsValidation"))
+            assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
         }
 }

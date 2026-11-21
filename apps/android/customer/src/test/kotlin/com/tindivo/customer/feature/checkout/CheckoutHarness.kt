@@ -193,27 +193,35 @@ abstract class CheckoutHarness {
             loader = loader,
             checkout = checkout,
             cartStore = cartStore,
-            ledger = OrderAttemptLedger(ledgerStore, lookup),
+            ledger = OrderAttemptLedger(ledgerStore, lookup, clock = { ledgerClock() }),
             sessionStore = session,
             debounce = QuoteDebounce { },
             configService = configService,
-            gps =
-                object : CheckoutGps {
-                    override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
-                        gpsReads += pay
-                        gpsGate?.await()
-                        return gpsAnswer(pay)
-                    }
-
-                    override fun prefetch(scope: CoroutineScope) {
-                        gpsPrefetches++
-                    }
-
-                    override fun reset() {
-                        gpsResets++
-                    }
-                },
+            gps = gpsOverride ?: fakeGps(),
         )
+
+    /** Si se pone, el ViewModel usa esta lectura (por ejemplo la real con un GPS falso) en vez de [fakeGps]. */
+    protected var gpsOverride: CheckoutGps? = null
+
+    /** El reloj del libro de intentos: una prueba lo adelanta para agotar la ventana de vuelo. */
+    protected var ledgerClock: () -> Long = System::currentTimeMillis
+
+    private fun fakeGps() =
+        object : CheckoutGps {
+            override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
+                gpsReads += pay
+                gpsGate?.await()
+                return gpsAnswer(pay)
+            }
+
+            override fun prefetch(scope: CoroutineScope) {
+                gpsPrefetches++
+            }
+
+            override fun reset() {
+                gpsResets++
+            }
+        }
 
     protected companion object {
         const val BUSINESS_ID = "8f1f2b5e-6d3c-4a7b-9e10-1a2b3c4d5e6f"
