@@ -223,7 +223,6 @@ private fun NavGraphBuilder.accountGraph(navController: NavHostController) {
                 .value
         AccountDestination(
             onLeave = { navController.popBackStack() },
-            onOpenOrders = { navController.navigate(OrdersRoute) },
             onOpenAddresses = { navController.navigate(AddressesRoute) },
             onVerifyPhone = { navController.navigate(PhoneVerifyRoute) },
             phoneChanged = phoneChanged,

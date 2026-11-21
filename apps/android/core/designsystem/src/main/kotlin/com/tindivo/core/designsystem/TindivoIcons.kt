@@ -160,6 +160,53 @@ object TindivoIcons {
         )
     }
 
+    /** Globo de conversación: «Ayuda por WhatsApp». */
+    val Chat: ImageVector by lazy {
+        icon("Chat", "M20,2H4c-1.1,0 -2,0.9 -2,2v18l4,-4h14c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2z")
+    }
+
+    /** Documento: «Términos y condiciones». */
+    val Description: ImageVector by lazy {
+        icon(
+            "Description",
+            "M14,2H6c-1.1,0 -1.99,0.9 -1.99,2L4,20c0,1.1 0.89,2 1.99,2H18c1.1,0 2,-0.9 2,-2V8l-6,-6zM16,18H8v-2h8v2z" +
+                "M16,14H8v-2h8v2zM13,9V3.5L18.5,9H13z",
+        )
+    }
+
+    /** Escudo: «Privacidad». */
+    val Shield: ImageVector by lazy {
+        icon("Shield", "M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z")
+    }
+
+    /** Salir: «Cerrar sesión». */
+    val Logout: ImageVector by lazy {
+        icon(
+            "Logout",
+            "M17,7l-1.41,1.41L18.17,11H8v2h10.17l-2.58,2.58L17,17l5,-5zM4,5h8V3H4c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 " +
+                "2,2h8v-2H4V5z",
+        )
+    }
+
+    /** Pin de mapa: las direcciones. */
+    val Place: ImageVector by lazy {
+        icon(
+            "Place",
+            "M12,2C8.13,2 5,5.13 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.87 -3.13,-7 -7,-7zM12,11.5c-1.38,0 -2.5," +
+                "-1.12 -2.5,-2.5s1.12,-2.5 2.5,-2.5 2.5,1.12 2.5,2.5 -1.12,2.5 -2.5,2.5z",
+        )
+    }
+
+    /** Abrir fuera de la app: un enlace que sale a WhatsApp o al navegador. */
+    val OpenInNew: ImageVector by lazy {
+        icon(
+            "OpenInNew",
+            "M19,19H5V5h7V3H5c-1.11,0 -2,0.9 -2,2v14c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 2,-2v-7h-2v7zM14,3v2h3.59" +
+                "l-9.83,9.83 1.41,1.41L19,6.41V10h2V3h-7z",
+            autoMirror = true,
+        )
+    }
+
     /** Chevron hacia abajo: la píldora «Entregar en». */
     val ExpandMore: ImageVector by lazy {
         icon("ExpandMore", "M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6 1.41,-1.41z")

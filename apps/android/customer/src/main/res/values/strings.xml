@@ -142,7 +142,7 @@
 
     <string name="account_entry">Mi cuenta</string>
     <string name="account_back">Volver</string>
-    <string name="account_title">Mi cuenta</string>
+    <string name="account_title">Cuenta</string>
     <string name="account_loading">Cargando</string>
     <string name="account_retry">Reintentar</string>
     <string name="account_phone_verified">Teléfono verificado</string>
@@ -157,6 +157,9 @@
     <string name="account_orders">Mis pedidos</string>
 
     <string name="account_addresses">Mis direcciones</string>
+    <string name="account_addresses_open">Ver y editar mis direcciones</string>
+    <string name="account_verified">Verificado</string>
+    <string name="account_version">Tindivo %1$s</string>
     <string name="addresses_title">Mis direcciones</string>
     <string name="addresses_back">Volver</string>
     <string name="addresses_loading">Cargando</string>
