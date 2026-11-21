@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
+import android.os.SystemClock
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
@@ -43,6 +44,12 @@ fun interface CheckoutGps {
      * guardada de un intento): si lo revocaron, no sale ninguna coordenada. Por defecto, sí.
      */
     fun permissionGranted(): Boolean = true
+
+    /**
+     * Un reloj monótono en milisegundos, para que el checkout sepa cuánto hace que se leyó una ubicación (ENC-d). Por
+     * defecto está quieto: nada caduca.
+     */
+    fun elapsedMs(): Long = 0L
 }
 
 /** Lo que hace falta de la configuración pública para describir una lectura: el centro y la precisión aceptable. */
@@ -64,7 +71,6 @@ internal data class GpsConfig(
     }
 }
 
-private const val NANOS_PER_MS = 1_000_000L
 private const val COORDINATE_SCALE = 7
 private const val ACCURACY_SCALE = 1
 private const val DISTANCE_SCALE = 3
@@ -159,13 +165,17 @@ private fun found(
  */
 internal class LiveCheckoutGps(
     private val location: LocationSource,
-    /** Un reloj monótono en milisegundos; las pruebas inyectan el suyo (sin esperas reales). */
-    private val now: () -> Long = { System.nanoTime() / NANOS_PER_MS },
+    /** El reloj monótono en milisegundos; las pruebas inyectan el suyo (sin esperas reales). Quieto por defecto. */
+    private val now: () -> Long = { 0L },
     private val loadConfig: suspend () -> GetPublicConfig200ResponseData?,
 ) : CheckoutGps {
     @Inject
     constructor(location: LocationSource, catalog: CatalogRepository) :
-        this(location, loadConfig = { (catalog.publicConfig() as? ApiResult.Success)?.data })
+        this(
+            location,
+            now = SystemClock::elapsedRealtime,
+            loadConfig = { (catalog.publicConfig() as? ApiResult.Success)?.data },
+        )
 
     private var cachedConfig: GpsConfig? = null
     private var prefetched: Deferred<LocationReading>? = null
@@ -194,6 +204,8 @@ internal class LiveCheckoutGps(
     private fun prefetchedExpired(): Boolean = prefetchedAt?.let { now() - it >= GPS_FIX_MAX_AGE_MS } == true
 
     override fun permissionGranted(): Boolean = location.hasPermission()
+
+    override fun elapsedMs(): Long = now()
 
     override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
         if (pay == PayMethod.Prepaid) return gpsEvidence(null, GpsConfig.Fallback, prepaid = true)

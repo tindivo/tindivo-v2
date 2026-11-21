@@ -518,10 +518,9 @@
     <string name="checkout_gps_title">No pudimos leer tu ubicación</string>
     <string name="checkout_gps_body_permission">Tindivo no tiene permiso de ubicación. Actívalo en los ajustes del teléfono y vuelve a intentar. Tu bolsa y tus datos siguen como estaban.</string>
     <string name="checkout_gps_body_signal">Tu teléfono no dio una ubicación a tiempo. Pasa con señal débil o bajo techo: sal al patio o acércate a una ventana. Tu bolsa y tus datos siguen como estaban.</string>
-    <string name="checkout_gps_after_retry">Sigue sin ubicación o sin conexión. Puedes intentar otra vez, pagar por adelantado o pedir igual.</string>
+    <string name="checkout_gps_after_retry">Sigue sin ubicación o sin conexión. Puedes intentar otra vez o pagar por adelantado.</string>
     <string name="checkout_gps_retry">Intentar de nuevo</string>
     <string name="checkout_gps_prepay">Cambiar a pago por adelantado</string>
-    <string name="checkout_gps_continue">Pedir sin ubicación</string>
     <!-- Borrar mi cuenta: los mismos textos que la web /borrar-cuenta (apps/customer/app/borrar-cuenta/page.tsx). -->
     <string name="account_help_title">Ayuda y legal</string>
     <string name="account_help_whatsapp">Ayuda por WhatsApp</string>

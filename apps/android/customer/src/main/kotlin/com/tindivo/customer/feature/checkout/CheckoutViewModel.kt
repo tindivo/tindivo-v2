@@ -80,9 +80,6 @@ class CheckoutViewModel
         private var sheetOwner: String? = null
         private var sheetGeneration = -1
 
-        /** «Pedir sin ubicación» (hoja de GPS): vale solo para el siguiente envío. */
-        private var gpsWaived = false
-
         /** «Intentar de nuevo» (hoja de GPS): la hoja del siguiente fallo lo dice. */
         private var gpsRetried = false
 
@@ -225,13 +222,6 @@ class CheckoutViewModel
         /** «Cambiar a pago por adelantado»: solo cambia el método; la persona vuelve a confirmar. */
         fun gpsPrepay() {
             if (takeSheet { it is CheckoutSheet.GpsBlock }) selectPay(PayMethod.Prepaid)
-        }
-
-        /** «Pedir sin ubicación»: negar el GPS nunca impide pedir (CA-CHK-10); el servidor decide. */
-        fun gpsContinue() {
-            if (!takeSheet { it is CheckoutSheet.GpsBlock }) return
-            gpsWaived = true
-            confirm()
         }
 
         /** Atrás, tocar fuera o «Cerrar»: la hoja se va sin aplicar nada. */
@@ -528,11 +518,9 @@ class CheckoutViewModel
             form: CheckoutUiState,
             evidence: CreateOrderRequestGpsValidation?,
         ): Boolean {
-            val waived = gpsWaived
             val retried = gpsRetried
-            gpsWaived = false
             gpsRetried = false
-            if (waived || !gpsBlocks(form, evidence)) return false
+            if (!gpsBlocks(form, evidence)) return false
             sheetOwner = account
             sheetGeneration = started
             val sheet = CheckoutSheet.GpsBlock(noPermission = evidence == null, afterRetry = retried)
@@ -608,7 +596,8 @@ class CheckoutViewModel
                 gps.reset()
                 return null
             }
-            gpsCapture?.takeIf { it.key == key }?.let { return it.evidence }
+            // La captura guardada caduca con la misma regla de la lectura adelantada (ENC-d): 2 minutos.
+            gpsCapture?.takeIf { it.key == key && !it.expired(gps.elapsedMs()) }?.let { return it.evidence }
             // Mientras se espera la lectura el botón lo dice («Verificando tu ubicación…»); pagar por adelantado no lee.
             val waits = pay != PayMethod.Prepaid
             if (waits) mutableState.update { it.copy(locating = true) }
@@ -618,7 +607,7 @@ class CheckoutViewModel
                 } finally {
                     if (waits) mutableState.update { it.copy(locating = false) }
                 }
-            gpsCapture = GpsCapture(key, evidence)
+            gpsCapture = GpsCapture(key, evidence, gps.elapsedMs())
             return evidence
         }
 
@@ -729,6 +718,10 @@ private data class GpsKey(
 private class GpsCapture(
     val key: GpsKey,
     val evidence: CreateOrderRequestGpsValidation?,
+    /** El instante de la lectura, en el reloj de [CheckoutGps.elapsedMs]. */
+    val takenAt: Long,
 ) {
+    fun expired(nowMs: Long): Boolean = nowMs - takenAt >= GPS_FIX_MAX_AGE_MS
+
     override fun toString(): String = "GpsCapture(***)"
 }

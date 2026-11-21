@@ -180,6 +180,9 @@ abstract class CheckoutHarness {
         if (pay == PayMethod.Prepaid) null else preciseFix()
     }
 
+    /** El reloj de la lectura de ubicación: una prueba lo adelanta para caducar una lectura guardada. */
+    protected var gpsClockMs = 0L
+
     protected fun preciseFix() =
         CreateOrderRequestGpsValidation(
             method = CreateOrderRequestGpsValidation.Method.gps_high_accuracy,
@@ -235,6 +238,8 @@ abstract class CheckoutHarness {
             override fun reset() {
                 gpsResets++
             }
+
+            override fun elapsedMs(): Long = gpsClockMs
         }
 
     protected companion object {

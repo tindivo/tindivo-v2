@@ -66,19 +66,19 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
         }
 
     @Test
-    fun `Pedir sin ubicacion envia igual y sin gpsValidation, y vale solo para ese envio`() =
+    fun `no hay salida que envie un pedido al recibir sin ubicacion, volver a confirmar abre la hoja otra vez`() =
         runTest(dispatcher) {
             gpsAnswer = noGps()
             val vm = cashReady()
             vm.confirm()
             advanceUntilIdle()
+            vm.closeSheet()
 
-            vm.gpsContinue()
+            vm.confirm()
             advanceUntilIdle()
 
-            assertEquals(1, orders().size)
-            assertTrue(body().absent("gpsValidation"))
-            assertNull(vm.state.value.sheet)
+            assertEquals(0, orders().size)
+            assertEquals(CheckoutSheet.GpsBlock(noPermission = true, afterRetry = false), vm.state.value.sheet)
         }
 
     @Test
@@ -122,9 +122,15 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
         }
 
     @Test
-    fun `Cambiar a pago por adelantado solo cambia el metodo y al confirmar sale prepago sin leer ubicacion`() =
+    fun `Cambiar a pago por adelantado solo cambia el metodo y al confirmar sale prepago con manual_skip_prepaid`() =
         runTest(dispatcher) {
-            gpsAnswer = noGps()
+            gpsAnswer = { pay ->
+                if (pay == PayMethod.Prepaid) {
+                    CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.manual_skip_prepaid)
+                } else {
+                    null
+                }
+            }
             val vm = cashReady()
             vm.confirm()
             advanceUntilIdle()
@@ -140,7 +146,14 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
 
             assertEquals(1, orders().size)
             assertEquals("prepaid", body().getValue("paymentIntent").jsonPrimitive.content)
-            assertEquals(PayMethod.Prepaid, gpsReads.last())
+            assertEquals(
+                "manual_skip_prepaid",
+                body()
+                    .getValue("gpsValidation")
+                    .jsonObject
+                    .getValue("method")
+                    .jsonPrimitive.content,
+            )
         }
 
     @Test
@@ -175,4 +188,27 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
         assertEquals(false, gpsBlocks(delivery.copy(method = DeliveryChoice.Pickup, pay = PayMethod.Prepaid), null))
         assertEquals(false, gpsBlocks(delivery.copy(pay = null), null))
     }
+
+    @Test
+    fun `ENC-d una captura guardada de 2 minutos o mas no se reutiliza en el reenvio`() =
+        runTest(dispatcher) {
+            handlers["POST /customer/orders"] = { reply(409, problem(409, "conflict", "El pedido sigue en proceso.")) }
+            val vm = cashReady()
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(1, gpsReads.size)
+
+            // Pasa la ventana de vuelo y vuelve a confirmar sin que pase el plazo de la ubicacion: reusa la captura.
+            ledgerClock = { System.currentTimeMillis() + DEFAULT_FLIGHT_WINDOW_MS + 1 }
+            gpsClockMs = GPS_FIX_MAX_AGE_MS - 1
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(1, gpsReads.size)
+
+            // Con 2 minutos cumplidos la captura ya no vale: se lee otra vez.
+            gpsClockMs = GPS_FIX_MAX_AGE_MS
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(2, gpsReads.size)
+        }
 }
