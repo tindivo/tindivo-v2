@@ -64,7 +64,7 @@ class GoTrueAuthBackendErrorsTest {
 
             val error =
                 try {
-                    backend().signInWithGoogle("id-token", "nonce")
+                    backend().signInWithGoogle("id-token", "nonce", termsPending = false)
                     null
                 } catch (e: IOException) {
                     e
@@ -91,7 +91,7 @@ class GoTrueAuthBackendErrorsTest {
                     io = StandardTestDispatcher(testScheduler),
                 )
 
-            assertEquals(SignInResult.Failed, store.signInWithGoogle("id-token", "nonce"))
+            assertEquals(SignInResult.Failed, store.signInWithGoogle("id-token", "nonce", termsPending = false))
             assertTrue(store.state.value !is SessionState.SignedIn)
         }
 }

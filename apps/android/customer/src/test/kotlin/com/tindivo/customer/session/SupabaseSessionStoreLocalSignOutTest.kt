@@ -55,7 +55,7 @@ class SupabaseSessionStoreLocalSignOutTest {
             val store = store(backend)
             // Primero termina la restauración de lo guardado (la de A); después entra B.
             runCurrent()
-            store.signInWithGoogle("id-token", "nonce")
+            store.signInWithGoogle("id-token", "nonce", termsPending = false)
 
             val closed = store.signOutLocally("user-1")
 

@@ -86,7 +86,7 @@ class SessionPersistenceTest {
                     .build(),
             )
             val first = store(EncryptedSessionFile(UndeletableFile(path), aead, NoKeys))
-            assertEquals(SignInResult.Success, first.signInWithGoogle("id-token", "nonce"))
+            assertEquals(SignInResult.Success, first.signInWithGoogle("id-token", "nonce", termsPending = false))
 
             first.signOut()
 

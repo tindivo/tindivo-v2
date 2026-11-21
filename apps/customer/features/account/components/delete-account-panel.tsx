@@ -33,7 +33,7 @@ export function DeleteAccountPanel() {
       .then(({ data }) => setPhase(data.session ? 'ready' : 'signed-out'))
   }, [])
 
-  const confirmed = typed.trim().toUpperCase() === CONFIRM_WORD
+  const confirmed = typed === CONFIRM_WORD
 
   async function handleDelete() {
     if (!confirmed) return

@@ -1,12 +1,18 @@
 package com.tindivo.customer.navigation
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -17,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.tindivo.customer.BuildConfig
+import com.tindivo.customer.R
 import com.tindivo.customer.feature.account.AccountDestination
 import com.tindivo.customer.feature.account.ProfileLink
 import com.tindivo.customer.feature.addresses.ADDRESSES_CHANGED_KEY
@@ -51,6 +58,8 @@ import com.tindivo.customer.feature.reviews.ReviewHost
 import com.tindivo.customer.feature.reviews.rememberReviewController
 import com.tindivo.customer.feature.signin.SignInDestination
 import com.tindivo.customer.feature.store.StoreListRoute
+import com.tindivo.customer.feature.terms.TermsGate
+import com.tindivo.customer.feature.terms.TermsGateViewModel
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
 
@@ -69,9 +78,6 @@ data object CheckoutRoute
 data object DiagnosticsRoute
 
 @Serializable
-data object UpdateRoute
-
-@Serializable
 data object SignInRoute
 
 @Serializable
@@ -82,35 +88,47 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
     val navController = rememberNavController()
     val upgradeRequired = appViewModel.upgradeRequired.collectAsStateWithLifecycle().value
     val osNoticeVisible = appViewModel.osNoticeVisible.collectAsStateWithLifecycle().value
-    // Un 426 llegue de donde llegue: se vacía la pila y se muestra la actualización, sin vuelta atrás (CLI-4).
-    LaunchedEffect(upgradeRequired) {
-        if (upgradeRequired) {
-            navController.navigate(UpdateRoute) {
-                popUpTo(navController.graph.id) { inclusive = true }
-                launchSingleTop = true
+    val termsGate: TermsGateViewModel = hiltViewModel()
+    val termsRequired = termsGate.required.collectAsStateWithLifecycle().value
+    val restoring = termsGate.restoring.collectAsStateWithLifecycle().value
+    AppShell(
+        termsRequired = termsRequired,
+        upgradeRequired = upgradeRequired,
+        restoring = restoring,
+        gate = { TermsGate(termsGate) },
+        loading = { StartupLoading() },
+        // Un 426 llegue de donde llegue: solo la actualización, sin vuelta atrás (CLI-4), con o sin puerta de Términos.
+        update = { UpdateScreen() },
+    ) {
+        Column {
+            // D-58: aviso que no bloquea. Con la actualización obligatoria el ViewModel ya no lo muestra.
+            if (osNoticeVisible) {
+                OsNotice(onDismiss = appViewModel::dismissOsNotice)
+            }
+            // El aviso ya cubre la barra de estado: el contenido no la vuelve a reservar.
+            val contentModifier =
+                if (osNoticeVisible) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier
+            NavHost(
+                navController = navController,
+                startDestination = CatalogHomeRoute,
+                modifier = contentModifier,
+            ) {
+                catalogGraph(navController)
+                accountGraph(navController)
+                addressesGraph(navController)
+                ordersGraph(navController)
+                if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
             }
         }
     }
-    Column {
-        // D-58: aviso que no bloquea. Con la actualización obligatoria el ViewModel ya no lo muestra.
-        if (osNoticeVisible) {
-            OsNotice(onDismiss = appViewModel::dismissOsNotice)
-        }
-        // El aviso ya cubre la barra de estado: el contenido no la vuelve a reservar.
-        val contentModifier =
-            if (osNoticeVisible) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier
-        NavHost(
-            navController = navController,
-            startDestination = CatalogHomeRoute,
-            modifier = contentModifier,
-        ) {
-            catalogGraph(navController)
-            accountGraph(navController)
-            addressesGraph(navController)
-            ordersGraph(navController)
-            if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
-            composable<UpdateRoute> { UpdateScreen() }
-        }
+}
+
+/** La sesión guardada aún se restaura: nada de la app se arma hasta saber si la aceptación está confirmada. */
+@Composable
+private fun StartupLoading() {
+    val description = stringResource(R.string.account_loading)
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = description })
     }
 }
 
