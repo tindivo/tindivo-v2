@@ -4,6 +4,8 @@ package com.tindivo.customer.feature.addresses
 internal sealed interface LocationReading {
     data class Found(
         val point: GeoPoint,
+        /** La precisión en metros que dio el proveedor; `null` si no la dio. */
+        val accuracyM: Float? = null,
     ) : LocationReading
 
     /** El GPS está encendido pero no dio una posición a tiempo. */
@@ -27,6 +29,9 @@ internal sealed interface LocationReading {
 internal interface LocationSource {
     /** ¿Hay Google Play services para pedir la ubicación? Sin él, el botón no se muestra. */
     fun isAvailable(): Boolean
+
+    /** ¿Hay permiso de ubicación AHORA (preciso o aproximado)? Se mira al usar una lectura, no solo al pedirla. */
+    fun hasPermission(): Boolean
 
     /**
      * Una sola lectura de alta precisión. Si la corrutina se cancela (la persona salió del formulario), la lectura se
