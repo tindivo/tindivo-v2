@@ -13,6 +13,7 @@ import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
+import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartLine
@@ -175,17 +176,56 @@ abstract class CheckoutHarness {
 
     protected fun cart(quantity: Int = 2) = Cart(BUSINESS_ID, "Pollería Don Lucho", listOf(line(quantity)))
 
+    /** Lo que contesta la lectura de ubicación de la prueba; por defecto, sin permiso: nada que mandar. */
+    protected var gpsAnswer: (PayMethod?) -> CreateOrderRequestGpsValidation? = { null }
+
+    /** Con qué método de pago se leyó la ubicación, en orden. */
+    protected val gpsReads = mutableListOf<PayMethod?>()
+
+    /** Si se pone, la lectura espera a que se complete (un GPS que tarda). */
+    protected var gpsGate: CompletableDeferred<Unit>? = null
+
+    /** Cuántas veces el formulario adelantó la lectura al abrirse. */
+    protected var gpsPrefetches = 0
+
+    /** Cuántas veces el formulario descartó la lectura adelantada (cambio o cierre de cuenta). */
+    protected var gpsResets = 0
+
     /** Cada llamada arma un libro nuevo sobre el mismo almacén: así se simula reabrir la pantalla o la app. */
     protected fun viewModel(): CheckoutViewModel =
         CheckoutViewModel(
             loader = loader,
             checkout = checkout,
             cartStore = cartStore,
-            ledger = OrderAttemptLedger(ledgerStore, lookup),
+            ledger = OrderAttemptLedger(ledgerStore, lookup, clock = { ledgerClock() }),
             sessionStore = session,
             debounce = QuoteDebounce { },
             configService = configService,
+            gps = gpsOverride ?: fakeGps(),
         )
+
+    /** Si se pone, el ViewModel usa esta lectura (por ejemplo la real con un GPS falso) en vez de [fakeGps]. */
+    protected var gpsOverride: CheckoutGps? = null
+
+    /** El reloj del libro de intentos: una prueba lo adelanta para agotar la ventana de vuelo. */
+    protected var ledgerClock: () -> Long = System::currentTimeMillis
+
+    private fun fakeGps() =
+        object : CheckoutGps {
+            override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
+                gpsReads += pay
+                gpsGate?.await()
+                return gpsAnswer(pay)
+            }
+
+            override fun prefetch(scope: CoroutineScope) {
+                gpsPrefetches++
+            }
+
+            override fun reset() {
+                gpsResets++
+            }
+        }
 
     protected companion object {
         const val BUSINESS_ID = "8f1f2b5e-6d3c-4a7b-9e10-1a2b3c4d5e6f"

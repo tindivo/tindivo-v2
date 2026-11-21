@@ -74,7 +74,9 @@ class OrderDetailMappingTest {
             method: String = "delivery",
         ) = detail(status = status, paymentIntent = intent, deliveryMethod = method).toDetailUi()?.headline
 
-        assertEquals(OrderHeadline.Progress(OrderHero.Received), hero("validando"))
+        // CUS-CHK-027: en `validando` sin prepago la cajera llama antes de aceptar.
+        assertEquals(OrderHeadline.Progress(OrderHero.CallToConfirm), hero("validando"))
+        assertEquals(OrderHeadline.Progress(OrderHero.Received), hero("pending_acceptance"))
         assertEquals(OrderHeadline.Progress(OrderHero.AwaitingAvailability), hero("pending_acceptance", "prepaid"))
         assertEquals(OrderHeadline.Progress(OrderHero.PayNow), hero("awaiting_payment", "prepaid"))
         assertEquals(OrderHeadline.Progress(OrderHero.PaymentVerified), hero("confirmed", "prepaid"))
