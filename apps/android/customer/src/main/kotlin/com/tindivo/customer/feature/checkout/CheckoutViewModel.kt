@@ -136,6 +136,8 @@ class CheckoutViewModel
             lastIntent = null
             loadedFor = null
             gpsCapture = null
+            // La lectura adelantada es de la cuenta que se va: la de la nueva se adelanta al cargar su formulario.
+            gps.reset()
             val empty = cart?.isEmpty() != false
             mutableState.update {
                 CheckoutUiState(

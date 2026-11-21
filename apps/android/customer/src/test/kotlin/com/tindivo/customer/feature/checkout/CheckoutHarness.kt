@@ -184,6 +184,9 @@ abstract class CheckoutHarness {
     /** Cuántas veces el formulario adelantó la lectura al abrirse. */
     protected var gpsPrefetches = 0
 
+    /** Cuántas veces el formulario descartó la lectura adelantada (cambio o cierre de cuenta). */
+    protected var gpsResets = 0
+
     /** Cada llamada arma un libro nuevo sobre el mismo almacén: así se simula reabrir la pantalla o la app. */
     protected fun viewModel(): CheckoutViewModel =
         CheckoutViewModel(
@@ -204,6 +207,10 @@ abstract class CheckoutHarness {
 
                     override fun prefetch(scope: CoroutineScope) {
                         gpsPrefetches++
+                    }
+
+                    override fun reset() {
+                        gpsResets++
                     }
                 },
         )

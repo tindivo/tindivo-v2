@@ -93,6 +93,22 @@ class LiveCheckoutGpsTest {
         }
 
     @Test
+    fun `tras reset la lectura adelantada ya no se usa y al confirmar se lee de nuevo`() =
+        runTest {
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = live(location)
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            gps.reset()
+            location.next = LocationReading.Found(GeoPoint(-9.2, -78.6), accuracyM = 10f)
+            val evidence = gps.capture(PayMethod.Cash)
+
+            assertEquals(2, location.calls)
+            assertEquals(java.math.BigDecimal("-9.2000000"), evidence?.lat)
+        }
+
+    @Test
     fun `si al abrir no habia permiso, al confirmar se lee de nuevo por si lo dieron entre tanto`() =
         runTest {
             val location = FakeLocationSource(next = LocationReading.NoPermission)

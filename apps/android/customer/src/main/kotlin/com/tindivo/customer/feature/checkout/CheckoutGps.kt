@@ -34,6 +34,9 @@ fun interface CheckoutGps {
      * adelanto: [capture] sigue mandando y, sin nada adelantado, lee entonces. Por defecto no hace nada.
      */
     fun prefetch(scope: CoroutineScope) = Unit
+
+    /** Descarta la lectura adelantada: es de una cuenta que ya no es la de la pantalla. Por defecto no hace nada. */
+    fun reset() = Unit
 }
 
 /** Lo que hace falta de la configuración pública para describir una lectura: el centro y la precisión aceptable. */
@@ -145,6 +148,11 @@ internal class LiveCheckoutGps(
         if (prefetched != null) return
         prefetched = scope.async { read() }
         scope.launch { config() }
+    }
+
+    override fun reset() {
+        prefetched?.cancel()
+        prefetched = null
     }
 
     override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
