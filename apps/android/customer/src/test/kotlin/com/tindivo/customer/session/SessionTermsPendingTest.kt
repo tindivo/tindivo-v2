@@ -139,4 +139,18 @@ class SessionTermsPendingTest {
 
             assertNull(SupabaseSessionStore(backend(), clock, backgroundScope).accessToken())
         }
+
+    @Test
+    fun `CA-AUT-13 la entrada con la aceptacion pendiente proyecta termsPending y sin ella no`() =
+        runTest {
+            server.enqueue(tokens("acceso", "refresco"))
+            server.enqueue(tokens("acceso-2", "refresco-2"))
+
+            val pending = backend().signInWithGoogle("id-token", "nonce", termsPending = true)
+            val accepted = backend().signInWithGoogle("id-token", "nonce", termsPending = false)
+
+            assertEquals(true, pending.termsPending)
+            assertEquals(false, pending.termsUnknown)
+            assertEquals(false, accepted.termsPending)
+        }
 }

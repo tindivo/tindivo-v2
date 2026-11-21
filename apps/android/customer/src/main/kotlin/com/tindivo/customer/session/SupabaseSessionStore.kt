@@ -49,6 +49,10 @@ internal class SupabaseSessionStore(
     override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 
     private var current: TokenSnapshot? = null
+
+    // Para la red: el token solo sale hacia el registro de la aceptación mientras ésta esté pendiente O desconocida
+    // (CAX-001). Distinto de [termsRequired], que es solo lo que muestra la puerta de la interfaz.
+    private var termsRestricted = false
     private var restored = false
 
     private val mutableClosePending = MutableStateFlow(false)
@@ -75,7 +79,7 @@ internal class SupabaseSessionStore(
         mutex.withLock {
             restoreOnce()
             val token = tokenLocked()
-            AccessGrant(token, onlyForTermsAcceptance = mutableTermsRequired.value)
+            AccessGrant(token, onlyForTermsAcceptance = termsRestricted)
         }
 
     private suspend fun tokenLocked(): String? {
@@ -128,6 +132,7 @@ internal class SupabaseSessionStore(
                 if (current?.userId?.equals(accountId, ignoreCase = true) != true) return@withLock false
                 backend.markTermsAccepted()
                 mutableTermsRequired.value = false
+                termsRestricted = false
                 true
             }
         }
@@ -259,6 +264,7 @@ internal class SupabaseSessionStore(
     ): TokenSnapshot {
         current = snapshot
         mutableTermsRequired.value = snapshot.termsUnknown
+        termsRestricted = snapshot.termsUnknown || snapshot.termsPending
         if (countsAsChange) generation.incrementAndGet()
         mutableState.value = SessionState.SignedIn(snapshot.userId)
         return snapshot
@@ -284,6 +290,7 @@ internal class SupabaseSessionStore(
     private suspend fun drop(): Boolean {
         current = null
         mutableTermsRequired.value = false
+        termsRestricted = false
         generation.incrementAndGet()
         var cleared = false
         withContext(NonCancellable) {

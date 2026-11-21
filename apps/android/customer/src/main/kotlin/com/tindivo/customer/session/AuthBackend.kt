@@ -9,6 +9,8 @@ internal class TokenSnapshot(
     val expiresAtEpochSeconds: Long,
     /** La sesión es de un archivo anterior a la marca de aceptación: no se sabe si la persona aceptó los Términos. */
     val termsUnknown: Boolean = false,
+    /** Entrada nueva cuya aceptación aún no recibió el 2xx: la red solo deja pasar el registro de la aceptación (CAX-001). */
+    val termsPending: Boolean = false,
 ) {
     override fun toString(): String = "TokenSnapshot(userId=$userId)"
 }

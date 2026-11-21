@@ -256,5 +256,11 @@ internal class GoTrueAuthBackend(
         }
 
     private fun StoredSession.toSnapshot() =
-        TokenSnapshot(accessToken, userId, expiresAtEpochSeconds, termsUnknown = termsAccepted == null)
+        TokenSnapshot(
+            accessToken,
+            userId,
+            expiresAtEpochSeconds,
+            termsUnknown = termsAccepted == null,
+            termsPending = termsAccepted == false,
+        )
 }
