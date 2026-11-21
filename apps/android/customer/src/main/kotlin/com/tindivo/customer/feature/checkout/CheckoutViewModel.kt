@@ -332,7 +332,11 @@ class CheckoutViewModel
                         is LoadOutcome.Loaded -> {
                             lastIntent = outcome.data.lastIntent
                             mutableState.update { it.withLoaded(outcome.data, current).preferring(prefer) }
-                            if (mutableState.value.phase == CheckoutPhase.Form) requote(debounced = false)
+                            if (mutableState.value.phase == CheckoutPhase.Form) {
+                                // Como la web: la ubicación se lee al abrir el checkout, no al confirmar.
+                                gps.prefetch(viewModelScope)
+                                requote(debounced = false)
+                            }
                         }
                     }
                 }
@@ -548,7 +552,15 @@ class CheckoutViewModel
         ): CreateOrderRequestGpsValidation? {
             val key = GpsKey(account, bag.fingerprint(), pay)
             gpsCapture?.takeIf { it.key == key }?.let { return it.evidence }
-            val evidence = gps.capture(pay)
+            // Mientras se espera la lectura el botón lo dice («Verificando tu ubicación…»); pagar por adelantado no lee.
+            val waits = pay != PayMethod.Prepaid
+            if (waits) mutableState.update { it.copy(locating = true) }
+            val evidence =
+                try {
+                    gps.capture(pay)
+                } finally {
+                    if (waits) mutableState.update { it.copy(locating = false) }
+                }
             gpsCapture = GpsCapture(key, evidence)
             return evidence
         }

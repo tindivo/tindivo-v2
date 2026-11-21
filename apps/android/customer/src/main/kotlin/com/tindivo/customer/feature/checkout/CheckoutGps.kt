@@ -10,8 +10,11 @@ import com.tindivo.customer.feature.addresses.LOCATE_GIVE_UP_MS
 import com.tindivo.customer.feature.addresses.LocationReading
 import com.tindivo.customer.feature.addresses.LocationSource
 import com.tindivo.customer.feature.addresses.haversineKm
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -25,6 +28,12 @@ import javax.inject.Inject
 fun interface CheckoutGps {
     /** La evidencia para un pedido pagado con [pay], o `null` si no hay. Solo se cancela si se cancela quien la pide. */
     suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation?
+
+    /**
+     * Adelanta la lectura al abrirse el checkout para que, al confirmar, ya esté (la web hace lo mismo). Es solo un
+     * adelanto: [capture] sigue mandando y, sin nada adelantado, lee entonces. Por defecto no hace nada.
+     */
+    fun prefetch(scope: CoroutineScope) = Unit
 }
 
 /** Lo que hace falta de la configuración pública para describir una lectura: el centro y la precisión aceptable. */
@@ -110,11 +119,13 @@ private fun found(
     )
 }
 
+
 /**
  * La lectura real: una sola posición del teléfono ([LocationSource], nunca en segundo plano) y la configuración
- * pública en paralelo. Si la configuración no llega, se usa el respaldo; si el GPS no contesta en su plazo, es
- * [LocationReading.NoFix]. Pagar por adelantado no lee nada. El permiso lo comprueba la propia lectura y va primero:
- * sin él no se manda nada, esté el GPS como esté.
+ * pública. Si la configuración no llega, se usa el respaldo (sin guardarlo); si llega, se guarda en memoria y los
+ * pedidos siguientes no la piden otra vez, como la web. Si el GPS no contesta en su plazo, es [LocationReading.NoFix].
+ * Pagar por adelantado no lee nada. El permiso lo comprueba la propia lectura y va primero: sin él no se manda nada,
+ * esté el GPS como esté. Una instancia por pantalla; se usa desde el hilo principal.
  */
 internal class LiveCheckoutGps(
     private val location: LocationSource,
@@ -124,12 +135,36 @@ internal class LiveCheckoutGps(
     constructor(location: LocationSource, catalog: CatalogRepository) :
         this(location, { (catalog.publicConfig() as? ApiResult.Success)?.data })
 
+    private var cachedConfig: GpsConfig? = null
+    private var prefetched: Deferred<LocationReading>? = null
+
+    /**
+     * Adelanta la lectura al abrir el checkout (como `takePrefetchedGpsFix` de la web): sigue siendo una lectura en
+     * vivo de esta sesión, solo que pedida antes. Sin permiso contesta [LocationReading.NoPermission] al instante.
+     */
+    override fun prefetch(scope: CoroutineScope) {
+        if (prefetched != null) return
+        prefetched = scope.async { read() }
+        scope.launch { config() }
+    }
+
     override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
         if (pay == PayMethod.Prepaid) return gpsEvidence(null, GpsConfig.Fallback, prepaid = true)
         return coroutineScope {
-            val config = async { GpsConfig.from(loadConfig()) }
-            val reading = withTimeoutOrNull(LOCATE_GIVE_UP_MS) { location.current() } ?: LocationReading.NoFix
+            val config = async { config() }
+            val early = prefetched
+            var reading = early?.await() ?: read()
+            prefetched = null
+            // Sin permiso al abrir: pudo darlo al tocar «Confirmar», así que se lee de nuevo.
+            if (early != null && reading == LocationReading.NoPermission) reading = read()
             gpsEvidence(reading, config.await(), prepaid = false)
         }
     }
+
+    private suspend fun read(): LocationReading =
+        withTimeoutOrNull(LOCATE_GIVE_UP_MS) { location.current() } ?: LocationReading.NoFix
+
+    private suspend fun config(): GpsConfig =
+        cachedConfig ?: loadConfig()?.let { GpsConfig.from(it).also { found -> cachedConfig = found } }
+            ?: GpsConfig.Fallback
 }

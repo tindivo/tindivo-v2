@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.checkout
 import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
 import com.tindivo.customer.feature.addresses.GeoPoint
 import com.tindivo.customer.feature.addresses.LocationReading
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -13,6 +14,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -164,6 +166,55 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             assertNotNull(gps["lng"])
             assertNotNull(gps["accuracyM"])
             assertNotNull(gps["distanceToCenterKm"])
+        }
+
+    @Test
+    fun `al abrirse el formulario la lectura de ubicacion ya se adelanta`() =
+        runTest(dispatcher) {
+            ready()
+
+            assertEquals(1, gpsPrefetches)
+            assertEquals(emptyList<PayMethod?>(), gpsReads)
+        }
+
+    @Test
+    fun `mientras espera la ubicacion el boton dice que la esta verificando y despues sigue el pedido`() =
+        runTest(dispatcher) {
+            val gate = CompletableDeferred<Unit>()
+            gpsGate = gate
+            val vm = ready()
+            vm.selectPay(PayMethod.Yape)
+
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertTrue(vm.state.value.locating)
+            assertEquals(Cta.Locating, vm.state.value.cta)
+            assertEquals(0, orders().size)
+
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            assertFalse(vm.state.value.locating)
+            assertEquals(1, orders().size)
+            assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
+        }
+
+    @Test
+    fun `pagar por adelantado no muestra el aviso de ubicacion`() =
+        runTest(dispatcher) {
+            val gate = CompletableDeferred<Unit>()
+            gpsGate = gate
+            val vm = ready()
+            vm.selectPay(PayMethod.Prepaid)
+
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertFalse(vm.state.value.locating)
+            assertEquals(Cta.Sending, vm.state.value.cta)
+            gate.complete(Unit)
+            advanceUntilIdle()
         }
 
     @Test

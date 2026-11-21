@@ -178,6 +178,12 @@ abstract class CheckoutHarness {
     /** Con qué método de pago se leyó la ubicación, en orden. */
     protected val gpsReads = mutableListOf<PayMethod?>()
 
+    /** Si se pone, la lectura espera a que se complete (un GPS que tarda). */
+    protected var gpsGate: CompletableDeferred<Unit>? = null
+
+    /** Cuántas veces el formulario adelantó la lectura al abrirse. */
+    protected var gpsPrefetches = 0
+
     /** Cada llamada arma un libro nuevo sobre el mismo almacén: así se simula reabrir la pantalla o la app. */
     protected fun viewModel(): CheckoutViewModel =
         CheckoutViewModel(
@@ -189,9 +195,16 @@ abstract class CheckoutHarness {
             debounce = QuoteDebounce { },
             configService = configService,
             gps =
-                CheckoutGps { pay ->
-                    gpsReads += pay
-                    gpsAnswer(pay)
+                object : CheckoutGps {
+                    override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
+                        gpsReads += pay
+                        gpsGate?.await()
+                        return gpsAnswer(pay)
+                    }
+
+                    override fun prefetch(scope: CoroutineScope) {
+                        gpsPrefetches++
+                    }
                 },
         )
 

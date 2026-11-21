@@ -46,7 +46,7 @@ internal fun CheckoutBottomBar(
             }
             Button(
                 onClick = { onCta(cta, state.selectedAddressId, confirm, form, openSheet) },
-                enabled = cta != Cta.Sending,
+                enabled = cta != Cta.Sending && cta != Cta.Locating,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             ) {
                 Text(text = cta.label())

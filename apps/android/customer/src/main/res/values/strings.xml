@@ -410,6 +410,7 @@
     <string name="checkout_totals_loading">Calculando…</string>
 
     <string name="checkout_cta_sending">Enviando tu pedido…</string>
+    <string name="checkout_cta_locating">Verificando tu ubicación…</string>
     <string name="checkout_cta_calculating">Calculando tu pedido…</string>
     <string name="checkout_cta_quote_problem">Calcular de nuevo</string>
     <string name="checkout_cta_name">Agrega tu nombre</string>

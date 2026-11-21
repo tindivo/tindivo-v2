@@ -1,9 +1,11 @@
 package com.tindivo.customer.feature.checkout
 
 import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
+import com.tindivo.core.network.generated.model.GetPublicConfig200ResponseData
 import com.tindivo.customer.feature.addresses.FakeLocationSource
 import com.tindivo.customer.feature.addresses.GeoPoint
 import com.tindivo.customer.feature.addresses.LocationReading
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -38,5 +40,70 @@ class LiveCheckoutGpsTest {
             val gps = live(FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f)))
 
             assertEquals(CreateOrderRequestGpsValidation.Method.gps_high_accuracy, gps.capture(PayMethod.Yape)?.method)
+        }
+
+    private val config = GetPublicConfig200ResponseData(null, null, null, null, null, null, null, null, null)
+
+    @Test
+    fun `la configuracion publica se pide una vez y se reusa en los pedidos siguientes`() =
+        runTest {
+            var loads = 0
+            val gps =
+                LiveCheckoutGps(FakeLocationSource(next = LocationReading.NoFix)) {
+                    loads++
+                    config
+                }
+
+            gps.capture(PayMethod.Cash)
+            gps.capture(PayMethod.Yape)
+
+            assertEquals(1, loads)
+        }
+
+    @Test
+    fun `una configuracion que no llego no se guarda: el siguiente pedido la vuelve a pedir`() =
+        runTest {
+            var loads = 0
+            val gps =
+                LiveCheckoutGps(FakeLocationSource(next = LocationReading.NoFix)) {
+                    loads++
+                    if (loads == 1) null else config
+                }
+
+            gps.capture(PayMethod.Cash)
+            gps.capture(PayMethod.Cash)
+            gps.capture(PayMethod.Cash)
+
+            assertEquals(2, loads)
+        }
+
+    @Test
+    fun `la lectura adelantada al abrir el checkout es la que se usa al confirmar, sin leer otra vez`() =
+        runTest {
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = live(location)
+
+            gps.prefetch(backgroundScope)
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            val evidence = gps.capture(PayMethod.Cash)
+
+            assertEquals(1, location.calls)
+            assertEquals(CreateOrderRequestGpsValidation.Method.gps_high_accuracy, evidence?.method)
+        }
+
+    @Test
+    fun `si al abrir no habia permiso, al confirmar se lee de nuevo por si lo dieron entre tanto`() =
+        runTest {
+            val location = FakeLocationSource(next = LocationReading.NoPermission)
+            val gps = live(location)
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            location.next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f)
+            val evidence = gps.capture(PayMethod.Cash)
+
+            assertEquals(2, location.calls)
+            assertEquals(CreateOrderRequestGpsValidation.Method.gps_high_accuracy, evidence?.method)
         }
 }
