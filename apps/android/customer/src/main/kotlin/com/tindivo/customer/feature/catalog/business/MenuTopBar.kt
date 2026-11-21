@@ -1,16 +1,25 @@
 package com.tindivo.customer.feature.catalog.business
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,6 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -46,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import kotlinx.coroutines.launch
@@ -180,7 +191,11 @@ private fun SectionChips(
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        LazyRow(modifier = Modifier.weight(1f), state = rowState) {
+        LazyRow(
+            modifier = Modifier.weight(1f),
+            state = rowState,
+            contentPadding = PaddingValues(horizontal = 12.dp),
+        ) {
             itemsIndexed(categories, key = { _, category -> category.id }) { index, category ->
                 SectionChip(
                     name = category.name,
@@ -205,49 +220,77 @@ private fun SectionChips(
     }
 }
 
-/** Activo = negrita y subrayado en el color del texto (no pastilla). */
+/**
+ * Píldora de sección (tablero «Negocio y carta»): 40 dp dentro de un área de 48. La activa va en tinta con texto
+ * blanco; las demás, blancas con borde `outline`.
+ */
 @Composable
 private fun SectionChip(
     name: String,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val underline = MaterialTheme.colorScheme.onSurface
-    Column(
+    val scheme = MaterialTheme.colorScheme
+    Box(
         modifier =
             Modifier
-                .heightIn(min = 48.dp)
+                .heightIn(min = TindivoSpacing.touchTarget)
                 .selectable(selected = selected, onClick = onClick, role = Role.Tab)
-                .drawBehind {
-                    if (selected) {
-                        val thickness = 2.dp.toPx()
-                        val y = size.height - thickness / 2
-                        drawLine(underline, Offset(0f, y), Offset(size.width, y), strokeWidth = thickness)
-                    }
-                }.padding(horizontal = 12.dp),
-        verticalArrangement = Arrangement.Center,
+                .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            maxLines = 1,
-        )
+        Box(
+            modifier =
+                Modifier
+                    .height(40.dp)
+                    .background(if (selected) scheme.onSurface else scheme.surface, CircleShape)
+                    .then(if (selected) Modifier else Modifier.border(1.dp, scheme.outline, CircleShape))
+                    .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (selected) scheme.surface else scheme.onSurface,
+                maxLines = 1,
+            )
+        }
     }
 }
 
+/** El índice de secciones: botón redondo de 48 dp con la cuadrícula y el total en una insignia. */
 @Composable
 private fun IndexButton(
     count: Int,
     onClick: () -> Unit,
 ) {
     val description = stringResource(R.string.business_sections_open, count)
-    TextButton(
-        onClick = onClick,
-        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = description },
-    ) {
-        Icon(imageVector = TindivoIcons.GridView, contentDescription = null)
-        Text(text = count.toString(), modifier = Modifier.padding(start = 4.dp))
+    val scheme = MaterialTheme.colorScheme
+    Box(modifier = Modifier.padding(start = 4.dp, end = 12.dp)) {
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = scheme.surface,
+            border = BorderStroke(1.dp, scheme.outline),
+            modifier = Modifier.size(TindivoSpacing.touchTarget).semantics { contentDescription = description },
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(imageVector = TindivoIcons.GridView, contentDescription = null, modifier = Modifier.size(20.dp))
+            }
+        }
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-2).dp)
+                    .sizeIn(minWidth = 20.dp, minHeight = 20.dp)
+                    .background(scheme.onSurface, CircleShape)
+                    .padding(horizontal = 5.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text = count.toString(), style = MaterialTheme.typography.labelSmall, color = scheme.surface)
+        }
     }
 }
 

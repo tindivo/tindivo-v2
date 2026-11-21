@@ -109,7 +109,12 @@ internal fun BusinessScreen(
                     if (parseTerms(text).isNotEmpty()) {
                         MenuSearchResults(business = state.business, query = text, onDishClick = onDishClick)
                     } else {
-                        MenuList(rows = rows, listState = listState, onDishClick = onDishClick)
+                        MenuList(
+                            rows = rows,
+                            listState = listState,
+                            onDishClick = onDishClick,
+                            closed = ordering is OrderingMode.Closed,
+                        )
                     }
                 }
             }
@@ -125,7 +130,9 @@ private fun MenuList(
     rows: List<MenuRow>,
     listState: LazyListState,
     onDishClick: ((MenuItemUi) -> Unit)?,
+    closed: Boolean = false,
 ) {
+    val hasBanner = rows.firstOrNull() is MenuRow.Banner
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         state = listState,
@@ -135,16 +142,12 @@ private fun MenuList(
         items(rows, key = { it.key }) { row ->
             when (row) {
                 is MenuRow.Banner -> {
-                    AsyncImage(
-                        model = row.url,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxWidth().height(160.dp),
-                    )
+                    BusinessBanner(row.url)
                 }
 
                 is MenuRow.Header -> {
-                    BusinessHeader(row.business)
+                    // Con portada, la hoja de la cabecera sube sobre ella: 28 dp del tablero más el espacio entre filas.
+                    BusinessHeader(row.business, closed = closed, overlap = if (hasBanner) 40.dp else null)
                 }
 
                 is MenuRow.Category -> {
