@@ -35,25 +35,30 @@ internal class FusedLocationSource
             GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
 
         override suspend fun current(): LocationReading {
+            // El permiso va primero: sin él no se informa de nada más (ni GPS apagado ni Play services).
+            if (!hasPermission()) return LocationReading.NoPermission
             if (!isAvailable()) return LocationReading.Unavailable
             val manager = context.getSystemService(LocationManager::class.java)
             if (manager == null || !LocationManagerCompat.isLocationEnabled(manager)) return LocationReading.Off
             return read()
         }
 
-        /**
-         * La lectura en sí. El permiso (preciso o aproximado) se comprueba aquí, justo antes de pedir la posición, y la
-         * llamada va dentro de un `catch` de [SecurityException]: el permiso puede quitarse desde Ajustes entre la
-         * comprobación y la llamada. En los dos casos la respuesta es [LocationReading.NoPermission].
-         */
-        private suspend fun read(): LocationReading {
+        /** ¿Hay permiso de ubicación, preciso o aproximado? */
+        private fun hasPermission(): Boolean {
             val fine =
                 ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
                     PackageManager.PERMISSION_GRANTED
             val coarse =
                 ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
                     PackageManager.PERMISSION_GRANTED
-            if (!fine && !coarse) return LocationReading.NoPermission
+            return fine || coarse
+        }
+
+        /**
+         * La lectura en sí. La llamada va dentro de un `catch` de [SecurityException]: el permiso puede quitarse desde
+         * Ajustes entre la comprobación de [current] y la llamada, y la respuesta es [LocationReading.NoPermission].
+         */
+        private suspend fun read(): LocationReading {
             val request =
                 CurrentLocationRequest
                     .Builder()

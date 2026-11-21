@@ -113,25 +113,23 @@ private fun found(
 /**
  * La lectura real: una sola posición del teléfono ([LocationSource], nunca en segundo plano) y la configuración
  * pública en paralelo. Si la configuración no llega, se usa el respaldo; si el GPS no contesta en su plazo, es
- * [LocationReading.NoFix]. Pagar por adelantado no lee nada.
+ * [LocationReading.NoFix]. Pagar por adelantado no lee nada. El permiso lo comprueba la propia lectura y va primero:
+ * sin él no se manda nada, esté el GPS como esté.
  */
-internal class LiveCheckoutGps
+internal class LiveCheckoutGps(
+    private val location: LocationSource,
+    private val loadConfig: suspend () -> GetPublicConfig200ResponseData?,
+) : CheckoutGps {
     @Inject
-    constructor(
-        private val location: LocationSource,
-        private val catalog: CatalogRepository,
-    ) : CheckoutGps {
-        override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
-            if (pay == PayMethod.Prepaid) return gpsEvidence(null, GpsConfig.Fallback, prepaid = true)
-            return coroutineScope {
-                val config = async { GpsConfig.from((catalog.publicConfig() as? ApiResult.Success)?.data) }
-                val reading =
-                    if (location.isAvailable()) {
-                        withTimeoutOrNull(LOCATE_GIVE_UP_MS) { location.current() } ?: LocationReading.NoFix
-                    } else {
-                        LocationReading.Unavailable
-                    }
-                gpsEvidence(reading, config.await(), prepaid = false)
-            }
+    constructor(location: LocationSource, catalog: CatalogRepository) :
+        this(location, { (catalog.publicConfig() as? ApiResult.Success)?.data })
+
+    override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
+        if (pay == PayMethod.Prepaid) return gpsEvidence(null, GpsConfig.Fallback, prepaid = true)
+        return coroutineScope {
+            val config = async { GpsConfig.from(loadConfig()) }
+            val reading = withTimeoutOrNull(LOCATE_GIVE_UP_MS) { location.current() } ?: LocationReading.NoFix
+            gpsEvidence(reading, config.await(), prepaid = false)
         }
     }
+}
