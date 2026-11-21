@@ -11,7 +11,8 @@ internal class CourierFormActions(
     val onItem: (String) -> Unit,
     val onPayer: (CourierPayer) -> Unit,
     val onNote: (String) -> Unit,
-    val onReadyAndPaid: (Boolean) -> Unit,
+    val onPrepaid: (Boolean) -> Unit,
+    val onAllowed: (Boolean) -> Unit,
     val onSubmit: () -> Unit,
 ) {
     companion object {
@@ -26,7 +27,8 @@ internal class CourierFormActions(
                 onItem = viewModel::setItem,
                 onPayer = viewModel::setPayer,
                 onNote = viewModel::setNote,
-                onReadyAndPaid = viewModel::setReadyAndPaid,
+                onPrepaid = viewModel::setPrepaidConfirmed,
+                onAllowed = viewModel::setWeightConfirmed,
                 onSubmit = viewModel::submit,
             )
     }

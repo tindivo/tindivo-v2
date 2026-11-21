@@ -94,24 +94,25 @@ reglas: [COURIER_ITEM_DESCRIPTION_MAX, COURIER_MAX_WEIGHT_KG, COURIER_DRIVER_HIN
 
 - **CUS-ENT-020** (soporte de WhatsApp y responsabilidad por daños): espera la revisión legal; está en `Docs/trabajo/decisiones-abiertas.md` (DA-18).
 - **Flujo de «pedir»**: se mantiene el de Android (portada y formulario con hojas) **si** el canvas v35 lo dibuja así; el agente no pudo abrir el canvas, así que Jesús lo confirma al revisar la ficha. Si el canvas muestra «mapa primero», la ficha cambia.
+- **Términos borrador**: `Docs/trabajo/legal/terminos-borrador.md` (línea 118) aún dice «mochila de 45 × 45 × 45 cm»; el canon ya dice «mochila, sin medida». No se toca aquí: lo corrige la revisión legal.
 
 ## Brecha con Android
 
-Verificado el 2026-11-18 en develop@25a6d537. Rutas relativas a `apps/android/customer/src/main/kotlin/com/tindivo/customer/`;
+Verificado el 2026-11-19 en develop@25a6d537 más el PR #204 (código de Android de esta capacidad). Rutas relativas a `apps/android/customer/src/main/kotlin/com/tindivo/customer/`;
 `res/` es `apps/android/customer/src/main/res/`.
 
 | Requisito | Estado | Evidencia |
 |---|---|---|
 | CUS-ENT-001 | DIFIERE | La entrada única existe (`feature/catalog/home/CourierEntryCard.kt`, `feature/catalog/home/CatalogHomeScreen.kt`). Pero «Pedir una entrega» abre la portada y luego el formulario (`navigation/CourierNavigation.kt`), no el mapa del punto A que aprobó Jesús el 2026-10-07. |
 | CUS-ENT-002 | HECHO | `feature/courier/CourierText.kt` (`closedText`), `feature/courier/CourierHomeScreen.kt`; prueba «con el servicio cerrado no deja pedir» (`CourierRequestViewModelTest.kt`). |
-| CUS-ENT-003 | DIFIERE | El precio sale del servidor (`CourierText.kt`, `CourierModels.kt`). «Hasta 5 kg» está escrito en `res/values/strings.xml`; `GET /public/courier/status` no devuelve el peso (`packages/contracts/src/courier.ts`). |
-| CUS-ENT-004 | DIFIERE | Pin, zona y largo mínimo: HECHO (`CourierRequestSheets.kt`, `CourierRequestViewModel.kt`, `CourierRequestState.kt`; prueba «un pin fuera de la zona…», `CourierRequestViewModelTest.kt`). Falta el filtro de texto basura: solo valida el largo y no usa `isGarbageText` (sin coincidencias en `feature/courier/`); la API sí lo filtra (`packages/contracts/src/primitives.ts`). |
+| CUS-ENT-003 | HECHO | Precio y peso del servidor: `CourierText.kt` (`factsText`), `CourierMapping.kt` (`toServiceUi`, `maxWeightKg`), `res/values/strings.xml` (`courier_facts_price`, `courier_facts_weight`); servidor: migración `0291`; pruebas `CourierStatusDecodeTest` y `CourierStringsTest` (CA-ENT-11). Sin el campo no se muestra peso. |
+| CUS-ENT-004 | HECHO | Pin y zona: `CourierRequestSheets.kt`, `CourierRequestViewModel.kt` (`pickPin`); referencia con `isReferenceOk` (largo y texto basura, el mismo criterio del servidor) en `CourierRequestState.kt`; pruebas `CourierReferenceVectorTest` (vector compartido, CA-ENT-02) y `CourierRequestViewModelTest` (pin fuera de zona). |
 | CUS-ENT-005 | DIFIERE | «Soy yo» (`CourierRequestSections.kt`), «Mis direcciones» (`CourierRequestSheets.kt`) y «Sitios anteriores» (`CourierRequestSheets.kt`): HECHO. Faltan buscar un lugar por su nombre y recoger de un negocio del directorio: no hay código de `listCourierDirectory` en `apps/android`. |
 | CUS-ENT-006 | HECHO | Categorías `CourierRequestSections.kt`; `isFragile = false` en `CourierRequestState.kt`. La categoría «Medicinas» depende de la decisión sobre medicamentos. |
 | CUS-ENT-007 | HECHO | `CourierRequestSections.kt`; textos `res/values/strings.xml`; el cuerpo solo lleva `payer` (`CourierRequestState.kt`). |
-| CUS-ENT-008 | DIFIERE | Una sola casilla («Ya está listo y pagado», `CourierRequestSections.kt`) y lo permitido como texto (`ReadyAndPaid` y el texto de `ItemSection`). El cuerpo envía `weightConfirmed = true` y `prepaidConfirmed = true` siempre (`CourierRequestState.kt`). |
+| CUS-ENT-008 | HECHO | Dos casillas, `PrepaidCheck` y `AllowedCheck` en `CourierRequestSections.kt`; cada una manda su valor (`CourierRequestState.kt`, `toRequest`); pruebas `CourierRequestViewModelTest` y `CourierRequestStateTest` (CA-ENT-01). |
 | CUS-ENT-009 | HECHO | `CourierRequestScreen.kt`; `CourierRequestState.kt`; prueba `CourierRequestViewModelTest.kt`. |
-| CUS-ENT-010 | DIFIERE | La app dice «Hasta 5 kg» y no menciona la mochila (`res/values/strings.xml`); el peso no se lee del servidor (ver CUS-ENT-003). |
+| CUS-ENT-010 | HECHO | «cabe en la mochila del motorizado y pesa hasta [peso] kg» con el peso del servidor (`courier_allowed_check_weight`, `AllowedCheck`); prueba `CourierStringsTest` (ningún texto escribe el peso). |
 | CUS-ENT-012 | HECHO | Lo hace el servidor (`supabase/migrations/0276_el_perfil_los_terminos_y_las_apelaciones_los_escribe_el_servidor.sql`); la app muestra el texto del servidor (prueba «un rechazo con explicacion muestra el texto del servidor», `CourierRequestViewModelTest.kt`). |
 | CUS-ENT-013 | HECHO | `CourierHomeList.kt`, `CourierHomeScreen.kt`, `CourierHomeViewModel.kt`. |
 | CUS-ENT-014 | HECHO | `CourierTracking.kt`. |
@@ -122,14 +123,10 @@ Verificado el 2026-11-18 en develop@25a6d537. Rutas relativas a `apps/android/cu
 | CUS-ENT-019 | HECHO | `CourierAttempts.kt`, `CourierRequestScreen.kt`; pruebas `CourierAttemptsTest.kt` y `CourierRequestViewModelTest.kt`. |
 | CUS-ENT-020 | FALTA | Ningún texto de soporte de WhatsApp ni de responsabilidad en `res/values/strings.xml`. La redacción espera la revisión legal. |
 | CUS-ENT-021 | DIFIERE | Fuera del lanzamiento (M2, por diseñar). Lo registra el motorizado, no el cliente; no hay código en ninguna app. |
-| CUS-ENT-022 | FALTA | `res/values/strings.xml` (`courier_allowed_info`) conserva «Sin alcohol, sin nada que necesite receta especial ni refrigeración» y `strings.xml` (`courier_category_medicine`) la categoría «Medicinas». Android no muestra la lista del canon. |
+| CUS-ENT-022 | HECHO | `res/values/strings.xml` (`courier_prohibited_info`) trae la lista del canon, con animales vivos y objetos robados; prueba `CourierStringsTest` (CA-ENT-10). La categoría «Medicinas» se queda (medicamentos de venta libre, sí). |
 
-Cuenta: 21 requisitos vigentes (`CUS-ENT-011` está retirado): **HECHO 12, FALTA 2, DIFIERE 7**.
+Cuenta: 21 requisitos vigentes (`CUS-ENT-011` está retirado): **HECHO 17, FALTA 1 (CUS-ENT-020), DIFIERE 3 (CUS-ENT-001, 005 y 021)**.
 
 ## Defectos
 
-| # | Requisito | Hallazgo | Dónde |
-|---|---|---|---|
-| 1 | CUS-ENT-004 | Android valida solo el largo de la referencia, sin filtro de texto basura; la API sí lo filtra y devolvería 422. | `feature/courier/CourierRequestState.kt` |
-| 2 | CUS-ENT-003, CUS-ENT-010 | «Hasta 5 kg» escrito en los textos; no se lee de `courier.maxWeightKg`. | `res/values/strings.xml` |
-| 3 | CUS-ENT-008 | Las confirmaciones viajan siempre en `true` aunque solo haya una casilla. | `feature/courier/CourierRequestState.kt` |
+Ninguno abierto. Los tres de la primera verificación (referencia sin filtro de basura, peso escrito en los textos y confirmaciones siempre en `true`) los corrige #204.
