@@ -6,6 +6,7 @@ import { useRef } from 'react'
 import { saveAddress } from '@/components/auth-onboarding/persistence'
 import type { CheckoutState } from '@/features/checkout/hooks/use-checkout-state'
 import { cashError } from '@/features/checkout/lib/cash'
+import { gpsFailureOutcome } from '@/features/checkout/lib/gps-failure'
 import type { GeoBlockKind, GpsValidationPayload, OrderResult } from '@/features/checkout/types'
 import { deliveryPointQuality } from '@/lib/address-record'
 import { api } from '@/lib/api'
@@ -168,13 +169,7 @@ export function useCheckoutActions(state: CheckoutState): CheckoutActions {
         },
       }
     } catch {
-      if (selectedPayment === 'prepaid') return { payload: { method: 'manual_skip_prepaid' } }
-      // Un recojo presencial NO se cae por un GPS que no fija. Se registra el
-      // intento fallido —`failed` es un hecho que vale guardar— y sigue: quien
-      // decide es la cajera, y a ella no le hace falta una coordenada para ver
-      // que tiene a alguien delante.
-      if (recojoPresencial) return { payload: { method: 'failed' } }
-      return { issue: 'unavailable' }
+      return gpsFailureOutcome({ selectedPayment, recojoPresencial, hasDeliveryHistory })
     }
   }
 
