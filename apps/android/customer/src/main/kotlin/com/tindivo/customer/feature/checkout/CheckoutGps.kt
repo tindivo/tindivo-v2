@@ -177,7 +177,9 @@ internal class LiveCheckoutGps(
             prefetched = null
             // Sin permiso al abrir: pudo darlo al tocar «Confirmar», así que se lee de nuevo.
             if (early != null && reading == LocationReading.NoPermission) reading = read()
-            gpsEvidence(reading, config.await(), prepaid = false)
+            val gpsConfig = config.await()
+            // Revalidado tras las esperas: si el permiso se revocó mientras tanto, no sale ninguna coordenada.
+            if (permissionGranted()) gpsEvidence(reading, gpsConfig, prepaid = false) else null
         }
     }
 

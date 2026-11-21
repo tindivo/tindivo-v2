@@ -589,7 +589,7 @@ class CheckoutViewModel
                 if (reserve(started, account, current) && isCurrent(started, account)) {
                     val consume: suspend (String) -> Unit = { fingerprint -> cartStore.consume(account, fingerprint) }
                     ledger.place(account, current, consume) { key ->
-                        checkout.createOrder(request, key, account).also {
+                        checkout.createOrder(withCurrentPermission(request), key, account).also {
                             if (it is ApiResult.Failure) reportUpgrade(it.error)
                         }
                     }
@@ -600,6 +600,21 @@ class CheckoutViewModel
                 if (isCurrent(started, account)) stop(CheckoutMessage.StillProcessing)
                 null
             }
+
+        /**
+         * EL punto de control del permiso de ubicación: se mira justo antes de cada POST, ya pasadas todas las esperas
+         * (configuración, reserva, consulta del libro). Si lo revocaron, la petición sale sin `gpsValidation`, con la
+         * misma clave, y se descartan las cachés de ubicación.
+         */
+        private fun withCurrentPermission(request: CreateOrderRequest): CreateOrderRequest {
+            val evidence = request.gpsValidation ?: return request
+            // Pagar por adelantado no lee ubicación: no depende del permiso.
+            if (evidence.method == CreateOrderRequestGpsValidation.Method.manual_skip_prepaid) return request
+            if (gps.permissionGranted()) return request
+            gpsCapture = null
+            gps.reset()
+            return request.copy(gpsValidation = null)
+        }
 
         /** La bolsa con la que otra cuenta intentó enviar no se envía ni se enseña: se descarta. */
         private suspend fun reserve(
