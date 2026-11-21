@@ -174,4 +174,32 @@ class LiveCheckoutGpsTest {
     fun `ENC-d el plazo de la lectura adelantada es de 2 minutos`() {
         assertEquals(120_000L, GPS_FIX_MAX_AGE_MS)
     }
+
+    @Test
+    fun `ENC-d la captura dice cuando se leyo la lectura adelantada, no cuando se confirmo`() =
+        runTest {
+            var clock = 0L
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = LiveCheckoutGps(location, now = { clock }) { null }
+
+            gps.prefetch(backgroundScope)
+            runCurrent()
+            clock = GPS_FIX_MAX_AGE_MS - 1
+            gps.capture(PayMethod.Cash)
+
+            assertEquals(0L, gps.lastReadAtMs())
+            assertEquals(GPS_FIX_MAX_AGE_MS - 1, gps.elapsedMs())
+        }
+
+    @Test
+    fun `ENC-d una lectura hecha al confirmar se fecha al confirmar`() =
+        runTest {
+            var clock = 5_000L
+            val location = FakeLocationSource(next = LocationReading.Found(GeoPoint(-9.15, -78.5), accuracyM = 10f))
+            val gps = LiveCheckoutGps(location, now = { clock }) { null }
+
+            gps.capture(PayMethod.Cash)
+
+            assertEquals(5_000L, gps.lastReadAtMs())
+        }
 }

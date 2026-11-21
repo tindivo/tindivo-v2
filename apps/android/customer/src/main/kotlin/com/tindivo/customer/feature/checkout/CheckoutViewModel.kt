@@ -80,9 +80,6 @@ class CheckoutViewModel
         private var sheetOwner: String? = null
         private var sheetGeneration = -1
 
-        /** «Intentar de nuevo» (hoja de GPS): la hoja del siguiente fallo lo dice. */
-        private var gpsRetried = false
-
         init {
             viewModelScope.launch { sessionStore.state.collect { onSession(it) } }
             viewModelScope.launch { cartStore.cart.collect { onCart(it) } }
@@ -213,10 +210,10 @@ class CheckoutViewModel
         /** «Intentar de nuevo»: se descarta lo leído y se vuelve a confirmar, que lee de nuevo. */
         fun gpsRetry() {
             if (!takeSheet { it is CheckoutSheet.GpsBlock }) return
-            gpsRetried = true
             gpsCapture = null
             gps.reset()
-            confirm()
+            // «Es un reintento» viaja como argumento: una parada antes de enviar no lo deja pegado a la hoja siguiente.
+            startConfirm(skipGpsSheet = false, afterRetry = true)
         }
 
         /**
@@ -224,7 +221,7 @@ class CheckoutViewModel
          * `failed` si no hubo señal) y decide el servidor (CA-CHK-10). Vale para un único envío.
          */
         fun gpsContinue() {
-            if (takeSheet { it is CheckoutSheet.GpsBlock }) startConfirm(skipGpsSheet = true)
+            if (takeSheet { it is CheckoutSheet.GpsBlock }) startConfirm(skipGpsSheet = true, afterRetry = false)
         }
 
         /** «Cambiar a pago por adelantado»: solo cambia el método; la persona vuelve a confirmar. */
@@ -449,14 +446,17 @@ class CheckoutViewModel
         }
 
         /** El botón fijo. Un segundo toque mientras se envía no hace nada (además del `Busy` del libro). */
-        fun confirm() = startConfirm(skipGpsSheet = false)
+        fun confirm() = startConfirm(skipGpsSheet = false, afterRetry = false)
 
         /**
          * [skipGpsSheet] («Continuar sin ubicación») vale para ESTE envío y no se guarda en el ViewModel: viaja como
          * argumento hasta [place], así que cualquier parada antes de enviar (total o opciones cambiadas, sin conexión,
          * un 422 que se recotiza) la descarta y el siguiente «Confirmar» vuelve a abrir la hoja.
          */
-        private fun startConfirm(skipGpsSheet: Boolean) {
+        private fun startConfirm(
+            skipGpsSheet: Boolean,
+            afterRetry: Boolean,
+        ) {
             val current = mutableState.value
             if (current.phase != CheckoutPhase.Form || current.sending || !current.cta.canConfirm) return
             // La cuenta se captura UNA vez aqui y firma el pedido hasta el POST: la sesion no se vuelve a leer.
@@ -466,7 +466,7 @@ class CheckoutViewModel
             val started = generation
             mutableState.update { it.copy(sending = true, message = null) }
             viewModelScope.launch {
-                submit(started, account, bag, skipGpsSheet)
+                submit(started, account, bag, skipGpsSheet, afterRetry)
                 emptyBagIfNothingLeft()
             }
         }
@@ -476,6 +476,7 @@ class CheckoutViewModel
             account: String?,
             bag: Cart?,
             skipGpsSheet: Boolean = false,
+            afterRetry: Boolean = false,
         ) {
             if (started == generation) quoteJob?.cancel()
             if (account == null) {
@@ -502,7 +503,7 @@ class CheckoutViewModel
 
                 next.pay != before.pay || !ready -> stop(CheckoutMessage.OptionsChanged)
 
-                else -> place(started, account, bag, next, fresh, skipGpsSheet)
+                else -> place(started, account, bag, next, fresh, skipGpsSheet, afterRetry)
             }
         }
 
@@ -534,13 +535,12 @@ class CheckoutViewModel
             form: CheckoutUiState,
             evidence: CreateOrderRequestGpsValidation?,
             skipGpsSheet: Boolean,
+            afterRetry: Boolean,
         ): Boolean {
-            val retried = gpsRetried
-            gpsRetried = false
             if (skipGpsSheet || !gpsBlocks(form, evidence)) return false
             sheetOwner = account
             sheetGeneration = started
-            val sheet = CheckoutSheet.GpsBlock(noPermission = evidence == null, afterRetry = retried)
+            val sheet = CheckoutSheet.GpsBlock(noPermission = evidence == null, afterRetry = afterRetry)
             mutableState.update { it.copy(sending = false, sheet = sheet) }
             return true
         }
@@ -552,13 +552,14 @@ class CheckoutViewModel
             form: CheckoutUiState,
             quote: QuoteView,
             skipGpsSheet: Boolean,
+            afterRetry: Boolean,
         ) {
             // La ubicación es evidencia, nunca un requisito: sin permiso o sin señal el pedido sale igual (CUS-CHK-009).
             val evidence = if (current == null) null else evidenceFor(account, current, form.pay)
             // Sin ubicación en un pedido a domicilio que se paga al recibir: se abre la hoja y no sale nada.
             val blocked =
                 current != null && isCurrent(started, account) &&
-                    openGpsSheetIfNeeded(started, account, form, evidence, skipGpsSheet)
+                    openGpsSheetIfNeeded(started, account, form, evidence, skipGpsSheet, afterRetry)
             // Si la cuenta cambió mientras se leía la ubicación no se arma ni se envía nada.
             val request =
                 if (current == null || blocked || !isCurrent(started, account)) {
@@ -626,7 +627,7 @@ class CheckoutViewModel
                 } finally {
                     if (waits) mutableState.update { it.copy(locating = false) }
                 }
-            gpsCapture = GpsCapture(key, evidence, gps.elapsedMs())
+            gpsCapture = GpsCapture(key, evidence, gps.lastReadAtMs())
             return evidence
         }
 

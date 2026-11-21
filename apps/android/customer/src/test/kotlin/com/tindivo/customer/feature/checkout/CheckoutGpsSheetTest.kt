@@ -6,7 +6,6 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -225,7 +224,8 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
 
             assertEquals(1, orders().size)
             assertEquals("pending_cash", body().getValue("paymentIntent").jsonPrimitive.content)
-            assertTrue(body()["gpsValidation"] == null || body()["gpsValidation"] is JsonNull)
+            // `explicitNulls = false`: sin evidencia la clave no viaja.
+            assertNull(body()["gpsValidation"])
             assertEquals(CheckoutPhase.Opening, vm.state.value.phase)
         }
 
@@ -271,5 +271,66 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
 
             assertEquals(0, orders().size)
             assertTrue(vm.state.value.sheet is CheckoutSheet.GpsBlock)
+        }
+
+    @Test
+    fun `Continuar sin ubicacion cuando falla la senal envia gpsValidation failed sin coordenadas`() =
+        runTest(dispatcher) {
+            gpsAnswer = noGps(CreateOrderRequestGpsValidation.Method.failed)
+            val vm = cashReady()
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(0, orders().size)
+
+            vm.gpsContinue()
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            val gps = body().getValue("gpsValidation").jsonObject
+            assertEquals("failed", gps.getValue("method").jsonPrimitive.content)
+            assertNull(gps["lat"])
+            assertNull(gps["lng"])
+        }
+
+    @Test
+    fun `un reintento que se para antes de enviar no marca la hoja siguiente como reintento`() =
+        runTest(dispatcher) {
+            gpsAnswer = noGps()
+            val vm = cashReady()
+            vm.confirm()
+            advanceUntilIdle()
+
+            handlers["POST /customer/checkout/quote"] = { reply(500, problem(500, "internal_error", "x")) }
+            vm.gpsRetry()
+            advanceUntilIdle()
+            assertNull(vm.state.value.sheet)
+
+            handlers["POST /customer/checkout/quote"] = { reply(200, quoteJson()) }
+            vm.retryQuote()
+            advanceUntilIdle()
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertEquals(CheckoutSheet.GpsBlock(noPermission = true, afterRetry = false), vm.state.value.sheet)
+        }
+
+    @Test
+    fun `ENC-d una lectura adelantada de casi 2 minutos se fecha al leerse, no al confirmar`() =
+        runTest(dispatcher) {
+            handlers["POST /customer/orders"] = { reply(409, problem(409, "conflict", "El pedido sigue en proceso.")) }
+            val vm = cashReady()
+            // La lectura adelantada tiene 1:59 al confirmar: la captura guardada nace con esa edad.
+            gpsClockMs = GPS_FIX_MAX_AGE_MS - 1
+            gpsReadAgeMs = GPS_FIX_MAX_AGE_MS - 1
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(1, gpsReads.size)
+
+            // Al reenviar, la coordenada ya tiene 2:00 desde que se leyo (aunque se confirmo hace un segundo): se relee.
+            ledgerClock = { System.currentTimeMillis() + DEFAULT_FLIGHT_WINDOW_MS + 1 }
+            gpsClockMs = GPS_FIX_MAX_AGE_MS
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(2, gpsReads.size)
         }
 }

@@ -50,6 +50,12 @@ fun interface CheckoutGps {
      * defecto está quieto: nada caduca.
      */
     fun elapsedMs(): Long = 0L
+
+    /**
+     * Cuándo se leyó (en [elapsedMs]) la ubicación que devolvió la última [capture]: el instante de la lectura, que en
+     * una lectura adelantada es anterior al de confirmar. Por defecto, ahora.
+     */
+    fun lastReadAtMs(): Long = elapsedMs()
 }
 
 /** Lo que hace falta de la configuración pública para describir una lectura: el centro y la precisión aceptable. */
@@ -183,6 +189,9 @@ internal class LiveCheckoutGps(
     /** Cuándo terminó de leerse la lectura adelantada (en [now]); `null` mientras no ha terminado. */
     private var prefetchedAt: Long? = null
 
+    /** Cuándo se leyó la ubicación de la última captura (en [now]). */
+    private var lastReadAt = 0L
+
     /**
      * Adelanta la lectura al abrir el checkout (como `takePrefetchedGpsFix` de la web): sigue siendo una lectura en
      * vivo de esta sesión, solo que pedida antes. Sin permiso contesta [LocationReading.NoPermission] al instante.
@@ -207,7 +216,10 @@ internal class LiveCheckoutGps(
 
     override fun elapsedMs(): Long = now()
 
+    override fun lastReadAtMs(): Long = lastReadAt
+
     override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
+        lastReadAt = now()
         if (pay == PayMethod.Prepaid) return gpsEvidence(null, GpsConfig.Fallback, prepaid = true)
         // Una posición ya adelantada no sale si el permiso se revocó después: se descarta y no se manda nada.
         if (!permissionGranted()) {
@@ -219,10 +231,15 @@ internal class LiveCheckoutGps(
             // Una lectura adelantada que ya caducó se descarta: se lee de nuevo, como la web.
             val early = prefetched?.takeUnless { prefetchedExpired() }
             var reading = early?.await() ?: read()
+            // Una lectura adelantada se fecha cuando terminó de leerse, no cuando se confirma; una nueva, ahora.
+            lastReadAt = if (early != null) prefetchedAt ?: now() else now()
             prefetched = null
             prefetchedAt = null
             // Sin permiso al abrir: pudo darlo al tocar «Confirmar», así que se lee de nuevo.
-            if (early != null && reading == LocationReading.NoPermission) reading = read()
+            if (early != null && reading == LocationReading.NoPermission) {
+                reading = read()
+                lastReadAt = now()
+            }
             val gpsConfig = config.await()
             // Revalidado tras las esperas: si el permiso se revocó mientras tanto, no sale ninguna coordenada.
             if (permissionGranted()) gpsEvidence(reading, gpsConfig, prepaid = false) else null

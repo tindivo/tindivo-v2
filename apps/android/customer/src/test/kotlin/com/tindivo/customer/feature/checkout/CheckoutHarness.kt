@@ -183,6 +183,9 @@ abstract class CheckoutHarness {
     /** El reloj de la lectura de ubicación: una prueba lo adelanta para caducar una lectura guardada. */
     protected var gpsClockMs = 0L
 
+    /** Cuánto hace que se leyó la ubicación que devuelve la captura (una lectura adelantada ya vieja). */
+    protected var gpsReadAgeMs = 0L
+
     protected fun preciseFix() =
         CreateOrderRequestGpsValidation(
             method = CreateOrderRequestGpsValidation.Method.gps_high_accuracy,
@@ -240,6 +243,8 @@ abstract class CheckoutHarness {
             }
 
             override fun elapsedMs(): Long = gpsClockMs
+
+            override fun lastReadAtMs(): Long = gpsClockMs - gpsReadAgeMs
         }
 
     protected companion object {
