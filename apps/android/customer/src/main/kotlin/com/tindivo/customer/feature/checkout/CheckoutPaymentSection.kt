@@ -17,9 +17,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.customer.R
+import com.tindivo.customer.support.SupportViewModel
+import com.tindivo.customer.support.accountErrorHelpLink
+import com.tindivo.customer.support.openSafely
 
 /** «¿Cómo pagas?»: las opciones de la cotización, en su orden, agrupadas por momento. */
 internal fun LazyListScope.paymentSection(
@@ -54,6 +60,7 @@ internal fun LazyListScope.paymentSection(
                     quote,
                     form,
                 )
+                if (quote.options.any { it.unavailableReason == PREPAY_REQUIRED }) PrepayErrorHelp()
                 if (state.pay == PayMethod.Prepaid) PrepayExplainer(state.businessName)
                 val rules = quote.cash
                 if (state.pay == PayMethod.Cash && !state.isPickup && rules != null) {
@@ -109,6 +116,21 @@ private fun payHint(method: PayMethod): String =
         },
     )
 
+private const val PREPAY_REQUIRED = "prepay_required"
+
+/** «Si crees que hubo un error…» (CUS-SUP-005): el botón a WhatsApp de soporte, sin formulario de apelación. */
+@Composable
+private fun PrepayErrorHelp(supportViewModel: SupportViewModel = hiltViewModel()) {
+    val number = supportViewModel.number.collectAsStateWithLifecycle().value
+    val uriHandler = LocalUriHandler.current
+    TextButton(
+        onClick = { uriHandler.openSafely(accountErrorHelpLink(number)) },
+        modifier = Modifier.heightIn(min = 48.dp),
+    ) {
+        Text(text = stringResource(R.string.checkout_blocked_whatsapp))
+    }
+}
+
 /** Por qué una opción no está disponible, con las palabras de la web (el motivo viene del servidor). */
 @Composable
 private fun unavailableText(
@@ -117,7 +139,7 @@ private fun unavailableText(
 ): String =
     when (option.unavailableReason) {
         "exceeds_threshold" -> stringResource(R.string.checkout_pay_reason_threshold, quote.prepayThreshold.soles())
-        "prepay_required" -> stringResource(R.string.checkout_pay_reason_required)
+        PREPAY_REQUIRED -> stringResource(R.string.checkout_pay_reason_required)
         else -> stringResource(R.string.checkout_pay_reason_other)
     }
 

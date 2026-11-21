@@ -36,6 +36,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
+import com.tindivo.customer.support.SupportViewModel
+import com.tindivo.customer.support.cancelledOrderSupportLink
 import java.util.UUID
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
@@ -45,6 +48,7 @@ internal fun OrdersDestination(
     onOpenOrder: (id: String) -> Unit,
     onExplore: () -> Unit,
     onReorder: (businessId: String) -> Unit = {},
+    onReviewMoment: (open: Boolean) -> Unit = {},
     viewModel: OrdersViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
 ) {
@@ -54,6 +58,9 @@ internal fun OrdersDestination(
     LaunchedEffect(state) {
         if (state is OrdersUiState.LoggedOut) onBack()
     }
+    // CUS-REV-001: en el historial la pregunta de la reseña sale si no hay un pedido activo a la vista.
+    val reviewMoment = state.allowsReviewPrompt()
+    LaunchedEffect(reviewMoment) { onReviewMoment(reviewMoment) }
     OrdersScreen(
         state = state,
         onRetry = viewModel::refresh,
@@ -78,7 +85,7 @@ internal fun OrdersDestination(
 
 /** Lo que una tarjeta del historial puede hacer además de abrir el pedido. */
 internal data class OrderCardActions(
-    val supportNumber: String? = null,
+    val supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
     val onReorder: (businessId: String) -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
 )
