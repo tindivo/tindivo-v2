@@ -117,6 +117,7 @@ abstract class CheckoutHarness {
                 CustomerRepository(baseUrl, client, io),
                 AddressRepository(baseUrl, client, io),
                 CatalogRepository(baseUrl, client, io),
+                checkout,
             )
         configService = ConfigService(SystemRepository(baseUrl, client, io), "0.1.0", CoroutineScope(dispatcher))
     }

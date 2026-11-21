@@ -187,6 +187,88 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
     }
 
     @Test
+    fun `con compra previa la hoja nunca se abre, falte el permiso o la senal`() {
+        val trusted = CheckoutUiState(method = DeliveryChoice.Delivery, pay = PayMethod.Cash, previousPurchase = true)
+        assertEquals(false, gpsBlocks(trusted, null))
+        assertEquals(false, gpsBlocks(trusted.copy(pay = PayMethod.Yape), null))
+        assertEquals(
+            false,
+            gpsBlocks(
+                trusted,
+                CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.failed),
+            ),
+        )
+    }
+
+    private fun trustedBuyer() {
+        handlers["GET /customer/payment-options"] = {
+            reply(200, """{"data":{"contraentregaAllowed":true,"prepayRequired":false,"reason":"trusted"}}""")
+        }
+    }
+
+    @Test
+    fun `la carga lee la compra previa de payment-options y sin ella queda en falso`() =
+        runTest(dispatcher) {
+            trustedBuyer()
+            fillCart()
+            val trusted = viewModel()
+            advanceUntilIdle()
+            assertTrue(trusted.state.value.previousPurchase)
+            assertEquals(1, sent("GET", "/customer/payment-options").size)
+
+            handlers["GET /customer/payment-options"] = {
+                reply(200, """{"data":{"contraentregaAllowed":false,"prepayRequired":true,"reason":"prepay_required"}}""")
+            }
+            val newcomer = viewModel()
+            advanceUntilIdle()
+            assertEquals(false, newcomer.state.value.previousPurchase)
+        }
+
+    @Test
+    fun `con compra previa y sin permiso el pedido sale sin gpsValidation y sin hoja`() =
+        runTest(dispatcher) {
+            trustedBuyer()
+            gpsAnswer = noGps()
+            val vm = cashReady()
+
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            assertNull(vm.state.value.sheet)
+            assertNull(body().get("gpsValidation"))
+        }
+
+    @Test
+    fun `con compra previa y sin senal el pedido sale con gpsValidation failed y sin hoja`() =
+        runTest(dispatcher) {
+            trustedBuyer()
+            gpsAnswer = noGps(CreateOrderRequestGpsValidation.Method.failed)
+            val vm = cashReady()
+
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            assertNull(vm.state.value.sheet)
+            assertEquals("failed", body()["gpsValidation"]!!.jsonObject["method"]!!.jsonPrimitive.content)
+        }
+
+    @Test
+    fun `si payment-options falla se trata como sin compra previa y la hoja se abre`() =
+        runTest(dispatcher) {
+            handlers["GET /customer/payment-options"] = { reply(500, PROBLEM_404) }
+            gpsAnswer = noGps()
+            val vm = cashReady()
+
+            vm.confirm()
+            advanceUntilIdle()
+
+            assertEquals(0, orders().size)
+            assertEquals(CheckoutSheet.GpsBlock(noPermission = true, afterRetry = false), vm.state.value.sheet)
+        }
+
+    @Test
     fun `ENC-d una captura guardada de 2 minutos o mas no se reutiliza en el reenvio`() =
         runTest(dispatcher) {
             handlers["POST /customer/orders"] = { reply(409, problem(409, "conflict", "El pedido sigue en proceso.")) }

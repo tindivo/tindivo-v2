@@ -66,6 +66,11 @@ data class CheckoutUiState(
     val name: String = "",
     val phone: String? = null,
     val phoneVerified: Boolean = false,
+    /**
+     * Compra previa (`GET /customer/payment-options` con `reason = "trusted"`): puede pagar al recibir sin ubicación.
+     * Si la lectura falla es `false` (el lado seguro: se muestra la hoja de GPS).
+     */
+    val previousPurchase: Boolean = false,
     val note: String = "",
     val lines: List<BagLineUi> = emptyList(),
     val pay: PayMethod? = null,
@@ -95,7 +100,7 @@ data class CheckoutUiState(
         "CheckoutUiState(phase=$phase, businessName=$businessName, etaMin=$etaMin, etaMax=$etaMax, " +
             "acceptsDelivery=$acceptsDelivery, acceptsPickup=$acceptsPickup, method=$method, pickupWhen=$pickupWhen, " +
             "addresses=${addresses.size}, selectedAddressId=$selectedAddressId, name=***, " +
-            "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, note=***, " +
+            "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, previousPurchase=$previousPurchase, note=***, " +
             "lines=${lines.size}, pay=$pay, cash=$cash, quote=$quote, quoteStatus=$quoteStatus, sending=$sending, " +
             "locating=$locating, " +
             "message=$message, blockedDetail=$blockedDetail, reconcileSeen=$reconcileSeen, " +

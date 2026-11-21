@@ -132,14 +132,15 @@ internal fun gpsEvidence(
 
 /**
  * ¿Abre la hoja de GPS? Solo en un pedido a domicilio que se paga al recibir ([PayMethod.Cash] o [PayMethod.Yape]) y
- * sin ubicación utilizable: [evidence] es `null` (sin permiso) o `failed` (sin señal). Pagar por adelantado y el recojo
- * nunca la abren. Es solo un aviso con salidas: pedir sin ubicación sigue siendo posible (CA-CHK-10).
+ * sin ubicación utilizable: [evidence] es `null` (sin permiso) o `failed` (sin señal). Pagar por adelantado, el recojo
+ * y quien tiene compra previa ([CheckoutUiState.previousPurchase]: puede pagar al recibir sin GPS) nunca la abren. Es solo un aviso con salidas: pedir sin ubicación sigue siendo posible (CA-CHK-10).
  */
 internal fun gpsBlocks(
     form: CheckoutUiState,
     evidence: CreateOrderRequestGpsValidation?,
 ): Boolean =
     form.method == DeliveryChoice.Delivery &&
+        !form.previousPurchase &&
         form.pay != null &&
         form.pay != PayMethod.Prepaid &&
         (evidence == null || evidence.method == CreateOrderRequestGpsValidation.Method.failed)
