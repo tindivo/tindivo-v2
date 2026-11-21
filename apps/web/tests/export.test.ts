@@ -177,6 +177,11 @@ describe('/borrar-cuenta (CA-WPU-05)', () => {
     )
     expect(main).not.toMatch(/<form|<input|href="\/entrar/)
   })
+
+  it('no remite a un plazo de conservación que la Privacidad no da (CAX-002)', () => {
+    expect(visibleText(html('borrar-cuenta'))).not.toMatch(/plazo exacto/i)
+    expect(visibleText(html('privacidad'))).not.toMatch(/plazo exacto/i)
+  })
 })
 
 describe('build sin red', () => {

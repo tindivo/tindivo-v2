@@ -73,8 +73,7 @@ export default function BorrarCuentaPage() {
             número estaba bloqueado o solo podía pagar por adelantado, esa restricción se queda con
             el número hasta su fecha, aunque otra cuenta lo verifique después. Las reseñas se quedan
             sin tu nombre. Las fotos de comprobantes de pago se guardan con el pedido anonimizado el
-            tiempo que su negocio las necesite para su caja; el plazo exacto está en la política de
-            privacidad.
+            tiempo que su negocio las necesite para su caja.
           </p>
         </section>
 
