@@ -571,8 +571,8 @@
     <string name="courier_entry_title">Tindivo Entregas</string>
     <string name="courier_entry_subtitle">Llevamos tus cosas de un lugar a otro</string>
     <string name="courier_back">Volver</string>
-    <string name="courier_facts">Desde %1$s · Hasta 5 kg</string>
-    <string name="courier_facts_hours">Desde %1$s · Hasta 5 kg · %2$s</string>
+    <string name="courier_facts_price">Desde %1$s</string>
+    <string name="courier_facts_weight">Hasta %1$s kg</string>
     <string name="courier_hours_same">%1$s a %2$s %3$s</string>
     <string name="courier_hours_cross">%1$s %2$s a %3$s %4$s</string>
     <string name="courier_opens_at">Abre a las %1$s %2$s</string>
@@ -626,8 +626,10 @@
     <string name="courier_payer_info">Tú eliges. Se le paga al motorizado: efectivo exacto o Yape. El artículo no cambia de manos hasta que se cobra el transporte.</string>
     <string name="courier_note_label">Indicaciones para el motorizado (opcional)</string>
     <string name="courier_note_hint">Ej.: Está a nombre de María. Cuidado, es frágil.</string>
-    <string name="courier_ready_paid">Ya está listo y pagado. Tindivo no compra ni adelanta dinero. Máx. 5 kg.</string>
-    <string name="courier_allowed_info">Hasta 5 kg, sin foto. Sin alcohol, sin nada que necesite receta especial ni refrigeración. El motorizado puede rechazar la entrega si al recoger no cumple esto.</string>
+    <string name="courier_ready_paid">Ya está listo y pagado. Tindivo no compra ni adelanta dinero.</string>
+    <string name="courier_allowed_check">Lo que envío está permitido y cabe en la mochila del motorizado.</string>
+    <string name="courier_allowed_check_weight">Lo que envío está permitido, cabe en la mochila del motorizado y pesa hasta %1$s kg.</string>
+    <string name="courier_prohibited_info">No se puede enviar: alcohol, tabaco y vapeadores; joyas, metales y piedras preciosas; efectivo, billetes y moneda; armas, municiones y armas blancas; explosivos, pólvora, fuegos artificiales y venenos; drogas; material obsceno; animales vivos; objetos robados ni artículos de venta restringida. Los documentos sí. El motorizado puede rechazar la entrega si al recoger no cumple esto.</string>
     <string name="courier_submit">Pedir entrega · %1$s</string>
     <string name="courier_sending">Enviando…</string>
     <string name="courier_missing_origin_place">Falta elegir dónde recogemos</string>
@@ -637,7 +639,8 @@
     <string name="courier_missing_item">Falta decir qué llevamos</string>
     <string name="courier_missing_origin_phone">Falta el celular de quien entrega</string>
     <string name="courier_missing_destination_phone">Falta el celular de quien recibe</string>
-    <string name="courier_missing_ready">Marca que está listo y pagado</string>
+    <string name="courier_missing_prepaid">Marca que está listo y pagado</string>
+    <string name="courier_missing_allowed">Marca que lo que envías está permitido</string>
     <string name="courier_missing_requester_phone">Verifica tu número de WhatsApp antes de hacer un pedido.</string>
     <string name="courier_verify_phone">Verificar mi celular</string>
     <string name="courier_error_network">No pudimos conectarnos. Revisa tu señal y vuelve a tocar «Pedir entrega».</string>

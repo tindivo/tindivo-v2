@@ -1986,6 +1986,12 @@
                     "pausedMessage": {
                       "nullable": true,
                       "type": "string"
+                    },
+                    "maxWeightKg": {
+                      "description": "Peso máximo de un envío, en kg: `app_settings.courier.maxWeightKg`. Opcional: no está en el respaldo de la ruta ni en servidores anteriores; la app no escribe un peso por su cuenta",
+                      "type": "number",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
                     }
                   },
                   "required": [

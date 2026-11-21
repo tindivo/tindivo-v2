@@ -129,7 +129,7 @@ class CourierRequestViewModelTest : CourierHarness() {
         }
 
     @Test
-    fun `dice lo primero que falta y sin todo no envia`() =
+    fun `CA-ENT-01 · dice lo primero que falta y sin las dos casillas no envia`() =
         runTest {
             val viewModel = viewModel()
             assertEquals(CourierMissing.OriginPlace, viewModel.state.value.missing)
@@ -144,13 +144,37 @@ class CourierRequestViewModelTest : CourierHarness() {
             assertEquals(CourierMissing.OriginPhone, viewModel.state.value.missing)
             viewModel.setPhone(CourierEnd.Origin, "+51 912 000 111")
             assertEquals("912000111", viewModel.state.value.draft.origin.phone)
-            assertEquals(CourierMissing.ReadyAndPaid, viewModel.state.value.missing)
+            assertEquals(CourierMissing.Prepaid, viewModel.state.value.missing)
 
             viewModel.submit()
             assertTrue(gateway.sentKeys.isEmpty())
 
-            viewModel.setReadyAndPaid(true)
+            viewModel.setPrepaidConfirmed(true)
+            assertEquals(CourierMissing.Allowed, viewModel.state.value.missing)
+            viewModel.submit()
+            assertTrue(gateway.sentKeys.isEmpty())
+
+            viewModel.setWeightConfirmed(true)
             assertNull(viewModel.state.value.missing)
+        }
+
+    @Test
+    fun `CA-ENT-01 · desmarcar una casilla vuelve a bloquear el pedido`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.fill()
+            assertNull(viewModel.state.value.missing)
+
+            viewModel.setWeightConfirmed(false)
+            assertEquals(CourierMissing.Allowed, viewModel.state.value.missing)
+            viewModel.submit()
+            assertTrue(gateway.sentKeys.isEmpty())
+
+            viewModel.setWeightConfirmed(true)
+            viewModel.setPrepaidConfirmed(false)
+            assertEquals(CourierMissing.Prepaid, viewModel.state.value.missing)
+            viewModel.submit()
+            assertTrue(gateway.sentKeys.isEmpty())
         }
 
     @Test
@@ -166,7 +190,7 @@ class CourierRequestViewModelTest : CourierHarness() {
         }
 
     @Test
-    fun `pedir envia lo que se ve, con los rotulos de sistema si no hay nombre, y abre el seguimiento`() =
+    fun `CA-ENT-05 · pedir envia lo que se ve, con los rotulos de sistema si no hay nombre, y abre el seguimiento`() =
         runTest {
             gateway.creates += ApiResult.Success(CREATED)
             val viewModel = viewModel()
@@ -188,6 +212,7 @@ class CourierRequestViewModelTest : CourierHarness() {
             assertEquals("987654321", sent.requesterPhone)
             assertEquals(CreateCourierOrderRequest.Payer.origin, sent.payer)
             assertEquals("Cuidado, es frágil", sent.driverNote)
+            // Cada casilla manda su propio valor y el cuerpo no lleva ningún importe: la tarifa la pone el servidor.
             assertEquals(true, sent.weightConfirmed)
             assertEquals(true, sent.prepaidConfirmed)
             assertEquals(listOf("create:$ACCOUNT_A"), gateway.calls.filter { it.startsWith("create:") })

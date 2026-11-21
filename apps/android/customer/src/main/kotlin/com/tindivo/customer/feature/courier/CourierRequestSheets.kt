@@ -26,6 +26,7 @@ import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.addresses.AddressMap
 import com.tindivo.customer.feature.addresses.GeoPoint
+import com.tindivo.customer.feature.addresses.isReferenceOk
 import com.tindivo.customer.feature.checkout.AddressSheet
 import com.tindivo.customer.feature.checkout.CheckoutSheetActions
 import com.tindivo.customer.feature.checkout.ChoiceRow
@@ -183,7 +184,7 @@ private fun PinSheet(
     var point by remember(end) { mutableStateOf(start) }
     var reference by remember(end) { mutableStateOf(current.reference) }
     val inside = point?.let(state.area::contains) == true
-    val referenceOk = reference.trim().length in COURIER_REFERENCE_MIN..COURIER_REFERENCE_MAX
+    val referenceOk = isReferenceOk(reference)
     SheetFrame(title = stringResource(end.chooseTitle()), onClose = onClose, holdsMap = true) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             AddressMap(

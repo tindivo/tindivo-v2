@@ -89,6 +89,10 @@ export const CourierServiceStatusSchema = z.object({
     .meta({ description: 'Tal cual `app_settings.courier.hours`. Null en el respaldo de la ruta' }),
   price: legacyMoney,
   pausedMessage: z.string().nullable(),
+  maxWeightKg: z.number().positive().optional().meta({
+    description:
+      'Peso máximo de un envío, en kg: `app_settings.courier.maxWeightKg`. Opcional: no está en el respaldo de la ruta ni en servidores anteriores; la app no escribe un peso por su cuenta',
+  }),
 })
 
 /** GET /public/search — `search_catalog()`. */

@@ -208,11 +208,12 @@ internal fun CourierRequestViewModel.pick(
     choose()
 }
 
-/** Un borrador completo: recojo en la casa guardada, entrega en el sitio anterior de mamá, qué llevamos y la casilla. */
+/** Un borrador completo: recojo en la casa guardada, entrega en el sitio anterior de mamá, qué llevamos y las dos casillas. */
 internal fun CourierRequestViewModel.fill() {
     pick(CourierEnd.Origin) { pickAddress(CourierEnd.Origin, HOME.id) }
     pick(CourierEnd.Destination) { pickContact(CourierEnd.Destination, 0) }
     setItem("Documentos")
     setPhone(CourierEnd.Origin, "912000111")
-    setReadyAndPaid(true)
+    setPrepaidConfirmed(true)
+    setWeightConfirmed(true)
 }

@@ -15,6 +15,8 @@ internal data class CourierServiceUi(
     val opensAt: String?,
     val closesAt: String?,
     val pausedMessage: String?,
+    /** El peso máximo del servidor (`maxWeightKg`), listo para mostrar («5»); `null` si no lo mandó: no se inventa uno. */
+    val maxWeightKg: String? = null,
 ) {
     /** Se puede pedir ahora: el servicio está encendido y dentro de su horario. */
     val canRequest: Boolean get() = enabled && openNow
