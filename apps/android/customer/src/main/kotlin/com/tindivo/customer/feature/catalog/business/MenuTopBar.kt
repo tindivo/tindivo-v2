@@ -243,7 +243,7 @@ private fun SectionChip(
             modifier =
                 Modifier
                     .height(40.dp)
-                    .background(if (selected) scheme.onSurface else scheme.surface, CircleShape)
+                    .background(if (selected) scheme.onSurface else scheme.surfaceContainerLowest, CircleShape)
                     .then(if (selected) Modifier else Modifier.border(1.dp, scheme.outline, CircleShape))
                     .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center,
@@ -252,7 +252,7 @@ private fun SectionChip(
                 text = name,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = if (selected) scheme.surface else scheme.onSurface,
+                color = if (selected) scheme.surfaceContainerLowest else scheme.onSurface,
                 maxLines = 1,
             )
         }
@@ -271,7 +271,7 @@ private fun IndexButton(
         Surface(
             onClick = onClick,
             shape = CircleShape,
-            color = scheme.surface,
+            color = scheme.surfaceContainerLowest,
             border = BorderStroke(1.dp, scheme.outline),
             modifier = Modifier.size(TindivoSpacing.touchTarget).semantics { contentDescription = description },
         ) {
@@ -289,7 +289,11 @@ private fun IndexButton(
                     .padding(horizontal = 5.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = count.toString(), style = MaterialTheme.typography.labelSmall, color = scheme.surface)
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = scheme.surfaceContainerLowest,
+            )
         }
     }
 }

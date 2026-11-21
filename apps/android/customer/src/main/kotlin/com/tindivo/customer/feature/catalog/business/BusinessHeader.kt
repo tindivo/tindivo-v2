@@ -81,7 +81,10 @@ internal fun BusinessHeader(
         if (overlap != null) {
             Modifier
                 .pullUp(overlap)
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(
+                    MaterialTheme.colorScheme.surfaceContainerLowest,
+                    RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                )
         } else {
             Modifier.padding(top = TindivoSpacing.tight)
         }

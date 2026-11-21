@@ -72,6 +72,11 @@
 
     <string name="dish_group_required">Obligatorio</string>
     <string name="dish_group_done">Listo</string>
+    <string name="dish_group_optional">Opcional</string>
+    <plurals name="dish_required_progress">
+        <item quantity="one">%1$d de %2$d lista</item>
+        <item quantity="other">%1$d de %2$d listas</item>
+    </plurals>
     <string name="dish_group_counter">%1$d/%2$d</string>
     <string name="dish_group_counter_unlimited">%1$d/∞</string>
     <string name="dish_group_pick_one">Elige una opción</string>
