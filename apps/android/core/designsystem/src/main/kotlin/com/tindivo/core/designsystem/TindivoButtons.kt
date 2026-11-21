@@ -1,6 +1,8 @@
 package com.tindivo.core.designsystem
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +18,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -49,6 +52,8 @@ fun TindivoPrimaryButton(
     loading: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val pressed = interaction.collectIsPressedAsState().value
     val colors =
         if (loading) {
             ButtonDefaults.buttonColors(
@@ -56,10 +61,12 @@ fun TindivoPrimaryButton(
                 disabledContentColor = scheme.onPrimary,
             )
         } else {
-            ButtonDefaults.buttonColors()
+            // Presionado: `primaryPressed` (#CF4A0C). Material no lo da; se deriva del estado de la interacción.
+            ButtonDefaults.buttonColors(containerColor = if (pressed) TindivoColors.primaryPressed else scheme.primary)
         }
     Button(
         onClick = onClick,
+        interactionSource = interaction,
         enabled = enabled && !loading,
         colors = colors,
         modifier =
@@ -138,7 +145,7 @@ fun TindivoTextButton(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun TindivoButtonsPreview() {
     TindivoTheme {

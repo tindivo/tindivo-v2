@@ -82,4 +82,54 @@ object TindivoIcons {
                 "1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z",
         )
     }
+
+    /** Casa: pestaña Inicio. */
+    val Home: ImageVector by lazy { icon("Home", "M10,20v-6h4v6h5v-8h3L12,3 2,12h3v8z") }
+
+    /** Camión: pestaña y tarjeta de Entregas (hueco: la moto ilustrada de la v3.1 aún no es un recurso). */
+    val LocalShipping: ImageVector by lazy {
+        icon(
+            "LocalShipping",
+            "M20,8h-3V4H3c-1.1,0 -2,0.9 -2,2v11h2c0,1.66 1.34,3 3,3s3,-1.34 3,-3h6c0,1.66 1.34,3 3,3s3,-1.34 3,-3h2" +
+                "v-5" +
+                "l-3,-4zM6,18.5c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5 1.5,0.67 1.5,1.5 -0.67,1.5 -1.5,1.5z" +
+                "M19.5,9.5l1.96,2.5H17V9.5h2.5zM18,18.5c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5 1.5,0.67 " +
+                "1.5,1.5 -0.67,1.5 -1.5,1.5z",
+        )
+    }
+
+    /** Recibo: pestaña Pedidos. */
+    val Receipt: ImageVector by lazy {
+        icon(
+            "Receipt",
+            "M18,17H6v-2h12v2zM18,13H6v-2h12v2zM18,9H6V7h12v2zM3,22l1.5,-1.5L6,22l1.5,-1.5L9,22l1.5,-1.5L12,22l1.5," +
+                "-1.5L15,22l1.5,-1.5L18,22l1.5,-1.5L21,22V2l-1.5,1.5L18,2l-1.5,1.5L15,2l-1.5,1.5L12,2l-1.5,1.5L9,2 " +
+                "7.5,3.5 6,2 4.5,3.5 3,2v20z",
+        )
+    }
+
+    /** Persona: pestaña Cuenta. */
+    val Person: ImageVector by lazy {
+        icon(
+            "Person",
+            "M12,12c2.21,0 4,-1.79 4,-4s-1.79,-4 -4,-4 -4,1.79 -4,4 1.79,4 4,4zM12,14c-2.67,0 -8,1.34 -8,4v2h16v-2" +
+                "c0,-2.66 -5.33,-4 -8,-4z",
+        )
+    }
+
+    /** Bolsa de compras: la bolsa del cliente. */
+    val ShoppingBag: ImageVector by lazy {
+        icon(
+            "ShoppingBag",
+            "M18,6h-2c0,-2.21 -1.79,-4 -4,-4S8,3.79 8,6H6c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2" +
+                "V8" +
+                "c0,-1.1 -0.9,-2 -2,-2zM12,4c1.1,0 2,0.9 2,2h-4c0,-1.1 0.9,-2 2,-2zM18,20H6V8h2v2c0,0.55 0.45,1 1,1" +
+                "s1,-0.45 1,-1V8h4v2c0,0.55 0.45,1 1,1s1,-0.45 1,-1V8h2v12z",
+        )
+    }
+
+    /** Chevron hacia abajo: la píldora «Entregar en». */
+    val ExpandMore: ImageVector by lazy {
+        icon("ExpandMore", "M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6 1.41,-1.41z")
+    }
 }

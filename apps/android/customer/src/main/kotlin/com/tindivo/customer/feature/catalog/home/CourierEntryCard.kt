@@ -43,7 +43,7 @@ internal fun CourierEntryCard(onClick: () -> Unit) {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun CourierEntryCardPreview() {
     TindivoTheme { CourierEntryCard(onClick = {}) }

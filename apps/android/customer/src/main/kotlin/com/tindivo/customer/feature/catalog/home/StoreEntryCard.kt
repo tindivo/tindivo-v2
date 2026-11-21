@@ -43,7 +43,7 @@ internal fun StoreEntryCard(onClick: () -> Unit) {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun StoreEntryCardPreview() {
     TindivoTheme { StoreEntryCard(onClick = {}) }

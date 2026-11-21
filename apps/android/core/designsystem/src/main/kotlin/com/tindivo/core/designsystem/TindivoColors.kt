@@ -5,8 +5,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 /**
- * La paleta de Tindivo, la misma de la web (`packages/ui/src/theme.css`): naranja de marca, tinta cálida y superficie
- * crema. Solo hay tema claro, como en la web: el manual de marca no define uno oscuro.
+ * La paleta de Tindivo según el sistema de diseño v3.1 (`Docs/negocio/sistema-de-diseno.md`): naranja de marca, tinta
+ * fría y fondo `#F7F8FA`. El primario sigue en `#F97316` (decisión de Jesús, 2026-11-21). Solo hay tema claro, como en la web: el manual de marca no define uno oscuro.
  *
  * Quien dibuja una pantalla no usa estos valores directamente: usa `MaterialTheme.colorScheme`. Las dos excepciones
  * están en [TindivoColors]: el naranja para texto y los pares de aviso, que Material 3 no tiene.
@@ -16,16 +16,21 @@ internal object Palette {
     val BrandDark = Color(color = 0xFFC2410C)
     val BrandDeep = Color(color = 0xFF9A3412)
     val BrandSoft = Color(color = 0xFFFFF7ED)
+    val BrandPressed = Color(color = 0xFFCF4A0C)
+    val BrandMark = Color(color = 0xFFFA7020)
+    val CtaMid = Color(color = 0xFFEE6417)
+    val CtaEnd = Color(color = 0xFFE8590C)
 
-    val Ink = Color(color = 0xFF1A1614)
-    val InkMuted = Color(color = 0xFF57534E)
-    val InkSubtle = Color(color = 0xFFA8A29E)
+    val Ink = Color(color = 0xFF2E3236)
+    val InkMuted = Color(color = 0xFF50565D)
+    val InkTertiary = Color(color = 0xFF636B73)
+    val Outline = Color(color = 0xFF7A828C)
 
-    val Surface = Color(color = 0xFFFAF6F1)
-    val SurfaceLow = Color(color = 0xFFF0EBE3)
-    val SurfaceMid = Color(color = 0xFFF5F1EB)
+    val Surface = Color(color = 0xFFF7F8FA)
+    val SurfaceLow = Color(color = 0xFFEFF1F4)
+    val SurfaceMid = Color(color = 0xFFEFF1F4)
     val Card = Color(color = 0xFFFFFFFF)
-    val Border = Color(color = 0xFFEAE7E2)
+    val Border = Color(color = 0xFFE0E4E8)
 
     val Success = Color(color = 0xFF15803D)
     val SuccessSoft = Color(color = 0xFFDCFCE7)
@@ -46,7 +51,7 @@ internal object Palette {
  *   enlaces en naranja se usa [TindivoColors.brandText] (`#C2410C`, 5.2:1 sobre blanco).
  * - `secondary` es la tinta: el botón oscuro de la web.
  * - `tertiary` es el verde de «todo bien» (entregado, verificado).
- * - Las tarjetas van en blanco sobre la superficie crema, con borde: ver [TindivoCard].
+ * - Las tarjetas van en blanco sobre el fondo, con sombra suave y sin borde: ver [TindivoCard].
  */
 internal val TindivoLightColors: ColorScheme =
     lightColorScheme(
@@ -73,7 +78,7 @@ internal val TindivoLightColors: ColorScheme =
         surfaceVariant = Palette.SurfaceLow,
         onSurfaceVariant = Palette.InkMuted,
         surfaceTint = Color.Transparent,
-        outline = Palette.InkSubtle,
+        outline = Palette.Outline,
         outlineVariant = Palette.Border,
         surfaceContainerLowest = Palette.Card,
         surfaceContainerLow = Palette.Card,
@@ -96,6 +101,18 @@ object TindivoColors {
     val onWarningContainer: Color = Palette.WarningDeep
     val warning: Color = Palette.Warning
 
-    /** Borde fino de tarjetas y separadores. */
+    /** Texto apagado: etiquetas, placeholder y metadatos (`inkTertiary`, 5,41:1 sobre el fondo). */
+    val textMuted: Color = Palette.InkTertiary
+
+    /** Presionado del CTA (`primaryPressed`). */
+    val primaryPressed: Color = Palette.BrandPressed
+
+    /** Degradado decorativo de las tarjetas de servicio (`gradientCta`): el texto blanco va en la mitad oscura. */
+    val gradientCta: List<Color> = listOf(Palette.BrandMark, Palette.CtaMid, Palette.CtaEnd)
+
+    /** Sombra de las tarjetas (`elevation1`, rgba(46,50,54,.06)): el tono de la tinta. */
+    val shadow: Color = Palette.Ink
+
+    /** Divisor dentro de una superficie. */
     val border: Color = Palette.Border
 }

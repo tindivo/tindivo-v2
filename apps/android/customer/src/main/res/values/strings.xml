@@ -14,6 +14,10 @@
     <string name="diagnostics_config_api_version">Versión del contrato</string>
     <string name="diagnostics_config_server_time">Hora del servidor</string>
 
+    <string name="nav_home">Inicio</string>
+    <string name="nav_courier">Entregas</string>
+    <string name="nav_orders">Pedidos</string>
+    <string name="nav_account">Cuenta</string>
     <string name="catalog_home_title">¿Qué pedimos hoy?</string>
     <string name="catalog_home_restaurants">Restaurantes</string>
     <string name="catalog_home_empty">Aún no hay restaurantes disponibles.</string>

@@ -197,7 +197,7 @@ private fun ActiveBanner(
 internal fun errorBodyRes(error: AppError): Int =
     if (error is AppError.Network) R.string.error_network else R.string.error_generic
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun CourierHomePreview() {
     val card =

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -16,15 +17,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.account.AccountDestination
+import com.tindivo.customer.feature.account.AccountEntryViewModel
 import com.tindivo.customer.feature.account.ProfileLink
 import com.tindivo.customer.feature.addresses.ADDRESSES_CHANGED_KEY
 import com.tindivo.customer.feature.addresses.AddressFormDestination
@@ -89,6 +93,7 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
     val upgradeRequired = appViewModel.upgradeRequired.collectAsStateWithLifecycle().value
     val osNoticeVisible = appViewModel.osNoticeVisible.collectAsStateWithLifecycle().value
     val termsGate: TermsGateViewModel = hiltViewModel()
+    val accountEntry: AccountEntryViewModel = hiltViewModel()
     val termsRequired = termsGate.required.collectAsStateWithLifecycle().value
     val restoring = termsGate.restoring.collectAsStateWithLifecycle().value
     AppShell(
@@ -108,16 +113,37 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             // El aviso ya cubre la barra de estado: el contenido no la vuelve a reservar.
             val contentModifier =
                 if (osNoticeVisible) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier
+            // La barra inferior solo existe en las cuatro raíces; con ella a la vista, el contenido no reserva otra vez la
+            // barra de gestos.
+            val backStackEntry = navController.currentBackStackEntryAsState().value
+            val tab =
+                rootTabFor(
+                    route = backStackEntry?.destination?.route,
+                    courierListOnly = backStackEntry?.arguments?.getBoolean("listOnly") == true,
+                )
+            val signedIn = accountEntry.signedIn.collectAsStateWithLifecycle().value
             NavHost(
                 navController = navController,
                 startDestination = CatalogHomeRoute,
-                modifier = contentModifier,
+                modifier =
+                    (
+                        if (tab !=
+                            null
+                        ) {
+                            contentModifier.consumeWindowInsets(WindowInsets.navigationBars)
+                        } else {
+                            contentModifier
+                        }
+                    ).weight(1f),
             ) {
                 catalogGraph(navController)
                 accountGraph(navController)
                 addressesGraph(navController)
                 ordersGraph(navController)
                 if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
+            }
+            if (tab != null) {
+                BottomTabBar(selected = tab, onSelect = { navController.openTab(it, signedIn) })
             }
         }
     }
@@ -343,4 +369,26 @@ private fun OrderDetailWithReview(
         onRate = review.openForm,
     )
     ReviewHost(review)
+}
+
+/**
+ * Cambia de pestaña: siempre se vuelve a la raíz de esa pestaña, con la pila de Inicio por debajo (atrás sale de la
+ * app desde cualquier pestaña) y sin duplicar destinos. Sin sesión, «Cuenta» abre la entrada.
+ */
+private fun NavHostController.openTab(
+    tab: RootTab,
+    signedIn: Boolean,
+) {
+    val destination: Any =
+        when (tab) {
+            RootTab.Home -> CatalogHomeRoute
+            RootTab.Courier -> CourierHomeRoute()
+            RootTab.Orders -> OrdersRoute
+            RootTab.Account -> if (signedIn) AccountRoute else SignInRoute
+        }
+    navigate(destination) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = tab != RootTab.Account
+    }
 }

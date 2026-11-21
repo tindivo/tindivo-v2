@@ -8,6 +8,8 @@ Cómo se usa: `packages/design-tokens/tokens.json` (escrito a mano, con los mism
 `pnpm tokens:build`. Android hoy no los consume y difiere en lo que lista `packages/design-tokens/src/__tests__/android-parity.test.ts`;
 se ajusta en sus PRs de diseño.
 
+> Android, 2026-11-21 (decisión de Jesús): la app Android ya usa los valores de esta tabla (fondo `#F7F8FA`, tinta `#2E3236`, `inkSecondary`, `inkTertiary`, `outline`, `outlineVariant`, `surfaceSunken`, `primaryPressed`, tarjeta con `elevation1` sin borde, `ctaHeight` 56) con una sola excepción: **`primary` se queda en `#F97316`** en Android. Éxito, aviso y error no cambian.
+
 ## 1. Nombres estables de los tokens
 
 Cada token tiene **un nombre lógico en camelCase, igual en Compose y en SwiftUI**. Solo cambia dónde se accede a él:
