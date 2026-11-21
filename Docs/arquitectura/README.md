@@ -77,7 +77,7 @@ Dos caminos, los dos nacen **dentro de la transacción** del cambio (invariante 
 
 1. **Avisos push:** las funciones escriben un evento en `domain_events`; un trigger (`trg_dispatch_event` →
    `dispatch_event`) llama por HTTP a la Edge Function `send-push`, que envía el Web Push. El tag de cada aviso es
-   `${event_type}-${shortId}` (invariante 5). Lo enviado queda en `push_delivery_log`.
+   `${eventType}-${action}-${sid}` (invariante 5). Lo enviado queda en `push_delivery_log`.
 2. **Plazos:** los cambios de `orders` y de `courier_order_events` dejan una fila en `outbox_events` (triggers
    `trg_orders_outbox_events` y `courier_event_to_outbox`); un job de Inngest (`process-outbox-events-cron`) las
    reclama y programa los vencimientos (aceptación, validación, pago, comprobante, traspaso, Entregas).

@@ -578,7 +578,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 ## 11. Outbox, push y scheduling
 
 - **Outbox real y transaccional**: el `INSERT` en `domain_events` ocurre en la **MISMA transacción** que el cambio del agregado (vía RPC/repositorio transaccional, **no** dos `await` separados como en el ejemplo del spec).
-- **Relay push**: trigger `AFTER INSERT` (pg_net) lee secrets de Vault → Edge Function `send-push` (Deno + web-push). **Tag = `${event_type}-${shortId}`** (el v1 usaba solo `shortId` y colapsaba `OrderAssigned` con `OrderOverdue`). Objetivo P99 < 5s.
+- **Relay push**: trigger `AFTER INSERT` (pg_net) lee secrets de Vault → Edge Function `send-push` (Deno + web-push). **Tag = `${eventType}-${action}-${sid}`** (el v1 usaba solo `shortId` y colapsaba `OrderAssigned` con `OrderOverdue`). Objetivo P99 < 5s.
 - **Lista de `event_types` con push** debe coincidir con el mapa de UX (fuente única en `contracts`); test que lo verifique. (El spec tenía 20 en trigger vs 26 en UX.)
 - **`published_at`/retry**: la Edge Function marca `published_at`; un cron de reconciliación reprocesa no publicados con `retry_count` incremental.
 - **Scheduling**: Inngest `step.sleepUntil()` para deadlines individuales (auto-cancel-pending, checkOrderOverdue, processTransferTimeout, closeDriversAtShiftEnd). **Crons failsafe pg_cron** como red de seguridad, **idempotentes** (verifican estado antes de mutar).
