@@ -65,6 +65,9 @@ internal sealed interface SendProblem {
 
     data object TooLarge : SendProblem
 
+    /** Un HEIC en Android 8, que no lo decodifica: se pide una captura de pantalla (CUS-PAY-003). */
+    data object HeicUnsupported : SendProblem
+
     /** El servidor lo rechazó y lo explicó ([detail] es su texto, si lo trae). */
     data class Rejected(
         val detail: String?,

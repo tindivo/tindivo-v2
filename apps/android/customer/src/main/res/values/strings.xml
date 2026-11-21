@@ -199,6 +199,7 @@
 
     <string name="order_hero_received">Pedido recibido</string>
     <string name="order_hero_received_sub">Estamos confirmándolo con el restaurante</string>
+    <string name="order_hero_call_to_confirm_sub">Te llamaremos para confirmar tu pedido</string>
     <string name="order_hero_awaiting_availability_sub">Esperando confirmación de disponibilidad</string>
     <string name="order_hero_pay_now_sub">Restaurante confirmó. Paga ahora</string>
     <string name="order_hero_verifying_proof_sub">Verificando tu comprobante de pago</string>
@@ -409,6 +410,7 @@
     <string name="checkout_totals_loading">Calculando…</string>
 
     <string name="checkout_cta_sending">Enviando tu pedido…</string>
+    <string name="checkout_cta_locating">Verificando tu ubicación…</string>
     <string name="checkout_cta_calculating">Calculando tu pedido…</string>
     <string name="checkout_cta_quote_problem">Calcular de nuevo</string>
     <string name="checkout_cta_name">Agrega tu nombre</string>
@@ -557,6 +559,7 @@
     <string name="prepay_error_offline">No pudimos enviarlo: revisa tu conexión. Tu captura sigue aquí.</string>
     <string name="prepay_error_unreadable">No pudimos leer esa imagen. Elige otra captura.</string>
     <string name="prepay_error_too_large">La imagen es demasiado pesada. Elige otra captura.</string>
+    <string name="prepay_error_heic">No pudimos leer esa foto. Haz una captura de pantalla del pago y súbela de nuevo.</string>
     <string name="prepay_error_generic">No pudimos enviar tu comprobante. Inténtalo de nuevo.</string>
     <!-- Tindivo Entregas (D-62). Textos de la web: apps/customer/features/courier. -->
     <string name="courier_entry_title">Tindivo Entregas</string>

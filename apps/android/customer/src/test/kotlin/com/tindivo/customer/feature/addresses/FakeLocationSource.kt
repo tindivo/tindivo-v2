@@ -19,8 +19,14 @@ internal class FakeLocationSource(
 
     override fun isAvailable(): Boolean = available
 
+    /** Con `false`, el permiso se revocó: una lectura nueva contesta NoPermission y [hasPermission] lo dice. */
+    var permission = true
+
+    override fun hasPermission(): Boolean = permission
+
     override suspend fun current(): LocationReading {
         calls++
+        if (!permission) return LocationReading.NoPermission
         next?.let { return it }
         try {
             return pending.await()

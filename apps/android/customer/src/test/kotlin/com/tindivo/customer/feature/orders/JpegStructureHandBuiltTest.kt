@@ -311,7 +311,10 @@ class JpegStructureHandBuiltTest {
         val data = ByteArray(BIG_DATA) { pattern[it % pattern.size] }
         val jpeg = head() + data + EOI
 
-        assertArrayEquals(jpeg, (finishProofJpeg(jpeg) as EncodedProof.Ready).jpeg)
+        // Los 8 MB pasan del tope de 1,5 MB: el recorrido entero termina bien (limpio y sin cambios) y solo el peso
+        // lo deja fuera.
+        assertArrayEquals(jpeg, stripJpegMetadata(jpeg))
+        assertEquals(EncodedProof.TooLarge, finishProofJpeg(jpeg))
     }
 
     private fun assertRejected(

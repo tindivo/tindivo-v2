@@ -5,6 +5,9 @@ import java.util.UUID
 /** Lo que dice el título grande de un pedido en curso o entregado (textos literales de la web). */
 internal enum class OrderHero {
     Received,
+
+    /** Paga al recibir y la cajera tiene que llamar antes (`validando`): «Te llamaremos» (CUS-CHK-027). */
+    CallToConfirm,
     AwaitingAvailability,
     PayNow,
     VerifyingProof,
