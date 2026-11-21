@@ -20,10 +20,13 @@ import java.nio.file.StandardCopyOption
 /**
  * DataStore para tests de JVM que también corre en Windows.
  *
- * `FileStorage` de DataStore 1.2.1 mueve el temporal con `atomicMoveTo`: con API 26 o más usa `Files.move` con
- * `REPLACE_EXISTING`, y si no, `File.renameTo`. En un test de JVM `SDK_INT` vale 0, así que usa `renameTo`, que en
- * Windows devuelve `false` si el destino ya existe: la segunda escritura lanza «Unable to rename …». En Linux y macOS
- * `renameTo` reemplaza (POSIX). Aquí se escribe el temporal y se mueve con `REPLACE_EXISTING`. Solo para tests.
+ * Fuera de Windows devuelve el `DataStoreFactory.create` real, con el `FileStorage` de DataStore (incluido su
+ * chequeo de «multiple DataStores active for the same file»), igual que la app.
+ *
+ * En Windows no sirve: `FileStorage` de DataStore 1.2.1 guarda con `scratch.renameTo(file)` y `File.renameTo`
+ * devuelve `false` si el destino ya existe, así que la segunda escritura lanza «Unable to rename …». Ahí se usa un
+ * `Storage` propio que escribe el temporal y mueve con `REPLACE_EXISTING`. Solo para tests: la app real corre sobre
+ * Android, donde `FileStorage` funciona.
  */
 internal fun <T> testDataStore(
     serializer: Serializer<T>,
@@ -31,11 +34,20 @@ internal fun <T> testDataStore(
     scope: CoroutineScope,
     produceFile: () -> File,
 ): DataStore<T> =
-    DataStoreFactory.create(
-        storage = ReplacingFileStorage(serializer, produceFile),
-        corruptionHandler = corruptionHandler,
-        scope = scope,
-    )
+    if (System.getProperty("os.name").orEmpty().startsWith("Windows")) {
+        DataStoreFactory.create(
+            storage = ReplacingFileStorage(serializer, produceFile),
+            corruptionHandler = corruptionHandler,
+            scope = scope,
+        )
+    } else {
+        DataStoreFactory.create(
+            serializer = serializer,
+            corruptionHandler = corruptionHandler,
+            scope = scope,
+            produceFile = produceFile,
+        )
+    }
 
 private class ReplacingFileStorage<T>(
     private val serializer: Serializer<T>,
