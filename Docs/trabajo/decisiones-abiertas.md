@@ -118,3 +118,10 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 - **Decidir**: (1) a dónde lleva «compartir»; (2) si el distintivo lo marca el negocio o se calcula.
 - **Alternativas**: (a) quitarlos hasta tener enlaces; (b) el negocio marca el distintivo en el panel; (c) calcularlo por reglas.
 - **Recomendación**: (a). Jesús no respondió a esta decisión el 2026-11-19: queda abierta y no entra en la app.
+
+### DA-21 · Apple con correo oculto en iOS
+
+- 2026-11-19 · Bloquea: el inicio de iOS · Detectó: Claude
+- **Contexto**: el correo oculto de Apple puede crear una segunda cuenta que choque con «un celular, una cuenta» (`D-63`). Sin verificar contra las tiendas. Es la única decisión del PR de Acceso y Cuenta que no traía una recomendación.
+- **Alternativas**: se miran al empezar iOS.
+- **Recomendación**: ninguna todavía.

@@ -21,6 +21,10 @@ class BearerAuthInterceptorTest : HttpClientTestBase() {
     ) : AccessTokenSource {
         val refreshes = AtomicInteger()
 
+        @Volatile var blocked = false
+
+        override suspend fun accessGrant() = AccessGrant(accessToken(), onlyForTermsAcceptance = blocked)
+
         override suspend fun accessToken(): String? = token
 
         override suspend fun refresh(): String? {
@@ -69,6 +73,45 @@ class BearerAuthInterceptorTest : HttpClientTestBase() {
     fun `con sesion la peticion a la API lleva el token`() {
         server.enqueue(MockResponse(code = 200))
         call(FakeSource(token = "t1") { null })
+        assertEquals("Bearer t1", server.takeRequest().headers["Authorization"])
+    }
+
+    @Test
+    fun `CA-AUT-13 con la sesion bloqueada solo la aceptacion de los Terminos lleva el token`() {
+        server.enqueue(MockResponse(code = 200))
+        val source = FakeSource(token = "t1") { null }.also { it.blocked = true }
+
+        assertEquals(200, call(source, method = "POST", url = server.url("/api/v1/customer/terms-acceptance")))
+
+        assertEquals("Bearer t1", server.takeRequest().headers["Authorization"])
+    }
+
+    @Test
+    fun `CA-AUT-13 con la sesion bloqueada el resto de la API falla en local y no sale a la red`() {
+        val source = FakeSource(token = "t1") { null }.also { it.blocked = true }
+
+        for ((method, path) in listOf(
+            "GET" to "/api/v1/customer/profile",
+            "POST" to "/api/v1/customer/orders",
+            "GET" to "/api/v1/customer/terms-acceptance",
+            "POST" to "/api/v1/customer/phone/send-code",
+        )) {
+            val error =
+                runCatching { call(source, method = method, url = server.url(path)) }.exceptionOrNull()
+            assertEquals(SessionBlockedException::class.java, error?.javaClass)
+        }
+
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `CA-AUT-13 desbloqueada la sesion el resto de la API vuelve a llevar el token`() {
+        server.enqueue(MockResponse(code = 200))
+        val source = FakeSource(token = "t1") { null }.also { it.blocked = true }
+        source.blocked = false
+
+        assertEquals(200, call(source))
+
         assertEquals("Bearer t1", server.takeRequest().headers["Authorization"])
     }
 

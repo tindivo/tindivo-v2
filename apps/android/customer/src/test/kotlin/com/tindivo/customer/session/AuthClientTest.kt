@@ -60,7 +60,7 @@ class AuthClientTest {
         runTest {
             server.enqueue(unavailableRetryNow())
 
-            assertEquals(SignInResult.Failed, store().signInWithGoogle("id-token", "nonce"))
+            assertEquals(SignInResult.Failed, store().signInWithGoogle("id-token", "nonce", termsPending = false))
 
             assertEquals(1, server.requestCount)
         }
@@ -71,7 +71,7 @@ class AuthClientTest {
             server.enqueue(signIn(expiresIn = 30))
             server.enqueue(unavailableRetryNow())
             val store = store()
-            assertEquals(SignInResult.Success, store.signInWithGoogle("id-token", "nonce"))
+            assertEquals(SignInResult.Success, store.signInWithGoogle("id-token", "nonce", termsPending = false))
 
             assertNull(store.accessToken())
 

@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import javax.inject.Inject
 
 /** La palabra que hay que escribir, la misma que en la web: un toque sin querer no borra una cuenta. */
@@ -67,7 +66,7 @@ internal data class DeleteAccountUiState(
     val phase: DeletePhase = DeletePhase.Ready,
     val notice: DeleteNotice? = null,
 ) {
-    val confirmed: Boolean get() = typed.trim().uppercase(Locale.ROOT) == CONFIRM_WORD
+    val confirmed: Boolean get() = typed == CONFIRM_WORD
 
     val canDelete: Boolean get() = confirmed && phase == DeletePhase.Ready
 }

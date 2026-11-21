@@ -109,7 +109,7 @@ class SupabaseSessionStoreSignOutTest {
             val store = store(backend)
             val holder = launch { store.accessToken() }
             advanceUntilIdle()
-            val signIn = launch { store.signInWithGoogle("id", "nonce") }
+            val signIn = launch { store.signInWithGoogle("id", "nonce", termsPending = false) }
             runCurrent()
             val closed = async { store.signOutIf("user-1") }
             runCurrent()

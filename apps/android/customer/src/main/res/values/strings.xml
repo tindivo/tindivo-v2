@@ -103,9 +103,20 @@
     <string name="error_code">Código: %1$s</string>
 
     <string name="signin_entry">Entrar</string>
+    <string name="terms_gate_title">Actualizamos los términos</string>
+    <string name="terms_gate_message">Léelos y acéptalos para seguir pidiendo.</string>
+    <string name="terms_gate_accept">Aceptar y continuar</string>
+    <string name="terms_gate_sign_out">Cerrar sesión</string>
+    <string name="terms_gate_error">Algo salió mal. Inténtalo de nuevo.</string>
+    <string name="signin_not_now">Ahora no</string>
+    <string name="signin_terms_label">Acepto los Términos y la Política de privacidad</string>
+    <string name="signin_terms_link">Términos</string>
+    <string name="signin_privacy_link">Política de privacidad</string>
+    <string name="signin_terms_talkback">Acepta los Términos para continuar</string>
+    <string name="signin_terms_missing">Marca la casilla para entrar</string>
+    <string name="signin_terms_not_saved">No pudimos guardar. Reintenta.</string>
     <string name="signin_close_pending">No pudimos cerrar la sesión anterior en este aparato.</string>
     <string name="signin_close_retry">Reintentar</string>
-    <string name="signin_back">Volver</string>
     <string name="signin_title">Entrar a Tindivo</string>
     <string name="signin_google">Continuar con Google</string>
     <string name="signin_error">No se pudo entrar. Inténtalo otra vez.</string>
@@ -120,6 +131,10 @@
     <string name="account_phone_missing">Falta verificar tu teléfono para pedir</string>
     <string name="account_phone_verify">Verificar mi número</string>
     <string name="account_phone_change">Cambiar número</string>
+    <string name="account_name_edit">Editar nombre</string>
+    <string name="account_name_edit_title">Tu nombre</string>
+    <string name="account_name_save">Guardar</string>
+    <string name="account_name_cancel">Cancelar</string>
     <string name="account_sign_out">Cerrar sesión</string>
     <string name="account_orders">Mis pedidos</string>
 
@@ -270,7 +285,7 @@
     <string name="order_cancel_failed">No se pudo cancelar</string>
 
     <!-- Soporte por WhatsApp: support-link.tsx, cancelled-view.tsx y el historial de la web. -->
-    <string name="order_support_link">¿Algún problema? Escríbenos</string>
+    <string name="order_help_with_order">Ayuda con este pedido</string>
     <string name="order_support_whatsapp">Escribir por WhatsApp</string>
     <string name="order_back_to_menu">Volver al menú</string>
     <string name="order_support_cancelled">¿Problema con este pedido?</string>
@@ -394,7 +409,7 @@
     <string name="checkout_pay_prepaid">Yape o Plin adelantado</string>
     <string name="checkout_pay_prepaid_hint">Pagas apenas el local confirme. No pagas nada ahora.</string>
     <string name="checkout_pay_reason_threshold">Tu total con envío pasa de %1$s, así que el pago va adelantado.</string>
-    <string name="checkout_pay_reason_required">Por ahora tus pedidos van con pago adelantado. Si crees que es un error, escríbenos.</string>
+    <string name="checkout_pay_reason_required">Por ahora tus pedidos van con pago adelantado. Si crees que hubo un error, escríbenos por WhatsApp.</string>
     <string name="checkout_pay_reason_other">Por ahora no puedes elegir esta opción en este pedido.</string>
     <string name="checkout_prepay_how">¿Cómo funciona el pago adelantado?</string>
     <string name="checkout_prepay_step1">El local confirma tu pedido.</string>
@@ -454,7 +469,8 @@
     <string name="checkout_msg_options_changed">Cambiaron las opciones de tu pedido. Revísalas y vuelve a confirmar.</string>
 
     <string name="checkout_blocked_title">Cuenta en pausa</string>
-    <string name="checkout_blocked_message">Tu cuenta está temporalmente pausada por incidentes reiterados en las entregas. Escríbenos para regularizar tu situación y reactivarla.</string>
+    <string name="checkout_blocked_message">Tu cuenta está temporalmente pausada por incidentes reiterados en las entregas.</string>
+    <string name="support_error_phrase">Si crees que hubo un error, escríbenos por WhatsApp.</string>
     <string name="checkout_blocked_whatsapp">Escribir por WhatsApp</string>
     <string name="checkout_blocked_home">Volver al inicio</string>
     <string name="checkout_reconcile_title">No sabemos si tu pedido anterior llegó</string>
@@ -480,6 +496,9 @@
     <string name="phone_error_number">Escribe un celular de 9 dígitos que empiece con 9.</string>
     <string name="phone_error_code">Escribe el código de 6 dígitos.</string>
     <string name="phone_error_expired">Pasó demasiado tiempo. Pide un código nuevo.</string>
+    <string name="phone_other_account">Este número ya está asociado a otra cuenta.</string>
+    <string name="phone_contact_support">Contactar soporte</string>
+    <string name="phone_use_other_number">Usar otro número</string>
     <string name="phone_transfer_title">Este número está en otra cuenta</string>
     <string name="phone_transfer_message">Si lo usas aquí, la otra cuenta pierde la verificación y recibe un aviso. No se mueven pedidos ni datos.</string>
     <string name="phone_transfer_confirm">Usar en esta cuenta</string>
@@ -512,6 +531,11 @@
     <string name="checkout_sheet_add_new">Agregar nueva</string>
     <string name="checkout_sheet_close">Cerrar</string>
     <!-- Borrar mi cuenta: los mismos textos que la web /borrar-cuenta (apps/customer/app/borrar-cuenta/page.tsx). -->
+    <string name="account_help_title">Ayuda y legal</string>
+    <string name="account_help_whatsapp">Ayuda por WhatsApp</string>
+    <string name="account_terms">Términos y condiciones</string>
+    <string name="account_privacy">Privacidad</string>
+    <string name="account_arco">Ejercer mis derechos</string>
     <string name="account_delete">Borrar mi cuenta</string>
     <string name="delete_account_title">Borrar mi cuenta</string>
     <string name="delete_account_back">Volver</string>
@@ -524,7 +548,7 @@
     <string name="delete_account_removed_notices">Tus avisos en el celular, tus avisos de seguridad y tu aceptación de términos.</string>
     <string name="delete_account_removed_promos">Tus canjes de promociones.</string>
     <string name="delete_account_kept_title">Qué se conserva, y sin tu nombre</string>
-    <string name="delete_account_kept_body">Los pedidos que ya hiciste se quedan porque son la caja de cada negocio. Pierden todo lo que te identifica: tu nombre, tu teléfono, la dirección, la referencia, la ubicación y tus notas. Solo quedan el importe, el estado y las fechas. También se conservan, por seguridad contra fraudes, los reportes de pedidos no recibidos ligados a un número de teléfono, y el directorio de direcciones que usa la cajera para reconocer vecinos. Si tu número estaba bloqueado o solo podía pagar por adelantado, esa restricción se queda con el número hasta su fecha, aunque otra cuenta lo verifique después. Las reseñas se quedan sin tu nombre. Las fotos de comprobantes de pago se guardan 90 días con el pedido anonimizado.</string>
+    <string name="delete_account_kept_body">Los pedidos que ya hiciste se quedan porque son la caja de cada negocio. Pierden todo lo que te identifica: tu nombre, tu teléfono, la dirección, la referencia, la ubicación y tus notas. Solo quedan el importe, el estado y las fechas. También se conservan, por seguridad contra fraudes, los reportes de pedidos no recibidos ligados a un número de teléfono, y el directorio de direcciones que usa la cajera para reconocer vecinos. Si tu número estaba bloqueado o solo podía pagar por adelantado, esa restricción se queda con el número hasta su fecha, aunque otra cuenta lo verifique después. De tus reseñas se conservan la nota y las etiquetas, sin tu nombre; tu comentario se borra. Las fotos de comprobantes de pago se guardan 90 días con el pedido anonimizado.</string>
     <string name="delete_account_time_title">Cuánto tarda</string>
     <string name="delete_account_time_body">Es inmediato: al confirmar, tu cuenta deja de existir y no se puede recuperar. Si quieres volver a usar Tindivo, tendrás que crear una cuenta nueva.</string>
     <string name="delete_account_not_yet_title">Cuándo no se puede todavía</string>

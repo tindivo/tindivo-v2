@@ -30,6 +30,8 @@ internal class SheetTestSession(
     /** Una sola entrada, la de la apertura: la prueba no vuelve a entrar. */
     override val signInGeneration: StateFlow<Long> = MutableStateFlow(1L).asStateFlow()
 
+    override val termsRequired: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+
     override suspend fun accessToken(): String? = null
 
     override suspend fun refresh(): String? = null
@@ -37,7 +39,10 @@ internal class SheetTestSession(
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): SignInResult = SignInResult.Failed
+
+    override suspend fun confirmTerms(accountId: String): Boolean = false
 
     override suspend fun signOut() {
         mutable.value = SessionState.SignedOut

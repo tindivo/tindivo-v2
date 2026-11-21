@@ -235,7 +235,7 @@ afterAll(async () => {
 })
 
 describe('DELETE /customer/account: la cuenta se anonimiza y se va', () => {
-  it('borra lo personal, deja el pedido sin la persona y no toca el ledger', async () => {
+  it('CA-ACC-05 · borra lo personal, deja el pedido sin la persona y no toca el ledger', async () => {
     const c = await crearCliente()
     const seed = await pedidoEntregadoDe(c)
     await entregar(seed)
@@ -349,7 +349,7 @@ describe('DELETE /customer/account: la cuenta se anonimiza y se va', () => {
     expect(incidentes).toEqual([{ customer_phone: c.phone }])
   })
 
-  it('repetirla en la base responde already_deleted, y por HTTP el token ya no sirve', async () => {
+  it('CA-ACC-05 · repetirla en la base responde already_deleted, y por HTTP el token ya no sirve', async () => {
     const c = await crearCliente()
     expect((await borrar(c.token)).status).toBe(204)
     const again = await sdb.rpc('delete_customer_account', { p_user_id: c.userId })
@@ -357,7 +357,7 @@ describe('DELETE /customer/account: la cuenta se anonimiza y se va', () => {
     expect((await borrar(c.token)).status).toBe(401)
   })
 
-  it('con un pedido en curso: 409, y no cambia nada', async () => {
+  it('CA-ACC-04 · con un pedido en curso: 409, y no cambia nada', async () => {
     const c = await crearCliente()
     const seed = await pedidoEnCurso(c)
     const res = await borrar(c.token)
@@ -430,7 +430,7 @@ describe('DELETE /customer/account: la cuenta se anonimiza y se va', () => {
     expect(data?.user?.id).toBe('e2e00000-0000-4000-8000-000000000002')
   })
 
-  it('no toca a las demás cuentas', async () => {
+  it('CA-ACC-06 · no toca a las demás cuentas', async () => {
     const a = await crearCliente()
     const b = await crearCliente()
     const seedB = await pedidoEntregadoDe(b)

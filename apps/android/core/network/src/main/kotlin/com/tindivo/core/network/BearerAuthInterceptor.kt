@@ -3,10 +3,13 @@ package com.tindivo.core.network
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
  * De dónde sale el token de acceso. La implementación vive detrás de `SessionStore` (CLI-7): aquí no se sabe nada del
@@ -18,7 +21,33 @@ interface AccessTokenSource {
 
     /** Pide un token nuevo a Auth; `null` si la sesión ya no vale (revocada, refresh caducado, sin red). */
     suspend fun refresh(): String?
+
+    /**
+     * El token y, leído bajo el MISMO candado y DESPUÉS de restaurar la sesión, si está bloqueada hasta aceptar los
+     * Términos. Por defecto, sin bloqueo.
+     */
+    suspend fun accessGrant(): AccessGrant = AccessGrant(accessToken(), onlyForTermsAcceptance = false)
+
+    /**
+     * Espera, FUERA de cualquier candado, a que se resuelva la aceptación pendiente de una entrada nueva y devuelve el
+     * permiso vigente: con la aceptación confirmada, el token; si la sesión se cerró, sin token. Por defecto no espera.
+     */
+    suspend fun awaitTermsResolution(): AccessGrant = accessGrant()
 }
+
+/**
+ * Lo que la capa de red necesita para decidir. Con [onlyForTermsAcceptance] el token solo va a
+ * `POST /customer/terms-acceptance`; cualquier otra petición a la API falla en local, sin salir a la red. Si además
+ * [termsPending] (entrada nueva a la espera del 2xx de la aceptación), la petición espera ese 2xx en vez de fallar.
+ */
+class AccessGrant(
+    val token: String?,
+    val onlyForTermsAcceptance: Boolean,
+    val termsPending: Boolean = false,
+)
+
+/** La petición no salió: la sesión espera la aceptación de los Términos. */
+class SessionBlockedException : IOException("sesión bloqueada hasta aceptar los Términos")
 
 /**
  * El refresco único de CLI-7: si varias peticiones reciben 401 con el mismo token a la vez, solo la primera refresca;
@@ -63,24 +92,76 @@ class BearerAuthInterceptor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val token = if (request.url.isSameOrigin(apiOrigin)) runBlocking { source.accessToken() } else null
-        return if (token == null) chain.proceed(request) else proceedWithToken(chain, request, token)
+        if (!request.url.isSameOrigin(apiOrigin)) return chain.proceed(request)
+        // El presupuesto de espera es UNO por llamada: el reenvío tras un 401 gasta el mismo, no lo reinicia.
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TERMS_WAIT_MILLIS)
+        val token = authorize(chain, request, deadline)
+        return if (token == null) chain.proceed(request) else proceedWithToken(chain, request, token, deadline)
+    }
+
+    // La decisión de autorización, la misma para la salida inicial y para el reenvío (CAX-001): con el estado ya
+    // restaurado y vigente, nunca antes de saber si la aceptación está confirmada.
+    private fun authorize(
+        chain: Interceptor.Chain,
+        request: Request,
+        deadline: Long,
+    ): String? {
+        var grant = runBlocking { source.accessGrant() }
+        if (grant.onlyForTermsAcceptance && !request.isTermsAcceptance()) {
+            if (!grant.termsPending) throw SessionBlockedException()
+            grant = awaitAcceptance(chain, deadline)
+        }
+        return grant.token
+    }
+
+    // Las pantallas que esperan a la sesión cargan en cuanto la entrada se publica, antes del 2xx de la aceptación: esa
+    // petición espera aquí (fuera del candado de la sesión) en vez de fallar. runBlocking es válido porque OkHttp corre
+    // los interceptores en sus propios hilos, nunca en el principal. La espera va en tramos cortos para notar si se
+    // canceló la llamada (runBlocking no se entera) y soltar el hilo. Si la aceptación no se confirma, la sesión se
+    // cierra o vence el tope, falla como siempre y no sale a la red.
+    private fun awaitAcceptance(
+        chain: Interceptor.Chain,
+        deadline: Long,
+    ): AccessGrant {
+        var resolved: AccessGrant? = null
+        while (resolved == null && System.nanoTime() < deadline) {
+            resolved = runBlocking { withTimeoutOrNull(WAIT_SLICE_MILLIS) { source.awaitTermsResolution() } }
+            if (resolved == null && chain.call().isCanceled()) throw IOException("Canceled")
+        }
+        val usable = resolved != null && resolved.token != null && !resolved.onlyForTermsAcceptance
+        if (!usable) throw SessionBlockedException()
+        return checkNotNull(resolved)
     }
 
     private fun proceedWithToken(
         chain: Interceptor.Chain,
         request: Request,
         token: String,
+        deadline: Long,
     ): Response {
         val response = chain.proceed(request.withBearer(token))
         if (response.code != HTTP_UNAUTHORIZED) return response
-        val replacement = runBlocking { gate.replacementFor(token) } ?: return response
-        response.close()
-        return chain.proceed(request.withBearer(replacement))
+        // El reenvío pasa por la misma decisión que la salida inicial, con el estado de ahora: una entrada pendiente
+        // publicada mientras la petición volaba la hace esperar el 2xx (o fallar si la sesión se cierra).
+        return try {
+            val replaced = runBlocking { gate.replacementFor(token) } != null
+            val fresh = if (replaced) authorize(chain, request, deadline) else null
+            if (fresh == null) return response
+            response.close()
+            chain.proceed(request.withBearer(fresh))
+        } catch (e: IOException) {
+            response.close()
+            throw e
+        }
     }
 }
 
 private const val HTTP_UNAUTHORIZED = 401
+private const val TERMS_WAIT_MILLIS = 30_000L
+private const val WAIT_SLICE_MILLIS = 250L
+
+private fun Request.isTermsAcceptance(): Boolean =
+    method == "POST" && url.encodedPath.endsWith("/customer/terms-acceptance")
 
 private fun Request.withBearer(token: String): Request = newBuilder().header("Authorization", "Bearer $token").build()
 
