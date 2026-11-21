@@ -27,6 +27,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
+import com.tindivo.customer.support.SupportViewModel
+import com.tindivo.customer.support.orderHelpLink
 import java.util.UUID
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
@@ -105,7 +108,7 @@ internal fun OrderDetailScreen(
     prepay: PrepayUiState = PrepayUiState(),
     prepayActions: PrepayActions = PrepayActions(),
     cancel: CancelSection = CancelSection(),
-    supportNumber: String? = null,
+    supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
     onBackToMenu: () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
@@ -129,7 +132,7 @@ internal fun OrderDetailScreen(
 
                 is OrderDetailUiState.Loaded -> {
                     val order = state.order
-                    val supportLink = orderSupportLink(supportNumber, order.shortId)
+                    val supportLink = orderHelpLink(supportNumber, order.shortId, order.businessName)
                     if (order.phase is OrderPhase.Cancelled) {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             OrderTitle(order = order)
