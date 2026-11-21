@@ -7,6 +7,7 @@ import com.tindivo.customer.R
 internal fun OrderHero.titleRes(): Int =
     when (this) {
         OrderHero.Received,
+        OrderHero.CallToConfirm,
         OrderHero.AwaitingAvailability,
         OrderHero.PayNow,
         OrderHero.VerifyingProof,
@@ -28,6 +29,7 @@ internal fun OrderHero.titleRes(): Int =
 internal fun OrderHero.subtitleRes(): Int? =
     when (this) {
         OrderHero.Received -> R.string.order_hero_received_sub
+        OrderHero.CallToConfirm -> R.string.order_hero_call_to_confirm_sub
         OrderHero.AwaitingAvailability -> R.string.order_hero_awaiting_availability_sub
         OrderHero.PayNow -> R.string.order_hero_pay_now_sub
         OrderHero.VerifyingProof -> R.string.order_hero_verifying_proof_sub

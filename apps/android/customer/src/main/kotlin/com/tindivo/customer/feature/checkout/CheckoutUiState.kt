@@ -73,6 +73,8 @@ data class CheckoutUiState(
     val quote: QuoteView? = null,
     val quoteStatus: QuoteStatus = QuoteStatus.Loading,
     val sending: Boolean = false,
+    /** Mientras `sending`, se está esperando la lectura de la ubicación (solo en pedidos que la leen). */
+    val locating: Boolean = false,
     val message: CheckoutMessage? = null,
     val blockedDetail: String? = null,
     /** Ya abrió «Mis pedidos» desde la vista de reconciliación: recién entonces puede decir «Ya revisé». */
@@ -95,6 +97,7 @@ data class CheckoutUiState(
             "addresses=${addresses.size}, selectedAddressId=$selectedAddressId, name=***, " +
             "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, note=***, " +
             "lines=${lines.size}, pay=$pay, cash=$cash, quote=$quote, quoteStatus=$quoteStatus, sending=$sending, " +
+            "locating=$locating, " +
             "message=$message, blockedDetail=$blockedDetail, reconcileSeen=$reconcileSeen, " +
             "createdOrderId=$createdOrderId, sheet=$sheet)"
 }
@@ -150,6 +153,9 @@ fun Cta.sheet(selectedAddressId: String?): CheckoutSheet? =
 sealed interface Cta {
     data object Sending : Cta
 
+    /** Se envía, pero antes se espera la lectura de la ubicación: «Verificando tu ubicación…» (como la web). */
+    data object Locating : Cta
+
     data object Calculating : Cta
 
     data object QuoteProblem : Cta
@@ -184,6 +190,8 @@ sealed interface Cta {
 fun ctaOf(state: CheckoutUiState): Cta {
     val quote = state.quote
     return when {
+        state.sending && state.locating -> Cta.Locating
+
         state.sending -> Cta.Sending
 
         state.name.trim().isEmpty() -> Cta.NeedName

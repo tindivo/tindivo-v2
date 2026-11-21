@@ -20,30 +20,50 @@ import javax.imageio.ImageIO
  */
 class ProofJpegTest {
     @Test
-    fun `el submuestreo no baja el lado mayor de 1600`() {
-        assertEquals(2, proofSampleSize(4000, 3000))
-        assertEquals(2, proofSampleSize(3000, 4000))
-        assertEquals(8, proofSampleSize(12800, 100))
-        assertEquals(1, proofSampleSize(3199, 100))
+    fun `el submuestreo no baja del tamano final en ningun lado`() {
+        assertEquals(1, proofSampleSize(4000, 3000))
+        assertEquals(2, proofSampleSize(4400, 3300))
+        assertEquals(4, proofSampleSize(8800, 6600))
+        assertEquals(1, proofSampleSize(1080, 2400))
         assertEquals(1, proofSampleSize(1000, 800))
         assertEquals(1, proofSampleSize(0, 800))
         assertEquals(1, proofSampleSize(-5, -5))
+        for ((w, h) in listOf(4000 to 3000, 12000 to 9000, 9000 to 1000, 1500 to 9000)) {
+            val target = proofTargetSize(w, h)
+            val sample = proofSampleSize(w, h)
+            assertTrue("$w×$h con muestreo $sample", w / sample >= target.width && h / sample >= target.height)
+        }
     }
 
     @Test
-    fun `el tamano final respeta el lado maximo y la proporcion sin agrandar`() {
-        assertEquals(PixelSize(1600, 1200), proofTargetSize(4000, 3000))
-        assertEquals(PixelSize(1200, 1600), proofTargetSize(3000, 4000))
-        assertEquals(PixelSize(1600, 900), proofTargetSize(1600, 900))
+    fun `el tamano final respeta el lado mayor, el ancho minimo y la proporcion sin agrandar`() {
+        assertEquals(PixelSize(2200, 1650), proofTargetSize(4000, 3000))
+        assertEquals(PixelSize(1650, 2200), proofTargetSize(3000, 4000))
+        assertEquals(PixelSize(2200, 900), proofTargetSize(2200, 900))
         assertEquals(PixelSize(800, 600), proofTargetSize(800, 600))
-        assertEquals(PixelSize(1600, 1), proofTargetSize(20000, 1))
-        for (width in listOf(1601, 1999, 2047, 3001, 4032, 9999)) {
-            for (height in listOf(1, 7, 1600, 3024, 4000)) {
+        for (width in listOf(1, 899, 1079, 1080, 1081, 1601, 2199, 2201, 3001, 4032, 9999)) {
+            for (height in listOf(1, 7, 1080, 2200, 2400, 3024, 4000, 20000)) {
                 val size = proofTargetSize(width, height)
-                assertTrue("$width×$height dio $size", maxOf(size.width, size.height) <= MAX_PROOF_SIDE)
-                assertTrue(size.width >= 1 && size.height >= 1)
+                assertTrue("$width×$height dio $size", size.width >= 1 && size.height >= 1)
+                // Nunca se agranda.
+                assertTrue("$width×$height dio $size", size.width <= width && size.height <= height)
+                // Lado mayor <= 2200, o lado menor <= 1080 (el ancho minimo manda sobre el lado mayor).
+                assertTrue(
+                    "$width×$height dio $size",
+                    maxOf(size.width, size.height) <= MAX_PROOF_SIDE ||
+                        minOf(size.width, size.height) <= MIN_PROOF_WIDTH,
+                )
             }
         }
+    }
+
+    @Test
+    fun `CA-PAY-08 manda el ancho minimo 1080 sobre el lado mayor 2200 y nunca se agranda`() {
+        assertEquals(PixelSize(1080, 2400), proofTargetSize(1080, 2400))
+        assertEquals(PixelSize(1080, 2880), proofTargetSize(1500, 4000))
+        assertEquals(PixelSize(2880, 1080), proofTargetSize(4000, 1500))
+        assertEquals(PixelSize(2400, 1080), proofTargetSize(2400, 1080))
+        assertEquals(PixelSize(900, 2000), proofTargetSize(900, 2000))
     }
 
     @Test
@@ -117,21 +137,24 @@ class ProofJpegTest {
     }
 
     @Test
-    fun `la comprobacion final entrega un JPEG sin metadatos de hasta 1600 px`() {
-        val ok = finishProofJpeg(insertAfterSoi(jpeg(1600, 1200), exifSegment()))
+    fun `la comprobacion final entrega un JPEG sin metadatos de de hasta 2200 px`() {
+        val ok = finishProofJpeg(insertAfterSoi(jpeg(2200, 1200), exifSegment()))
 
         val jpeg = (ok as EncodedProof.Ready).jpeg
         assertEquals(0xFF, jpeg[0].toInt() and 0xFF)
         assertEquals(0xD8, jpeg[1].toInt() and 0xFF)
         assertFalse(hasJpegMetadata(jpeg))
         assertFalse(jpeg.containsAscii(GPS_MARK))
-        assertEquals(PixelSize(1600, 1200), jpegDimensions(jpeg))
+        assertEquals(PixelSize(2200, 1200), jpegDimensions(jpeg))
     }
 
     @Test
-    fun `un JPEG con el lado mayor por encima de 1600 no se sube`() {
-        assertEquals(EncodedProof.Unreadable, finishProofJpeg(jpeg(1601, 10)))
-        assertEquals(EncodedProof.Unreadable, finishProofJpeg(jpeg(10, 2400)))
+    fun `un JPEG con el lado mayor por encima de 2200 y el menor por encima de 1080 no se sube`() {
+        assertEquals(EncodedProof.Unreadable, finishProofJpeg(jpeg(2201, 1081)))
+        assertEquals(EncodedProof.Unreadable, finishProofJpeg(jpeg(1200, 2400)))
+        // El ancho minimo manda sobre el lado mayor: 1080x2400 si pasa.
+        assertTrue(finishProofJpeg(jpeg(1080, 2400)) is EncodedProof.Ready)
+        assertTrue(finishProofJpeg(jpeg(10, 2400)) is EncodedProof.Ready)
     }
 
     @Test

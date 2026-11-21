@@ -149,7 +149,7 @@ private class OneShotBody(
 private const val CONNECT_TIMEOUT_SECONDS = 10L
 private const val READ_TIMEOUT_SECONDS = 30L
 private const val WRITE_TIMEOUT_SECONDS = 60L
-private const val CALL_TIMEOUT_SECONDS = 90L
+private const val CALL_TIMEOUT_SECONDS = 120L
 
 /**
  * El cliente HTTP de las subidas a Storage: SIN interceptores (ni cabeceras de cliente, ni token, ni reintentos), sin
