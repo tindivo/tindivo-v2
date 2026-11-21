@@ -21,6 +21,11 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
 
     private fun body(index: Int = 0): JsonObject = Json.parseToJsonElement(bodyOf(orders()[index])).jsonObject
 
+    private fun gpsMethod(): String {
+        val gps = checkNotNull(body()["gpsValidation"]).jsonObject
+        return checkNotNull(gps["method"]).jsonPrimitive.content
+    }
+
     private suspend fun TestScope.cashReady(): CheckoutViewModel {
         fillCart()
         val vm = viewModel()
@@ -255,7 +260,7 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
 
             assertEquals(1, orders().size)
             assertNull(vm.state.value.sheet)
-            assertEquals("failed", body()["gpsValidation"]!!.jsonObject["method"]!!.jsonPrimitive.content)
+            assertEquals("failed", gpsMethod())
         }
 
     @Test
@@ -270,7 +275,7 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
 
             assertEquals(1, orders().size)
             assertNull(vm.state.value.sheet)
-            assertEquals("failed", body()["gpsValidation"]!!.jsonObject["method"]!!.jsonPrimitive.content)
+            assertEquals("failed", gpsMethod())
         }
 
     @Test
