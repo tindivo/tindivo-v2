@@ -43,7 +43,7 @@ class CheckoutGpsRetryKeyTest : CheckoutHarness() {
     /** El primer envío queda incierto (500) y la pantalla se recrea con una ubicación distinta y la ventana agotada. */
     private suspend fun TestScope.secondScreenAfterUncertainSend(): CheckoutViewModel {
         gpsAnswer = { reading("-9.1547000") }
-        handlers["POST /customer/orders"] = { reply(500, problem(500, "internal_error", "x")) }
+        handlers["POST /customer/orders"] = { reply(409, problem(409, "conflict", "El pedido sigue en proceso.")) }
         fillCart()
         val first = viewModel()
         advanceUntilIdle()

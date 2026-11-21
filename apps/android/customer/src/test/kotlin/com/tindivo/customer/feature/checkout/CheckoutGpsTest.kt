@@ -270,7 +270,7 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
         runTest(dispatcher) {
             val location = FakeLocationSource(next = fix())
             gpsOverride = LiveCheckoutGps(location) { null }
-            handlers["POST /customer/orders"] = { reply(500, problem(500, "internal_error", "x")) }
+            handlers["POST /customer/orders"] = { reply(409, problem(409, "conflict", "El pedido sigue en proceso.")) }
             val vm = ready()
             vm.selectPay(PayMethod.Yape)
 
