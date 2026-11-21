@@ -37,12 +37,15 @@ terminal, igual que en los pedidos de restaurante.
 
 ## Qué se lleva y qué no
 
+> Decisión de Jesús, 2026-11-16 (mochila, sin medida) y 2026-11-19 (medicamentos de venta libre sí; animales vivos y
+> objetos robados no; conversación con Claude Code: «apruebo las recomendaciones de los cuatro»).
 > Decisión de Jesús, 2026-11-17: la regla de qué se puede enviar es la lista de prohibidos de inDrive
 > (https://indrive.com/delivery), consultada el 2026-11-17. Sustituye a la lista anterior (dinero y valores,
 > documentos de identidad, alcohol, medicinas con receta retenida, animales y peligrosos).
 
-**Se lleva** lo que ya está coordinado, pagado y listo, siempre que quepa en la mochila (45 × 45 × 45 cm) y no pase de
-⚙ `courier.maxWeightKg`. Los **documentos se permiten**. También va comida (decisión de Jesús, 2026-11-11: ver arriba).
+**Se lleva** lo que ya está coordinado, pagado y listo, siempre que quepa en la mochila del motorizado (sin medida en
+centímetros: lo decide el motorizado al recoger) y no pase de ⚙ `courier.maxWeightKg`. Los medicamentos de venta libre
+se permiten. Los **documentos se permiten**. También va comida (decisión de Jesús, 2026-11-11: ver arriba).
 
 **No se lleva:**
 
@@ -53,10 +56,9 @@ terminal, igual que en los pedidos de restaurante.
 - explosivos, pólvora, fuegos artificiales y venenos;
 - drogas;
 - material obsceno;
-- artículos de venta restringida.
-
-**Por decidir (Jesús):** medicamentos, animales vivos y objetos robados. Hasta que se decida, la lista de arriba es
-la única regla.
+- artículos de venta restringida;
+- animales vivos;
+- objetos robados.
 
 Lo frágil no se prohíbe ni se marca al pedir (decisión de Jesús, 2026-11-11): se le dice al motorizado cuando llega a
 recoger, y él decide si puede llevarlo. Las apps envían `isFragile = false`. Los términos de responsabilidad, con tope
@@ -64,11 +66,9 @@ de S/ 200, son un **borrador sin revisión legal**.
 
 ## Cómo se pide
 
-Aprobado por Jesús el 2026-10-07: **una sola entrada** (la tarjeta del inicio y `tindivo.com/entregas` abren lo mismo),
-el **mapa del punto A primero**, y los atajos dentro del mapa: **repetir una entrega** (hasta 3 anteriores), **buscar un
-lugar** por su nombre (negocios primero, luego referencias públicas) y, en el punto B, **«Usar mi dirección»**. «Listo
-y pagado» se vuelve a marcar en cada envío. Recoger de un negocio del directorio llega cuando haya negocios cargados con
-su contacto.
+Lo que hace la app del cliente al pedir (la entrada única, el mapa del punto A, los atajos, las confirmaciones y el
+seguimiento) vive en `Docs/producto/entregas/` (aprobado por Jesús el 2026-10-07). Aquí queda la regla: «listo y
+pagado» se vuelve a marcar en cada envío.
 
 ## El motorizado
 
