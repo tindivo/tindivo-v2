@@ -61,7 +61,7 @@ class LiveCheckoutGpsTest {
         }
 
     @Test
-    fun `una configuracion que no llego no se guarda: el siguiente pedido la vuelve a pedir`() =
+    fun `una configuracion que no llego no se guarda, el siguiente pedido la vuelve a pedir`() =
         runTest {
             var loads = 0
             val gps =
