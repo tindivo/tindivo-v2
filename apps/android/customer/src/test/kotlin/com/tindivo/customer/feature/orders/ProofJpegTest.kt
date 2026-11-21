@@ -58,6 +58,15 @@ class ProofJpegTest {
     }
 
     @Test
+    fun `CA-PAY-08 manda el ancho minimo 1080 sobre el lado mayor 2200 y nunca se agranda`() {
+        assertEquals(PixelSize(1080, 2400), proofTargetSize(1080, 2400))
+        assertEquals(PixelSize(1080, 2880), proofTargetSize(1500, 4000))
+        assertEquals(PixelSize(2880, 1080), proofTargetSize(4000, 1500))
+        assertEquals(PixelSize(2400, 1080), proofTargetSize(2400, 1080))
+        assertEquals(PixelSize(900, 2000), proofTargetSize(900, 2000))
+    }
+
+    @Test
     fun `quitar metadatos elimina el EXIF con GPS y deja la imagen intacta`() {
         val clean = jpeg(1200, 800)
         val withExif = insertAfterSoi(clean, exifSegment(), commentSegment())
