@@ -88,7 +88,7 @@ class NewSignInTermsPendingNetworkTest {
     }
 
     @Test
-    fun `CA-AUT-13 con una entrada nueva pendiente el registro de la aceptacion si sale y, confirmada, las demas rutas se abren`() {
+    fun `CA-AUT-13 con una entrada nueva pendiente la aceptacion si sale y, confirmada, las demas rutas se abren`() {
         val store = store()
         runBlocking { store.signInWithGoogle("id", "nonce", termsPending = true) }
         server.enqueue(MockResponse(code = 200))
