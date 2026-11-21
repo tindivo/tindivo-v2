@@ -21,11 +21,30 @@ private val LOCATION_PERMISSIONS =
 /** ¿Este pedido lee la ubicación? Solo el que se paga al recibir en delivery; el prepago y el recojo no la necesitan. */
 internal fun CheckoutUiState.needsLocation(): Boolean = !isPickup && (pay == PayMethod.Cash || pay == PayMethod.Yape)
 
+/** Qué hace un toque en «Confirmar pedido» respecto al permiso de ubicación. */
+internal enum class ConfirmStep { AskPermission, Ignore, Confirm }
+
+/**
+ * La decisión pura de [rememberConfirmWithLocation]. Mientras el diálogo del sistema espera respuesta ([waitingAnswer])
+ * un toque más no confirma: el pedido sigue solo cuando la persona contesta.
+ */
+internal fun confirmStep(
+    needsLocation: Boolean,
+    asked: Boolean,
+    waitingAnswer: Boolean,
+    granted: Boolean,
+): ConfirmStep =
+    when {
+        waitingAnswer -> ConfirmStep.Ignore
+        needsLocation && !asked && !granted -> ConfirmStep.AskPermission
+        else -> ConfirmStep.Confirm
+    }
+
 /**
  * La acción de «Confirmar pedido» con la ubicación en tiempo de ejecución (CUS-CHK-009). Si el pedido la lee y aún no
  * hay permiso, lo pide UNA vez por pantalla y, diga lo que diga la persona, sigue con [onConfirm]: negar el permiso
  * nunca impide pedir (CA-CHK-10). Si ya lo negó para siempre, Android no muestra el diálogo y devuelve la negativa al
- * instante: el pedido sigue igual.
+ * instante: el pedido sigue igual. Un toque mientras el diálogo está abierto se ignora.
  */
 @Composable
 internal fun rememberConfirmWithLocation(
@@ -34,18 +53,29 @@ internal fun rememberConfirmWithLocation(
 ): () -> Unit {
     val context = LocalContext.current
     var asked by rememberSaveable { mutableStateOf(false) }
+    var waitingAnswer by rememberSaveable { mutableStateOf(false) }
     val latestConfirm = rememberUpdatedState(onConfirm)
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            waitingAnswer = false
             latestConfirm.value()
         }
     val needsLocation = state.needsLocation()
     return {
-        if (needsLocation && !asked && !hasLocationPermission(context)) {
-            asked = true
-            launcher.launch(LOCATION_PERMISSIONS)
-        } else {
-            onConfirm()
+        when (confirmStep(needsLocation, asked, waitingAnswer, hasLocationPermission(context))) {
+            ConfirmStep.AskPermission -> {
+                asked = true
+                waitingAnswer = true
+                launcher.launch(LOCATION_PERMISSIONS)
+            }
+
+            ConfirmStep.Ignore -> {
+                Unit
+            }
+
+            ConfirmStep.Confirm -> {
+                onConfirm()
+            }
         }
     }
 }
