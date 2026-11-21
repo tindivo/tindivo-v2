@@ -9,9 +9,9 @@ codigo:
   web: [apps/customer/features/catalog/**, apps/customer/lib/business-ordering.ts, apps/customer/lib/business-path.ts, apps/customer/lib/whatsapp.ts]
   android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/**]
   ios: []
-  backend: [apps/api/app/api/v1/public/businesses/**, apps/api/app/api/v1/public/search/**, apps/api/app/api/v1/public/schedule/**, packages/contracts/src/menu-availability.ts, packages/contracts/src/schedule.ts]
+  backend: [apps/api/app/api/v1/public/businesses/**, apps/api/app/api/v1/public/search/**, apps/api/app/api/v1/public/schedule/**, packages/contracts/src/menu-availability.ts, packages/contracts/src/schedule.ts, packages/contracts/src/featured-section.ts, apps/api/app/api/v1/business/profile/route.ts]
 operaciones: [searchCatalog, getOrderIntakeStatus]
-reglas: [CART_MAX_QUANTITY, CART_MAX_NOTE_LENGTH, isWithinWindow, describeWindow, getOpenStatus, checkModifierSelection, ACTIVE_ORDER_STATUSES, app_settings:platform_schedule]
+reglas: [FEATURED_MAX_ITEMS, CART_MAX_QUANTITY, CART_MAX_NOTE_LENGTH, isWithinWindow, describeWindow, getOpenStatus, checkModifierSelection, ACTIVE_ORDER_STATUSES, app_settings:platform_schedule]
 ---
 
 # Catálogo y negocio
@@ -33,7 +33,7 @@ reglas: [CART_MAX_QUANTITY, CART_MAX_NOTE_LENGTH, isWithinWindow, describeWindow
   Por eso CUS-CAT-023 pide que el servidor las entregue ya calculadas; mientras tanto la API manda la regla y no el resultado, por la caché de 15 s (`Docs/negocio/servicios/pedidos-restaurante.md`).
 - El negocio cerrado, pausado o sin confirmar la jornada se rechaza **en el servidor** (`createOrder`, capacidad checkout);
   la app solo lo anticipa (CUS-CAT-012). El modo catálogo (`catalog_only`) es la excepción: pedir por WhatsApp es el pedido.
-- Las decisiones del 17-nov (CUS-CAT-026 a 034) ya están aplicadas en esta ficha; el código Android las sigue desde `feat/android-catalogo`.
+- Las decisiones del 17-nov (CUS-CAT-026 a 034) ya están aplicadas en esta ficha; Android sigue las de franja, cerrado, modo catálogo, «Destacados» e Inicio, y las demás están por hacer (Defectos y PR).
 - iOS aún no empieza: `codigo.ios` vacío. La web del cliente se apaga y no se corrige.
 
 ## Requisitos
@@ -57,7 +57,7 @@ reglas: [CART_MAX_QUANTITY, CART_MAX_NOTE_LENGTH, isWithinWindow, describeWindow
 | CUS-CAT-015 | Cuando el negocio esté en modo catálogo (`catalog_only`), la app debe ofrecer «Pedir por WhatsApp» y «Llamar» en lugar de la bolsa; cierre y pausa no los bloquean. Conviven con CUS-CAT-026: sin contacto en la hoja de información, pero en modo catálogo pedir por WhatsApp es el pedido (decisión de Jesús, 2026-11-19). | `CAT.md` · `DECISIONS.md §18` | |
 | CUS-CAT-016 | La app debe resolver las capacidades del negocio (delivery, recojo) con datos frescos: nunca se guardan con la bolsa y, sin dato, el 409 del servidor es el suelo. | `CAT.md` · `getBusiness` | |
 | CUS-CAT-017 | Donde el negocio acepte delivery y recojo, la app debe mostrar el selector Delivery/Recojo; si solo acepta uno, queda fijo. | `CAT.md` · Canvas v35, tablero `Negocio` | |
-| CUS-CAT-018 | Si el cliente ya tiene un pedido activo (`ACTIVE_ORDER_STATUSES`) en un negocio, la app debe impedir crear otro en ese negocio y enlazar al existente. | `CAT.md` · `createOrder` (409 `active_order_block`) | ★ |
+| CUS-CAT-018 | Si el cliente ya tiene un pedido activo (`ACTIVE_ORDER_STATUSES`) en un negocio, la app debe impedir crear otro en ese negocio y enlazar al existente. | `CAT.md` · `createOrder` (hoy 422 `validation_error`; ver Abierto) | ★ |
 | CUS-CAT-020 | La app debe mostrar un carrusel de promociones en el Inicio. Recortada del lanzamiento (promociones): sus banners hoy están escritos en la web. | `CAT.md` · decisión 18 de `Docs/trabajo/app-cliente/README.md` | |
 | CUS-CAT-021 | La app debe mostrar el horario semanal (hoy resaltado, el día sin turno dice «Cerrado») y los datos del negocio, sin contacto (CUS-CAT-026). | `CAT.md` (modificado por CUS-CAT-026) · `getBusiness` | |
 | CUS-CAT-022 | **Diferido a después del lanzamiento** (decisión de Jesús, 2026-11-19): la app debe abrir un negocio desde un enlace compartido (`/negocio/{slug}`); los enlaces antiguos con id siguen funcionando. | `CAT.md` | |
@@ -81,12 +81,16 @@ reglas: [CART_MAX_QUANTITY, CART_MAX_NOTE_LENGTH, isWithinWindow, describeWindow
 | CA-CAT-03 | Dado un negocio cerrado, cuando se abre su carta, entonces los platos se ven, agregar queda deshabilitado y se dice cuándo abre. | CUS-CAT-012 |
 | CA-CAT-04 | Dado un negocio en modo catálogo, entonces la carta ofrece «Pedir por WhatsApp» y «Llamar» en lugar de la bolsa, también si está cerrado. | CUS-CAT-015 |
 | CA-CAT-05 | Dado el Inicio, entonces el título dice «¿Qué pedimos hoy?» y no aparece la tarjeta de Store. | CUS-CAT-002, CUS-CAT-032 |
+| CA-CAT-06 | Dado un plato con un grupo de opciones obligatorio y otro opcional, cuando se elige una opción, entonces en un grupo de una sola elección la nueva reemplaza a la anterior, el botón sigue pidiendo completar lo obligatorio y solo los grupos obligatorios bloquean. | CUS-CAT-008, CUS-CAT-033 |
+| CA-CAT-07 | Dado un plato con precio base, un grupo de tamaño con precio completo y extras con recargo, entonces el tamaño se muestra con su precio y los extras con «+ S/ x», y el precio de la línea es (precio del tamaño + extras) × cantidad, sin redondear. | CUS-CAT-009, CUS-CAT-034 |
 
 Los criterios de cada pantalla (`CA-CAT-P1` a `CA-CAT-P9`) viven en su ficha.
 
 ## Abierto
 
 - **Compartir plato y «Para compartir»** (decisión 9 del PR #198): sin recomendación ni decisión de Jesús; no entran. Registrado en `Docs/trabajo/decisiones-abiertas.md` (DA-17).
+
+- **Código HTTP del bloqueo por pedido activo** (CUS-CAT-018): el requisito decía 409 `active_order_block`, pero `active_order_block` es solo un marcador interno (`details` de la RPC `create_customer_order`) y la API responde 422 `validation_error` con «Ya tienes un pedido activo…». `contrato-rest.md` y el OpenAPI no lo definen. Sin elegir ganador: DA-24 en `Docs/trabajo/decisiones-abiertas.md`.
 
 ## Reglas
 
@@ -95,16 +99,18 @@ Los criterios de cada pantalla (`CA-CAT-P1` a `CA-CAT-P9`) viven en su ficha.
 - Franja de un plato: `isWithinWindow` y su texto, `describeWindow`.
 - Negocio abierto: `getOpenStatus`; horario de la plataforma: `app_settings:platform_schedule`.
 - Estados de pedido activo: `ACTIVE_ORDER_STATUSES`.
+- Tope de «Destacados»: `FEATURED_MAX_ITEMS`.
 
 ## Defectos
 
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
 | 1 | CUS-CAT-002 | El saludo de la web es fijo («Buenas noches»); la maqueta del Inicio dice «¿Qué pedimos hoy?». | `apps/customer/features/catalog/components/home-shell.tsx` |
-| 2 | CUS-CAT-011 | Android oculta el plato fuera de su franja en lugar de apagarlo (D-59, ahora sustituida); este documento pide apagarlo. | `feature/catalog/business/MenuMapping.kt` · `DishWindow.kt` |
-| 3 | CUS-CAT-012 | Android avisa «Cerrado ahora» solo en el Inicio; la carta no deshabilita el pedido ni dice cuándo abre. | `feature/catalog/home/CatalogHomeScreen.kt` · `feature/catalog/business/BusinessScreen.kt` |
-| 4 | CUS-CAT-015 | En Android el modo catálogo es una sección «Próximamente pedidos por la plataforma» del Inicio; la carta no ofrece «Pedir por WhatsApp» ni «Llamar». | `feature/catalog/home/CatalogHomeScreen.kt` |
+| 3 | CUS-CAT-012 | El Inicio de Android dice «Cerrado ahora»; la carta ya deshabilita el pedido y dice cuándo abre. Falta que el Inicio diga «Cerrado · abre [día] [hora]». | `feature/catalog/home/CatalogHomeScreen.kt` |
+| 4 | CUS-CAT-015 | Android: la carta ofrece «Pedir por WhatsApp» y «Llamar» con el único número público del negocio (`whatsapp_number`); la API no manda otro teléfono. El mensaje con la bolsa no existe (en modo catálogo no hay bolsa). | `feature/catalog/business/OrderingMode.kt` |
 | 5 | CUS-CAT-007 | Android no usa las etiquetas (`badges`) ni el color de respaldo (`image_hue`) que la API ya manda. | `feature/catalog/business/MenuMapping.kt` |
 | 6 | CUS-CAT-023 | La carta pública no trae `is_open_now` ni `available_now`; solo la lista de negocios trae `is_open_now`. | `packages/contracts/openapi/v1.json` (`getBusiness`) |
 | 7 | CUS-CAT-033 | El botón de la ficha dice «Completa [N] opciones»; el diseño pide nombrar el grupo que falta. | `feature/catalog/business/DishSheetState.kt` · `DishSheet.kt` |
 | 8 | CUS-CAT-034 | Android muestra el tamaño con su precio completo, pero no el texto «El precio es el del tamaño». | `feature/catalog/business/DishSheetState.kt` |
+| 9 | CUS-CAT-028, CUS-CAT-029 | El carrusel de «Destacados» no muestra el estado de la bolsa del plato (contador «− 1 +» y «En tu bolsa: N»); el diseño lo pide sincronizado. | `feature/catalog/business/FeaturedCarousel.kt` |
+| 10 | CUS-CAT-012, CUS-CAT-014 | La app no sabe si el negocio está pausado: `getBusiness` no manda la pausa (`accepting_orders_until`), así que la carta no la anticipa y el servidor rechaza el pedido al final (403 «pausado temporalmente»). | `feature/catalog/business/OrderingMode.kt` · `apps/api/app/api/v1/public/businesses/[id]/route.ts` |

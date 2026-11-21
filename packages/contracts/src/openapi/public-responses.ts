@@ -220,6 +220,10 @@ const MenuItemSchema = z.object({
   image_hue: z.number().int().nullable(),
   is_available: z.boolean(),
   is_compact: z.boolean().meta({ description: '«Destacado» (nombre histórico). Van primero' }),
+  is_featured: z.boolean().optional().meta({
+    description:
+      'El restaurante lo marcó para la sección «Destacados» (0290). Opcional y aditivo: la lista ya armada va en `featured`',
+  }),
   badges: z.array(z.string()),
   display_order: z.number().int(),
   available_days: z
@@ -253,6 +257,22 @@ export const PublicBusinessDetailSchema = z.object({
       items: z.array(MenuItemSchema),
     }),
   ),
+  featured: z
+    .object({
+      title: z
+        .string()
+        .meta({ description: 'Nombre que le puso el restaurante; «Destacados» si no puso uno' }),
+      item_ids: z.array(uuidOut).meta({
+        description:
+          'De 1 a 6 platos de la carta (ids de `categories[].items[]`), disponibles y con foto, en el orden de la carta. La franja horaria de cada uno la resuelve el cliente',
+      }),
+    })
+    .nullable()
+    .optional()
+    .meta({
+      description:
+        'Sección «Destacados» (CUS-CAT-028). Ausente o null = el restaurante no marcó ningún plato. Va primero en la carta',
+    }),
   schedule: z.array(ScheduleDaySchema),
   opening_confirmed: z.boolean().nullable().meta({
     description:

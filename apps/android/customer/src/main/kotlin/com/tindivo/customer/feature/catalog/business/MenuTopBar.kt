@@ -98,8 +98,8 @@ internal fun MenuTopBar(
                 },
             )
         }
-        if (business != null && query == null && business.categories.size >= 2) {
-            SectionChips(categories = business.categories, spy = spy)
+        if (business != null && query == null && business.sections.size >= 2) {
+            SectionChips(categories = business.sections, spy = spy)
         }
     }
 }

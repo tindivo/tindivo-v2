@@ -20,6 +20,8 @@ const Schema = z.object({
   logoUrl: z.url().max(500).optional(),
   bannerUrl: z.url().max(500).optional(),
   tagline: z.string().trim().max(120).optional(),
+  // Nombre de la sección «Destacados» de la carta (0290); null vuelve a «Destacados».
+  featuredTitle: z.string().trim().min(1).max(30).nullable().optional(),
   // accentColor NO se acepta aquí: el color de papelito lo gestiona SOLO el
   // admin (alta + PATCH /admin/businesses/:id), igual que las capacidades (§21).
   estimatedEtaMin: z.number().int().min(1).max(180).optional(),
@@ -50,6 +52,7 @@ export async function PATCH(req: Request): Promise<Response> {
       ...(body.logoUrl !== undefined && { logo_url: body.logoUrl }),
       ...(body.bannerUrl !== undefined && { banner_url: body.bannerUrl }),
       ...(body.tagline !== undefined && { tagline: body.tagline }),
+      ...(body.featuredTitle !== undefined && { featured_title: body.featuredTitle }),
       ...(body.estimatedEtaMin !== undefined && { estimated_eta_min: body.estimatedEtaMin }),
       ...(body.estimatedEtaMax !== undefined && { estimated_eta_max: body.estimatedEtaMax }),
       ...(body.deliveryFee !== undefined && { delivery_fee: body.deliveryFee }),

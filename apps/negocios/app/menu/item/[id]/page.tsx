@@ -69,6 +69,7 @@ export default function MenuItemEditorPage() {
         cats={editor.cats}
         schedule={editor.schedule}
         categoryItemCount={editor.catItemCounts[editor.formData.category_id] ?? 0}
+        featuredOthers={editor.featuredOthers}
         onApplyToCategory={editor.applyToCategory}
         applyingToCategory={editor.applyingToCategory}
         groups={editor.groups}
@@ -118,6 +119,7 @@ export default function MenuItemEditorPage() {
         cats={editor.cats}
         schedule={editor.schedule}
         categoryItemCount={editor.catItemCounts[editor.formData.category_id] ?? 0}
+        featuredOthers={editor.featuredOthers}
         onApplyToCategory={editor.applyToCategory}
         applyingToCategory={editor.applyingToCategory}
         groups={editor.groups}

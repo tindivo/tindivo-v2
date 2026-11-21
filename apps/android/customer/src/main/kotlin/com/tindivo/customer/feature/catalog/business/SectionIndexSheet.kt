@@ -32,7 +32,7 @@ internal fun SectionIndexSheet(
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val total = categories.sumOf { it.items.size }
+    val total = categories.filter { it.id != FEATURED_ID }.sumOf { it.items.size }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
