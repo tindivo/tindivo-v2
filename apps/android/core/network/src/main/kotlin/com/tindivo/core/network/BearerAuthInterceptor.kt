@@ -109,15 +109,14 @@ class BearerAuthInterceptor(
     // cierra o vence el tope, falla como siempre y no sale a la red.
     private fun awaitAcceptance(chain: Interceptor.Chain): AccessGrant {
         val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TERMS_WAIT_MILLIS)
-        while (System.nanoTime() < deadline) {
-            val resolved = runBlocking { withTimeoutOrNull(WAIT_SLICE_MILLIS) { source.awaitTermsResolution() } }
-            if (resolved != null) {
-                if (resolved.token == null || resolved.onlyForTermsAcceptance) throw SessionBlockedException()
-                return resolved
-            }
-            if (chain.call().isCanceled()) throw IOException("Canceled")
+        var resolved: AccessGrant? = null
+        while (resolved == null && System.nanoTime() < deadline) {
+            resolved = runBlocking { withTimeoutOrNull(WAIT_SLICE_MILLIS) { source.awaitTermsResolution() } }
+            if (resolved == null && chain.call().isCanceled()) throw IOException("Canceled")
         }
-        throw SessionBlockedException()
+        val usable = resolved != null && resolved.token != null && !resolved.onlyForTermsAcceptance
+        if (!usable) throw SessionBlockedException()
+        return checkNotNull(resolved)
     }
 
     private fun proceedWithToken(
