@@ -1,6 +1,6 @@
 # Las apps: qué puede hacer cada uno
 
-> Verificado: 2026-10-10 · entorno: `develop@7d00aa4` (pantallas de cada app) y `tindivo-prod` (solo lectura) ·
+> Verificado: 2026-11-18 (Motorizado y Apps nativas) y 2026-10-10 (el resto) · entorno: `develop@7d00aa4` (pantallas de cada app) y `tindivo-prod` (solo lectura) ·
 > Cómo están construidas: `Docs/arquitectura/README.md` · Nombres: `Docs/glosario.md`
 
 Cuatro apps web, una por rol, más la API que todas usan. El detalle de cada pantalla está en el código
@@ -29,8 +29,10 @@ de **efectivo** de los motorizados, historial, rendimiento, reseñas y configura
 ## Motorizado
 
 Cola de pedidos por tomar, su pedido en curso, **Entregas**, rendición de **efectivo** y de lo cobrado en Entregas
-(`/efectivo`, `/deuda`), historial, restaurantes y perfil. Lleva hasta 3 pedidos de comida a la vez
-(`app_settings.assignment_rules.maxOrdersPerDriver`) y hasta 2 entregas.
+(`/efectivo`, `/deuda`), historial, restaurantes y perfil. Lleva hasta 3 espacios de mochila a la vez
+(`MAX_SLOTS` en `apps/motorizados/components/capacity-indicator.tsx`; un pedido puede ocupar hasta 3) y hasta 2 entregas. La base solo hace
+cumplir el tope al traspasar un pedido (`assignment_rules.maxOccupancySlotsPerDriver`, migración `0130`); `maxOrdersPerDriver` está
+sembrado y ninguna función lo lee.
 
 ## Admin, para Jesús
 
@@ -46,5 +48,6 @@ nunca el texto; la reseña no toca dinero ni asignación; se pide en el pedido s
 
 ## Apps nativas
 
-La migración a Swift + Kotlin está en curso; su análisis y el catálogo de requisitos por app, en
-`Docs/trabajo/movil/`.
+La migración a Swift + Kotlin está en curso. Android ya tiene proyecto en `apps/android/` (módulos `core` y `customer`);
+iOS aún no tiene carpeta (`apps/ios/` está por crear). El plan, en `Docs/planes/movil/`; el análisis y el catálogo de
+requisitos por app, en `Docs/trabajo/movil/`.
