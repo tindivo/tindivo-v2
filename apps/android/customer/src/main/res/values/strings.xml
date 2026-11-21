@@ -18,6 +18,18 @@
     <string name="nav_courier">Entregas</string>
     <string name="nav_orders">Pedidos</string>
     <string name="nav_account">Cuenta</string>
+    <string name="home_logo_description">Tindivo</string>
+    <plurals name="home_bag_description">
+        <item quantity="one">Mi bolsa, %1$d producto</item>
+        <item quantity="other">Mi bolsa, %1$d productos</item>
+    </plurals>
+    <plurals name="home_open_now">
+        <item quantity="one">%1$d abierto ahora</item>
+        <item quantity="other">%1$d abiertos ahora</item>
+    </plurals>
+    <string name="home_courier_tagline">De A a B, ya pagado</string>
+    <string name="home_store_tagline">Variedad de productos</string>
+    <string name="catalog_open_now">Abierto</string>
     <string name="catalog_home_title">¿Qué pedimos hoy?</string>
     <string name="catalog_home_restaurants">Restaurantes</string>
     <string name="catalog_home_empty">Aún no hay restaurantes disponibles.</string>

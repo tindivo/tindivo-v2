@@ -11,50 +11,54 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.account.AccountEntryViewModel
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
 fun CatalogHomeDestination(
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
-    onOpenAccount: (signedIn: Boolean) -> Unit,
+    onOpenCart: () -> Unit,
     onOpenCourier: () -> Unit,
     onOpenStore: () -> Unit,
     viewModel: CatalogHomeViewModel = hiltViewModel(),
-    accountEntry: AccountEntryViewModel = hiltViewModel(),
+    bag: HomeBagViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
-    val signedIn = accountEntry.signedIn.collectAsStateWithLifecycle().value
+    val bagCount = bag.count.collectAsStateWithLifecycle().value
     CatalogHomeScreen(
         state = state,
         onRefresh = viewModel::refresh,
         onOpenBusiness = onOpenBusiness,
         onOpenDiagnostics = onOpenDiagnostics,
-        signedIn = signedIn,
-        onOpenAccount = { onOpenAccount(signedIn) },
+        bagCount = bagCount,
+        onOpenCart = onOpenCart,
         onOpenCourier = onOpenCourier,
         onOpenStore = onOpenStore,
     )
@@ -67,12 +71,12 @@ fun CatalogHomeScreen(
     onRefresh: () -> Unit,
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)? = null,
-    signedIn: Boolean = false,
-    onOpenAccount: () -> Unit = {},
+    bagCount: Int = 0,
+    onOpenCart: () -> Unit = {},
     onOpenCourier: () -> Unit = {},
     onOpenStore: () -> Unit = {},
 ) {
-    Scaffold { innerPadding ->
+    Scaffold(topBar = { HomeTopBar(bagCount = bagCount, onOpenBag = onOpenCart) }) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when (state) {
                 CatalogHomeUiState.Loading -> {
@@ -89,8 +93,6 @@ fun CatalogHomeScreen(
                             state = state,
                             onOpenBusiness = onOpenBusiness,
                             onOpenDiagnostics = onOpenDiagnostics,
-                            signedIn = signedIn,
-                            onOpenAccount = onOpenAccount,
                             onOpenCourier = onOpenCourier,
                             onOpenStore = onOpenStore,
                         )
@@ -106,8 +108,6 @@ private fun BusinessList(
     state: CatalogHomeUiState.Loaded,
     onOpenBusiness: (id: String) -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
-    signedIn: Boolean,
-    onOpenAccount: () -> Unit,
     onOpenCourier: () -> Unit,
     onOpenStore: () -> Unit,
 ) {
@@ -117,36 +117,24 @@ private fun BusinessList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.catalog_home_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.weight(1f).semantics { heading() },
-                )
-                onOpenDiagnostics?.let {
-                    TextButton(onClick = it, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(text = stringResource(R.string.diagnostics_title))
-                    }
-                }
-                TextButton(onClick = onOpenAccount, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(if (signedIn) R.string.account_entry else R.string.signin_entry))
-                }
-            }
+            Text(
+                text = stringResource(R.string.catalog_home_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.fillMaxWidth().semantics { heading() },
+            )
         }
         // Primero qué se quiere hacer (llevar algo de un lugar a otro), después dónde comer (como la web).
         // La tarjeta de Store no está mientras Store esté fuera del lanzamiento (CUS-CAT-032).
-        items(serviceCards(), key = { it.name }) { card ->
-            when (card) {
-                ServiceCard.Courier -> CourierEntryCard(onClick = onOpenCourier)
-                ServiceCard.Store -> StoreEntryCard(onClick = onOpenStore)
-            }
-        }
+        item { ServiceGrid(cards = serviceCards(), onOpenCourier = onOpenCourier, onOpenStore = onOpenStore) }
         item {
-            Text(
-                text = stringResource(R.string.catalog_home_restaurants),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.semantics { heading() },
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(R.string.catalog_home_restaurants),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.semantics { heading() },
+                )
+                if (state.openNowCount > 0) OpenNowChip(count = state.openNowCount)
+            }
         }
         state.refreshFailed?.let { error ->
             item { Text(text = errorMessage(error), color = MaterialTheme.colorScheme.error) }
@@ -181,6 +169,53 @@ private fun BusinessList(
                 BusinessCard(business = business, whatsapp = true, onClick = { onOpenBusiness(business.id) })
             }
         }
+        onOpenDiagnostics?.let {
+            // Herramienta de desarrollo (solo builds DEBUG): discreta, al final de la lista.
+            item {
+                TextButton(onClick = it, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(
+                        text = stringResource(R.string.diagnostics_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TindivoColors.textMuted,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Entregas y Store lado a lado, cada una de la mitad; si solo hay una, ocupa todo el ancho. */
+@Composable
+private fun ServiceGrid(
+    cards: List<ServiceCard>,
+    onOpenCourier: () -> Unit,
+    onOpenStore: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        cards.forEach { card ->
+            val tile = Modifier.weight(1f)
+            when (card) {
+                ServiceCard.Courier -> CourierEntryCard(onClick = onOpenCourier, modifier = tile)
+                ServiceCard.Store -> StoreEntryCard(onClick = onOpenStore, modifier = tile)
+            }
+        }
+    }
+}
+
+/** El chip verde «N abiertos ahora»: texto y color dicen lo mismo. */
+@Composable
+private fun OpenNowChip(count: Int) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+    ) {
+        Text(
+            text = pluralStringResource(R.plurals.home_open_now, count, count),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+        )
     }
 }
 

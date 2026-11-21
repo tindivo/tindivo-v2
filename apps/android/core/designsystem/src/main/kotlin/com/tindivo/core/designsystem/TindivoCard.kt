@@ -10,13 +10,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 @Composable
-private fun cardColors(): CardColors =
+private fun cardColors(container: Color = Color.Unspecified): CardColors =
     CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        containerColor =
+            if (container == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerLowest else container,
         contentColor = MaterialTheme.colorScheme.onSurface,
     )
 
@@ -70,13 +72,14 @@ fun TindivoCard(
 
 /**
  * La misma tarjeta, pero toda ella se toca: lleva a otra pantalla o abre un detalle. TalkBack la lee como un solo
- * botón con todo su texto.
+ * botón con todo su texto. [containerColor] cambia el fondo (p. ej. la tarjeta de un negocio cerrado).
  */
 @Composable
 fun TindivoCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    containerColor: Color = Color.Unspecified,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
@@ -84,7 +87,7 @@ fun TindivoCard(
         modifier = modifier.cardShadow(),
         enabled = enabled,
         shape = MaterialTheme.shapes.large,
-        colors = cardColors(),
+        colors = cardColors(containerColor),
         elevation = flat(),
         content = content,
     )

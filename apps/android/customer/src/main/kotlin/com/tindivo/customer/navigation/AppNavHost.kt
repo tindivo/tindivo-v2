@@ -163,9 +163,7 @@ private fun NavGraphBuilder.catalogGraph(navController: NavHostController) {
     composable<CatalogHomeRoute> { entry ->
         CatalogHomeDestination(
             onOpenBusiness = { id -> navController.navigate(BusinessRoute(id)) },
-            onOpenAccount = { signedIn ->
-                navController.navigate(if (signedIn) AccountRoute else SignInRoute)
-            },
+            onOpenCart = { navController.navigate(CartRoute) },
             onOpenCourier = { navController.navigate(CourierHomeRoute()) { launchSingleTop = true } },
             onOpenStore = { navController.navigate(StoreListRoute()) { launchSingleTop = true } },
             // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.

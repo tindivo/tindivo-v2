@@ -41,7 +41,10 @@ sealed interface CatalogHomeUiState {
         val whatsapp: List<BusinessCardUi>,
         val refreshing: Boolean = false,
         val refreshFailed: AppError? = null,
-    ) : CatalogHomeUiState
+    ) : CatalogHomeUiState {
+        /** Restaurantes de la plataforma abiertos ahora: el chip «N abiertos ahora». `closed` solo es `true` si el servidor lo dijo. */
+        val openNowCount: Int get() = restaurants.count { !it.closed }
+    }
 
     data class Failed(
         val error: AppError,
