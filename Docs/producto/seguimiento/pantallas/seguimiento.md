@@ -6,7 +6,7 @@ textos: []
 tokens: []
 codigo:
   web: [apps/customer/features/tracking/components/**, apps/customer/features/tracking/lib/**, apps/customer/app/pedido/**]
-  android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderDetailScreen.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderDetailSections.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderDetailViewModel.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderHeadline.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderCancelViews.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/CancelOrderViewModel.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/DriverContact.kt]
+  android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderDetailScreen.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderDetailSections.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderDetailViewModel.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderHeadline.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/OrderCancelViews.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/CancelOrderViewModel.kt]
   ios: []
 ---
 
