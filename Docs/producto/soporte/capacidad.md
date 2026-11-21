@@ -7,7 +7,7 @@ depende_de: []
 dinero: false
 codigo:
   web: [apps/customer/lib/support.ts, apps/customer/components/support-link.tsx, apps/customer/app/terminos/page.tsx, apps/customer/app/privacidad/page.tsx]
-  android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/orders/SupportContact.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/checkout/CheckoutNoticeViews.kt]
+  android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/support/SupportContact.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/checkout/CheckoutNoticeViews.kt]
   ios: []
   backend: [apps/api/app/api/v1/public/config/route.ts, apps/api/lib/mappers/whatsapp-digits.ts, packages/core/src/constants.ts]
 operaciones: [getPublicConfig]
