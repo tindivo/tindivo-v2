@@ -31,7 +31,7 @@ internal interface LocationSource {
     fun isAvailable(): Boolean
 
     /** ¿Hay permiso de ubicación AHORA (preciso o aproximado)? Se mira al usar una lectura, no solo al pedirla. */
-    fun hasPermission(): Boolean = true
+    fun hasPermission(): Boolean
 
     /**
      * Una sola lectura de alta precisión. Si la corrutina se cancela (la persona salió del formulario), la lectura se

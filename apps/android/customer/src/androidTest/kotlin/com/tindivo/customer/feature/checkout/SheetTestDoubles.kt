@@ -78,6 +78,8 @@ internal object NoAttempts : AttemptLookup {
 internal object NoLocation : LocationSource {
     override fun isAvailable(): Boolean = false
 
+    override fun hasPermission(): Boolean = true
+
     override suspend fun current(): LocationReading = LocationReading.NoFix
 }
 
