@@ -44,4 +44,24 @@ describe('gpsFailureOutcome', () => {
       }),
     ).toEqual({ issue: 'unavailable' })
   })
+
+  it('pending_yape sin compra previa: hoja de reintentar o prepago', () => {
+    expect(
+      gpsFailureOutcome({
+        selectedPayment: 'pending_yape',
+        recojoPresencial: false,
+        hasDeliveryHistory: false,
+      }),
+    ).toEqual({ issue: 'unavailable' })
+  })
+
+  it('prepago gana al recojo presencial (fija el orden de las ramas)', () => {
+    expect(
+      gpsFailureOutcome({
+        selectedPayment: 'prepaid',
+        recojoPresencial: true,
+        hasDeliveryHistory: false,
+      }),
+    ).toEqual({ payload: { method: 'manual_skip_prepaid' } })
+  })
 })
