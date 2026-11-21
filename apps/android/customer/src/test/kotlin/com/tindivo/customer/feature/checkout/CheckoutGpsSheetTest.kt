@@ -217,7 +217,10 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
             assertEquals(1, sent("GET", "/customer/payment-options").size)
 
             handlers["GET /customer/payment-options"] = {
-                reply(200, """{"data":{"contraentregaAllowed":false,"prepayRequired":true,"reason":"prepay_required"}}""")
+                reply(
+                    200,
+                    """{"data":{"contraentregaAllowed":false,"prepayRequired":true,"reason":"prepay_required"}}""",
+                )
             }
             val newcomer = viewModel()
             advanceUntilIdle()
@@ -243,6 +246,7 @@ class CheckoutGpsSheetTest : CheckoutHarness() {
     fun `con compra previa y sin permiso el pedido sale con gpsValidation failed y sin hoja`() =
         runTest(dispatcher) {
             trustedBuyer()
+            gpsPermission = false
             gpsAnswer = noGps()
             val vm = cashReady()
 

@@ -185,6 +185,9 @@ abstract class CheckoutHarness {
         if (pay == PayMethod.Prepaid) null else preciseFix()
     }
 
+    /** El permiso de ubicación que ve el ViewModel: una prueba lo pone en `false` para simular que se negó o se revocó. */
+    protected var gpsPermission = true
+
     /** El reloj de la lectura de ubicación: una prueba lo adelanta para caducar una lectura guardada. */
     protected var gpsClockMs = 0L
 
@@ -246,6 +249,8 @@ abstract class CheckoutHarness {
             override fun reset() {
                 gpsResets++
             }
+
+            override fun permissionGranted(): Boolean = gpsPermission
 
             override fun elapsedMs(): Long = gpsClockMs
 

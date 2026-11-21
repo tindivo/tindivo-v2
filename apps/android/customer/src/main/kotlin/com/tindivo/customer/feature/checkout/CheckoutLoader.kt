@@ -73,7 +73,7 @@ class CheckoutLoader
                 val saved = async { addresses.list(accountId) }
                 val business = async { catalog.business(businessId) }
                 val orders = async { customer.orders(null, accountId) }
-                val options = async { checkout.paymentOptions() }
+                val options = async { checkout.paymentOptions(accountId) }
                 val profileResult = profile.await()
                 val savedResult = saved.await()
                 when {

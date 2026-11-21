@@ -100,7 +100,8 @@ data class CheckoutUiState(
         "CheckoutUiState(phase=$phase, businessName=$businessName, etaMin=$etaMin, etaMax=$etaMax, " +
             "acceptsDelivery=$acceptsDelivery, acceptsPickup=$acceptsPickup, method=$method, pickupWhen=$pickupWhen, " +
             "addresses=${addresses.size}, selectedAddressId=$selectedAddressId, name=***, " +
-            "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, previousPurchase=$previousPurchase, note=***, " +
+            "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, " +
+            "previousPurchase=$previousPurchase, note=***, " +
             "lines=${lines.size}, pay=$pay, cash=$cash, quote=$quote, quoteStatus=$quoteStatus, sending=$sending, " +
             "locating=$locating, " +
             "message=$message, blockedDetail=$blockedDetail, reconcileSeen=$reconcileSeen, " +
