@@ -3,6 +3,5 @@
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && pnpm turbo run build --filter=@tindivo/web",
-  "outputDirectory": "out",
-  "ignoreCommand": "bash scripts/vercel-ignore.sh"
+  "outputDirectory": "out"
 }
