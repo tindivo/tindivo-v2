@@ -105,3 +105,16 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 - **Contexto**: el criterio aprobado dice «Responde en hasta [plazo de aceptación] min», con el plazo completo; el requisito de la cuenta atrás dice que mientras corra un plazo se muestra lo que queda. Una sola línea no puede ser las dos cosas. Hoy Android muestra, aparte, la cuenta atrás en `m:ss` y sin texto propio, igual que la web.
 - **Alternativas**: (a) dos líneas: «Responde en hasta [plazo] min» fija y la cuenta atrás en `m:ss` (es lo que hace hoy Android; Jesús decide si se le agrega un texto); (b) una línea que baja: «Responde en hasta [lo que queda] min»; (c) solo el plazo completo, sin cuenta atrás visible hasta el último tercio.
 - **Recomendación**: (a). Conserva lo aprobado y da la cuenta atrás; la cuenta atrás va sin texto hasta que Jesús apruebe uno.
+### DA-18 · Soporte de WhatsApp y responsabilidad por daños en Entregas
+
+- 2026-11-19 · Bloquea: CUS-ENT-020 · Detectó: Claude
+- **Contexto**: la decisión de Jesús del 2026-11-16 dice que los daños y pérdidas se atienden por el soporte de WhatsApp y que Tindivo responde por la conducta de sus motorizados; la redacción y el tope económico (S/ 200 en el borrador de 2026-09) esperan la revisión legal. Android no tiene ese texto.
+- **Alternativas**: (a) esperar a la revisión legal; (b) publicar un aviso mínimo sin tope.
+- **Recomendación**: (a). Jesús aprobó el 2026-11-19 dejarla abierta.
+### DA-17 · Compartir plato y distintivo «Para compartir» (app cliente)
+
+- 2026-11-19 · No bloquea el lanzamiento · Detectó: Claude (PR #198, capacidad `catalogo`)
+- **Contexto**: el canvas dibuja un botón de compartir en la ficha del plato y un distintivo «Para compartir» en las filas de la carta. Sin enlaces compartidos (CUS-CAT-022 diferido) no hay destino, y nadie definió quién asigna el distintivo.
+- **Decidir**: (1) a dónde lleva «compartir»; (2) si el distintivo lo marca el negocio o se calcula.
+- **Alternativas**: (a) quitarlos hasta tener enlaces; (b) el negocio marca el distintivo en el panel; (c) calcularlo por reglas.
+- **Recomendación**: (a). Jesús no respondió a esta decisión el 2026-11-19: queda abierta y no entra en la app.

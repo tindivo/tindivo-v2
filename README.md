@@ -28,7 +28,9 @@ apps/
   negocios/     la cajera                      (negocios.tindivo.com)
   motorizados/  el motorizado                  (motorizados.tindivo.com)
   admin/        Jesús: operación y cobros      (admin.tindivo.com)
-packages/       contracts (la fuente canónica), core, supabase, api-client, ui, map, images
+  android/      app nativa (Kotlin; módulos core y customer)
+packages/       contracts (la fuente canónica), backend (lógica de negocio; solo lo importa apps/api), core, supabase,
+                api-client, ui, map, images
 supabase/       migraciones (inmutables), funciones y reglas locales
 ```
 
