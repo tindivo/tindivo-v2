@@ -119,7 +119,6 @@ private fun found(
     )
 }
 
-
 /**
  * La lectura real: una sola posición del teléfono ([LocationSource], nunca en segundo plano) y la configuración
  * pública. Si la configuración no llega, se usa el respaldo (sin guardarlo); si llega, se guarda en memoria y los

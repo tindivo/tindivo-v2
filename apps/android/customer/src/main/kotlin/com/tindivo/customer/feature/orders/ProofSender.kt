@@ -142,14 +142,13 @@ internal class ProofSender(
     ): UploadResult {
         val slot =
             when (val result = gateway.uploadSlot(account, orderId)) {
-                is ApiResult.Success -> result.data
-                // En el reintento, si tampoco hay red para pedir la URL, es la misma caída: «revisa tu conexión».
-                is ApiResult.Failure ->
-                    return if (retry && result.error is AppError.Network) {
-                        DROPPED
-                    } else {
-                        Halted(SendStep.ApiFailed(result.error, confirming = false))
-                    }
+                is ApiResult.Success -> {
+                    result.data
+                }
+
+                is ApiResult.Failure -> {
+                    return slotFailure(result.error, retry)
+                }
             }
         if (!stillCurrent()) return Halted(SendStep.Abandoned)
         return when (gateway.upload(slot, jpeg)) {
@@ -167,6 +166,13 @@ internal class ProofSender(
             }
         }
     }
+
+    /** En el reintento, si tampoco hay red para pedir la URL, es la misma caída: «revisa tu conexión». */
+    private fun slotFailure(
+        error: AppError,
+        retry: Boolean,
+    ): Halted =
+        if (retry && error is AppError.Network) DROPPED else Halted(SendStep.ApiFailed(error, confirming = false))
 
     private suspend fun encodedPhoto(photo: String): EncodedProof {
         encoded?.takeIf { it.first == photo }?.let { return EncodedProof.Ready(it.second) }
