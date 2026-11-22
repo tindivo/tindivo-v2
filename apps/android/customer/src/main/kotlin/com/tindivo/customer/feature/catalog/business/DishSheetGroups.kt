@@ -36,19 +36,6 @@ import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.cart.SINGLE
 
-/** Cuántos grupos obligatorios están listos de cuántos hay: la píldora «N de M listas» de la ficha. */
-internal data class RequiredProgress(
-    val done: Int,
-    val total: Int,
-)
-
-/** `null` si el plato no tiene grupos obligatorios: entonces no hay nada que completar ni píldora que mostrar. */
-internal fun DishSheetState.requiredProgress(): RequiredProgress? {
-    val required = item.modifierGroups.filter { it.isRequired }
-    if (required.isEmpty()) return null
-    return RequiredProgress(done = required.count { progress(it).done }, total = required.size)
-}
-
 /** Un grupo de opciones en su tarjeta (tablero «Plato»): cabecera con su estado y una fila por opción. */
 @Composable
 internal fun ModifierGroupSection(

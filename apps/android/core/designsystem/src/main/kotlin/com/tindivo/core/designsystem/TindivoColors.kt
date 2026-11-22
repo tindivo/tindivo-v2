@@ -6,7 +6,8 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * La paleta de Tindivo según el sistema de diseño v3.1 (`Docs/negocio/sistema-de-diseno.md`): naranja de marca, tinta
- * fría y fondo `#F7F8FA`. El primario sigue en `#F97316` (decisión de Jesús, 2026-11-21). Solo hay tema claro, como en la web: el manual de marca no define uno oscuro.
+ * fría y fondo `#F7F8FA`. El primario sigue en `#F97316` (decisión de Jesús, 2026-11-21). Solo hay tema claro,
+ * como en la web: el manual de marca no define uno oscuro.
  *
  * Quien dibuja una pantalla no usa estos valores directamente: usa `MaterialTheme.colorScheme`. Las dos excepciones
  * están en [TindivoColors]: el naranja para texto y los pares de aviso, que Material 3 no tiene.

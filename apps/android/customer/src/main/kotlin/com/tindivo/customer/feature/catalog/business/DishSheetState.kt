@@ -212,3 +212,16 @@ internal data class DishSheetState(
 
 private fun ModifierGroupUi.toRule() =
     ModifierGroupRule(id, name, selectionType, isRequired, minSelections, maxSelections)
+
+/** Cuántos grupos obligatorios están listos de cuántos hay: la píldora «N de M listas» de la ficha. */
+internal data class RequiredProgress(
+    val done: Int,
+    val total: Int,
+)
+
+/** `null` si el plato no tiene grupos obligatorios: entonces no hay nada que completar ni píldora que mostrar. */
+internal fun DishSheetState.requiredProgress(): RequiredProgress? {
+    val required = item.modifierGroups.filter { it.isRequired }
+    if (required.isEmpty()) return null
+    return RequiredProgress(done = required.count { progress(it).done }, total = required.size)
+}

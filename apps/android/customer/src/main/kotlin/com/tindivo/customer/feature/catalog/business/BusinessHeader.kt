@@ -42,7 +42,6 @@ import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.customer.R
 
 private val LOGO = 76.dp
-private val SHEET_OVERLAP = 28.dp
 private const val MARK_RATIO = 158f / 93f
 
 /** La portada del negocio (tablero «Negocio y carta»): 208 dp, con la hoja blanca de la cabecera encima. */
