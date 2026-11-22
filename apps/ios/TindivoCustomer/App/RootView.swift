@@ -36,13 +36,34 @@ struct RootView: View {
     @ViewBuilder
     private func destination(_ route: AppRoute) -> some View {
         switch route {
-        case .business, .cart:
-            // Las pantallas de Negocio y Bolsa llegan en los siguientes bloques de la Fase 1·B.
+        case let .business(id):
+            BusinessRoute(id: id, environment: environment, navigator: navigator)
+        case .cart:
+            // La Bolsa llega en el siguiente bloque de la Fase 1·B.
             EmptyView()
         #if DEBUG
         case .diagnostics:
             DiagnosticsView(model: DiagnosticsScreenModel(system: environment.system, config: environment.config))
         #endif
         }
+    }
+}
+
+/// Crea el modelo de Negocio una sola vez por pantalla empujada: la ruta puede reevaluarse sin perder la carta.
+private struct BusinessRoute: View {
+    @State private var model: BusinessScreenModel
+    private let environment: AppEnvironment
+    private let navigator: AppNavigator
+
+    init(id: String, environment: AppEnvironment, navigator: AppNavigator) {
+        _model = State(initialValue: BusinessScreenModel(
+            id: id, catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock
+        ))
+        self.environment = environment
+        self.navigator = navigator
+    }
+
+    var body: some View {
+        BusinessView(model: model, environment: environment, onOpenCart: navigator.openCart)
     }
 }

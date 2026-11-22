@@ -4,6 +4,8 @@ import TindivoAPI
 
 /// Datos y dobles para los `#Preview` de las pantallas. Solo existen en compilaciones de desarrollo.
 enum PreviewData {
+    static let price = Decimal(string: "12.50") ?? 0
+
     static let summaries: [BusinessSummary] = [
         BusinessSummary(
             id: "n1", slug: "don-lucho", name: "Pollería Don Lucho", accentColor: "F97316",

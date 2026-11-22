@@ -23,3 +23,23 @@ struct AppEnvironment: Sendable {
         )
     }
 }
+
+#if DEBUG
+extension AppEnvironment {
+    /// Para los `#Preview`: catálogo de muestra y una bolsa propia en un archivo temporal.
+    static func preview() -> AppEnvironment {
+        AppEnvironment(
+            config: .fromBundle(),
+            system: PreviewSystem(),
+            catalog: PreviewCatalog(),
+            cartStore: FileCartStore.preview(),
+            clock: .live
+        )
+    }
+}
+
+private struct PreviewSystem: SystemRepository {
+    func health() async throws(AppError) -> ApiHealth { ApiHealth(status: "ok", version: "v1") }
+    func clientCompat() async throws(AppError) -> ClientCompat { ClientCompat(minAppVersion: "0.0.0", minOS: 17) }
+}
+#endif

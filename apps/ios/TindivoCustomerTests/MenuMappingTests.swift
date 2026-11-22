@@ -92,6 +92,16 @@ struct MenuMappingTests {
         #expect(business.categories[0].items.map(\.imageURL) == ["small", "big", nil])
     }
 
+    @Test("la cabecera del plato usa la foto grande; sin ella, la miniatura; una en blanco no cuenta")
+    func hero() throws {
+        let business = try detail(menu([category("c", [
+            item("a", imageURL: "big", thumbnailURL: "small"),
+            item("b", order: 2, imageURL: " ", thumbnailURL: "small"),
+            item("c", order: 3),
+        ])]))
+        #expect(business.categories[0].items.map(\.heroURL) == ["big", "small", nil])
+    }
+
     @Test("CA-CAT-02 «Destacados» sale primero con el título del restaurante y sus platos de la carta")
     func featured() throws {
         let raw = menu(

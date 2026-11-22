@@ -9,6 +9,8 @@ struct MenuItem: Sendable, Equatable {
     /// Texto listo para mostrar (`S/ 12.50`); nunca se usa para calcular.
     let priceText: String
     let isAvailable: Bool
+    /// La foto grande para la cabecera del plato (la foto, y si no la miniatura). Lo que se ve en la fila es `imageURL`.
+    let heroURL: String?
     /// Franja horaria: fuera de ella el plato se apaga y dice cuándo vuelve (ver `BusinessDetail.atInstant`).
     let window: DishWindow
     /// «Solo sáb y dom, de 11:00 a 15:00» mientras el plato esté fuera de su franja; `nil` si se sirve ahora.
@@ -20,12 +22,14 @@ struct MenuItem: Sendable, Equatable {
         priceText: String,
         isAvailable: Bool,
         window: DishWindow,
-        outsideWindow: String? = nil
+        outsideWindow: String? = nil,
+        heroURL: String? = nil
     ) {
         self.dish = dish
         self.description = description
         self.priceText = priceText
         self.isAvailable = isAvailable
+        self.heroURL = heroURL
         self.window = window
         self.outsideWindow = outsideWindow
     }
@@ -38,6 +42,8 @@ struct MenuItem: Sendable, Equatable {
     /// Se puede pedir: no se acabó y es su turno.
     var orderable: Bool { isAvailable && outsideWindow == nil }
 }
+
+extension MenuItem: Identifiable {}
 
 struct MenuCategory: Sendable, Equatable {
     let id: String
@@ -176,7 +182,9 @@ enum MenuMapping {
             description: nonBlank(raw.description),
             priceText: formatSoles(base),
             isAvailable: raw.isAvailable,
-            window: DishWindow(days: raw.availableDays, from: raw.availableFrom, to: raw.availableTo)
+            window: DishWindow(days: raw.availableDays, from: raw.availableFrom, to: raw.availableTo),
+            // Cabecera del plato: la foto grande primero; la fila de la carta usa la miniatura (`Dish.imageURL`).
+            heroURL: nonBlank(raw.imageURL) ?? nonBlank(raw.thumbnailURL)
         )
     }
 

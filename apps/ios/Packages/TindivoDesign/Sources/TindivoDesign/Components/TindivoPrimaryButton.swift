@@ -5,13 +5,20 @@ import SwiftUI
 /// Mientras `loading` es `true`, el botón deja de responder pero conserva su color, y VoiceOver sigue leyendo la
 /// etiqueta y anuncia que está en curso: una segunda pulsación no repite la acción (paridad con Android).
 public struct TindivoPrimaryButton: View {
-    private let title: LocalizedStringKey
+    private let title: Text
     private let loading: Bool
     private let action: () -> Void
     @Environment(\.isEnabled) private var isEnabled
 
     public init(_ title: LocalizedStringKey, loading: Bool = false, action: @escaping () -> Void) {
-        self.title = title
+        self.title = Text(title)
+        self.loading = loading
+        self.action = action
+    }
+
+    /// Para un texto que ya viene armado y traducido («Agregar · S/ 12.50»): se enseña tal cual.
+    public init(verbatim title: String, loading: Bool = false, action: @escaping () -> Void) {
+        self.title = Text(verbatim: title)
         self.loading = loading
         self.action = action
     }
@@ -20,7 +27,7 @@ public struct TindivoPrimaryButton: View {
         // La guarda va dentro de la acción: `allowsHitTesting` frena el dedo pero no la activación de VoiceOver.
         Button(action: { if !loading { action() } }) {
             ZStack {
-                Text(title)
+                title
                     .tindivoText(TindivoTokens.Typography.cta)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -31,16 +38,19 @@ public struct TindivoPrimaryButton: View {
             }
             .frame(maxWidth: .infinity, minHeight: TindivoTokens.Spacing.ctaHeight)
         }
-        .buttonStyle(PrimaryStyle(enabled: isEnabled))
+        .buttonStyle(TindivoCTAButtonStyle())
         .allowsHitTesting(!loading)
         .accessibilityValue(loading ? Text("En curso", bundle: .module) : Text(verbatim: ""))
     }
 }
 
-private struct PrimaryStyle: ButtonStyle {
-    let enabled: Bool
+/// El aspecto del CTA, para quien necesita un botón principal con un contenido propio (la barra «Ver mi bolsa»).
+public struct TindivoCTAButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
 
-    func makeBody(configuration: Configuration) -> some View {
+    public init() {}
+
+    public func makeBody(configuration: Configuration) -> some View {
         let fill = enabled
             ? (configuration.isPressed ? Color.tindivo.primaryPressed : Color.tindivo.primary)
             : Color.tindivo.disabled
