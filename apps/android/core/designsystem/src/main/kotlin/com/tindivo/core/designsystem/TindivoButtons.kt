@@ -61,7 +61,7 @@ fun TindivoPrimaryButton(
                 disabledContentColor = scheme.onPrimary,
             )
         } else {
-            // Presionado: `primaryPressed` (#CF4A0C). Material no lo da; se deriva del estado de la interacción.
+            // Presionado: `primaryPressed` (#9A3412). Material no lo da; se deriva del estado de la interacción.
             ButtonDefaults.buttonColors(containerColor = if (pressed) TindivoColors.primaryPressed else scheme.primary)
         }
     Button(

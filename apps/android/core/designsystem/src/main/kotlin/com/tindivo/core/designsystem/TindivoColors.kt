@@ -6,8 +6,8 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * La paleta de Tindivo según el sistema de diseño v3.1 (`Docs/negocio/sistema-de-diseno.md`): naranja de marca, tinta
- * fría y fondo `#F7F8FA`. El primario sigue en `#F97316` (decisión de Jesús, 2026-11-21). Solo hay tema claro,
- * como en la web: el manual de marca no define uno oscuro.
+ * fría y fondo `#F7F8FA`. La marca sigue en `#F97316`, y el primario (los botones con texto blanco) es `#C2410C`
+ * (decisión de Jesús, 2026-11-21). Solo hay tema claro, como en la web: el manual de marca no define uno oscuro.
  *
  * Quien dibuja una pantalla no usa estos valores directamente: usa `MaterialTheme.colorScheme`. Las dos excepciones
  * están en [TindivoColors]: el naranja para texto y los pares de aviso, que Material 3 no tiene.
@@ -48,7 +48,7 @@ internal object Palette {
  * El esquema de Material 3 con la paleta de Tindivo.
  *
  * - `primary` es el fondo de los botones con texto blanco: `#C2410C`, que con blanco da 5,2:1 (decisión de Jesús,
- *   2026-11-21). El naranja de marca `#F97316` ([TindivoColors.brand]) queda para el degradado de Entregas, el isotipo
+ *   2026-11-21). El naranja de marca `#F97316` ([TindivoColors.brand]) queda para el isotipo
  *   y los acentos decorativos: no lleva texto encima. Para texto o enlaces en naranja se usa [TindivoColors.brandText].
  * - `secondary` es la tinta: el botón oscuro de la web.
  * - `tertiary` es el verde de «todo bien» (entregado, verificado).
@@ -108,7 +108,7 @@ object TindivoColors {
     /** Texto apagado: etiquetas, placeholder y metadatos (`inkTertiary`, 5,41:1 sobre el fondo). */
     val textMuted: Color = Palette.InkTertiary
 
-    /** Presionado del CTA (`primaryPressed`): más oscuro que `primary`, ahora `#C2410C`. */
+    /** Presionado del CTA (`primaryPressed`): `#9A3412`, más oscuro que `primary` (`#C2410C`). */
     val primaryPressed: Color = Palette.BrandPressed
 
     /** Degradado decorativo de las tarjetas de servicio (`gradientCta`): el texto blanco va en la mitad oscura. */
