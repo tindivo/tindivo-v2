@@ -40,6 +40,7 @@ internal class SupabaseSessionStore(
     private val backend: AuthBackend,
     private val clock: Clock,
     scope: CoroutineScope,
+    private val publishLock: SessionPublishLock = SessionPublishLock(),
 ) : SessionStore {
     private val mutex = Mutex()
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Unknown)
@@ -117,15 +118,12 @@ internal class SupabaseSessionStore(
     ): SignInResult =
         mutex.withLock {
             try {
-                adopt(backend.signInWithGoogle(idToken, rawNonce, termsPending))
+                adopt(backend.signInWithGoogle(idToken, rawNonce, termsPending), entering = true)
                 // Entrar reemplaza lo guardado: una restauración tardía ya no debe leer el archivo (con la marca de
                 // «aceptación pendiente» lo borraría y cerraría esta sesión).
                 restored = true
                 // La sesión nueva reemplazó a la que quedó pendiente de cerrar (el archivo lo escribe el backend).
                 mutableClosePending.value = false
-                // Después del estado (ver SessionStore.signInGeneration): quien lea la generación y luego el estado
-                // nunca ve la generación vieja con la cuenta nueva sin darse cuenta.
-                signIns.value += 1
                 SignInResult.Success
             } catch (e: CancellationException) {
                 throw e
@@ -219,7 +217,11 @@ internal class SupabaseSessionStore(
             } catch (_: Exception) {
                 false
             }
-        if (snapshot != null) adopt(snapshot, countsAsChange = false) else mutableState.value = SessionState.SignedOut
+        if (snapshot != null) {
+            adopt(snapshot, countsAsChange = false)
+        } else {
+            publishLock.withLock { mutableState.value = SessionState.SignedOut }
+        }
     }
 
     // «Reintentar» tras un cierre fallido: vuelve a borrar lo guardado. Bajo el mismo candado y sin cancelarse a medias.
@@ -270,16 +272,23 @@ internal class SupabaseSessionStore(
 
     private fun TokenSnapshot.secondsLeft(): Long = expiresAtEpochSeconds - clock.instant().epochSecond
 
+    // Todo cambio de la cuenta visible va dentro de `publishLock` (CAX-001): bloque corto y sin suspensiones, que se toma
+    // con `mutex` ya tomado (orden: mutex → publishLock). [entering] = entrar a una cuenta: sube `signInGeneration`
+    // DESPUÉS del estado (ver SessionStore.signInGeneration), en el mismo bloque.
     private fun adopt(
         snapshot: TokenSnapshot,
         countsAsChange: Boolean = true,
+        entering: Boolean = false,
     ): TokenSnapshot {
-        current = snapshot
-        mutableTermsRequired.value = snapshot.termsUnknown
-        termsRestricted = snapshot.termsUnknown || snapshot.termsPending
-        termsPending.value = snapshot.termsPending
-        if (countsAsChange) generation.incrementAndGet()
-        mutableState.value = SessionState.SignedIn(snapshot.userId)
+        publishLock.withLock {
+            current = snapshot
+            mutableTermsRequired.value = snapshot.termsUnknown
+            termsRestricted = snapshot.termsUnknown || snapshot.termsPending
+            termsPending.value = snapshot.termsPending
+            if (countsAsChange) generation.incrementAndGet()
+            mutableState.value = SessionState.SignedIn(snapshot.userId)
+            if (entering) signIns.value += 1
+        }
         return snapshot
     }
 
@@ -301,11 +310,13 @@ internal class SupabaseSessionStore(
     // riesgo residual cuando fallan TODOS a la vez (borrado, vaciado, destrucción de la clave y escritura de la nota):
     // entonces el próximo arranque restauraría la cuenta anterior. [localClearFailures] cuenta esos fallos.
     private suspend fun drop(): Boolean {
-        current = null
-        mutableTermsRequired.value = false
-        termsRestricted = false
-        termsPending.value = false
-        generation.incrementAndGet()
+        publishLock.withLock {
+            current = null
+            mutableTermsRequired.value = false
+            termsRestricted = false
+            termsPending.value = false
+            generation.incrementAndGet()
+        }
         var cleared = false
         withContext(NonCancellable) {
             var attempts = 0
@@ -327,7 +338,9 @@ internal class SupabaseSessionStore(
             }
         }
         mutableClosePending.value = !cleared
-        mutableState.value = SessionState.SignedOut
+        // «Sin sesión» se publica bajo `publishLock` (CAX-001): un aviso de la cuenta anterior o se pintó antes (y la
+        // limpieza del cierre lo retira) o ya ve esta sesión cerrada y no se pinta.
+        publishLock.withLock { mutableState.value = SessionState.SignedOut }
         return cleared
     }
 }
@@ -356,6 +369,7 @@ internal fun createSupabaseSessionStore(
     clock: Clock,
     scope: CoroutineScope,
     io: CoroutineDispatcher,
+    publishLock: SessionPublishLock = SessionPublishLock(),
 ): SessionStore {
     val client =
         OkHttpClient
@@ -372,5 +386,5 @@ internal fun createSupabaseSessionStore(
             .addNetworkInterceptor(RetryAfterShieldInterceptor())
             .build()
     val backend = GoTrueAuthBackend("${url.trimEnd('/')}/auth/v1/".toHttpUrl(), publishableKey, client, file, clock, io)
-    return SupabaseSessionStore(backend, clock, scope)
+    return SupabaseSessionStore(backend, clock, scope, publishLock)
 }

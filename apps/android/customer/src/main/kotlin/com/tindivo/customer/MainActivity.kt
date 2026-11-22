@@ -12,6 +12,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.navigation.AppNavHost
+import com.tindivo.customer.push.PushRegistrar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,15 +22,22 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var configService: ConfigService
 
+    @Inject
+    lateinit var pushRegistrar: PushRegistrar
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // La app solo tiene tema claro: iconos oscuros en las dos barras aunque el teléfono esté en modo oscuro (por
         // defecto enableEdgeToEdge los pone claros y desaparecen sobre el crema).
         val lightBars = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
         enableEdgeToEdge(statusBarStyle = lightBars, navigationBarStyle = lightBars)
-        // CLI-4: STARTED = la app en primer plano; cubre abrirla y volver a ella.
+        // CLI-4: STARTED = la app en primer plano; cubre abrirla y volver a ella. Ahí también se reintenta en silencio un
+        // registro de avisos que falló sin red, y el servidor se entera de si el permiso cambió en Ajustes (CA-NOT-08).
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) { configService.refresh() }
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                pushRegistrar.refresh()
+                configService.refresh()
+            }
         }
         setContent {
             TindivoTheme {
