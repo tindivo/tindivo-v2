@@ -1,6 +1,6 @@
-import Foundation
-import OpenAPIRuntime
-import OpenAPIURLSession
+public import Foundation
+public import OpenAPIRuntime
+public import OpenAPIURLSession
 
 /// Cómo está la API (`GET /health`).
 public struct ApiHealth: Sendable, Equatable {
@@ -35,7 +35,7 @@ public protocol SystemRepository: Sendable {
 public struct LiveSystemRepository: SystemRepository {
     private let client: Client
 
-    public init(client: Client) {
+    package init(client: Client) {
         self.client = client
     }
 
@@ -57,7 +57,7 @@ public struct LiveSystemRepository: SystemRepository {
 /// cabeceras (un reintento conserva su `X-Request-Id`), traducción de errores y reintentos pegados al transporte (ven
 /// los status crudos).
 public enum TindivoAPIClient {
-    public static func make(
+    package static func make(
         baseURL: URL,
         client: ClientInfo,
         transport: any ClientTransport = TindivoHTTP.makeTransport(),
@@ -69,6 +69,21 @@ public enum TindivoAPIClient {
             configuration: Configuration(dateTranscoder: FlexibleISO8601()),
             transport: transport,
             middlewares: [DeadlineMiddleware(timeout: callTimeout), ClientHeadersMiddleware(client: client), ProblemMiddleware(), retry]
+        )
+    }
+}
+
+/// Los repositorios de la API, listos para inyectar. Es lo único que la app necesita para hablar con el servidor: el
+/// cliente generado (`Client`, `Operations.*`) es `package` y no sale de este paquete (DES-1, DES-2).
+public struct TindivoAPIServices: Sendable {
+    public let system: any SystemRepository
+    public let catalog: any CatalogRepository
+
+    public static func live(baseURL: URL, client: ClientInfo) -> TindivoAPIServices {
+        let generated = TindivoAPIClient.make(baseURL: baseURL, client: client)
+        return TindivoAPIServices(
+            system: LiveSystemRepository(client: generated),
+            catalog: LiveCatalogRepository(client: generated)
         )
     }
 }

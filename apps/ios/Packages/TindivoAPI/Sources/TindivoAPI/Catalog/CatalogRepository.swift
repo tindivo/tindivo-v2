@@ -1,5 +1,5 @@
-import Foundation
-import OpenAPIRuntime
+public import Foundation
+public import OpenAPIRuntime
 
 /// El catálogo público: la lista de negocios y la carta de uno. Sin sesión.
 public protocol CatalogRepository: Sendable {
@@ -13,7 +13,7 @@ public protocol CatalogRepository: Sendable {
 public struct LiveCatalogRepository: CatalogRepository {
     private let client: Client
 
-    public init(client: Client) {
+    package init(client: Client) {
         self.client = client
     }
 

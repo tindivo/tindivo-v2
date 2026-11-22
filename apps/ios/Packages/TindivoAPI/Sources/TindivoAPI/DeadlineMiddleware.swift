@@ -1,6 +1,6 @@
-import Foundation
-import HTTPTypes
-import OpenAPIRuntime
+public import Foundation
+public import HTTPTypes
+public import OpenAPIRuntime
 
 /// El plazo total de una llamada (CLI-10): 30 s para la petición lógica completa, con reintentos y esperas incluidos.
 /// Es el `callTimeout` de `TindivoHttp.kt`: `URLSession` solo pone plazo a cada intento, y sin esto una llamada con

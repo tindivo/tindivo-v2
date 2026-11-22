@@ -1,7 +1,7 @@
 generate:
   - types
   - client
-accessModifier: public
+accessModifier: package
 namingStrategy: idiomatic
 # Dinero heredado (número JSON de un numeric(10,2)): Decimal exacto, nunca Double (SW-8).
 # El documento que lee el generador apunta esos campos a estos esquemas (scripts/ios-openapi-tolerant.mjs).

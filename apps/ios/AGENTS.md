@@ -13,7 +13,8 @@ Se suma al `AGENTS.md` raíz. La norma es `Docs/arquitectura/estandares/swift.md
   lee un documento tolerante que deriva `scripts/ios-openapi-tolerant.mjs` (abre objetos y enums de las respuestas):
   sin ese paso, un campo o valor nuevo del backend tumba la decodificación (CLI-2). Lo cubre
   `SystemRepositoryTests` («CLI-2: un campo nuevo…»).
-- **Los tipos generados (`Operations.*`) no salen de `TindivoAPI`:** cada repositorio los traduce a modelos propios.
+- **Los tipos generados (`Operations.*`, `Client`) no salen de `TindivoAPI`** (el generador los emite `package`; la app
+  recibe `TindivoAPIServices`): cada repositorio los traduce a modelos propios.
   Los errores no se traducen por operación: `ProblemMiddleware` convierte todo no-2xx en `AppError` y `apiCall`
   deja `AppError` como único error.
 - **En un `.xcconfig`, `//` abre comentario:** las URL se escriben `https:/$()/host`.

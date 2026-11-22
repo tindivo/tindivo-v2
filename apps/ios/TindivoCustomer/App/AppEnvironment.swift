@@ -10,14 +10,14 @@ struct AppEnvironment: Sendable {
     let clock: AppClock
 
     static func live(config: AppConfig = .fromBundle()) -> AppEnvironment {
-        let client = TindivoAPIClient.make(
+        let api = TindivoAPIServices.live(
             baseURL: config.apiBaseURL,
             client: ClientInfo(app: "customer", appVersion: config.appVersion, build: config.build)
         )
         return AppEnvironment(
             config: config,
-            system: LiveSystemRepository(client: client),
-            catalog: LiveCatalogRepository(client: client),
+            system: api.system,
+            catalog: api.catalog,
             cartStore: FileCartStore(),
             clock: .live
         )

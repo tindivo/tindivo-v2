@@ -1,6 +1,6 @@
-import Foundation
-import HTTPTypes
-import OpenAPIRuntime
+public import Foundation
+public import HTTPTypes
+public import OpenAPIRuntime
 
 /// Convierte toda respuesta que no sea 2xx en un `AppError` antes de que el código generado la intente decodificar.
 ///

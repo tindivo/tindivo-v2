@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// `primary_capability` del negocio: un enum abierto (CLI-2). Un valor que esta versión no conoce llega como
 /// `.unknown` con su texto, nunca rompe la decodificación.

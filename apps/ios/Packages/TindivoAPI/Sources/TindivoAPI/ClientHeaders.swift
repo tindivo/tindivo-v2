@@ -1,6 +1,6 @@
-import Foundation
-import HTTPTypes
-import OpenAPIRuntime
+public import Foundation
+public import HTTPTypes
+public import OpenAPIRuntime
 
 /// Quién llama a la API (CLI-3). Con estas cabeceras la API decide el 426 de versión mínima (CLI-4) y registra el
 /// tráfico por versión (CLI-15).

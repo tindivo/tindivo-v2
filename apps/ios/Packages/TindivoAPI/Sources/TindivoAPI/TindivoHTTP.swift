@@ -1,6 +1,6 @@
-import Foundation
-import OpenAPIRuntime
-import OpenAPIURLSession
+public import Foundation
+public import OpenAPIRuntime
+public import OpenAPIURLSession
 
 /// La sesión HTTP de la app, con los plazos de CLI-10 y sin seguir redirecciones (paridad con `TindivoHttp.kt`).
 ///

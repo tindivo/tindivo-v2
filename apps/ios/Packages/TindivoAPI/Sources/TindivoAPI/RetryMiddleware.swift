@@ -1,6 +1,6 @@
-import Foundation
-import HTTPTypes
-import OpenAPIRuntime
+public import Foundation
+public import HTTPTypes
+public import OpenAPIRuntime
 
 /// Reintentos de CLI-10, con la misma política que `RetryInterceptor.kt`:
 /// - solo `GET` y `POST` con `Idempotency-Key` no vacía (repetirlo no duplica nada);
