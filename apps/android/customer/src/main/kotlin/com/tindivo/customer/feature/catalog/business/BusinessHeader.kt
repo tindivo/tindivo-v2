@@ -144,7 +144,7 @@ private fun BusinessLogo(
         Image(
             bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_isotipo),
             contentDescription = null,
-            modifier = Modifier.width(46.dp).aspectRatio(MARK_RATIO),
+            modifier = Modifier.width(38.dp).aspectRatio(MARK_RATIO),
         )
         business.logoUrl?.let {
             AsyncImage(

@@ -55,7 +55,7 @@ private fun FeaturedContent(item: MenuItemUi) {
         DishPhoto(
             imageUrl = item.imageUrl,
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            markWidth = 56.dp,
+            markWidth = 48.dp,
             modifier = Modifier.fillMaxWidth().height(PHOTO_HEIGHT),
         )
         Column(

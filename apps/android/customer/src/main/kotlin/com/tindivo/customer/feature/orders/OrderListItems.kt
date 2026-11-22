@@ -45,7 +45,7 @@ import com.tindivo.customer.R
 import com.tindivo.customer.support.cancelledOrderSupportLink
 
 private val THUMB = 48.dp
-private val THUMB_MARK_WIDTH = 30.dp
+private val THUMB_MARK_WIDTH = 24.dp
 private const val MARK_RATIO = 158f / 93f
 private val MOTO_WIDTH = 72.dp
 private const val MOTO_RATIO = 440f / 398f

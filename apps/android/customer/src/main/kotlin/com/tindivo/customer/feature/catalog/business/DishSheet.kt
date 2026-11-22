@@ -107,7 +107,7 @@ private fun DishHeader(
         DishPhoto(
             imageUrl = item.imageUrl,
             shape = MaterialTheme.shapes.large,
-            markWidth = 112.dp,
+            markWidth = 72.dp,
             modifier = Modifier.fillMaxWidth().height(PHOTO_HEIGHT),
         )
         Text(

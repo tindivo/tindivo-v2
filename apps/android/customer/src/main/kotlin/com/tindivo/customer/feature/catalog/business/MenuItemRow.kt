@@ -121,7 +121,7 @@ private fun MenuItemContent(
         DishPhoto(
             imageUrl = menuItem.imageUrl,
             shape = MaterialTheme.shapes.small,
-            markWidth = 52.dp,
+            markWidth = 44.dp,
             modifier = Modifier.size(PHOTO),
         )
     }

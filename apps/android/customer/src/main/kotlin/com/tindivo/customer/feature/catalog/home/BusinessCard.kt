@@ -42,7 +42,7 @@ import com.tindivo.customer.R
 private val LOGO_SIZE = 72.dp
 private val CARD_MIN_HEIGHT = 92.dp
 private const val CLOSED_ALPHA = 0.45f
-private val MARK_HEIGHT = 26.dp
+private val MARK_HEIGHT = 22.dp
 private const val MARK_RATIO = 158f / 93f
 
 /** Gris para el logo de un negocio cerrado: es la señal grande de «hoy no»; el chip la confirma. */
