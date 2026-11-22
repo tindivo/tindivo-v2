@@ -13,7 +13,7 @@
  *   3. Cabeceras: el canon dice contra qué se verificó («Verificado:»), un ADR su estado («Estado:») y un plan el suyo.
  *   4. El canon no toma reglas de Docs/trabajo/: solo puede enlazarlo en una línea «Discusión:».
  *
- * Y un aviso, no un error: el AGENTS.md raíz por encima de 120 líneas.
+ * Y un tope: el AGENTS.md raíz no pasa de 150 líneas (decisión de Jesús, 2026-11-18); lo que no cabe va al canon.
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, statSync } from 'node:fs'
@@ -25,7 +25,7 @@ const tracked = execFileSync('git', ['-c', 'core.quotepath=off', 'ls-files'], { 
   .filter(Boolean)
 
 const esAgentes = (f) => /(^|\/)(AGENTS|CLAUDE)\.md$/.test(f)
-const CANON = ['Docs/negocio/', 'Docs/arquitectura/', 'Docs/operacion/', 'Docs/glosario.md', 'Docs/README.md']
+const CANON = ['Docs/negocio/', 'Docs/producto/', 'Docs/arquitectura/', 'Docs/operacion/', 'Docs/glosario.md', 'Docs/README.md']
 const esCanon = (f) => CANON.some((c) => f.startsWith(c)) && f.endsWith('.md')
 const esAdr = (f) => /^Docs\/decisiones\/\d{4}-.+\.md$/.test(f)
 const esPlan = (f) => /^Docs\/planes\/[^/]+\/[^/]+\.md$/.test(f)
@@ -77,14 +77,24 @@ for (const f of alcance) {
   })
 
   // 3 · cabeceras
-  const cabeza = lineas.slice(0, 12).join('\n')
-  if (esCanon(f) && !/^>\s*Verificado:/m.test(cabeza)) errores.push(`${f} · falta «> Verificado: …» en la cabecera`)
+  // La cabecera son las 12 primeras líneas después del bloque de metadatos (---), si lo hay: las capacidades de
+  // Docs/producto/ empiezan con uno (Codex, PR #186, CAX-002).
+  const cierre = lineas[0] === '---' ? lineas.indexOf('---', 1) : -1
+  const cabeza = lineas.slice(cierre + 1, cierre + 13).join('\n')
+  // En producto/ la cabecera va en capacidad.md y en el índice; las fichas de pantalla heredan la de su capacidad.
+  const sinCabeceraPropia = f.startsWith('Docs/producto/') && (f.includes('/pantallas/') || f.includes('/_plantilla/'))
+  if (esCanon(f) && !sinCabeceraPropia && !/^>\s*Verificado:/m.test(cabeza)) errores.push(`${f} · falta «> Verificado: …» en la cabecera`)
   if (esAdr(f) && !/^Estado:/m.test(cabeza)) errores.push(`${f} · al ADR le falta «Estado: …»`)
   if (esPlan(f) && !/Estado:/.test(cabeza)) errores.push(`${f} · al plan le falta «Estado: …» en la cabecera`)
 }
 
-const raiz = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8').split('\n').length
-if (raiz > 120) avisos.push(`AGENTS.md tiene ${raiz} líneas (aviso por encima de 120): lo que no cabe va al canon`)
+const AGENTS_MAX_LINEAS = 150
+// LF, CRLF y CR suelto cuentan como fin de línea (CAX-002): con solo LF, 151 líneas con CR pasarían como una.
+const raiz = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8')
+  .replace(/(\r\n|\r|\n)$/, '')
+  .split(/\r\n|\r|\n/).length
+if (raiz > AGENTS_MAX_LINEAS)
+  errores.push(`AGENTS.md tiene ${raiz} líneas (tope: ${AGENTS_MAX_LINEAS}): lo que no cabe va al canon y se enlaza`)
 
 for (const a of avisos) console.warn(`⚠ ${a}`)
 if (errores.length) {

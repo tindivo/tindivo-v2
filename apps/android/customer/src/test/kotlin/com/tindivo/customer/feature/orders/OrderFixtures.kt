@@ -66,6 +66,7 @@ internal fun detail(
     amount: String = "45.00",
     deliveredAt: String? = null,
     estimatedReadyAt: String? = null,
+    paymentProofStatus: String? = null,
 ) = GetCustomerOrder200ResponseData(
     id = ORDER_ID,
     shortId = "ABCD2345",
@@ -106,6 +107,7 @@ internal fun detail(
     arrivedAtCustomerAt = arrivedAtCustomerAt,
     proofAttempt = proofAttempt,
     paymentVerifiedAt = paymentVerifiedAt,
+    paymentProofStatus = paymentProofStatus,
     driver = driver,
 )
 
@@ -128,7 +130,7 @@ internal fun detailJson(
      "paysWith":null,"changeToGive":null,"estimatedReadyAt":null,"arrivedAtCustomerAt":${jsonText(
         arrivedAtCustomerAt,
     )},"proofAttempt":0,
-     "paymentVerifiedAt":null,"driver":null}}
+     "paymentVerifiedAt":null,"paymentProofStatus":null,"driver":null}}
     """.trimIndent()
 
 /**

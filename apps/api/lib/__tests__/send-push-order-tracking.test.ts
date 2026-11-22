@@ -382,7 +382,7 @@ describe('send-push index.ts · los momentos nuevos del cliente', () => {
       "const progress = orderProgress(\n      String(o.status ?? ''),\n      String(o.delivery_method ?? ''),\n      o.updated_at,\n    )",
     )
     expect(src).toContain(
-      "'short_id,business_id,customer_user_id,driver_id,status,updated_at,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing'",
+      "'short_id,business_id,customer_user_id,driver_id,status,updated_at,cancel_reason,payment_proof_status,proof_attempt,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing'",
     )
     expect(src).toContain("...(app === 'customer' ? custProgress : {}),")
     // Comprobante/validado: también leen `status` y `delivery_method`.

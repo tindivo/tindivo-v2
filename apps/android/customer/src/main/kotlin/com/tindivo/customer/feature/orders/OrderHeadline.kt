@@ -9,7 +9,8 @@ internal fun headlineOf(
 ): OrderHeadline =
     when (phase) {
         is OrderPhase.Cancelled -> {
-            OrderHeadline.Cancelled(cancelCopyOf(phase.reason, isPickup), alreadyPaid = payment.alreadyPaid)
+            val copy = cancelCopyOf(phase.reason, isPickup, payment)
+            OrderHeadline.Cancelled(copy, alreadyPaid = payment.alreadyPaid)
         }
 
         OrderPhase.Delivered -> {
@@ -71,17 +72,31 @@ internal fun cancelOfferOf(
         else -> CancelOffer.None
     }
 
+/**
+ * Con `prepay_timeout` el texto depende del comprobante (`paymentProofStatus`): rechazado, «No pudimos validar tu pago»;
+ * enviado y sin revisar, «No se pudo revisar tu pago a tiempo». Sin estado (`null` o un valor desconocido) se decide por
+ * `proofAttempt`, como antes: con comprobante, el aviso de sin revisar; sin él, «no llegó el pago».
+ */
 private fun cancelCopyOf(
     reason: String?,
     isPickup: Boolean,
+    payment: PaymentFacts,
 ): CancelCopy =
     when (reason) {
         "customer_cancelled" -> CancelCopy.CustomerCancelled
-        "prepay_timeout" -> CancelCopy.PrepayTimeout
-        "validation_timeout", "pending_acceptance_timeout" -> CancelCopy.CouldNotConfirm
+        "prepay_timeout" -> prepayTimeoutCopyOf(payment)
+        "pending_acceptance_timeout" -> CancelCopy.BusinessNoResponse
+        "validation_timeout" -> CancelCopy.CouldNotConfirm
         "business_cancelled" -> CancelCopy.BusinessCancelled
         "admin_cancelled" -> CancelCopy.AdminCancelled
         "proof_rejected_final" -> CancelCopy.ProofRejected
         "no_show" -> if (isPickup) CancelCopy.PickupNoShow else CancelCopy.DeliveryNoShow
         else -> CancelCopy.Generic
+    }
+
+private fun prepayTimeoutCopyOf(payment: PaymentFacts): CancelCopy =
+    when {
+        payment.proofStatus == ProofStatus.Rejected -> CancelCopy.PrepayProofRejected
+        payment.proofStatus != null || payment.proofSent -> CancelCopy.PrepayProofNotReviewed
+        else -> CancelCopy.PrepayTimeout
     }

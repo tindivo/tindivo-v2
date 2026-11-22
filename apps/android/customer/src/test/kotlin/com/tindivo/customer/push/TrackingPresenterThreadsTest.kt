@@ -146,7 +146,9 @@ class TrackingPresenterThreadsTest {
 
     @Test
     fun `cambiar de cuenta desde otro hilo no se cuela entre la comprobacion y el pintado (CAX-001)`() {
-        run { store -> assertEquals(SignInResult.Success, store.signInWithGoogle("id", "nonce")) }
+        run { store ->
+            assertEquals(SignInResult.Success, store.signInWithGoogle("id", "nonce", termsPending = false))
+        }
     }
 
     private companion object {

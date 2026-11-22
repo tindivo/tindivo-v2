@@ -1,6 +1,6 @@
 # Plataforma: qué es Tindivo, quién participa, dónde y cuándo
 
-> Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura) + `develop@7d00aa4` · Nombres: `Docs/glosario.md`
+> Verificado: 2026-11-19 (principio 1) y 2026-11-18 (fila de Store) y 2026-10-10 (el resto) · entorno: `tindivo-prod` (solo lectura) + `develop@7d00aa4` · Nombres: `Docs/glosario.md`
 
 ## Qué es
 
@@ -15,7 +15,7 @@ pedido registrado); antes funcionaba el v1.
 |---|---|
 | **Pedidos de restaurante** (con entrega o recojo en el local) | En operación: **~500 pedidos entregados en 30 días**, 7 de ellos recogidos en el local |
 | **Tindivo Entregas** | Encendido de lunes a domingo, de 18:00 a 23:00 (ADR 0035). **3 entregas** en total |
-| **Tindivo Store** | Construido y en producción, **sin productos publicados** |
+| **Tindivo Store** | Construido y en producción, **sin productos publicados**; es un experimento (`Docs/negocio/servicios/store.md`) y en la app llega después del lanzamiento (decisión de Jesús, 2026-11-17, conversación con Claude Code) |
 
 Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 0034).
 
@@ -23,7 +23,7 @@ Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 003
 
 - **Clientes.** Piden por la app o llamando al negocio. **El 84 % de los pedidos entregados en 30 días los tecleó la
   cajera** (420 de 497): el hábito del pueblo es llamar. Que el pueblo pida por la app es la apuesta (ADR 0034).
-- **Negocios aliados.** Cuatro, todos activos:
+- **Partners.** Cuatro, todos activos:
 
   | Negocio | Cómo trabaja con Tindivo | Pedidos entregados en 30 días |
   |---|---|---|
@@ -55,7 +55,7 @@ Encargos («te lo compramos y te lo llevamos») no existe: se descartó (ADR 003
    se eliminó en la `0123`. **Una excepción, autorizada por Jesús:** cuando una apelación se aprueba (el negocio
    rechazó por error un comprobante de prepago), Jesús le devuelve el dinero al cliente y lo carga a la deuda del
    negocio (`register_appeal_refund` → `refund_charge`). Es la única forma en que Tindivo pone dinero en el medio:
-   adelanta y recupera, nunca guarda el del cliente (ADR 0036).
+   adelanta y recupera, nunca guarda el del cliente (ADR 0036). **Excepción explícita:** En Tindivo Entregas, el motorizado le rinde a Tindivo la comisión de Tindivo por la entrega ("Transporte de Entregas" en `Docs/negocio/dinero.md`): es tarifa de Tindivo, no dinero del cliente. Aprobado por Jesús el 2026-11-19, conversación con Claude Code (invariante 9). Ver `Docs/negocio/servicios/entregas.md`.
 2. **El antifraude es humano.** Ante un cliente nuevo o con strikes que paga contraentrega, **la cajera lo llama**
    antes de cocinar (`validando`). La llamada es antifraude, no un canal para avisarle del estado del pedido.
 3. **Se cobra solo lo entregado.** Un pedido cancelado no genera comisión ni deuda.

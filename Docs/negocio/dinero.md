@@ -54,7 +54,7 @@ Mandan los valores de `app_settings`, no este archivo; al 2026-10-10:
    (S/ 600) es un aviso que ve el negocio, no un corte.
 
 Medido al 2026-10-10: S/ 3,165.00 liquidados (S/ 3,144.50 de comisión y envío más S/ 20.50 de reembolso) y S/ 273.00
-pendientes entre los cuatro aliados. Los 23 pagos registrados suman S/ 3,165.00 y **cada pago coincide al céntimo con
+pendientes entre los cuatro partners. Los 23 pagos registrados suman S/ 3,165.00 y **cada pago coincide al céntimo con
 los cargos que liquidó**; no hay cargos liquidados sin pago.
 
 ## Promociones de envío gratis

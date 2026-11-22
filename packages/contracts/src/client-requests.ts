@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CART_MAX_LINES, CART_MAX_MODIFIERS, CART_MAX_QUANTITY } from './cart'
 import { DeliveryMethodSchema, PickupTimingSchema } from './enums'
 import {
   AddressLineSchema,
@@ -117,12 +118,12 @@ export const CheckoutQuoteRequestSchema = z
       .array(
         z.object({
           menuItemId: UuidSchema,
-          quantity: z.number().int().min(1).max(50),
-          modifiers: z.array(UuidSchema).max(20).optional(),
+          quantity: z.number().int().min(1).max(CART_MAX_QUANTITY),
+          modifiers: z.array(UuidSchema).max(CART_MAX_MODIFIERS).optional(),
         }),
       )
       .min(1)
-      .max(50),
+      .max(CART_MAX_LINES),
   })
   .refine((d) => d.deliveryMethod === 'pickup' || d.pickupTiming === undefined, {
     message: 'pickupTiming solo aplica a pedidos de recojo',

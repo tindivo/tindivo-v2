@@ -1,6 +1,6 @@
 # 0034. Encargos queda fuera; la apuesta es el hábito de pedir comida en la app
 
-Estado: Vigente · 2026-10-07 · Aprobada por Jesús (actualización escrita en `Docs/ingresos/conclusion.md` el
+Estado: Vigente · 2026-10-07 · Aprobada por Jesús (actualización escrita en `Docs/ingresos/conclusion.md` (borrado; en git: `7dcb74d7:Docs/ingresos/conclusion.md`) el
 2026-10-07; confirmada en conversación con Claude Code el 2026-10-10: «sí, encargos fuera»)
 
 ## Contexto

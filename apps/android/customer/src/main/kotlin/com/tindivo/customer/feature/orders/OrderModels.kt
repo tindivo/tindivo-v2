@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.orders
 
+import java.time.Instant
 import java.util.UUID
 
 /** Lo que dice el título grande de un pedido en curso o entregado (textos literales de la web). */
@@ -20,6 +21,9 @@ internal enum class OrderHero {
 internal enum class CancelCopy {
     CustomerCancelled,
     PrepayTimeout,
+    PrepayProofNotReviewed,
+    PrepayProofRejected,
+    BusinessNoResponse,
     CouldNotConfirm,
     BusinessCancelled,
     AdminCancelled,
@@ -27,6 +31,24 @@ internal enum class CancelCopy {
     PickupNoShow,
     DeliveryNoShow,
     Generic,
+}
+
+/** Estado del comprobante de pago que dice la API; lo desconocido no se representa (se trata como sin dato). */
+internal enum class ProofStatus {
+    Pending,
+    Verified,
+    Rejected,
+    ;
+
+    companion object {
+        fun fromApi(value: String?): ProofStatus? =
+            when (value) {
+                "pending" -> Pending
+                "verified" -> Verified
+                "rejected" -> Rejected
+                else -> null
+            }
+    }
 }
 
 /** Lo que el titular necesita saber del pago de un pedido. */
@@ -38,6 +60,11 @@ internal data class PaymentFacts(
      */
     val proofSent: Boolean,
     val verified: Boolean,
+    /**
+     * `paymentProofStatus` del detalle: `pending`, `verified`, `rejected` o `null` (sin comprobante). El enum es abierto:
+     * un valor que esta versión no conoce llega como `null`, nunca rompe.
+     */
+    val proofStatus: ProofStatus? = null,
 ) {
     /** Lo que la web llama `yaPago` en `cancelledCopy`. */
     val alreadyPaid: Boolean get() = prepaid && (proofSent || verified)
@@ -74,6 +101,8 @@ internal data class OrderCardUi(
     val reorderable: Boolean,
     /** Prepago esperando el pago: en la portada es «Falta tu pago», no «Pedido en curso». */
     val awaitingPayment: Boolean = false,
+    /** Cancelado por `proof_rejected_final`: la fila ofrece «Ver caso de pago» (CUS-ORD-003). */
+    val paymentCase: Boolean = false,
 )
 
 internal data class OrdersPageUi(
@@ -111,14 +140,12 @@ internal data class CashPaymentUi(
 )
 
 /**
- * El motorizado. [name] solo llega cuando ya es asunto del cliente; [atDoor] es que llegó a la puerta y el pedido no
- * se ha entregado, y solo entonces puede haber [whatsappLink]. El teléfono no se guarda ni se muestra nunca como texto.
- * Su `toString` no lleva el nombre ni el enlace (que trae el celular): el detalle del pedido que lo contiene tampoco.
+ * El motorizado: solo su nombre completo y si llegó a la puerta con el pedido sin entregar (CUS-TRK-021). El cliente no
+ * recibe ni usa su teléfono, su WhatsApp ni su placa. Su `toString` no lleva el nombre: el detalle que lo contiene tampoco.
  */
 internal data class DriverUi(
-    val name: String?,
+    val name: String,
     val atDoor: Boolean,
-    val whatsappLink: String?,
 ) {
     override fun toString(): String = "DriverUi(atDoor=$atDoor)"
 }
@@ -149,6 +176,13 @@ internal data class OrderDetailUi(
     val awaitingPrepayment: Boolean = false,
     /** Si el detalle ofrece cancelar y con qué aviso ([cancelOfferOf]). */
     val cancel: CancelOffer = CancelOffer.None,
+    /** Espera a que el negocio acepte (`pending_acceptance`): se enseña la espera con su cuenta atrás. */
+    val waitingForBusiness: Boolean = false,
+    val etaStage: EtaStage = EtaStage.InProgress,
+    /** Desde cuándo espera al negocio (`pendingAcceptanceAt`); `null` si el servidor no lo manda. */
+    val pendingAcceptanceAt: Instant? = null,
+    val estimatedReadyAt: Instant? = null,
+    val travel: TravelRange? = null,
 )
 
 /**

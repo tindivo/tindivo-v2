@@ -1,6 +1,6 @@
 # Docs: cómo se documenta Tindivo y cómo se trabaja con agentes
 
-> Verificado: 2026-10-12 · entorno: `develop@591ec569` · Estándar vigente, aprobado por Jesús el 2026-10-10; enmienda aprobada por Jesús el 2026-10-12 (conversación con Claude Code) · Resumen operativo: `AGENTS.md` raíz
+> Verificado: 2026-11-18 (ruta de iOS en §6.2) y 2026-11-17 (el resto) · entorno: `develop@946feb2e` · Estándar vigente, aprobado por Jesús el 2026-10-10; enmiendas aprobadas por Jesús el 2026-10-12, el 2026-11-17 (`Docs/producto/`, §2.4) y el 2026-11-18 (tope de `AGENTS.md`, §6.2; conversaciones con Claude Code) · Resumen operativo: `AGENTS.md` raíz
 > La transición que lo implantó (el squash de ~255 documentos a este canon) terminó el 2026-10-10; su plan y el debate
 > con Codex, que firmó con cambios en dos rondas, están en la etiqueta `archive/estandar-docs` (commit `8dcf6ba`).
 
@@ -16,7 +16,8 @@ aprobada. Este estándar pone esa frontera.
 | Dónde | Qué |
 |---|---|
 | `Docs/glosario.md` | El nombre de cada cosa |
-| `Docs/negocio/` | Plataforma, dinero, antifraude, apps, diseño y un archivo por servicio en `servicios/` |
+| `Docs/negocio/` | Plataforma, dinero, antifraude, apps, diseño y un archivo por línea de negocio en `servicios/` |
+| `Docs/producto/` | Qué hace el producto, por capacidad: requisitos, criterios de aceptación y una ficha por pantalla, común a web, Android e iOS (§2.4) |
 | `Docs/arquitectura/README.md` | Cómo está construido; los estándares de código, en `arquitectura/estandares/` |
 | `Docs/operacion/` | Runbooks: deploy, publicación de apps nativas, trampas conocidas, graphify, cómo llamar a cada agente |
 | `Docs/decisiones/` y `DECISIONS.md` | Las decisiones (ADR desde la 0034; §1–§32 e índice en `DECISIONS.md`) |
@@ -31,7 +32,7 @@ ni está abierto **no está en el repo**: está en git (§2.3).
 
 | Zona | Dónde | Qué contiene | Quién escribe | ¿Manda? |
 |---|---|---|---|---|
-| **Canon** | `Docs/negocio/`, `arquitectura/`, `decisiones/`, `operacion/`, `glosario.md`, `README.md` | Lo que es verdad hoy y por qué | Por promoción (§5) o corrección dentro de lo aprobado (§4) | **Sí**, como regla general |
+| **Canon** | `Docs/negocio/`, `producto/`, `arquitectura/`, `decisiones/`, `operacion/`, `glosario.md`, `README.md` | Lo que es verdad hoy y por qué | Por promoción (§5) o corrección dentro de lo aprobado (§4) | **Sí**, como regla general |
 | **Planes** | `Docs/planes/<tema>/` | Planes y specs **aprobados por Jesús**, en ejecución o por ejecutar | Se crean al aprobarse; se actualiza su avance | **Sí**, solo dentro de su alcance |
 | **Trabajo** | `Docs/trabajo/<tema>/` | Análisis, debates, propuestas, inventarios, bitácoras | Cualquier agente, libremente | **No** |
 
@@ -39,7 +40,8 @@ ni está abierto **no está en el repo**: está en git (§2.3).
 
 | Carpeta | Contiene | **No** contiene |
 |---|---|---|
-| `negocio/` | Reglas del negocio y su porqué, sin tecnología: roles, dinero, antifraude, tiempos; un archivo por servicio en `negocio/servicios/` (pedidos de restaurante, Entregas, Store…) | Tablas, endpoints, componentes |
+| `negocio/` | Reglas del negocio y su porqué, sin tecnología: roles, dinero, antifraude, tiempos; un archivo por línea de negocio en `negocio/servicios/` (pedidos de restaurante, Entregas, Store…) con qué capacidades usa y sus límites | Tablas, endpoints, componentes; lo que hace una pantalla (va a `producto/`) |
+| `producto/` | Una carpeta por capacidad (§2.4): requisitos, criterios de aceptación, fichas de pantalla y las reglas que cita | Valores de reglas (se citan por símbolo), estado por plataforma (se genera), maquetas |
 | `arquitectura/` | Cómo está construido y por qué: módulos, fronteras, flujo de datos, estándares de código (`estandares/`), excepciones y propiedad de los objetos de la base | Listas de columnas o endpoints (§3.2) |
 | `decisiones/` | ADR de decisiones duraderas (§5.1) | Discusión: mientras está abierta vive en `trabajo/`; después, en git, enlazada por etiqueta |
 | `operacion/` | Runbooks (deploy, base local, seed, migraciones, publicación de apps) y trampas conocidas con su síntoma. **Son la fuente** de cada procedimiento; las skills los envuelven (§6.3) | — |
@@ -76,6 +78,41 @@ tropezando con ella.
 - **Lo que no es documento no entra al repo**: salidas de modelos, muestras, listas intermedias y scripts de un solo
   uso viven en la carpeta temporal del agente. Al repo llega solo su conclusión.
 - **Antes de borrar, enlaces entrantes** (§8.1): lo que se borra no puede quedar citado como fuente.
+
+### 2.4 Producto: capacidades y pantallas
+
+Una **capacidad** es algo que el sistema sabe hacer y que usan una o más líneas de negocio (direcciones, bolsa,
+checkout, despacho, deuda…); una **línea de negocio** es a quién se vende y con qué reglas comerciales, y no tiene
+código propio (glosario). La capacidad es la unidad de `Docs/producto/<capacidad>/`, del módulo de `packages/backend` y
+de la carpeta `feature/` de cada app. Así, un cambio de diseño se edita en **un** lugar y el resto se comprueba.
+
+```
+Docs/producto/
+├── README.md                ← generado (pnpm spec:indice): capacidades × actores y × líneas
+├── _plantilla/              ← se copia para empezar una capacidad
+└── <capacidad>/
+    ├── capacidad.md         ← cabecera (lineas, depende_de, dinero, codigo, operaciones, reglas), «Antes de tocar»,
+    │                          requisitos, criterios de aceptación (CA), reglas citadas
+    └── pantallas/<slug>.md  ← una ficha por pantalla, la misma para web, Android e iOS; clave `<capacidad>/<slug>`
+```
+
+- **Se escribe a mano:** requisitos, criterios, fichas y el bloque «Antes de tocar» (máximo 15 líneas: qué es, de qué
+  depende, dónde vive su código, qué dinero toca y si dispara Codex).
+- **No se escribe:** el valor de una regla (vive en `packages/contracts`, `app_settings` o `Docs/negocio/` y se cita por
+  símbolo, §3.1); el estado por plataforma (lo calculan las pruebas que llevan el ID del criterio en su nombre); el
+  índice (`pnpm spec:indice`).
+- **IDs completos, sin rangos.** Un requisito es `CUS-ADR-001`, nunca `001…003`. Un criterio que cambia de significado
+  recibe un ID nuevo.
+- **Un cambio de diseño** edita la ficha en la misma rama que el código, y Jesús aprueba ese diff con el antes y el
+  después del tablero. Si no cabe en un PR, va primero como plan (§2.2) o, si no está aprobado, a `trabajo/`.
+- **Dinero por dependencia:** si una capacidad tiene `dinero: true`, o una pantalla cumple un requisito de una capacidad
+  así, su cambio pasa por Codex.
+- **Migración:** las capacidades entran una a una desde `negocio/servicios/`, `planes/movil/` y `trabajo/`; mientras una
+  capacidad no está en `producto/`, mandan sus fuentes de siempre. Lo migrado se borra del origen en el mismo PR.
+
+`pnpm spec:validar` comprueba cabeceras, IDs únicos y completos, que toda referencia resuelva (capacidades,
+`operationId`, globs de código, símbolos y claves de `app_settings`), que no haya ciclos en `depende_de`, que la sección
+Reglas solo cite y que no haya citas por línea ni marcas de estado escritas a mano.
 
 ## 3. Reglas de escritura del canon
 
@@ -232,8 +269,8 @@ inspeccionó su registro de sesión.
 - **`AGENTS.md` raíz es la entrada común**, y la leen las tres herramientas. `CLAUDE.md` = `@AGENTS.md` + lo exclusivo
   de Claude. No hay `GEMINI.md` ni `.agents/AGENTS.md` con reglas propias. Sin copias de texto.
 - **El `AGENTS.md` raíz incluye un mapa de instrucciones locales** («antes de editar en `apps/negocios/` o
-  `packages/ui/`, lee `apps/negocios/AGENTS.md`»; «antes de editar en `apps/customer-ios/`, lee
-  `apps/customer-ios/AGENTS.md`»). El mapa es obligatorio porque Codex, lanzado desde la raíz, no carga los locales.
+  `packages/ui/`, lee `apps/negocios/AGENTS.md`»; «antes de editar en `apps/ios/`, lee
+  `apps/ios/AGENTS.md`»). El mapa es obligatorio porque Codex, lanzado desde la raíz, no carga los locales.
 - `.agents/AGENTS.md` desaparece: su contenido se reparte entre `AGENTS.md`, el canon y los mecanismos (§6.4).
 
 Entra en `AGENTS.md` solo lo que, si se borra, haría equivocarse a un agente:
@@ -244,7 +281,8 @@ Entra en `AGENTS.md` solo lo que, si se borra, haría equivocarse a un agente:
 4. Los invariantes, en una o dos líneas cada uno, con enlace a su fuente normativa o test.
 5. Cómo se trabaja (§7) y los comandos esenciales.
 
-**Aviso** (no bloqueo) por encima de 120 líneas: lo que no cabe va al canon y se enlaza.
+**Tope** de 150 líneas: la CI falla por encima (`pnpm check:docs`; decisión de Jesús, 2026-11-18). Lo que no cabe va al
+canon y se enlaza.
 
 ### 6.3 Runbooks y skills
 
@@ -354,12 +392,28 @@ La complejidad de la tarea elige el modelo, no la costumbre. Claude elige y lo d
 
 | Tarea | Quién y con qué |
 |---|---|
-| Localizar código o relaciones | Graphify primero (§6.5), sin coste de modelo |
-| Lectura masiva, búsquedas, inventarios, conteos | Antigravity, **siempre en su modelo más avanzado** (decisión de Jesús, 2026-10-10); o un subagente de Claude en Haiku |
-| Redacción, refactor acotado, tarea con criterio mecánico | Subagente de Claude en Sonnet |
-| Diseño, decisiones de negocio, integración, auditoría | Claude en su modelo principal |
-| Atacar una decisión importante (§7.4) | Codex con razonamiento alto |
-| Compilar o probar la app iOS | Solo en macOS: la Mac de Jesús o CI con runner macOS. Un agente en Linux o en la nube no toca Swift |
+Reparto pedido y aprobado por Jesús el 2026-11-18 en la conversación con Claude Code. Su pedido: «para todo lo que es
+lectura, Haiku es esencial para darte el contexto […] Para programación, yo creo que Opus con Sonnet también se pueden
+apalancar. Y si necesitamos cuestiones más de arquitectura, auditoría para toma de decisiones importantes y críticas,
+yo creo que Fable es un buen indicador […] importante también lo que es Codex y también utilizar Hydrogen o […] Argon
+[…] Gemini Flash […] si no se considera eso [la cuota], podríamos tener un plan alternativo que sería una reevaluación
+con el mismo Opus». Su aprobación de la propuesta (auditada antes por Fable): «sí, apruebo la v2, procede».
+
+| Tarea | Titular | Plan B sin cuota |
+|---|---|---|
+| Localizar código o relaciones | Graphify primero (§6.5), sin coste de modelo | — |
+| Leer, resumir, contrastar documento ↔ código, dar contexto | Subagente de Claude en **Haiku** | Antigravity |
+| Lectura masiva, barridos, inventarios, conteos | **Antigravity** (`gemini-3.8-flash-high`) | Subagente Haiku |
+| Programar con encargo cerrado | Subagente de Claude en **Sonnet** | Claude en su modelo principal (y lo revisa otro subagente limpio) |
+| Diseño, piloto, encargos, orquestación | Claude en su modelo principal | — |
+| Revisar lo que escribió cualquier Claude | Subagente en contexto limpio que no recibe el plan; la CI sola, solo para lo rutinario (§7.4) | — |
+| Arquitectura y decisiones críticas | Subagente en **Fable**, con preguntas cerradas (gasta mucho) | Claude en contexto limpio |
+| Segunda opinión independiente | Antigravity en **Gemini Argon o Hydrogen** (autorizados por Jesús el 2026-11-14) | Claude en contexto limpio |
+| Atacar una decisión importante (§7.4) | Codex con razonamiento alto | Contingencia de `Docs/operacion/codex-auditor.md` §10 |
+| Compilar o probar la app iOS | Solo en macOS: la Mac de Jesús o CI con runner macOS. Un agente en Linux o en la nube no toca Swift | — |
+
+Una decisión crítica lleva dos opiniones independientes y la aprueba siempre Jesús. Si por el plan B las dos salen del
+mismo modelo, se declara. Un plan B nunca quita un control: solo cambia quién lo ejerce.
 
 Mecanismos:
 
@@ -370,29 +424,69 @@ Mecanismos:
   cuenta de Jesús se anotan en `operacion/` al comprobarlos.
 - **Antigravity**: `agy -p "<encargo>" --model <id> --mode plan` (sin `--dangerously-skip-permissions`). Siempre el
   Gemini más avanzado: **`gemini-3.8-flash-high`**. Jesús fijó el 2026-10-10 usar solo Gemini 3.8 Flash (Antigravity
-  marca los demás como «Leaving Soon»). En la muestra del inventario (25 archivos) acertó la zona en 22 y citó literal
+  marca los demás como «Leaving Soon»); el 2026-11-14 autorizó además Argon e Hydrogen, solo para segundas opiniones. En la muestra del inventario (25 archivos) acertó la zona en 22 y citó literal
   las 25 (88 %; con 25 casos, el intervalo de confianza al 95 % va de ~70 % a ~96 %: no justifica auditar menos). Se
   revisa con `agy models` cuando salga uno nuevo.
 - **Sin orquestador adicional por ahora**: no hay una necesidad demostrada. Se reevalúa si la coordinación manual
   limita el trabajo.
 
+### 7.7 El ciclo de un cambio
+
+Todo cambio sigue el mismo orden; no se pasa a un paso sin la salida del anterior. Las skills viven en
+`.claude/skills/`: Claude aplica `using-agent-skills` al empezar cada tarea y dice qué skill usa en cada paso. Codex y
+Antigravity no cargan skills: el encargo copia el párrafo que aplica.
+
+| # | Paso | Salida que lo cierra | Skill |
+|---|---|---|---|
+| 0 | Contexto | Consumidores y capacidades afectadas (`graphify path/query`, `pnpm spec:traza <cap>`) | `graphify` |
+| 1 | Pedido | Una frase de qué y para quién, con los supuestos escritos | `interview-me` si es vago |
+| 2 | Diseño validado | El flujo propuesto, **contrastado con la app real**: cada paso cita su pantalla existente (ficha, código y canvas) o dice «nueva» | `spec-driven-development`; `/auditar-ui-mobile` solo la lanza Jesús |
+| 3 | Correcciones de Jesús | Diff aprobado de la ficha y de los requisitos y CA en `producto/<cap>/` | `documentation-and-adrs` |
+| 4 | Impacto transversal | **Matriz de paridad** (una fila por app: backend, customer web, Android, iOS, negocios, motorizados, admin; `cambia`, `no aplica` o `diferido` con motivo y entrada en `trabajo/decisiones-abiertas.md`) y **compatibilidad**: la app ya instalada sigue funcionando contra el servidor nuevo (`AGENTS.md`, invariante 11) | `api-and-interface-design`, `deprecation-and-migration` |
+| 5 | Plan | Rebanadas verticales en orden: contrato → servidor → clientes → e2e, cada una con su CA | `planning-and-task-breakdown` |
+| 6 | Implementación | Test que falla citando su CA → código mínimo → verde | `test-driven-development`, `incremental-implementation`, `ponytail`, `frontend-ui-engineering`, `source-driven-development`, `observability-and-instrumentation` |
+| 7 | Verificación | Gates con `--force`; el orquestador comprueba exit codes y `Cached: 0`: lint, type-check, unitarios, `db:cycle`, e2e, Kotlin en CI, `spec:validar` y `spec:traza` sin avisos ★ | `debugging-and-error-recovery` si algo falla |
+| 8 | Revisión | Subagente en contexto limpio sin el plan; nunca el autor ni quien escribió el encargo. La CI sola basta solo para lo rutinario (§7.4). Codex si dispara. Si toca dinero: revisión explícita de Jesús, aparte del merge | `code-review-and-quality`, `code-simplification`, `security-and-hardening`, `doubt-driven-development` |
+| 9 | Entrega | PR con impacto documental, matriz de paridad, evidencia y «listo para merge» | `git-workflow-and-versioning` |
+
+**Un cambio no termina mientras una app de la matriz esté en `cambia` sin hacer.**
+
+**Ciclo corto.** Califica solo si se cumple todo, comprobado sobre el diff: toca una sola app; no cambia lo que la
+persona ve ni hace, una regla de negocio ni un documento que manda (nada que necesite aprobación de diseño, negocio o
+canon); ningún archivo en `packages/contracts`, el OpenAPI, `supabase/` ni `producto/`; ningún disparador de Codex; no
+toca un símbolo de `reglas:` de una capacidad; como mucho 5 archivos y 150 líneas sin contar tests. Pasos: graphify de
+consumidores → test que falla y cambio → gates de esa app con `--force` → revisión ajena como en el paso 8 → PR
+titulado «ciclo corto» con la salida del clasificador. Si un criterio deja de cumplirse, se para y se hacen **todos**
+los pasos del ciclo completo que falten, desde el primero que no se cumplió (si cambia lo que se ve o una regla, desde
+el paso 2).
+
+**Pruebas entre apps**, en este orden: (1) contrato por cliente: respuestas reales de la API, guardadas como fixtures
+desde el OpenAPI, que los tests de Kotlin (y de Swift) decodifican en CI; (2) compatibilidad hacia atrás: las
+peticiones de la versión publicada de cada app, congeladas, corren contra la API nueva en `db:cycle`; (3) vectores
+compartidos para cada regla copiada entre TS, Kotlin y Swift (`packages/contracts/fixtures/vectores/`, junto a los
+fixtures de TST-5 y CLI-2); (4) e2e web que
+cruzan apps. Un CA ★ tiene prueba en cada app nativa, salvo los que garantiza el servidor. Ninguna prueba garantiza
+«cero fallos»: estas detectan la rotura entre apps antes del merge.
+
 ## 8. Mecanismos que lo sostienen
 
-Corren en CI y bloquean el merge, salvo los avisos. Los puntos 1 a 5 están en el job `docs` de
-`.github/workflows/ci.yml`; el 6 y el 7, en `.github/workflows/docs-guard.yml` (el 6 lee el cuerpo del PR y el 7 corre
-por calendario, y ninguno de los dos encaja en el disparador de `ci.yml`):
+Corren en CI y bloquean el merge, salvo los avisos. En `.github/workflows/ci.yml`, los puntos 1 a 4 y el 9 corren en
+el job `quality`, y el 5 en el job `docs`; el 6 y el 7 están en `.github/workflows/docs-guard.yml` (el 6 lee el cuerpo
+del PR y el 7 corre por calendario, y ninguno de los dos encaja en el disparador de `ci.yml`):
 
 1. **Enlaces y rutas** (`pnpm check:docs`): todo enlace del canon y de `planes/`, y toda ruta mencionada en `AGENTS.md`/`CLAUDE.md`,
    existe. Las rutas históricas, de ejemplo o futuras se marcan como tales y quedan fuera.
 2. **Cabecera de verificación** (§3.5; `pnpm check:docs`) en cada archivo del canon; **cabecera de plan** (§2.2) en cada plan.
 3. **Ninguna regla del canon tiene como fuente un archivo de `trabajo/`** (`pnpm check:docs`). Excepciones registradas.
-4. **Aviso** si `AGENTS.md` pasa de 120 líneas (`pnpm check:docs`).
+4. **Tope** de 150 líneas para `AGENTS.md`: por encima, falla (`pnpm check:docs`).
 5. **Referencias a git**: todo `<ref>:<ruta>` citado en el canon, en `planes/` o en los archivos de agentes resuelve en
    un clon limpio, y su ref es una etiqueta `archive/*` o un ancestro de `develop` (`scripts/check-archive-refs.sh`).
 6. **Impacto documental**: el PR trae la línea `Impacto documental:` completa (§5).
 7. **Aviso semanal**: temas de `trabajo/` sin actividad en 30 días (`scripts/check-trabajo-age.sh`).
 8. **Carga de instrucciones**: la prueba con tokens (§6.1.1) se repite tras cada actualización de una herramienta; es
    manual y queda registrada en §6.1.
+9. **Producto** (§2.4): `pnpm spec:validar`, el índice al día (`node scripts/spec.mjs indice --check`) y las pruebas
+   del propio validador (`node --test scripts/spec.test.mjs`).
 
 Los puntos 1 a 4 son las cuatro reglas de `scripts/check-docs.mjs` (`pnpm check:docs`, paso «Documentación que
 manda» del CI). Los scripts de shell se revisan con `shellcheck`, y los workflows con `actionlint`, en el mismo job.

@@ -41,6 +41,13 @@ function handlerWith(result: RpcResult) {
         throw new Error('no se usa en estas pruebas')
       },
     },
+    dataRetention: {
+      purgeBatch: async () => 0,
+      listDueFileRows: async () => [],
+      applyFileRow: async () => 'not_found',
+      listPendingTombstones: async () => [],
+      markTombstoneDeleted: async () => undefined,
+    },
     retention: {
       listDueAccounts: async () => [],
       precheck: async () => 'ok',

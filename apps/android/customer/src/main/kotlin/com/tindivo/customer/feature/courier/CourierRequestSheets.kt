@@ -26,6 +26,7 @@ import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.addresses.AddressMap
 import com.tindivo.customer.feature.addresses.GeoPoint
+import com.tindivo.customer.feature.addresses.isReferenceOk
 import com.tindivo.customer.feature.checkout.AddressSheet
 import com.tindivo.customer.feature.checkout.CheckoutSheetActions
 import com.tindivo.customer.feature.checkout.ChoiceRow
@@ -168,7 +169,7 @@ private fun SheetSubtitle(text: String) {
 
 /**
  * Marcar el punto en el mapa con el pin fijo al centro y escribir cómo llegar (web: el `pin-drop`). Solo se confirma
- * un punto que la persona movió dentro de la zona y con una referencia de 5 a 140 letras; el ViewModel lo vuelve a
+ * un punto que la persona movió dentro de la zona y con una referencia de 15 a 140 letras; el ViewModel lo vuelve a
  * comprobar y el servidor también. Lo escrito vive solo mientras la hoja está abierta.
  */
 @Composable
@@ -183,7 +184,7 @@ private fun PinSheet(
     var point by remember(end) { mutableStateOf(start) }
     var reference by remember(end) { mutableStateOf(current.reference) }
     val inside = point?.let(state.area::contains) == true
-    val referenceOk = reference.trim().length in COURIER_REFERENCE_MIN..COURIER_REFERENCE_MAX
+    val referenceOk = isReferenceOk(reference)
     SheetFrame(title = stringResource(end.chooseTitle()), onClose = onClose, holdsMap = true) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             AddressMap(

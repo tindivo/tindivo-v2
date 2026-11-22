@@ -181,7 +181,7 @@ jobs:
       # D-57: el AAB prodRelease (R8 y reducción de recursos) se construye sin firmar y solo para medir su peso.
       - name: Construir el AAB prod release (sin firmar, solo para medir)
         working-directory: apps/android
-        run: ./gradlew :customer:bundleProdRelease -PversionCode=${{ github.run_number }}
+        run: ./gradlew :customer:bundleProdRelease -PversionCode=${{ github.run_number }} -PpermitirSinGoogleId=true
 
       # EVID-01: el manifiesto fusionado de prodRelease (el que entra al AAB), con la misma comprobación de superficie que
       # el del APK de depuración. El applicationId de prod no lleva sufijo (el de dev es com.tindivo.customer.dev). Se

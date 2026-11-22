@@ -1,7 +1,7 @@
 # Antifraude: a quién se le fía la comida
 
 > Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: `app_settings`, funciones de riesgo, conteos) +
-> `develop@7d00aa4` · Fuente de las reglas: `DECISIONS.md §8` · Pedidos: `Docs/negocio/servicios/pedidos-restaurante.md`
+> `develop@7d00aa4` · enmienda 2026-11-17: «En el mostrador no se fía», contra `0283` y `payment-rules.ts` · Fuente de las reglas: `DECISIONS.md §8` · Pedidos: `Docs/negocio/servicios/pedidos-restaurante.md`
 
 ## Qué se protege
 
@@ -44,15 +44,23 @@ en media cuadra en una hora es una noche buena, no fraude»).
 
 ## En el mostrador no se fía
 
+Pedidos que el cliente hace desde la app:
+
 | | Entrega | Recojo «ahora» | Recojo «más tarde» |
 |---|---|---|---|
-| Efectivo en caja | ✅ | ✅ | ⛔ prepago |
+| Efectivo en caja | ✅ | ⛔ prepago | ⛔ prepago |
 | Yape al recibir | ✅ | no existe | no existe |
 | Prepago con captura | ✅ | ✅ | ✅ |
 
-**Por qué:** un recojo «más tarde» es el único caso en que se cocina sin el cliente delante **y** sin nadie que cobre
-al final. Un recojo «ahora» se cobra al aceptar, antes de cocinar (`0224`). La regla vive en `customerPaymentIntents`
-(`packages/contracts`) y en el CHECK `orders_pickup_payment_chk`; solo aplica al canal de la app.
+**Todo recojo pedido desde la app va prepagado** y llega a cocina pagado (decisión de Jesús del 2026-10-29, ratificada
+el 2026-11-17; `DECISIONS.md`, «Decisiones de producto de la app cliente»). **Por qué:** en un recojo no hay motorizado
+que cobre al final, y el cliente puede no venir. Hasta la `0283`, el recojo «ahora» admitía pagar en caja; desde ella,
+`create_customer_order` rechaza todo recojo que no sea prepago (`pickup_requires_prepaid`). La regla vive en
+`customerPaymentIntents` (`packages/contracts/src/payment-rules.ts`) y en esa función; el CHECK
+`orders_pickup_payment_chk` (`0223`) queda de suelo y sigue admitiendo las filas históricas de recojo «ahora» en caja.
+
+**Solo aplica al canal de la app.** Los pedidos que la cajera teclea desde el panel del negocio
+(`create_business_manual_order`) no cambian: el cliente está en el mostrador o al teléfono y el negocio decide.
 
 ## Strikes: de dónde salen
 

@@ -1,37 +1,31 @@
 package com.tindivo.customer.feature.orders
 
 import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseDataDriver
+import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseDataTravelMinutes
 import com.tindivo.customer.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OrderDetailMappingTest {
     @Test
-    fun `el telefono nunca es texto y el boton de WhatsApp solo con telefono y sin entregar`() {
-        val driver = GetCustomerOrder200ResponseDataDriver(name = "Luis", phone = "+51 987-654-321")
+    fun `CA-TRK-08 el cliente ve el nombre completo del motorizado y nada de contacto aunque llegue un telefono`() {
+        val driver = GetCustomerOrder200ResponseDataDriver(name = "Carlos Ramírez", phone = "+51 987-654-321")
 
-        val ui =
-            detail(
-                status = "picked_up",
-                arrivedAtCustomerAt = "2026-10-26T15:20:00Z",
-                driver = driver,
-            ).toDetailUi()
-        val link = ui?.driver?.whatsappLink.orEmpty()
-
-        assertTrue(link, link.startsWith("https://wa.me/51987654321?text="))
-        assertTrue(link, link.contains("Hola%2C%20te%20escribo%20por%20mi%20pedido%20de%20Poller%C3%ADa%20Rosa"))
-        assertTrue(link, link.contains("%28%23ABCD2345%29"))
-        assertTrue(ui?.driver?.atDoor == true)
-        assertNull(detail(status = "delivered", driver = driver).toDetailUi()?.driver?.whatsappLink)
-        val noPhone = GetCustomerOrder200ResponseDataDriver(name = "Luis", phone = null)
-        assertNull(detail(status = "picked_up", driver = noPhone).toDetailUi()?.driver?.whatsappLink)
+        assertEquals(null, detail(status = "preparing", driver = driver).toDetailUi()?.driver)
+        for (status in listOf("picked_up", "delivered")) {
+            val ui = detail(status = status, driver = driver).toDetailUi()?.driver
+            assertEquals("Carlos Ramírez", ui?.name)
+        }
+        val atDoor =
+            detail(status = "picked_up", arrivedAtCustomerAt = "2026-10-26T15:20:00Z", driver = driver).toDetailUi()
+        assertTrue(atDoor?.driver?.atDoor == true)
+        assertFalse(detail(status = "delivered", driver = driver).toDetailUi()?.driver?.atDoor == true)
     }
 
     @Test
-    fun `el toString del motorizado y del detalle no lleva su nombre ni su celular`() {
+    fun `CA-TRK-08 el toString del motorizado y del detalle no lleva su nombre ni su celular`() {
         val driver = GetCustomerOrder200ResponseDataDriver(name = "Luis Quispe", phone = "+51 987-654-321")
 
         val ui =
@@ -40,11 +34,8 @@ class OrderDetailMappingTest {
                 arrivedAtCustomerAt = "2026-10-26T15:20:00Z",
                 driver = driver,
             ).toDetailUi()
-        val shown = ui?.driver
-        val texts = listOf(shown.toString(), ui.toString())
+        val texts = listOf(ui?.driver.toString(), ui.toString())
 
-        // El enlace sí lleva el celular: lo que se comprueba es que el texto no lo muestre.
-        assertTrue(shown?.whatsappLink.orEmpty().contains("51987654321"))
         for (text in texts) {
             for (marker in listOf("Luis", "Quispe", "987", "654", "321", "wa.me")) {
                 assertFalse("«$marker» en $text", text.contains(marker))
@@ -53,8 +44,26 @@ class OrderDetailMappingTest {
     }
 
     @Test
-    fun `un telefono sin digitos no da enlace`() {
-        assertNull(driverWhatsappLink("---", "X", "ABCD2345"))
+    fun `CA-TRK-05 el detalle lleva la hora de aceptacion, el estimado y el trayecto del servidor`() {
+        val ui =
+            detail(status = "pending_acceptance", estimatedReadyAt = "2026-10-26T15:30:00Z")
+                .copy(
+                    pendingAcceptanceAt = "2026-10-26T15:01:00Z",
+                    travelMinutes = GetCustomerOrder200ResponseDataTravelMinutes(min = 20, max = 25),
+                ).toDetailUi()
+
+        assertEquals(true, ui?.waitingForBusiness)
+        assertEquals(java.time.Instant.parse("2026-10-26T15:01:00Z"), ui?.pendingAcceptanceAt)
+        assertEquals(java.time.Instant.parse("2026-10-26T15:30:00Z"), ui?.estimatedReadyAt)
+        assertEquals(TravelRange(20, 25), ui?.travel)
+    }
+
+    @Test
+    fun `CA-TRK-05 un servidor que no manda los campos nuevos no rompe el detalle`() {
+        val ui = detail(status = "pending_acceptance").toDetailUi()
+
+        assertEquals(null, ui?.pendingAcceptanceAt)
+        assertEquals(null, ui?.travel)
     }
 
     @Test
@@ -78,7 +87,7 @@ class OrderDetailMappingTest {
     }
 
     @Test
-    fun `el motivo de cancelacion elige el titulo y no_show depende del metodo`() {
+    fun `CA-TRK-10 el motivo de cancelacion elige el titulo y no_show depende del metodo`() {
         fun copy(
             reason: String?,
             method: String = "delivery",
@@ -87,7 +96,7 @@ class OrderDetailMappingTest {
         assertEquals(OrderHeadline.Cancelled(CancelCopy.CustomerCancelled), copy("customer_cancelled"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.PrepayTimeout), copy("prepay_timeout"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.CouldNotConfirm), copy("validation_timeout"))
-        assertEquals(OrderHeadline.Cancelled(CancelCopy.CouldNotConfirm), copy("pending_acceptance_timeout"))
+        assertEquals(OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse), copy("pending_acceptance_timeout"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.BusinessCancelled), copy("business_cancelled"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.AdminCancelled), copy("admin_cancelled"))
         assertEquals(OrderHeadline.Cancelled(CancelCopy.ProofRejected), copy("proof_rejected_final"))
@@ -113,18 +122,7 @@ class OrderDetailMappingTest {
     }
 
     @Test
-    fun `sin el motorizado en la puerta no hay boton de WhatsApp aunque llegue un telefono`() {
-        val driver = GetCustomerOrder200ResponseDataDriver(name = "Luis", phone = "987654321")
-
-        val ui = detail(status = "picked_up", driver = driver).toDetailUi()?.driver
-
-        assertEquals("Luis", ui?.name)
-        assertFalse(ui?.atDoor == true)
-        assertNull(ui?.whatsappLink)
-    }
-
-    @Test
-    fun `con el prepago ya enviado o verificado la cancelacion no dice sin costo`() {
+    fun `CA-TRK-11 con el prepago ya enviado o verificado la cancelacion no dice sin costo`() {
         fun cancelled(
             reason: String,
             intent: String = "prepaid",
@@ -171,5 +169,68 @@ class OrderDetailMappingTest {
         assertEquals(R.string.order_cancel_admin_paid_body, CancelCopy.AdminCancelled.bodyRes(alreadyPaid = true))
         assertEquals(R.string.order_cancel_customer_body, CancelCopy.CustomerCancelled.bodyRes(alreadyPaid = false))
         assertEquals(R.string.order_cancel_prepay_body, CancelCopy.PrepayTimeout.bodyRes(alreadyPaid = true))
+        assertEquals(
+            R.string.order_cancel_prepay_unreviewed_body,
+            CancelCopy.PrepayProofNotReviewed.bodyRes(alreadyPaid = true),
+        )
+        assertEquals(
+            R.string.order_cancel_no_response_paid_body,
+            CancelCopy.BusinessNoResponse.bodyRes(alreadyPaid = true),
+        )
+        assertEquals(R.string.order_cancel_no_response_body, CancelCopy.BusinessNoResponse.bodyRes(alreadyPaid = false))
+    }
+
+    @Test
+    fun `prepay_timeout elige el texto segun el estado del comprobante`() {
+        fun copy(
+            proofStatus: String?,
+            proofAttempt: Int,
+        ) = detail(
+            status = "cancelled",
+            cancelReason = "prepay_timeout",
+            paymentIntent = "prepaid",
+            proofAttempt = proofAttempt,
+            paymentProofStatus = proofStatus,
+        ).toDetailUi()?.headline as OrderHeadline.Cancelled
+
+        assertEquals(CancelCopy.PrepayProofNotReviewed, copy("pending", 1).copy)
+        assertEquals(CancelCopy.PrepayProofRejected, copy("rejected", 1).copy)
+        assertEquals(CancelCopy.PrepayProofRejected, copy("rejected", 2).copy)
+        assertEquals(CancelCopy.PrepayProofNotReviewed, copy("verified", 1).copy)
+        assertEquals(CancelCopy.PrepayTimeout, copy(null, 0).copy)
+        // Valor que esta versión no conoce: se trata como null, sin romper.
+        assertEquals(CancelCopy.PrepayTimeout, copy("en_disputa", 0).copy)
+        assertEquals(CancelCopy.PrepayProofNotReviewed, copy("en_disputa", 1).copy)
+        assertTrue(copy("rejected", 1).alreadyPaid)
+        assertEquals(R.string.order_cancel_prepay_rejected_title, CancelCopy.PrepayProofRejected.titleRes())
+        assertEquals(
+            R.string.order_cancel_prepay_rejected_body,
+            CancelCopy.PrepayProofRejected.bodyRes(alreadyPaid = true),
+        )
+    }
+
+    @Test
+    fun `prepay_timeout distingue si el cliente envio comprobante y pending_acceptance_timeout es del negocio`() {
+        fun cancelled(
+            reason: String,
+            proofAttempt: Int,
+            intent: String = "prepaid",
+        ) = detail(status = "cancelled", cancelReason = reason, paymentIntent = intent, proofAttempt = proofAttempt)
+            .toDetailUi()
+            ?.headline
+
+        assertEquals(OrderHeadline.Cancelled(CancelCopy.PrepayTimeout), cancelled("prepay_timeout", proofAttempt = 0))
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.PrepayProofNotReviewed, alreadyPaid = true),
+            cancelled("prepay_timeout", proofAttempt = 1),
+        )
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse, alreadyPaid = true),
+            cancelled("pending_acceptance_timeout", proofAttempt = 1),
+        )
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse),
+            cancelled("pending_acceptance_timeout", proofAttempt = 0, intent = "pending_cash"),
+        )
     }
 }

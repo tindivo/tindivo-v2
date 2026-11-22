@@ -12,6 +12,7 @@ import {
   nativeDeviceFilter,
 } from './native.ts'
 import { must } from './db-result.ts'
+import { EXPIRED_TITLE, expiredBody } from './expired-text.ts'
 import { asRecord, classifyRequest } from './request-kind.ts'
 import { withStartedTasks } from './task-group.ts'
 import {
@@ -663,7 +664,7 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
       await db
         .from('orders')
         .select(
-          'short_id,business_id,customer_user_id,driver_id,status,updated_at,cancel_reason,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing',
+          'short_id,business_id,customer_user_id,driver_id,status,updated_at,cancel_reason,payment_proof_status,proof_attempt,payment_intent,order_amount,delivery_fee,prep_time_minutes,delivery_method,pickup_timing',
         )
         .eq('id', aggregateId)
         .maybeSingle(),
@@ -724,7 +725,16 @@ async function buildNotes(eventType: string, aggregateId: string, payload: Recor
     }
 
     if (eventType === 'OrderExpired') {
-      push('customer', cust, 'Tu pedido se canceló', 'No llegó el pago a tiempo · puedes volver a pedirlo')
+      push(
+        'customer',
+        cust,
+        EXPIRED_TITLE,
+        expiredBody({
+          cancelReason: o.cancel_reason,
+          paymentProofStatus: o.payment_proof_status,
+          proofAttempt: o.proof_attempt,
+        }),
+      )
     } else if (action === 'accept') {
       /**
        * ACEPTAR NO SIGNIFICA LO MISMO EN LOS DOS FLUJOS, y el aviso tampoco.

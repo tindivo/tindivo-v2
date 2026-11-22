@@ -6,7 +6,7 @@ import java.math.RoundingMode
 /** Límites de `packages/contracts/src/primitives.ts` (fuente única de la web y del servidor). */
 internal const val ADDRESS_LINE_MIN = 5
 internal const val ADDRESS_LINE_MAX = 200
-internal const val ADDRESS_REFERENCE_MIN = 5
+internal const val ADDRESS_REFERENCE_MIN = 15
 internal const val ADDRESS_REFERENCE_MAX = 140
 
 private const val MIN_PATTERN_LENGTH = 4

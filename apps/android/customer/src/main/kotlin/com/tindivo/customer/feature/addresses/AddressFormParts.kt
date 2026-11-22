@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -89,7 +90,7 @@ internal fun SaveBar(
             state.editingId == null -> R.string.address_form_save
             else -> R.string.address_form_save_changes
         }
-    Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
         Button(
             onClick = onSave,
             enabled = state.canSave,
