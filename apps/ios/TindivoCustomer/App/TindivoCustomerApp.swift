@@ -13,6 +13,11 @@ struct TindivoCustomerApp: App {
         if ProcessInfo.processInfo.arguments.contains("-tindivo-reset-cart") {
             try? FileManager.default.removeItem(at: FileCartStore.defaultFileURL)
         }
+        // `-tindivo-seed-other-bag` deja una bolsa de OTRO negocio (n2 de las vistas previas) antes de arrancar:
+        // así la prueba de interfaz recorre la pregunta «¿Empezar una bolsa nueva?».
+        if ProcessInfo.processInfo.arguments.contains("-tindivo-seed-other-bag") {
+            Self.seedOtherBag()
+        }
         #endif
         #if DEBUG
         environment = Self.debugEnvironment(.live())
@@ -28,8 +33,23 @@ struct TindivoCustomerApp: App {
     }
 
     #if DEBUG
+    /// Escribe en el archivo de la bolsa una bolsa de Chifa Lung Fung (`n2`), con un plato.
+    private static func seedOtherBag() {
+        let other = PreviewData.summaries[1]
+        let line = CartLine(
+            itemId: "seed-1", name: "Arroz chaufa", basePrice: PreviewData.price, modifiers: [], note: nil,
+            quantity: 1, imageURL: nil
+        )
+        guard let snapshot = Cart(businessId: other.id, businessName: other.name, lines: [line]).snapshot(),
+              let data = try? CartSnapshotCodec.encode(snapshot) else { return }
+        let url = FileCartStore.defaultFileURL
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: .atomic)
+    }
+
     /// Ganchos de las pruebas de interfaz, solo en DEBUG:
     /// - `-tindivo-now 2026-07-07T20:00:00-05:00` fija el reloj de la app: no depende de la hora a la que corre.
+    /// - `-tindivo-seed-other-bag` empieza con una bolsa de otro negocio (`n2`).
     /// - `-tindivo-fake-catalog` usa la carta de las vistas previas en vez de la API: el flujo no depende de staging.
     private static func debugEnvironment(_ live: AppEnvironment) -> AppEnvironment {
         let arguments = ProcessInfo.processInfo.arguments

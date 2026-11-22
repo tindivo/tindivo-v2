@@ -36,11 +36,11 @@ struct DishView: View {
         .tindivoToast(model.notices.message)
         .alert(
             Text("¿Empezar una bolsa nueva?"),
-            isPresented: Binding(get: { otherBusiness != nil }, set: { if !$0 { model.consumeOutcome() } }),
+            isPresented: Binding(get: { otherBusiness != nil }, set: { _ in }),
             presenting: otherBusiness
         ) { _ in
-            Button("Mantener", role: .cancel) { model.consumeOutcome() }
-            Button("Vaciar y empezar") { Task { await model.replaceWithPending() } }
+            Button("Mantener", role: .cancel) { model.keepCurrentBag() }
+            Button("Vaciar y empezar") { model.confirmReplace() }
         } message: { names in
             Text("Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new).")
         }

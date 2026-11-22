@@ -81,23 +81,35 @@ final class DishScreenModel {
         }
     }
 
-    /// La persona aceptó vaciar la bolsa del otro restaurante y empezar con el plato pendiente.
-    func replaceWithPending() async {
-        guard !isAdding, let line = pending else { return }
+    /// La persona aceptó vaciar la bolsa del otro restaurante: toma la línea pendiente EN EL ACTO (síncrono, antes de
+    /// que nada pueda consumirla) y después lanza la escritura. Devuelve la tarea para quien quiera esperarla.
+    @discardableResult
+    func confirmReplace() -> Task<Void, Never>? {
+        guard !isAdding, let line = pending else { return nil }
+        pending = nil
+        outcome = nil
         isAdding = true
+        return Task { await write(replacing: line) }
+    }
+
+    private func write(replacing line: CartLine) async {
         defer { isAdding = false }
         do throws(CartError) {
             try await cartStore.replace(businessId: businessId, businessName: businessName, line: line)
-            pending = nil
             outcome = .added(capped: false)
         } catch {
             outcome = .failed
         }
     }
 
-    /// La pantalla ya mostró el resultado (o la persona eligió «Mantener»).
+    /// «Mantener»: la bolsa del otro restaurante se queda y la línea pendiente se descarta.
+    func keepCurrentBag() {
+        pending = nil
+        outcome = nil
+    }
+
+    /// La pantalla ya mostró el resultado. No toca `pending`: cerrar el diálogo nunca pierde la línea pendiente.
     func consumeOutcome() {
-        if case .otherBusiness = outcome { pending = nil }
         outcome = nil
     }
 

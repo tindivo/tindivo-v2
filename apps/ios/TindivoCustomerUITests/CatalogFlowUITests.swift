@@ -18,8 +18,9 @@ final class CatalogFlowUITests: XCTestCase {
 
     /// La bolsa de una corrida anterior (de otro negocio) abriría la pregunta de vaciarla. El reloj de la app se fija
     /// en un martes a las 20:00 de Lima: el horario nocturno no depende de cuándo corra.
-    private func launch(fakeCatalog: Bool) {
+    private func launch(fakeCatalog: Bool, seedOtherBag: Bool = false) {
         app.launchArguments = ["-tindivo-reset-cart", "-tindivo-now", "2026-07-07T20:00:00-05:00"]
+        if seedOtherBag { app.launchArguments.append("-tindivo-seed-other-bag") }
         if fakeCatalog { app.launchArguments.append("-tindivo-fake-catalog") }
         app.launch()
     }
@@ -27,6 +28,49 @@ final class CatalogFlowUITests: XCTestCase {
     func testAddADishWithTheFakeCatalog() throws {
         launch(fakeCatalog: true)
         try runFlow()
+    }
+
+    /// Flujo A: un plato con grupo obligatorio («Presa») → elegir «Pecho» → Agregar → la bolsa lo muestra.
+    func testRequiredOptionFlowWithTheFakeCatalog() throws {
+        launch(fakeCatalog: true)
+        openDonLucho()
+        let dish = dishRow("1/4 de pollo")
+        XCTAssertTrue(dish.waitForExistence(timeout: 20), "No está «1/4 de pollo»")
+        dish.tap()
+        let add = element("dish.add")
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        XCTAssertFalse(add.isEnabled, "Con la presa sin elegir no se puede agregar")
+        app.staticTexts["Pecho"].firstMatch.tap()
+        XCTAssertTrue(add.isEnabled, "Con «Pecho» elegido debe poder agregarse")
+        add.tap()
+        let bar = element("business.cartBar")
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "No apareció «Ver mi bolsa»")
+        bar.tap()
+        XCTAssertTrue(element("cart.line").waitForExistence(timeout: 10), "La línea no apareció en la bolsa")
+        XCTAssertTrue(app.staticTexts["Presa: Pecho"].exists, "La línea no muestra «Presa: Pecho»")
+    }
+
+    /// Flujo B: la bolsa es de otro negocio; «Vaciar y empezar» debe dejar la línea nueva en una bolsa de Don Lucho.
+    func testReplaceTheBagOfAnotherBusinessWithTheFakeCatalog() throws {
+        launch(fakeCatalog: true, seedOtherBag: true)
+        openDonLucho()
+        let dish = dishRow("Chicha morada")
+        XCTAssertTrue(dish.waitForExistence(timeout: 20), "No está «Chicha morada»")
+        dish.tap()
+        let add = element("dish.add")
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        add.tap()
+        let replace = app.alerts.buttons["Vaciar y empezar"]
+        XCTAssertTrue(replace.waitForExistence(timeout: 5), "No apareció la pregunta de vaciar la bolsa")
+        replace.tap()
+        XCTAssertTrue(element("dish.add").waitForNonExistence(timeout: 10), "La ficha no se cerró")
+        let bar = element("business.cartBar")
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "No apareció «Ver mi bolsa»")
+        bar.tap()
+        XCTAssertTrue(element("cart.line").waitForExistence(timeout: 10), "La línea no apareció en la bolsa")
+        XCTAssertTrue(app.staticTexts["Pollería Don Lucho"].exists, "La bolsa no es de Pollería Don Lucho")
+        XCTAssertTrue(app.staticTexts["Chicha morada"].exists, "La línea no es «Chicha morada»")
+        XCTAssertFalse(app.staticTexts["Arroz chaufa"].exists, "Sigue el plato del otro negocio")
     }
 
     func testAddADishFromTheFirstOpenBusiness() throws {
@@ -75,6 +119,17 @@ final class CatalogFlowUITests: XCTestCase {
     }
 
     // MARK: Pasos
+
+    private func dishRow(_ name: String) -> XCUIElement {
+        query("menu.dish").containing(.staticText, identifier: name).firstMatch
+    }
+
+    private func openDonLucho() {
+        XCTAssertTrue(app.staticTexts["¿Qué pedimos hoy?"].waitForExistence(timeout: 30), "Inicio no cargó")
+        let card = app.staticTexts["Pollería Don Lucho"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 20), "No está Pollería Don Lucho en Inicio")
+        card.tap()
+    }
 
     /// Dentro de un negocio: abre el primer plato que no pida elegir opciones obligatorias y lo agrega. Devuelve su
     /// nombre, o `nil` si no encontró ninguno.

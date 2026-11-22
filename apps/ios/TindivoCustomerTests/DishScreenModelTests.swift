@@ -114,11 +114,11 @@ struct DishScreenModelTests {
         let model = try model(store: store)
         await model.add()
         #expect(model.outcome == .otherBusiness(currentBusinessName: "Chifa", newBusinessName: "Don Lucho"))
-        model.consumeOutcome()
+        model.keepCurrentBag()
         #expect(model.outcome == nil)
         #expect(await store.current()?.businessId == "otro")
         // «Mantener» descarta lo pendiente: reemplazar ya no hace nada.
-        await model.replaceWithPending()
+        await model.confirmReplace()?.value
         #expect(await store.current()?.businessId == "otro")
     }
 
@@ -128,8 +128,21 @@ struct DishScreenModelTests {
         _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("x"))
         let model = try model(store: store)
         await model.add()
-        await model.replaceWithPending()
+        await model.confirmReplace()?.value
         #expect(model.outcome == .added(capped: false))
+        let cart = await store.current()
+        #expect(cart?.businessId == "negocio-1")
+        #expect(cart?.lines.map(\.itemId) == ["i1"])
+    }
+
+    @Test("el orden real de SwiftUI: cerrar el diálogo (consume) antes de confirmar no pierde la línea")
+    func closingTheDialogBeforeConfirmKeepsThePendingLine() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("x"))
+        let model = try model(store: store)
+        await model.add()
+        model.consumeOutcome()
+        await model.confirmReplace()?.value
         let cart = await store.current()
         #expect(cart?.businessId == "negocio-1")
         #expect(cart?.lines.map(\.itemId) == ["i1"])
