@@ -5,6 +5,7 @@ import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -17,15 +18,25 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Una identidad cuyo `beginSignOut` se queda colgado (el disco no responde) hasta que la prueba lo suelte. */
+/**
+ * Una identidad cuyo `beginSignOut` se queda colgado (el disco no responde) hasta que la prueba lo suelte. Como el actor
+ * de DataStore, la escritura pedida se aplica AUNQUE quien la pidió ya se haya ido (cancelado por el tope): corre en
+ * [lateWrites], no en el llamador.
+ */
 class HangingSignOutInstallations(
     private val inner: PushInstallationStore,
+    private val lateWrites: CoroutineScope,
 ) : PushInstallationStore by inner {
     val gate = CompletableDeferred<Unit>()
+    val asked = mutableListOf<String?>()
 
     override suspend fun beginSignOut(accountId: String?): PendingCleanup? {
-        gate.await()
-        return inner.beginSignOut(accountId)
+        asked += accountId
+        return lateWrites
+            .async {
+                gate.await()
+                inner.beginSignOut(accountId)
+            }.await()
     }
 }
 
@@ -85,7 +96,7 @@ class PushAuditR1Test {
     @Test
     fun `PS202-002 un disco colgado no deja la sesion abierta y la escritura tardia no toca a la cuenta siguiente`() =
         runTest {
-            val hanging = HangingSignOutInstallations(PresenterRig(session).installations)
+            val hanging = HangingSignOutInstallations(PresenterRig(session).installations, backgroundScope)
             val rig = PresenterRig(session, installations = hanging, prefs = prefs)
             val registrar = registrar(rig)
             val oldInstall = puts().single().installId.toString()
@@ -105,12 +116,17 @@ class PushAuditR1Test {
             session.signOutIf("A")
             assertFalse(rig.presenter.onPush(payload(oldInstall)))
 
-            // Entra B y el disco se suelta después: lo tardío no deshace la vinculación de B.
+            // Entra B (el cierre del colector también vence su tope) y queda atada; el disco se suelta DESPUÉS y las
+            // escrituras pedidas se aplican tarde: ninguna deshace la vinculación de B.
             session.switchTo("B")
+            advanceTimeBy(30_000)
             runCurrent()
+            assertEquals("B", rig.installations.current()?.accountId)
+            assertFalse("nunca se pide soltar «cualquier cuenta»", hanging.asked.contains(null))
             hanging.gate.complete(Unit)
             runCurrent()
             assertEquals("B", rig.installations.current()?.accountId)
+            assertTrue(rig.presenter.onPush(payload(rig.installations.current()?.installId)))
         }
 
     // PS202-003: apagado sin red y reactivado desde Ajustes, al volver gana la última intención: queda registrado.

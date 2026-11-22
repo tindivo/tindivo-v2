@@ -91,6 +91,9 @@ class PushPresenter(
      */
     suspend fun silence(change: suspend () -> Unit) = lock.withLock { change() }
 
+    /** Vacía la bandeja sin esperar el candado: para un cierre cuyo tope venció con el candado tomado. */
+    fun clearTray() = notifications.clearAll()
+
     /** La identidad de antes de [generation] ya se invalidó: desde ahora se admiten los avisos de esa entrada. */
     suspend fun adopt(generation: Long) = lock.withLock { adoptedGeneration = generation }
 

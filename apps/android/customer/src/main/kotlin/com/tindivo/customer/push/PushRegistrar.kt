@@ -97,7 +97,8 @@ class PushRegistrar(
                             closing = null
                             seenAccount = null
                             entryAt = generation
-                            closeAccount(accountId = null, hasSession = false)
+                            // Con la cuenta atada, no `null`: una escritura tardía solo puede soltar ESA cuenta (H3).
+                            installations.current()?.accountId?.let { closeAccount(accountId = it, hasSession = false) }
                         }
 
                         is SessionState.SignedIn -> {
@@ -113,7 +114,10 @@ class PushRegistrar(
                             // Solo subió la generación de una entrada ya registrada: la identidad no cambió, no se repite.
                             val unchanged =
                                 sameAccount && before?.accountId == session.userId && installations.current() == before
-                            if (!unchanged) mutex.withLock { registerLocked(session.userId) }
+                            // Sin la generación adoptada (no se pudo soltar la identidad vieja) no se registra: se reintenta en el
+                            // próximo `refresh`, al volver a primer plano.
+                            val adopted = presenter.adoptedGeneration == generation
+                            if (!unchanged && adopted) mutex.withLock { registerLocked(session.userId) }
                             retryServerCleanup(session.userId)
                         }
                     }
@@ -124,7 +128,13 @@ class PushRegistrar(
     /** FCM rotó el token (`onNewToken`), o se acaba de conceder el permiso: se vuelve a registrar la cuenta vigente. */
     override fun refresh() {
         scope.launch {
+            val generation = sessionStore.signInGeneration.value
             val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return@launch
+            // Una adopción que quedó pendiente (el disco falló al soltar la identidad vieja) se reintenta aquí, sin
+            // historial: la identidad que haya se suelta antes de adoptar. Sin adoptar, no se registra.
+            if (generation != presenter.adoptedGeneration && !adoptGeneration(account, generation, entryAt = null)) {
+                return@launch
+            }
             mutex.withLock {
                 // Gana la última intención (PS202-003): apagado con la baja pendiente, se reintenta la baja; encendido
                 // (también desde Ajustes), la baja vieja ya no se quiere y se registra.
@@ -153,12 +163,12 @@ class PushRegistrar(
         val bound = installations.current()?.accountId
         if (generation == presenter.adoptedGeneration) {
             // Otra cuenta sin pasar por SignedOut (un StateFlow puede saltárselo): lo de la anterior se cierra igual.
-            if (bound != null && bound != account) closeAccount(accountId = null, hasSession = false)
+            if (bound != null && bound != account) closeAccount(accountId = bound, hasSession = false)
             return false
         }
         // La subida de generación de la entrada que sí se vio (la sesión publica el estado y luego la generación).
         val seenEntry = entryAt != null && (generation == entryAt || generation == entryAt + 1)
-        if (bound != null && (bound != account || !seenEntry)) closeAccount(accountId = null, hasSession = false)
+        if (bound != null && (bound != account || !seenEntry)) closeAccount(accountId = bound, hasSession = false)
         val now = installations.current()?.accountId
         if (now != null && !(seenEntry && now == account)) return false
         presenter.adopt(generation)
@@ -211,14 +221,16 @@ class PushRegistrar(
         // Paso atómico: nueva identidad + limpieza anotada + bandeja vacía, bajo el candado de los avisos.
         val pending =
             try {
-                // Con tope (PS202-002): un disco que no responde no deja la sesión abierta. Al vencer, la bandeja ya se
-                // limpió (el `finally` de `closeAccount`) y la sesión se cierra igual; una escritura tardía de
-                // `beginSignOut` solo actúa si la identidad sigue atada a esa cuenta, así que no toca a la siguiente.
+                // Con tope (PS202-002): un disco que no responde no deja la sesión abierta. Al vencer, se vacía la
+                // bandeja y la sesión se cierra igual; una escritura tardía de `beginSignOut` solo actúa si la identidad
+                // sigue atada a esa cuenta (siempre se pasa la cuenta, nunca `null`), así que no toca a la siguiente.
                 val outcome =
                     withTimeoutOrNull(registrationWaitMs) {
                         Result.success(presenter.closeAccount { installations.beginSignOut(accountId) })
                     }
                 if (outcome == null) {
+                    // Si el tope venció esperando el candado de los avisos, el `finally` no llegó a correr (H4).
+                    presenter.clearTray()
                     deleteTokenAfterFailure(accountId)
                     return
                 }
