@@ -33,12 +33,16 @@ public struct ExactMoney: Codable, Hashable, Sendable {
         try container.encode(value)
     }
 
+    /// 0,000001: muy por encima del error de `Double` en el rango de un `numeric(10,2)` (~1e-8) y muy por debajo de un
+    /// tercer decimal de verdad (0,001).
+    private static let tolerance = Decimal(sign: .plus, exponent: -6, significand: 1)
+
     /// El importe a céntimos si de verdad tiene a lo sumo 2 decimales (tolerando el error de `Double`); si no, nil.
     static func exactCents(_ raw: Decimal) -> Decimal? {
         var input = raw
         var rounded = Decimal()
         NSDecimalRound(&rounded, &input, 2, .plain)
         let drift = (raw - rounded).magnitude
-        return drift < Decimal(string: "0.000001", locale: Locale(identifier: "en_US_POSIX"))! ? rounded : nil
+        return drift < tolerance ? rounded : nil
     }
 }
