@@ -10,6 +10,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -77,27 +79,45 @@ class PushRegistrar(
         scope.launch {
             // El borrado del token pendiente, bajo el mismo candado que los registros.
             mutex.withLock { cleanTokenLocked() }
-            sessionStore.state.collect { session ->
-                when (session) {
-                    SessionState.Unknown -> {
-                        Unit
-                    }
+            // El estado Y la generación: la sesión publica primero el estado y después la generación, así que la última
+            // emisión trae los dos al día aunque el estado no cambie (A -> B -> A visto como A).
+            // La entrada que este colector VIO (el estado pasó de otra cosa a esta cuenta) y en qué generación: la que
+            // trae su propia subida de generación no se confunde con una entrada que se saltó.
+            var seenAccount: String? = null
+            var entryAt: Long? = null
+            combine(sessionStore.state, sessionStore.signInGeneration) { session, generation -> session to generation }
+                .distinctUntilChanged()
+                .collect { (session, generation) ->
+                    when (session) {
+                        SessionState.Unknown -> {
+                            Unit
+                        }
 
-                    SessionState.SignedOut -> {
-                        closing = null
-                        closeAccount(accountId = null, hasSession = false)
-                    }
+                        SessionState.SignedOut -> {
+                            closing = null
+                            seenAccount = null
+                            entryAt = generation
+                            closeAccount(accountId = null, hasSession = false)
+                        }
 
-                    is SessionState.SignedIn -> {
-                        if (closing != session.userId) closing = null
-                        // Otra cuenta sin pasar por SignedOut (un StateFlow puede saltárselo): lo de la anterior se cierra igual.
-                        val bound = installations.current()?.accountId
-                        if (bound != null && bound != session.userId) closeAccount(accountId = null, hasSession = false)
-                        mutex.withLock { registerLocked(session.userId) }
-                        retryServerCleanup(session.userId)
+                        is SessionState.SignedIn -> {
+                            if (closing != session.userId) closing = null
+                            // Una sesión restaurada al arrancar no es una entrada de este proceso (entryAt sigue null).
+                            if (seenAccount != session.userId && (seenAccount != null || entryAt != null)) {
+                                entryAt = generation
+                            }
+                            val sameAccount = seenAccount == session.userId
+                            seenAccount = session.userId
+                            val before = installations.current()
+                            if (adoptGeneration(session.userId, generation, entryAt)) entryAt = null
+                            // Solo subió la generación de una entrada ya registrada: la identidad no cambió, no se repite.
+                            val unchanged =
+                                sameAccount && before?.accountId == session.userId && installations.current() == before
+                            if (!unchanged) mutex.withLock { registerLocked(session.userId) }
+                            retryServerCleanup(session.userId)
+                        }
                     }
                 }
-            }
         }
     }
 
@@ -106,9 +126,43 @@ class PushRegistrar(
         scope.launch {
             val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return@launch
             mutex.withLock {
-                if (prefs.current().unregisterPending) optOutServerLocked(account) else registerLocked(account)
+                // Gana la última intención (PS202-003): apagado con la baja pendiente, se reintenta la baja; encendido
+                // (también desde Ajustes), la baja vieja ya no se quiere y se registra.
+                val current = prefs.current()
+                if (!current.enabled) {
+                    if (current.unregisterPending) optOutServerLocked(account)
+                } else {
+                    if (current.unregisterPending) prefs.update { it.copy(unregisterPending = false) }
+                    registerLocked(account)
+                }
             }
         }
+    }
+
+    /**
+     * Antes de registrar a [account]: si hubo una entrada nueva desde la última adoptada (aunque el `StateFlow` se haya
+     * saltado los estados intermedios, A -> B -> A), la identidad que haya es de una sesión anterior y se invalida
+     * (PS202-001). Solo con la identidad ya suelta se adopta la generación; si no se pudo soltar, los avisos siguen
+     * rechazados (fail-closed) hasta el siguiente intento.
+     */
+    private suspend fun adoptGeneration(
+        account: String,
+        generation: Long,
+        entryAt: Long?,
+    ): Boolean {
+        val bound = installations.current()?.accountId
+        if (generation == presenter.adoptedGeneration) {
+            // Otra cuenta sin pasar por SignedOut (un StateFlow puede saltárselo): lo de la anterior se cierra igual.
+            if (bound != null && bound != account) closeAccount(accountId = null, hasSession = false)
+            return false
+        }
+        // La subida de generación de la entrada que sí se vio (la sesión publica el estado y luego la generación).
+        val seenEntry = entryAt != null && (generation == entryAt || generation == entryAt + 1)
+        if (bound != null && (bound != account || !seenEntry)) closeAccount(accountId = null, hasSession = false)
+        val now = installations.current()?.accountId
+        if (now != null && !(seenEntry && now == account)) return false
+        presenter.adopt(generation)
+        return true
     }
 
     /** Apagar en Cuenta: primero nada se pinta, luego la baja de este aparato con la cuenta vigente (CA-NOT-06). */
@@ -157,7 +211,18 @@ class PushRegistrar(
         // Paso atómico: nueva identidad + limpieza anotada + bandeja vacía, bajo el candado de los avisos.
         val pending =
             try {
-                presenter.closeAccount { installations.beginSignOut(accountId) }
+                // Con tope (PS202-002): un disco que no responde no deja la sesión abierta. Al vencer, la bandeja ya se
+                // limpió (el `finally` de `closeAccount`) y la sesión se cierra igual; una escritura tardía de
+                // `beginSignOut` solo actúa si la identidad sigue atada a esa cuenta, así que no toca a la siguiente.
+                val outcome =
+                    withTimeoutOrNull(registrationWaitMs) {
+                        Result.success(presenter.closeAccount { installations.beginSignOut(accountId) })
+                    }
+                if (outcome == null) {
+                    deleteTokenAfterFailure(accountId)
+                    return
+                }
+                outcome.getOrNull()
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {

@@ -38,11 +38,20 @@ class PushPresenter(
 ) {
     private val lock = Mutex()
 
+    /**
+     * La generación de entrada cuya identidad ya quedó limpia (PS202-001). Al construirse, la de la sesión restaurada;
+     * cada entrada nueva en este proceso la cambia y, hasta que el registrador invalida la identidad anterior y la
+     * adopta ([adopt]), no se pinta ningún aviso: un `StateFlow` puede saltarse A -> B -> A, la generación no.
+     */
+    @Volatile var adoptedGeneration: Long = sessionStore.signInGeneration.value
+        private set
+
     /** Pinta [payload] si es de la instalación y la sesión actuales. Devuelve si lo pintó. */
     suspend fun onPush(payload: NativePushPayload): Boolean =
         lock.withLock {
             // La generación se lee ANTES que el estado (ver `SessionStore.signInGeneration`).
             val generation = sessionStore.signInGeneration.value
+            if (generation != adoptedGeneration) return false
             // Al arrancar desde un aviso la sesión guardada puede no haberse leído aún.
             val account =
                 (sessionStore.state.first { it != SessionState.Unknown } as? SessionState.SignedIn)?.userId
@@ -81,6 +90,9 @@ class PushPresenter(
      * pinta antes, y ninguno se pinta después.
      */
     suspend fun silence(change: suspend () -> Unit) = lock.withLock { change() }
+
+    /** La identidad de antes de [generation] ya se invalidó: desde ahora se admiten los avisos de esa entrada. */
+    suspend fun adopt(generation: Long) = lock.withLock { adoptedGeneration = generation }
 
     private fun stillCurrent(
         account: String,
