@@ -22,8 +22,6 @@ final class BusinessScreenModel {
     static let jumpGrace: TimeInterval = 0.9
 
     private(set) var state: State = .idle
-    /// Hubo un 426: la pantalla de actualización es de otra fase, la raíz lo leerá de aquí.
-    private(set) var upgradeNotice: UpgradeNotice?
 
     /// `nil` = no se busca; un texto, aunque vacío, es el modo búsqueda.
     private(set) var query: String?
@@ -77,7 +75,6 @@ final class BusinessScreenModel {
         recompute()
         do throws(AppError) {
             let menu = try await catalog.getBusiness(id: id)
-            upgradeNotice = nil
             if let detail = MenuMapping.detail(from: menu) {
                 state = .loaded(detail)
             } else {
@@ -86,7 +83,6 @@ final class BusinessScreenModel {
         } catch .cancelled {
             state = .idle
         } catch {
-            upgradeNotice = UpgradeNotice(error)
             state = .failed(error)
         }
         recompute()

@@ -49,6 +49,7 @@ targets:
         TindivoAPIBaseURL: $(API_BASE_URL)
         TindivoSupabaseURL: $(SUPABASE_URL)
         TindivoSupabasePublishableKey: $(SUPABASE_PUBLISHABLE_KEY)
+        TindivoAppStoreID: $(APP_STORE_ID)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)

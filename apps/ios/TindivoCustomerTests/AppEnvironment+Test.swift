@@ -5,15 +5,24 @@ import TindivoAPI
 
 /// La raíz de composición de las pruebas (SW-4): mismas dependencias que `live`, con dobles.
 extension AppEnvironment {
+    @MainActor
     static func test(
         system: any SystemRepository = UnusedSystemRepository(),
+        configService: (any ConfigService)? = nil,
         catalog: any CatalogRepository = UnusedCatalogRepository(),
         cartStore: any CartStore = FileCartStore(
             fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/cart.json")
         ),
         clock: AppClock = .live
     ) -> AppEnvironment {
-        AppEnvironment(config: .fromBundle(.main), system: system, catalog: catalog, cartStore: cartStore, clock: clock)
+        AppEnvironment(
+            config: .fromBundle(.main),
+            system: system,
+            configService: configService ?? StubConfigService(),
+            catalog: catalog,
+            cartStore: cartStore,
+            clock: clock
+        )
     }
 }
 
@@ -37,4 +46,12 @@ struct UnusedCatalogRepository: CatalogRepository {
 struct UnusedSystemRepository: SystemRepository {
     func health() async throws(AppError) -> ApiHealth { throw .network }
     func clientCompat() async throws(AppError) -> ClientCompat { throw .network }
+}
+
+/// La configuración remota que una prueba no necesita: nunca pide actualizar y no lee nada.
+@MainActor
+final class StubConfigService: ConfigService {
+    var state: ConfigState = .unknown
+    func refresh() async {}
+    func reportUpgradeRequired(minVersion: String?) {}
 }

@@ -198,7 +198,11 @@
     "Versión mínima" : {},
     "vie" : {},
     "Volver" : {},
-    "Ya tienes %lld de este plato: es el máximo por pedido" : {}
+    "Ya tienes %lld de este plato: es el máximo por pedido" : {},
+    "Actualiza la app" : {},
+    "Hay una versión nueva de Tindivo y necesitas instalarla para seguir usando la app." : {},
+    "Ir a la App Store" : {},
+    "Versión mínima: %@" : {}
   },
   "version" : "1.0"
 }

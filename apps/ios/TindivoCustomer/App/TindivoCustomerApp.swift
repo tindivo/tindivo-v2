@@ -8,6 +8,7 @@ struct TindivoCustomerApp: App {
 
     init() {
         TindivoFonts.register()
+        URLCache.shared = AppEnvironment.makeImageCache()
         #if DEBUG
         // Las pruebas de interfaz parten de una bolsa vacía: la de una corrida anterior abriría otra pregunta.
         if ProcessInfo.processInfo.arguments.contains("-tindivo-reset-cart") {
@@ -70,7 +71,8 @@ struct TindivoCustomerApp: App {
             )
         }
         return AppEnvironment(
-            config: live.config, system: live.system, catalog: catalog, cartStore: live.cartStore, clock: clock
+            config: live.config, system: live.system, configService: live.configService, catalog: catalog,
+            cartStore: live.cartStore, clock: clock
         )
     }
     #endif

@@ -22,8 +22,6 @@ final class CatalogHomeScreenModel {
     }
 
     private(set) var state: State = .idle
-    /// Hubo un 426 en la última carga: la pantalla de actualización es de otra fase, la raíz lo leerá de aquí.
-    private(set) var upgradeNotice: UpgradeNotice?
 
     private let catalog: any CatalogRepository
     private var inFlight = false
@@ -50,12 +48,10 @@ final class CatalogHomeScreenModel {
         state = previous.map { .loaded(Loaded(listing: $0.listing, refreshing: true)) } ?? .loading
         do throws(AppError) {
             let businesses = try await catalog.listBusinesses()
-            upgradeNotice = nil
             state = .loaded(Loaded(listing: HomeMapping.listing(from: businesses)))
         } catch .cancelled {
             state = previous.map { .loaded(Loaded(listing: $0.listing)) } ?? .idle
         } catch {
-            upgradeNotice = UpgradeNotice(error)
             state = previous.map { .loaded(Loaded(listing: $0.listing, refreshFailed: error)) } ?? .failed(error)
         }
     }

@@ -10,7 +10,13 @@ public struct ProblemMiddleware: ClientMiddleware {
     /// Un cuerpo de error más grande que esto no es un `ProblemDetails`: no se lee entero.
     static let maxProblemBytes = 64 * 1024
 
-    public init() {}
+    /// Aviso de un 426 (CLI-4): la app lo usa para mostrar la pantalla de actualización desde un solo sitio, sin que
+    /// cada repositorio ni cada pantalla tenga que acordarse. Recibe la versión mínima de la cabecera, si viene.
+    private let onUpgradeRequired: (@Sendable (_ minVersion: String?) -> Void)?
+
+    public init(onUpgradeRequired: (@Sendable (_ minVersion: String?) -> Void)? = nil) {
+        self.onUpgradeRequired = onUpgradeRequired
+    }
 
     public func intercept(
         _ request: HTTPRequest,
@@ -31,7 +37,9 @@ public struct ProblemMiddleware: ClientMiddleware {
                 data = nil
             }
         }
-        throw AppError.from(status: response.status.code, headers: response.headerFields, body: data)
+        let error = AppError.from(status: response.status.code, headers: response.headerFields, body: data)
+        if case let .upgradeRequired(minVersion) = error { onUpgradeRequired?(minVersion) }
+        throw error
     }
 }
 
