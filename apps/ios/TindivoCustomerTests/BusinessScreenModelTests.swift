@@ -146,11 +146,11 @@ struct BusinessScreenModelTests {
         #expect(model.visible?.categories.first?.items.first?.orderable == true)
 
         let clockTask = Task { await model.runClock() }
-        // Que el bucle llegue a dormir antes de mover la hora.
-        await eventually { model.rows.isEmpty == false }
-        try? await Task.sleep(for: .milliseconds(50))
+        // Que el bucle llegue a dormir antes de mover la hora, y que vuelva a dormir (ya reaccionó) después.
+        await manual.waitForSleep(number: 1)
         manual.set(at("2026-07-07", "15:00"))
-        await eventually { model.visible?.categories.first?.items.first?.orderable == false }
+        await manual.waitForSleep(number: 2)
+        #expect(model.visible?.categories.first?.items.first?.orderable == false)
         clockTask.cancel()
         _ = await clockTask.value
     }
@@ -208,10 +208,10 @@ struct BusinessScreenModelTests {
         #expect(model.openDish?.id == "lunch")
 
         let clockTask = Task { await model.runClock() }
-        await eventually { model.rows.isEmpty == false }
-        try? await Task.sleep(for: .milliseconds(50))
+        await manual.waitForSleep(number: 1)
         manual.set(at("2026-07-07", "15:00"))
-        await eventually { model.openDish == nil }
+        await manual.waitForSleep(number: 2)
+        #expect(model.openDish == nil)
         clockTask.cancel()
         _ = await clockTask.value
     }

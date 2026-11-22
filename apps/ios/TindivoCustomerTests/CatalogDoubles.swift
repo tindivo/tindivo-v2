@@ -61,38 +61,72 @@ struct StubCatalog: CatalogRepository {
 }
 
 /// Un reloj que solo avanza cuando la prueba lo dice: `advance` mueve la hora y despierta a quien duerme en `sleep`.
+/// Cuenta las veces que alguien se pone a dormir: `waitForSleep(number:)` deja a la prueba esperar, sin tiempo real,
+/// a que el bucle que se está probando llegue (otra vez) a dormir, que es cuando ya terminó de reaccionar al último
+/// despertar.
 final class ManualClock: Sendable {
-    private let date: OSAllocatedUnfairLock<Date>
+    private struct State {
+        var date: Date
+        var sleeps = 0
+        var waiters: [(number: Int, continuation: CheckedContinuation<Void, Never>)] = []
+    }
+
+    private let state: OSAllocatedUnfairLock<State>
     private let ticks: AsyncStream<Void>
     private let continuation: AsyncStream<Void>.Continuation
 
     init(_ start: Date) {
-        date = OSAllocatedUnfairLock(initialState: start)
+        state = OSAllocatedUnfairLock(initialState: State(date: start))
         (ticks, continuation) = AsyncStream.makeStream(of: Void.self)
     }
 
     var clock: AppClock {
         AppClock(
-            now: { self.date.withLock { $0 } },
+            now: { self.state.withLock { $0.date } },
             sleep: { _ in
+                self.didStartSleeping()
                 for await _ in self.ticks { return }
                 throw CancellationError()
             }
         )
     }
 
+    private func didStartSleeping() {
+        let ready = state.withLock { state -> [CheckedContinuation<Void, Never>] in
+            state.sleeps += 1
+            let due = state.waiters.filter { $0.number <= state.sleeps }.map(\.continuation)
+            state.waiters.removeAll { $0.number <= state.sleeps }
+            return due
+        }
+        ready.forEach { $0.resume() }
+    }
+
+    /// Vuelve cuando se han hecho al menos `number` llamadas a `sleep` (la 1.ª es la primera vez que alguien duerme).
+    func waitForSleep(number: Int) async {
+        await withCheckedContinuation { continuation in
+            let alreadyThere = state.withLock { state -> Bool in
+                if state.sleeps >= number { return true }
+                state.waiters.append((number, continuation))
+                return false
+            }
+            if alreadyThere { continuation.resume() }
+        }
+    }
+
     func advance(by seconds: TimeInterval) {
-        date.withLock { $0 = $0.addingTimeInterval(seconds) }
+        state.withLock { $0.date = $0.date.addingTimeInterval(seconds) }
         continuation.yield()
     }
 
     func set(_ new: Date) {
-        date.withLock { $0 = new }
+        state.withLock { $0.date = new }
         continuation.yield()
     }
 }
 
 /// Espera, cediendo el turno, a que una condición se cumpla. Falla (con `Issue`) si no llega en un tiempo razonable.
+/// Es para lo que ocurre en otro actor (el almacén de la bolsa) y no deja una señal que esperar; lo que depende del
+/// reloj usa `ManualClock.waitForSleep`.
 @MainActor
 func eventually(
     _ message: String = "la condición no se cumplió",
