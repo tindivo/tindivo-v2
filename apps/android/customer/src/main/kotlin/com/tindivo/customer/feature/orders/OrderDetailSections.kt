@@ -2,25 +2,31 @@ package com.tindivo.customer.feature.orders
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.StatusRow
+import com.tindivo.core.designsystem.TindivoCard
+import com.tindivo.core.designsystem.TindivoColors
+import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
 
 @Composable
@@ -30,13 +36,13 @@ internal fun OrderHeadlineBlock(headline: OrderHeadline) {
             is OrderHeadline.Progress -> {
                 Text(
                     text = stringResource(headline.hero.titleRes()),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineMedium,
                 )
                 headline.hero.subtitleRes()?.let {
                     Text(
                         text = stringResource(it),
                         style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -61,7 +67,10 @@ internal fun OrderHeadlineBlock(headline: OrderHeadline) {
     }
 }
 
-/** Los cuatro pasos; los ya alcanzados van resaltados y marcados como seleccionados para el lector de pantalla. */
+/**
+ * Los cuatro pasos como barras (tablero «Seguimiento»): verde lo ya hecho, naranja el paso actual y gris lo que falta;
+ * debajo, el nombre de cada paso. Los alcanzados van marcados como seleccionados para el lector de pantalla.
+ */
 @Composable
 internal fun OrderSteps(
     phase: OrderPhase,
@@ -73,20 +82,27 @@ internal fun OrderSteps(
             OrderPhase.Delivered -> TrackingStep.Delivered.ordinal
             else -> -1
         }
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    val scheme = MaterialTheme.colorScheme
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         TrackingStep.entries.forEach { step ->
             val reached = step.ordinal <= reachedIndex
+            val current = step.ordinal == reachedIndex && phase !is OrderPhase.Delivered
+            val bar =
+                when {
+                    current -> scheme.primary
+                    reached -> scheme.onTertiaryContainer
+                    else -> scheme.outline
+                }
             Column(
                 modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { selected = reached },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                val dot = if (reached) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-                Row(modifier = Modifier.size(12.dp).background(dot, CircleShape)) {}
+                Box(modifier = Modifier.fillMaxWidth().height(6.dp).background(bar, CircleShape))
                 Text(
                     text = stringResource(step.labelRes(isPickup)),
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (reached) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (current) FontWeight.Bold else FontWeight.Normal,
+                    color = if (reached) scheme.onSurface else scheme.onSurfaceVariant,
                 )
             }
         }
@@ -96,19 +112,37 @@ internal fun OrderSteps(
 /** Quién trae el pedido: su nombre completo y, en la puerta, «[Nombre] llegó». Ningún dato de contacto. */
 @Composable
 internal fun DriverBlock(driver: DriverUi) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = stringResource(R.string.order_driver_label),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(text = driver.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            if (driver.atDoor) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(
+                            40.dp,
+                        ).background(Brush.linearGradient(TindivoColors.gradientCta), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(TindivoIcons.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(text = driver.name, style = MaterialTheme.typography.titleLarge)
                 Text(
-                    text = stringResource(R.string.order_driver_arrived, driver.name),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = stringResource(R.string.order_driver_label),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (driver.atDoor) {
+                    Text(
+                        text = stringResource(R.string.order_driver_arrived, driver.name),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TindivoColors.brandText,
+                    )
+                }
             }
         }
     }

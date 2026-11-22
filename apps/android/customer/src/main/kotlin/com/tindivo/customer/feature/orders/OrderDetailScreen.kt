@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -30,6 +33,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoCard
+import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
@@ -133,10 +139,10 @@ internal fun OrderDetailScreen(
     onOpenOrders: () -> Unit = {},
     onSwitchAccount: () -> Unit = {},
 ) {
-    Scaffold { innerPadding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.orders_back))
+            IconButton(onClick = onBack, modifier = Modifier.padding(top = 4.dp).size(48.dp)) {
+                Icon(TindivoIcons.ArrowBack, contentDescription = stringResource(R.string.orders_back))
             }
             when (state) {
                 OrderDetailUiState.Loading, OrderDetailUiState.LoggedOut -> {
@@ -201,22 +207,29 @@ private fun OrderBody(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         OrderTitle(order = order)
-        if (order.waitingForBusiness) {
-            AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
-        } else {
-            OrderHeadlineBlock(headline = order.headline)
+        // La tarjeta héroe del tablero «Seguimiento»: el estado, los pasos y la hora estimada juntos.
+        TindivoCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (order.waitingForBusiness) {
+                    AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
+                } else {
+                    OrderHeadlineBlock(headline = order.headline)
+                }
+                if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
+                    OrderSteps(phase = order.phase, isPickup = order.isPickup)
+                }
+                EtaLine(order = order)
+            }
         }
         CancelRow(offer = order.cancel, section = cancel, supportLink = supportLink, onOpenLink = onOpenLink)
         cancel.state.problem?.let { CancelProblemText(problem = it) }
         if (onRate != null) {
-            Button(onClick = onRate, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.review_rate))
-            }
+            TindivoPrimaryButton(
+                text = stringResource(R.string.review_rate),
+                onClick = onRate,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
-        if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
-            OrderSteps(phase = order.phase, isPickup = order.isPickup)
-        }
-        EtaLine(order = order)
         if (order.awaitingPrepayment) {
             PrepaySection(state = prepay.state, amount = order.total, actions = prepay.actions)
         } else if (prepay.state.send is SendState.Sent &&
@@ -225,9 +238,13 @@ private fun OrderBody(
             SentNotice()
         }
         order.driver?.let { DriverBlock(driver = it) }
-        OrderLines(lines = order.lines)
-        OrderTotals(order = order)
-        OrderDelivery(order = order)
+        TindivoCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OrderLines(lines = order.lines)
+                OrderTotals(order = order)
+                OrderDelivery(order = order)
+            }
+        }
         SupportLink(link = supportLink, onOpenLink = onOpenLink)
     }
 }
@@ -264,7 +281,7 @@ private fun OrderTitle(order: OrderDetailUi) {
     Column {
         Text(
             text = order.businessName ?: stringResource(R.string.order_business_fallback),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.semantics { heading() },
         )
         Text(
