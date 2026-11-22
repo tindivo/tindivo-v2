@@ -17,9 +17,10 @@ struct CartScreenModelTests {
     }
 
     private func started(
-        _ store: any CartStore, clock: AppClock = ManualClock(Fixture.tuesdayEvening).clock
+        _ store: any CartStore, clock: AppClock = ManualClock(Fixture.tuesdayEvening).clock,
+        catalog: any CatalogRepository = UnusedCatalogRepository()
     ) async -> (CartScreenModel, Task<Void, Never>) {
-        let model = CartScreenModel(store: store, clock: clock)
+        let model = CartScreenModel(store: store, catalog: catalog, clock: clock)
         let task = Task { await model.observe() }
         await eventually { model.state != .loading }
         return (model, task)
@@ -31,7 +32,7 @@ struct CartScreenModelTests {
 
     @Test("hasta que se lee lo guardado no se enseña «vacía»")
     func startsLoading() {
-        let model = CartScreenModel(store: temporaryStore(), clock: ManualClock(Fixture.tuesdayEvening).clock)
+        let model = CartScreenModel(store: temporaryStore(), catalog: UnusedCatalogRepository(), clock: ManualClock(Fixture.tuesdayEvening).clock)
         #expect(model.state == .loading)
     }
 
@@ -265,6 +266,72 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
+    // MARK: Editar (CA-CRT-11)
+
+    private func editableMenu(available: Bool = true) -> BusinessMenu {
+        let group = Fixture.group("g", single: true, required: true, options: [Fixture.option("a", "1"), Fixture.option("b", "2")])
+        return Fixture.menu([Fixture.category("c", [Fixture.item("i1", price: "10", available: available, groups: [group])])])
+    }
+
+    private func editableLine() -> CartLine {
+        CartLine(
+            itemId: "i1", name: "Plato i1", basePrice: dec("10"),
+            modifiers: [CartModifier(optionId: "a", groupName: "Grupo g", optionName: "Opción a", price: dec("1"))],
+            note: "sin ají", quantity: 2, imageURL: nil
+        )
+    }
+
+    @Test("CA-CRT-11: «Editar» solo existe en una línea con opciones")
+    func editOnlyWithOptions() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "N", line: line("plain"))
+        _ = try await store.add(businessId: "negocio-1", businessName: "N", line: editableLine())
+        let (model, task) = await started(store)
+        #expect(try #require(filled(model)).lines.map(\.canEdit) == [false, true])
+        task.cancel()
+    }
+
+    @Test("CA-CRT-11: «Editar» abre el plato de la carta vigente con lo elegido en la línea")
+    func startEditingOpensTheDish() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "N", line: editableLine())
+        let (model, task) = await started(store, catalog: StubCatalog(menus: Script(just: editableMenu())))
+        await model.startEditing(signature: editableLine().signature)
+        let target = try #require(model.editing)
+        #expect(target.item.id == "i1")
+        #expect(target.line == editableLine())
+        let dish = model.dishModel(for: target)
+        #expect(dish.isEditing)
+        #expect(dish.selection.selectedIds == ["a"])
+        #expect(dish.selection.note == "sin ají")
+        #expect(dish.selection.quantity == 2)
+        model.finishEditing()
+        #expect(model.editing == nil)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-11: si el plato ya no se puede pedir, «Editar» avisa y no abre nada")
+    func startEditingOfAnUnavailableDish() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "N", line: editableLine())
+        let (model, task) = await started(store, catalog: StubCatalog(menus: Script(just: editableMenu(available: false))))
+        await model.startEditing(signature: editableLine().signature)
+        #expect(model.editing == nil)
+        #expect(model.notices.message == "Este producto ya no está disponible")
+        task.cancel()
+    }
+
+    @Test("CA-CRT-11: si no se puede leer la carta, «Editar» avisa del error y no abre nada")
+    func startEditingWithoutNetwork() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "N", line: editableLine())
+        let (model, task) = await started(store, catalog: StubCatalog(menus: Script(failing: .network)))
+        await model.startEditing(signature: editableLine().signature)
+        #expect(model.editing == nil)
+        #expect(model.notices.message == ErrorText.message(for: .network))
+        task.cancel()
+    }
+
     // MARK: Si no se puede guardar
 
     @Test("si falla guardar, se avisa «No se pudo guardar tu bolsa» y la bolsa se queda como estaba")
@@ -306,5 +373,6 @@ private actor FailingStore: CartStore {
     func changeQuantity(signature: String, by delta: Int) throws(CartError) { throw .saveFailed }
     func remove(signature: String) throws(CartError) -> RemovedLine? { throw .saveFailed }
     func restore(_ removed: RemovedLine) throws(CartError) -> Bool { throw .saveFailed }
+    func replaceLine(signature: String, with line: CartLine) throws(CartError) -> LineEditResult { throw .saveFailed }
     func clear() throws(CartError) { throw .saveFailed }
 }

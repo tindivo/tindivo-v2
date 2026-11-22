@@ -268,4 +268,35 @@ struct CartStoreTests {
         #expect(try await store.restore(last) == false)
         #expect(await store.current() == nil)
     }
+
+    @Test("replaceLine cambia la línea en su sitio y fusiona con otra idéntica, con el tope de unidades")
+    func replaceLine() async throws {
+        let (store, _) = makeStore()
+        let a = line("a", quantity: 30)
+        let b = line("b", quantity: 30)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: a)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: b)
+        // En su sitio: otra nota, misma posición.
+        let noted = CartLine(itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: "sin ají", quantity: 4, imageURL: nil)
+        #expect(try await store.replaceLine(signature: a.signature, with: noted) == .replaced(capped: false))
+        #expect(await store.current()?.lines.map(\.note) == ["sin ají", nil])
+        // Fusión: la de «b» pasa a ser «a con sin ají»: 4 + 30 = 34, y la línea queda en el sitio de la otra.
+        let merged = CartLine(itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: "sin ají", quantity: 30, imageURL: nil)
+        #expect(try await store.replaceLine(signature: b.signature, with: merged) == .replaced(capped: false))
+        #expect(await store.current()?.lines.map(\.quantity) == [34])
+        // Una línea que ya no está no se toca.
+        #expect(try await store.replaceLine(signature: "no-existe", with: merged) == .notFound)
+    }
+
+    @Test("replaceLine: la suma de una fusión no pasa de 50 y lo avisa")
+    func replaceLineCaps() async throws {
+        let (store, _) = makeStore()
+        let a = line("a", quantity: 40)
+        let b = line("b", quantity: 40)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: a)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: b)
+        let asA = CartLine(itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: nil, quantity: 40, imageURL: nil)
+        #expect(try await store.replaceLine(signature: b.signature, with: asA) == .replaced(capped: true))
+        #expect(await store.current()?.lines.map(\.quantity) == [50])
+    }
 }

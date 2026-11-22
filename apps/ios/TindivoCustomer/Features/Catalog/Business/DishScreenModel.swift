@@ -29,13 +29,21 @@ final class DishScreenModel {
     private let businessName: String
     private let cartStore: any CartStore
     private var pending: CartLine?
+    /// La línea de la bolsa que se está editando («Editar»); `nil` al agregar un plato.
+    private let editing: CartLine?
 
-    init(item: MenuItem, businessId: String, businessName: String, cartStore: any CartStore, clock: AppClock) {
+    var isEditing: Bool { editing != nil }
+
+    init(
+        item: MenuItem, businessId: String, businessName: String, cartStore: any CartStore, clock: AppClock,
+        editing: CartLine? = nil
+    ) {
         self.item = item
         self.businessId = businessId
         self.businessName = businessName
         self.cartStore = cartStore
-        selection = DishSelection(dish: item.dish)
+        self.editing = editing
+        selection = editing.map { DishSelection(dish: item.dish, restoring: $0) } ?? DishSelection(dish: item.dish)
         notices = TimedNotice(clock: clock)
     }
 
@@ -65,6 +73,13 @@ final class DishScreenModel {
         isAdding = true
         defer { isAdding = false }
         do throws(CartError) {
+            if let editing {
+                switch try await cartStore.replaceLine(signature: editing.signature, with: line) {
+                case let .replaced(capped): outcome = .added(capped: capped)
+                case .notFound: outcome = .failed
+                }
+                return
+            }
             switch try await cartStore.add(businessId: businessId, businessName: businessName, line: line) {
             case let .added(_, capped):
                 pending = nil

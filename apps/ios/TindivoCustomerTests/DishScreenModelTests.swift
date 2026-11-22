@@ -35,6 +35,10 @@ private actor GatedStore: CartStore {
         try await inner.changeQuantity(signature: signature, by: delta)
     }
 
+    func replaceLine(signature: String, with line: CartLine) async throws(CartError) -> LineEditResult {
+        try await inner.replaceLine(signature: signature, with: line)
+    }
+
     func remove(signature: String) async throws(CartError) -> RemovedLine? { try await inner.remove(signature: signature) }
     func restore(_ removed: RemovedLine) async throws(CartError) -> Bool { try await inner.restore(removed) }
     func clear() async throws(CartError) { try await inner.clear() }
@@ -61,9 +65,79 @@ struct DishScreenModelTests {
 
     private func model(
         _ raw: BusinessMenu.Item = Fixture.item("i1"), store: any CartStore, business: String = "negocio-1",
-        name: String = "Don Lucho", clock: AppClock = .fixed(Fixture.tuesdayEvening)
+        name: String = "Don Lucho", clock: AppClock = .fixed(Fixture.tuesdayEvening), editing: CartLine? = nil
     ) throws -> DishScreenModel {
-        DishScreenModel(item: try menuItem(raw), businessId: business, businessName: name, cartStore: store, clock: clock)
+        DishScreenModel(
+            item: try menuItem(raw), businessId: business, businessName: name, cartStore: store, clock: clock,
+            editing: editing
+        )
+    }
+
+    // MARK: Editar (CA-CRT-11)
+
+    private func editable() -> BusinessMenu.Item {
+        Fixture.item("i1", price: "10", groups: [
+            Fixture.group("g", single: true, required: true, options: [Fixture.option("a", "1"), Fixture.option("b", "2")]),
+        ])
+    }
+
+    private func editedLine(_ option: String, price: String, quantity: Int, note: String? = nil) -> CartLine {
+        CartLine(
+            itemId: "i1", name: "Plato i1", basePrice: dec("10"),
+            modifiers: [CartModifier(optionId: option, groupName: "Grupo g", optionName: "Opción \(option)", price: dec(price))],
+            note: note, quantity: quantity, imageURL: nil
+        )
+    }
+
+    @Test("CA-CRT-11: editar parte de lo elegido y, al guardar otras opciones, la línea cambia en su sitio")
+    func editReplacesTheLineInPlace() async throws {
+        let store = temporaryStore()
+        let original = editedLine("a", price: "1", quantity: 2, note: "sin ají")
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: original)
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: Fixture.line("i2"))
+        let model = try model(editable(), store: store, editing: original)
+        #expect(model.isEditing)
+        #expect(model.selection.selectedIds == ["a"])
+        #expect(model.selection.note == "sin ají")
+        #expect(model.selection.quantity == 2)
+
+        let group = model.item.dish.groups[0]
+        model.toggle(group.options[1], in: group)
+        await model.add()
+        #expect(model.outcome == .added(capped: false))
+        let cart = try #require(await store.current())
+        #expect(cart.lines.map(\.itemId) == ["i1", "i2"])
+        #expect(cart.lines[0].modifiers.map(\.optionId) == ["b"])
+        #expect(cart.lines[0].quantity == 2)
+        #expect(cart.lines[0].note == "sin ají")
+    }
+
+    @Test("CA-CRT-11: si al editar la línea queda idéntica a otra, se fusionan sumando cantidades")
+    func editMergesWithAnIdenticalLine() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: editedLine("a", price: "1", quantity: 1))
+        let second = editedLine("b", price: "2", quantity: 2)
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: second)
+        let model = try model(editable(), store: store, editing: second)
+
+        let group = model.item.dish.groups[0]
+        model.toggle(group.options[0], in: group)
+        await model.add()
+        #expect(model.outcome == .added(capped: false))
+        let cart = try #require(await store.current())
+        #expect(cart.lines.count == 1)
+        #expect(cart.lines[0].modifiers.map(\.optionId) == ["a"])
+        #expect(cart.lines[0].quantity == 3)
+    }
+
+    @Test("editar una opción que la carta ya no tiene deja la selección incompleta hasta elegir otra")
+    func editWithARemovedOption() async throws {
+        let store = temporaryStore()
+        let gone = editedLine("zz", price: "1", quantity: 1)
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: gone)
+        let model = try model(editable(), store: store, editing: gone)
+        #expect(model.selection.selectedIds.isEmpty)
+        #expect(model.canAdd == false)
     }
 
     // MARK: Agregar

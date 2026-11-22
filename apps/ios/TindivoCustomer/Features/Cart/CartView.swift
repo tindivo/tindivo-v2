@@ -37,6 +37,13 @@ struct CartView: View {
             Button("Cancelar", role: .cancel) {}
             Button("Vaciar", role: .destructive) { Task { await model.clear() } }
         }
+        .fullScreenCover(item: Binding(get: { model.editing }, set: { if $0 == nil { model.finishEditing() } })) { target in
+            DishView(
+                model: model.dishModel(for: target),
+                onClose: { model.finishEditing() },
+                onAdded: { model.finishEditing(capped: $0) }
+            )
+        }
         .overlay(alignment: .bottom) { undoBar }
         .tindivoToast(model.notices.message)
         .onChange(of: model.undoMessage) { _, message in
@@ -110,6 +117,7 @@ struct CartView: View {
                     CartLineView(
                         line: line,
                         onChange: { delta in Task { await model.changeQuantity(signature: line.signature, by: delta) } },
+                        onEdit: { Task { await model.startEditing(signature: line.signature) } },
                         onRemove: { Task { await model.remove(signature: line.signature) } }
                     )
                     Divider().overlay(Color.tindivo.outlineVariant)
@@ -154,6 +162,7 @@ extension CartView {
 private struct CartLineView: View {
     let line: CartLineRow
     let onChange: (Int) -> Void
+    let onEdit: () -> Void
     let onRemove: () -> Void
 
     var body: some View {
@@ -180,27 +189,42 @@ private struct CartLineView: View {
                     .tindivoText(TindivoTokens.Typography.bodySecondary)
                     .foregroundStyle(Color.tindivo.inkSecondary)
             }
-            HStack {
-                TindivoStepper(
-                    quantity: line.quantity,
-                    canDecrease: true,
-                    canIncrease: line.canIncrease,
-                    decreaseLabel: line.decreaseRemoves
-                        ? String(localized: "Quitar \(line.name)")
-                        : String(localized: "Quitar una unidad de \(line.name)"),
-                    increaseLabel: String(localized: "Agregar una unidad de \(line.name)"),
-                    onDecrease: { onChange(-1) },
-                    onIncrease: { onChange(1) }
-                )
-                Spacer()
-                TindivoTextButton("Quitar", action: onRemove)
-                    .accessibilityLabel(Text("Quitar \(line.name)"))
+            ViewThatFits(in: .horizontal) {
+                HStack { stepper; Spacer(); actions }
+                VStack(alignment: .leading, spacing: 4) { stepper; actions }
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("cart.line")
     }
+
+    private var stepper: some View {
+        TindivoStepper(
+            quantity: line.quantity,
+            canDecrease: true,
+            canIncrease: line.canIncrease,
+            decreaseLabel: line.decreaseRemoves
+                ? String(localized: "Quitar \(line.name)")
+                : String(localized: "Quitar una unidad de \(line.name)"),
+            increaseLabel: String(localized: "Agregar una unidad de \(line.name)"),
+            onDecrease: { onChange(-1) },
+            onIncrease: { onChange(1) }
+        )
+    }
+
+    private var actions: some View {
+        HStack(spacing: TindivoTokens.Spacing.spaceInner) {
+            if line.canEdit {
+                TindivoTextButton("Editar", action: onEdit)
+                    .accessibilityLabel(Text("Editar \(line.name)"))
+                    .accessibilityIdentifier("cart.edit")
+            }
+            TindivoTextButton("Quitar", action: onRemove)
+                .accessibilityLabel(Text("Quitar \(line.name)"))
+        }
+    }
 }
+
 
 #if DEBUG
 #Preview("Bolsa") {
@@ -210,7 +234,7 @@ private struct CartLineView: View {
 
 #Preview("Bolsa vacía") {
     NavigationStack {
-        CartView(model: CartScreenModel(store: FileCartStore.preview(), clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
+        CartView(model: CartScreenModel(store: FileCartStore.preview(), catalog: PreviewCatalog(), clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
     }
     .onAppear { TindivoFonts.register() }
 }
@@ -220,7 +244,7 @@ private struct CartPreviewHost: View {
 
     var body: some View {
         NavigationStack {
-            CartView(model: CartScreenModel(store: store, clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
+            CartView(model: CartScreenModel(store: store, catalog: PreviewCatalog(), clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
         }
         .task {
             let line = CartLine(

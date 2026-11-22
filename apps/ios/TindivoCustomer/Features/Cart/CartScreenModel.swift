@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import TindivoAPI
 
 /// Una opción elegida de un plato, para enseñarla como «Grupo: Opción».
 struct CartOptionText: Equatable, Identifiable {
@@ -20,6 +21,8 @@ struct CartLineRow: Equatable {
     /// Con 1 unidad el «−» quita la línea (CUS-CRT-003): no baja de 1.
     let decreaseRemoves: Bool
     let canIncrease: Bool
+    /// «Editar» solo existe si el plato lleva opciones (CUS-CRT-014).
+    let canEdit: Bool
 
     /// Identidad en la lista: unidades UTF-16 (como `CartLine.signatureKey`), no la igualdad canónica de `String`.
     var signatureKey: [UInt16] { Array(signature.utf16) }
@@ -44,6 +47,15 @@ final class CartScreenModel {
         case filled(Filled)
     }
 
+    /// El plato que «Editar» abre: la línea y el plato de la carta vigente con sus opciones.
+    struct EditTarget: Identifiable, Equatable {
+        var id: String { line.signature }
+        let item: MenuItem
+        let line: CartLine
+        let businessId: String
+        let businessName: String
+    }
+
     /// Cuánto dura «Deshacer» (CUS-CRT-013).
     static let undoWindow: Duration = .seconds(5)
 
@@ -55,12 +67,20 @@ final class CartScreenModel {
     /// Los avisos de error («No se pudo guardar tu bolsa»).
     let notices: TimedNotice
 
+    /// El plato que está abierto para editar; la pantalla lo presenta.
+    private(set) var editing: EditTarget?
+
     private let store: any CartStore
+    private let catalog: any CatalogRepository
+    private let clock: AppClock
     private let undoNotice: TimedNotice
     private var lastRemoved: RemovedLine?
+    private var isOpeningEdit = false
 
-    init(store: any CartStore, clock: AppClock) {
+    init(store: any CartStore, catalog: any CatalogRepository, clock: AppClock) {
         self.store = store
+        self.catalog = catalog
+        self.clock = clock
         notices = TimedNotice(clock: clock)
         undoNotice = TimedNotice(clock: clock, duration: Self.undoWindow)
     }
@@ -116,6 +136,54 @@ final class CartScreenModel {
         }
     }
 
+    // MARK: Editar (CUS-CRT-014)
+
+    /// Abre el plato de una línea con lo elegido. Pide la carta vigente: sus opciones son las de hoy, no las de cuando
+    /// se agregó. Si el plato ya no se puede pedir o no se puede leer la carta, avisa y no abre nada.
+    func startEditing(signature: String) async {
+        guard editing == nil, !isOpeningEdit, let cart = await store.current(),
+              let line = cart.lines.first(where: { $0.signatureKey == Array(signature.utf16) }) else { return }
+        isOpeningEdit = true
+        defer { isOpeningEdit = false }
+        let detail: BusinessDetail
+        do throws(AppError) {
+            detail = try await loadMenu(of: cart.businessId)
+        } catch {
+            notices.show(ErrorText.message(for: error))
+            return
+        }
+        let wanted = line.itemId.lowercased()
+        guard let item = detail.atInstant(clock.now()).categories.lazy.flatMap(\.items)
+            .first(where: { $0.id.lowercased() == wanted && $0.orderable })
+        else {
+            notices.show(String(localized: "Este producto ya no está disponible"))
+            return
+        }
+        editing = EditTarget(item: item, line: line, businessId: cart.businessId, businessName: cart.businessName)
+    }
+
+    /// La ficha del plato se cerró (con o sin guardar). `capped`: al fusionarse con otra línea llegó al máximo.
+    func finishEditing(capped: Bool = false) {
+        editing = nil
+        if capped { notices.show(DishScreenModel.addedMessage(capped: true)) }
+    }
+
+    /// El modelo de la ficha del plato para editar `target`: guarda en la misma bolsa que esta pantalla.
+    func dishModel(for target: EditTarget) -> DishScreenModel {
+        DishScreenModel(
+            item: target.item, businessId: target.businessId, businessName: target.businessName, cartStore: store,
+            clock: clock, editing: target.line
+        )
+    }
+
+    private func loadMenu(of businessId: String) async throws(AppError) -> BusinessDetail {
+        let menu = try await catalog.getBusiness(id: businessId)
+        guard let detail = MenuMapping.detail(from: menu) else {
+            throw .unknown(code: nil, detail: MenuMapping.invalidMenuDetail, status: nil)
+        }
+        return detail
+    }
+
     func clear() async {
         forgetUndo()
         await write { store async throws(CartError) in try await store.clear() }
@@ -159,7 +227,8 @@ final class CartScreenModel {
                     quantity: line.quantity,
                     total: formatAmount(line.total) ?? formatSoles(line.total),
                     decreaseRemoves: line.quantity == 1,
-                    canIncrease: line.quantity < CartLimits.maxQuantity
+                    canIncrease: line.quantity < CartLimits.maxQuantity,
+                    canEdit: !line.modifiers.isEmpty
                 )
             },
             subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal)

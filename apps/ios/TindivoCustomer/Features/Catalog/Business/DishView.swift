@@ -156,7 +156,8 @@ struct DishView: View {
 
     private var ctaTitle: String {
         switch model.selection.cta {
-        case let .add(total): String(localized: "Agregar · \(total)")
+        case let .add(total):
+            model.isEditing ? String(localized: "Guardar cambios · \(total)") : String(localized: "Agregar · \(total)")
         case let .complete(missing):
             missing == 1 ? String(localized: "Completa \(missing) opción") : String(localized: "Completa \(missing) opciones")
         }

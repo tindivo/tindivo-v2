@@ -14,11 +14,20 @@ protocol CartStore: Sendable {
     /// Suma `delta` unidades a la cantidad que la línea tiene en el momento de escribir (1...`maxQuantity`): leer y
     /// escribir son una sola operación, así que dos toques seguidos suman los dos.
     func changeQuantity(signature: String, by delta: Int) async throws(CartError)
+    /// «Editar»: cambia la línea `signature` por `line` en su sitio, o la fusiona con otra idéntica (CUS-CRT-014).
+    func replaceLine(signature: String, with line: CartLine) async throws(CartError) -> LineEditResult
     /// Quita la línea y devuelve lo necesario para deshacerlo; `nil` si ya no estaba.
     @discardableResult func remove(signature: String) async throws(CartError) -> RemovedLine?
     /// Devuelve una línea quitada a su sitio. `false` si ya no cabe (la bolsa cambió o se vació): no hace nada.
     func restore(_ removed: RemovedLine) async throws(CartError) -> Bool
     func clear() async throws(CartError)
+}
+
+enum LineEditResult: Sendable, Equatable {
+    /// `capped`: se fusionó con otra línea y la suma no cabía: se quedó en `maxQuantity`.
+    case replaced(capped: Bool)
+    /// La línea ya no estaba en la bolsa: no se escribió nada.
+    case notFound
 }
 
 /// La bolsa en un archivo `Codable` (`tindivo_cart.json` en Application Support). Es un `actor`: leer, cambiar y
@@ -64,6 +73,13 @@ actor FileCartStore: CartStore {
     func setQuantity(signature: String, quantity: Int) throws(CartError) {
         guard let cart = current() else { return }
         try write(cart.settingQuantity(of: signature, to: quantity))
+    }
+
+    func replaceLine(signature: String, with line: CartLine) throws(CartError) -> LineEditResult {
+        try requireValidQuantity(line)
+        guard let cart = current(), let edited = cart.replacing(signature, with: line) else { return .notFound }
+        try write(edited.cart)
+        return .replaced(capped: edited.capped)
     }
 
     func changeQuantity(signature: String, by delta: Int) throws(CartError) {

@@ -49,6 +49,18 @@ struct DishSelection: Sendable, Equatable {
         self.quantity = quantity
     }
 
+    /// La selección de una línea de la bolsa, para «Editar»: sus opciones (las que la carta aún tiene), su nota y su
+    /// cantidad. Una opción que ya no existe se descarta y la selección queda incompleta hasta que se vuelva a elegir.
+    init(dish: Dish, restoring line: CartLine) {
+        let canonical = Dictionary(
+            dish.groups.flatMap { $0.options.map { ($0.id.lowercased(), $0.id) } }, uniquingKeysWith: { first, _ in first }
+        )
+        self.init(
+            dish: dish, selectedIds: line.modifiers.compactMap { canonical[$0.optionId.lowercased()] },
+            note: line.note ?? "", quantity: line.quantity
+        )
+    }
+
     private var issues: [ModifierSelectionIssue] {
         let optionGroupOf = Dictionary(
             dish.groups.flatMap { group in group.options.map { ($0.id, group.id) } },

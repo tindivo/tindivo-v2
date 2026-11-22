@@ -103,6 +103,23 @@ struct Cart: Sendable, Equatable {
         return RemovedLine(line: lines[index], index: index, wasLast: lines.count == 1)
     }
 
+    /// Cambia la línea `signature` por `line` en su sitio. Si `line` queda idéntica a OTRA línea (misma firma), se
+    /// fusionan sumando cantidades (tope `maxQuantity`) en el sitio de esa otra, con el nombre y los precios de
+    /// `line` (CUS-CRT-002). `nil` si `signature` ya no está en la bolsa.
+    func replacing(_ signature: String, with line: CartLine) -> (cart: Cart, capped: Bool)? {
+        let key = Array(signature.utf16)
+        guard let index = lines.firstIndex(where: { $0.signatureKey == key }) else { return nil }
+        var next = lines
+        guard let other = next.indices.first(where: { $0 != index && next[$0].signatureKey == line.signatureKey }) else {
+            next[index] = line
+            return (Cart(businessId: businessId, businessName: businessName, lines: next), false)
+        }
+        let wanted = next[other].quantity + line.quantity
+        next[other] = line.with(quantity: min(wanted, CartLimits.maxQuantity))
+        next.remove(at: index)
+        return (Cart(businessId: businessId, businessName: businessName, lines: next), wanted > CartLimits.maxQuantity)
+    }
+
     /// Devuelve `removed` a su sitio (o al final si la bolsa ya es más corta). Es `nil` si no cabe: ya hay una línea
     /// igual o la bolsa tiene `maxLines` platos.
     func inserting(_ removed: RemovedLine) -> Cart? {
@@ -165,7 +182,7 @@ func replacedWith(businessId: String, businessName: String, line: CartLine) thro
     return Cart(businessId: businessId, businessName: businessName, lines: [line])
 }
 
-private func requireValidQuantity(_ line: CartLine) throws(CartError) {
+func requireValidQuantity(_ line: CartLine) throws(CartError) {
     guard (1...CartLimits.maxQuantity).contains(line.quantity) else { throw .invalidQuantity }
 }
 
