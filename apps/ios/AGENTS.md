@@ -7,8 +7,17 @@ Se suma al `AGENTS.md` raíz. La norma es `Docs/arquitectura/estandares/swift.md
   `pnpm ios:gen` (`scripts/gen.sh`). Se edita `project.yml`, nunca el proyecto en Xcode: lo que cambies en la
   interfaz de Xcode se pierde en la siguiente generación. Del `.xcodeproj` solo se versiona su `Package.resolved`.
 - **Comandos:** `pnpm ios:gen`, `pnpm ios:build`, `pnpm ios:test` (los dos últimos regeneran antes). Simulador sin
-  firma; otro destino con `IOS_DESTINATION`. Herramientas fijadas (XcodeGen con sha256, swift-openapi-generator con
-  versión exacta en `Tools/Package.swift`) en `~/Library/Caches/tindivo-ios`, compartida entre worktrees.
+  firma; otro destino con `IOS_DESTINATION`. Herramientas fijadas (XcodeGen y SwiftLint con sha256, swift-openapi-generator
+  con versión exacta en `Tools/Package.swift`) en `~/Library/Caches/tindivo-ios`, compartida entre worktrees.
+- **Estilo (SW-14):** `pnpm ios:lint` corre SwiftLint (`.swiftlint.yml`; falla solo con errores) y `swift format lint`
+  (`.swift-format`) sobre lo versionado y no generado; `pnpm ios:format` aplica `swift-format` y reescribe archivos.
+  swift-format decide largo de línea y comas finales: por eso SwiftLint tiene apagados `line_length` y `trailing_comma`.
+- **Build (SW-15):** `IOS_BUILD_NUMBER` (la CI pasa `github.run_number`) fija `CURRENT_PROJECT_VERSION`.
+- **Recursos:** `Resources/Assets.xcassets` lleva `AppIcon` (versionado; `scripts/ios-appicon.swift` lo rehace desde el
+  icono adaptativo de Android) y, generados desde `packages/design-tokens` por `gen.sh`, `AccentColor` (`primary`) y
+  `LaunchBackground` (`background`). `PrivacyInfo.xcprivacy`: sin rastreo, sin datos recogidos y sin APIs de razón
+  obligatoria; si el código pasa a usar una (UserDefaults, fechas de archivo, espacio en disco, tiempo de arranque) o a
+  enviar datos personales, se declara ahí.
 - **El contrato:** `Packages/TindivoAPI/openapi/v1.json` es una copia fiel (`scripts/sync-openapi.sh`). El generador
   lee un documento tolerante que deriva `scripts/ios-openapi-tolerant.mjs` (abre objetos y enums de las respuestas):
   sin ese paso, un campo o valor nuevo del backend tumba la decodificación (CLI-2). Lo cubre
