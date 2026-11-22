@@ -1,4 +1,5 @@
 import Foundation
+import Testing
 import TindivoAPI
 @testable import TindivoCustomer
 
@@ -18,8 +19,19 @@ extension AppEnvironment {
 
 /// El catálogo que una prueba no usa: si alguien lo llama, la prueba falla con un error claro y no con la red.
 struct UnusedCatalogRepository: CatalogRepository {
-    func listBusinesses() async throws(AppError) -> [BusinessSummary] { throw .network }
-    func getBusiness(id: String) async throws(AppError) -> BusinessMenu { throw .network }
+    func listBusinesses() async throws(AppError) -> [BusinessSummary] {
+        Issue.record("listBusinesses: esta prueba no debía llamar al catálogo")
+        throw unused("listBusinesses")
+    }
+
+    func getBusiness(id: String) async throws(AppError) -> BusinessMenu {
+        Issue.record("getBusiness(\(id)): esta prueba no debía llamar al catálogo")
+        throw unused("getBusiness")
+    }
+
+    private func unused(_ operation: String) -> AppError {
+        .unknown(code: nil, detail: "UnusedCatalogRepository.\(operation) llamado sin doble", status: nil)
+    }
 }
 
 struct UnusedSystemRepository: SystemRepository {

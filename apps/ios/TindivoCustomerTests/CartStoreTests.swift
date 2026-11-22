@@ -170,6 +170,25 @@ struct CartStoreTests {
 
     @Test("si no se puede escribir, el error es saveFailed y no se pierde la bolsa anterior")
     func saveFailure() async throws {
+        let (store, file) = makeStore()
+        let directory = file.deletingLastPathComponent()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        let before = try #require(await store.current())
+        let bytesBefore = try Data(contentsOf: file)
+
+        // Directorio de solo lectura: no se puede crear el archivo temporal ni borrar el vigente.
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: directory.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path) }
+
+        await #expect(throws: CartError.saveFailed) {
+            _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b"))
+        }
+        #expect(await store.current() == before)
+        #expect(try Data(contentsOf: file) == bytesBefore)
+    }
+
+    @Test("sin poder crear el directorio tampoco hay bolsa y el error es saveFailed")
+    func saveFailureWithoutDirectory() async throws {
         let blocker = FileManager.default.temporaryDirectory.appending(path: "tindivo-blocker-\(UUID().uuidString)")
         try Data().write(to: blocker)
         // El «directorio» padre es un archivo: no se puede crear el de la bolsa.
@@ -178,5 +197,21 @@ struct CartStoreTests {
             _ = try await store.add(businessId: "n", businessName: "Pollería", line: line())
         }
         #expect(await store.current() == nil)
+    }
+
+    @Test("una bolsa que no se podría releer no se escribe: lanza y deja la anterior intacta")
+    func unreadableCartIsNotWritten() async throws {
+        let (store, file) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        let bytesBefore = try Data(contentsOf: file)
+        // Veintiuna opciones: más de las que admite el pedido, así que al releerla se descartaría entera.
+        let options = (0...CartLimits.maxModifiers).map {
+            CartModifier(optionId: "o\($0)", groupName: "Extras", optionName: "Opción \($0)", price: dec("1.00"))
+        }
+        await #expect(throws: CartError.saveFailed) {
+            try await store.replace(businessId: "m", businessName: "Chifa", line: line("arroz", modifiers: options))
+        }
+        #expect(await store.current()?.businessId == "n")
+        #expect(try Data(contentsOf: file) == bytesBefore)
     }
 }

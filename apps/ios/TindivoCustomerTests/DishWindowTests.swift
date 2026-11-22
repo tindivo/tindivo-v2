@@ -17,6 +17,11 @@ struct DishWindowTests {
     private var noche: DishWindow { win(days: [0, 1, 2, 3, 4, 5], from: "18:00", to: "23:30") }
     private var trasnoche: DishWindow { win(days: [5], from: "22:00", to: "02:00") }
 
+    @Test("el reloj es el de Lima aunque el dispositivo esté en otra zona")
+    func clockIsLima() {
+        #expect(LimaClock.calendar.timeZone.identifier == "America/Lima")
+    }
+
     @Test("CA-CAT-01 la franja se cuenta en una frase, la de describeWindow")
     func describes() {
         #expect(mediodia.describe() == "Solo sáb y dom, de 11:00 a 15:00")

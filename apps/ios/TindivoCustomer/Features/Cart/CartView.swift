@@ -62,7 +62,7 @@ struct CartView: View {
                     .tindivoText(TindivoTokens.Typography.titleScreen)
                     .foregroundStyle(Color.tindivo.ink)
                     .accessibilityAddTraits(.isHeader)
-                ForEach(filled.lines, id: \.signature) { line in
+                ForEach(filled.lines, id: \.signatureKey) { line in
                     CartLineView(
                         line: line,
                         onChange: { delta in Task { await model.changeQuantity(signature: line.signature, by: delta) } },

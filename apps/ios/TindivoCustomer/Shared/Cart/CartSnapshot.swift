@@ -139,7 +139,7 @@ extension Cart {
     /// del pedido, una opción repetida en una línea, o dos líneas con la misma firma descartan la bolsa entera.
     /// Nunca se arregla a medias: lo que se enseñaría podría no ser lo que la persona eligió.
     init?(snapshot: CartSnapshot) {
-        guard snapshot.version == cartSnapshotVersion, !snapshot.businessId.trimmingCharacters(in: .whitespaces).isEmpty,
+        guard snapshot.version == cartSnapshotVersion, !snapshot.businessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !snapshot.lines.isEmpty, snapshot.lines.count <= CartLimits.maxLines
         else { return nil }
         var restored: [CartLine] = []
@@ -147,7 +147,7 @@ extension Cart {
             guard let restoredLine = CartLine(snapshot: line) else { return nil }
             restored.append(restoredLine)
         }
-        guard Set(restored.map(\.signature)).count == restored.count else { return nil }
+        guard Set(restored.map(\.signatureKey)).count == restored.count else { return nil }
         self.init(businessId: snapshot.businessId, businessName: snapshot.businessName, lines: restored)
     }
 }

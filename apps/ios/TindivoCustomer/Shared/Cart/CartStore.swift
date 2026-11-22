@@ -78,10 +78,13 @@ actor FileCartStore: CartStore {
     }
 
     /// Escribe `cart` (`nil` o vacía = borrar el archivo) y avisa a quien observa. Si no se puede escribir lanza
-    /// `saveFailed` y la bolsa anterior queda como estaba.
+    /// `saveFailed` y la bolsa anterior queda como estaba. Una bolsa que al releerla se descartaría (`Cart(snapshot:)`
+    /// la rechaza) no se escribe: lanza sin tocar el disco, para no perder la anterior por otra que «desaparece».
     private func write(_ cart: Cart?) throws(CartError) {
+        let snapshot = cart?.snapshot()
+        if let snapshot, Cart(snapshot: snapshot) == nil { throw .saveFailed }
         do {
-            if let snapshot = cart?.snapshot() {
+            if let snapshot {
                 try FileManager.default.createDirectory(
                     at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true
                 )

@@ -18,6 +18,9 @@ struct CartLineRow: Equatable {
     /// Con 1 unidad el «−» está deshabilitado: para quitar el plato está «Quitar».
     let canDecrease: Bool
     let canIncrease: Bool
+
+    /// Identidad en la lista: unidades UTF-16 (como `CartLine.signatureKey`), no la igualdad canónica de `String`.
+    var signatureKey: [UInt16] { Array(signature.utf16) }
 }
 
 /// Bolsa: las líneas de lo que se va a pedir, con su subtotal. La bolsa vive en `CartStore`; aquí solo se enseña y se
@@ -57,7 +60,7 @@ final class CartScreenModel {
     /// Suma o resta una unidad a la línea; se queda dentro de 1...50. Parte de lo guardado y no de lo que se ve: dos
     /// toques seguidos, antes de que la pantalla se actualice, suman dos veces.
     func changeQuantity(signature: String, by delta: Int) async {
-        guard let line = await store.current()?.lines.first(where: { $0.signature == signature }) else { return }
+        guard let line = await store.current()?.lines.first(where: { $0.signatureKey == Array(signature.utf16) }) else { return }
         await write { store async throws(CartError) in
             try await store.setQuantity(signature: signature, quantity: line.quantity + delta)
         }

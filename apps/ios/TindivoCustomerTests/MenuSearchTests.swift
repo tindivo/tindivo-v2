@@ -116,6 +116,12 @@ struct MenuSearchTests {
         #expect(names(searchMenu(menu, query: "pizza")) == ["Media Pizza", "Champizza"])
     }
 
+    @Test("un emoji antes de la palabra no es una letra: la palabra empieza ahí, como en Android")
+    func wordStartAfterEmoji() {
+        let menu = [category("Cosas", [item("Donapo"), item("🍕napo")])]
+        #expect(names(searchMenu(menu, query: "napo")) == ["🍕napo", "Donapo"])
+    }
+
     @Test("devuelve los tramos alineados con el texto original")
     func rangesAligned() throws {
         let hit = try #require(searchMenu(carta, query: "champinon").first)

@@ -125,6 +125,8 @@ struct CartSnapshotTests {
         var blank = try snapshot()
         blank.businessId = " "
         #expect(Cart(snapshot: blank) == nil)
+        blank.businessId = " \n\t"
+        #expect(Cart(snapshot: blank) == nil)
         #expect(try Cart(snapshot: with([])) == nil)
     }
 

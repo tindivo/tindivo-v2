@@ -46,7 +46,7 @@ enum HomeMapping {
 /// `businesses.accent_color` viaja sin `#` (CHECK `accent_color_format`, 0002), pero se acepta con él. Devuelve el
 /// color opaco en ARGB, o `nil` si no son seis dígitos hexadecimales.
 func parseAccent(_ hex: String?) -> UInt32? {
-    guard var clean = hex?.trimmingCharacters(in: .whitespaces) else { return nil }
+    guard var clean = hex?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
     if clean.hasPrefix("#") { clean.removeFirst() }
     guard clean.count == 6, clean.allSatisfy(\.isHexDigit), let rgb = UInt32(clean, radix: 16) else { return nil }
     return 0xFF00_0000 | rgb

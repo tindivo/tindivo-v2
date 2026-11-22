@@ -65,8 +65,9 @@ public struct BusinessSummary: Sendable, Equatable {
     }
 }
 
-/// La carta de un negocio (`GET /public/businesses/{id}`). Los precios llegan exactos (`Decimal`, SW-8) pero SIN
-/// validar: que un precio no sea mostrable lo decide quien mapea la carta.
+/// La carta de un negocio (`GET /public/businesses/{id}`). Los precios llegan exactos (`Decimal`, SW-8): `ExactMoney`
+/// ya rechazó los de más de dos decimales. Lo que NO se valida aquí es el rango (negativos, más de ocho cifras
+/// enteras): que un precio sea mostrable lo decide quien mapea la carta.
 public struct BusinessMenu: Sendable, Equatable {
     public struct Business: Sendable, Equatable {
         public let id: String

@@ -142,6 +142,36 @@ struct CartTests {
         #expect(merged.cart.lines.first?.quantity == 2)
     }
 
+    @Test("la firma compara unidades UTF-16 como Kotlin: «é» compuesta y descompuesta son platos distintos")
+    func signatureIsUTF16() throws {
+        let nfc = "caf\u{E9}", nfd = "cafe\u{301}"
+        #expect(nfc == nfd, "Swift las ve iguales; Kotlin no")
+        let a = line(note: nfc), b = line(note: nfd)
+        #expect(Array(a.signature.utf16) != Array(b.signature.utf16))
+        #expect(a.signatureKey != b.signatureKey)
+
+        let first = try added(addToCart(nil, businessId: "n", businessName: "N", line: a)).cart
+        let both = try added(addToCart(first, businessId: "n", businessName: "N", line: b)).cart
+        #expect(both.lines.count == 2)
+
+        // Cambiar o quitar una afecta solo a la suya.
+        #expect(both.removingLine(a.signature).lines.map(\.note) == [nfd])
+        #expect(both.settingQuantity(of: b.signature, to: 3).count == 4)
+        let sameBag = Cart(businessId: "n", businessName: "N", lines: [a])
+        let otherBag = Cart(businessId: "n", businessName: "N", lines: [b])
+        #expect(Array(sameBag.fingerprint().utf16) != Array(otherBag.fingerprint().utf16))
+    }
+
+    @Test("la huella ordena por unidades UTF-16: un carácter fuera del plano básico va antes que U+FFFF")
+    func fingerprintSortsUTF16() {
+        // En UTF-16 «😀» (D83D…) < «\u{FF5E}»; por escalares Unicode sería al revés.
+        let emoji = Cart(businessId: "n", businessName: "N", lines: [line("a", note: "\u{1F600}"), line("a", note: "\u{FF5E}")])
+        let reversed = Cart(businessId: "n", businessName: "N", lines: [line("a", note: "\u{FF5E}"), line("a", note: "\u{1F600}")])
+        #expect(Array(emoji.fingerprint().utf16) == Array(reversed.fingerprint().utf16))
+        #expect(emoji.fingerprint().hasPrefix("n#a||"))
+        #expect(emoji.fingerprint().unicodeScalars.dropFirst(5).first == "\u{1F600}")
+    }
+
     @Test("la huella no depende del orden ni de los precios")
     func fingerprint() {
         let a = Cart(businessId: "ABC", businessName: "N", lines: [line("a"), line("b", quantity: 2)])

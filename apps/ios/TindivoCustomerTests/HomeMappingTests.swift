@@ -43,6 +43,8 @@ struct HomeMappingTests {
     func accent() {
         #expect(parseAccent("F97316") == 0xFFF97316)
         #expect(parseAccent("#f97316") == 0xFFF97316)
+        // `trim()` de Kotlin quita también saltos de línea.
+        #expect(parseAccent(" #f97316\n") == 0xFFF97316)
         for bad in ["", "F9731", "F973166", "-12345", "ZZZZZZ", "+12345", nil] as [String?] {
             #expect(parseAccent(bad) == nil, "\(bad ?? "nil")")
         }

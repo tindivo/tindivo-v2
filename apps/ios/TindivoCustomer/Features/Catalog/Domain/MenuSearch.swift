@@ -121,7 +121,9 @@ private func wordStarts(_ hay: [UInt16], with prefix: [UInt16]) -> Bool {
     var from = 0
     while let at = index(of: prefix, in: hay, from: from) {
         if at == 0 { return true }
-        if let previous = Unicode.Scalar(hay[at - 1]), !isWordScalar(previous) { return true }
+        // Una unidad suelta de un par sustituto no es un escalar: tampoco es una letra (`Character.isLetterOrDigit`).
+        let startsWord = Unicode.Scalar(hay[at - 1]).map { !isWordScalar($0) } ?? true
+        if startsWord { return true }
         from = at + 1
     }
     return false

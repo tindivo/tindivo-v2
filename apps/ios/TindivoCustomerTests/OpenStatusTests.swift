@@ -26,6 +26,11 @@ struct OpenStatusTests {
         .closed(ClosedStatus(opensAt: opensAt, daysAhead: daysAhead, notConfirmed: notConfirmed))
     }
 
+    @Test("el reloj es el de Lima aunque el dispositivo esté en otra zona")
+    func clockIsLima() {
+        #expect(LimaClock.calendar.timeZone.identifier == "America/Lima")
+    }
+
     @Test("CA-CAT-03 un negocio cerrado dice cuándo abre hoy")
     func opensToday() {
         let status = openStatus(days: week, now: at("2026-07-07", "12:00"), openingConfirmed: nil)

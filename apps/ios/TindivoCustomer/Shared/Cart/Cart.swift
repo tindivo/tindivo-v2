@@ -30,10 +30,14 @@ struct CartLine: Sendable, Equatable {
     var signature: String {
         [
             itemId.lowercased(),
-            modifiers.map { $0.optionId.lowercased() }.sorted().joined(separator: ","),
+            modifiers.map { $0.optionId.lowercased() }.sortedByUTF16().joined(separator: ","),
             (note ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
         ].joined(separator: "|")
     }
+
+    /// La firma para COMPARAR: sus unidades UTF-16, como `String.equals` de Kotlin. `==` de `String` en Swift trata
+    /// como iguales «é» compuesta y descompuesta; en Android (y en la web) son platos distintos.
+    var signatureKey: [UInt16] { Array(signature.utf16) }
 
     /// Precio de una unidad: el del plato más el de cada opción. Exacto: sin `Double` ni redondeo (SW-8).
     var unitPrice: Decimal { modifiers.reduce(basePrice) { $0 + $1.price } }
@@ -64,20 +68,22 @@ struct Cart: Sendable, Equatable {
     /// Cambia la cantidad de una línea, siempre dentro de 1...`maxQuantity`; para quitarla está `removingLine`.
     func settingQuantity(of signature: String, to quantity: Int) -> Cart {
         let clamped = min(max(quantity, 1), CartLimits.maxQuantity)
+        let key = Array(signature.utf16)
         return Cart(
             businessId: businessId, businessName: businessName,
-            lines: lines.map { $0.signature == signature ? $0.with(quantity: clamped) : $0 }
+            lines: lines.map { $0.signatureKey == key ? $0.with(quantity: clamped) : $0 }
         )
     }
 
     func removingLine(_ signature: String) -> Cart {
-        Cart(businessId: businessId, businessName: businessName, lines: lines.filter { $0.signature != signature })
+        let key = Array(signature.utf16)
+        return Cart(businessId: businessId, businessName: businessName, lines: lines.filter { $0.signatureKey != key })
     }
 
     /// La huella de la bolsa: negocio y, por plato, su firma y su cantidad (sin importar el orden). Los precios no
     /// entran: el servidor cobra con los suyos.
     func fingerprint() -> String {
-        businessId.lowercased() + "#" + lines.map { "\($0.signature)*\($0.quantity)" }.sorted().joined(separator: ";")
+        businessId.lowercased() + "#" + lines.map { "\($0.signature)*\($0.quantity)" }.sortedByUTF16().joined(separator: ";")
     }
 }
 
@@ -104,7 +110,7 @@ func addToCart(_ cart: Cart?, businessId: String, businessName: String, line: Ca
 }
 
 private func merge(_ line: CartLine, into cart: Cart) -> AddResult {
-    guard let existing = cart.lines.firstIndex(where: { $0.signature == line.signature }) else {
+    guard let existing = cart.lines.firstIndex(where: { $0.signatureKey == line.signatureKey }) else {
         if cart.lines.count >= CartLimits.maxLines { return .full }
         return .added(
             Cart(businessId: cart.businessId, businessName: cart.businessName, lines: cart.lines + [line]),
@@ -147,4 +153,12 @@ func takeUTF16(_ text: String, _ limit: Int) -> String {
         result.append(character)
     }
     return result
+}
+
+extension [String] {
+    /// Orden por unidades UTF-16, el de `sorted()` de Kotlin: el de Swift (por escalares) difiere con caracteres
+    /// fuera del plano básico.
+    fileprivate func sortedByUTF16() -> [String] {
+        sorted { $0.utf16.lexicographicallyPrecedes($1.utf16) }
+    }
 }
