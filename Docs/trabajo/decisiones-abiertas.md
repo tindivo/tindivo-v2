@@ -13,6 +13,7 @@ Cada entrada se contrastó el 2026-10-12 con `DECISIONS.md`, `Docs/decisiones/`,
 | DA-05 · Qué se conserva al borrar una cuenta | Decidido: D-44 |
 | DA-07 · Tope y ventana de las promociones | Abierta en la D-24 (`Docs/planes/movil/decisiones.md` §3: consentimiento, horas de silencio, frecuencia máxima). Valor inicial propuesto por el paquete: como mucho 2 promociones por usuario por semana, entre las 10:00 y las 21:00 (hora de Lima); se decide dentro de la D-24, antes de enviar la primera promoción |
 | DA-09 · Versiones mínimas de sistema | Decidido: D-47 (Android 8 e iOS 17) |
+| DA-12 · Identificadores de las apps | Decidido: `com.tindivo.customer`, con `.dev` en staging (SW-15, KT-15; iOS: Jesús, 2026-11-22) |
 | DA-13 · Fuente del criterio de DES-5 | Lo resuelve el PR de los estándares |
 
 Los números DA-01 a DA-14 se conservan aunque falten entradas.
@@ -41,7 +42,8 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 
 ### DA-08 · Herramienta de *crashes* y errores de las apps
 
-- 2026-10-12 · Bloquea: antes de crear los proyectos nativos · Detectó: Claude
+- 2026-10-12 · Bloquea: publicar las apps (ya no bloquea crear los proyectos) · Detectó: Claude
+- **2026-11-22, Jesús:** sin rastreador por ahora, igual que Android; se retoma antes de publicar (CLI-12, OPS-4). Ya no bloquea crear los proyectos.
 - **Contexto**: el repo no tiene hoy ningún rastreador de errores (no aparece Sentry ni Crashlytics en el código ni en el canon).
 - **Alternativas**: (a) Firebase Crashlytics, en el mismo proyecto de Firebase que el push; (b) Sentry, que también cubre web y API.
 - **Recomendación**: (a) para las apps (sin coste según Firebase; verificar las condiciones vigentes). La API y las web siguen sin rastreador hasta que se decida.
@@ -55,15 +57,10 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 
 ### DA-11 · Dominio para *deep links* y la página de borrado
 
-- 2026-10-12 · Bloquea: antes de crear los proyectos nativos · Detectó: Claude
+- 2026-10-12 · Bloquea: publicar las apps (ya no bloquea crear los proyectos) · Detectó: Claude
+- **2026-11-22, Jesús:** se arranca sin dominio de deep links; iOS abre las rutas relativas del push (SW-11). Sigue bloqueando publicar.
 - **Contexto**: Universal Links y App Links exigen un dominio propio con HTTPS que sirva `apple-app-site-association` y `assetlinks.json`. Google exige además un enlace web para borrar la cuenta. El dominio de la marca ya es `tindivo.com`; falta decidir en qué subdominio se sirven esos archivos y la página de borrado.
 - **Decidir**: el subdominio, y el de la API si DA-02 es (a).
-
-### DA-12 · Identificadores de las apps
-
-- 2026-10-12 · Bloquea: antes de crear los proyectos nativos · Irreversible · Detectó: Claude
-- **Contexto**: el bundle ID de iOS y el `applicationId` de Android no se pueden cambiar después de publicar. **Android ya está decidido** (Jesús, 2026-10-22: `com.tindivo.customer`, con `.dev` en el sabor de staging; `Docs/arquitectura/estandares/kotlin.md`); queda el bundle ID de iOS.
-- **Recomendación**: el dominio de la marca invertido + `.customer`: `com.tindivo.customer`, porque el dominio es `tindivo.com`.
 
 ### DA-14 · Procedimiento de incidentes (OPS-9)
 
@@ -121,7 +118,15 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 
 ### DA-21 · Apple con correo oculto en iOS
 
-- 2026-11-19 · Bloquea: el inicio de iOS · Detectó: Claude
+- 2026-11-19 · Bloquea: la sesión de iOS (no el esqueleto ni el catálogo) · Detectó: Claude
+- **2026-11-22:** Jesús la deja pendiente.
 - **Contexto**: el correo oculto de Apple puede crear una segunda cuenta que choque con «un celular, una cuenta» (`D-63`). Sin verificar contra las tiendas. Es la única decisión del PR de Acceso y Cuenta que no traía una recomendación.
 - **Alternativas**: se miran al empezar iOS.
 - **Recomendación**: ninguna todavía.
+
+### DA-26 · El OpenAPI declara cerradas las respuestas
+
+- 2026-11-22 · No bloquea · Detectó: Claude
+- **Contexto**: 164 de 165 objetos de respuesta llevan `additionalProperties: false` y 16 enums son cerrados; API-3 permite añadir campos y valores. El cliente Swift generado los rechaza (medido el 2026-11-22).
+- **Alternativas**: (a) el generador del OpenAPI deja de emitirlos en respuestas; (b) cada cliente deriva su documento tolerante (lo que hace iOS hoy, `scripts/ios-openapi-tolerant.mjs`).
+- **Recomendación**: (a), revisado por Codex (toca el contrato).

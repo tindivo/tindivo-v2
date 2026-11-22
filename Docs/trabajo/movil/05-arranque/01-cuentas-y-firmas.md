@@ -86,6 +86,7 @@ Developer Support: los bloqueos típicos son nombre distinto al del documento o 
    *Live Activities* se activa desde el proyecto (`NSSupportsLiveActivities`) y usa el mismo permiso de push.
 2. *Keys → +*: crea una **clave APNs** (*Apple Push Notifications service*). Se descarga **una sola vez** (`.p8`):
    guárdala como secreto. Anota **Key ID** y **Team ID**. Esa clave es la que se sube a Firebase (§5).
+   Para push, iOS no necesita Firebase: el `.p8` va a los secretos de `send-push` (`Docs/operacion/deploy.md`). Añadir la app iOS a Firebase solo si se elige Crashlytics (DA-08).
 3. Anota el **Team ID** (se ve en *Membership details*).
 
 **Paso 5 · App Store Connect** (`appstoreconnect.apple.com`).
