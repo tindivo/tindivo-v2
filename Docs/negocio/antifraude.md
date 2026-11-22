@@ -23,9 +23,13 @@ strikes. En este orden; el riesgo manda sobre cualquier historial:
 2. **Con strikes** (`customer_requires_prepayment`; strikes anclados al teléfono **y** a la dirección, de modo que
    cambiar uno no limpia el otro): con **2**, solo prepago; con **3**, bloqueo de **30 días**, tampoco prepago.
 3. **Monto grande**: por encima de **S/ 80** (`prepay_threshold`), prepago aunque sea conocido.
-4. **Compra previa** (`customer_trusted_for_contraentrega`), resuelta por el teléfono verificado por SMS: basta una
-   entrega de esta cuenta, una entrega a este teléfono (también las manuales de la cajera) o cualquier fila de este
-   teléfono en el directorio de direcciones. Con eso, contraentrega **sin llamada**. La tercera vía se puede conseguir
+4. **Compra previa** (`customer_contraentrega_decision`, en su versión de la `0286`), resuelta por el teléfono
+   verificado por SMS: basta una entrega de esta cuenta, una entrega a este teléfono (también las manuales de la cajera)
+   o una fila de este teléfono en el directorio de direcciones usada dentro de la ventana de
+   `app_settings.data_retention.addressDirectoryMonths` (24 meses; cuenta lo más reciente entre `last_used_at`,
+   `updated_at` y `created_at`). Si el número tiene otro dueño, o lo tuvo con una asignación terminada dentro de la
+   ventana de `phoneAssignmentsMonths` (24 meses), solo vale una entrega de esta cuenta a ese número hecha durante su
+   asignación actual (`0277`). Con eso, contraentrega **sin llamada**. La tercera vía se puede conseguir
    llamando al restaurante y cancelando: se acepta a propósito, porque los strikes se evalúan antes. **Sin GPS** (permiso
    negado o sin señal), la compra previa sigue pudiendo pagar al recibir: negarlo nunca impide pedir. El GPS no condiciona la
    **elegibilidad** por compra previa, pero si se envía, una distancia de más de 400 m al punto de entrega pasa el pedido a la
