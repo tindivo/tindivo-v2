@@ -473,4 +473,33 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             assertTrue(body(1).gps().absent("lat"))
             assertEquals(1, gpsReads.size)
         }
+
+    @Test
+    fun `CAX-223-001 vencida y con el permiso revocado durante la consulta del libro sale sin gpsValidation`() =
+        runTest(dispatcher) {
+            handlers["POST /customer/orders"] = { reply(409, problem(409, "conflict", "El pedido sigue en proceso.")) }
+            val vm = ready()
+            vm.selectPay(PayMethod.Yape)
+            vm.confirm()
+            advanceUntilIdle()
+
+            val later = System.currentTimeMillis() + DEFAULT_FLIGHT_WINDOW_MS + 1
+            ledgerClock = { later }
+            val gate = CompletableDeferred<Unit>()
+            lookup.gate = gate
+            handlers["POST /customer/orders"] = { reply(201, CREATED_JSON) }
+            gpsClockMs = 119_000L
+            vm.confirm()
+            advanceUntilIdle()
+
+            // «Dijo que no» manda sobre «el GPS no contestó»: sin permiso no viaja ni siquiera `failed`.
+            gpsClockMs = 121_000L
+            gpsPermission = false
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(2, orders().size)
+            assertEquals(orders()[0].headers["Idempotency-Key"], orders()[1].headers["Idempotency-Key"])
+            assertTrue(body(1).absent("gpsValidation"))
+        }
 }
