@@ -2,16 +2,22 @@ package com.tindivo.customer.feature.orders
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -82,7 +88,15 @@ internal fun EtaLine(order: OrderDetailUi) {
             is EtaView.Single -> stringResource(R.string.order_eta_single, eta.minutes)
             is EtaView.Range -> stringResource(R.string.order_eta_range, eta.min, eta.max)
         }
-    Text(text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(
+            TindivoIcons.Schedule,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    }
 }
 
 /** Mientras [keepOn], la pantalla no se apaga (CUS-TRK-012); al salir o al terminar el pedido, vuelve a lo normal. */

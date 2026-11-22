@@ -209,6 +209,8 @@ private fun OrderBody(
         OrderTitle(order = order)
         // La tarjeta héroe del tablero «Seguimiento»: el estado, los pasos y la hora estimada juntos.
         TindivoCard(modifier = Modifier.fillMaxWidth()) {
+            val art = orderArtOf(order.headline, order.waitingForBusiness, driverAtDoor = order.driver?.atDoor == true)
+            art?.let { OrderArtPanel(it) }
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (order.waitingForBusiness) {
                     AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
