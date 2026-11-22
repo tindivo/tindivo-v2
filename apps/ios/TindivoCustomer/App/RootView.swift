@@ -39,8 +39,7 @@ struct RootView: View {
         case let .business(id):
             BusinessRoute(id: id, environment: environment, navigator: navigator)
         case .cart:
-            // La Bolsa llega en el siguiente bloque de la Fase 1·B.
-            EmptyView()
+            CartRoute(environment: environment, navigator: navigator)
         #if DEBUG
         case .diagnostics:
             DiagnosticsView(model: DiagnosticsScreenModel(system: environment.system, config: environment.config))
@@ -65,5 +64,26 @@ private struct BusinessRoute: View {
 
     var body: some View {
         BusinessView(model: model, environment: environment, onOpenCart: navigator.openCart)
+    }
+}
+
+private struct CartRoute: View {
+    @State private var model: CartScreenModel
+    private let navigator: AppNavigator
+
+    init(environment: AppEnvironment, navigator: AppNavigator) {
+        _model = State(initialValue: CartScreenModel(store: environment.cartStore))
+        self.navigator = navigator
+    }
+
+    var body: some View {
+        CartView(
+            model: model,
+            onAddMore: navigator.addMore(to:),
+            onSeeBusinesses: navigator.seeBusinesses,
+            onContinue: {
+                // Fase 2: checkout
+            }
+        )
     }
 }
