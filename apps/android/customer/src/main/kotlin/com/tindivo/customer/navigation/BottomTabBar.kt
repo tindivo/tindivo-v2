@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -74,7 +75,12 @@ internal fun BottomTabBar(
         shadowElevation = 8.dp,
     ) {
         Row(
-            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars).heightIn(min = BAR_HEIGHT),
+            // `selectableGroup`: TalkBack anuncia las cuatro pestañas como un grupo («pestaña 2 de 4»).
+            modifier =
+                Modifier
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .heightIn(min = BAR_HEIGHT)
+                    .selectableGroup(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {

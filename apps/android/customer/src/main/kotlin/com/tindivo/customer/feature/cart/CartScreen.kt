@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -289,16 +290,18 @@ private fun FilledBag(
         item { BusinessLine(name = state.businessName) }
         item {
             TindivoCard(modifier = Modifier.fillMaxWidth()) {
+                // Una sola tarjeta, como el tablero; `key` da a cada plato su identidad (la de `items(key = …)`), así
+                // que quitar uno no le pasa su estado al siguiente.
                 state.lines.forEachIndexed { index, line ->
-                    if (index >
-                        0
-                    ) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 14.dp),
-                            color = TindivoColors.border,
-                        )
+                    key(line.signature) {
+                        if (index > 0) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                            )
+                        }
+                        CartLineRow(line = line, actions = actions)
                     }
-                    CartLineRow(line = line, actions = actions)
                 }
             }
         }
