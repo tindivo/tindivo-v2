@@ -21,6 +21,12 @@ struct CartLineRow: Equatable {
     /// Con 1 unidad el «−» quita la línea (CUS-CRT-003): no baja de 1.
     let decreaseRemoves: Bool
     let canIncrease: Bool
+    /// Para VoiceOver: el contador dice «2 unidades» y los botones, qué hacen y cuántas hay (con 1 unidad, «−» quita).
+    let quantityLabel: String
+    let decreaseLabel: String
+    let increaseLabel: String
+    /// Lo que la carta vigente dice de esta línea (CUS-CRT-005): vacío si se puede pedir.
+    let issues: [String]
     /// «Editar» solo existe si el plato lleva opciones (CUS-CRT-014).
     let canEdit: Bool
 
@@ -39,6 +45,7 @@ final class CartScreenModel {
         let lines: [CartLineRow]
         let subtotal: String
         let method: DeliveryMethod
+        let validation: Validation
 
         /// La etiqueta del método de entrega (CUS-CRT-007, CUS-CRT-010).
         var methodLabel: String {
@@ -52,11 +59,27 @@ final class CartScreenModel {
         var showsShipping: Bool { method == .delivery }
     }
 
+    /// Cómo va la revisión de la bolsa contra la carta vigente. No se guarda: se repite cada vez que se abre.
+    enum Validation: Equatable {
+        /// Esperando la carta; «Continuar» (cuando exista) dice «Cargando…».
+        case validating
+        /// La carta respondió: las líneas con problema llevan su aviso.
+        case checked
+        /// La carta no se pudo leer: no se bloquea nada; el servidor lo vuelve a comprobar al pedir.
+        case unchecked
+    }
+
     enum State: Equatable {
         /// Aún no se leyó lo guardado: no se enseña «vacía» por un instante.
         case loading
         case empty
         case filled(Filled)
+    }
+
+    private enum Menu {
+        case pending
+        case loaded(BusinessDetail)
+        case failed
     }
 
     /// El plato que «Editar» abre: la línea y el plato de la carta vigente con sus opciones.
@@ -88,6 +111,9 @@ final class CartScreenModel {
     private let undoNotice: TimedNotice
     private var lastRemoved: RemovedLine?
     private var isOpeningEdit = false
+    private var cart: Cart?
+    private var hasCart = false
+    private var menu: Menu = .pending
 
     init(store: any CartStore, catalog: any CatalogRepository, clock: AppClock) {
         self.store = store
@@ -100,7 +126,51 @@ final class CartScreenModel {
     /// La bolsa vigente ahora y después cada vez que cambia. Se lanza con `.task`.
     func observe() async {
         for await cart in await store.updates() {
-            state = Self.state(for: cart)
+            self.cart = cart
+            hasCart = true
+            rebuild()
+        }
+    }
+
+    /// Revisa la bolsa contra la carta vigente del negocio (CUS-CRT-005). Se lanza con `.task` al abrir la pantalla.
+    /// Si la carta no carga, no se bloquea nada (`unchecked`). Quitar o editar líneas después se revisa de nuevo con la
+    /// misma carta, sin pedirla otra vez.
+    func validate() async {
+        guard let cart = await store.current(), !cart.isEmpty else { return }
+        menu = .pending
+        rebuild()
+        do throws(AppError) {
+            menu = .loaded(try await loadMenu(of: cart.businessId))
+        } catch .cancelled {
+            return
+        } catch {
+            menu = .failed
+        }
+        rebuild()
+    }
+
+    /// «Continuar» (todavía no existe en iOS: llega con el checkout) solo podrá avanzar con la bolsa ya revisada y
+    /// sin líneas con problema. Con la carta sin leer (`unchecked`) no bloquea.
+    var canContinue: Bool {
+        guard case let .filled(filled) = state, filled.validation != .validating else { return false }
+        return filled.lines.allSatisfy { $0.issues.isEmpty }
+    }
+
+    private func rebuild() {
+        guard hasCart else { return }
+        guard let cart, !cart.isEmpty else {
+            state = .empty
+            return
+        }
+        switch menu {
+        case let .loaded(detail) where detail.id.caseInsensitiveCompare(cart.businessId) == .orderedSame:
+            state = Self.state(
+                for: cart, validation: .checked, issues: CartValidation.issues(of: cart, against: detail, now: clock.now())
+            )
+        case .failed:
+            state = Self.state(for: cart, validation: .unchecked)
+        case .pending, .loaded:
+            state = Self.state(for: cart, validation: .validating)
         }
     }
 
@@ -159,7 +229,11 @@ final class CartScreenModel {
         defer { isOpeningEdit = false }
         let detail: BusinessDetail
         do throws(AppError) {
-            detail = try await loadMenu(of: cart.businessId)
+            if case let .loaded(known) = menu, known.id.caseInsensitiveCompare(cart.businessId) == .orderedSame {
+                detail = known
+            } else {
+                detail = try await loadMenu(of: cart.businessId)
+            }
         } catch {
             notices.show(ErrorText.message(for: error))
             return
@@ -225,12 +299,13 @@ final class CartScreenModel {
         }
     }
 
-    static func state(for cart: Cart?) -> State {
+    /// `issues` va en el orden de las líneas; sin ella, ninguna línea tiene avisos.
+    static func state(for cart: Cart?, validation: Validation = .validating, issues: [[CartLineIssue]] = []) -> State {
         guard let cart, !cart.isEmpty else { return .empty }
         return .filled(Filled(
             businessId: cart.businessId,
             businessName: cart.businessName,
-            lines: cart.lines.map { line in
+            lines: cart.lines.enumerated().map { index, line in
                 CartLineRow(
                     signature: line.signature,
                     name: line.name,
@@ -240,11 +315,23 @@ final class CartScreenModel {
                     total: formatAmount(line.total) ?? formatSoles(line.total),
                     decreaseRemoves: line.quantity == 1,
                     canIncrease: line.quantity < CartLimits.maxQuantity,
+                    quantityLabel: Self.unitsText(line.quantity),
+                    decreaseLabel: line.quantity == 1
+                        ? String(localized: "Quitar \(line.name)")
+                        : String(localized: "Quitar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
+                    increaseLabel: String(localized: "Agregar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
+                    issues: issues.indices.contains(index) ? issues[index].map(\.message) : [],
                     canEdit: !line.modifiers.isEmpty
                 )
             },
             subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal),
-            method: cart.method
+            method: cart.method,
+            validation: validation
         ))
+    }
+
+    /// «1 unidad», «2 unidades» (plural en el catálogo de textos).
+    private static func unitsText(_ quantity: Int) -> String {
+        String(localized: "\(quantity) unidades")
     }
 }

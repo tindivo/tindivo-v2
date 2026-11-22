@@ -1,6 +1,7 @@
 import Foundation
 import os
 import Testing
+import TindivoAPI
 @testable import TindivoCustomer
 
 /// `CartViewModelTest.kt`.
@@ -288,6 +289,145 @@ struct CartScreenModelTests {
         }())
         #expect(state.methodLabel == "Recojo")
         #expect(state.showsShipping == false)
+    }
+
+    // MARK: VoiceOver
+
+    @Test("VoiceOver: el contador dice «2 unidades» y «1 unidad», y los botones dicen qué hacen")
+    func accessibilityLabels() throws {
+        let cart = Cart(businessId: "n1", businessName: "N", lines: [line("a", quantity: 1), line("b", quantity: 2)])
+        guard case let .filled(filled) = CartScreenModel.state(for: cart) else { Issue.record("debía haber platos"); return }
+        #expect(filled.lines.map(\.quantityLabel) == ["1 unidad", "2 unidades"])
+        #expect(filled.lines[0].decreaseLabel == "Quitar Plato a")
+        #expect(filled.lines[1].decreaseLabel == "Quitar una unidad de Plato b. Llevas 2 unidades")
+        #expect(filled.lines[1].increaseLabel == "Agregar una unidad de Plato b. Llevas 2 unidades")
+    }
+
+    // MARK: Validación contra la carta (CA-CRT-05)
+
+    private func validationMenu(_ items: [BusinessMenu.Item]) -> BusinessMenu {
+        Fixture.menu([Fixture.category("c", items)])
+    }
+
+    private func validated(
+        lines: [CartLine], menu: BusinessMenu
+    ) async throws -> (CartScreenModel, FileCartStore, Task<Void, Never>) {
+        let store = temporaryStore()
+        for line in lines { _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line) }
+        let (model, task) = await started(store, catalog: StubCatalog(menus: Script(just: menu)))
+        await model.validate()
+        return (model, store, task)
+    }
+
+    @Test("CA-CRT-05: antes de que responda la carta la bolsa se ve, está «validando» y no se puede continuar")
+    func validatingBeforeTheMenuAnswers() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let gate = Gate()
+        let catalog = StubCatalog(menus: Script(just: validationMenu([Fixture.item("a")])), gate: gate)
+        let (model, task) = await started(store, catalog: catalog)
+        #expect(filled(model)?.validation == .validating)
+        #expect(model.canContinue == false)
+
+        let validation = Task { await model.validate() }
+        await eventually { catalog.menus.calls == 1 }
+        #expect(filled(model)?.lines.count == 1)
+        #expect(filled(model)?.validation == .validating)
+        #expect(model.canContinue == false)
+
+        gate.open()
+        await validation.value
+        #expect(filled(model)?.validation == .checked)
+        #expect(model.canContinue == true)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05: un plato agotado se avisa en su línea y no se puede continuar hasta quitarlo")
+    func unavailableLineBlocksContinuing() async throws {
+        let (model, _, task) = try await validated(
+            lines: [line("a"), line("b")],
+            menu: validationMenu([Fixture.item("a", order: 1), Fixture.item("b", order: 2, available: false)])
+        )
+        let rows = try #require(filled(model)).lines
+        #expect(rows[0].issues.isEmpty)
+        #expect(rows[1].issues == ["Producto agotado por ahora"])
+        #expect(model.canContinue == false)
+
+        await model.remove(signature: rows[1].signature)
+        await eventually { filled(model)?.lines.map(\.name) == ["Plato a"] }
+        #expect(filled(model)?.validation == .checked)
+        #expect(model.canContinue == true)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05: un precio cambiado se avisa en la línea y bloquea; la bolsa no se toca")
+    func changedPriceBlocksContinuing() async throws {
+        let (model, store, task) = try await validated(
+            lines: [line("a", price: "10")], menu: validationMenu([Fixture.item("a", price: "12")])
+        )
+        #expect(filled(model)?.lines.first?.issues.map(\.plain) == ["Precio actualizado (+S/ 2.00)"])
+        #expect(model.canContinue == false)
+        #expect(await store.current()?.lines.first?.basePrice == dec("10"))
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05: un plato eliminado, uno fuera de franja y una opción que ya no existe se avisan en su línea")
+    func otherIssuesAreShownOnTheLine() async throws {
+        let sizes = Fixture.group("g", single: true, required: true, options: [Fixture.option("a", "1")])
+        let stale = CartModifier(optionId: "zz", groupName: "Grupo g", optionName: "Opción zz", price: dec("1"))
+        let (model, _, task) = try await validated(
+            lines: [line("gone"), line("noon"), line("opt", modifiers: [stale])],
+            menu: validationMenu([
+                Fixture.item("noon", order: 1, from: "11:00", to: "15:00"),
+                Fixture.item("opt", order: 2, groups: [sizes]),
+            ])
+        )
+        let rows = try #require(filled(model)).lines
+        #expect(rows[0].issues == ["Este producto ya no está disponible"])
+        #expect(rows[1].issues == ["Solo de 11:00 a 15:00"])
+        #expect(rows[2].issues == ["Una opción ya no está disponible"])
+        #expect(model.canContinue == false)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05: una bolsa que coincide con la carta puede continuar")
+    func matchingBagCanContinue() async throws {
+        let (model, _, task) = try await validated(lines: [line("a")], menu: validationMenu([Fixture.item("a")]))
+        #expect(filled(model)?.validation == .checked)
+        #expect(model.canContinue == true)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05: si la carta no se puede leer no se bloquea: queda «sin validar» y sin avisos")
+    func uncheckedWhenTheMenuFails() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let (model, task) = await started(store, catalog: StubCatalog(menus: Script(failing: .network)))
+        await model.validate()
+        #expect(filled(model)?.validation == .unchecked)
+        #expect(filled(model)?.lines.first?.issues.isEmpty == true)
+        #expect(model.canContinue == true)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05: una carta que no se puede mostrar tal cual (precio con tres decimales) también queda «sin validar»")
+    func uncheckedWhenTheMenuIsInvalid() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let broken = validationMenu([Fixture.item("a", price: "10.123")])
+        let (model, task) = await started(store, catalog: StubCatalog(menus: Script(just: broken)))
+        await model.validate()
+        #expect(filled(model)?.validation == .unchecked)
+        #expect(model.canContinue == true)
+        task.cancel()
+    }
+
+    @Test("una bolsa vacía no tiene nada que continuar")
+    func emptyBagCannotContinue() async {
+        let (model, task) = await started(temporaryStore())
+        await model.validate()
+        #expect(model.canContinue == false)
+        task.cancel()
     }
 
     // MARK: Editar (CA-CRT-11)

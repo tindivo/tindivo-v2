@@ -50,6 +50,7 @@ struct CartView: View {
             if let message { AccessibilityNotification.Announcement(message).post() }
         }
         .task { await model.observe() }
+        .task { await model.validate() }
     }
 
     // MARK: Deshacer
@@ -117,6 +118,12 @@ struct CartView: View {
                     .tindivoText(TindivoTokens.Typography.bodySecondary)
                     .foregroundStyle(Color.tindivo.inkSecondary)
                     .accessibilityIdentifier("cart.method")
+                if filled.validation == .unchecked {
+                    Text("No pudimos revisar tu bolsa con la carta. Lo confirmaremos al hacer el pedido.")
+                        .tindivoText(TindivoTokens.Typography.bodySecondary)
+                        .foregroundStyle(Color.tindivo.inkSecondary)
+                        .accessibilityIdentifier("cart.unchecked")
+                }
                 ForEach(filled.lines, id: \.signatureKey) { line in
                     CartLineView(
                         line: line,
@@ -196,6 +203,12 @@ private struct CartLineView: View {
                     .tindivoText(TindivoTokens.Typography.bodySecondary)
                     .foregroundStyle(Color.tindivo.inkSecondary)
             }
+            ForEach(line.issues, id: \.self) { issue in
+                Text(issue)
+                    .tindivoText(TindivoTokens.Typography.bodySecondary)
+                    .foregroundStyle(Color.tindivo.error)
+                    .accessibilityIdentifier("cart.issue")
+            }
             ViewThatFits(in: .horizontal) {
                 HStack { stepper; Spacer(); actions }
                 VStack(alignment: .leading, spacing: 4) { stepper; actions }
@@ -210,10 +223,8 @@ private struct CartLineView: View {
             quantity: line.quantity,
             canDecrease: true,
             canIncrease: line.canIncrease,
-            decreaseLabel: line.decreaseRemoves
-                ? String(localized: "Quitar \(line.name)")
-                : String(localized: "Quitar una unidad de \(line.name)"),
-            increaseLabel: String(localized: "Agregar una unidad de \(line.name)"),
+            decreaseLabel: line.decreaseLabel,
+            increaseLabel: line.increaseLabel,
             onDecrease: { onChange(-1) },
             onIncrease: { onChange(1) }
         )
