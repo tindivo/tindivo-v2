@@ -1,12 +1,12 @@
 public import Foundation
 public import HTTPTypes
-public import OpenAPIRuntime
+package import OpenAPIRuntime
 
 /// Convierte toda respuesta que no sea 2xx en un `AppError` antes de que el código generado la intente decodificar.
 ///
 /// Así la traducción de errores (RFC 9457, 426, códigos nuevos) vive en un solo sitio y no por operación: el cliente
 /// generado solo ve respuestas buenas. Va después de `ClientHeadersMiddleware` en la cadena.
-public struct ProblemMiddleware: ClientMiddleware {
+package struct ProblemMiddleware: ClientMiddleware {
     /// Un cuerpo de error más grande que esto no es un `ProblemDetails`: no se lee entero.
     static let maxProblemBytes = 64 * 1024
 
@@ -14,11 +14,11 @@ public struct ProblemMiddleware: ClientMiddleware {
     /// cada repositorio ni cada pantalla tenga que acordarse. Recibe la versión mínima de la cabecera, si viene.
     private let onUpgradeRequired: (@Sendable (_ minVersion: String?) -> Void)?
 
-    public init(onUpgradeRequired: (@Sendable (_ minVersion: String?) -> Void)? = nil) {
+    package init(onUpgradeRequired: (@Sendable (_ minVersion: String?) -> Void)? = nil) {
         self.onUpgradeRequired = onUpgradeRequired
     }
 
-    public func intercept(
+    package func intercept(
         _ request: HTTPRequest,
         body: HTTPBody?,
         baseURL: URL,
@@ -27,6 +27,10 @@ public struct ProblemMiddleware: ClientMiddleware {
     ) async throws -> (HTTPResponse, HTTPBody?) {
         let (response, responseBody) = try await next(request, body, baseURL)
         guard response.status.kind != .successful else { return (response, responseBody) }
+        // El aviso de actualización sale ANTES de leer el cuerpo: un cuerpo lento o cancelado (plazo vencido, la pantalla
+        // se fue) no debe hacer que se pierda el 426.
+        let isUpgradeStatus = response.status.code == 426
+        if isUpgradeStatus { onUpgradeRequired?(response.headerFields[ClientHeaders.minVersion]) }
         var data: Data?
         if let responseBody {
             do {
@@ -38,7 +42,8 @@ public struct ProblemMiddleware: ClientMiddleware {
             }
         }
         let error = AppError.from(status: response.status.code, headers: response.headerFields, body: data)
-        if case let .upgradeRequired(minVersion) = error { onUpgradeRequired?(minVersion) }
+        // Un `client_upgrade_required` con otro status solo se sabe leyendo el cuerpo.
+        if !isUpgradeStatus, case let .upgradeRequired(minVersion) = error { onUpgradeRequired?(minVersion) }
         throw error
     }
 }
@@ -46,7 +51,7 @@ public struct ProblemMiddleware: ClientMiddleware {
 extension AppError {
     /// Lleva cualquier error de una llamada a `AppError` (SW-6). El cliente generado envuelve lo que lanza un
     /// middleware o el transporte en `ClientError`; aquí se desenvuelve.
-    public static func wrap(_ error: any Error) -> AppError {
+    package static func wrap(_ error: any Error) -> AppError {
         switch error {
         case let error as AppError:
             error

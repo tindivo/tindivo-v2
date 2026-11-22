@@ -1,6 +1,6 @@
 public import Foundation
 public import HTTPTypes
-public import OpenAPIRuntime
+package import OpenAPIRuntime
 
 /// El plazo total de una llamada (CLI-10): 30 s para la petición lógica completa, con reintentos y esperas incluidos.
 /// Es el `callTimeout` de `TindivoHttp.kt`: `URLSession` solo pone plazo a cada intento, y sin esto una llamada con
@@ -9,12 +9,12 @@ public import OpenAPIRuntime
 /// Va primero en la cadena, por fuera de los reintentos. Al vencer cancela el trabajo de dentro (el intento en curso y
 /// la espera del reintento) y devuelve `AppError.network`, que cubre «tiempo agotado». Si quien llama cancela, el error
 /// es el de siempre (`.cancelled`), no un tiempo agotado.
-public struct DeadlineMiddleware: ClientMiddleware {
+package struct DeadlineMiddleware: ClientMiddleware {
     private let timeout: Duration
     private let sleep: @Sendable (Duration) async throws -> Void
 
     /// `sleep` solo se cambia en pruebas.
-    public init(
+    package init(
         timeout: Duration = TindivoHTTP.callTimeout,
         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
     ) {
@@ -27,7 +27,7 @@ public struct DeadlineMiddleware: ClientMiddleware {
         case timedOut
     }
 
-    public func intercept(
+    package func intercept(
         _ request: HTTPRequest,
         body: HTTPBody?,
         baseURL: URL,

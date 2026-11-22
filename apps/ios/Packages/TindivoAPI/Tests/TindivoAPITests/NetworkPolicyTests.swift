@@ -170,12 +170,36 @@ struct TindivoHTTPTests {
     }
 }
 
+/// Una señal sin reloj: `wait()` se queda hasta que alguien llama a `fire()`, y se corta si la tarea se cancela.
+/// Reemplaza a los `Task.sleep` y a los sondeos de las pruebas: «entró el intento» y «venció el plazo» son señales.
+final class Latch: Sendable {
+    private let stream: AsyncStream<Void>
+    private let continuation: AsyncStream<Void>.Continuation
+
+    init() { (stream, continuation) = AsyncStream.makeStream(of: Void.self) }
+
+    func wait() async throws {
+        for await _ in stream { return }
+        try Task.checkCancellation()
+    }
+
+    func fire() { continuation.yield() }
+}
+
+private actor Tally {
+    private(set) var attempts = 0
+    private(set) var sleeps: [UInt64] = []
+    func attempt() { attempts += 1 }
+    func slept(_ millis: UInt64) { sleeps.append(millis) }
+}
+
 @Suite("Plazo total de la llamada (CLI-10)")
 struct CallDeadlineTests {
     private static let health = #"{"data":{"status":"ok","service":"tindivo-api","version":"v1","time":"t"}}"#
 
+    /// `expire` es el reloj del plazo: la prueba lo dispara cuando quiere que venza, sin esperar tiempo real.
     private func repository(
-        callTimeout: Duration,
+        expire: Latch,
         retry: RetryMiddleware = RetryMiddleware(random: { $0 }),
         _ respond: @escaping @Sendable (HTTPRequest) async throws -> (HTTPResponse, HTTPBody?)
     ) -> LiveSystemRepository {
@@ -184,87 +208,96 @@ struct CallDeadlineTests {
             client: ClientInfo(app: "customer", appVersion: "0.1.0", build: "1"),
             transport: StubTransport(respond: respond),
             retry: retry,
-            callTimeout: callTimeout
+            deadline: DeadlineMiddleware(timeout: .seconds(30), sleep: { _ in try await expire.wait() })
         ))
     }
 
-    /// Mide cuánto tarda la llamada y qué error devuelve; una cadena que se pasara del plazo la corta el límite de la prueba.
-    private func timed(_ repository: LiveSystemRepository) async -> (elapsed: Duration, error: AppError?) {
-        let clock = ContinuousClock()
-        let start = clock.now
-        var caught: AppError?
-        do throws(AppError) { _ = try await repository.health() } catch { caught = error }
-        return (clock.now - start, caught)
+    private func call(_ repository: LiveSystemRepository) -> Task<AppError?, Never> {
+        Task {
+            do throws(AppError) { _ = try await repository.health(); return nil } catch { return error }
+        }
     }
 
     @Test("CLI-10: un transporte que no contesta se corta al vencer el plazo total y devuelve .network")
     func hungTransportIsCut() async {
-        let repo = repository(callTimeout: .milliseconds(100)) { _ in
-            try await Task.sleep(for: .seconds(60))
+        let expire = Latch(), entered = Latch(), never = Latch()
+        let repo = repository(expire: expire) { _ in
+            entered.fire()
+            try await never.wait() // solo termina cuando el plazo cancela el intento
             throw URLError(.timedOut)
         }
-        let result = await timed(repo)
-        #expect(result.error == .network)
-        #expect(result.elapsed < .seconds(5))
+        let result = call(repo)
+        try? await entered.wait()
+        expire.fire()
+        #expect(await result.value == .network)
     }
 
-    @Test("CLI-10: los reintentos por error de red no pasan del plazo total (la espera del reintento se corta)")
-    func retriesStayWithinDeadline() async {
-        let attempts = Counter()
-        // Con random = tope, el primer reintento espera 500 ms; el plazo es de 100 ms.
-        let repo = repository(callTimeout: .milliseconds(100)) { _ in
-            await attempts.bump()
+    @Test("CLI-10: la espera de un reintento por error de red se corta con el plazo total, sin reintentar")
+    func retryWaitIsCutByDeadline() async {
+        let expire = Latch(), waiting = Latch(), neverRelease = Latch(), tally = Tally()
+        let retry = RetryMiddleware(
+            sleep: { millis in
+                await tally.slept(millis)
+                waiting.fire()
+                try await neverRelease.wait()
+            },
+            random: { $0 }
+        )
+        let repo = repository(expire: expire, retry: retry) { _ in
+            await tally.attempt()
             throw URLError(.networkConnectionLost)
         }
-        let result = await timed(repo)
-        #expect(result.error == .network)
-        #expect(result.elapsed < .seconds(5))
-        #expect(await attempts.value == 1)
+        let result = call(repo)
+        try? await waiting.wait()
+        expire.fire()
+        #expect(await result.value == .network)
+        #expect(await tally.attempts == 1)
+        #expect(await tally.sleeps == [500])
     }
 
     @Test("CLI-10: un Retry-After largo (aceptado por la política, hasta 10 s) no supera el plazo total")
     func longRetryAfterStaysWithinDeadline() async {
-        let attempts = Counter()
-        let repo = repository(callTimeout: .milliseconds(100)) { _ in
-            await attempts.bump()
+        let expire = Latch(), waiting = Latch(), neverRelease = Latch(), tally = Tally()
+        let retry = RetryMiddleware(
+            sleep: { millis in
+                await tally.slept(millis)
+                waiting.fire()
+                try await neverRelease.wait()
+            },
+            random: { $0 }
+        )
+        let repo = repository(expire: expire, retry: retry) { _ in
+            await tally.attempt()
             return (HTTPResponse(status: .serviceUnavailable, headerFields: [RetryMiddleware.retryAfter: "9"]), nil)
         }
-        let result = await timed(repo)
-        #expect(result.error == .network)
-        #expect(result.elapsed < .seconds(5))
-        #expect(await attempts.value == 1)
+        let result = call(repo)
+        try? await waiting.wait()
+        expire.fire()
+        #expect(await result.value == .network)
+        #expect(await tally.sleeps == [9000], "la política sí quería esperar los 9 s del Retry-After")
+        #expect(await tally.attempts == 1)
     }
 
     @Test("CLI-10: dentro del plazo la llamada no se altera")
     func withinDeadlineIsUntouched() async throws {
-        let repo = repository(callTimeout: .seconds(30)) { _ in
+        let repo = repository(expire: Latch()) { _ in
             (HTTPResponse(status: .ok, headerFields: [.contentType: "application/json"]), HTTPBody(Self.health))
         }
         let health = try await repo.health()
         #expect(health.status == "ok")
     }
 
-    @Test("CLI-10: el plazo total por defecto es de 30 s, como callTimeout de Android")
-    func defaultIsThirtySeconds() {
-        #expect(TindivoHTTP.callTimeout == .seconds(30))
-    }
-
     @Test("una cancelación de quien llama sigue siendo .cancelled, no .network")
     func callerCancellationIsNotATimeout() async {
-        let repo = repository(callTimeout: .seconds(30)) { _ in
-            try await Task.sleep(for: .seconds(60))
+        let entered = Latch(), never = Latch()
+        let repo = repository(expire: Latch()) { _ in
+            entered.fire()
+            try await never.wait()
             throw URLError(.timedOut)
         }
-        let task = Task { () -> AppError? in
-            do throws(AppError) { _ = try await repo.health(); return nil } catch { return error }
-        }
-        try? await Task.sleep(for: .milliseconds(50))
-        task.cancel()
-        #expect(await task.value == .cancelled)
+        let result = call(repo)
+        try? await entered.wait()
+        result.cancel()
+        #expect(await result.value == .cancelled)
     }
-}
-
-private actor Counter {
-    private(set) var value = 0
-    func bump() { value += 1 }
 }

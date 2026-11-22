@@ -51,7 +51,7 @@ struct ProblemDetails: Decodable {
 extension AppError {
     /// Traduce una respuesta de error a `AppError`. Nunca lanza: un cuerpo ausente, que no es JSON o que no tiene la
     /// forma de `ProblemDetails` termina en `.unknown` con el status HTTP.
-    public static func from(status: Int, headers: HTTPFields, body: Data?) -> AppError {
+    package static func from(status: Int, headers: HTTPFields, body: Data?) -> AppError {
         let problem = body.flatMap { try? JSONDecoder().decode(ProblemDetails.self, from: $0) }
         if status == 426 || problem?.code == ApiErrorCode.clientUpgradeRequired.rawValue {
             return .upgradeRequired(minVersion: headers[ClientHeaders.minVersion])

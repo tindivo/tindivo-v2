@@ -1,6 +1,6 @@
 public import Foundation
 public import HTTPTypes
-public import OpenAPIRuntime
+package import OpenAPIRuntime
 
 /// Reintentos de CLI-10, con la misma política que `RetryInterceptor.kt`:
 /// - solo `GET` y `POST` con `Idempotency-Key` no vacía (repetirlo no duplica nada);
@@ -11,8 +11,8 @@ public import OpenAPIRuntime
 ///   respuesta sin esperar y la pantalla lo dice.
 ///
 /// Va el último de la cadena, pegado al transporte: ve los status crudos antes de que `ProblemMiddleware` los traduzca.
-public struct RetryMiddleware: ClientMiddleware {
-    public static let maxRetries = 2
+package struct RetryMiddleware: ClientMiddleware {
+    package static let maxRetries = 2
     static let baseMillis: UInt64 = 500
     static let maxRetryAfterMillis: UInt64 = 10_000
     static let idempotencyKey = HTTPField.Name.constant("Idempotency-Key")
@@ -22,7 +22,7 @@ public struct RetryMiddleware: ClientMiddleware {
     private let random: @Sendable (_ upTo: UInt64) -> UInt64
     private let now: @Sendable () -> Date
 
-    public init(
+    package init(
         sleep: @escaping @Sendable (_ millis: UInt64) async throws -> Void = { try await Task.sleep(for: .milliseconds($0)) },
         random: @escaping @Sendable (_ upTo: UInt64) -> UInt64 = { UInt64.random(in: 0...$0) },
         now: @escaping @Sendable () -> Date = { Date() }
@@ -32,7 +32,7 @@ public struct RetryMiddleware: ClientMiddleware {
         self.now = now
     }
 
-    public func intercept(
+    package func intercept(
         _ request: HTTPRequest,
         body: HTTPBody?,
         baseURL: URL,

@@ -76,6 +76,34 @@ struct SystemRepositoryTests {
         #expect(seen.values == ["2.0.0", "2.0.0"])
     }
 
+    @Test("CLI-4: un 426 cuyo cuerpo se cancela al leerlo avisa igual (el aviso sale antes de leer el cuerpo)")
+    func upgradeIsReportedEvenIfTheBodyIsCancelled() async {
+        let headers: HTTPFields = [ClientHeaders.minVersion: "2.0.0"]
+        let transport = StubTransport { _ in
+            let body = AsyncThrowingStream<ArraySlice<UInt8>, any Error> { $0.finish(throwing: CancellationError()) }
+            return (HTTPResponse(status: .init(code: 426), headerFields: headers), HTTPBody(body, length: .unknown))
+        }
+        let seen = Reports()
+        let client = TindivoAPIClient.make(
+            baseURL: URL(string: "https://api.test/api/v1")!,
+            client: ClientInfo(app: "customer", appVersion: "0.1.0", build: "1"),
+            transport: transport,
+            onUpgradeRequired: { seen.add($0) }
+        )
+        await #expect(throws: AppError.cancelled) { try await LiveSystemRepository(client: client).health() }
+        #expect(seen.values == ["2.0.0"])
+    }
+
+    @Test("M6: la sesión de /config ignora la caché local y no usa URLCache; la normal sí la usa")
+    func configSessionBypassesTheLocalCache() {
+        let uncached = TindivoHTTP.makeSession(ignoreLocalCache: true).configuration
+        #expect(uncached.requestCachePolicy == .reloadIgnoringLocalCacheData)
+        #expect(uncached.urlCache == nil)
+        let normal = TindivoHTTP.makeSession().configuration
+        #expect(normal.requestCachePolicy == .useProtocolCachePolicy)
+        #expect(normal.urlCache != nil)
+    }
+
     @Test("CLI-4: un error que no es 426 no avisa de actualización")
     func otherErrorsDoNotReportUpgrade() async {
         let seen = Reports()

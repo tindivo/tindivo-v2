@@ -1,6 +1,6 @@
 public import Foundation
-public import OpenAPIRuntime
-public import OpenAPIURLSession
+package import OpenAPIRuntime
+package import OpenAPIURLSession
 
 /// Cómo está la API (`GET /health`).
 public struct ApiHealth: Sendable, Equatable {
@@ -45,14 +45,14 @@ public protocol SystemRepository: Sendable {
 }
 
 /// Los tipos generados (`Operations.*`) no salen de aquí: se traducen a modelos propios.
-public struct LiveSystemRepository: SystemRepository {
+package struct LiveSystemRepository: SystemRepository {
     private let client: Client
 
     package init(client: Client) {
         self.client = client
     }
 
-    public func health() async throws(AppError) -> ApiHealth {
+    package func health() async throws(AppError) -> ApiHealth {
         let data = try await apiCall { try await client.getHealth().ok.body.json.data }
         return ApiHealth(
             status: data.status.value1?.rawValue ?? data.status.value2 ?? "",
@@ -60,7 +60,7 @@ public struct LiveSystemRepository: SystemRepository {
         )
     }
 
-    public func clientCompat() async throws(AppError) -> ClientCompat {
+    package func clientCompat() async throws(AppError) -> ClientCompat {
         let data = try await apiCall { try await client.getClientConfig().ok.body.json.data }
         return ClientCompat(
             minAppVersion: data.minAppVersion.customer.ios,
@@ -75,20 +75,20 @@ public struct LiveSystemRepository: SystemRepository {
 /// Arma el cliente con la cadena de middlewares del contrato (SW-7), de fuera hacia dentro: plazo total de la llamada,
 /// cabeceras (un reintento conserva su `X-Request-Id`), traducción de errores y reintentos pegados al transporte (ven
 /// los status crudos).
-public enum TindivoAPIClient {
+package enum TindivoAPIClient {
     package static func make(
         baseURL: URL,
         client: ClientInfo,
         transport: any ClientTransport = TindivoHTTP.makeTransport(),
         retry: RetryMiddleware = RetryMiddleware(),
-        callTimeout: Duration = TindivoHTTP.callTimeout,
+        deadline: DeadlineMiddleware = DeadlineMiddleware(),
         onUpgradeRequired: (@Sendable (_ minVersion: String?) -> Void)? = nil
     ) -> Client {
         Client(
             serverURL: baseURL,
             configuration: Configuration(dateTranscoder: FlexibleISO8601()),
             transport: transport,
-            middlewares: [DeadlineMiddleware(timeout: callTimeout), ClientHeadersMiddleware(client: client), ProblemMiddleware(onUpgradeRequired: onUpgradeRequired), retry]
+            middlewares: [deadline, ClientHeadersMiddleware(client: client), ProblemMiddleware(onUpgradeRequired: onUpgradeRequired), retry]
         )
     }
 }
@@ -100,14 +100,30 @@ public struct TindivoAPIServices: Sendable {
     public let catalog: any CatalogRepository
 
     /// `onUpgradeRequired` se llama con la versión mínima cada vez que CUALQUIER llamada recibe un 426 (CLI-4).
+    ///
+    /// `/config` y `/health` van por su propia sesión, que ignora la caché local: un mínimo de versión recién subido
+    /// no puede llegar tarde porque la `URLCache` de la app (más grande, por las miniaturas) lo guardó. `protocolClasses`
+    /// es para pruebas.
     public static func live(
         baseURL: URL,
         client: ClientInfo,
-        onUpgradeRequired: (@Sendable (_ minVersion: String?) -> Void)? = nil
+        onUpgradeRequired: (@Sendable (_ minVersion: String?) -> Void)? = nil,
+        protocolClasses: [AnyClass]? = nil
     ) -> TindivoAPIServices {
-        let generated = TindivoAPIClient.make(baseURL: baseURL, client: client, onUpgradeRequired: onUpgradeRequired)
+        let generated = TindivoAPIClient.make(
+            baseURL: baseURL, client: client,
+            transport: TindivoHTTP.makeTransport(session: TindivoHTTP.makeSession(protocolClasses: protocolClasses)),
+            onUpgradeRequired: onUpgradeRequired
+        )
+        let uncached = TindivoAPIClient.make(
+            baseURL: baseURL, client: client,
+            transport: TindivoHTTP.makeTransport(
+                session: TindivoHTTP.makeSession(protocolClasses: protocolClasses, ignoreLocalCache: true)
+            ),
+            onUpgradeRequired: onUpgradeRequired
+        )
         return TindivoAPIServices(
-            system: LiveSystemRepository(client: generated),
+            system: LiveSystemRepository(client: uncached),
             catalog: LiveCatalogRepository(client: generated)
         )
     }

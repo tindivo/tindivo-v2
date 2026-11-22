@@ -1,5 +1,5 @@
 public import Foundation
-public import OpenAPIRuntime
+package import OpenAPIRuntime
 
 /// El catálogo público: la lista de negocios y la carta de uno. Sin sesión.
 public protocol CatalogRepository: Sendable {
@@ -10,14 +10,14 @@ public protocol CatalogRepository: Sendable {
 }
 
 /// Los tipos generados (`Operations.*`) no salen de aquí: se traducen a modelos propios.
-public struct LiveCatalogRepository: CatalogRepository {
+package struct LiveCatalogRepository: CatalogRepository {
     private let client: Client
 
     package init(client: Client) {
         self.client = client
     }
 
-    public func listBusinesses() async throws(AppError) -> [BusinessSummary] {
+    package func listBusinesses() async throws(AppError) -> [BusinessSummary] {
         let data = try await apiCall { try await client.listBusinesses().ok.body.json.data }
         return data.map { business in
             BusinessSummary(
@@ -35,7 +35,7 @@ public struct LiveCatalogRepository: CatalogRepository {
         }
     }
 
-    public func getBusiness(id idOrSlug: String) async throws(AppError) -> BusinessMenu {
+    package func getBusiness(id idOrSlug: String) async throws(AppError) -> BusinessMenu {
         let data = try await apiCall {
             try await client.getBusiness(path: .init(id: idOrSlug)).ok.body.json.data
         }

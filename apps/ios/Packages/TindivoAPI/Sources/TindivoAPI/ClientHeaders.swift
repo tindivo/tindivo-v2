@@ -1,6 +1,6 @@
 public import Foundation
 public import HTTPTypes
-public import OpenAPIRuntime
+package import OpenAPIRuntime
 
 /// Quién llama a la API (CLI-3). Con estas cabeceras la API decide el 426 de versión mínima (CLI-4) y registra el
 /// tráfico por versión (CLI-15).
@@ -20,16 +20,16 @@ public struct ClientInfo: Sendable, Equatable {
 }
 
 /// Nombres de las cabeceras tal como los publica el contrato (`packages/contracts/src/client-compat.ts`).
-public enum ClientHeaders {
-    public static let platform: HTTPField.Name = .constant("X-Tindivo-Platform")
-    public static let app: HTTPField.Name = .constant("X-Tindivo-App")
-    public static let appVersion: HTTPField.Name = .constant("X-Tindivo-App-Version")
-    public static let build: HTTPField.Name = .constant("X-Tindivo-Build")
-    public static let requestId: HTTPField.Name = .constant("X-Request-Id")
+package enum ClientHeaders {
+    package static let platform: HTTPField.Name = .constant("X-Tindivo-Platform")
+    package static let app: HTTPField.Name = .constant("X-Tindivo-App")
+    package static let appVersion: HTTPField.Name = .constant("X-Tindivo-App-Version")
+    package static let build: HTTPField.Name = .constant("X-Tindivo-Build")
+    package static let requestId: HTTPField.Name = .constant("X-Request-Id")
     /// La devuelve la API junto al 426 `client_upgrade_required`.
-    public static let minVersion: HTTPField.Name = .constant("x-tindivo-min-version")
+    package static let minVersion: HTTPField.Name = .constant("x-tindivo-min-version")
 
-    public static let platformIOS = "ios"
+    package static let platformIOS = "ios"
 }
 
 extension HTTPField.Name {
@@ -47,16 +47,16 @@ extension HTTPField.Name {
 ///
 /// Va primero en la cadena, antes del de reintentos: un reintento repite la misma petición y conserva su
 /// `X-Request-Id`, así que en los registros de la API se ve como el mismo intento lógico (paridad con Android).
-public struct ClientHeadersMiddleware: ClientMiddleware {
+package struct ClientHeadersMiddleware: ClientMiddleware {
     private let client: ClientInfo
     private let makeRequestId: @Sendable () -> String
 
-    public init(client: ClientInfo, makeRequestId: @escaping @Sendable () -> String = { UUID().uuidString }) {
+    package init(client: ClientInfo, makeRequestId: @escaping @Sendable () -> String = { UUID().uuidString }) {
         self.client = client
         self.makeRequestId = makeRequestId
     }
 
-    public func intercept(
+    package func intercept(
         _ request: HTTPRequest,
         body: HTTPBody?,
         baseURL: URL,
