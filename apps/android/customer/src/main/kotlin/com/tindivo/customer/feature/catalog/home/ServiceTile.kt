@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -97,7 +98,7 @@ internal fun ServiceTile(
                 ).clickable(onClick = onClick, role = Role.Button),
     ) {
         val wide = maxWidth > WIDE_FROM
-        Box(modifier = Modifier.height(if (wide) WIDE_TILE_HEIGHT else SERVICE_TILE_HEIGHT)) {
+        Box(modifier = Modifier.heightIn(min = if (wide) WIDE_TILE_HEIGHT else SERVICE_TILE_HEIGHT)) {
             if (courier) CourierDecoration(wide = wide)
             TileText(title = title, tagline = tagline, courier = courier, wide = wide)
         }

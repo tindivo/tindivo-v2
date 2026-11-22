@@ -230,7 +230,7 @@ private fun QuantityStepper(
         shape = CircleShape,
         color = scheme.surfaceContainerLowest,
         border = BorderStroke(1.dp, scheme.outline),
-        modifier = Modifier.height(TindivoSpacing.primaryButtonHeight),
+        modifier = Modifier.heightIn(min = TindivoSpacing.primaryButtonHeight),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 3.dp),

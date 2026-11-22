@@ -221,7 +221,7 @@ private fun ContinueBar(
                     .navigationBarsPadding()
                     .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp)
                     .fillMaxWidth()
-                    .height(TindivoSpacing.primaryButtonHeight)
+                    .heightIn(min = TindivoSpacing.primaryButtonHeight)
                     .clearAndSetSemantics {
                         contentDescription = "$label, $subtotal"
                         role = Role.Button

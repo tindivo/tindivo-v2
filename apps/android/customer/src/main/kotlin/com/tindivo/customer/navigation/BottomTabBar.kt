@@ -74,7 +74,7 @@ internal fun BottomTabBar(
         shadowElevation = 8.dp,
     ) {
         Row(
-            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars).height(BAR_HEIGHT),
+            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars).heightIn(min = BAR_HEIGHT),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -155,7 +156,7 @@ private fun ServiceHeader() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(HEADER_HEIGHT)
+                .heightIn(min = HEADER_HEIGHT)
                 .background(Brush.linearGradient(TindivoColors.gradientUnderText)),
     ) {
         Text(

@@ -124,7 +124,7 @@ private fun ConfirmPill(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(TindivoSpacing.primaryButtonHeight)
+                .heightIn(min = TindivoSpacing.primaryButtonHeight)
                 .clearAndSetSemantics {
                     contentDescription = label
                     role = Role.Button
