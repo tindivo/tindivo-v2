@@ -156,7 +156,7 @@ private fun ServiceHeader() {
             Modifier
                 .fillMaxWidth()
                 .height(HEADER_HEIGHT)
-                .background(Brush.linearGradient(TindivoColors.gradientCta)),
+                .background(Brush.linearGradient(TindivoColors.gradientUnderText)),
     ) {
         Text(
             text = stringResource(R.string.courier_entry_subtitle),

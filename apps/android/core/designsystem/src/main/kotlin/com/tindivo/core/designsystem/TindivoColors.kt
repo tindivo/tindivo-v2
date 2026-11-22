@@ -114,6 +114,12 @@ object TindivoColors {
     /** Degradado decorativo de las tarjetas de servicio (`gradientCta`): el texto blanco va en la mitad oscura. */
     val gradientCta: List<Color> = listOf(Palette.BrandMark, Palette.CtaMid, Palette.CtaEnd)
 
+    /**
+     * Degradado de una franja con texto blanco arriba a la izquierda (Entregas): empieza en `#C2410C`, que con blanco
+     * da 5,2:1; `#FA7020` daría 2,8:1. Sigue la diagonal por defecto de `Brush.linearGradient`.
+     */
+    val gradientUnderText: List<Color> = listOf(Palette.BrandDark, Palette.CtaEnd, Palette.BrandMark)
+
     /** Sombra de las tarjetas (`elevation1`, rgba(46,50,54,.06)): el tono de la tinta. */
     val shadow: Color = Palette.Ink
 

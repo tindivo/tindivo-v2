@@ -55,7 +55,7 @@ private const val MOTO_RATIO = 352f / 318f
  * Degradado de la tarjeta de Entregas (150°). El tablero empieza en `#CF4A0C`; aquí empieza en `#C2410C` porque el
  * subtítulo blanco de 14 sp va en esa esquina y con `#CF4A0C` daría 4,0:1 (bajo AA); con `#C2410C`, 5,2:1.
  */
-private val CourierGradient = listOf(Color(color = 0xFFC2410C), Color(color = 0xFFE8590C), Color(color = 0xFFFA7020))
+private val CourierGradient = TindivoColors.gradientUnderText
 private val GlowLight = Color.White.copy(alpha = 0.16f)
 private val GlowDark = Color(color = 0xFF9A3412).copy(alpha = 0.30f)
 
