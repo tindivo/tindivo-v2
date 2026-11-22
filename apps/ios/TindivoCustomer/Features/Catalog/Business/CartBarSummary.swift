@@ -13,12 +13,12 @@ func cartBar(for cart: Cart?, businessId: String) -> CartBarSummary? {
     return CartBarSummary(count: cart.count, subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal))
 }
 
-/// «3 unidades» / «1 unidad».
+/// «3 unidades» / «1 unidad»: el plural lo decide el catálogo de cadenas (variaciones de plural).
 func unitsText(_ count: Int) -> String {
-    count == 1 ? String(localized: "\(count) unidad") : String(localized: "\(count) unidades")
+    String(localized: "\(count) unidades")
 }
 
 /// «12 platos» / «1 plato».
 func dishesText(_ count: Int) -> String {
-    count == 1 ? String(localized: "\(count) plato") : String(localized: "\(count) platos")
+    String(localized: "\(count) platos")
 }

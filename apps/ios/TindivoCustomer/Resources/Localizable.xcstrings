@@ -44,10 +44,82 @@
         }
       }
     },
-    "%lld plato" : {},
-    "%lld platos" : {},
-    "%lld unidad" : {},
-    "%lld unidades" : {},
+    "%lld platos" : {
+      "localizations" : {
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld plato"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld platos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld unidades" : {
+      "localizations" : {
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unidad"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unidades"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld de %lld listas" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld de %#@total@"
+          },
+          "substitutions" : {
+            "total" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg lista"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg listas"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld–%lld min" : {
       "localizations" : {
         "es" : {
@@ -88,6 +160,28 @@
     "Añadido a tu bolsa" : {},
     "API" : {},
     "Aún no hay restaurantes disponibles." : {},
+    "Bolsa, %lld productos" : {
+      "localizations" : {
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Bolsa, %lld producto"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Bolsa, %lld productos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Buscar en %@" : {},
     "Buscar en la carta" : {},
     "Cancelar" : {},
