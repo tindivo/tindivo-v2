@@ -391,7 +391,7 @@ struct BusinessScreenModelTests {
     @Test("Destacados es la primera sección y trae un carrusel")
     func featuredRows() async {
         let menu = Fixture.menu(
-            [Fixture.category("c1", [Fixture.item("i1"), Fixture.item("i2", order: 2)])],
+            [Fixture.category("c1", [Fixture.item("i1"), Fixture.item("i2", order: 2, image: "https://x/i2.jpg")])],
             featured: .init(title: "Los más pedidos", itemIds: ["i2"])
         )
         let model = await loaded(menu)

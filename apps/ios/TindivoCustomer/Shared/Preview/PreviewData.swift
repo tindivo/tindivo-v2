@@ -33,7 +33,9 @@ enum PreviewData {
                 items: [
                     .init(
                         id: "i1", name: "1/4 de pollo", description: "Con papas fritas y ensalada",
-                        basePrice: Decimal(string: "12.50") ?? 0, displayOrder: 1,
+                        basePrice: Decimal(string: "12.50") ?? 0,
+                        // `.invalid` nunca resuelve: la foto no carga y se ve el respaldo de marca, sin depender de la red.
+                        imageURL: "https://fotos.invalid/i1.jpg", displayOrder: 1,
                         modifierGroups: [
                             .init(
                                 id: "g1", name: "Cremas", selectionType: "multi", isRequired: false,
@@ -62,7 +64,10 @@ enum PreviewData {
             .init(
                 id: "c2", name: "Bebidas", displayOrder: 2,
                 items: [
-                    .init(id: "i3", name: "Chicha morada", basePrice: Decimal(string: "5.00") ?? 0, displayOrder: 1),
+                    .init(
+                        id: "i3", name: "Chicha morada", basePrice: Decimal(string: "5.00") ?? 0,
+                        imageURL: "https://fotos.invalid/i3.jpg", displayOrder: 1
+                    ),
                     // Con franja (hasta las 20:20): para probar que la ficha se cierra sola al salir de ella.
                     .init(
                         id: "i4", name: "Chicha de la noche", basePrice: Decimal(string: "4.00") ?? 0, displayOrder: 2,

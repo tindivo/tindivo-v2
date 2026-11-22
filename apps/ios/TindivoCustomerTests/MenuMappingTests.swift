@@ -22,11 +22,11 @@ struct MenuMappingTests {
     private func item(
         _ id: String, order: Int = 1, price: String = "18", groups: [Raw.ModifierGroup] = [],
         description: String? = nil, imageURL: String? = nil, thumbnailURL: String? = nil,
-        days: [Int]? = nil, from: String? = nil, to: String? = nil
+        days: [Int]? = nil, from: String? = nil, to: String? = nil, available: Bool = true
     ) -> Raw.Item {
         Raw.Item(
             id: id, name: "Plato \(id)", description: description, basePrice: dec(price), imageURL: imageURL,
-            thumbnailURL: thumbnailURL, displayOrder: order, availableDays: days, availableFrom: from,
+            thumbnailURL: thumbnailURL, isAvailable: available, displayOrder: order, availableDays: days, availableFrom: from,
             availableTo: to, modifierGroups: groups
         )
     }
@@ -105,7 +105,7 @@ struct MenuMappingTests {
     @Test("CA-CAT-02 «Destacados» sale primero con el título del restaurante y sus platos de la carta")
     func featured() throws {
         let raw = menu(
-            [category("c", [item("p1")])],
+            [category("c", [item("p1", imageURL: "https://x/p1.jpg")])],
             featured: .init(title: "Los más pedidos", itemIds: ["p1"])
         )
         let business = try detail(raw)
@@ -116,16 +116,19 @@ struct MenuMappingTests {
 
     @Test("CA-CAT-02 sin sección destacada, o con un plato que ya no está en la carta, no hay sección")
     func featuredMissing() throws {
-        #expect(try detail(menu([category("c", [item("p1")])])).featured == nil)
-        let stale = menu([category("c", [item("p1")])], featured: .init(title: "X", itemIds: ["fantasma"]))
+        let photo = "https://x/p1.jpg"
+        #expect(try detail(menu([category("c", [item("p1", imageURL: photo)])])).featured == nil)
+        let stale = menu([category("c", [item("p1", imageURL: photo)])], featured: .init(title: "X", itemIds: ["fantasma"]))
         #expect(try detail(stale).featured == nil)
-        let partial = menu([category("c", [item("p1")])], featured: .init(title: "X", itemIds: ["fantasma", "p1"]))
+        let partial = menu(
+            [category("c", [item("p1", imageURL: photo)])], featured: .init(title: "X", itemIds: ["fantasma", "p1"])
+        )
         #expect(try detail(partial).featured?.items.map(\.id) == ["p1"])
     }
 
     @Test("CA-CAT-02 «Destacados» sin título usa Destacados y no pasa de seis platos")
     func featuredTitleAndCap() throws {
-        let items = (1...8).map { item("p\($0)", order: $0) }
+        let items = (1...8).map { item("p\($0)", order: $0, imageURL: "https://x/\($0).jpg") }
         let raw = menu(
             [category("c", items)],
             featured: .init(title: " ", itemIds: items.map(\.id))
@@ -133,6 +136,43 @@ struct MenuMappingTests {
         let section = try #require(try detail(raw).featured)
         #expect(section.name == "Destacados")
         #expect(section.items.map(\.id) == ["p1", "p2", "p3", "p4", "p5", "p6"])
+    }
+
+    @Test("CA-CAT-02 «Destacados» deja fuera los platos agotados y los que no tienen foto")
+    func featuredOnlyAvailableWithPhoto() throws {
+        let photo = "https://x/foto.jpg"
+        let raw = menu(
+            [category("c", [
+                item("ok", order: 1, imageURL: photo),
+                item("agotado", order: 2, imageURL: photo, available: false),
+                item("sinfoto", order: 3),
+                item("miniatura", order: 4, thumbnailURL: "https://x/mini.jpg"),
+            ])],
+            featured: .init(title: "Los más pedidos", itemIds: ["ok", "agotado", "sinfoto", "miniatura"])
+        )
+        #expect(try detail(raw).featured?.items.map(\.id) == ["ok", "miniatura"])
+    }
+
+    @Test("CA-CAT-02 si ningún destacado está disponible con foto, la sección no aparece")
+    func featuredNoneEligible() throws {
+        let raw = menu(
+            [category("c", [item("a", imageURL: "https://x/a.jpg", available: false), item("b", order: 2)])],
+            featured: .init(title: "Los más pedidos", itemIds: ["a", "b"])
+        )
+        let business = try detail(raw)
+        #expect(business.featured == nil)
+        #expect(business.sections.map(\.name) == ["Cat c"])
+    }
+
+    @Test("CA-CAT-02 los seis destacados salen de los que cumplen, no de los primeros seis de la lista")
+    func featuredCapAfterFiltering() throws {
+        let broken = (1...3).map { item("x\($0)", order: $0) }
+        let good = (1...7).map { item("p\($0)", order: $0 + 3, imageURL: "https://x/\($0).jpg") }
+        let raw = menu(
+            [category("c", broken + good)],
+            featured: .init(title: "Los más pedidos", itemIds: (broken + good).map(\.id))
+        )
+        #expect(try detail(raw).featured?.items.map(\.id) == ["p1", "p2", "p3", "p4", "p5", "p6"])
     }
 
     @Test("CA-CAT-04 el modo catálogo y su WhatsApp llegan al modelo")

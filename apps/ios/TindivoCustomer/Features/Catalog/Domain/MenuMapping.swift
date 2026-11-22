@@ -39,6 +39,9 @@ struct MenuItem: Sendable, Equatable {
     var basePrice: Decimal { dish.basePrice }
     var imageURL: String? { dish.imageURL }
 
+    /// Tiene foto (la grande o la miniatura): «Destacados» solo enseña platos con foto.
+    var hasPhoto: Bool { imageURL != nil || heroURL != nil }
+
     /// Se puede pedir: no se acabó y es su turno.
     var orderable: Bool { isAvailable && outsideWindow == nil }
 }
@@ -117,7 +120,10 @@ enum MenuMapping {
             categories.flatMap(\.items).map { ($0.id, $0) },
             uniquingKeysWith: { _, last in last }
         )
-        let featuredItems = (menu.featured?.itemIds ?? []).compactMap { byID[$0] }.prefix(featuredMax)
+        // «Destacados» solo con platos que se pueden pedir y se ven bien: disponibles y con foto (CUS-CAT-028).
+        let featuredItems = (menu.featured?.itemIds ?? []).compactMap { byID[$0] }
+            .filter { $0.isAvailable && $0.hasPhoto }
+            .prefix(featuredMax)
         let business = menu.business
         return BusinessDetail(
             id: business.id,
@@ -127,7 +133,8 @@ enum MenuMapping {
             bannerURL: nonBlank(business.bannerURL),
             accent: parseAccent(business.accentColor),
             categories: categories,
-            // Un plato que el servidor mandó destacado pero ya no está en la carta se descarta; sin platos no hay sección.
+            // Un plato destacado que ya no está en la carta, está agotado o no tiene foto se descarta; sin platos no hay
+            // sección.
             featured: featuredItems.isEmpty
                 ? nil
                 : MenuCategory(
