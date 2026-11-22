@@ -78,6 +78,9 @@ public struct BusinessMenu: Sendable, Equatable {
         public let accentColor: String
         public let primaryCapability: PrimaryCapability?
         public let whatsappNumber: String?
+        /// Plazo de entrega estimado, en minutos.
+        public let estimatedEtaMin: Int?
+        public let estimatedEtaMax: Int?
 
         public init(
             id: String,
@@ -87,8 +90,12 @@ public struct BusinessMenu: Sendable, Equatable {
             bannerURL: String? = nil,
             accentColor: String,
             primaryCapability: PrimaryCapability? = nil,
-            whatsappNumber: String? = nil
+            whatsappNumber: String? = nil,
+            estimatedEtaMin: Int? = nil,
+            estimatedEtaMax: Int? = nil
         ) {
+            self.estimatedEtaMin = estimatedEtaMin
+            self.estimatedEtaMax = estimatedEtaMax
             self.id = id
             self.name = name
             self.tagline = tagline
@@ -130,6 +137,8 @@ public struct BusinessMenu: Sendable, Equatable {
         public let availableFrom: String?
         public let availableTo: String?
         public let modifierGroups: [ModifierGroup]
+        /// Etiquetas cortas del plato, tal como las manda el restaurante.
+        public let badges: [String]
 
         public init(
             id: String,
@@ -143,8 +152,10 @@ public struct BusinessMenu: Sendable, Equatable {
             availableDays: [Int]? = nil,
             availableFrom: String? = nil,
             availableTo: String? = nil,
-            modifierGroups: [ModifierGroup] = []
+            modifierGroups: [ModifierGroup] = [],
+            badges: [String] = []
         ) {
+            self.badges = badges
             self.id = id
             self.name = name
             self.description = description

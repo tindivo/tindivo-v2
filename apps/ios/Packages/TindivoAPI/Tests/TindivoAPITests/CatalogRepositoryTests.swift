@@ -119,6 +119,16 @@ struct CatalogRepositoryTests {
         #expect(menu.categories[0].items[0].modifierGroups[0].selectionType == "tipo_futuro")
     }
 
+    @Test("CUS-CAT-007 las etiquetas del plato y el plazo del negocio llegan al modelo")
+    func badgesAndEta() async throws {
+        let detail = try fixture("business-detail")
+            .replacingOccurrences(of: "\"badges\":[]", with: "\"badges\":[\"Nuevo\",\"Picante\"]")
+        let menu = try await repository(.json(200, detail)).getBusiness(id: "x")
+        #expect(menu.categories[0].items[0].badges == ["Nuevo", "Picante"])
+        #expect(menu.business.estimatedEtaMin == 25)
+        #expect(menu.business.estimatedEtaMax != nil)
+    }
+
     @Test("un base_price ilegible tumba la carta como .unknown y nunca llega como precio")
     func badBasePrice() async throws {
         let base = try fixture("business-detail")
