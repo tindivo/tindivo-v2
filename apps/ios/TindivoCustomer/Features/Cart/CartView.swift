@@ -59,18 +59,18 @@ struct CartView: View {
     @ViewBuilder private var undoBar: some View {
         if let message = model.undoMessage {
             VStack(spacing: 0) {
-                HStack(spacing: TindivoTokens.Spacing.spaceInner) {
-                    Text(message)
-                        .tindivoText(TindivoTokens.Typography.body)
-                        .foregroundStyle(Color.tindivo.onSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Button("Deshacer") { Task { await model.undo() } }
-                        .tindivoText(TindivoTokens.Typography.titleSection)
-                        .foregroundStyle(Color.tindivo.onSecondary)
-                        .frame(minHeight: TindivoTokens.Spacing.touchTarget)
-                        .accessibilityIdentifier("cart.undo")
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: TindivoTokens.Spacing.spaceInner) {
+                        undoText(message).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                        undoButton
+                    }
+                    VStack(alignment: .leading, spacing: 0) {
+                        undoText(message)
+                        undoButton
+                    }
                 }
                 .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
+                .padding(.vertical, 4)
                 if !reduceMotion {
                     Rectangle()
                         .fill(Color.tindivo.onSecondary.opacity(0.6))
@@ -89,6 +89,22 @@ struct CartView: View {
                 withAnimation(.linear(duration: 5)) { undoProgress = 0 }
             }
         }
+    }
+
+    private func undoText(_ message: String) -> some View {
+        Text(message)
+            .tindivoText(TindivoTokens.Typography.body)
+            .foregroundStyle(Color.tindivo.onSecondary)
+    }
+
+    private var undoButton: some View {
+        Button("Deshacer") { Task { await model.undo() } }
+            .tindivoText(TindivoTokens.Typography.titleSection)
+            .foregroundStyle(Color.tindivo.onSecondary)
+            .lineLimit(1)
+            .fixedSize()
+            .frame(minHeight: TindivoTokens.Spacing.touchTarget)
+            .accessibilityIdentifier("cart.undo")
     }
 
     // MARK: Vacía
