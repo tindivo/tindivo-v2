@@ -6,6 +6,7 @@ struct AppEnvironment: Sendable {
     let config: AppConfig
     let system: any SystemRepository
     let catalog: any CatalogRepository
+    let cartStore: any CartStore
 
     static func live(config: AppConfig = .fromBundle()) -> AppEnvironment {
         let client = TindivoAPIClient.make(
@@ -15,7 +16,8 @@ struct AppEnvironment: Sendable {
         return AppEnvironment(
             config: config,
             system: LiveSystemRepository(client: client),
-            catalog: LiveCatalogRepository(client: client)
+            catalog: LiveCatalogRepository(client: client),
+            cartStore: FileCartStore()
         )
     }
 }

@@ -6,9 +6,12 @@ import TindivoAPI
 extension AppEnvironment {
     static func test(
         system: any SystemRepository,
-        catalog: any CatalogRepository = UnusedCatalogRepository()
+        catalog: any CatalogRepository = UnusedCatalogRepository(),
+        cartStore: any CartStore = FileCartStore(
+            fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/cart.json")
+        )
     ) -> AppEnvironment {
-        AppEnvironment(config: .fromBundle(.main), system: system, catalog: catalog)
+        AppEnvironment(config: .fromBundle(.main), system: system, catalog: catalog, cartStore: cartStore)
     }
 }
 
