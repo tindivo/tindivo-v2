@@ -1,12 +1,17 @@
 package com.tindivo.customer.feature.checkout
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,7 +21,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -90,11 +98,45 @@ private fun PayGroup(
                     title = payTitle(option.method),
                     hint = if (option.available) payHint(option.method) else unavailableText(option, quote),
                     onClick = { form.onSelectPay(option.method) },
+                    leading = { PayArt(method = option.method, enabled = option.available) },
                 )
             }
         }
     }
 }
+
+/**
+ * El dibujo de cada medio (tablero «Checkout»): el billete para efectivo y los logos de Yape y Plin para lo que se paga
+ * con el celular. Decorativo: el título ya nombra el medio. Apagado, a media opacidad.
+ */
+@Composable
+private fun PayArt(
+    method: PayMethod,
+    enabled: Boolean,
+) {
+    val alpha = if (enabled) 1f else DISABLED_ALPHA
+    if (method == PayMethod.Cash) {
+        Image(
+            bitmap = ImageBitmap.imageResource(R.drawable.img_pay_cash),
+            contentDescription = null,
+            alpha = alpha,
+            modifier = Modifier.size(40.dp),
+        )
+        return
+    }
+    Row(modifier = Modifier.width(40.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        listOf(R.drawable.img_pay_yape, R.drawable.img_pay_plin).forEach {
+            Image(
+                bitmap = ImageBitmap.imageResource(it),
+                contentDescription = null,
+                alpha = alpha,
+                modifier = Modifier.size(19.dp).clip(RoundedCornerShape(5.dp)),
+            )
+        }
+    }
+}
+
+private const val DISABLED_ALPHA = 0.5f
 
 @Composable
 private fun payTitle(method: PayMethod): String =

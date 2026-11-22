@@ -411,6 +411,7 @@
     <string name="checkout_pickup_at">Recoges tu pedido en el local</string>
     <string name="checkout_address_title">Entregar en</string>
     <string name="checkout_address_default">Por defecto</string>
+    <string name="checkout_address_line_label">%1$s · %2$s</string>
     <string name="checkout_address_change">Cambiar</string>
     <string name="checkout_address_add">Agregar dirección</string>
     <string name="checkout_address_add_hint">Necesitamos saber dónde entregar tu pedido.</string>

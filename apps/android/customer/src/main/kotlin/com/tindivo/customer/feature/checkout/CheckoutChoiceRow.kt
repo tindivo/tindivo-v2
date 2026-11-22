@@ -29,7 +29,7 @@ import com.tindivo.core.designsystem.TindivoIcons
 /**
  * Una opción de una lista de elegir una (tablero «Checkout»): baldosa redondeada; la elegida va sobre crema con borde
  * naranja y el visto en un círculo. Apagada (`enabled = false`) sigue a la vista con su motivo en [hint], en vez de
- * esconderse. Para TalkBack sigue siendo un botón de radio.
+ * esconderse. Para TalkBack sigue siendo un botón de radio. [leading] es el logo o el dibujo del medio de pago.
  */
 @Composable
 internal fun ChoiceRow(
@@ -38,6 +38,7 @@ internal fun ChoiceRow(
     title: String,
     hint: String?,
     onClick: () -> Unit,
+    leading: (@Composable () -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     val color = if (enabled) scheme.onSurface else scheme.onSurfaceVariant
@@ -55,6 +56,7 @@ internal fun ChoiceRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        leading?.invoke()
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = MaterialTheme.typography.titleMedium, color = color)
             hint?.let {
