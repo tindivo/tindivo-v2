@@ -167,11 +167,11 @@ fun AccountScreen(
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
                         supportNumber = supportNumber,
+                        notificationsToggle = notificationsToggle,
                     )
                 }
 
                 is AccountUiState.Loaded -> {
-                    notificationsToggle()
                     Profile(
                         profile = state.profile,
                         onOpenOrders = onOpenOrders,
@@ -183,6 +183,7 @@ fun AccountScreen(
                         nameEdit = nameEdit,
                         onSaveName = onSaveName,
                         onDismissNameEdit = onDismissNameEdit,
+                        notificationsToggle = notificationsToggle,
                     )
                 }
             }
@@ -229,6 +230,7 @@ private fun ProfileMissing(
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
     supportNumber: String,
+    notificationsToggle: @Composable () -> Unit = {},
 ) {
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -253,6 +255,7 @@ private fun ProfileMissing(
         ) {
             Text(text = stringResource(R.string.account_sign_out))
         }
+        notificationsToggle()
         HelpAndLegalSection(supportNumber = supportNumber)
         // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
         DeleteAccountButton(onDeleteAccount = onDeleteAccount)
@@ -271,6 +274,7 @@ private fun Profile(
     nameEdit: NameEditState,
     onSaveName: (String) -> Unit,
     onDismissNameEdit: () -> Unit,
+    notificationsToggle: @Composable () -> Unit = {},
 ) {
     var editing by remember { mutableStateOf(false) }
     LaunchedEffect(nameEdit) {
@@ -341,6 +345,7 @@ private fun Profile(
         ) {
             Text(text = stringResource(R.string.account_sign_out))
         }
+        notificationsToggle()
         HelpAndLegalSection(supportNumber = supportNumber)
         DeleteAccountButton(onDeleteAccount = onDeleteAccount)
     }

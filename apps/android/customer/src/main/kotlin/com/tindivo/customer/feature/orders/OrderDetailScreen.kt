@@ -175,7 +175,8 @@ internal fun OrderDetailScreen(
 
                 is OrderDetailUiState.Loaded -> {
                     val order = state.order
-                    notificationsBanner()
+                    // Solo con el pedido en curso: en uno terminado ya no hay avisos que esperar.
+                    if (!order.phase.isTerminal()) notificationsBanner()
                     val supportLink = orderHelpLink(supportNumber, order.shortId, order.businessName)
                     if (order.phase is OrderPhase.Cancelled) {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {

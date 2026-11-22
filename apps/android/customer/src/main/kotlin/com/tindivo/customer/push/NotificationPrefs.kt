@@ -25,6 +25,8 @@ data class NotificationPrefs(
     val offered: Boolean = false,
     val enabled: Boolean = true,
     val systemAsked: Boolean = false,
+    /** Se apagó pero la baja del servidor no llegó (sin red): se reintenta al volver a primer plano. */
+    val unregisterPending: Boolean = false,
 )
 
 @Serializable

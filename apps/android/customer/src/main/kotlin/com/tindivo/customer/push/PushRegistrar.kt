@@ -105,27 +105,44 @@ class PushRegistrar(
     override fun refresh() {
         scope.launch {
             val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return@launch
-            mutex.withLock { registerLocked(account) }
+            mutex.withLock {
+                if (prefs.current().unregisterPending) optOutServerLocked(account) else registerLocked(account)
+            }
         }
     }
 
     /** Apagar en Cuenta: primero nada se pinta, luego la baja de este aparato con la cuenta vigente (CA-NOT-06). */
     override suspend fun optOut() {
         mutex.withLock {
-            presenter.silence { prefs.update { it.copy(enabled = false) } }
+            presenter.silence { prefs.update { it.copy(enabled = false, unregisterPending = true) } }
             val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return
-            val installation = installations.current() ?: return
-            val installId = installation.installId.toUuidOrNull() ?: return
-            if (installation.accountId != account || !live(account)) return
-            withTimeoutOrNull(unregisterTimeoutMs) { devices.unregister(installId, account) }
+            optOutServerLocked(account)
         }
     }
 
-    /** Encender en Cuenta: se guarda y se vuelve a registrar la cuenta vigente. */
+    /**
+     * La baja de este aparato por estar apagado, con el [mutex] tomado. Solo se da por hecha con un 2xx; si no, queda
+     * pendiente para el siguiente [refresh]. Si ya no hay nada que dar de baja (cerró sesión, otra cuenta), tampoco.
+     */
+    private suspend fun optOutServerLocked(account: String) {
+        val installation = installations.current()
+        val installId = installation?.installId?.toUuidOrNull()
+        if (installation == null || installId == null || installation.accountId != account) {
+            prefs.update { it.copy(unregisterPending = false) }
+            return
+        }
+        if (!live(account)) return
+        val result = withTimeoutOrNull(unregisterTimeoutMs) { devices.unregister(installId, account) }
+        if (result is ApiResult.Success) prefs.update { it.copy(unregisterPending = false) }
+    }
+
+    /** Encender en Cuenta: se guarda y se vuelve a registrar la cuenta vigente, bajo el [mutex] (no se cruza con apagar). */
     override suspend fun optIn() {
-        prefs.update { it.copy(enabled = true) }
-        val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return
-        mutex.withLock { registerLocked(account) }
+        mutex.withLock {
+            prefs.update { it.copy(enabled = true, unregisterPending = false) }
+            val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return
+            registerLocked(account)
+        }
     }
 
     override suspend fun beforeSignOut(accountId: String) {

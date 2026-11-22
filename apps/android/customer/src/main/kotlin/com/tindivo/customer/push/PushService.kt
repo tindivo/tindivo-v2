@@ -11,6 +11,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -117,9 +119,19 @@ class PushService : FirebaseMessagingService() {
         val payload = NativePushPayload.decode(message.data) ?: return
         // Este hilo es del servicio de FCM (no el principal) y el trabajo es corto: se espera a la puerta de los avisos,
         // que solo pinta lo que es de la sesión actual (`PushPresenter.onPush`).
-        runBlocking { presenter.onPush(payload) }
+        // Con tope: un disco o una sesión que no responden no atascan el hilo de FCM; el aviso se descarta.
+        runBlocking {
+            try {
+                withTimeoutOrNull(PUSH_PRESENT_TIMEOUT_MS) { presenter.onPush(payload) }
+            } catch (_: IOException) {
+                // DataStore no se pudo leer: sin saber de quién es la instalación, no se pinta nada.
+            }
+        }
     }
 }
+
+/** FCM da unos 20 s a `onMessageReceived`; la puerta de los avisos tarda milisegundos salvo un disco atascado. */
+private const val PUSH_PRESENT_TIMEOUT_MS = 10_000L
 
 private suspend fun <T> Task<T>.await(): T =
     suspendCancellableCoroutine { continuation ->

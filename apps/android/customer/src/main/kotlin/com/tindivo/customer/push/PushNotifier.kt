@@ -49,7 +49,12 @@ class AndroidNotificationAccess(
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
 
-    override fun notificationsEnabled(): Boolean = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    /** Avisos de la app permitidos Y el canal de pedidos sin bloquear: apagar solo el canal también es «apagados». */
+    override fun notificationsEnabled(): Boolean {
+        val manager = NotificationManagerCompat.from(context)
+        val channel = manager.getNotificationChannelCompat(PushChannels.ORDER_UPDATES)
+        return manager.areNotificationsEnabled() && channel?.importance != NotificationManagerCompat.IMPORTANCE_NONE
+    }
 }
 
 /**

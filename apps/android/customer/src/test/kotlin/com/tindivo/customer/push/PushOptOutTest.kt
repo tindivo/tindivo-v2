@@ -72,6 +72,24 @@ class PushOptOutTest {
         }
 
     @Test
+    fun `una baja que no llego por falta de red se reintenta al volver a primer plano, sin registrar`() =
+        runTest {
+            val registrar = registrar()
+            devices.unregisterResults += FakePushDevices.NO_NETWORK
+
+            registrar.optOut()
+            assertTrue(prefs.flow.value.unregisterPending)
+
+            registrar.refresh()
+
+            val deletes = devices.calls.filter { it.method == "DELETE" }
+            assertEquals(2, deletes.size)
+            assertEquals(1, devices.calls.count { it.method == "PUT" })
+            assertFalse(prefs.flow.value.unregisterPending)
+            assertFalse(prefs.flow.value.enabled)
+        }
+
+    @Test
     fun `encender vuelve a registrar el aparato y se pintan los avisos`() =
         runTest {
             val registrar = registrar()
