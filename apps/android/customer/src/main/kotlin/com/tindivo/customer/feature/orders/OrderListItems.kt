@@ -90,6 +90,12 @@ private fun NameAndSubtitle(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        // El código del pedido: con él se habla con soporte.
+        Text(
+            text = stringResource(R.string.order_short_id, order.shortId),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
