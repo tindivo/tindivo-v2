@@ -43,7 +43,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDevelopmentRegion: es
-        UILaunchScreen: {}
+        UILaunchScreen: { UIColorName: LaunchBackground } # generado desde los tokens (scripts/ios-colorsets.mjs)
+        ITSAppUsesNonExemptEncryption: false # solo HTTPS del sistema
         UIUserInterfaceStyle: Light # el canon solo define tema claro
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         TindivoAPIBaseURL: $(API_BASE_URL)
@@ -55,6 +56,8 @@ targets:
         TARGETED_DEVICE_FAMILY: "1" # solo iPhone
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
         SWIFT_EMIT_LOC_STRINGS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
   TindivoCustomerTests:
     type: bundle.unit-test
     platform: iOS
