@@ -44,10 +44,7 @@ packages/design-tokens/generated/swift/TindivoTokens.swift
 Uso: `TindivoTokens.Colors.primary`, `TindivoTokens.Spacing.spaceScreen`, `TindivoTokens.Typography.titleScreen` (`size`, `line`, `weight`), `TindivoTokens.Elevation.elevation1` (capas de sombra) y `TindivoTokens.fontFamily` (la familia la pone quien dibuja). El canon habla de `Color.tindivo.primary`: ese acceso lo añade `TindivoDesign` encima de este archivo. Requiere
 SwiftUI (iOS 15 o superior por `Font.Weight`/`Color(.sRGB…)`; el mínimo real lo fija el proyecto).
 
-Estado de esta salida: **generada pero no compilada** (no hay Swift en la máquina de desarrollo). La primera vez que
-se enlace en Xcode, si el compilador pide un ajuste, se corrige en `src/generate.ts` y no en el `.swift`. Para no
-copiar a mano, el proyecto puede enlazar el archivo por referencia o con un paso de build que lo copie; cualquiera de
-las dos sirve mientras `pnpm tokens:check` siga en verde en CI.
+Estado: compila (Swift 6, iOS 17, Xcode 27.2; 2026-11-22). `pnpm ios:gen` lo copia a `Packages/TindivoDesign/Sources/TindivoDesign/Generated/`, que no se versiona; un paquete SwiftPM no puede referenciar fuentes de fuera de su carpeta. Si el compilador pide un ajuste, se corrige en `src/generate.ts` y no en el `.swift`; `pnpm tokens:check` debe seguir en verde en CI.
 
 ## Qué NO hace todavía
 
