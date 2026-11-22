@@ -138,9 +138,11 @@ private struct CartLineView: View {
             HStack {
                 TindivoStepper(
                     quantity: line.quantity,
-                    canDecrease: line.canDecrease,
+                    canDecrease: true,
                     canIncrease: line.canIncrease,
-                    decreaseLabel: String(localized: "Quitar una unidad de \(line.name)"),
+                    decreaseLabel: line.decreaseRemoves
+                        ? String(localized: "Quitar \(line.name)")
+                        : String(localized: "Quitar una unidad de \(line.name)"),
                     increaseLabel: String(localized: "Agregar una unidad de \(line.name)"),
                     onDecrease: { onChange(-1) },
                     onIncrease: { onChange(1) }

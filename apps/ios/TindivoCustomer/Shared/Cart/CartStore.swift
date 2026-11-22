@@ -11,7 +11,13 @@ protocol CartStore: Sendable {
     /// Empieza una bolsa nueva con `line`: solo después de que la persona aceptó vaciar la del otro negocio.
     func replace(businessId: String, businessName: String, line: CartLine) async throws(CartError)
     func setQuantity(signature: String, quantity: Int) async throws(CartError)
-    func remove(signature: String) async throws(CartError)
+    /// Suma `delta` unidades a la cantidad que la línea tiene en el momento de escribir (1...`maxQuantity`): leer y
+    /// escribir son una sola operación, así que dos toques seguidos suman los dos.
+    func changeQuantity(signature: String, by delta: Int) async throws(CartError)
+    /// Quita la línea y devuelve lo necesario para deshacerlo; `nil` si ya no estaba.
+    @discardableResult func remove(signature: String) async throws(CartError) -> RemovedLine?
+    /// Devuelve una línea quitada a su sitio. `false` si ya no cabe (la bolsa cambió o se vació): no hace nada.
+    func restore(_ removed: RemovedLine) async throws(CartError) -> Bool
     func clear() async throws(CartError)
 }
 
@@ -60,9 +66,21 @@ actor FileCartStore: CartStore {
         try write(cart.settingQuantity(of: signature, to: quantity))
     }
 
-    func remove(signature: String) throws(CartError) {
+    func changeQuantity(signature: String, by delta: Int) throws(CartError) {
         guard let cart = current() else { return }
+        try write(cart.changingQuantity(of: signature, by: delta))
+    }
+
+    func remove(signature: String) throws(CartError) -> RemovedLine? {
+        guard let cart = current(), let removed = cart.removal(of: signature) else { return nil }
         try write(cart.removingLine(signature))
+        return removed
+    }
+
+    func restore(_ removed: RemovedLine) throws(CartError) -> Bool {
+        guard let cart = current(), let restored = cart.inserting(removed) else { return false }
+        try write(restored)
+        return true
     }
 
     func clear() throws(CartError) {

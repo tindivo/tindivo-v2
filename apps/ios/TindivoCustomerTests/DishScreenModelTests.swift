@@ -31,7 +31,12 @@ private actor GatedStore: CartStore {
         try await inner.setQuantity(signature: signature, quantity: quantity)
     }
 
-    func remove(signature: String) async throws(CartError) { try await inner.remove(signature: signature) }
+    func changeQuantity(signature: String, by delta: Int) async throws(CartError) {
+        try await inner.changeQuantity(signature: signature, by: delta)
+    }
+
+    func remove(signature: String) async throws(CartError) -> RemovedLine? { try await inner.remove(signature: signature) }
+    func restore(_ removed: RemovedLine) async throws(CartError) -> Bool { try await inner.restore(removed) }
     func clear() async throws(CartError) { try await inner.clear() }
 }
 

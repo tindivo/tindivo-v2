@@ -75,21 +75,21 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("con 1 unidad el − está apagado y con 50 el + también")
+    @Test("CA-CRT-03: con 1 unidad el − quita la línea y con 50 el + está apagado")
     func quantityButtons() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "n1", businessName: "N", line: line("uno"))
         _ = try await store.add(businessId: "n1", businessName: "N", line: line("tope", quantity: 50))
         let (model, task) = await started(store)
         let rows = try #require(filled(model)).lines
-        #expect(rows[0].canDecrease == false)
+        #expect(rows[0].decreaseRemoves == true)
         #expect(rows[0].canIncrease == true)
-        #expect(rows[1].canDecrease == true)
+        #expect(rows[1].decreaseRemoves == false)
         #expect(rows[1].canIncrease == false)
         task.cancel()
     }
 
-    @Test("sumar y restar unidades cambia la línea y se detiene en 1")
+    @Test("sumar y restar unidades cambia la línea")
     func changeQuantity() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "n1", businessName: "N", line: line("a", quantity: 2))
@@ -97,15 +97,46 @@ struct CartScreenModelTests {
         let signature = try #require(filled(model)?.lines.first?.signature)
 
         await model.changeQuantity(signature: signature, by: 1)
+        #expect(await store.current()?.lines.first?.quantity == 3)
         await eventually { filled(model)?.lines.first?.quantity == 3 }
         await model.changeQuantity(signature: signature, by: -1)
         await model.changeQuantity(signature: signature, by: -1)
-        await eventually { filled(model)?.lines.first?.quantity == 1 }
-        // Ya en 1, restar otra vez no baja de ahí.
-        await model.changeQuantity(signature: signature, by: -1)
-        try? await Task.sleep(for: .milliseconds(30))
-        #expect(filled(model)?.lines.first?.quantity == 1)
         #expect(await store.current()?.lines.first?.quantity == 1)
+        await eventually { filled(model)?.lines.first?.quantity == 1 }
+        task.cancel()
+    }
+
+    @Test("CA-CRT-03: con cantidad 1, restar quita la línea; si era la última, la bolsa queda vacía sin negocio")
+    func decreaseAtOneRemovesTheLine() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("a"))
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("b", quantity: 2))
+        let (model, task) = await started(store)
+        let a = try #require(filled(model)?.lines.first?.signature)
+        await model.changeQuantity(signature: a, by: -1)
+        #expect(await store.current()?.lines.map(\.itemId) == ["b"])
+        await eventually { filled(model)?.lines.map(\.name) == ["Plato b"] }
+
+        let b = try #require(filled(model)?.lines.first?.signature)
+        await model.changeQuantity(signature: b, by: -1)
+        #expect(await store.current()?.lines.first?.quantity == 1)
+        await eventually { filled(model)?.lines.first?.quantity == 1 }
+        await model.changeQuantity(signature: b, by: -1)
+        #expect(await store.current() == nil)
+        await eventually { model.state == .empty }
+        task.cancel()
+    }
+
+    @Test("dos toques seguidos al + no pierden ninguna unidad")
+    func concurrentIncrementsAreNotLost() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("a"))
+        let (model, task) = await started(store)
+        let signature = try #require(filled(model)?.lines.first?.signature)
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<20 { group.addTask { await model.changeQuantity(signature: signature, by: 1) } }
+        }
+        #expect(await store.current()?.lines.first?.quantity == 21)
         task.cancel()
     }
 

@@ -52,6 +52,14 @@ struct CartLine: Sendable, Equatable {
     }
 }
 
+/// Una línea que se quitó, con el sitio que ocupaba: lo que hace falta para «Deshacer».
+struct RemovedLine: Sendable, Equatable {
+    let line: CartLine
+    let index: Int
+    /// Era la única línea: la bolsa quedó vacía y no hay nada a lo que devolverla.
+    let wasLast: Bool
+}
+
 /// La bolsa: platos de un solo negocio. Inmutable; cada cambio devuelve otra.
 struct Cart: Sendable, Equatable {
     let businessId: String
@@ -78,6 +86,31 @@ struct Cart: Sendable, Equatable {
     func removingLine(_ signature: String) -> Cart {
         let key = Array(signature.utf16)
         return Cart(businessId: businessId, businessName: businessName, lines: lines.filter { $0.signatureKey != key })
+    }
+
+    /// Suma `delta` unidades a una línea sin salir de 1...`maxQuantity` (quitarla es `removingLine`). Se calcula sobre
+    /// la cantidad que la línea tiene AHORA, no sobre la que se veía: por eso es una operación de la bolsa.
+    func changingQuantity(of signature: String, by delta: Int) -> Cart {
+        let key = Array(signature.utf16)
+        guard let line = lines.first(where: { $0.signatureKey == key }) else { return self }
+        return settingQuantity(of: signature, to: line.quantity + delta)
+    }
+
+    /// La línea que se quitaría y el sitio que ocupa, para poder devolverla (`inserting`).
+    func removal(of signature: String) -> RemovedLine? {
+        let key = Array(signature.utf16)
+        guard let index = lines.firstIndex(where: { $0.signatureKey == key }) else { return nil }
+        return RemovedLine(line: lines[index], index: index, wasLast: lines.count == 1)
+    }
+
+    /// Devuelve `removed` a su sitio (o al final si la bolsa ya es más corta). Es `nil` si no cabe: ya hay una línea
+    /// igual o la bolsa tiene `maxLines` platos.
+    func inserting(_ removed: RemovedLine) -> Cart? {
+        let key = removed.line.signatureKey
+        guard !lines.contains(where: { $0.signatureKey == key }), lines.count < CartLimits.maxLines else { return nil }
+        var next = lines
+        next.insert(removed.line, at: min(max(removed.index, 0), next.count))
+        return Cart(businessId: businessId, businessName: businessName, lines: next)
     }
 
     /// La huella de la bolsa: negocio y, por plato, su firma y su cantidad (sin importar el orden). Los precios no

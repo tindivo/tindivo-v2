@@ -214,4 +214,27 @@ struct CartStoreTests {
         #expect(await store.current()?.businessId == "n")
         #expect(try Data(contentsOf: file) == bytesBefore)
     }
+
+    @Test("changeQuantity: veinte toques a la vez suman veinte, no pierden unidades")
+    func concurrentChangeQuantity() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        let signature = line("a").signature
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0..<20 { group.addTask { try await store.changeQuantity(signature: signature, by: 1) } }
+            try await group.waitForAll()
+        }
+        #expect(await store.current()?.lines.first?.quantity == 21)
+    }
+
+    @Test("changeQuantity se queda dentro de 1...50")
+    func changeQuantityClamps() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a", quantity: 49))
+        let signature = line("a").signature
+        try await store.changeQuantity(signature: signature, by: 5)
+        #expect(await store.current()?.lines.first?.quantity == 50)
+        try await store.changeQuantity(signature: signature, by: -80)
+        #expect(await store.current()?.lines.first?.quantity == 1)
+    }
 }

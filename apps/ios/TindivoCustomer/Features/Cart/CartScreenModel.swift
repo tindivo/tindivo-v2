@@ -17,8 +17,8 @@ struct CartLineRow: Equatable {
     let note: String?
     let quantity: Int
     let total: String
-    /// Con 1 unidad el «−» está deshabilitado: para quitar el plato está «Quitar».
-    let canDecrease: Bool
+    /// Con 1 unidad el «−» quita la línea (CUS-CRT-003): no baja de 1.
+    let decreaseRemoves: Bool
     let canIncrease: Bool
 
     /// Identidad en la lista: unidades UTF-16 (como `CartLine.signatureKey`), no la igualdad canónica de `String`.
@@ -59,17 +59,25 @@ final class CartScreenModel {
         }
     }
 
-    /// Suma o resta una unidad a la línea; se queda dentro de 1...50. Parte de lo guardado y no de lo que se ve: dos
-    /// toques seguidos, antes de que la pantalla se actualice, suman dos veces.
+    /// Suma o resta una unidad a la línea; se queda dentro de 1...50. La suma la hace la bolsa sobre lo guardado (una
+    /// sola operación): dos toques seguidos, antes de que la pantalla se actualice, suman dos veces. Con 1 unidad,
+    /// restar quita la línea (CUS-CRT-003); lo que decide eso es la fila que se ve, y si estaba desfasada la bolsa
+    /// nunca baja de 1 por restar.
     func changeQuantity(signature: String, by delta: Int) async {
-        guard let line = await store.current()?.lines.first(where: { $0.signatureKey == Array(signature.utf16) }) else { return }
-        await write { store async throws(CartError) in
-            try await store.setQuantity(signature: signature, quantity: line.quantity + delta)
+        if delta < 0, displayedQuantity(of: signature) == 1 {
+            await remove(signature: signature)
+            return
         }
+        await write { store async throws(CartError) in try await store.changeQuantity(signature: signature, by: delta) }
     }
 
     func remove(signature: String) async {
         await write { store async throws(CartError) in try await store.remove(signature: signature) }
+    }
+
+    private func displayedQuantity(of signature: String) -> Int? {
+        guard case let .filled(filled) = state else { return nil }
+        return filled.lines.first { $0.signatureKey == Array(signature.utf16) }?.quantity
     }
 
     func clear() async {
@@ -77,9 +85,9 @@ final class CartScreenModel {
     }
 
     /// Si no se puede escribir en el teléfono, la bolsa se queda como estaba y la pantalla sigue mostrándola.
-    private func write(_ change: (any CartStore) async throws(CartError) -> Void) async {
+    private func write<Output>(_ change: (any CartStore) async throws(CartError) -> Output) async {
         do throws(CartError) {
-            try await change(store)
+            _ = try await change(store)
         } catch {
             // La bolsa que se ve es la que está guardada: no hay nada que deshacer.
         }
@@ -98,7 +106,7 @@ final class CartScreenModel {
                     note: line.note,
                     quantity: line.quantity,
                     total: formatAmount(line.total) ?? formatSoles(line.total),
-                    canDecrease: line.quantity > 1,
+                    decreaseRemoves: line.quantity == 1,
                     canIncrease: line.quantity < CartLimits.maxQuantity
                 )
             },
