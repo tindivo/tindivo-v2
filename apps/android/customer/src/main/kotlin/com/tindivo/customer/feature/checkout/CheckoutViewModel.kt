@@ -650,7 +650,7 @@ class CheckoutViewModel
             if (evidence?.lat == null || !stale(fix.readAtMs)) return evidence
             gpsCapture = null
             gps.reset()
-            return CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.failed)
+            return failedEvidence()
         }
 
         /**
@@ -693,21 +693,24 @@ class CheckoutViewModel
             readAtMs: Long?,
         ): CreateOrderRequest {
             val evidence = request.gpsValidation ?: return request
-            if (evidence.lat != null && stale(readAtMs)) {
-                gpsCapture = null
-                gps.reset()
-                val failed = CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.failed)
-                return request.copy(gpsValidation = failed)
-            }
             // Pagar por adelantado no lee ubicación: no depende del permiso.
             if (evidence.method == CreateOrderRequestGpsValidation.Method.manual_skip_prepaid) return request
             // `failed` no lleva coordenadas: la falta de ubicación se guarda igual con o sin permiso.
             if (evidence.method == CreateOrderRequestGpsValidation.Method.failed) return request
-            if (gps.permissionGranted()) return request
+            // El permiso va primero: «dijo que no» (sin `gpsValidation`) manda sobre «el GPS no contestó» (`failed`).
+            val replacement =
+                when {
+                    !gps.permissionGranted() -> null
+                    evidence.lat != null && stale(readAtMs) -> failedEvidence()
+                    else -> return request
+                }
             gpsCapture = null
             gps.reset()
-            return request.copy(gpsValidation = null)
+            return request.copy(gpsValidation = replacement)
         }
+
+        private fun failedEvidence() =
+            CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.failed)
 
         /** La bolsa con la que otra cuenta intentó enviar no se envía ni se enseña: se descarta. */
         private suspend fun reserve(
