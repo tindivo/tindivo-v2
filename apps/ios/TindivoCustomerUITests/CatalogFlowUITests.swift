@@ -1,23 +1,40 @@
 import XCTest
 
-/// El flujo crítico del cliente como invitado (SW-13, TST-6), contra staging: Inicio → un negocio abierto con platos →
-/// un plato que se pueda pedir → Agregar → «Ver mi bolsa» → la línea aparece en la bolsa.
+/// El flujo crítico del cliente como invitado (SW-13, TST-6): Inicio → un negocio abierto con platos → un plato que se
+/// pueda pedir → Agregar → «Ver mi bolsa» → la línea aparece en la bolsa.
 ///
-/// Depende de lo que haya en staging a esta hora: si no hay ningún negocio abierto con un plato pedible, el test se
-/// SALTA y dice por qué; no falla por datos que no controla.
+/// Dos variantes:
+/// - Contra staging: depende de lo que haya allí; si no hay ningún negocio abierto con un plato pedible, se SALTA y
+///   dice por qué, no falla por datos que no controla.
+/// - Con la carta de las vistas previas (`-tindivo-fake-catalog`, solo DEBUG): no depende de la red ni de staging, así
+///   que no se salta nunca. Es la que garantiza que Plato y Bolsa se recorren en cada corrida.
 @MainActor
 final class CatalogFlowUITests: XCTestCase {
     private let app = XCUIApplication()
 
     override func setUp() async throws {
         continueAfterFailure = false
-        // La bolsa de una corrida anterior (de otro negocio) abriría la pregunta de vaciarla.
-        // El reloj de la app se fija en un martes a las 20:00 de Lima: el horario nocturno de staging no depende de cuándo corra.
+    }
+
+    /// La bolsa de una corrida anterior (de otro negocio) abriría la pregunta de vaciarla. El reloj de la app se fija
+    /// en un martes a las 20:00 de Lima: el horario nocturno no depende de cuándo corra.
+    private func launch(fakeCatalog: Bool) {
         app.launchArguments = ["-tindivo-reset-cart", "-tindivo-now", "2026-07-07T20:00:00-05:00"]
+        if fakeCatalog { app.launchArguments.append("-tindivo-fake-catalog") }
         app.launch()
     }
 
+    func testAddADishWithTheFakeCatalog() throws {
+        launch(fakeCatalog: true)
+        try runFlow()
+    }
+
     func testAddADishFromTheFirstOpenBusiness() throws {
+        launch(fakeCatalog: false)
+        try runFlow()
+    }
+
+    private func runFlow() throws {
         // Inicio
         XCTAssertTrue(app.staticTexts["¿Qué pedimos hoy?"].waitForExistence(timeout: 30), "Inicio no cargó")
         // Se prefieren los que el servidor dice abiertos; si ahora no hay ninguno (de día), sirve cualquier restaurante,

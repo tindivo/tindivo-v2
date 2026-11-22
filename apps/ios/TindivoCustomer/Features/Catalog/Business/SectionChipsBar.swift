@@ -42,6 +42,9 @@ struct SectionChipsBar: View {
                 .accessibilityIdentifier("menu.indexButton")
             }
         }
+        // `ScrollViewReader` acepta toda la altura que se le ofrece: dentro de un `safeAreaInset` tapaba la carta
+        // entera. La barra mide lo que miden sus chips (y crece con la letra grande).
+        .fixedSize(horizontal: false, vertical: true)
         .background(Color.tindivo.surface)
         .overlay(alignment: .bottom) { Color.tindivo.outlineVariant.frame(height: 1) }
     }
