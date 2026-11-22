@@ -3,6 +3,7 @@
 name: TindivoCustomer
 options:
   minimumXcodeGenVersion: 2.46.0
+  developmentLanguage: es
   deploymentTarget: { iOS: "17.0" }
   createIntermediateGroups: true
   defaultConfig: Release-Prod
@@ -63,14 +64,26 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tests
+  # SW-13: el flujo crítico contra staging. Solo corre con el esquema Dev (Prod no tiene destino de pruebas).
+  TindivoCustomerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [{ path: TindivoCustomerUITests }]
+    dependencies: [{ target: TindivoCustomer }]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).uitests
+        TEST_TARGET_NAME: TindivoCustomer
 schemes:
   TindivoCustomer-Dev:
-    build: { targets: { TindivoCustomer: all, TindivoCustomerTests: [test] } }
+    build: { targets: { TindivoCustomer: all, TindivoCustomerTests: [test], TindivoCustomerUITests: [test] } }
     run: { config: Debug-Dev }
     test:
       config: Debug-Dev
       targets:
         - TindivoCustomerTests
+        - TindivoCustomerUITests
         - package: TindivoAPI/TindivoAPITests
         - package: TindivoDesign/TindivoDesignTests
     profile: { config: Release-Dev }

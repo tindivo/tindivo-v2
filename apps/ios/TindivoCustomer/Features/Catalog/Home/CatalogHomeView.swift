@@ -58,17 +58,26 @@ struct CatalogHomeView: View {
         .refreshable { await model.refresh() }
     }
 
+    /// Con letra grande el botón de Diagnóstico pasa debajo del título en vez de apretarlo hasta partir palabras.
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text("¿Qué pedimos hoy?")
-                .tindivoText(TindivoTokens.Typography.titleScreen)
-                .foregroundStyle(Color.tindivo.ink)
-                .accessibilityAddTraits(.isHeader)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if let onOpenDiagnostics {
-                TindivoTextButton("Diagnóstico", action: onOpenDiagnostics)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) {
+                title
+                if let onOpenDiagnostics { TindivoTextButton("Diagnóstico", action: onOpenDiagnostics) }
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                title
+                if let onOpenDiagnostics { TindivoTextButton("Diagnóstico", action: onOpenDiagnostics) }
             }
         }
+    }
+
+    private var title: some View {
+        Text("¿Qué pedimos hoy?")
+            .tindivoText(TindivoTokens.Typography.titleScreen)
+            .foregroundStyle(Color.tindivo.ink)
+            .accessibilityAddTraits(.isHeader)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func whatsappSection(_ businesses: [BusinessCard]) -> some View {

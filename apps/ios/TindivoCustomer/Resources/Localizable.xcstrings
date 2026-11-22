@@ -1,5 +1,204 @@
 {
   "sourceLanguage" : "es",
-  "strings" : {},
+  "strings" : {
+    "¿Empezar una bolsa nueva?" : {},
+    "¿Qué pedimos hoy?" : {},
+    "¿Vaciar tu bolsa?" : {},
+    "%@ · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ a %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ a %2$@"
+          }
+        }
+      }
+    },
+    "%@ y %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ y %2$@"
+          }
+        }
+      }
+    },
+    "%@: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%lld plato" : {},
+    "%lld platos" : {},
+    "%lld unidad" : {},
+    "%lld unidades" : {},
+    "%lld–%lld min" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld–%2$lld min"
+          }
+        }
+      }
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "+ Agregar más" : {},
+    "+%@" : {},
+    "Abre el %@ a las %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Abre el %1$@ a las %2$@"
+          }
+        }
+      }
+    },
+    "Abre hoy a las %@" : {},
+    "Abre mañana a las %@" : {},
+    "Agregar · %@" : {},
+    "Agregar una unidad de %@" : {},
+    "Algo salió mal. Inténtalo de nuevo." : {},
+    "Añadido a tu bolsa" : {},
+    "API" : {},
+    "Aún no hay restaurantes disponibles." : {},
+    "Buscar en %@" : {},
+    "Buscar en la carta" : {},
+    "Cancelar" : {},
+    "Cantidad" : {},
+    "Cargando" : {},
+    "Cerrado ahora" : {},
+    "Cerrar" : {},
+    "Completa %lld opción" : {},
+    "Completa %lld opciones" : {},
+    "Consulta su horario más tarde" : {},
+    "Consultando…" : {},
+    "Continuar" : {},
+    "Contrato" : {},
+    "de %@ a %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "de %1$@ a %2$@"
+          }
+        }
+      }
+    },
+    "Destacados" : {},
+    "Diagnóstico" : {},
+    "dom" : {},
+    "Ej. sin cebolla, bien cocido, tocar timbre 2 veces…" : {},
+    "El envío y el total final se calculan al confirmar el pedido." : {},
+    "Elige una opción" : {},
+    "Error" : {},
+    "Estado" : {},
+    "Hasta %lld" : {},
+    "Hay que actualizar la app (mínimo %@)" : {},
+    "Hoy este restaurante no ha confirmado que atiende" : {},
+    "Incluido" : {},
+    "iOS mínimo" : {},
+    "jue" : {},
+    "Limpiar búsqueda" : {},
+    "Listo" : {},
+    "Llamar" : {},
+    "lun" : {},
+    "Mantener" : {},
+    "mar" : {},
+    "Mi bolsa" : {},
+    "mié" : {},
+    "No disponible" : {},
+    "No encontramos “%@” en %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No encontramos “%1$@” en %2$@"
+          }
+        }
+      }
+    },
+    "No se pudo guardar tu bolsa. Inténtalo de nuevo." : {},
+    "Nota (opcional)" : {},
+    "Nota: %@" : {},
+    "Obligatorio" : {},
+    "Pedidos por WhatsApp" : {},
+    "Pedir por WhatsApp" : {},
+    "Pide directo por WhatsApp mientras preparamos su integración completa a la plataforma." : {},
+    "Probar de nuevo" : {},
+    "Próximamente pedidos por la plataforma" : {},
+    "Prueba con otro nombre, o con un ingrediente: también buscamos dentro de la descripción de cada plato." : {},
+    "Quitar" : {},
+    "Quitar %@" : {},
+    "Quitar una unidad de %@" : {},
+    "Reintentar" : {},
+    "Restaurantes" : {},
+    "sáb" : {},
+    "Sin conexión con la API" : {},
+    "Sin conexión. Revisa tu internet e inténtalo de nuevo." : {},
+    "Solo %@" : {},
+    "Solo %@, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Solo %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Subtotal" : {},
+    "Todas las secciones" : {},
+    "Tu bolsa está vacía" : {},
+    "Tu bolsa tiene productos de %@. Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tu bolsa tiene productos de %1$@. Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en %2$@."
+          }
+        }
+      }
+    },
+    "Tu bolsa ya tiene %lld platos distintos: es el máximo por pedido" : {},
+    "Una más" : {},
+    "Una menos" : {},
+    "Vaciar" : {},
+    "Vaciar y empezar" : {},
+    "Ver las %lld secciones de la carta" : {},
+    "Ver mi bolsa" : {},
+    "Ver negocios" : {},
+    "Versión" : {},
+    "Versión mínima" : {},
+    "vie" : {},
+    "Volver" : {},
+    "Ya tienes %lld de este plato: es el máximo por pedido" : {}
+  },
   "version" : "1.0"
 }
