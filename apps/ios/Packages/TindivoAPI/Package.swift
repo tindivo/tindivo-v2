@@ -24,7 +24,8 @@ let package = Package(
         ),
         .testTarget(
             name: "TindivoAPITests",
-            dependencies: ["TindivoAPI"]
+            dependencies: ["TindivoAPI"],
+            resources: [.copy("Fixtures")]
         ),
     ]
 )

@@ -5,12 +5,17 @@ import TindivoAPI
 struct AppEnvironment: Sendable {
     let config: AppConfig
     let system: any SystemRepository
+    let catalog: any CatalogRepository
 
     static func live(config: AppConfig = .fromBundle()) -> AppEnvironment {
         let client = TindivoAPIClient.make(
             baseURL: config.apiBaseURL,
             client: ClientInfo(app: "customer", appVersion: config.appVersion, build: config.build)
         )
-        return AppEnvironment(config: config, system: LiveSystemRepository(client: client))
+        return AppEnvironment(
+            config: config,
+            system: LiveSystemRepository(client: client),
+            catalog: LiveCatalogRepository(client: client)
+        )
     }
 }
