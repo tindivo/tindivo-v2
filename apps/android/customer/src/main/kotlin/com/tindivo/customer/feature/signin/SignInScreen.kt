@@ -1,14 +1,21 @@
 package com.tindivo.customer.feature.signin
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -23,10 +30,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -95,10 +107,25 @@ fun SignInScreen(
     }
     Scaffold { innerPadding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(text = stringResource(R.string.signin_title), style = MaterialTheme.typography.headlineMedium)
+            SignInArt()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = stringResource(R.string.signin_title), style = MaterialTheme.typography.headlineMedium)
+                if (googleAvailable) {
+                    Text(
+                        text = stringResource(R.string.signin_subtitle),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             if (closePending) {
                 Text(
                     text = stringResource(R.string.signin_close_pending),
@@ -152,6 +179,28 @@ fun SignInScreen(
         }
     }
 }
+
+/** La ilustración del tablero «Entrar», sobre crema. Decorativa: el título dice qué es la pantalla. */
+@Composable
+private fun SignInArt() {
+    // imageResource y no painterResource: solo decodifica el webp, sin el lector de vectores XML.
+    Image(
+        bitmap = ImageBitmap.imageResource(R.drawable.img_signin),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(ART_HEIGHT)
+                .clip(RoundedCornerShape(28.dp))
+                .background(ArtCream),
+    )
+}
+
+private val ART_HEIGHT = 240.dp
+
+/** El crema del fondo de la ilustración (#FEF6ED del tablero), para que no se le note el borde. */
+private val ArtCream = Color(color = 0xFFFEF6ED)
 
 /** La casilla va siempre, desmarcada; los dos enlaces abren la web en el navegador (CUS-AUT-020). */
 @Composable

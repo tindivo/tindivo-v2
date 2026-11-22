@@ -144,6 +144,7 @@
     <string name="signin_close_pending">No pudimos cerrar la sesión anterior en este aparato.</string>
     <string name="signin_close_retry">Reintentar</string>
     <string name="signin_title">Entrar a Tindivo</string>
+    <string name="signin_subtitle">Solo con tu cuenta de Google.</string>
     <string name="signin_google">Continuar con Google</string>
     <string name="signin_error">No se pudo entrar. Inténtalo otra vez.</string>
     <string name="signin_unavailable">El inicio de sesión aún no está disponible en esta versión.</string>
