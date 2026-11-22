@@ -1,11 +1,17 @@
 package com.tindivo.customer.feature.courier
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -14,11 +20,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -109,15 +119,11 @@ private fun ServiceCard(
     onRetry: () -> Unit,
 ) {
     TindivoCard(modifier = Modifier.fillMaxWidth()) {
+        ServiceHeader()
         Column(
             modifier = Modifier.padding(TindivoSpacing.screen),
             verticalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
         ) {
-            Text(
-                text = stringResource(R.string.courier_entry_subtitle),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
             when (val service = state.service) {
                 ServiceState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -136,6 +142,43 @@ private fun ServiceCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * La franja de arriba de la tarjeta, como la de Entregas en el Inicio: el degradado naranja con la moto. El texto
+ * blanco va arriba a la izquierda, sobre la parte oscura del degradado.
+ */
+@Composable
+private fun ServiceHeader() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(HEADER_HEIGHT)
+                .background(Brush.linearGradient(TindivoColors.gradientCta)),
+    ) {
+        Text(
+            text = stringResource(R.string.courier_entry_subtitle),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onPrimary,
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth(HEADER_TEXT_FRACTION)
+                    .padding(TindivoSpacing.screen),
+        )
+        // Decorativa: el texto ya nombra el servicio.
+        Image(
+            bitmap = ImageBitmap.imageResource(R.drawable.img_moto_tindivo),
+            contentDescription = null,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = TindivoSpacing.tight)
+                    .width(HEADER_MOTO_WIDTH)
+                    .aspectRatio(MOTO_RATIO),
+        )
     }
 }
 
@@ -228,3 +271,8 @@ private fun CourierHomePreview() {
         )
     }
 }
+
+private val HEADER_HEIGHT = 120.dp
+private val HEADER_MOTO_WIDTH = 120.dp
+private const val HEADER_TEXT_FRACTION = 0.62f
+private const val MOTO_RATIO = 352f / 318f
