@@ -17,9 +17,11 @@ Se suma al `AGENTS.md` raíz. La norma es `Docs/arquitectura/estandares/swift.md
   Los errores no se traducen por operación: `ProblemMiddleware` convierte todo no-2xx en `AppError` y `apiCall`
   deja `AppError` como único error.
 - **En un `.xcconfig`, `//` abre comentario:** las URL se escriben `https:/$()/host`.
-- **Red (CLI-10):** `TindivoHTTP` (30 s por intento, sin seguir redirecciones) y `RetryMiddleware` (misma política que
-  `RetryInterceptor.kt`). Desviación: `URLSession` no tiene plazo solo para conectar; los 10 s de CLI-10 quedan dentro
-  de los 30 s del intento. Fechas `date-time` con `FlexibleISO8601` (con o sin fracción de segundo).
+- **Red (CLI-10):** `TindivoHTTP` (30 s por intento, sin seguir redirecciones), `DeadlineMiddleware` (30 s para la
+  llamada completa, reintentos y esperas incluidos: el `callTimeout` de Android; al vencer devuelve `AppError.network`)
+  y `RetryMiddleware` (mismas reglas de qué reintentar, cuántas veces y `Retry-After` que `RetryInterceptor.kt`; la
+  espera va dentro del plazo total). Desviación: `URLSession` no tiene plazo solo para conectar; los 10 s de CLI-10
+  quedan dentro de los 30 s del intento. Fechas `date-time` con `FlexibleISO8601` (con o sin fracción de segundo).
 - **Dinero heredado:** los campos `legacyMoney` del contrato (número JSON) llegan como `ExactMoney` (`Decimal`), por
   `typeOverrides`; los campos nuevos (texto, D-39) se leen con `Money.parse`. Nunca `Double` (SW-8).
 - **Textos:** catálogo `Localizable.xcstrings` en la app y en cada paquete con UI; en un paquete, `Text(…, bundle: .module)`.

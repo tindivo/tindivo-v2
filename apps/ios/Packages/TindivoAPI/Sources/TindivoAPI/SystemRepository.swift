@@ -53,20 +53,22 @@ public struct LiveSystemRepository: SystemRepository {
     }
 }
 
-/// Arma el cliente con la cadena de middlewares del contrato (SW-7), de fuera hacia dentro: cabeceras (un reintento
-/// conserva su `X-Request-Id`), traducción de errores y reintentos pegados al transporte (ven los status crudos).
+/// Arma el cliente con la cadena de middlewares del contrato (SW-7), de fuera hacia dentro: plazo total de la llamada,
+/// cabeceras (un reintento conserva su `X-Request-Id`), traducción de errores y reintentos pegados al transporte (ven
+/// los status crudos).
 public enum TindivoAPIClient {
     public static func make(
         baseURL: URL,
         client: ClientInfo,
         transport: any ClientTransport = TindivoHTTP.makeTransport(),
-        retry: RetryMiddleware = RetryMiddleware()
+        retry: RetryMiddleware = RetryMiddleware(),
+        callTimeout: Duration = TindivoHTTP.callTimeout
     ) -> Client {
         Client(
             serverURL: baseURL,
             configuration: Configuration(dateTranscoder: FlexibleISO8601()),
             transport: transport,
-            middlewares: [ClientHeadersMiddleware(client: client), ProblemMiddleware(), retry]
+            middlewares: [DeadlineMiddleware(timeout: callTimeout), ClientHeadersMiddleware(client: client), ProblemMiddleware(), retry]
         )
     }
 }

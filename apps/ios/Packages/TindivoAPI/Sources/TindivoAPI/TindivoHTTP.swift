@@ -4,10 +4,13 @@ import OpenAPIURLSession
 
 /// La sesión HTTP de la app, con los plazos de CLI-10 y sin seguir redirecciones (paridad con `TindivoHttp.kt`).
 ///
-/// Plazos: 30 s sin recibir datos y 30 s como máximo por intento. `URLSession` no tiene un plazo solo para conectar
-/// (CLI-10 pide 10 s): la conexión cuenta dentro de esos 30 s. Desviación anotada en `apps/ios/AGENTS.md`.
+/// Plazos: 30 s sin recibir datos y 30 s como máximo por intento, y 30 s para la llamada completa con sus reintentos
+/// (`callTimeout`, lo aplica `DeadlineMiddleware`). `URLSession` no tiene un plazo solo para conectar (CLI-10 pide
+/// 10 s): la conexión cuenta dentro de esos 30 s. Desviación anotada en `apps/ios/AGENTS.md`.
 public enum TindivoHTTP {
     public static let requestTimeout: TimeInterval = 30
+    /// Plazo total de una llamada lógica, reintentos y esperas incluidos (el `callTimeout` de Android).
+    public static let callTimeout: Duration = .seconds(30)
 
     public static func makeSession(protocolClasses: [AnyClass]? = nil) -> URLSession {
         let configuration = URLSessionConfiguration.default
