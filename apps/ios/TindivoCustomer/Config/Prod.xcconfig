@@ -1,0 +1,7 @@
+// Producción (tindivo-prod). Mismos valores que la variante prod de Android. Nada de aquí es secreto (SW-15).
+// En un .xcconfig `//` abre comentario: las URL se escriben `https:/$()/host`.
+APP_BUNDLE_ID = com.tindivo.customer
+APP_DISPLAY_NAME = Tindivo
+API_BASE_URL = https:/$()/apiv2.tindivo.com/api/v1
+SUPABASE_URL = https:/$()/zpnipajgwfthxhdtzhly.supabase.co
+SUPABASE_PUBLISHABLE_KEY = sb_publishable_J8M8nH_cb2eYjAt2E5L27w_EhMnwS0W

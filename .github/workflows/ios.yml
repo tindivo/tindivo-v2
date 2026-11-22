@@ -1,0 +1,53 @@
+name: iOS
+
+# La app iOS del cliente (apps/ios): genera el cliente con swift-openapi-generator (SW-7), compila y corre las
+# pruebas en el simulador. Sustituye a `mobile-models-swift.yml`, que compilaba modelos de otro generador (el jar
+# `swift6`) que ignoraba las claves desconocidas y por eso no veía el fallo de CLI-2 del generador de Apple.
+#
+# A diario y no en cada PR (D-48). El cron lo dispara la definición de este archivo en `main` (rama por defecto) y
+# compila `develop`: un cambio aquí no afecta al cron hasta llegar a `main`; antes, lánzalo a mano
+# (Actions > iOS > Run workflow).
+on:
+  schedule:
+    # 09:00 UTC = 04:00 en Lima, fuera del horario de pedidos.
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    name: App iOS compila y pasa sus pruebas
+    # Mismo Xcode que la Mac de desarrollo (27.2, 27B52; SW-1). Plan B si la imagen falla: `macos-26` con Xcode 26.6,
+    # que cumple el mínimo de App Store Connect.
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Xcode 27.2
+        run: sudo xcode-select -s /Applications/Xcode_27.2.app
+
+      - name: Versiones
+        run: xcodebuild -version && swift --version
+
+      # Herramientas fijadas (XcodeGen con sha256, generador con versión exacta) y paquetes de SwiftPM.
+      - name: Caché de herramientas
+        uses: actions/cache@v5
+        with:
+          path: ~/Library/Caches/tindivo-ios
+          key: tindivo-ios-${{ hashFiles('apps/ios/scripts/tools.sh', 'apps/ios/Tools/Package.swift') }}
+
+      - name: Compilar y probar en el simulador
+        env:
+          IOS_DESTINATION: platform=iOS Simulator,name=iPhone 17,OS=latest
+        run: apps/ios/scripts/xcodebuild.sh test Dev

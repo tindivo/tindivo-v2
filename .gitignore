@@ -84,3 +84,16 @@ apps/api/scripts/fixtures/*.json
 # Mobile UX: capturas de apps de terceros (pueden mostrar datos personales) y corridas de Maestro de un solo uso
 Docs/trabajo/mobile-ux/capturas/referencias/
 Docs/trabajo/mobile-ux/capturas/actual/_run/
+
+# iOS: todo lo generado se rehace con apps/ios/scripts/gen.sh (pnpm ios:gen).
+# Del .xcodeproj solo se versiona Package.resolved (SW-16).
+apps/ios/TindivoCustomer.xcodeproj/*
+!apps/ios/TindivoCustomer.xcodeproj/project.xcworkspace/
+apps/ios/TindivoCustomer.xcodeproj/project.xcworkspace/*
+!apps/ios/TindivoCustomer.xcodeproj/project.xcworkspace/xcshareddata/
+apps/ios/TindivoCustomer.xcodeproj/project.xcworkspace/xcshareddata/*
+!apps/ios/TindivoCustomer.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+apps/ios/TindivoCustomer.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/*
+!apps/ios/TindivoCustomer.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+apps/ios/**/Generated/
+apps/ios/TindivoCustomer/Info.plist

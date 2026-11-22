@@ -254,7 +254,7 @@ jobs:
 
   # MV2c: los modelos de Kotlin se generan desde el contrato OpenAPI y se compilan en cada PR. Si un cambio del
   # contrato rompe la app Android, cae aquí y no al construir la app. Los de Swift se compilan a diario en
-  # `mobile-models-swift.yml` (D-48: el runner de macOS cuesta diez veces más). Los modelos no se versionan.
+  # `ios.yml` (la app iOS entera, D-48: el runner de macOS cuesta diez veces más). Los modelos no se versionan.
   # Todo va fijado: generador (con sha256) y plugins en scripts/generate-mobile-models.mjs; JDK y Gradle, aquí.
   mobile-models-kotlin:
     name: Modelos móviles · Kotlin compila

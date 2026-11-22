@@ -27,6 +27,8 @@ public enum AppError: Error, Sendable, Equatable {
     case upgradeRequired(minVersion: String?)
     /// Sin conexión, tiempo agotado o corte a mitad de la petición.
     case network
+    /// La tarea se canceló (la pantalla se fue): no se muestra nada.
+    case cancelled
     /// Un `code` del contrato que esta versión conoce. `fieldMessage`: el primer campo inválido del 422, tal cual.
     case known(code: ApiErrorCode, status: Int, detail: String?, fieldMessage: String?)
     /// Un `code` que esta versión no conoce, o una respuesta que no se pudo leer (CLI-2): la UI muestra un genérico.

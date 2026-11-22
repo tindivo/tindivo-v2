@@ -1,14 +1,17 @@
 /**
- * Genera los MODELOS (solo tipos de datos, sin cliente HTTP) de las apps nativas desde el contrato
+ * Genera los MODELOS de Kotlin (solo tipos de datos, sin cliente HTTP) desde el contrato
  * `packages/contracts/openapi/v1.json`, y opcionalmente comprueba que compilan.
  *
  *   pnpm mobile:models kotlin            # genera en build/mobile-models/kotlin
  *   pnpm mobile:models kotlin --compile  # y compila con Gradle (hace falta JDK 17+ y gradle)
- *   pnpm mobile:models swift --compile   # y compila con `swift build` (solo macOS/Linux con Swift)
  *   opciones: --out <dir>
  *
  * Los modelos generados NO se versionan (`build/` está en .gitignore): se generan en la CI. Plan: MV2c,
- * Docs/planes/movil/decisiones.md D-48 (Kotlin en cada PR, Swift a diario).
+ * Docs/planes/movil/decisiones.md D-48 (Kotlin en cada PR).
+ *
+ * Swift ya no pasa por aquí: la app iOS genera su cliente con swift-openapi-generator, el de Apple (SW-7), en
+ * `apps/ios/scripts/gen.sh`, y la CI lo compila y lo prueba en `.github/workflows/ios.yml`. El generador `swift6`
+ * de este jar ignoraba las claves desconocidas y por eso no habría detectado que el de Apple las rechaza (CLI-2).
  *
  * Todo va fijado a una versión exacta: el generador (con su sha256), el plugin de Kotlin y la serialización.
  * Subir cualquiera es un cambio aparte, que se prueba en su propio PR.
@@ -31,8 +34,8 @@ const cacheDir = join(root, 'build/mobile-models/.tools')
 const jar = join(cacheDir, `openapi-generator-cli-${GENERATOR_VERSION}.jar`)
 
 const [target, ...flags] = process.argv.slice(2)
-if (target !== 'kotlin' && target !== 'swift') {
-  console.error('Uso: node scripts/generate-mobile-models.mjs <kotlin|swift> [--compile] [--out <dir>]')
+if (target !== 'kotlin') {
+  console.error('Uso: node scripts/generate-mobile-models.mjs kotlin [--compile] [--out <dir>]')
   process.exit(2)
 }
 const compile = flags.includes('--compile')
@@ -68,34 +71,21 @@ function run(cmd, args, cwd = root) {
 
 function generatorArgs() {
   const base = ['-jar', jar, 'generate', '-i', spec, '-o', out]
-  if (target === 'kotlin') {
-    return [
-      ...base,
-      '-g',
-      'kotlin',
-      // Solo modelos. Dinero nuevo ya llega como string en el contrato (D-39) y queda String.
-      '--global-property',
-      'models,modelDocs=false,modelTests=false',
-      '--additional-properties',
-      'library=jvm-okhttp4,serializationLibrary=kotlinx_serialization,packageName=com.tindivo.api,modelPackage=com.tindivo.api.models,enumPropertyNaming=UPPERCASE',
-      // Los objetos de forma libre (`metadata`) salen como `Map<String, Any>`, y `Any` no tiene serializador: el plugin
-      // de kotlinx.serialization revienta con un error interno del compilador. JsonElement sí es serializable.
-      '--type-mappings',
-      'AnyType=JsonElement',
-      '--import-mappings',
-      'JsonElement=kotlinx.serialization.json.JsonElement',
-    ]
-  }
   return [
     ...base,
     '-g',
-    'swift6',
-    // Los modelos de swift6 dependen de los ficheros de Infrastructure (CodableHelper, JSONValue...), por eso
-    // supportingFiles; los APIs (cliente HTTP) no se generan.
+    'kotlin',
+    // Solo modelos. Dinero nuevo ya llega como string en el contrato (D-39) y queda String.
     '--global-property',
-    'models,supportingFiles,modelDocs=false,modelTests=false',
+    'models,modelDocs=false,modelTests=false',
     '--additional-properties',
-    'projectName=TindivoModels,useSPMFileStructure=true,library=urlsession',
+    'library=jvm-okhttp4,serializationLibrary=kotlinx_serialization,packageName=com.tindivo.api,modelPackage=com.tindivo.api.models,enumPropertyNaming=UPPERCASE',
+    // Los objetos de forma libre (`metadata`) salen como `Map<String, Any>`, y `Any` no tiene serializador: el plugin
+    // de kotlinx.serialization revienta con un error interno del compilador. JsonElement sí es serializable.
+    '--type-mappings',
+    'AnyType=JsonElement',
+    '--import-mappings',
+    'JsonElement=kotlinx.serialization.json.JsonElement',
   ]
 }
 
@@ -136,13 +126,9 @@ if (gen.status !== 0) {
 }
 console.log(`✔ modelos de ${target} generados en ${out}`)
 
-if (target === 'kotlin') writeKotlinBuild()
+writeKotlinBuild()
 
 if (compile) {
-  if (target === 'kotlin') {
-    run('gradle', ['--no-daemon', '--console=plain', 'compileKotlin'], out)
-  } else {
-    run('swift', ['build', '--package-path', out])
-  }
+  run('gradle', ['--no-daemon', '--console=plain', 'compileKotlin'], out)
   console.log(`✔ los modelos de ${target} compilan`)
 }
