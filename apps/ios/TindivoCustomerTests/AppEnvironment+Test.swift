@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 import TindivoAPI
 @testable import TindivoCustomer
@@ -54,4 +55,5 @@ final class StubConfigService: ConfigService {
     var state: ConfigState = .unknown
     func refresh() async {}
     func reportUpgradeRequired(minVersion: String?) {}
+    func sceneDidChange(to phase: ScenePhase) async {}
 }

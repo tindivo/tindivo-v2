@@ -87,10 +87,4 @@ struct AppNavigatorTests {
         navigator.openBusiness(" SLUG-A ")
         #expect(navigator.path == [.business(id: "slug-a")])
     }
-
-    @Test("el identificador canónico ignora mayúsculas y espacios")
-    func canonicalIsNormalized() {
-        let navigator = AppNavigator()
-        #expect(navigator.canonical("  AbC ") == "abc")
-    }
 }

@@ -7,11 +7,14 @@ import TindivoAPI
 private struct ConfigSystem: SystemRepository {
     var compat: Script<ClientCompat>
     var gate: Gate?
+    /// Se abre cuando la lectura ya empezó: la prueba espera esa señal en vez de sondear.
+    var entered: Gate?
 
     func health() async throws(AppError) -> ApiHealth { throw .network }
 
     func clientCompat() async throws(AppError) -> ClientCompat {
         let result = compat.next()
+        entered?.open()
         await gate?.wait()
         return try result.get()
     }
@@ -28,10 +31,11 @@ struct ConfigServiceTests {
         _ results: [Result<ClientCompat, AppError>],
         appVersion: String = "1.0.0",
         gate: Gate? = nil,
+        entered: Gate? = nil,
         reports: AsyncStream<String?>? = nil
     ) -> (LiveConfigService, Script<ClientCompat>) {
         let script = Script<ClientCompat>(results)
-        let system = ConfigSystem(compat: script, gate: gate)
+        let system = ConfigSystem(compat: script, gate: gate, entered: entered)
         return (LiveConfigService(system: system, appVersion: appVersion, upgradeReports: reports), script)
     }
 
@@ -69,20 +73,35 @@ struct ConfigServiceTests {
         #expect(config.state == .upgradeRequired(minVersion: "3.0.0"))
     }
 
-    @Test("CLI-4: un 426 de cualquier otra llamada (aviso de la API) pide actualizar")
-    func upgradeRequiredFromAnyCall() async throws {
+    @Test("CLI-4: un 426 de cualquier otra llamada (aviso de la API) pide actualizar", .timeLimit(.minutes(1)))
+    func upgradeRequiredFromAnyCall() async {
         let (stream, continuation) = AsyncStream<String?>.makeStream()
         let (config, _) = service([.success(compat("0.0.0"))], reports: stream)
         continuation.yield("2.0.0")
-        for _ in 0..<200 where !config.state.isUpgradeRequired { try await Task.sleep(for: .milliseconds(10)) }
+        await config.waitUntil { $0.isUpgradeRequired }
         #expect(config.state == .upgradeRequired(minVersion: "2.0.0"))
     }
 
-    @Test("CLI-4: la actualización obligatoria no se deshace con una lectura buena posterior")
-    func upgradeIsSticky() async {
-        let (config, _) = service([.failure(.upgradeRequired(minVersion: "3.0.0")), .success(compat("0.0.0"))])
+    @Test("M3: al liberarse el servicio, la escucha del canal de avisos termina y no queda colgada", .timeLimit(.minutes(1)))
+    func listenerEndsWhenTheServiceIsReleased() async {
+        let (stream, continuation) = AsyncStream<String?>.makeStream()
+        let ended = Gate()
+        continuation.onTermination = { _ in ended.open() }
+        weak var released: LiveConfigService?
+        do {
+            let (config, _) = service([.success(compat("0.0.0"))], reports: stream)
+            released = config
+        }
+        await ended.wait() // el canal se termina porque el servicio murió y canceló la escucha
+        #expect(released == nil)
+    }
+
+    @Test("CLI-4: la actualización obligatoria no se deshace, y con ella pendiente ya no se relee")
+    func upgradeIsStickyAndStopsReading() async {
+        let (config, script) = service([.failure(.upgradeRequired(minVersion: "3.0.0")), .success(compat("0.0.0"))])
         await config.refresh()
         await config.refresh()
+        #expect(script.calls == 1, "con la actualización pendiente no se vuelve a leer /config")
         #expect(config.state == .upgradeRequired(minVersion: "3.0.0"))
         config.reportUpgradeRequired(minVersion: nil)
         #expect(config.state == .upgradeRequired(minVersion: "3.0.0"))
@@ -99,14 +118,15 @@ struct ConfigServiceTests {
         #expect(config.state == .ready(features: [:], minOS: 17))
     }
 
-    @Test("CLI-4: dos activaciones seguidas no hacen dos lecturas simultáneas")
+    @Test("CLI-4: dos activaciones seguidas no hacen dos lecturas simultáneas", .timeLimit(.minutes(1)))
     func overlappingRefreshesReadOnce() async {
-        let gate = Gate()
-        let (config, script) = service([.success(compat("0.0.0"))], gate: gate)
-        let first = Task { await config.sceneDidChange(to: .active) }
-        let second = Task { await config.sceneDidChange(to: .active) }
-        for _ in 0..<50 { await Task.yield() }
-        #expect(script.calls == 1)
+        let gate = Gate(), entered = Gate()
+        let (config, script) = service([.success(compat("0.0.0"))], gate: gate, entered: entered)
+        let first = Task { await config.refresh() }
+        await entered.wait() // la primera lectura ya está en vuelo
+        // La segunda llamada se encola en el MainActor (cola FIFO) antes de que la lectura pueda terminar: en cuanto
+        // `gate.open()` la despierta, su regreso al MainActor queda detrás de esta tarea.
+        let second = Task { await config.refresh() }
         gate.open()
         await first.value
         await second.value
@@ -114,16 +134,50 @@ struct ConfigServiceTests {
         #expect(config.state == .ready(features: [:], minOS: 17))
     }
 
-    @Test("CLI-4: al volver la escena a .active se relee; en otro estado no")
-    func sceneActiveRereads() async {
+    @Test("CLI-4: al abrir se lee una vez, aunque la escena pase por .inactive antes de .active")
+    func launchReadsOnce() async {
+        let (config, script) = service([.success(compat("0.0.0"))])
+        await config.sceneDidChange(to: .inactive)
+        #expect(script.calls == 0)
+        await config.sceneDidChange(to: .active)
+        #expect(script.calls == 1)
+    }
+
+    @Test("M1: se relee al pasar de segundo plano a .active, no al volver de .inactive")
+    func rereadsOnlyAfterBackground() async {
         let (config, script) = service([.success(compat("0.0.0"))])
         await config.sceneDidChange(to: .active)
         #expect(script.calls == 1)
         await config.sceneDidChange(to: .inactive)
+        await config.sceneDidChange(to: .active)
+        #expect(script.calls == 1, "active → inactive → active (centro de control, una llamada) no relee")
+        await config.sceneDidChange(to: .inactive)
         await config.sceneDidChange(to: .background)
-        #expect(script.calls == 1)
         await config.sceneDidChange(to: .active)
         #expect(script.calls == 2)
+    }
+
+    @Test("M1: con la actualización pendiente, volver a primer plano no relee")
+    func noRereadWhenUpgradeIsPending() async {
+        let (config, script) = service([.failure(.upgradeRequired(minVersion: "3.0.0"))])
+        await config.sceneDidChange(to: .active)
+        await config.sceneDidChange(to: .background)
+        await config.sceneDidChange(to: .active)
+        #expect(script.calls == 1)
+        #expect(config.state.isUpgradeRequired)
+    }
+
+    @Test("M4: con el iOS del aparato por debajo de minOs solo avisa; no bloquea (D-58, como Android)")
+    func belowMinOSOnlyWarns() async {
+        let compatLow = ClientCompat(minAppVersion: "0.0.0", minOS: 18)
+        let (config, _) = service([.success(compatLow)])
+        #expect(!config.state.isBelowMinOS(17), "sin lectura no se avisa")
+        await config.refresh()
+        #expect(config.state.isBelowMinOS(17))
+        #expect(!config.state.isBelowMinOS(18))
+        #expect(!config.state.isBelowMinOS(26))
+        #expect(!config.state.isUpgradeRequired)
+        #expect(!ConfigState.upgradeRequired(minVersion: "9.0.0").isBelowMinOS(1), "con actualización pendiente manda esa pantalla")
     }
 
     @Test("CLI-4: los interruptores de config se exponen; una clave ausente usa el valor por defecto")

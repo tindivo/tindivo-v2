@@ -11,14 +11,15 @@ struct AppEnvironment: Sendable {
     let clock: AppClock
 
     @MainActor
-    static func live(config: AppConfig = .fromBundle()) -> AppEnvironment {
+    static func live(config: AppConfig = .fromBundle(), protocolClasses: [AnyClass]? = nil) -> AppEnvironment {
         // Todo 426 de la API (de cualquier repositorio, hoy o mañana) llega a `ConfigService` por este canal: es el
         // único camino hacia la pantalla de actualización (CLI-4).
         let (upgradeReports, reportUpgrade) = AsyncStream<String?>.makeStream()
         let api = TindivoAPIServices.live(
             baseURL: config.apiBaseURL,
             client: ClientInfo(app: "customer", appVersion: config.appVersion, build: config.build),
-            onUpgradeRequired: { reportUpgrade.yield($0) }
+            onUpgradeRequired: { reportUpgrade.yield($0) },
+            protocolClasses: protocolClasses
         )
         return AppEnvironment(
             config: config,
@@ -49,7 +50,7 @@ extension AppEnvironment {
         AppEnvironment(
             config: .fromBundle(),
             system: PreviewSystem(),
-            configService: PreviewConfigService(),
+            configService: FixedConfigService(),
             catalog: PreviewCatalog(),
             cartStore: FileCartStore.preview(),
             clock: .live

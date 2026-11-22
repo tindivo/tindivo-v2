@@ -7,6 +7,7 @@ struct RootView: View {
     @State private var navigator = AppNavigator()
     @State private var home: CatalogHomeScreenModel
     @Environment(\.scenePhase) private var scenePhase
+    @State private var osNoticeDismissed = false
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -15,7 +16,7 @@ struct RootView: View {
 
     var body: some View {
         content
-            // Al abrir la app y cada vez que la escena vuelve a `.active` se relee `/config` (CLI-4).
+            // Al abrir la app y al volver de segundo plano se relee `/config` (CLI-4).
             .task(id: scenePhase) { await environment.configService.sceneDidChange(to: scenePhase) }
     }
 
@@ -34,6 +35,11 @@ struct RootView: View {
                 )
                 .navigationDestination(for: AppRoute.self) { route in
                     destination(route)
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if !osNoticeDismissed, config.state.isBelowMinOS(ProcessInfo.processInfo.operatingSystemVersion.majorVersion) {
+                    OSNoticeView { osNoticeDismissed = true }
                 }
             }
         }

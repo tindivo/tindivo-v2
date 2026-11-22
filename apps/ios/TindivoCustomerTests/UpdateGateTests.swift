@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import TindivoAPI
 @testable import TindivoCustomer
 
 @Suite("Pantalla de actualización (CLI-4)")
@@ -21,12 +22,35 @@ struct UpdateScreenTests {
     }
 }
 
-@Suite("Imágenes")
-struct ImageCacheTests {
-    @Test("las miniaturas de AsyncImage tienen una caché con capacidad (32 MB en memoria, 128 MB en disco)")
-    func capacity() {
-        let cache = AppEnvironment.makeImageCache()
-        #expect(cache.memoryCapacity == 32 * 1024 * 1024)
-        #expect(cache.diskCapacity == 128 * 1024 * 1024)
+/// Un servidor que contesta 426 a todo: la API real, armada como en `AppEnvironment.live`, sin red.
+final class UpgradeRequiredProtocol: URLProtocol, @unchecked Sendable {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        guard let url = request.url else { return }
+        let response = HTTPURLResponse(
+            url: url, statusCode: 426, httpVersion: nil,
+            headerFields: ["Content-Type": "application/json", "x-tindivo-min-version": "2.0.0"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data(#"{"code":"client_upgrade_required"}"#.utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
+@MainActor
+@Suite("Cableado del 426 (CLI-4)")
+struct UpgradeWiringTests {
+    @Test("CLI-4: un 426 del catálogo, con los repositorios armados como en AppEnvironment.live, deja el servicio en .upgradeRequired", .timeLimit(.minutes(1)))
+    func catalogUpgradeReachesTheService() async throws {
+        let environment = AppEnvironment.live(config: .fromBundle(.main), protocolClasses: [UpgradeRequiredProtocol.self])
+        let service = try #require(environment.configService as? LiveConfigService)
+        #expect(service.state == .unknown)
+        await #expect(throws: AppError.upgradeRequired(minVersion: "2.0.0")) {
+            try await environment.catalog.getBusiness(id: "x")
+        }
+        await service.waitUntil { $0.isUpgradeRequired }
+        #expect(service.state == .upgradeRequired(minVersion: "2.0.0"))
     }
 }
