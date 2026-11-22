@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.customer.R
 import com.tindivo.customer.support.SupportViewModel
 import com.tindivo.customer.support.accountErrorHelpLink
@@ -80,7 +80,7 @@ private fun PayGroup(
     form: CheckoutFormActions,
 ) {
     if (options.isEmpty()) return
-    Card(modifier = Modifier.fillMaxWidth()) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = stringResource(titleRes), style = MaterialTheme.typography.titleSmall)
             options.forEach { option ->
@@ -146,7 +146,7 @@ private fun unavailableText(
 @Composable
 private fun PrepayExplainer(businessName: String) {
     var open by rememberSaveable { mutableStateOf(true) }
-    Card(modifier = Modifier.fillMaxWidth()) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TextButton(onClick = { open = !open }, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(text = stringResource(R.string.checkout_prepay_how))

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -19,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.customer.R
 import java.math.BigDecimal
 
@@ -31,7 +31,7 @@ internal fun CashSelector(
     onChoice: (CashChoice) -> Unit,
 ) {
     val check = checkCash(choice.payingWith(total), total, rules, exact = choice is CashChoice.Exact)
-    Card(modifier = Modifier.fillMaxWidth()) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text = stringResource(R.string.checkout_cash_total, total.soles()),

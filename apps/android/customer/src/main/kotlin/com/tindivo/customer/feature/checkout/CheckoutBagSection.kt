@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.customer.R
 
 /** «Tu pedido»: la bolsa en un acordeón. Los importes por línea salen de la cotización, no de los precios de la carta. */
@@ -42,7 +42,7 @@ private fun BagCard(
     var open by rememberSaveable { mutableStateOf(false) }
     val units = state.lines.sumOf { it.quantity }
     val hint = stringResource(if (open) R.string.checkout_bag_close else R.string.checkout_bag_open)
-    Card(modifier = Modifier.fillMaxWidth()) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 modifier =

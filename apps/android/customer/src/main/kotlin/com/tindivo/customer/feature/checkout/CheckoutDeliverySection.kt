@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +20,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.customer.R
 
 /** «Entrega»: delivery o recojo, la dirección (o el punto de recojo), el contacto y la nota para el motorizado. */
@@ -49,9 +49,8 @@ internal fun LazyListScope.deliverySection(
 internal fun SectionTitle(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.semantics { heading() },
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(start = 4.dp, top = 4.dp).semantics { heading() },
     )
 }
 
@@ -82,7 +81,7 @@ private fun PickupQuestion(
     state: CheckoutUiState,
     form: CheckoutFormActions,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = stringResource(R.string.checkout_pickup_question), style = MaterialTheme.typography.titleSmall)
             ChoiceRow(
@@ -105,7 +104,7 @@ private fun PickupQuestion(
 
 @Composable
 private fun PickupPoint(businessName: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = stringResource(R.string.checkout_pickup_point), style = MaterialTheme.typography.titleSmall)
             Text(text = businessName, style = MaterialTheme.typography.bodyLarge)
@@ -124,7 +123,7 @@ private fun AddressCard(
     openSheet: (CheckoutSheet) -> Unit,
 ) {
     val selected = state.selectedAddress
-    Card(modifier = Modifier.fillMaxWidth()) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = stringResource(R.string.checkout_address_title), style = MaterialTheme.typography.titleSmall)
             if (selected == null) {
@@ -198,7 +197,7 @@ private fun ContactCard(
     form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = stringResource(R.string.checkout_contact_title), style = MaterialTheme.typography.titleSmall)
             OutlinedTextField(

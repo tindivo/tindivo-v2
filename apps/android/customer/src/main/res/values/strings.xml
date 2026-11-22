@@ -492,6 +492,7 @@
     <string name="checkout_cta_pay">Elige cómo pagas</string>
     <string name="checkout_cta_cash">Revisa con cuánto pagas</string>
     <string name="checkout_cta_confirm">Confirmar pedido · %1$s</string>
+    <string name="checkout_cta_confirm_short">Confirmar pedido</string>
     <string name="checkout_cta_do_not_close">No cierres esta pantalla.</string>
     <string name="checkout_sub_prepaid">Todavía no pagas nada. Te avisamos cuando el local confirme.</string>
     <string name="checkout_sub_cash">Pagas al recibir, directo al motorizado.</string>
