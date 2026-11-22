@@ -28,6 +28,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +52,8 @@ private val TAGLINE_MAX_WIDE = 200.dp
 private val MOTO_WIDTH = 128.dp
 private val MOTO_WIDTH_WIDE = 168.dp
 private const val MOTO_RATIO = 440f / 398f
+private val STORE_ART = 112.dp
+private val STORE_ART_WIDE = 160.dp
 
 /**
  * Degradado de la tarjeta de Entregas (150°). El tablero empieza en `#CF4A0C`; aquí empieza en `#C2410C` porque el
@@ -65,7 +69,8 @@ internal enum class ServiceTileStyle { Courier, Store }
 /**
  * Una tarjeta de servicio del Inicio (tablero «1 · Inicio»): toda ella se toca y TalkBack la lee como un botón con
  * título y subtítulo. Jerarquía en tres niveles: título 22/700, subtítulo 14/500 y una flecha en círculo de 48 dp. La de
- * Entregas lleva el degradado naranja y la moto ilustrada; la de Store, fondo `primaryContainer` y flecha en tinta.
+ * Entregas lleva el degradado naranja y la moto ilustrada; la de Store, fondo `primaryContainer`, la bolsa ilustrada y
+ * flecha en tinta.
  */
 @Composable
 internal fun ServiceTile(
@@ -98,7 +103,7 @@ internal fun ServiceTile(
     ) {
         val wide = maxWidth > WIDE_FROM
         Box(modifier = Modifier.heightIn(min = if (wide) WIDE_TILE_HEIGHT else SERVICE_TILE_HEIGHT)) {
-            if (courier) CourierDecoration(wide = wide)
+            if (courier) CourierDecoration(wide = wide) else StoreDecoration(wide = wide)
             TileText(title = title, tagline = tagline, courier = courier, wide = wide)
         }
     }
@@ -133,6 +138,20 @@ private fun androidx.compose.foundation.layout.BoxScope.CourierDecoration(wide: 
                 .offset(x = 14.dp, y = (-4).dp)
                 .width(motoWidth)
                 .aspectRatio(MOTO_RATIO),
+    )
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.StoreDecoration(wide: Boolean) {
+    // Decorativo: la bolsa ilustrada del tablero; el título ya nombra el servicio.
+    Image(
+        bitmap = ImageBitmap.imageResource(R.drawable.img_store_bolsa),
+        contentDescription = null,
+        modifier =
+            Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 12.dp, y = 12.dp)
+                .size(if (wide) STORE_ART_WIDE else STORE_ART),
     )
 }
 
