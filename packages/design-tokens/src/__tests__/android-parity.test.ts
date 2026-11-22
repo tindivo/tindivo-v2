@@ -29,7 +29,7 @@ const COLOR_MAP: Record<string, string | null> = {
   primaryPressed: 'BrandPressed',
   onPrimary: 'White',
   primaryText: 'BrandDark',
-  brand: 'BrandMark',
+  brand: 'Brand',
   primaryContainer: 'BrandSoft',
   onPrimaryContainer: 'BrandDeep',
   secondary: 'Ink',
@@ -176,6 +176,8 @@ const androidOnly = [
 const KNOWN_DIFFS: string[] = [
   'primary · #EE6417 · #C2410C',
   'primaryPressed · #CF4A0C · #9A3412',
+  // Excepción de Android (sistema-de-diseno.md, 2026-11-21): la marca es #F97316, la de TindivoColors.brand.
+  'brand · #FA7020 · #F97316',
   'success · #166534 · #15803D',
   'warning · #92400E · #B45309',
   'error · #991B1B · #DC2626',
@@ -197,7 +199,6 @@ const KNOWN_DIFFS: string[] = [
   'elevation3 · sombra del canon · no existe',
 ]
 const KNOWN_ANDROID_ONLY: string[] = [
-  'color Brand',
   'color SurfaceMid',
   'color SuccessDeep',
   'color WarningDeep',
