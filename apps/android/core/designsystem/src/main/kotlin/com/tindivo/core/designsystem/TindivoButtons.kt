@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,10 +29,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /** Tamaño y trazo del indicador de carga dentro de un botón: cabe en la línea de la etiqueta. */
 private val ButtonSpinnerSize = 20.dp
 private val ButtonSpinnerStroke = 2.dp
+
+/** Lo mínimo a lo que se achica la etiqueta del botón principal antes de cortarse. */
+private val ButtonMinFontSize = 14.sp
 
 /** Borde del botón secundario, el mismo grosor que el de las tarjetas. */
 private val SecondaryBorderWidth = 1.dp
@@ -76,11 +81,15 @@ fun TindivoPrimaryButton(
                 .semantics { liveRegion = LiveRegionMode.Polite },
     ) {
         Box(contentAlignment = Alignment.Center) {
+            // Con letra grande una etiqueta larga («Completa 1 opción») ya no cabe en una línea: se achica hasta 14 sp
+            // antes de cortarse con «…». Si cabe, sale a su tamaño de siempre.
+            val style = MaterialTheme.typography.titleLarge
             Text(
                 text = text,
-                style = MaterialTheme.typography.titleLarge,
+                style = style,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                autoSize = TextAutoSize.StepBased(minFontSize = ButtonMinFontSize, maxFontSize = style.fontSize),
                 modifier = Modifier.alpha(if (loading) 0f else 1f),
             )
             if (loading) {

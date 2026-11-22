@@ -66,6 +66,8 @@ private fun FeaturedContent(item: MenuItemUi) {
                 text = item.name,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
+                // Siempre dos líneas de alto: así todas las tarjetas del carrusel miden lo mismo, como en el tablero.
+                minLines = 2,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )

@@ -116,6 +116,8 @@ private fun BagButton(
                         text = if (count > BADGE_MAX) "$BADGE_MAX+" else count.toString(),
                         color = MaterialTheme.colorScheme.onPrimary,
                         fontSize = 12.sp,
+                        // El alto de línea del texto heredado agrandaba la píldora y el círculo del botón la recortaba.
+                        lineHeight = 12.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }

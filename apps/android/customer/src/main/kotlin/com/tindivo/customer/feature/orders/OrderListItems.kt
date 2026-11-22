@@ -52,9 +52,11 @@ private const val MOTO_RATIO = 440f / 398f
 private val SEGMENT_HEIGHT = 6.dp
 private const val STEPS = 4
 
-/** «Fecha · total», la segunda línea de toda fila de pedido. */
+/** «Fecha · total», la segunda línea de toda fila de pedido. El total no se parte: «S/» y la cifra van juntos. */
 @Composable
-private fun OrderCardUi.subtitle(): String = relativeDateText(createdAt) + " · " + total
+private fun OrderCardUi.subtitle(): String = relativeDateText(createdAt) + " · " + total.replace(' ', NO_BREAK_SPACE)
+
+private const val NO_BREAK_SPACE = ' '
 
 /** El cuadro de 48 dp con el isotipo: el negocio aún no manda su logo en el historial. */
 @Composable
