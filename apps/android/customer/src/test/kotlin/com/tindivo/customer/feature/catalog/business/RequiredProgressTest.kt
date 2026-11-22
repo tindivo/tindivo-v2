@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.catalog.business
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
 
@@ -45,5 +46,17 @@ class RequiredProgressTest {
 
         val oneDone = start.toggle(g1, g1.options.first())
         assertEquals(RequiredProgress(done = 1, total = 2), oneDone.requiredProgress())
+    }
+
+    @Test
+    fun `con todos los obligatorios elegidos la pildora dice todos listos`() {
+        val g1 = group("g1", required = true)
+        val g2 = group("g2", required = true)
+        val dish = item(g1, g2)
+
+        val done = DishSheetState(dish).toggle(g1, g1.options.first()).toggle(g2, g2.options.last())
+
+        assertEquals(RequiredProgress(done = 2, total = 2), done.requiredProgress())
+        assertTrue(done.isValid)
     }
 }
