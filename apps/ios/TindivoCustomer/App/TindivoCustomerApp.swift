@@ -12,9 +12,7 @@ struct TindivoCustomerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // Fase 0: la app abre en Diagnóstico. En la Fase 1 la raíz pasa a ser el catálogo y Diagnóstico queda
-            // solo en Dev, como en Android.
-            DiagnosticsView(model: DiagnosticsScreenModel(system: environment.system, config: environment.config))
+            RootView(environment: environment)
         }
     }
 }
