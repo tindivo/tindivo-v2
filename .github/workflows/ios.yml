@@ -5,8 +5,8 @@ name: iOS
 # `swift6`) que ignoraba las claves desconocidas y por eso no veía el fallo de CLI-2 del generador de Apple.
 #
 # A diario y no en cada PR (D-48). El cron lo dispara la definición de este archivo en `main` (rama por defecto) y
-# compila `develop`: un cambio aquí no afecta al cron hasta llegar a `main`; antes, lánzalo a mano
-# (Actions > iOS > Run workflow).
+# compila `develop`. Ni el cron ni el botón «Run workflow» existen hasta que este archivo llegue a `main`: hasta
+# entonces la única verificación es `pnpm ios:test` en una Mac.
 on:
   schedule:
     # 09:00 UTC = 04:00 en Lima, fuera del horario de pedidos.
@@ -16,6 +16,9 @@ on:
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   ios:
@@ -40,14 +43,19 @@ jobs:
       - name: Versiones
         run: xcodebuild -version && swift --version
 
-      # Herramientas fijadas (XcodeGen con sha256, generador con versión exacta) y paquetes de SwiftPM.
+      # Herramientas fijadas (XcodeGen con sha256 y el generador compilado). Los paquetes de la app no van aquí: se
+      # resuelven en apps/ios/build/DerivedData, solo con las versiones de Package.resolved.
       - name: Caché de herramientas
         uses: actions/cache@v5
         with:
           path: ~/Library/Caches/tindivo-ios
-          key: tindivo-ios-${{ hashFiles('apps/ios/scripts/tools.sh', 'apps/ios/Tools/Package.swift') }}
+          key: tindivo-ios-xcode-27.2-${{ hashFiles('apps/ios/scripts/tools.sh', 'apps/ios/Tools/Package.swift', 'apps/ios/Tools/Package.resolved') }}
 
       - name: Compilar y probar en el simulador
         env:
           IOS_DESTINATION: platform=iOS Simulator,name=iPhone 17,OS=latest
         run: apps/ios/scripts/xcodebuild.sh test Dev
+
+      # Prod no tiene pruebas propias (mismo código), pero compila en Release con optimización: lo que solo falla ahí.
+      - name: Compilar Prod (Release)
+        run: apps/ios/scripts/xcodebuild.sh build Prod

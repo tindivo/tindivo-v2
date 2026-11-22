@@ -16,7 +16,8 @@ source "$IOS/scripts/tools.sh"
 }
 
 API="$IOS/Packages/TindivoAPI"
-WORK="$TINDIVO_IOS_CACHE/openapi"
+# Dentro del worktree (build/ está ignorado): dos worktrees en paralelo no se pisan el documento.
+WORK="$IOS/build/openapi"
 mkdir -p "$WORK"
 node "$ROOT/scripts/ios-openapi-tolerant.mjs" "$API/openapi/v1.json" "$WORK/openapi.json"
 swift run --package-path "$IOS/Tools" --scratch-path "$TINDIVO_IOS_CACHE/tools" \

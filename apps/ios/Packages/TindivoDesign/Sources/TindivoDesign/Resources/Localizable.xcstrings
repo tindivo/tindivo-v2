@@ -1,0 +1,10 @@
+{
+  "sourceLanguage" : "es",
+  "strings" : {
+    "En curso" : {
+      "comment" : "VoiceOver: el botón principal está procesando la acción.",
+      "extractionState" : "manual"
+    }
+  },
+  "version" : "1.0"
+}

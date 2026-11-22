@@ -10,6 +10,11 @@
 //
 // Solo toca las RESPUESTAS y `components.schemas`: lo que la app envía sigue validándose igual de estricto.
 // Es un parche: la causa está en el contrato (DA-26). Cuando el contrato emita respuestas abiertas, este paso sobra.
+//
+// Además, en TODO el documento (peticiones y respuestas), el dinero heredado —número JSON que sale de un
+// `numeric(10,2)`, marcado por `legacyMoney` de `packages/contracts/src/openapi/schema-helpers.ts`— pasa a apuntar a
+// los esquemas `LegacyMoney` / `LegacyMoneyNullable`, que `openapi-generator-config.yaml` sustituye por `ExactMoney`
+// (un `Decimal`): sin este paso el generador lo declara `Double`, y SW-8 lo prohíbe.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 
@@ -22,6 +27,25 @@ if (!input || !output) {
 const doc = JSON.parse(readFileSync(input, 'utf8'))
 let closedObjects = 0
 let closedEnums = 0
+let legacyMoneyFields = 0
+
+const LEGACY_MONEY_DESCRIPTION =
+  'Soles como número JSON (numeric(10,2) en la base). Campo heredado: no cambia de tipo.'
+
+function isLegacyMoney(schema) {
+  return schema?.type === 'number' && schema.description === LEGACY_MONEY_DESCRIPTION
+}
+
+function pointMoney(schema) {
+  if (Array.isArray(schema)) return schema.map(pointMoney)
+  if (schema === null || typeof schema !== 'object') return schema
+  if (isLegacyMoney(schema)) {
+    legacyMoneyFields++
+    const target = schema.nullable ? 'LegacyMoneyNullable' : 'LegacyMoney'
+    return { $ref: `#/components/schemas/${target}` }
+  }
+  return Object.fromEntries(Object.entries(schema).map(([k, v]) => [k, pointMoney(v)]))
+}
 
 function open(schema) {
   if (Array.isArray(schema)) return schema.map(open)
@@ -53,5 +77,15 @@ for (const item of Object.values(doc.paths ?? {})) {
 }
 if (doc.components?.schemas) doc.components.schemas = open(doc.components.schemas)
 
+doc.paths = pointMoney(doc.paths)
+doc.components = pointMoney(doc.components ?? {})
+doc.components.schemas = {
+  ...doc.components.schemas,
+  LegacyMoney: { type: 'number', description: LEGACY_MONEY_DESCRIPTION },
+  LegacyMoneyNullable: { type: 'number', nullable: true, description: LEGACY_MONEY_DESCRIPTION },
+}
+
 writeFileSync(output, JSON.stringify(doc, null, 2))
-console.log(`Documento tolerante: ${closedObjects} objetos abiertos, ${closedEnums} enums abiertos → ${output}`)
+console.log(
+  `Documento para iOS: ${closedObjects} objetos y ${closedEnums} enums abiertos, ${legacyMoneyFields} campos de dinero heredado → ${output}`,
+)

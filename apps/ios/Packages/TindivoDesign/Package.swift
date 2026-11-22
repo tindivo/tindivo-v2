@@ -16,6 +16,7 @@ let package = Package(
             resources: [
                 .process("Resources/Geist.ttf"),
                 .copy("Resources/OFL.txt"),
+                .process("Resources/Localizable.xcstrings"),
             ]
         ),
         .testTarget(

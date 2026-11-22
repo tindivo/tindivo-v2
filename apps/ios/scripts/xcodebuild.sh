@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # build o test de la app iOS en el simulador, siempre tras regenerar (P1: nadie compila un proyecto viejo).
-#   apps/ios/scripts/xcodebuild.sh build|test [Dev|Prod]
+#   apps/ios/scripts/xcodebuild.sh build|test [Dev|Prod] [argumentos extra de xcodebuild]
 # Sin firma: el simulador no la necesita (CODE_SIGNING_ALLOWED=NO).
 set -euo pipefail
 
 ACTION="${1:-build}"
 ENV="${2:-Dev}"
+shift $(( $# < 2 ? $# : 2 ))
 ROOT="$(git rev-parse --show-toplevel)"
 IOS="$ROOT/apps/ios"
 "$IOS/scripts/gen.sh"
@@ -17,4 +18,6 @@ xcodebuild "$ACTION" \
   -scheme "TindivoCustomer-$ENV" \
   -destination "$DESTINATION" \
   -derivedDataPath "$IOS/build/DerivedData" \
-  CODE_SIGNING_ALLOWED=NO
+  -onlyUsePackageVersionsFromResolvedFile \
+  CODE_SIGNING_ALLOWED=NO \
+  "$@"

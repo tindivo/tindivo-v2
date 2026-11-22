@@ -17,11 +17,13 @@ public struct TindivoPrimaryButton: View {
     }
 
     public var body: some View {
-        Button(action: action) {
+        // La guarda va dentro de la acción: `allowsHitTesting` frena el dedo pero no la activación de VoiceOver.
+        Button(action: { if !loading { action() } }) {
             ZStack {
                 Text(title)
                     .tindivoText(TindivoTokens.Typography.cta)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .opacity(loading ? 0 : 1)
                 if loading {
                     ProgressView().tint(Color.tindivo.onPrimary)
@@ -31,7 +33,7 @@ public struct TindivoPrimaryButton: View {
         }
         .buttonStyle(PrimaryStyle(enabled: isEnabled))
         .allowsHitTesting(!loading)
-        .accessibilityValue(loading ? Text("En curso") : Text(""))
+        .accessibilityValue(loading ? Text("En curso", bundle: .module) : Text(verbatim: ""))
     }
 }
 

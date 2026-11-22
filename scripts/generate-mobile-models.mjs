@@ -34,6 +34,13 @@ const cacheDir = join(root, 'build/mobile-models/.tools')
 const jar = join(cacheDir, `openapi-generator-cli-${GENERATOR_VERSION}.jar`)
 
 const [target, ...flags] = process.argv.slice(2)
+// Puente temporal: el cron de `mobile-models-swift.yml` sigue en `main` hasta que develop llegue allí, y llama a
+// `swift --compile`. Para que no salga rojo cada día, avisa y termina bien. Se borra cuando ese archivo deje de
+// existir en `main`.
+if (target === 'swift') {
+  console.log('Swift ya no se genera aquí: la app iOS se compila y se prueba en .github/workflows/ios.yml (SW-7).')
+  process.exit(0)
+}
 if (target !== 'kotlin') {
   console.error('Uso: node scripts/generate-mobile-models.mjs kotlin [--compile] [--out <dir>]')
   process.exit(2)

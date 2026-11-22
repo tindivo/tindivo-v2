@@ -21,10 +21,15 @@ public struct ProblemMiddleware: ClientMiddleware {
     ) async throws -> (HTTPResponse, HTTPBody?) {
         let (response, responseBody) = try await next(request, body, baseURL)
         guard response.status.kind != .successful else { return (response, responseBody) }
-        let data: Data? = if let responseBody {
-            try? await Data(collecting: responseBody, upTo: Self.maxProblemBytes)
-        } else {
-            nil
+        var data: Data?
+        if let responseBody {
+            do {
+                data = try await Data(collecting: responseBody, upTo: Self.maxProblemBytes)
+            } catch {
+                // Si la pantalla se fue mientras se leía el error, es una cancelación, no un error que mostrar.
+                if Task.isCancelled || AppError.wrap(error) == .cancelled { throw AppError.cancelled }
+                data = nil
+            }
         }
         throw AppError.from(status: response.status.code, headers: response.headerFields, body: data)
     }
