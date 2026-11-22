@@ -80,10 +80,7 @@ private struct CartRoute: View {
         CartView(
             model: model,
             onAddMore: navigator.addMore(to:),
-            onSeeBusinesses: navigator.seeBusinesses,
-            onContinue: {
-                // Fase 2: checkout
-            }
+            onSeeBusinesses: navigator.seeBusinesses
         )
     }
 }

@@ -6,7 +6,6 @@ struct CartView: View {
     /// «+ Agregar más»: vuelve a la carta del negocio de la bolsa.
     let onAddMore: (String) -> Void
     let onSeeBusinesses: () -> Void
-    let onContinue: () -> Void
 
     @State private var confirmingClear = false
 
@@ -70,14 +69,9 @@ struct CartView: View {
                     )
                     Divider().overlay(Color.tindivo.outlineVariant)
                 }
-                HStack {
-                    Text("Subtotal")
-                        .tindivoText(TindivoTokens.Typography.titleSection)
-                    Spacer()
-                    Text(filled.subtotal)
-                        .tindivoText(TindivoTokens.Typography.titleSection)
-                        .monospacedDigit()
-                        .accessibilityIdentifier("cart.subtotal")
+                ViewThatFits(in: .horizontal) {
+                    HStack { subtotalLabel; Spacer(); subtotalAmount(filled.subtotal) }
+                    VStack(alignment: .leading, spacing: 2) { subtotalLabel; subtotalAmount(filled.subtotal) }
                 }
                 .foregroundStyle(Color.tindivo.ink)
                 .accessibilityElement(children: .combine)
@@ -89,12 +83,25 @@ struct CartView: View {
             }
             .padding(TindivoTokens.Spacing.spaceScreen)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            TindivoBottomBar {
-                TindivoPrimaryButton("Continuar", action: onContinue)
-                    .accessibilityIdentifier("cart.continue")
-            }
-        }
+        // Fase 2: checkout. Hasta que exista, la bolsa no enseña «Continuar»: un botón que no hace nada engaña.
+    }
+}
+
+extension CartView {
+    fileprivate var subtotalLabel: some View {
+        Text("Subtotal")
+            .tindivoText(TindivoTokens.Typography.titleSection)
+            .lineLimit(1)
+            .fixedSize()
+    }
+
+    fileprivate func subtotalAmount(_ text: String) -> some View {
+        Text(text)
+            .tindivoText(TindivoTokens.Typography.titleSection)
+            .monospacedDigit()
+            .lineLimit(1)
+            .fixedSize()
+            .accessibilityIdentifier("cart.subtotal")
     }
 }
 
@@ -114,9 +121,11 @@ private struct CartLineView: View {
                 Text(line.total)
                     .tindivoText(TindivoTokens.Typography.body)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
                     .foregroundStyle(Color.tindivo.ink)
             }
-            ForEach(line.options, id: \.self.option) { option in
+            ForEach(line.options) { option in
                 Text("\(option.group): \(option.option)")
                     .tindivoText(TindivoTokens.Typography.bodySecondary)
                     .foregroundStyle(Color.tindivo.inkSecondary)
@@ -154,7 +163,7 @@ private struct CartLineView: View {
 
 #Preview("Bolsa vacía") {
     NavigationStack {
-        CartView(model: CartScreenModel(store: FileCartStore.preview()), onAddMore: { _ in }, onSeeBusinesses: {}, onContinue: {})
+        CartView(model: CartScreenModel(store: FileCartStore.preview()), onAddMore: { _ in }, onSeeBusinesses: {})
     }
     .onAppear { TindivoFonts.register() }
 }
@@ -164,7 +173,7 @@ private struct CartPreviewHost: View {
 
     var body: some View {
         NavigationStack {
-            CartView(model: CartScreenModel(store: store), onAddMore: { _ in }, onSeeBusinesses: {}, onContinue: {})
+            CartView(model: CartScreenModel(store: store), onAddMore: { _ in }, onSeeBusinesses: {})
         }
         .task {
             let line = CartLine(

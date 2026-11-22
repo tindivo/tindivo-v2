@@ -2,7 +2,9 @@ import Foundation
 import Observation
 
 /// Una opción elegida de un plato, para enseñarla como «Grupo: Opción».
-struct CartOptionText: Equatable {
+struct CartOptionText: Equatable, Identifiable {
+    /// Identidad en la lista: dos grupos pueden tener una opción con el mismo nombre, pero no el mismo `optionId`.
+    let id: String
     let group: String
     let option: String
 }
@@ -92,7 +94,7 @@ final class CartScreenModel {
                 CartLineRow(
                     signature: line.signature,
                     name: line.name,
-                    options: line.modifiers.map { CartOptionText(group: $0.groupName, option: $0.optionName) },
+                    options: line.modifiers.map { CartOptionText(id: $0.optionId, group: $0.groupName, option: $0.optionName) },
                     note: line.note,
                     quantity: line.quantity,
                     total: formatAmount(line.total) ?? formatSoles(line.total),

@@ -52,11 +52,26 @@ struct CartScreenModelTests {
         #expect(state.businessName == "Don Lucho")
         let row = try #require(state.lines.first)
         #expect(row.name == "Plato a")
-        #expect(row.options == [CartOptionText(group: "Tamaño", option: "1/4")])
+        #expect(row.options == [CartOptionText(id: "o1", group: "Tamaño", option: "1/4")])
         #expect(row.note == "sin ají")
         #expect(row.quantity == 3)
         #expect(row.total.plain == "S/ 37.50")
         #expect(state.subtotal.plain == "S/ 37.50")
+        task.cancel()
+    }
+
+    @Test("dos grupos con una opción del mismo nombre no comparten identidad en la lista")
+    func sameOptionNameInTwoGroups() async throws {
+        let store = temporaryStore()
+        let modifiers = [
+            CartModifier(optionId: "o1", groupName: "Presa", optionName: "Mediano", price: dec("0")),
+            CartModifier(optionId: "o2", groupName: "Papas", optionName: "Mediano", price: dec("0")),
+        ]
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("a", modifiers: modifiers))
+        let (model, task) = await started(store)
+        let options = try #require(filled(model)).lines[0].options
+        #expect(options.count == 2)
+        #expect(Set(options.map(\.id)).count == 2)
         task.cancel()
     }
 
