@@ -266,6 +266,30 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
+    // MARK: Método de entrega (CA-CRT-01, CA-CRT-08)
+
+    @Test("CA-CRT-01: la bolsa muestra «Delivery» y la fila del envío por defecto")
+    func deliveryByDefault() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("a"))
+        let (model, task) = await started(store)
+        let state = try #require(filled(model))
+        #expect(state.method == .delivery)
+        #expect(state.methodLabel == "Delivery")
+        #expect(state.showsShipping)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-08: una bolsa de recojo dice «Recojo» y no muestra la fila del envío")
+    func pickupLabel() async throws {
+        let cart = Cart(businessId: "n1", businessName: "N", lines: [line("a")], method: .pickup)
+        let state = try #require({ () -> CartScreenModel.Filled? in
+            if case let .filled(filled) = CartScreenModel.state(for: cart) { filled } else { nil }
+        }())
+        #expect(state.methodLabel == "Recojo")
+        #expect(state.showsShipping == false)
+    }
+
     // MARK: Editar (CA-CRT-11)
 
     private func editableMenu(available: Bool = true) -> BusinessMenu {

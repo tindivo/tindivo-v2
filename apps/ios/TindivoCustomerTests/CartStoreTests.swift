@@ -299,4 +299,47 @@ struct CartStoreTests {
         #expect(try await store.replaceLine(signature: b.signature, with: asA) == .replaced(capped: true))
         #expect(await store.current()?.lines.map(\.quantity) == [50])
     }
+
+    // MARK: Método de entrega (CA-CRT-01)
+
+    /// Escribe en disco una bolsa de recojo, como la dejaría el checkout.
+    private func seedPickup(_ file: URL) throws {
+        let cart = Cart(businessId: "n", businessName: "Pollería", lines: [line("a"), line("b")], method: .pickup)
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try CartSnapshotCodec.encode(try #require(cart.snapshot())).write(to: file)
+    }
+
+    @Test("CA-CRT-01: cambiar cantidades, agregar o quitar del mismo negocio conserva el método")
+    func methodSurvivesEdits() async throws {
+        let (store, file) = makeStore()
+        try seedPickup(file)
+        #expect(await store.current()?.method == .pickup)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("c"))
+        try await store.changeQuantity(signature: line("a").signature, by: 2)
+        try await store.remove(signature: line("b").signature)
+        #expect(await store.current()?.method == .pickup)
+        #expect(await store.current()?.lines.map(\.itemId) == ["a", "c"])
+    }
+
+    @Test("CA-CRT-01: reemplazar la bolsa por la de otro negocio vuelve a delivery")
+    func replacingResetsTheMethod() async throws {
+        let (store, file) = makeStore()
+        try seedPickup(file)
+        try await store.replace(businessId: "m", businessName: "Chifa", line: line("arroz"))
+        #expect(await store.current()?.method == .delivery)
+        #expect(await store.current()?.businessId == "m")
+    }
+
+    @Test("CA-CRT-03: al vaciarse la bolsa no queda negocio ni método; la siguiente empieza en delivery")
+    func emptyingResetsTheMethod() async throws {
+        let (store, file) = makeStore()
+        try seedPickup(file)
+        try await store.remove(signature: line("a").signature)
+        try await store.remove(signature: line("b").signature)
+        #expect(await store.current() == nil)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        #expect(await store.current()?.method == .delivery)
+        try await store.clear()
+        #expect(await store.current() == nil)
+    }
 }

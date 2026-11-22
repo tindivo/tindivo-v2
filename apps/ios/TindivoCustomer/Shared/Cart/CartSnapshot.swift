@@ -10,6 +10,8 @@ struct CartSnapshot: Codable, Sendable, Equatable {
     var businessId: String
     var businessName: String
     var lines: [CartLineSnapshot]
+    /// `delivery` o `pickup`. Una bolsa guardada antes de que existiera el campo se lee como `delivery`.
+    var method: String = DeliveryMethod.delivery.rawValue
 }
 
 struct CartLineSnapshot: Codable, Sendable, Equatable {
@@ -50,7 +52,7 @@ private func rejectUnknownKeys<Key: CodingKey & CaseIterable>(_ decoder: any Dec
 
 extension CartSnapshot {
     private enum CodingKeys: String, CodingKey, CaseIterable {
-        case version, businessId, businessName, lines
+        case version, businessId, businessName, lines, method
     }
 
     init(from decoder: any Decoder) throws {
@@ -60,6 +62,7 @@ extension CartSnapshot {
         businessId = try container.decode(String.self, forKey: .businessId)
         businessName = try container.decode(String.self, forKey: .businessName)
         lines = try container.decode([CartLineSnapshot].self, forKey: .lines)
+        method = try container.decodeIfPresent(String.self, forKey: .method) ?? DeliveryMethod.delivery.rawValue
     }
 }
 
@@ -130,17 +133,19 @@ extension Cart {
                     },
                     note: line.note, quantity: line.quantity, imageURL: line.imageURL
                 )
-            }
+            },
+            method: method.rawValue
         )
     }
 
     /// La bolsa que representa `snapshot`, o `nil` si algo no cuadra. Falla cerrado: una versión distinta, un importe
-    /// que no es un precio de carta, más platos, una cantidad, una lista de opciones o una nota fuera de los límites
+    /// que no es un precio de carta, un método de entrega desconocido, más platos, una cantidad, una lista de opciones o una nota fuera de los límites
     /// del pedido, una opción repetida en una línea, o dos líneas con la misma firma descartan la bolsa entera.
     /// Nunca se arregla a medias: lo que se enseñaría podría no ser lo que la persona eligió.
     init?(snapshot: CartSnapshot) {
         guard snapshot.version == cartSnapshotVersion, !snapshot.businessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !snapshot.lines.isEmpty, snapshot.lines.count <= CartLimits.maxLines
+              !snapshot.lines.isEmpty, snapshot.lines.count <= CartLimits.maxLines,
+              let method = DeliveryMethod(rawValue: snapshot.method)
         else { return nil }
         var restored: [CartLine] = []
         for line in snapshot.lines {
@@ -148,7 +153,7 @@ extension Cart {
             restored.append(restoredLine)
         }
         guard Set(restored.map(\.signatureKey)).count == restored.count else { return nil }
-        self.init(businessId: snapshot.businessId, businessName: snapshot.businessName, lines: restored)
+        self.init(businessId: snapshot.businessId, businessName: snapshot.businessName, lines: restored, method: method)
     }
 }
 

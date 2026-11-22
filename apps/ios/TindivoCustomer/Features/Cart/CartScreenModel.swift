@@ -38,6 +38,18 @@ final class CartScreenModel {
         let businessName: String
         let lines: [CartLineRow]
         let subtotal: String
+        let method: DeliveryMethod
+
+        /// La etiqueta del método de entrega (CUS-CRT-007, CUS-CRT-010).
+        var methodLabel: String {
+            switch method {
+            case .delivery: String(localized: "Delivery")
+            case .pickup: String(localized: "Recojo")
+            }
+        }
+
+        /// La fila del envío solo existe en delivery (CA-CRT-08).
+        var showsShipping: Bool { method == .delivery }
     }
 
     enum State: Equatable {
@@ -231,7 +243,8 @@ final class CartScreenModel {
                     canEdit: !line.modifiers.isEmpty
                 )
             },
-            subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal)
+            subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal),
+            method: cart.method
         ))
     }
 }

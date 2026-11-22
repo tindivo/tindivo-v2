@@ -154,4 +154,35 @@ struct CartSnapshotTests {
         }
         #expect(throws: (any Error).self) { try CartSnapshotCodec.decode(Data([0x00, 0x7F, 0xFF])) }
     }
+
+    // MARK: Método de entrega (CA-CRT-01, CUS-CRT-007)
+
+    @Test("CA-CRT-01: un snapshot viejo, sin el campo del método, se lee como delivery")
+    func oldSnapshotReadsAsDelivery() throws {
+        let old = """
+        {"businessId":"negocio","businessName":"Pollería","lines":[{"basePrice":"12.50","itemId":"plato","modifiers":[],"name":"Lomo","quantity":2}],"version":1}
+        """
+        let decoded = try CartSnapshotCodec.decode(Data(old.utf8))
+        #expect(decoded.method == "delivery")
+        let restored = try #require(Cart(snapshot: decoded))
+        #expect(restored.method == .delivery)
+        #expect(restored.lines.first?.quantity == 2)
+    }
+
+    @Test("CA-CRT-01: el método recojo se guarda y se lee")
+    func pickupRoundTrips() throws {
+        let pickup = Cart(businessId: "negocio", businessName: "Pollería", lines: [line("a", modifiers: [], note: nil)], method: .pickup)
+        let data = try CartSnapshotCodec.encode(try #require(pickup.snapshot()))
+        #expect(String(decoding: data, as: UTF8.self).contains("\"method\":\"pickup\""))
+        let restored = try #require(Cart(snapshot: try CartSnapshotCodec.decode(data)))
+        #expect(restored.method == .pickup)
+        #expect(restored == pickup)
+    }
+
+    @Test("un método de entrega desconocido descarta la bolsa entera")
+    func unknownMethodIsRejected() throws {
+        var snapshot = try snapshot()
+        snapshot.method = "drone"
+        #expect(Cart(snapshot: snapshot) == nil)
+    }
 }

@@ -113,6 +113,10 @@ struct CartView: View {
                     .tindivoText(TindivoTokens.Typography.titleScreen)
                     .foregroundStyle(Color.tindivo.ink)
                     .accessibilityAddTraits(.isHeader)
+                Text(filled.methodLabel)
+                    .tindivoText(TindivoTokens.Typography.bodySecondary)
+                    .foregroundStyle(Color.tindivo.inkSecondary)
+                    .accessibilityIdentifier("cart.method")
                 ForEach(filled.lines, id: \.signatureKey) { line in
                     CartLineView(
                         line: line,
@@ -128,9 +132,12 @@ struct CartView: View {
                 }
                 .foregroundStyle(Color.tindivo.ink)
                 .accessibilityElement(children: .combine)
-                Text("El envío y el total final se calculan al confirmar el pedido.")
-                    .tindivoText(TindivoTokens.Typography.bodySecondary)
-                    .foregroundStyle(Color.tindivo.inkSecondary)
+                if filled.showsShipping {
+                    Text("Delivery · Se calcula con tu dirección")
+                        .tindivoText(TindivoTokens.Typography.bodySecondary)
+                        .foregroundStyle(Color.tindivo.inkSecondary)
+                        .accessibilityIdentifier("cart.shipping")
+                }
                 TindivoSecondaryButton("+ Agregar más") { onAddMore(filled.businessId) }
                     .accessibilityIdentifier("cart.addMore")
             }

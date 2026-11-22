@@ -60,11 +60,32 @@ struct RemovedLine: Sendable, Equatable {
     let wasLast: Bool
 }
 
+/// Cómo recibirá el pedido: `DELIVERY_METHODS` de `packages/contracts`. La bolsa solo lo recuerda y lo enseña como
+/// etiqueta; se elige en el checkout (CUS-CRT-007).
+enum DeliveryMethod: String, Sendable, Equatable {
+    case delivery
+    case pickup
+}
+
 /// La bolsa: platos de un solo negocio. Inmutable; cada cambio devuelve otra.
 struct Cart: Sendable, Equatable {
     let businessId: String
     let businessName: String
     let lines: [CartLine]
+    /// Por defecto `delivery`; una bolsa nueva (otro negocio o vacía) siempre empieza ahí.
+    let method: DeliveryMethod
+
+    init(businessId: String, businessName: String, lines: [CartLine], method: DeliveryMethod = .delivery) {
+        self.businessId = businessId
+        self.businessName = businessName
+        self.lines = lines
+        self.method = method
+    }
+
+    /// La misma bolsa (negocio y método) con otras líneas.
+    func with(lines: [CartLine]) -> Cart {
+        Self(businessId: businessId, businessName: businessName, lines: lines, method: method)
+    }
 
     var subtotal: Decimal { lines.reduce(Decimal.zero) { $0 + $1.total } }
 
@@ -77,15 +98,12 @@ struct Cart: Sendable, Equatable {
     func settingQuantity(of signature: String, to quantity: Int) -> Cart {
         let clamped = min(max(quantity, 1), CartLimits.maxQuantity)
         let key = Array(signature.utf16)
-        return Cart(
-            businessId: businessId, businessName: businessName,
-            lines: lines.map { $0.signatureKey == key ? $0.with(quantity: clamped) : $0 }
-        )
+        return with(lines: lines.map { $0.signatureKey == key ? $0.with(quantity: clamped) : $0 })
     }
 
     func removingLine(_ signature: String) -> Cart {
         let key = Array(signature.utf16)
-        return Cart(businessId: businessId, businessName: businessName, lines: lines.filter { $0.signatureKey != key })
+        return with(lines: lines.filter { $0.signatureKey != key })
     }
 
     /// Suma `delta` unidades a una línea sin salir de 1...`maxQuantity` (quitarla es `removingLine`). Se calcula sobre
@@ -112,12 +130,12 @@ struct Cart: Sendable, Equatable {
         var next = lines
         guard let other = next.indices.first(where: { $0 != index && next[$0].signatureKey == line.signatureKey }) else {
             next[index] = line
-            return (Cart(businessId: businessId, businessName: businessName, lines: next), false)
+            return (with(lines: next), false)
         }
         let wanted = next[other].quantity + line.quantity
         next[other] = line.with(quantity: min(wanted, CartLimits.maxQuantity))
         next.remove(at: index)
-        return (Cart(businessId: businessId, businessName: businessName, lines: next), wanted > CartLimits.maxQuantity)
+        return (with(lines: next), wanted > CartLimits.maxQuantity)
     }
 
     /// Devuelve `removed` a su sitio (o al final si la bolsa ya es más corta). Es `nil` si no cabe: ya hay una línea
@@ -127,7 +145,7 @@ struct Cart: Sendable, Equatable {
         guard !lines.contains(where: { $0.signatureKey == key }), lines.count < CartLimits.maxLines else { return nil }
         var next = lines
         next.insert(removed.line, at: min(max(removed.index, 0), next.count))
-        return Cart(businessId: businessId, businessName: businessName, lines: next)
+        return with(lines: next)
     }
 
     /// La huella de la bolsa: negocio y, por plato, su firma y su cantidad (sin importar el orden). Los precios no
@@ -163,7 +181,7 @@ private func merge(_ line: CartLine, into cart: Cart) -> AddResult {
     guard let existing = cart.lines.firstIndex(where: { $0.signatureKey == line.signatureKey }) else {
         if cart.lines.count >= CartLimits.maxLines { return .full }
         return .added(
-            Cart(businessId: cart.businessId, businessName: cart.businessName, lines: cart.lines + [line]),
+            cart.with(lines: cart.lines + [line]),
             capped: false
         )
     }
@@ -171,7 +189,7 @@ private func merge(_ line: CartLine, into cart: Cart) -> AddResult {
     var lines = cart.lines
     lines[existing] = line.with(quantity: min(wanted, CartLimits.maxQuantity))
     return .added(
-        Cart(businessId: cart.businessId, businessName: cart.businessName, lines: lines),
+        cart.with(lines: lines),
         capped: wanted > CartLimits.maxQuantity
     )
 }
