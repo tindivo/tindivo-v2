@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Herramientas fijadas de la app iOS (SW-16): versión exacta + sha256, sin brew ni mint.
+# Herramientas fijadas de la app iOS (SW-14, SW-16): versión exacta + sha256, sin brew ni mint.
 # Se guardan en la caché del usuario, compartida entre worktrees. Imprime nada; exporta las rutas al hacer `source`.
 set -euo pipefail
 
@@ -34,4 +34,31 @@ if [ ! -f "$XCODEGEN_DIR/.verified" ]; then
   [ -f "$XCODEGEN_DIR/.verified" ] || { echo "No se pudo instalar XcodeGen en $XCODEGEN_DIR" >&2; exit 1; }
 fi
 
-export TINDIVO_IOS_CACHE XCODEGEN
+# SwiftLint (SW-14): binario portable oficial de las releases de realm/SwiftLint, mismo esquema que XcodeGen.
+SWIFTLINT_VERSION="0.65.1"
+SWIFTLINT_SHA256="c1e429b0599cf1b516f369a2d9ec04eaf0e436f3c12b637df8851fa52ff694d0"
+SWIFTLINT_DIR="$TINDIVO_IOS_CACHE/swiftlint-$SWIFTLINT_VERSION"
+SWIFTLINT="$SWIFTLINT_DIR/swiftlint"
+
+if [ ! -f "$SWIFTLINT_DIR/.verified" ]; then
+  mkdir -p "$TINDIVO_IOS_CACHE"
+  staging="$(mktemp -d "$TINDIVO_IOS_CACHE/swiftlint-tmp.XXXXXX")"
+  trap 'rm -rf "$staging"' EXIT
+  curl -fsSL -o "$staging/swiftlint.zip" \
+    "https://github.com/realm/SwiftLint/releases/download/$SWIFTLINT_VERSION/portable_swiftlint.zip"
+  actual="$(shasum -a 256 "$staging/swiftlint.zip" | cut -d' ' -f1)"
+  if [ "$actual" != "$SWIFTLINT_SHA256" ]; then
+    echo "SwiftLint $SWIFTLINT_VERSION: sha256 inesperado ($actual). No se usa." >&2
+    exit 1
+  fi
+  unzip -q "$staging/swiftlint.zip" -d "$staging"
+  rm "$staging/swiftlint.zip"
+  touch "$staging/.verified"
+  if [ -d "$SWIFTLINT_DIR" ] && [ ! -f "$SWIFTLINT_DIR/.verified" ]; then rm -rf "$SWIFTLINT_DIR"; fi
+  if [ ! -e "$SWIFTLINT_DIR" ]; then mv "$staging" "$SWIFTLINT_DIR" 2>/dev/null || true; fi
+  rm -rf "$staging"
+  trap - EXIT
+  [ -f "$SWIFTLINT_DIR/.verified" ] || { echo "No se pudo instalar SwiftLint en $SWIFTLINT_DIR" >&2; exit 1; }
+fi
+
+export TINDIVO_IOS_CACHE XCODEGEN SWIFTLINT

@@ -1,0 +1,30 @@
+# SW-14. Nombres de reglas verificados con `swiftlint rules` (versión fijada en scripts/tools.sh).
+included:
+  - TindivoCustomer
+  - TindivoCustomerTests
+  - TindivoCustomerUITests
+  - Packages
+excluded:
+  - build
+  - "**/.build"
+  - "**/Generated"
+# El largo de línea y las comas finales los decide swift-format (.swift-format): aquí se apagan para no discutir con él.
+disabled_rules:
+  - line_length
+  - trailing_comma
+opt_in_rules:
+  - force_unwrapping
+force_cast: error
+force_try: error
+force_unwrapping: error
+file_length:
+  warning: 300
+function_body_length:
+  warning: 80
+cyclomatic_complexity:
+  warning: 15
+# Nombres de dos letras (id, to, at, ok) son habituales en Swift; solo avisa de una letra.
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
