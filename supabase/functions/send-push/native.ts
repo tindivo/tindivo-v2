@@ -28,6 +28,12 @@ export type NativePayload = {
   title: string
   body: string
   deepLink: string
+  /**
+   * La instalación destinataria (`push_devices.install_id`), opcional en el contrato. La app del
+   * cliente en Android solo pinta el aviso cuyo `install` es el de SU instalación vigente: al
+   * cerrar sesión o cambiar de cuenta el `installId` cambia y un aviso en tránsito se descarta.
+   */
+  install?: string
 }
 
 /** Lo mínimo que se usa de `Response`; `fetch` real y los dobles de los tests lo cumplen. */
@@ -43,6 +49,8 @@ export type NativeFetch = (
 ) => Promise<{ status: number; text(): Promise<string> }>
 
 export type NativeDevice = {
+  /** `push_devices.install_id`; va en el payload como `install` (solo al cliente en Android). */
+  installId?: string
   token: string
   platform: NativePlatform
   environment: NativeEnvironment
@@ -62,8 +70,12 @@ const APPS_WITH_NATIVE: readonly NativeApp[] = ['customer', 'negocios', 'motoriz
 
 // ── Payload y mensajes ──────────────────────────────────────────────────────
 
-export function nativePayload(note: NativeNote, eventType: string): NativePayload {
-  return {
+export function nativePayload(
+  note: NativeNote,
+  eventType: string,
+  installId?: string,
+): NativePayload {
+  const payload: NativePayload = {
     v: 1,
     type: eventType,
     tag: note.tag,
@@ -71,34 +83,56 @@ export function nativePayload(note: NativeNote, eventType: string): NativePayloa
     body: note.body,
     deepLink: note.url,
   }
+  if (installId) payload.install = installId
+  return payload
 }
 
 export type FcmMessage = {
   message: {
     token: string
-    notification: { title: string; body: string }
+    /** Ausente en un mensaje solo-datos. */
+    notification?: { title: string; body: string }
     data: Record<string, string>
     android: {
       priority: 'HIGH'
       collapse_key: string
-      notification: { tag: string; channel_id: string }
+      /** Ausente en un mensaje solo-datos. */
+      notification?: { tag: string; channel_id: string }
     }
   }
 }
 
-export function buildFcmMessage(token: string, payload: NativePayload): FcmMessage {
+/**
+ * El mensaje de FCM HTTP v1.
+ *
+ * SOLO-DATOS (`dataOnly`): sin `notification` ni `android.notification`. El sistema no lo pinta:
+ * llega siempre a `onMessageReceived` de la app, que comprueba que el aviso es de su instalación
+ * vigente (`install`) antes de mostrarlo. Es el de la app del cliente (spec de notificaciones,
+ * PR #202): así un aviso de la cuenta anterior que llega tras cerrar sesión no se ve. Las demás
+ * apps no tienen quién lo pinte y siguen con el bloque `notification`.
+ */
+export function buildFcmMessage(
+  token: string,
+  payload: NativePayload,
+  options: { dataOnly?: boolean } = {},
+): FcmMessage {
+  const data: Record<string, string> = {
+    v: String(payload.v),
+    type: payload.type,
+    tag: payload.tag,
+    title: payload.title,
+    body: payload.body,
+    deepLink: payload.deepLink,
+  }
+  if (options.dataOnly) {
+    if (payload.install !== undefined) data.install = payload.install
+    return { message: { token, data, android: { priority: 'HIGH', collapse_key: payload.tag } } }
+  }
   return {
     message: {
       token,
       notification: { title: payload.title, body: payload.body },
-      data: {
-        v: String(payload.v),
-        type: payload.type,
-        tag: payload.tag,
-        title: payload.title,
-        body: payload.body,
-        deepLink: payload.deepLink,
-      },
+      data,
       android: {
         priority: 'HIGH',
         collapse_key: payload.tag,
@@ -577,6 +611,7 @@ async function sendFcm(
   device: NativeDevice,
   payload: NativePayload,
   deps: NativeSendDeps,
+  dataOnly: boolean,
 ): Promise<NativeSendResult> {
   const fail = (status: number | null, reason: string): NativeSendResult => ({
     channel: 'fcm',
@@ -595,7 +630,7 @@ async function sendFcm(
     res = await deps.fetch(`https://fcm.googleapis.com/v1/projects/${config.projectId}/messages:send`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
-      body: JSON.stringify(buildFcmMessage(device.token, payload)),
+      body: JSON.stringify(buildFcmMessage(device.token, payload, { dataOnly })),
       signal: AbortSignal.timeout(NATIVE_TIMEOUT_MS),
       redirect: 'error',
     })
@@ -683,12 +718,16 @@ export async function sendNative(
   deps: NativeSendDeps,
 ): Promise<NativeSendResult | null> {
   if (app === 'admin') return null
-  const payload = nativePayload(note, eventType)
   try {
     if (device.platform === 'ios') {
+      const payload = nativePayload(note, eventType)
       return deps.config.apns ? await sendApns(deps.config.apns, device, app, payload, deps) : null
     }
-    return deps.config.fcm ? await sendFcm(deps.config.fcm, device, payload, deps) : null
+    // Al cliente, solo-datos y atado a su instalación: lo pinta la app, que descarta el aviso de
+    // una instalación que ya no es la suya (cerró sesión o cambió de cuenta).
+    const dataOnly = app === 'customer'
+    const payload = nativePayload(note, eventType, dataOnly ? device.installId : undefined)
+    return deps.config.fcm ? await sendFcm(deps.config.fcm, device, payload, deps, dataOnly) : null
   } catch {
     return {
       channel: device.platform === 'ios' ? 'apns' : 'fcm',

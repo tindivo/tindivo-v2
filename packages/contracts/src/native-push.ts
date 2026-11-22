@@ -14,6 +14,11 @@ import { z } from 'zod'
  * `deepLink` es una RUTA RELATIVA de la propia app (`/pedido/AB2C3D4E`), nunca una URL con
  * host: la app decide qué pantalla abre. En FCM viaja en `data` (todo como texto); en APNs,
  * en el cuerpo junto a `aps`.
+ *
+ * `install` (opcional, aditivo): el `installId` del dispositivo destinatario
+ * (`push_devices.install_id`). Solo lo lleva el aviso solo-datos de la app del cliente en
+ * Android: la app descarta el que no es de su instalación vigente, que cambia al cerrar sesión.
+ * Es un identificador aleatorio, no un dato personal.
  */
 export const NATIVE_PUSH_PAYLOAD_VERSION = 1
 
@@ -32,5 +37,9 @@ export const NativePushPayloadSchema = z.object({
     .max(512)
     .regex(/^\/(?!\/)/)
     .meta({ description: 'Ruta relativa de la app que abre el aviso' }),
+  install: z.string().min(8).max(64).optional().meta({
+    description:
+      'installId del dispositivo destinatario; la app descarta el aviso que no es de su instalación vigente',
+  }),
 })
 export type NativePushPayload = z.infer<typeof NativePushPayloadSchema>
