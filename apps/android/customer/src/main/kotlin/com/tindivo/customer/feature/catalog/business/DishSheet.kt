@@ -240,7 +240,7 @@ private fun QuantityStepper(
                 onClick = { onChange(quantity - 1) },
                 enabled = quantity > 1,
                 modifier = Modifier.size(TindivoSpacing.touchTarget),
-                colors = IconButtonDefaults.iconButtonColors(containerColor = TindivoColors.border),
+                colors = IconButtonDefaults.iconButtonColors(containerColor = scheme.outlineVariant),
             ) {
                 Icon(TindivoIcons.Remove, contentDescription = stringResource(R.string.dish_quantity_less))
             }

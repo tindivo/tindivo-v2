@@ -116,7 +116,6 @@
     <string name="cart_clear_confirm">Vaciar</string>
     <string name="cart_subtotal">Subtotal</string>
     <string name="cart_shipping_note">El envío y el total final se calculan al confirmar el pedido.</string>
-    <string name="cart_add_more">+ Agregar más</string>
     <string name="cart_add_more_from">Agregar más de %1$s</string>
     <string name="cart_empty">Tu bolsa está vacía</string>
     <string name="cart_see_businesses">Ver negocios</string>
@@ -130,7 +129,6 @@
     <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
     <string name="error_code">Código: %1$s</string>
 
-    <string name="signin_entry">Entrar</string>
     <string name="terms_gate_title">Actualizamos los términos</string>
     <string name="terms_gate_message">Léelos y acéptalos para seguir pidiendo.</string>
     <string name="terms_gate_accept">Aceptar y continuar</string>
@@ -150,12 +148,10 @@
     <string name="signin_error">No se pudo entrar. Inténtalo otra vez.</string>
     <string name="signin_unavailable">El inicio de sesión aún no está disponible en esta versión.</string>
 
-    <string name="account_entry">Mi cuenta</string>
     <string name="account_back">Volver</string>
     <string name="account_title">Cuenta</string>
     <string name="account_loading">Cargando</string>
     <string name="account_retry">Reintentar</string>
-    <string name="account_phone_verified">Teléfono verificado</string>
     <string name="account_phone_missing">Falta verificar tu teléfono para pedir</string>
     <string name="account_phone_verify">Verificar mi número</string>
     <string name="account_phone_change">Cambiar número</string>
@@ -164,7 +160,6 @@
     <string name="account_name_save">Guardar</string>
     <string name="account_name_cancel">Cancelar</string>
     <string name="account_sign_out">Cerrar sesión</string>
-    <string name="account_orders">Mis pedidos</string>
 
     <string name="account_addresses">Mis direcciones</string>
     <string name="account_addresses_open">Ver y editar mis direcciones</string>

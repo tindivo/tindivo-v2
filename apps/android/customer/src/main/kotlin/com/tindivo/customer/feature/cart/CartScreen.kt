@@ -387,7 +387,7 @@ private fun CartLineRow(
                     line.options.forEach {
                         Chip(
                             text = stringResource(R.string.cart_option, it.group, it.option),
-                            container = TindivoColors.border.copy(alpha = 0.5f),
+                            container = MaterialTheme.colorScheme.surfaceVariant,
                             content = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }

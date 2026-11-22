@@ -79,7 +79,7 @@ internal fun ChoiceRow(
                     Modifier
                         .size(
                             28.dp,
-                        ).border(2.dp, if (enabled) scheme.outline else TindivoColors.border, CircleShape),
+                        ).border(2.dp, if (enabled) scheme.outline else scheme.outlineVariant, CircleShape),
             )
         }
     }

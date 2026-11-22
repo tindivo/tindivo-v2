@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- La fondo de página de TindivoTheme (Palette.Surface): el arranque se ve del mismo color que la primera pantalla. -->
+    <!-- El fondo de página de TindivoTheme (Palette.Surface): el arranque se ve del mismo color que la primera pantalla. -->
     <color name="tindivo_window_background">#F7F8FA</color>
 
     <!-- Solo cubre el arranque: la UI real la pinta TindivoTheme de :core:designsystem. Solo claro, como el tema:

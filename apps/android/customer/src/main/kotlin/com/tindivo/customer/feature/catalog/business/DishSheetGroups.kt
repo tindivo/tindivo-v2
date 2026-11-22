@@ -110,7 +110,7 @@ private fun GroupStatusPill(progress: GroupProgress) {
 
         else -> {
             text = R.string.dish_group_optional
-            container = TindivoColors.border
+            container = scheme.outlineVariant
             content = scheme.onSurfaceVariant
         }
     }
@@ -163,7 +163,7 @@ private fun OptionRow(
         }
     val scheme = MaterialTheme.colorScheme
     val shape = MaterialTheme.shapes.medium
-    val border = if (selected) BorderStroke(1.5.dp, scheme.primary) else BorderStroke(1.dp, TindivoColors.border)
+    val border = if (selected) BorderStroke(1.5.dp, scheme.primary) else BorderStroke(1.dp, scheme.outlineVariant)
     Row(
         modifier =
             Modifier
