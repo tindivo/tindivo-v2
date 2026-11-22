@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.roborazzi)
 }
 
 // ID de cliente WEB de Google del Supabase de staging (tindivo-dev).
@@ -84,6 +85,19 @@ android {
         compose = true
     }
 
+    testOptions {
+        // Robolectric necesita los recursos y el manifiesto de la app para montar las pantallas en la JVM.
+        unitTests.isIncludeAndroidResources = true
+        // Robolectric 4.17 con la API 36 crea memoria compartida con las clases internas del JDK: sin estas dos opciones de
+        // la JVM de prueba (solo de prueba, no del APK) todas las pruebas de Robolectric mueren con IllegalAccessException.
+        unitTests.all {
+            it.jvmArgs(
+                "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                "--add-opens=java.base/java.io=ALL-UNNAMED",
+            )
+        }
+    }
+
     lint {
         abortOnError = true
         checkDependencies = true
@@ -158,6 +172,13 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Capturas de pantalla en JVM (KT-16, Jesús, 2026-11-21). La versión de Compose UI test sale del mismo BOM.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
