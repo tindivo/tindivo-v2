@@ -22,8 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -171,7 +170,7 @@ private fun ServiceHeader() {
         )
         // Decorativa: el texto ya nombra el servicio.
         Image(
-            bitmap = ImageBitmap.imageResource(R.drawable.img_moto_tindivo),
+            painter = painterResource(R.drawable.img_moto_tindivo),
             contentDescription = null,
             modifier =
                 Modifier
@@ -276,4 +275,4 @@ private fun CourierHomePreview() {
 private val HEADER_HEIGHT = 120.dp
 private val HEADER_MOTO_WIDTH = 120.dp
 private const val HEADER_TEXT_FRACTION = 0.62f
-private const val MOTO_RATIO = 352f / 318f
+private const val MOTO_RATIO = 440f / 398f

@@ -28,8 +28,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -50,7 +49,7 @@ private val TAGLINE_MAX = 120.dp
 private val TAGLINE_MAX_WIDE = 200.dp
 private val MOTO_WIDTH = 128.dp
 private val MOTO_WIDTH_WIDE = 168.dp
-private const val MOTO_RATIO = 352f / 318f
+private const val MOTO_RATIO = 440f / 398f
 
 /**
  * Degradado de la tarjeta de Entregas (150°). El tablero empieza en `#CF4A0C`; aquí empieza en `#C2410C` porque el
@@ -126,7 +125,7 @@ private fun androidx.compose.foundation.layout.BoxScope.CourierDecoration(wide: 
     )
     val motoWidth: Dp = if (wide) MOTO_WIDTH_WIDE else MOTO_WIDTH
     Image(
-        bitmap = ImageBitmap.imageResource(R.drawable.img_moto_tindivo),
+        painter = painterResource(R.drawable.img_moto_tindivo),
         contentDescription = null,
         modifier =
             Modifier

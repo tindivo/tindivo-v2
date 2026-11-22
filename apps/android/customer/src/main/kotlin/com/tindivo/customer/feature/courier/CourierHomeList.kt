@@ -15,8 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -135,7 +134,7 @@ private fun CourierEmpty() {
         verticalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
     ) {
         Image(
-            bitmap = ImageBitmap.imageResource(R.drawable.img_moto_tindivo),
+            painter = painterResource(R.drawable.img_moto_tindivo),
             contentDescription = null,
             modifier = Modifier.width(EMPTY_MOTO_WIDTH).aspectRatio(EMPTY_MOTO_RATIO),
         )
@@ -155,4 +154,4 @@ private fun CourierEmpty() {
 }
 
 private val EMPTY_MOTO_WIDTH = 160.dp
-private const val EMPTY_MOTO_RATIO = 352f / 318f
+private const val EMPTY_MOTO_RATIO = 440f / 398f

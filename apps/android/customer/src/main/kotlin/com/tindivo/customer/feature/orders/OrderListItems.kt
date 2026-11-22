@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -47,7 +48,7 @@ private val THUMB = 48.dp
 private val THUMB_MARK_WIDTH = 30.dp
 private const val MARK_RATIO = 158f / 93f
 private val MOTO_WIDTH = 72.dp
-private const val MOTO_RATIO = 352f / 318f
+private const val MOTO_RATIO = 440f / 398f
 private val SEGMENT_HEIGHT = 6.dp
 private const val STEPS = 4
 
@@ -118,7 +119,7 @@ internal fun ActiveOrderCard(
                 OrderThumb()
                 NameAndSubtitle(order = order, modifier = Modifier.weight(1f))
                 Image(
-                    bitmap = ImageBitmap.imageResource(R.drawable.img_moto_tindivo),
+                    painter = painterResource(R.drawable.img_moto_tindivo),
                     contentDescription = null,
                     modifier = Modifier.width(MOTO_WIDTH).aspectRatio(MOTO_RATIO),
                 )
@@ -278,7 +279,7 @@ internal fun EmptyOrders(onExplore: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
-            bitmap = ImageBitmap.imageResource(R.drawable.img_orders_empty),
+            painter = painterResource(R.drawable.img_orders_empty),
             contentDescription = null,
             modifier = Modifier.size(200.dp).clip(RoundedCornerShape(28.dp)),
         )
