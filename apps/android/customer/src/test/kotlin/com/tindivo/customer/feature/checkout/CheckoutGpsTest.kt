@@ -357,4 +357,120 @@ class CheckoutGpsOrderTest : CheckoutHarness() {
             assertEquals(orders()[0].headers["Idempotency-Key"], orders()[1].headers["Idempotency-Key"])
             assertTrue(body(1).absent("gpsValidation"))
         }
+
+    private fun JsonObject.gps(): JsonObject = getValue("gpsValidation").jsonObject
+
+    private fun JsonObject.method(): String = gps().getValue("method").jsonPrimitive.content
+
+    /** Una lectura adelantada a t = 0 cuya configuración tarda: la prueba suelta la espera cuando quiere. */
+    private fun liveWithSlowConfig(clock: () -> Long): CompletableDeferred<Unit> {
+        val config = CompletableDeferred<Unit>()
+        gpsOverride =
+            LiveCheckoutGps(FakeLocationSource(next = fix()), now = clock) {
+                config.await()
+                null
+            }
+        return config
+    }
+
+    @Test
+    fun `CAX-223-001 una lectura que vence mientras se espera la configuracion no sale y abre la hoja de sin senal`() =
+        runTest(dispatcher) {
+            var clock = 0L
+            val config = liveWithSlowConfig { clock }
+            val vm = ready()
+            vm.selectPay(PayMethod.Yape)
+
+            clock = 119_000L
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(0, orders().size)
+
+            clock = 121_000L
+            config.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(0, orders().size)
+            val sheet = vm.state.value.sheet
+            assertTrue(sheet is CheckoutSheet.GpsBlock && !sheet.noPermission)
+        }
+
+    @Test
+    fun `CAX-223-001 con compra previa, la lectura vencida en la configuracion sale como failed y sin coordenadas`() =
+        runTest(dispatcher) {
+            handlers["GET /customer/payment-options"] = {
+                reply(200, """{"data":{"contraentregaAllowed":true,"prepayRequired":false,"reason":"trusted"}}""")
+            }
+            var clock = 0L
+            val config = liveWithSlowConfig { clock }
+            val vm = ready()
+            vm.selectPay(PayMethod.Cash)
+            vm.selectCash(CashChoice.Exact)
+
+            clock = 119_000L
+            vm.confirm()
+            advanceUntilIdle()
+            clock = 121_000L
+            config.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            assertEquals("failed", body(0).method())
+            assertTrue(body(0).gps().absent("lat"))
+        }
+
+    @Test
+    fun `CAX-223-001 una lectura que vence mientras se reserva la bolsa sale como failed, sin coordenadas`() =
+        runTest(dispatcher) {
+            var clock = 0L
+            gpsOverride = LiveCheckoutGps(FakeLocationSource(next = fix()), now = { clock }) { null }
+            val vm = ready()
+            vm.selectPay(PayMethod.Yape)
+
+            clock = 119_000L
+            val gate = cartDisk.holdNextBeforeTransform()
+            vm.confirm()
+            advanceUntilIdle()
+            assertTrue("la reserva no llegó", gate.reached.isCompleted)
+            assertEquals(0, orders().size)
+
+            clock = 121_000L
+            gate.open()
+            advanceUntilIdle()
+
+            assertEquals(1, orders().size)
+            assertEquals("failed", body(0).method())
+            assertTrue(body(0).gps().absent("lat"))
+        }
+
+    @Test
+    fun `CAX-223-001 una lectura que vence durante la consulta del libro sale sin coordenadas y con la misma clave`() =
+        runTest(dispatcher) {
+            handlers["POST /customer/orders"] = { reply(409, problem(409, "conflict", "El pedido sigue en proceso.")) }
+            val vm = ready()
+            vm.selectPay(PayMethod.Yape)
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals("gps_high_accuracy", body(0).method())
+
+            val later = System.currentTimeMillis() + DEFAULT_FLIGHT_WINDOW_MS + 1
+            ledgerClock = { later }
+            val gate = CompletableDeferred<Unit>()
+            lookup.gate = gate
+            handlers["POST /customer/orders"] = { reply(201, CREATED_JSON) }
+            gpsClockMs = 119_000L
+            vm.confirm()
+            advanceUntilIdle()
+            assertEquals(1, orders().size)
+
+            gpsClockMs = 121_000L
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(2, orders().size)
+            assertEquals(orders()[0].headers["Idempotency-Key"], orders()[1].headers["Idempotency-Key"])
+            assertEquals("failed", body(1).method())
+            assertTrue(body(1).gps().absent("lat"))
+            assertEquals(1, gpsReads.size)
+        }
 }
