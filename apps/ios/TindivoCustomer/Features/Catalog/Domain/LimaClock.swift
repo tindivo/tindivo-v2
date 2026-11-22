@@ -43,4 +43,22 @@ enum LimaClock {
         default: String(localized: "dom")
         }
     }
+
+    /// «Lunes» … «Domingo» (0 = lunes), para la lista del horario semanal.
+    static func dayName(_ index: Int) -> String {
+        switch index {
+        case 0: String(localized: "Lunes")
+        case 1: String(localized: "Martes")
+        case 2: String(localized: "Miércoles")
+        case 3: String(localized: "Jueves")
+        case 4: String(localized: "Viernes")
+        case 5: String(localized: "Sábado")
+        default: String(localized: "Domingo")
+        }
+    }
+
+    /// `HH:MM` desde `HH:MM` o `HH:MM:SS`; `nil` si no se puede leer.
+    static func clockLabel(_ value: String?) -> String? {
+        parseMinutes(value).map { String(format: "%02d:%02d", $0 / hourMinutes, $0 % hourMinutes) }
+    }
 }

@@ -39,6 +39,13 @@ final class BusinessScreenModel {
     private(set) var visible: BusinessDetail?
     private(set) var ordering: OrderingMode = .open
     private(set) var rows: [MenuRow] = []
+    /// Lo que se ve de la búsqueda: se recalcula al cambiar la consulta o la carta, no en cada dibujo de la pantalla.
+    private(set) var searchResults: [MenuHit] = []
+    private(set) var hasSearchTerms = false
+    /// «Abierto · cierra 23:00» / «Cerrado · abre hoy 18:00»; `nil` sin horario o en modo catálogo (CA-CAT-P5).
+    private(set) var statusLine: String?
+    /// La hoja «Información» está abierta (CUS-CAT-027).
+    private(set) var isShowingInfo = false
 
     private let id: String
     private let catalog: any CatalogRepository
@@ -120,6 +127,9 @@ final class BusinessScreenModel {
         let detail: BusinessDetail? = if case let .loaded(raw) = state { raw.atInstant(now) } else { nil }
         visible = detail
         ordering = detail.map { orderingMode(for: $0, now: now) } ?? .open
+        statusLine = detail.flatMap { detail in
+            detail.catalogOnly ? nil : openStatusLine(openStatus(days: detail.schedule, now: now, openingConfirmed: detail.openingConfirmed), now: now)
+        }
         rows = detail.map(menuRows(for:)) ?? []
         headerIndices = categoryHeaderIndices(rows)
         selectedSection = min(selectedSection, max(0, headerIndices.count - 1))
@@ -128,6 +138,7 @@ final class BusinessScreenModel {
             self.openDishID = nil
         }
         if detail == nil { query = nil }
+        updateSearch()
     }
 
     /// La barra «Ver mi bolsa» de ESTE negocio, o `nil` si la bolsa es de otro o no hay.
@@ -139,27 +150,33 @@ final class BusinessScreenModel {
 
     var isSearching: Bool { query != nil && visible != nil }
 
-    /// Hay algo que buscar: con menos de dos caracteres útiles se sigue viendo la carta.
-    var hasSearchTerms: Bool { !parseTerms(query ?? "").isEmpty }
-
-    /// Los platos que casan con la consulta, sobre la carta que se ve (ya filtrada por franja).
-    var searchResults: [MenuHit] {
-        guard let visible, let query else { return [] }
-        return searchMenu(visible.categories, query: query)
+    /// Los platos que casan con la consulta, sobre la carta que se ve (ya filtrada por franja). `hasSearchTerms`: con
+    /// menos de dos caracteres útiles se sigue viendo la carta.
+    private func updateSearch() {
+        guard let visible, let query else {
+            searchResults = []
+            hasSearchTerms = false
+            return
+        }
+        hasSearchTerms = !parseTerms(query).isEmpty
+        searchResults = searchMenu(visible.categories, query: query)
     }
 
     func startSearch() {
         guard visible != nil else { return }
         query = ""
+        updateSearch()
     }
 
     func closeSearch() {
         query = nil
+        updateSearch()
     }
 
     func setQuery(_ text: String) {
         guard query != nil else { return }
         query = text
+        updateSearch()
     }
 
     // MARK: La ficha del plato
@@ -210,6 +227,109 @@ final class BusinessScreenModel {
 
     /// Desde cuántas secciones aparece el botón del índice (D-61).
     static let indexMinSections = 5
+    /// Desde cuántas secciones aparece la barra de secciones.
+    static let chipsMinSections = 2
+
+    /// La barra de secciones: `nil` con una sola sección o mientras se busca. `showsIndex`: desde 5 secciones.
+    struct SectionBar: Equatable {
+        let names: [String]
+        let selected: Int
+        let showsIndex: Bool
+    }
+
+    var sectionBar: SectionBar? {
+        guard let sections = visible?.sections, sections.count >= Self.chipsMinSections, !isSearching else { return nil }
+        return SectionBar(
+            names: sections.map(\.name), selected: selectedSection, showsIndex: sections.count >= Self.indexMinSections
+        )
+    }
+
+    // MARK: Información del negocio
+
+    func showInfo() {
+        guard visible != nil else { return }
+        isShowingInfo = true
+    }
+
+    func hideInfo() {
+        isShowingInfo = false
+    }
+
+    /// Lo de la hoja «Información»: el horario semanal con hoy resaltado y cómo se recibe el pedido, sin contacto.
+    var info: BusinessInfo? {
+        visible.map { detail in
+            BusinessInfo(
+                name: detail.name,
+                modes: deliveryModes(capability: detail.capability, etaMin: detail.etaMin, etaMax: detail.etaMax),
+                week: weekSchedule(days: detail.schedule, now: now),
+                status: statusLine
+            )
+        }
+    }
+
+    // MARK: El contador de cada plato (CUS-CAT-029)
+
+    /// Lo que la tarjeta de un plato ofrece según lo que ya hay en la bolsa de ESTE negocio; `nil` si no se puede
+    /// pedir (cerrado, modo catálogo, agotado o fuera de franja).
+    func control(for item: MenuItem) -> DishRowControl? {
+        guard ordering.allowsBag, item.orderable else { return nil }
+        let units = unitsInBag(of: item)
+        if item.isConfigurable { return units > 0 ? .inBag(quantity: units) : .choose }
+        return units > 0 ? .stepper(quantity: units, canIncrease: units < CartLimits.maxQuantity) : .add
+    }
+
+    private func unitsInBag(of item: MenuItem) -> Int {
+        guard let cart, let id = visible?.id, cart.businessId.caseInsensitiveCompare(id) == .orderedSame else { return 0 }
+        return cart.lines.filter { $0.itemId == item.id }.reduce(0) { $0 + $1.quantity }
+    }
+
+    /// El «+» de un plato sin opciones: suma una unidad. Si la bolsa es de otro restaurante abre la ficha, que sabe
+    /// preguntar si se vacía; si está llena o no se pudo guardar, lo dice con un aviso.
+    func increment(_ item: MenuItem) async {
+        guard ordering.allowsBag, item.orderable, let detail = visible,
+              let line = DishSelection(dish: item.dish).toLine() else { return }
+        do throws(CartError) {
+            switch try await cartStore.add(businessId: detail.id, businessName: detail.name, line: line) {
+            case let .added(_, capped): if capped { notices.show(DishScreenModel.addedMessage(capped: true)) }
+            case .otherBusiness: openDishID = item.id
+            case .full: notices.show(DishScreenModel.fullMessage)
+            }
+        } catch {
+            notices.show(DishScreenModel.failedMessage)
+        }
+    }
+
+    /// El «−» de un plato sin opciones: resta una unidad y, con la última, lo saca de la bolsa.
+    func decrement(_ item: MenuItem) async {
+        guard let line = DishSelection(dish: item.dish).toLine() else { return }
+        let units = unitsInBag(of: item)
+        do throws(CartError) {
+            if units > 1 {
+                try await cartStore.setQuantity(signature: line.signature, quantity: units - 1)
+            } else if units == 1 {
+                try await cartStore.remove(signature: line.signature)
+            }
+        } catch {
+            notices.show(DishScreenModel.failedMessage)
+        }
+    }
+
+    /// «Elegir» y «Editar selección»: abren la ficha del plato.
+    func chooseOptions(_ item: MenuItem) {
+        open(item)
+    }
+}
+
+/// Lo que la tarjeta de un plato ofrece junto a la foto (CUS-CAT-029).
+enum DishRowControl: Sendable, Equatable {
+    /// Plato sin opciones y nada en la bolsa: un «+».
+    case add
+    /// Plato sin opciones con unidades en la bolsa: «− 1 +».
+    case stepper(quantity: Int, canIncrease: Bool)
+    /// Plato con opciones y nada en la bolsa: «Elegir».
+    case choose
+    /// Plato con opciones con unidades en la bolsa: «En tu bolsa: N» y «Editar selección».
+    case inBag(quantity: Int)
 }
 
 private extension Array {
