@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -165,34 +166,40 @@ private fun CartTopBar(
             IconButton(onClick = onBack, modifier = Modifier.size(TindivoSpacing.touchTarget)) {
                 Icon(imageVector = TindivoIcons.ArrowBack, contentDescription = stringResource(R.string.business_back))
             }
-            Text(
-                text = stringResource(R.string.cart_title),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.semantics { heading() },
-            )
-            units?.let {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(start = 4.dp),
-                ) {
-                    Text(
-                        text = pluralStringResource(R.plurals.cart_units, it, it),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                    )
+            // El título y el contador toman lo que deja «Vaciar»: con letra grande el contador se corta con «…» y
+            // «Vaciar» ya no se parte letra por letra.
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.cart_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    modifier = Modifier.semantics { heading() },
+                )
+                units?.let {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(start = 8.dp).weight(1f, fill = false),
+                    ) {
+                        Text(
+                            text = pluralStringResource(R.plurals.cart_units, it, it),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
+                    }
                 }
             }
-            Spacer(modifier = Modifier.weight(1f))
             if (units != null) {
                 TextButton(
                     onClick = onClear,
                     modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget),
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text(text = stringResource(R.string.cart_clear), fontWeight = FontWeight.SemiBold)
+                    Text(text = stringResource(R.string.cart_clear), fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
         }
@@ -232,22 +239,31 @@ private fun ContinueBar(
                 modifier = Modifier.padding(start = 24.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = label, style = MaterialTheme.typography.titleLarge)
-                Icon(
-                    imageVector = TindivoIcons.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.padding(start = 8.dp).size(20.dp),
-                )
-                Spacer(modifier = Modifier.weight(1f))
+                // «Continuar →» toma lo que deja el subtotal: el monto nunca se corta; con letra grande, el texto sí («…»).
+                Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Icon(
+                        imageVector = TindivoIcons.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.padding(start = 8.dp).size(20.dp),
+                    )
+                }
                 Box(
                     modifier =
                         Modifier
-                            .height(40.dp)
+                            .padding(start = 8.dp)
+                            .heightIn(min = 40.dp)
                             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f), CircleShape)
                             .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = subtotal, style = MaterialTheme.typography.titleLarge)
+                    Text(text = subtotal, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
                 }
             }
         }
