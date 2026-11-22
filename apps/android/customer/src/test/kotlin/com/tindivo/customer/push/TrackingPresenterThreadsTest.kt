@@ -151,6 +151,45 @@ class TrackingPresenterThreadsTest {
         }
     }
 
+    @Test
+    fun `un aviso que llega mientras se borra la sesion se pinta con A y la limpieza del cierre lo retira (CAX-001)`() {
+        val rig = Rig(scope)
+        rig.release.countDown()
+        runBlocking { rig.store.state.first { it != SessionState.Unknown } }
+        val install =
+            runBlocking {
+                rig.installations
+                    .bindTo("user-1")
+                    .installId
+                    .toString()
+            }
+        // El borrado del disco falla dos veces y se reintenta: el estado visible sigue en A durante todo ese tramo.
+        rig.backend.clearFailuresLeft = 2
+        val duringClear = mutableListOf<Boolean?>()
+        rig.backend.onClear = {
+            if (duringClear.isEmpty()) {
+                val pushed = AtomicReference<Boolean?>(null)
+                val pushing = thread { pushed.set(runBlocking { rig.presenter.onPush(payload(install)) }) }
+                pushing.join(JOIN_MS)
+                duringClear += pushed.get()
+            }
+        }
+
+        runBlocking { assertTrue(rig.store.signOutLocally("user-1")) }
+
+        // Se pintó con A todavía visible (nunca con la sesión ya cerrada) y el cierre publicó `SignedOut` después.
+        assertEquals(listOf<Boolean?>(true), duringClear)
+        assertEquals(listOf<SessionState>(SessionState.SignedIn("user-1")), rig.sessionAtShow)
+        assertEquals(SessionState.SignedOut, rig.store.state.value)
+
+        // La limpieza que acompaña al cierre lo retira, y un aviso tardío de A ya no se pinta.
+        runBlocking { rig.presenter.closeAccount { } }
+        assertTrue(rig.notifications.visible.isEmpty())
+        assertTrue(rig.marks.saved.isEmpty())
+        assertFalse(runBlocking { rig.presenter.onPush(payload(install)) })
+        assertEquals(1, rig.notifications.shows.size)
+    }
+
     private companion object {
         const val WAIT_SECONDS = 20L
         const val HOLD_MS = 400L
