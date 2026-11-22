@@ -127,6 +127,6 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 ### DA-26 · El OpenAPI declara cerradas las respuestas
 
 - 2026-11-22 · No bloquea · Detectó: Claude
-- **Contexto**: 164 de 165 objetos de respuesta llevan `additionalProperties: false` y 16 enums son cerrados; API-3 permite añadir campos y valores. El cliente Swift generado los rechaza (medido el 2026-11-22).
+- **Contexto**: 167 esquemas de respuesta llevan `additionalProperties: false` y 7 enums de respuesta son cerrados (medido con `scripts/ios-openapi-tolerant.mjs`); API-3 permite añadir campos y valores. El cliente Swift generado los rechaza (medido el 2026-11-22).
 - **Alternativas**: (a) el generador del OpenAPI deja de emitirlos en respuestas; (b) cada cliente deriva su documento tolerante (lo que hace iOS hoy, `scripts/ios-openapi-tolerant.mjs`).
 - **Recomendación**: (a), revisado por Codex (toca el contrato).
