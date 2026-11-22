@@ -155,8 +155,9 @@ class PresenterRig(
     val installations: PushInstallationStore =
         DataStorePushInstallationStore(MemoryDataStore(PushInstallationSnapshot())),
     val notifications: FakePushNotifications = FakePushNotifications(),
+    val prefs: NotificationPrefsStore = NotificationPrefsStore.AlwaysOn,
 ) {
-    val presenter = PushPresenter(session, installations, notifications)
+    val presenter = PushPresenter(session, installations, notifications, prefs = prefs)
 }
 
 /** La identidad de la instalación con una compuerta: [current] lee el valor y, si hay [gate], espera ahí (ya leído). */

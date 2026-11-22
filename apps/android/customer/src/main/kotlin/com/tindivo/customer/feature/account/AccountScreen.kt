@@ -41,6 +41,9 @@ import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
+import com.tindivo.customer.push.NotificationsEffects
+import com.tindivo.customer.push.NotificationsToggleRow
+import com.tindivo.customer.push.NotificationsViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
 import com.tindivo.customer.support.arcoRightsLink
@@ -61,8 +64,11 @@ fun AccountDestination(
     profile: ProfileLink,
     onDeleteAccount: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel(),
+    notifications: NotificationsViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val push = notifications.state.collectAsStateWithLifecycle().value
+    NotificationsEffects(notifications)
     val supportNumber = hiltViewModel<SupportViewModel>().number.collectAsStateWithLifecycle().value
     val nameEdit = viewModel.nameEdit.collectAsStateWithLifecycle().value
     // Volvió de «Completa tu perfil» con el perfil ya creado: se carga la cuenta.
@@ -103,6 +109,9 @@ fun AccountDestination(
         nameEdit = nameEdit,
         onSaveName = viewModel::saveName,
         onDismissNameEdit = viewModel::dismissNameEdit,
+        notificationsToggle = {
+            push.status?.let { NotificationsToggleRow(on = it.on, onToggle = notifications::toggle) }
+        },
     )
 }
 
@@ -128,6 +137,7 @@ fun AccountScreen(
     nameEdit: NameEditState = NameEditState.Idle,
     onSaveName: (String) -> Unit = {},
     onDismissNameEdit: () -> Unit = {},
+    notificationsToggle: @Composable () -> Unit = {},
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -161,6 +171,7 @@ fun AccountScreen(
                 }
 
                 is AccountUiState.Loaded -> {
+                    notificationsToggle()
                     Profile(
                         profile = state.profile,
                         onOpenOrders = onOpenOrders,

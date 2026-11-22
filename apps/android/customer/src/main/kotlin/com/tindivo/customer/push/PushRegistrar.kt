@@ -64,7 +64,9 @@ class PushRegistrar(
     private val scope: CoroutineScope,
     private val unregisterTimeoutMs: Long = UNREGISTER_TIMEOUT_MS,
     private val registrationWaitMs: Long = REGISTRATION_WAIT_MS,
-) : PushSignOut {
+    private val prefs: NotificationPrefsStore = NotificationPrefsStore.AlwaysOn,
+) : PushSignOut,
+    PushSwitch {
     private val mutex = Mutex()
 
     /** La cuenta que está cerrando sesión: mientras dure, no se registra. Se limpia cuando la sesión ya cambió. */
@@ -100,11 +102,30 @@ class PushRegistrar(
     }
 
     /** FCM rotó el token (`onNewToken`), o se acaba de conceder el permiso: se vuelve a registrar la cuenta vigente. */
-    fun refresh() {
+    override fun refresh() {
         scope.launch {
             val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return@launch
             mutex.withLock { registerLocked(account) }
         }
+    }
+
+    /** Apagar en Cuenta: primero nada se pinta, luego la baja de este aparato con la cuenta vigente (CA-NOT-06). */
+    override suspend fun optOut() {
+        mutex.withLock {
+            presenter.silence { prefs.update { it.copy(enabled = false) } }
+            val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return
+            val installation = installations.current() ?: return
+            val installId = installation.installId.toUuidOrNull() ?: return
+            if (installation.accountId != account || !live(account)) return
+            withTimeoutOrNull(unregisterTimeoutMs) { devices.unregister(installId, account) }
+        }
+    }
+
+    /** Encender en Cuenta: se guarda y se vuelve a registrar la cuenta vigente. */
+    override suspend fun optIn() {
+        prefs.update { it.copy(enabled = true) }
+        val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return
+        mutex.withLock { registerLocked(account) }
     }
 
     override suspend fun beforeSignOut(accountId: String) {
@@ -219,7 +240,7 @@ class PushRegistrar(
     }
 
     private suspend fun registerLocked(account: String) {
-        if (!tokens.enabled || !access.permissionGranted() || !live(account)) return
+        if (!tokens.enabled || !access.permissionGranted() || !prefs.current().enabled || !live(account)) return
         // Antes de atar la instalación: un borrado de token pendiente no puede correr después y llevarse el nuevo.
         cleanTokenLocked()
         val binding = installations.bindTo(account)

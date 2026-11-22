@@ -304,6 +304,7 @@ private fun NavGraphBuilder.ordersGraph(navController: NavHostController) {
             onSignIn = {
                 navController.navigate(SignInRoute) { popUpTo<OrderDetailRoute> { inclusive = true } }
             },
+            onOpenAccount = { navController.navigate(AccountRoute) },
         )
     }
 }
@@ -344,6 +345,7 @@ private fun OrderDetailWithReview(
     onBackToMenu: () -> Unit,
     onOpenOrders: () -> Unit,
     onSignIn: () -> Unit,
+    onOpenAccount: () -> Unit,
 ) {
     val review = rememberReviewController(autoPrompt = false)
     OrderDetailDestination(
@@ -351,6 +353,7 @@ private fun OrderDetailWithReview(
         onBackToMenu = onBackToMenu,
         onOpenOrders = onOpenOrders,
         onSignIn = onSignIn,
+        onOpenAccount = onOpenAccount,
         canRate = { id -> review.state.pending?.orderId == id },
         onRate = review.openForm,
     )

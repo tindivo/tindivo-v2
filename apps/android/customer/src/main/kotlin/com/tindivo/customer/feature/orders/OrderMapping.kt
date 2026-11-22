@@ -93,6 +93,7 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
         businessName = businessName,
         phase = phase,
         headline = headlineOf(phase, status, payment, pickup),
+        status = status,
         isPickup = pickup,
         lines = lineUis,
         deliveryFee = feeText,

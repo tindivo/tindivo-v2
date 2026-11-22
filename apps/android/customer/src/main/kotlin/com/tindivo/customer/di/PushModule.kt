@@ -9,11 +9,15 @@ import com.tindivo.core.network.PushDeviceInfo
 import com.tindivo.core.network.PushRepository
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.push.AndroidNotificationAccess
+import com.tindivo.customer.push.DataStoreNotificationPrefsStore
 import com.tindivo.customer.push.DataStorePushInstallationStore
 import com.tindivo.customer.push.DeviceDescription
 import com.tindivo.customer.push.FirebaseConfig
 import com.tindivo.customer.push.FirebasePushTokens
 import com.tindivo.customer.push.NotificationAccess
+import com.tindivo.customer.push.NotificationPrefsSerializer
+import com.tindivo.customer.push.NotificationPrefsSnapshot
+import com.tindivo.customer.push.NotificationPrefsStore
 import com.tindivo.customer.push.PushDevices
 import com.tindivo.customer.push.PushInstallationSerializer
 import com.tindivo.customer.push.PushInstallationSnapshot
@@ -22,6 +26,7 @@ import com.tindivo.customer.push.PushNotifier
 import com.tindivo.customer.push.PushPresenter
 import com.tindivo.customer.push.PushRegistrar
 import com.tindivo.customer.push.PushSignOut
+import com.tindivo.customer.push.PushSwitch
 import com.tindivo.customer.push.PushTokens
 import com.tindivo.customer.session.SessionPublishLock
 import com.tindivo.customer.session.SessionStore
@@ -43,6 +48,7 @@ import javax.inject.Singleton
 /** En `noBackupFilesDir`: la identidad de la instalación nunca viaja a una copia ni a otro aparato. */
 private const val PUSH_INSTALLATION_FILE = "tindivo_push_installation.json"
 private const val MAX_DEVICE_MODEL = 128
+private const val NOTIFICATION_PREFS_FILE = "tindivo_notification_prefs.json"
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -145,8 +151,19 @@ object PushModule {
         description: DeviceDescription,
         presenter: PushPresenter,
         @ApplicationScope scope: CoroutineScope,
+        prefs: NotificationPrefsStore,
     ): PushRegistrar =
-        PushRegistrar(sessionStore, installations, tokens, access, devices, description, presenter, scope)
+        PushRegistrar(
+            sessionStore,
+            installations,
+            tokens,
+            access,
+            devices,
+            description,
+            presenter,
+            scope,
+            prefs = prefs,
+        )
 
     @Provides
     fun providePushSignOut(registrar: PushRegistrar): PushSignOut = registrar
@@ -159,5 +176,28 @@ object PushModule {
         installations: PushInstallationStore,
         notifier: PushNotifier,
         publishLock: SessionPublishLock,
-    ): PushPresenter = PushPresenter(sessionStore, installations, notifier, publishLock)
+        prefs: NotificationPrefsStore,
+    ): PushPresenter = PushPresenter(sessionStore, installations, notifier, publishLock, prefs)
+
+    @Provides
+    fun providePushSwitch(registrar: PushRegistrar): PushSwitch = registrar
+
+    /** En `noBackupFilesDir`, como la identidad: lo decidido es de este aparato. Ilegible = preferencias de fábrica. */
+    @Provides
+    @Singleton
+    fun provideNotificationPrefsStore(
+        @ApplicationContext context: Context,
+        @IoDispatcher io: CoroutineDispatcher,
+    ): NotificationPrefsStore =
+        DataStoreNotificationPrefsStore(
+            DataStoreFactory.create(
+                serializer = NotificationPrefsSerializer,
+                corruptionHandler =
+                    ReplaceFileCorruptionHandler<NotificationPrefsSnapshot>(
+                        produceNewData = { NotificationPrefsSnapshot() },
+                    ),
+                scope = CoroutineScope(io + SupervisorJob()),
+                produceFile = { File(context.noBackupFilesDir, NOTIFICATION_PREFS_FILE) },
+            ),
+        )
 }

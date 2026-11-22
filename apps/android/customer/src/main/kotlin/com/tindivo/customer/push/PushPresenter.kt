@@ -34,6 +34,7 @@ class PushPresenter(
     private val installations: PushInstallationStore,
     private val notifications: PushNotifications,
     private val publishLock: SessionPublishLock = SessionPublishLock(),
+    private val prefs: NotificationPrefsStore = NotificationPrefsStore.AlwaysOn,
 ) {
     private val lock = Mutex()
 
@@ -46,6 +47,8 @@ class PushPresenter(
             val account =
                 (sessionStore.state.first { it != SessionState.Unknown } as? SessionState.SignedIn)?.userId
                     ?: return false
+            // Apagados en Cuenta (CA-NOT-06): no se pinta nada, aunque el aviso ya viniera en camino.
+            if (!prefs.current().enabled) return false
             val installation = installations.current() ?: return false
             val install = payload.install
             if (installation.accountId != account || install == null || install != installation.installId) return false
@@ -72,6 +75,12 @@ class PushPresenter(
                 notifications.clearAll()
             }
         }
+
+    /**
+     * Corre [change] (apagar los avisos) bajo el mismo candado que [onPush]: un aviso que ya se estaba comprobando se
+     * pinta antes, y ninguno se pinta después.
+     */
+    suspend fun silence(change: suspend () -> Unit) = lock.withLock { change() }
 
     private fun stillCurrent(
         account: String,

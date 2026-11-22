@@ -183,6 +183,8 @@ internal data class OrderDetailUi(
     val pendingAcceptanceAt: Instant? = null,
     val estimatedReadyAt: Instant? = null,
     val travel: TravelRange? = null,
+    /** El `status` tal cual: decide cuándo se ofrecen los avisos (`pushOfferMoment`). */
+    val status: String = "",
 )
 
 /**
