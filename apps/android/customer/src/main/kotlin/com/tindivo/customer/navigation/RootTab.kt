@@ -28,3 +28,12 @@ fun rootTabFor(
             }?.key
     return if (tab == RootTab.Courier && courierListOnly) null else tab
 }
+
+/**
+ * Sin sesión, «Pedidos» y «Cuenta» abren la entrada: el historial es de una cuenta, y abrirlo sin ella devolvía a la
+ * persona al Inicio sin decirle por qué.
+ */
+fun tabNeedsSignIn(
+    tab: RootTab,
+    signedIn: Boolean,
+): Boolean = !signedIn && (tab == RootTab.Orders || tab == RootTab.Account)

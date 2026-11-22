@@ -370,22 +370,24 @@ private fun OrderDetailWithReview(
 
 /**
  * Cambia de pestaña: siempre se vuelve a la raíz de esa pestaña, con la pila de Inicio por debajo (atrás sale de la
- * app desde cualquier pestaña) y sin duplicar destinos. Sin sesión, «Cuenta» abre la entrada.
+ * app desde cualquier pestaña) y sin duplicar destinos. Sin sesión, «Pedidos» y «Cuenta» abren la entrada.
  */
 private fun NavHostController.openTab(
     tab: RootTab,
     signedIn: Boolean,
 ) {
+    val needsSignIn = tabNeedsSignIn(tab, signedIn)
     val destination: Any =
-        when (tab) {
-            RootTab.Home -> CatalogHomeRoute
-            RootTab.Courier -> CourierHomeRoute()
-            RootTab.Orders -> OrdersRoute
-            RootTab.Account -> if (signedIn) AccountRoute else SignInRoute
+        when {
+            needsSignIn -> SignInRoute
+            tab == RootTab.Home -> CatalogHomeRoute
+            tab == RootTab.Courier -> CourierHomeRoute()
+            tab == RootTab.Orders -> OrdersRoute
+            else -> AccountRoute
         }
     navigate(destination) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
-        restoreState = tab != RootTab.Account
+        restoreState = tab != RootTab.Account && !needsSignIn
     }
 }

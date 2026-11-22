@@ -7,7 +7,9 @@ import com.tindivo.customer.feature.courier.CourierRequestRoute
 import com.tindivo.customer.feature.orders.OrderDetailRoute
 import com.tindivo.customer.feature.orders.OrdersRoute
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** La barra inferior solo se ve en las cuatro pestañas raíz (v3.1): nunca dentro del negocio, el checkout ni el seguimiento. */
@@ -43,5 +45,18 @@ class RootTabsTest {
     @Test
     fun `sin ruta no hay barra`() {
         assertNull(rootTabFor(null))
+    }
+
+    @Test
+    fun `sin sesion Pedidos y Cuenta abren la entrada, como Cuenta`() {
+        assertTrue(tabNeedsSignIn(RootTab.Orders, signedIn = false))
+        assertTrue(tabNeedsSignIn(RootTab.Account, signedIn = false))
+        assertFalse(tabNeedsSignIn(RootTab.Home, signedIn = false))
+        assertFalse(tabNeedsSignIn(RootTab.Courier, signedIn = false))
+    }
+
+    @Test
+    fun `con sesion ninguna pestana pide entrar`() {
+        RootTab.entries.forEach { assertFalse(tabNeedsSignIn(it, signedIn = true)) }
     }
 }
