@@ -62,6 +62,8 @@ struct MenuItemRowView: View {
                     .tindivoText(TindivoTokens.Typography.body)
                     .fontWeight(.bold)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
                     .foregroundStyle(Color.tindivo.ink)
                 if let status {
                     Text(status)

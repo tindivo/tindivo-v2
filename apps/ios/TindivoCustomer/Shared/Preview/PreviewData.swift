@@ -61,7 +61,14 @@ enum PreviewData {
             ),
             .init(
                 id: "c2", name: "Bebidas", displayOrder: 2,
-                items: [.init(id: "i3", name: "Chicha morada", basePrice: Decimal(string: "5.00") ?? 0, displayOrder: 1)]
+                items: [
+                    .init(id: "i3", name: "Chicha morada", basePrice: Decimal(string: "5.00") ?? 0, displayOrder: 1),
+                    // Con franja (hasta las 20:20): para probar que la ficha se cierra sola al salir de ella.
+                    .init(
+                        id: "i4", name: "Chicha de la noche", basePrice: Decimal(string: "4.00") ?? 0, displayOrder: 2,
+                        availableFrom: "12:00", availableTo: "20:20"
+                    ),
+                ]
             ),
         ],
         featured: .init(title: "Destacados", itemIds: ["i1", "i3"])

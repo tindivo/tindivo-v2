@@ -18,8 +18,12 @@ final class CatalogFlowUITests: XCTestCase {
 
     /// La bolsa de una corrida anterior (de otro negocio) abriría la pregunta de vaciarla. El reloj de la app se fija
     /// en un martes a las 20:00 de Lima: el horario nocturno no depende de cuándo corra.
-    private func launch(fakeCatalog: Bool, seedOtherBag: Bool = false) {
+    private func launch(fakeCatalog: Bool, seedOtherBag: Bool = false, fastClock: Bool = false, largeType: Bool = false) {
         app.launchArguments = ["-tindivo-reset-cart", "-tindivo-now", "2026-07-07T20:00:00-05:00"]
+        if largeType {
+            app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        }
+        if fastClock { app.launchArguments.append("-tindivo-clock-fast") }
         if seedOtherBag { app.launchArguments.append("-tindivo-seed-other-bag") }
         if fakeCatalog { app.launchArguments.append("-tindivo-fake-catalog") }
         app.launch()
@@ -71,6 +75,40 @@ final class CatalogFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Pollería Don Lucho"].exists, "La bolsa no es de Pollería Don Lucho")
         XCTAssertTrue(app.staticTexts["Chicha morada"].exists, "La línea no es «Chicha morada»")
         XCTAssertFalse(app.staticTexts["Arroz chaufa"].exists, "Sigue el plato del otro negocio")
+    }
+
+    /// Un plato con franja hasta las 20:20: con la ficha abierta entre 20:00 y 20:20 (reloj acelerado, un minuto por segundo),
+    /// al salir de la franja la ficha se cierra sola y la carta ya no deja abrirlo.
+    func testTheDishClosesItselfWhenItsWindowEnds() throws {
+        launch(fakeCatalog: true, fastClock: true)
+        openDonLucho()
+        let dish = dishRow("Chicha de la noche")
+        XCTAssertTrue(dish.waitForExistence(timeout: 20), "No está «Chicha de la noche» a las 20:00")
+        dish.tap()
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 5))
+        XCTAssertTrue(element("dish.add").waitForNonExistence(timeout: 30), "La ficha siguió abierta pasada su franja")
+    }
+
+    /// Con la letra más grande (AX5): el flujo se recorre igual y las pantallas quedan adjuntas para revisarlas a ojo.
+    func testTheFlowWithTheLargestType() throws {
+        launch(fakeCatalog: true, largeType: true)
+        openDonLucho()
+        let dish = dishRow("1/4 de pollo")
+        XCTAssertTrue(dish.waitForExistence(timeout: 20))
+        dish.tap()
+        let add = element("dish.add")
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        attach("ax5-plato-incompleto")
+        app.staticTexts["Pecho"].firstMatch.tap()
+        attach("ax5-plato-completo")
+        add.tap()
+        let bar = element("business.cartBar")
+        XCTAssertTrue(bar.waitForExistence(timeout: 10))
+        attach("ax5-negocio-con-bolsa")
+        XCTAssertTrue(bar.isHittable, "La barra «Ver mi bolsa» no se puede tocar")
+        bar.tap()
+        XCTAssertTrue(element("cart.line").waitForExistence(timeout: 10))
+        attach("ax5-bolsa")
     }
 
     func testAddADishFromTheFirstOpenBusiness() throws {

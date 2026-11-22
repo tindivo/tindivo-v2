@@ -27,22 +27,42 @@ struct CartBarView: View {
 
     var body: some View {
         TindivoBottomBar {
-            Button(action: action) {
-                HStack(spacing: TindivoTokens.Spacing.spaceInner) {
-                    Text("Ver mi bolsa")
-                        .tindivoText(TindivoTokens.Typography.cta)
-                    Spacer(minLength: 0)
-                    Text("\(unitsText(summary.count)) · \(summary.subtotal)")
-                        .tindivoText(TindivoTokens.Typography.body)
-                        .monospacedDigit()
-                        .multilineTextAlignment(.trailing)
-                }
-                .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
-                .frame(maxWidth: .infinity, minHeight: TindivoTokens.Spacing.ctaHeight)
+            // Con letra grande «Ver mi bolsa» y el resumen no caben en una línea: pasan a dos, uno sobre otro, y la
+            // cápsula (que en varias líneas se comería el texto) pasa a rectángulo redondeado.
+            ViewThatFits(in: .horizontal) {
+                button(vertical: false)
+                button(vertical: true)
             }
-            .buttonStyle(TindivoCTAButtonStyle())
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("business.cartBar")
+        }
+    }
+
+    private func button(vertical: Bool) -> some View {
+        Button(action: action) {
+            layout(vertical: vertical) {
+                Text("Ver mi bolsa")
+                    .tindivoText(TindivoTokens.Typography.cta)
+                    .lineLimit(1)
+                    .fixedSize()
+                if !vertical { Spacer(minLength: 0) }
+                Text("\(unitsText(summary.count)) · \(summary.subtotal)")
+                    .tindivoText(TindivoTokens.Typography.body)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
+            .padding(.vertical, vertical ? TindivoTokens.Spacing.spaceInner : 0)
+            .frame(maxWidth: .infinity, minHeight: TindivoTokens.Spacing.ctaHeight)
+        }
+        .buttonStyle(TindivoCTAButtonStyle(cornerRadius: vertical ? TindivoTokens.Radius.radiusField : nil))
+    }
+
+    private func layout(vertical: Bool, @ViewBuilder _ content: () -> some View) -> some View {
+        let spacing = TindivoTokens.Spacing.spaceInner
+        return Group {
+            if vertical { VStack(spacing: 2, content: content) } else { HStack(spacing: spacing, content: content) }
         }
     }
 }

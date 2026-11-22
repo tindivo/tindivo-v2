@@ -10,6 +10,7 @@ public struct TindivoStepper: View {
     private let increaseLabel: String
     private let onDecrease: () -> Void
     private let onIncrease: () -> Void
+    @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 16
 
     public init(
         quantity: Int,
@@ -35,6 +36,8 @@ public struct TindivoStepper: View {
             Text(verbatim: "\(quantity)")
                 .tindivoText(TindivoTokens.Typography.titleSection)
                 .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
                 .foregroundStyle(Color.tindivo.ink)
                 .frame(minWidth: 24)
             roundButton(.plus, label: increaseLabel, enabled: canIncrease, action: onIncrease)
@@ -44,7 +47,7 @@ public struct TindivoStepper: View {
     private func roundButton(_ icon: TindivoIcon, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(tindivo: icon)
-                .font(.system(size: 16, weight: .bold))
+                .font(.system(size: iconSize, weight: .bold))
                 .foregroundStyle(enabled ? Color.tindivo.ink : Color.tindivo.onDisabled)
                 .frame(width: TindivoTokens.Spacing.touchTarget, height: TindivoTokens.Spacing.touchTarget)
                 .overlay(Circle().stroke(enabled ? Color.tindivo.outline : Color.tindivo.disabled, lineWidth: 1))

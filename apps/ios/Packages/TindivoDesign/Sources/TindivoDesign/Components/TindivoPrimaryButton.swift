@@ -37,6 +37,7 @@ public struct TindivoPrimaryButton: View {
                 }
             }
             .frame(maxWidth: .infinity, minHeight: TindivoTokens.Spacing.ctaHeight)
+            .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
         }
         .buttonStyle(TindivoCTAButtonStyle())
         .allowsHitTesting(!loading)
@@ -47,8 +48,17 @@ public struct TindivoPrimaryButton: View {
 /// El aspecto del CTA, para quien necesita un botón principal con un contenido propio (la barra «Ver mi bolsa»).
 public struct TindivoCTAButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
+    private let cornerRadius: CGFloat?
 
-    public init() {}
+    /// `cornerRadius` en `nil` da la cápsula; con contenido de varias líneas (letra grande) se pasa un radio fijo,
+    /// porque una cápsula alta se come el texto de los lados.
+    public init(cornerRadius: CGFloat? = nil) {
+        self.cornerRadius = cornerRadius
+    }
+
+    private var shape: AnyShape {
+        cornerRadius.map { AnyShape(RoundedRectangle(cornerRadius: $0)) } ?? AnyShape(Capsule())
+    }
 
     public func makeBody(configuration: Configuration) -> some View {
         let fill = enabled
@@ -56,9 +66,9 @@ public struct TindivoCTAButtonStyle: ButtonStyle {
             : Color.tindivo.disabled
         configuration.label
             .foregroundStyle(enabled ? Color.tindivo.onPrimary : Color.tindivo.onDisabled)
-            .background(fill, in: Capsule())
+            .background(fill, in: shape)
             .tindivoElevation(enabled ? TindivoTokens.Elevation.elevation3 : [])
-            .contentShape(Capsule())
+            .contentShape(shape)
     }
 }
 

@@ -79,6 +79,8 @@ struct DishView: View {
                     .tindivoText(TindivoTokens.Typography.titleScreen)
                     .foregroundStyle(Color.tindivo.ink)
                     .accessibilityAddTraits(.isHeader)
+                    // Sin foto, la X cae sobre el título: se le deja su hueco a la derecha.
+                    .padding(.trailing, model.item.heroURL == nil ? TindivoTokens.Spacing.touchTarget : 0)
                 if let description = model.item.description {
                     Text(description)
                         .tindivoText(TindivoTokens.Typography.body)
@@ -87,6 +89,8 @@ struct DishView: View {
                 Text(model.item.priceText)
                     .tindivoText(TindivoTokens.Typography.titleSection)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
                     .foregroundStyle(Color.tindivo.ink)
             }
             .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)

@@ -6,6 +6,7 @@ public struct TindivoIconButton: View {
     private let label: LocalizedStringKey
     private let tint: Color
     private let action: () -> Void
+    @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 18
 
     public init(
         _ icon: TindivoIcon,
@@ -22,7 +23,7 @@ public struct TindivoIconButton: View {
     public var body: some View {
         Button(action: action) {
             Image(tindivo: icon)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: iconSize, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(minWidth: TindivoTokens.Spacing.touchTarget, minHeight: TindivoTokens.Spacing.touchTarget)
                 .contentShape(Rectangle())

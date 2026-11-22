@@ -5,6 +5,8 @@ import TindivoDesign
 struct DishGroupSection: View {
     let group: DishGroup
     let model: DishScreenModel
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ScaledMetric(relativeTo: .body) private var markSize: CGFloat = 22
 
     var body: some View {
         let progress = model.selection.progress(of: group)
@@ -29,6 +31,8 @@ struct DishGroupSection: View {
                 Text(counter(progress))
                     .tindivoText(TindivoTokens.Typography.bodySecondary)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
                     .foregroundStyle(Color.tindivo.inkSecondary)
             }
             HStack(spacing: 8) {
@@ -57,13 +61,22 @@ struct DishGroupSection: View {
         return progress.max.map { String(localized: "Hasta \($0)") }
     }
 
+    private func price(of option: DishOption) -> some View {
+        Text(model.selection.optionPrice(of: option, in: group).displayText)
+            .tindivoText(TindivoTokens.Typography.bodySecondary)
+            .monospacedDigit()
+            .lineLimit(1)
+            .fixedSize()
+            .foregroundStyle(Color.tindivo.inkSecondary)
+    }
+
     private func optionRow(_ option: DishOption) -> some View {
         let selected = model.selection.isSelected(option)
         let enabled = !model.selection.isDisabled(option, in: group)
         return Button { model.toggle(option, in: group) } label: {
             HStack(spacing: 8) {
                 Image(tindivo: group.isSingle ? (selected ? .radioOn : .radioOff) : (selected ? .checkOn : .checkOff))
-                    .font(.system(size: 22))
+                    .font(.system(size: markSize))
                     .foregroundStyle(selected ? Color.tindivo.primary : Color.tindivo.outline)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(option.name)
@@ -74,12 +87,12 @@ struct DishGroupSection: View {
                             .tindivoText(TindivoTokens.Typography.bodySecondary)
                             .foregroundStyle(Color.tindivo.inkSecondary)
                     }
+                    // Con letra grande el precio pasa debajo del nombre: el nombre no se parte a mitad de palabra.
+                    if typeSize.isAccessibilitySize { price(of: option) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Text(model.selection.optionPrice(of: option, in: group).displayText)
-                    .tindivoText(TindivoTokens.Typography.bodySecondary)
-                    .monospacedDigit()
-                    .foregroundStyle(Color.tindivo.inkSecondary)
+                .layoutPriority(1)
+                if !typeSize.isAccessibilitySize { price(of: option) }
             }
             .frame(minHeight: TindivoTokens.Spacing.touchTarget)
             .contentShape(Rectangle())

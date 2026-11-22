@@ -59,6 +59,16 @@ struct TindivoCustomerApp: App {
            let fixed = ISO8601DateFormatter().date(from: arguments[flag + 1]) {
             clock = AppClock(now: { fixed }, sleep: { try await Task.sleep(for: $0) })
         }
+        // `-tindivo-clock-fast`: el reloj arranca en `-tindivo-now` y avanza un minuto por segundo real, y la espera
+        // de la carta dura un segundo: así se ve en segundos lo que pasa al salir de la franja de un plato.
+        if arguments.contains("-tindivo-clock-fast") {
+            let start = clock.now()
+            let origin = ContinuousClock.now
+            clock = AppClock(
+                now: { start.addingTimeInterval(Double((ContinuousClock.now - origin).components.seconds) * 60) },
+                sleep: { _ in try await Task.sleep(for: .seconds(1)) }
+            )
+        }
         return AppEnvironment(
             config: live.config, system: live.system, catalog: catalog, cartStore: live.cartStore, clock: clock
         )

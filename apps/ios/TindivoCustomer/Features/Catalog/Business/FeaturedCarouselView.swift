@@ -47,6 +47,9 @@ struct FeaturedCarouselView: View {
                 .tindivoText(TindivoTokens.Typography.body)
                 .fontWeight(.bold)
                 .monospacedDigit()
+                .lineLimit(1)
+                // La tarjeta tiene ancho fijo: el importe se encoge antes que partirse o pisar a la vecina.
+                .minimumScaleFactor(0.5)
                 .foregroundStyle(Color.tindivo.ink)
             if let window = item.outsideWindow {
                 Text(window)
