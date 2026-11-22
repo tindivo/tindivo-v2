@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -84,8 +85,12 @@ data object SignInRoute
 data object AccountRoute
 
 @Composable
-fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
+fun AppNavHost(
+    appViewModel: AppViewModel = hiltViewModel(),
+    deepLinkViewModel: DeepLinkViewModel = hiltViewModel(),
+) {
     val navController = rememberNavController()
+    val deepLink = deepLinkViewModel.navigation.collectAsStateWithLifecycle().value
     val upgradeRequired = appViewModel.upgradeRequired.collectAsStateWithLifecycle().value
     val osNoticeVisible = appViewModel.osNoticeVisible.collectAsStateWithLifecycle().value
     val termsGate: TermsGateViewModel = hiltViewModel()
@@ -119,6 +124,13 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
                 ordersGraph(navController)
                 if (BuildConfig.DEBUG) composable<DiagnosticsRoute> { DiagnosticsDestination() }
             }
+        }
+        // Un aviso tocado (KT-11). Solo aquí, con el NavHost armado: con la actualización obligatoria, la restauración
+        // o la puerta de Términos no se abre nada y el destino espera a que la app quede navegable.
+        LaunchedEffect(deepLink) {
+            val target = deepLink ?: return@LaunchedEffect
+            navController.openDeepLink(target)
+            deepLinkViewModel.navigated()
         }
     }
 }
