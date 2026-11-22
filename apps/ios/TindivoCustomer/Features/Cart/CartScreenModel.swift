@@ -44,12 +44,25 @@ final class CartScreenModel {
         case filled(Filled)
     }
 
+    /// Cuánto dura «Deshacer» (CUS-CRT-013).
+    static let undoWindow: Duration = .seconds(5)
+
     private(set) var state: State = .loading
+    /// «Quitaste "[plato]"» mientras se puede deshacer; `nil` pasados 5 s. La pantalla lo enseña con su botón.
+    var undoMessage: String? { undoNotice.message }
+    /// Cambia con cada quitada: la raya que se vacía en la pantalla arranca de nuevo.
+    private(set) var undoToken = 0
+    /// Los avisos de error («No se pudo guardar tu bolsa»).
+    let notices: TimedNotice
 
     private let store: any CartStore
+    private let undoNotice: TimedNotice
+    private var lastRemoved: RemovedLine?
 
-    init(store: any CartStore) {
+    init(store: any CartStore, clock: AppClock) {
         self.store = store
+        notices = TimedNotice(clock: clock)
+        undoNotice = TimedNotice(clock: clock, duration: Self.undoWindow)
     }
 
     /// La bolsa vigente ahora y después cada vez que cambia. Se lanza con `.task`.
@@ -71,8 +84,50 @@ final class CartScreenModel {
         await write { store async throws(CartError) in try await store.changeQuantity(signature: signature, by: delta) }
     }
 
+    /// Quita la línea. Si queda alguna otra, ofrece «Deshacer» durante 5 s; si era la última, la bolsa pasa a vacía
+    /// sin aviso (CUS-CRT-003).
     func remove(signature: String) async {
-        await write { store async throws(CartError) in try await store.remove(signature: signature) }
+        let removed: RemovedLine?
+        do throws(CartError) {
+            removed = try await store.remove(signature: signature)
+        } catch {
+            showSaveFailed()
+            return
+        }
+        guard let removed, !removed.wasLast else {
+            forgetUndo()
+            return
+        }
+        lastRemoved = removed
+        undoToken += 1
+        undoNotice.show(String(localized: "Quitaste \"\(removed.line.name)\""))
+    }
+
+    /// «Deshacer»: devuelve la línea quitada a su sitio con su cantidad. No hace nada pasados los 5 s o si ya no cabe.
+    @discardableResult
+    func undo() async -> Bool {
+        guard undoNotice.message != nil, let removed = lastRemoved else { return false }
+        forgetUndo()
+        do throws(CartError) {
+            return try await store.restore(removed)
+        } catch {
+            showSaveFailed()
+            return false
+        }
+    }
+
+    func clear() async {
+        forgetUndo()
+        await write { store async throws(CartError) in try await store.clear() }
+    }
+
+    private func forgetUndo() {
+        lastRemoved = nil
+        undoNotice.clear()
+    }
+
+    private func showSaveFailed() {
+        notices.show(String(localized: "No se pudo guardar tu bolsa. Inténtalo de nuevo."))
     }
 
     private func displayedQuantity(of signature: String) -> Int? {
@@ -80,16 +135,13 @@ final class CartScreenModel {
         return filled.lines.first { $0.signatureKey == Array(signature.utf16) }?.quantity
     }
 
-    func clear() async {
-        await write { store async throws(CartError) in try await store.clear() }
-    }
-
     /// Si no se puede escribir en el teléfono, la bolsa se queda como estaba y la pantalla sigue mostrándola.
     private func write<Output>(_ change: (any CartStore) async throws(CartError) -> Output) async {
         do throws(CartError) {
             _ = try await change(store)
         } catch {
-            // La bolsa que se ve es la que está guardada: no hay nada que deshacer.
+            // La bolsa que se ve es la que está guardada; solo se avisa de que el cambio no quedó.
+            showSaveFailed()
         }
     }
 

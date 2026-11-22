@@ -8,6 +8,8 @@ struct CartView: View {
     let onSeeBusinesses: () -> Void
 
     @State private var confirmingClear = false
+    @State private var undoProgress = 1.0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -35,7 +37,50 @@ struct CartView: View {
             Button("Cancelar", role: .cancel) {}
             Button("Vaciar", role: .destructive) { Task { await model.clear() } }
         }
+        .overlay(alignment: .bottom) { undoBar }
+        .tindivoToast(model.notices.message)
+        .onChange(of: model.undoMessage) { _, message in
+            if let message { AccessibilityNotification.Announcement(message).post() }
+        }
         .task { await model.observe() }
+    }
+
+    // MARK: Deshacer
+
+    /// «Quitaste "[plato]"» · «Deshacer», con una raya que se vacía en 5 s (con «reducir movimiento» no hay raya).
+    @ViewBuilder private var undoBar: some View {
+        if let message = model.undoMessage {
+            VStack(spacing: 0) {
+                HStack(spacing: TindivoTokens.Spacing.spaceInner) {
+                    Text(message)
+                        .tindivoText(TindivoTokens.Typography.body)
+                        .foregroundStyle(Color.tindivo.onSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button("Deshacer") { Task { await model.undo() } }
+                        .tindivoText(TindivoTokens.Typography.titleSection)
+                        .foregroundStyle(Color.tindivo.onSecondary)
+                        .frame(minHeight: TindivoTokens.Spacing.touchTarget)
+                        .accessibilityIdentifier("cart.undo")
+                }
+                .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
+                if !reduceMotion {
+                    Rectangle()
+                        .fill(Color.tindivo.onSecondary.opacity(0.6))
+                        .frame(height: 3)
+                        .scaleEffect(x: undoProgress, anchor: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .background(Color.tindivo.secondary, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
+            .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
+            .padding(TindivoTokens.Spacing.spaceScreen)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .task(id: model.undoToken) {
+                undoProgress = 1
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: 5)) { undoProgress = 0 }
+            }
+        }
     }
 
     // MARK: Vacía
@@ -165,7 +210,7 @@ private struct CartLineView: View {
 
 #Preview("Bolsa vacía") {
     NavigationStack {
-        CartView(model: CartScreenModel(store: FileCartStore.preview()), onAddMore: { _ in }, onSeeBusinesses: {})
+        CartView(model: CartScreenModel(store: FileCartStore.preview(), clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
     }
     .onAppear { TindivoFonts.register() }
 }
@@ -175,7 +220,7 @@ private struct CartPreviewHost: View {
 
     var body: some View {
         NavigationStack {
-            CartView(model: CartScreenModel(store: store), onAddMore: { _ in }, onSeeBusinesses: {})
+            CartView(model: CartScreenModel(store: store, clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
         }
         .task {
             let line = CartLine(

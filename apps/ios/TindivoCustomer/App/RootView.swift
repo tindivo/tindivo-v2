@@ -72,7 +72,7 @@ private struct CartRoute: View {
     private let navigator: AppNavigator
 
     init(environment: AppEnvironment, navigator: AppNavigator) {
-        _model = State(initialValue: CartScreenModel(store: environment.cartStore))
+        _model = State(initialValue: CartScreenModel(store: environment.cartStore, clock: environment.clock))
         self.navigator = navigator
     }
 

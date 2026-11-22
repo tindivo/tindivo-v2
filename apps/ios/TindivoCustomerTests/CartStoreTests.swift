@@ -237,4 +237,35 @@ struct CartStoreTests {
         try await store.changeQuantity(signature: signature, by: -80)
         #expect(await store.current()?.lines.first?.quantity == 1)
     }
+
+    @Test("remove devuelve la línea y su sitio, y restore la devuelve a él")
+    func removeAndRestore() async throws {
+        let (store, _) = makeStore()
+        for id in ["a", "b", "c"] { _ = try await store.add(businessId: "n", businessName: "Pollería", line: line(id, quantity: 2)) }
+        let removed = try #require(try await store.remove(signature: line("b").signature))
+        #expect(removed.index == 1)
+        #expect(removed.wasLast == false)
+        #expect(removed.line.quantity == 2)
+        #expect(await store.current()?.lines.map(\.itemId) == ["a", "c"])
+        #expect(try await store.restore(removed) == true)
+        #expect(await store.current()?.lines.map(\.itemId) == ["a", "b", "c"])
+    }
+
+    @Test("restore no hace nada si la bolsa ya tiene esa línea o se vació")
+    func restoreRefusesWhenItNoLongerFits() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b"))
+        let removed = try #require(try await store.remove(signature: line("b").signature))
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b"))
+        #expect(try await store.restore(removed) == false)
+        #expect(await store.current()?.lines.map(\.itemId) == ["a", "b"])
+
+        let last = try #require(try await store.remove(signature: line("a").signature))
+        let lastOne = try #require(try await store.remove(signature: line("b").signature))
+        #expect(lastOne.wasLast == true)
+        #expect(await store.current() == nil)
+        #expect(try await store.restore(last) == false)
+        #expect(await store.current() == nil)
+    }
 }

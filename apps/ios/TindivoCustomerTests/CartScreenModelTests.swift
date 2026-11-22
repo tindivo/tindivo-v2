@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 @testable import TindivoCustomer
 
@@ -15,8 +16,10 @@ struct CartScreenModelTests {
         )
     }
 
-    private func started(_ store: FileCartStore) async -> (CartScreenModel, Task<Void, Never>) {
-        let model = CartScreenModel(store: store)
+    private func started(
+        _ store: any CartStore, clock: AppClock = ManualClock(Fixture.tuesdayEvening).clock
+    ) async -> (CartScreenModel, Task<Void, Never>) {
+        let model = CartScreenModel(store: store, clock: clock)
         let task = Task { await model.observe() }
         await eventually { model.state != .loading }
         return (model, task)
@@ -28,7 +31,7 @@ struct CartScreenModelTests {
 
     @Test("hasta que se lee lo guardado no se enseña «vacía»")
     func startsLoading() {
-        let model = CartScreenModel(store: temporaryStore())
+        let model = CartScreenModel(store: temporaryStore(), clock: ManualClock(Fixture.tuesdayEvening).clock)
         #expect(model.state == .loading)
     }
 
@@ -185,4 +188,123 @@ struct CartScreenModelTests {
         await eventually { filled(model)?.lines.count == 1 }
         task.cancel()
     }
+
+    // MARK: Deshacer (CA-CRT-10)
+
+    @Test("CA-CRT-10: quitar la segunda de tres líneas y tocar «Deshacer» antes de 5 s la devuelve a su sitio con su cantidad")
+    func undoRestoresTheLineInPlace() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("a", price: "10"))
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("b", price: "20", quantity: 3))
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("c", price: "5"))
+        let (model, task) = await started(store)
+        let before = try #require(filled(model)).subtotal
+        let second = try #require(filled(model)?.lines[1].signature)
+
+        await model.remove(signature: second)
+        #expect(model.undoMessage == "Quitaste \"Plato b\"")
+        await eventually { filled(model)?.lines.map(\.name) == ["Plato a", "Plato c"] }
+        #expect(try #require(filled(model)).subtotal != before)
+
+        #expect(await model.undo() == true)
+        #expect(await store.current()?.lines.map(\.itemId) == ["a", "b", "c"])
+        #expect(await store.current()?.lines[1].quantity == 3)
+        await eventually { filled(model)?.lines.map(\.name) == ["Plato a", "Plato b", "Plato c"] }
+        #expect(filled(model)?.subtotal == before)
+        #expect(model.undoMessage == nil)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-10: pasados 5 s «Deshacer» ya no devuelve la línea")
+    func undoExpiresAfterFiveSeconds() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("a"))
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("b"))
+        let sleeps = OSAllocatedUnfairLock<[Duration]>(initialState: [])
+        let manual = ManualClock(Fixture.tuesdayEvening)
+        let base = manual.clock
+        let clock = AppClock(now: base.now, sleep: { duration in
+            sleeps.withLock { $0.append(duration) }
+            try await base.sleep(duration)
+        })
+        let (model, task) = await started(store, clock: clock)
+        await model.remove(signature: try #require(filled(model)?.lines.first?.signature))
+        await eventually { sleeps.withLock { $0 } == [.seconds(5)] }
+        #expect(model.undoMessage != nil)
+
+        manual.advance(by: 5)
+        await eventually { model.undoMessage == nil }
+        #expect(await model.undo() == false)
+        #expect(await store.current()?.lines.map(\.itemId) == ["b"])
+        task.cancel()
+    }
+
+    @Test("CUS-CRT-003: quitar la última línea deja la bolsa vacía y sin aviso de «Deshacer»")
+    func removingTheLastLineHasNoUndo() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("a"))
+        let (model, task) = await started(store)
+        await model.remove(signature: try #require(filled(model)?.lines.first?.signature))
+        #expect(model.undoMessage == nil)
+        #expect(await model.undo() == false)
+        #expect(await store.current() == nil)
+        await eventually { model.state == .empty }
+        task.cancel()
+    }
+
+    @Test("un segundo «Quitaste» reemplaza al primero: solo se deshace la última")
+    func undoOnlyTheLastRemoval() async throws {
+        let store = temporaryStore()
+        for id in ["a", "b", "c"] { _ = try await store.add(businessId: "n1", businessName: "N", line: line(id)) }
+        let (model, task) = await started(store)
+        await model.remove(signature: line("a").signature)
+        await model.remove(signature: line("b").signature)
+        #expect(model.undoMessage == "Quitaste \"Plato b\"")
+        #expect(await model.undo() == true)
+        #expect(await store.current()?.lines.map(\.itemId) == ["b", "c"])
+        task.cancel()
+    }
+
+    // MARK: Si no se puede guardar
+
+    @Test("si falla guardar, se avisa «No se pudo guardar tu bolsa» y la bolsa se queda como estaba")
+    func saveFailureShowsTheNotice() async throws {
+        let store = FailingStore(cart: Cart(businessId: "n1", businessName: "N", lines: [line("a", quantity: 2)]))
+        let (model, task) = await started(store)
+        let signature = try #require(filled(model)?.lines.first?.signature)
+
+        await model.changeQuantity(signature: signature, by: 1)
+        #expect(model.notices.message == "No se pudo guardar tu bolsa. Inténtalo de nuevo.")
+        model.notices.clear()
+        await model.remove(signature: signature)
+        #expect(model.notices.message == "No se pudo guardar tu bolsa. Inténtalo de nuevo.")
+        #expect(model.undoMessage == nil)
+        model.notices.clear()
+        await model.clear()
+        #expect(model.notices.message == "No se pudo guardar tu bolsa. Inténtalo de nuevo.")
+        #expect(filled(model)?.lines.first?.quantity == 2)
+        task.cancel()
+    }
+}
+
+/// Una bolsa cuyo disco no deja escribir: toda escritura lanza `saveFailed`.
+private actor FailingStore: CartStore {
+    private let cart: Cart
+
+    init(cart: Cart) { self.cart = cart }
+
+    func current() -> Cart? { cart }
+    func updates() -> AsyncStream<Cart?> {
+        let (stream, continuation) = AsyncStream.makeStream(of: Cart?.self)
+        continuation.yield(cart)
+        return stream
+    }
+
+    func add(businessId: String, businessName: String, line: CartLine) throws(CartError) -> AddResult { throw .saveFailed }
+    func replace(businessId: String, businessName: String, line: CartLine) throws(CartError) { throw .saveFailed }
+    func setQuantity(signature: String, quantity: Int) throws(CartError) { throw .saveFailed }
+    func changeQuantity(signature: String, by delta: Int) throws(CartError) { throw .saveFailed }
+    func remove(signature: String) throws(CartError) -> RemovedLine? { throw .saveFailed }
+    func restore(_ removed: RemovedLine) throws(CartError) -> Bool { throw .saveFailed }
+    func clear() throws(CartError) { throw .saveFailed }
 }
