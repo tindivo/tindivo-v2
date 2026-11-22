@@ -555,7 +555,9 @@ class CheckoutViewModel
             afterRetry: Boolean,
         ) {
             // La ubicación es evidencia, nunca un requisito: sin permiso o sin señal el pedido sale igual (CUS-CHK-009).
-            val evidence = if (current == null) null else evidenceFor(account, current, form.pay)
+            val fix = if (current == null) null else evidenceFor(account, current, form.pay)
+            // Una lectura que venció mientras se esperaba (la configuración) cuenta como sin señal (CAX-223-001).
+            val evidence = fix?.let(::freshOrFailed)
             // Sin ubicación en un pedido a domicilio que se paga al recibir: se abre la hoja y no sale nada.
             val blocked =
                 current != null && isCurrent(started, account) &&
@@ -571,7 +573,7 @@ class CheckoutViewModel
                 if (!blocked && isCurrent(started, account)) stop(CheckoutMessage.Generic)
                 return
             }
-            val result = reserveAndSend(started, account, current, request) ?: return
+            val result = reserveAndSend(started, account, current, request, fix?.readAtMs) ?: return
             // El pedido de la cuenta que salió existe y el libro ya consumió su bolsa; esta pantalla (ya de otra
             // cuenta, o de nadie) no navega a él ni muestra nada suyo.
             if (!isCurrent(started, account)) return
@@ -608,16 +610,18 @@ class CheckoutViewModel
             account: String,
             bag: Cart,
             pay: PayMethod?,
-        ): CreateOrderRequestGpsValidation? {
+        ): CapturedFix {
             val key = GpsKey(account, bag.fingerprint(), pay)
             // El permiso VIGENTE manda sobre cualquier evidencia ya leída (guardada o adelantada): sin él no sale nada.
             if (pay != PayMethod.Prepaid && !gps.permissionGranted()) {
                 gpsCapture = null
                 gps.reset()
-                return null
+                return CapturedFix(null, gps.elapsedMs())
             }
             // La captura guardada caduca con la misma regla de la lectura adelantada (ENC-d): 2 minutos.
-            gpsCapture?.takeIf { it.key == key && !it.expired(gps.elapsedMs()) }?.let { return it.evidence }
+            gpsCapture
+                ?.takeIf { it.key == key && !it.expired(gps.elapsedMs()) }
+                ?.let { return CapturedFix(it.evidence, it.takenAt) }
             // Mientras se espera la lectura el botón lo dice («Verificando tu ubicación…»); pagar por adelantado no lee.
             val waits = pay != PayMethod.Prepaid
             if (waits) mutableState.update { it.copy(locating = true) }
@@ -629,7 +633,24 @@ class CheckoutViewModel
                 }
             // La captura se fecha con la hora de la lectura que devolvió la propia captura, no con la de confirmar.
             gpsCapture = GpsCapture(key, fix.evidence, fix.readAtMs)
-            return fix.evidence
+            return fix
+        }
+
+        /** ¿Ya pasaron [GPS_FIX_MAX_AGE_MS] desde [readAtMs] (en el reloj de [CheckoutGps.elapsedMs])? */
+        private fun stale(readAtMs: Long?): Boolean =
+            readAtMs != null && gps.elapsedMs() - readAtMs >= GPS_FIX_MAX_AGE_MS
+
+        /**
+         * Las coordenadas de una lectura que ya tiene 2 minutos no salen (ENC-d, CAX-223-001): el pedido queda como si el
+         * GPS no hubiera contestado (`failed`, sin coordenadas) y decide el servidor; se descartan las cachés para que el
+         * siguiente intento lea de nuevo. Lo que no lleva coordenadas (`failed`, `manual_skip_prepaid`, nada) no cambia.
+         */
+        private fun freshOrFailed(fix: CapturedFix): CreateOrderRequestGpsValidation? {
+            val evidence = fix.evidence
+            if (evidence?.lat == null || !stale(fix.readAtMs)) return evidence
+            gpsCapture = null
+            gps.reset()
+            return CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.failed)
         }
 
         /**
@@ -642,13 +663,14 @@ class CheckoutViewModel
             account: String,
             current: Cart,
             request: CreateOrderRequest,
+            readAtMs: Long?,
         ): PlaceResult<CreateOrder201ResponseData>? =
             try {
                 // La bolsa se consume DENTRO del libro, antes de olvidar el intento; el envío no se cancela.
                 if (reserve(started, account, current) && isCurrent(started, account)) {
                     val consume: suspend (String) -> Unit = { fingerprint -> cartStore.consume(account, fingerprint) }
                     ledger.place(account, current, consume) { key ->
-                        checkout.createOrder(withCurrentPermission(request), key, account).also {
+                        checkout.createOrder(withCurrentEvidence(request, readAtMs), key, account).also {
                             if (it is ApiResult.Failure) reportUpgrade(it.error)
                         }
                     }
@@ -661,12 +683,22 @@ class CheckoutViewModel
             }
 
         /**
-         * EL punto de control del permiso de ubicación: se mira justo antes de cada POST, ya pasadas todas las esperas
-         * (configuración, reserva, consulta del libro). Si lo revocaron, la petición sale sin `gpsValidation`, con la
-         * misma clave, y se descartan las cachés de ubicación.
+         * EL punto de control de la ubicación: se mira justo antes de cada POST, ya pasadas todas las esperas
+         * (configuración, reserva, consulta del libro). Si la lectura ([readAtMs]) ya tiene 2 minutos, sus coordenadas no
+         * salen: la petición va con `failed` (CAX-223-001). Si revocaron el permiso, sale sin `gpsValidation`. En los dos
+         * casos, con la misma clave y descartando las cachés de ubicación.
          */
-        private fun withCurrentPermission(request: CreateOrderRequest): CreateOrderRequest {
+        private fun withCurrentEvidence(
+            request: CreateOrderRequest,
+            readAtMs: Long?,
+        ): CreateOrderRequest {
             val evidence = request.gpsValidation ?: return request
+            if (evidence.lat != null && stale(readAtMs)) {
+                gpsCapture = null
+                gps.reset()
+                val failed = CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.failed)
+                return request.copy(gpsValidation = failed)
+            }
             // Pagar por adelantado no lee ubicación: no depende del permiso.
             if (evidence.method == CreateOrderRequestGpsValidation.Method.manual_skip_prepaid) return request
             // `failed` no lleva coordenadas: la falta de ubicación se guarda igual con o sin permiso.
