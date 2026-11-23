@@ -58,4 +58,22 @@ class OrdersRefreshKeepsListTest : OrdersHarness() {
             // Que la carga termine antes de cerrar la prueba: no deja corrutinas sueltas tras restaurar Main.
             viewModel.settled()
         }
+
+    @Test
+    fun `cargar mas durante una recarga no lanza otra peticion`() =
+        runTest {
+            server.enqueue(response(200, pageJson(ids(1), next = "c2")))
+            server.enqueue(response(200, pageJson(ids(2), next = null), delayMillis = 300))
+            val viewModel = viewModel(Dispatchers.IO)
+            viewModel.settled()
+
+            viewModel.refresh()
+            viewModel.loadMore()
+
+            val during = viewModel.state.value as OrdersUiState.Loaded
+            assertTrue(during.refreshing)
+            assertFalse(during.loadingMore)
+            viewModel.state.first { it is OrdersUiState.Loaded && !it.refreshing }
+            assertEquals(2, server.requestCount)
+        }
 }

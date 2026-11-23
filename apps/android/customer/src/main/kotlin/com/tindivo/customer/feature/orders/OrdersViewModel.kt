@@ -130,7 +130,8 @@ internal class OrdersViewModel
         fun loadMore() {
             val current = _state.value as? OrdersUiState.Loaded ?: return
             val account = accountId ?: return
-            if (!current.canLoadMore || current.loadingMore) return
+            // Con una recarga en curso no se pide más: pisaría `loadJob` y el cursor.
+            if (!current.canLoadMore || current.loadingMore || current.refreshing) return
             _state.value = current.copy(loadingMore = true, loadMoreFailed = false)
             val cursor = nextCursor
             loadJob = viewModelScope.launch { onNextPage(current, customer.orders(cursor, account), account) }
