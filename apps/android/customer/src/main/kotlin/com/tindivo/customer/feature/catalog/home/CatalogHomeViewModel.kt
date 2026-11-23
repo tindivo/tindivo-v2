@@ -60,7 +60,7 @@ class CatalogHomeViewModel
     constructor(
         private val catalog: CatalogRepository,
         private val configService: ConfigService,
-        private val clock: Clock = Clock.systemUTC(),
+        private val clock: Clock,
     ) : ViewModel() {
         private val _state = MutableStateFlow<CatalogHomeUiState>(CatalogHomeUiState.Loading)
         val state: StateFlow<CatalogHomeUiState> = _state.asStateFlow()

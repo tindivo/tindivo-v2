@@ -79,7 +79,12 @@ class CatalogHomeViewModelTest {
                 )
             server.enqueue(response(200, "{\"data\":[${list.joinToString(",")}]}"))
 
-            val state = CatalogHomeViewModel(catalog, configService).settled() as CatalogHomeUiState.Loaded
+            val state =
+                CatalogHomeViewModel(
+                    catalog,
+                    configService,
+                    MutableClock(),
+                ).settled() as CatalogHomeUiState.Loaded
 
             assertEquals(listOf("Don Lucho", "Lung Fung"), state.restaurants.map { it.name })
             assertEquals(listOf("Rosita"), state.whatsapp.map { it.name })
@@ -98,7 +103,7 @@ class CatalogHomeViewModelTest {
         runTest {
             repeat(3) { server.enqueue(MockResponse.Builder().onRequestStart(SocketEffect.CloseSocket()).build()) }
 
-            val state = CatalogHomeViewModel(catalog, configService).settled()
+            val state = CatalogHomeViewModel(catalog, configService, MutableClock()).settled()
 
             assertTrue((state as CatalogHomeUiState.Failed).error is AppError.Network)
         }
@@ -107,7 +112,7 @@ class CatalogHomeViewModelTest {
     fun `una recarga que falla conserva la lista y marca el error`() =
         runTest {
             server.enqueue(response(200, "{\"data\":[${business(id = UUID_1, name = "Don Lucho")}]}"))
-            val viewModel = CatalogHomeViewModel(catalog, configService)
+            val viewModel = CatalogHomeViewModel(catalog, configService, MutableClock())
             viewModel.settled()
             server.enqueue(response(409, UNKNOWN_CODE, "application/problem+json"))
 
@@ -151,7 +156,7 @@ class CatalogHomeViewModelTest {
                     .build(),
             )
 
-            val state = CatalogHomeViewModel(catalog, configService).settled()
+            val state = CatalogHomeViewModel(catalog, configService, MutableClock()).settled()
 
             assertEquals(CatalogHomeUiState.Failed(AppError.UpgradeRequired("1.2.0")), state)
             assertEquals(ConfigState.UpgradeRequired("1.2.0"), configService.state.value)
