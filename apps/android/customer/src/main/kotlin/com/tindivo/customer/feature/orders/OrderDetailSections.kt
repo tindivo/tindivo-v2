@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,15 +31,27 @@ import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
 
 @Composable
-internal fun OrderHeadlineBlock(headline: OrderHeadline) {
+internal fun OrderHeadlineBlock(
+    headline: OrderHeadline,
+    driver: DriverUi? = null,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when (headline) {
             is OrderHeadline.Progress -> {
+                // El motorizado marcó «Llegué»: el titular lo dice con su nombre y el subtítulo pide salir (CUS-TRK-021).
+                val arrived = headline.hero == OrderHero.OnTheWay && driver?.atDoor == true
+                val firstName = if (arrived) driverFirstName(driver?.name) else null
                 Text(
-                    text = stringResource(headline.hero.titleRes()),
+                    text =
+                        when {
+                            firstName != null -> stringResource(R.string.order_driver_arrived_title, firstName)
+                            arrived -> stringResource(R.string.order_driver_arrived_anonymous)
+                            else -> stringResource(headline.hero.titleRes())
+                        },
                     style = MaterialTheme.typography.headlineMedium,
                 )
-                headline.hero.subtitleRes()?.let {
+                val subtitle = if (arrived) R.string.order_driver_arrived_sub else headline.hero.subtitleRes()
+                subtitle?.let {
                     Text(
                         text = stringResource(it),
                         style = MaterialTheme.typography.bodyLarge,
@@ -58,6 +71,21 @@ internal fun OrderHeadlineBlock(headline: OrderHeadline) {
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
+                if (headline.copy.nothingCharged(headline.alreadyPaid)) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.order_cancel_nothing_charged),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        )
+                    }
+                }
                 Text(
                     text = stringResource(headline.copy.bodyRes(headline.alreadyPaid)),
                     style = MaterialTheme.typography.bodyLarge,
@@ -109,7 +137,7 @@ internal fun OrderSteps(
     }
 }
 
-/** Quién trae el pedido: su nombre completo y, en la puerta, «[Nombre] llegó». Ningún dato de contacto. */
+/** Quién trae el pedido: su nombre completo. Que llegó lo dice el titular de arriba. Ningún dato de contacto. */
 @Composable
 internal fun DriverBlock(driver: DriverUi) {
     TindivoCard(modifier = Modifier.fillMaxWidth()) {
@@ -135,14 +163,6 @@ internal fun DriverBlock(driver: DriverUi) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (driver.atDoor) {
-                    Text(
-                        text = stringResource(R.string.order_driver_arrived, driver.name),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TindivoColors.brandText,
-                    )
-                }
             }
         }
     }
@@ -206,6 +226,18 @@ internal fun OrderTotals(order: OrderDetailUi) {
         if (!order.isPickup) {
             StatusRow(label = stringResource(R.string.order_delivery_fee), value = order.deliveryFee)
         }
+        // El total va antes que «Pagas con» y en negrita grande: es lo que se mira primero.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(if (order.totalPaid) R.string.order_total_paid else R.string.order_total),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(text = order.total, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
         order.cash?.let { cash ->
             StatusRow(label = stringResource(R.string.order_pays_with), value = cash.paysWith)
             Text(
@@ -218,10 +250,6 @@ internal fun OrderTotals(order: OrderDetailUi) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        StatusRow(
-            label = stringResource(if (order.totalPaid) R.string.order_total_paid else R.string.order_total),
-            value = order.total,
-        )
     }
 }
 

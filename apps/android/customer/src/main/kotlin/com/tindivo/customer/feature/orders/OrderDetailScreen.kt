@@ -215,7 +215,7 @@ private fun OrderBody(
                 if (order.waitingForBusiness) {
                     AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
                 } else {
-                    OrderHeadlineBlock(headline = order.headline)
+                    OrderHeadlineBlock(headline = order.headline, driver = order.driver)
                 }
                 if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
                     OrderSteps(phase = order.phase, isPickup = order.isPickup)

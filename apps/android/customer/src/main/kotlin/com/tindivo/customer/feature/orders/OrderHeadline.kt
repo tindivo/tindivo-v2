@@ -101,3 +101,31 @@ private fun prepayTimeoutCopyOf(payment: PaymentFacts): CancelCopy =
         payment.proofStatus != null || payment.proofSent -> CancelCopy.PrepayProofNotReviewed
         else -> CancelCopy.PrepayTimeout
     }
+
+/**
+ * El nombre de pila para el titular «Luis llegó»: la primera palabra del nombre completo del motorizado, o `null` si no
+ * hay nombre (entonces el titular es «Tu pedido llegó»).
+ */
+internal fun driverFirstName(fullName: String?): String? =
+    fullName
+        ?.trim()
+        ?.split(Regex("""\s+"""))
+        ?.firstOrNull()
+        ?.takeIf { it.isNotEmpty() }
+
+/**
+ * «No se te cobró nada» solo es cierto cuando el pedido se canceló sin cobro posible: el motivo es uno de los cuatro en
+ * que la web dice «sin costo» y no hay comprobante enviado ni pago verificado ([alreadyPaid] en falso). Con dinero de
+ * por medio, o en los motivos que no lo prometen (no_show, pago rechazado…), no se resalta.
+ */
+internal fun CancelCopy.nothingCharged(alreadyPaid: Boolean): Boolean =
+    !alreadyPaid &&
+        when (this) {
+            CancelCopy.CustomerCancelled,
+            CancelCopy.CouldNotConfirm,
+            CancelCopy.BusinessCancelled,
+            CancelCopy.BusinessNoResponse,
+            -> true
+
+            else -> false
+        }
