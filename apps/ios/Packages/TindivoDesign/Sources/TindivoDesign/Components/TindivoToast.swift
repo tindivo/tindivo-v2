@@ -10,6 +10,7 @@ extension View {
 
 private struct ToastModifier: ViewModifier {
     let message: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
@@ -23,11 +24,12 @@ private struct ToastModifier: ViewModifier {
                         .padding(.vertical, TindivoTokens.Spacing.spaceInner)
                         .background(Color.tindivo.secondary, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
                         .padding(TindivoTokens.Spacing.spaceScreen)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        // Con «Reducir movimiento» el aviso aparece sin deslizarse.
+                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                         .accessibilityIdentifier("toast")
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: message)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: message)
             .onChange(of: message) { _, new in
                 if let new { AccessibilityNotification.Announcement(new).post() }
             }

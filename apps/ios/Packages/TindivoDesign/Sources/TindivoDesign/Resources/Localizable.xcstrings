@@ -1,8 +1,16 @@
 {
   "sourceLanguage" : "es",
   "strings" : {
+    "Cantidad" : {
+      "comment" : "VoiceOver: el selector de cantidad, un control ajustable.",
+      "extractionState" : "manual"
+    },
     "En curso" : {
       "comment" : "VoiceOver: el botón principal está procesando la acción.",
+      "extractionState" : "manual"
+    },
+    "Tindivo" : {
+      "comment" : "VoiceOver: el logo de la barra superior.",
       "extractionState" : "manual"
     }
   },

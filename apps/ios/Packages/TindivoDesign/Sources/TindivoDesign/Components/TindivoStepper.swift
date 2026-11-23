@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// El selector de cantidad « − n + »: dos botones de `touchTarget` con etiquetas propias para VoiceOver (que dicen
-/// qué se quita o agrega) y el número en cifras tabulares.
+/// El selector de cantidad « − n + »: dos botones de `touchTarget` y el número en cifras tabulares. Para VoiceOver es UN
+/// control ajustable («Cantidad, 2»): deslizar arriba o abajo suma o quita una unidad, que es como se maneja un
+/// selector; las etiquetas de los botones («Una más») quedan para quien los toca de otras formas, como el control por
+/// voz o el de botones.
 public struct TindivoStepper: View {
     private let quantity: Int
     private let canDecrease: Bool
@@ -10,7 +12,6 @@ public struct TindivoStepper: View {
     private let increaseLabel: String
     private let onDecrease: () -> Void
     private let onIncrease: () -> Void
-    @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 16
 
     public init(
         quantity: Int,
@@ -32,7 +33,7 @@ public struct TindivoStepper: View {
 
     public var body: some View {
         HStack(spacing: TindivoTokens.Spacing.spaceInner) {
-            roundButton(.minus, label: decreaseLabel, enabled: canDecrease, action: onDecrease)
+            TindivoRoundButton(.minus, label: decreaseLabel, enabled: canDecrease, action: onDecrease)
             Text(verbatim: "\(quantity)")
                 .tindivoText(TindivoTokens.Typography.titleSection)
                 .monospacedDigit()
@@ -40,13 +41,41 @@ public struct TindivoStepper: View {
                 .fixedSize()
                 .foregroundStyle(Color.tindivo.ink)
                 .frame(minWidth: 24)
-            roundButton(.plus, label: increaseLabel, enabled: canIncrease, action: onIncrease)
+            TindivoRoundButton(.plus, label: increaseLabel, enabled: canIncrease, action: onIncrease)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Cantidad", bundle: .module))
+        .accessibilityValue(Text(verbatim: "\(quantity)"))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: if canIncrease { onIncrease() }
+            case .decrement: if canDecrease { onDecrease() }
+            @unknown default: break
+            }
         }
     }
+}
 
-    private func roundButton(_ icon: TindivoIcon, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+/// Un botón redondo de `touchTarget` con un icono («−», «+»), con su etiqueta para VoiceOver (CLI-13). Es el del
+/// selector de cantidad y, solo, el «+» de agregar una unidad.
+public struct TindivoRoundButton: View {
+    private let icon: TindivoIcon
+    private let label: String
+    private let enabled: Bool
+    private let action: () -> Void
+    @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 16
+
+    public init(_ icon: TindivoIcon, label: String, enabled: Bool = true, action: @escaping () -> Void) {
+        self.icon = icon
+        self.label = label
+        self.enabled = enabled
+        self.action = action
+    }
+
+    public var body: some View {
         Button(action: action) {
             Image(tindivo: icon)
+                .accessibilityHidden(true)
                 .font(.system(size: iconSize, weight: .bold))
                 .foregroundStyle(enabled ? Color.tindivo.ink : Color.tindivo.onDisabled)
                 .frame(width: TindivoTokens.Spacing.touchTarget, height: TindivoTokens.Spacing.touchTarget)

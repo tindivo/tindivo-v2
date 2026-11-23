@@ -5,6 +5,8 @@ import SwiftUI
 /// SF Symbol: pide `Image(tindivo: .back)`.
 public enum TindivoIcon: Sendable, CaseIterable {
     case back
+    /// El «›» de una fila que lleva a otra pantalla u hoja.
+    case forward
     case search
     case close
     /// El índice de secciones de la carta.
@@ -21,6 +23,7 @@ public enum TindivoIcon: Sendable, CaseIterable {
     var systemName: String {
         switch self {
         case .back: "chevron.left"
+        case .forward: "chevron.right"
         case .search: "magnifyingglass"
         case .close: "xmark"
         case .index: "square.grid.2x2"
@@ -37,7 +40,8 @@ public enum TindivoIcon: Sendable, CaseIterable {
 }
 
 extension Image {
-    /// El icono de la app; decorativo hasta que quien lo usa le ponga etiqueta.
+    /// El icono de la app. Un SF Symbol se lee en VoiceOver con el nombre del dibujo («plus», «xmark»): quien lo usa lo
+    /// oculta con `.accessibilityHidden(true)` cuando es decorativo, o deja que la etiqueta de su botón lo tape.
     public init(tindivo icon: TindivoIcon) {
         self.init(systemName: icon.systemName)
     }
