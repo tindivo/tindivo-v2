@@ -388,7 +388,7 @@ extension CartScreenModelTests {
         let (model, store, task) = try await validated(
             lines: [line("a", price: "10")], menu: validationMenu([Fixture.item("a", price: "12")])
         )
-        #expect(filled(model)?.lines.first?.issues.map(\.plain) == ["Precio actualizado (+S/ 2.00)"])
+        #expect(filled(model)?.lines.first?.issues.map(\.plain) == ["Precio actualizado: +S/ 2.00 por unidad"])
         #expect(model.canContinue == false)
         #expect(await store.current()?.lines.first?.basePrice == dec("10"))
         task.cancel()
@@ -636,8 +636,11 @@ extension CartScreenModelTests {
         await model.validate()
         #expect(filled(model)?.lines.first?.issues.isEmpty == true)
         let ticking = Task { await model.runClock() }
+        // El reloj manual despierta solo a quien ya cumplió su plazo: se espera a que el bucle duerma antes de avanzarlo.
+        await manual.waitForSleep(number: 1)
         manual.advance(by: 120)
-        await eventually { filled(model)?.lines.first?.issues.isEmpty == false }
+        await manual.waitForSleep(number: 2)
+        #expect(filled(model)?.lines.first?.issues.isEmpty == false)
         #expect(model.canContinue == false)
         ticking.cancel()
         task.cancel()

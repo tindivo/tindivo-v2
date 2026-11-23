@@ -19,7 +19,7 @@ struct DecisionsTests {
         _ store: any CartStore, clock: AppClock, catalog: any CatalogRepository = UnusedCatalogRepository(),
         voiceOver: Bool
     ) async -> (CartScreenModel, Task<Void, Never>) {
-        let model = CartScreenModel(store: store, catalog: catalog, clock: clock, voiceOverRunning: { voiceOver })
+        let model = CartScreenModel(store: store, catalog: catalog, clock: clock, voiceOverRunning: voiceOver)
         let task = Task { await model.observe() }
         await eventually { model.state != .loading }
         return (model, task)
@@ -47,7 +47,7 @@ struct DecisionsTests {
         #expect(model.undoMessage != nil)
         #expect(!model.undoAutoDismisses)
         manual.advance(by: 60)
-        await Task.yield()
+        #expect(manual.sleeps(of: .seconds(5)) == 0, "con VoiceOver nadie se durmió esperando el plazo")
         #expect(model.undoMessage != nil, "con VoiceOver no hay plazo")
         #expect(await model.undo() == true)
         #expect(model.undoMessage == nil)
@@ -59,7 +59,7 @@ struct DecisionsTests {
         let manual = ManualClock(Fixture.tuesdayEvening)
         let (model, task) = await started(try await twoLines(), clock: manual.clock, voiceOver: true)
         await model.remove(signature: try #require(filled(model)?.lines.first?.signature))
-        let second = try #require(await eventuallyValue { filled(model)?.lines.last?.signature })
+        let second = try #require(filled(model)?.lines.last?.signature)
         await model.changeQuantity(signature: second, by: 1)
         #expect(model.undoMessage == nil)
         task.cancel()
@@ -194,14 +194,4 @@ struct DecisionsTests {
         #expect(model.visible?.featured == nil)
         task.cancel()
     }
-}
-
-/// Espera a que `read` dé un valor.
-@MainActor
-func eventuallyValue<Value>(_ read: () -> Value?) async -> Value? {
-    for _ in 0..<2_000 {
-        if let value = read() { return value }
-        try? await Task.sleep(for: .milliseconds(2))
-    }
-    return nil
 }

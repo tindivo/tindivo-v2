@@ -9,6 +9,16 @@ struct CartView: View {
 
     @State private var confirmingClear = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+
+    /// Solo pruebas de interfaz (DEBUG): `-tindivo-voiceover` hace como si VoiceOver estuviera encendido.
+    private static var forcesVoiceOver: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-tindivo-voiceover")
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
         Group {
@@ -46,11 +56,11 @@ struct CartView: View {
             Button("Cancelar", role: .cancel) {}
             Button("Vaciar", role: .destructive) { Task { await model.clear() } }
         }
-        .fullScreenCover(item: Binding(get: { model.editing }, set: { if $0 == nil { model.finishEditing() } })) {
+        .fullScreenCover(item: Binding(get: { model.editing }, set: { if $0 == nil { model.cancelEditing() } })) {
             target in
             DishView(
                 model: model.dishModel(for: target),
-                onClose: { model.finishEditing() },
+                onClose: { model.cancelEditing() },
                 onAdded: { model.finishEditing(capped: $0) },
                 onLineGone: { model.lineGone() }
             )
@@ -60,9 +70,8 @@ struct CartView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { undoBar }
         // 200 ms con la curva del tablero «4 · Bolsa»; con «reducir movimiento», al instante.
         .animation(reduceMotion ? nil : .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.2), value: model.undoOffer?.token)
-        .onChange(of: model.undoOffer?.token) { _, token in
-            if token != nil, let message = model.undoMessage { AccessibilityNotification.Announcement(message).post() }
-        }
+        // Al quitar, VoiceOver solo lleva el foco al botón «Quitaste X. Deshacer»: sin un anuncio aparte que lo pise.
+        .onChange(of: voiceOver, initial: true) { _, running in model.setVoiceOver(running || Self.forcesVoiceOver) }
         .task { await model.observe() }
         .task { await model.validate() }
         .task { await model.runClock() }
@@ -121,6 +130,7 @@ struct CartView: View {
                         line: line,
                         onChange: { delta in Task { await model.changeQuantity(signature: line.signature, by: delta) }
                         },
+                        editDisabled: model.isOpeningEdit,
                         onEdit: { Task { await model.startEditing(signature: line.signature) } },
                         onRemove: { Task { await model.remove(signature: line.signature) } }
                     )
@@ -173,6 +183,8 @@ extension CartView {
 private struct CartLineView: View {
     let line: CartLineRow
     let onChange: (Int) -> Void
+    /// Mientras se abre otra ficha de «Editar» (esperando la carta) el botón espera.
+    let editDisabled: Bool
     let onEdit: () -> Void
     let onRemove: () -> Void
 
@@ -239,6 +251,7 @@ private struct CartLineView: View {
             if line.canEdit {
                 TindivoTextButton("Editar", action: onEdit)
                     .accessibilityLabel(Text("Editar \(line.name)"))
+                    .disabled(editDisabled)
                     .accessibilityIdentifier("cart.edit")
             }
             TindivoTextButton("Quitar", action: onRemove)
@@ -286,6 +299,8 @@ private struct UndoBar: View {
         Text(offer.message)
             .tindivoText(TindivoTokens.Typography.body)
             .foregroundStyle(Color.tindivo.onSecondary)
+            // Lo lee el botón («Quitaste X. Deshacer»): el texto suelto sonaría dos veces.
+            .accessibilityHidden(true)
     }
 
     private var button: some View {
@@ -299,6 +314,7 @@ private struct UndoBar: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text("\(offer.message). Deshacer"))
         .accessibilityFocused($focused)
         .accessibilityIdentifier("cart.undo")
     }

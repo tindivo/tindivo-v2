@@ -26,8 +26,8 @@ enum CartLineIssue: Sendable, Equatable {
         case let .outOfWindow(returns): returns ?? String(localized: "Fuera de su horario")
         case let .priceChanged(delta):
             delta >= 0
-                ? String(localized: "Precio actualizado (+\(formatSoles(delta)))")
-                : String(localized: "Precio actualizado (-\(formatSoles(-delta)))")
+                ? String(localized: "Precio actualizado: +\(formatSoles(delta)) por unidad")
+                : String(localized: "Precio actualizado: -\(formatSoles(-delta)) por unidad")
         case let .optionPriceChanged(name): String(localized: "La opción \"\(name)\" cambió de precio")
         case .optionRemoved: String(localized: "Una opción ya no está disponible")
         case .invalidSelection: String(localized: "El negocio cambió las opciones de este plato. Vuelve a elegirlas.")
@@ -71,7 +71,11 @@ enum CartValidation {
         if missingOption {
             issues.append(.optionRemoved)
         } else {
-            if expectedUnit != line.unitPrice { issues.append(.priceChanged(delta: expectedUnit - line.unitPrice)) }
+            if expectedUnit != line.unitPrice {
+                // El cambio de precio de una opción ya está dicho por el aviso de la unidad: un solo aviso, no dos.
+                issues.removeAll { if case .optionPriceChanged = $0 { true } else { false } }
+                issues.append(.priceChanged(delta: expectedUnit - line.unitPrice))
+            }
             if !DishSelection(dish: item.dish, selectedIds: chosenIds).isValid { issues.append(.invalidSelection) }
         }
         return issues

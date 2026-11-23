@@ -33,6 +33,15 @@ func formatAmount(_ amount: Decimal) -> String? {
     return exactCents(amount).map(formatSoles)
 }
 
+/// Lo que se enseña cuando un importe calculado no se puede mostrar (por aprobar). Un importe que `formatAmount` rechaza
+/// es un dato roto: nunca se «arregla» enseñándolo de otra forma.
+let invalidAmountText = "—"
+
+/// `formatAmount`, o «—» si el importe es un dato roto. No cambia ningún cálculo: solo lo que se muestra.
+func displayAmount(_ amount: Decimal) -> String {
+    formatAmount(amount) ?? invalidAmountText
+}
+
 /// `S/ 12.50` en soles de Perú (SW-8).
 func formatSoles(_ exact: Decimal) -> String {
     Money.format(exact)

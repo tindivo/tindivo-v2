@@ -105,8 +105,8 @@ struct DishSelection: Sendable, Equatable {
     var total: Decimal { unitPrice * Decimal(quantity) }
 
     var cta: DishCTA {
-        // Un total válido siempre cabe en `maxAmount`; el respaldo existe para no mostrar un hueco, no se espera.
-        isValid ? .add(total: formatAmount(total) ?? formatSoles(total)) : .complete(missing: missing)
+        // Un total que `formatAmount` rechaza es un dato roto: se muestra «—», no se «arregla».
+        isValid ? .add(total: displayAmount(total)) : .complete(missing: missing)
     }
 
     func isSelected(_ option: DishOption) -> Bool { selectedIds.contains(option.id) }
@@ -163,7 +163,7 @@ struct DishSelection: Sendable, Equatable {
 
     func optionPrice(of option: DishOption, in group: DishGroup) -> OptionPrice {
         if group.priceDisplay == "total" {
-            return .total(formatAmount(dish.basePrice + option.price) ?? option.priceText)
+            return .total(displayAmount(dish.basePrice + option.price))
         }
         return option.price == 0 ? .included : .delta(option.priceText)
     }

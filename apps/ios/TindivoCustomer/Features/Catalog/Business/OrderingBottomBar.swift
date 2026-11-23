@@ -20,14 +20,14 @@ struct OrderingBottomBar: View {
     }
 }
 
-/// La barra fija «Ver mi bolsa» con las unidades y el subtotal de la carta de este negocio.
+/// La barra fija «Ver bolsa» con las unidades y el subtotal de la carta de este negocio.
 struct CartBarView: View {
     let summary: CartBarSummary
     let action: () -> Void
 
     var body: some View {
         TindivoBottomBar {
-            // Con letra grande «Ver mi bolsa» y el resumen no caben en una línea: pasan a dos, uno sobre otro, y la
+            // Con letra grande «Ver bolsa» y el resumen no caben en una línea: pasan a dos, uno sobre otro, y la
             // cápsula (que en varias líneas se comería el texto) pasa a rectángulo redondeado.
             ViewThatFits(in: .horizontal) {
                 button(vertical: false)
@@ -43,7 +43,7 @@ struct CartBarView: View {
             layout(vertical: vertical) {
                 // En línea el texto mide lo que mide (si no cabe, `ViewThatFits` pasa a la variante vertical); en vertical
                 // se parte en las líneas que haga falta, centrado, y nunca se sale de la pantalla.
-                fitted(Text("Ver mi bolsa").tindivoText(TindivoTokens.Typography.cta), vertical: vertical)
+                fitted(Text("Ver bolsa").tindivoText(TindivoTokens.Typography.cta), vertical: vertical)
                 if !vertical { Spacer(minLength: 0) }
                 // Blanco sobre `primary` da 3,25:1: solo cuenta como texto grande en negrita y a 14 pt o más
                 // (decisión de Jesús, 2026-11-22; HIG: negrita, 3:1).

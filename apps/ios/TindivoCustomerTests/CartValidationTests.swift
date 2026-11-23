@@ -79,8 +79,9 @@ struct CartValidationTests {
     func basePriceChanged() throws {
         let result = try issues(of: [line("i1", price: "10")], in: [Fixture.item("i1", price: "12")])
         #expect(result == [[.priceChanged(delta: dec("2"))]])
-        #expect(CartLineIssue.priceChanged(delta: dec("2")).message.plain == "Precio actualizado (+S/ 2.00)")
-        #expect(CartLineIssue.priceChanged(delta: dec("-0.5")).message.plain == "Precio actualizado (-S/ 0.50)")
+        #expect(CartLineIssue.priceChanged(delta: dec("2")).message.plain == "Precio actualizado: +S/ 2.00 por unidad")
+        #expect(
+            CartLineIssue.priceChanged(delta: dec("-0.5")).message.plain == "Precio actualizado: -S/ 0.50 por unidad")
     }
 
     @Test(
@@ -91,7 +92,8 @@ struct CartValidationTests {
             of: [line("i1", modifiers: [modifier("a", "0.50")])],
             in: [Fixture.item("i1", groups: [sizes])]
         )
-        #expect(result == [[.optionPriceChanged(optionName: "Opción a"), .priceChanged(delta: dec("0.5"))]])
+        // Un solo aviso (el de la unidad), no uno por la opción y otro por el total.
+        #expect(result == [[.priceChanged(delta: dec("0.5"))]])
     }
 
     @Test(

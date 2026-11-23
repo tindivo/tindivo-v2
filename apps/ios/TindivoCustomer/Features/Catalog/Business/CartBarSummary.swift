@@ -1,6 +1,6 @@
 import Foundation
 
-/// Lo que enseña la barra «Ver mi bolsa»: unidades y subtotal ya formateado.
+/// Lo que enseña la barra «Ver bolsa»: unidades y subtotal ya formateado.
 struct CartBarSummary: Sendable, Equatable {
     let count: Int
     let subtotal: String
@@ -12,7 +12,7 @@ func cartBar(for cart: Cart?, businessId: String) -> CartBarSummary? {
     guard let cart, !cart.isEmpty, cart.businessId.caseInsensitiveCompare(businessId) == .orderedSame else {
         return nil
     }
-    return CartBarSummary(count: cart.count, subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal))
+    return CartBarSummary(count: cart.count, subtotal: displayAmount(cart.subtotal))
 }
 
 /// «3 unidades» / «1 unidad»: el plural lo decide el catálogo de cadenas (variaciones de plural).

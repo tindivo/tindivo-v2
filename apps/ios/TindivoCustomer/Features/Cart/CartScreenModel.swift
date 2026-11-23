@@ -1,5 +1,4 @@
 import Foundation
-import UIKit
 import Observation
 import TindivoAPI
 
@@ -22,8 +21,7 @@ struct CartLineRow: Equatable {
     /// Con 1 unidad el «−» quita la línea (CUS-CRT-003): no baja de 1.
     let decreaseRemoves: Bool
     let canIncrease: Bool
-    /// Para VoiceOver: qué hace cada botón y cuántas unidades hay («2 unidades»). TindivoStepper no deja ponerle
-    /// etiqueta al número: por eso la cantidad va en las etiquetas de los botones.
+    /// Para VoiceOver: qué hace cada botón y cuántas unidades hay («2 unidades»), en las etiquetas de los botones.
     let decreaseLabel: String
     let increaseLabel: String
     /// Lo que la carta vigente dice de esta línea (CUS-CRT-005): vacío si se puede pedir.
@@ -45,6 +43,9 @@ final class CartScreenModel {
         let businessName: String
         let lines: [CartLineRow]
         let subtotal: String
+        /// Falso si el subtotal o el total de alguna línea es un importe que no se puede mostrar (dato roto): no se
+        /// puede continuar con esa bolsa.
+        let amountsAreValid: Bool
         let method: DeliveryMethod
         let validation: Validation
         /// «[n] productos» de la barra (unidades en total).
@@ -56,6 +57,12 @@ final class CartScreenModel {
             case .delivery: String(localized: "Delivery")
             case .pickup: String(localized: "Recojo")
             }
+        }
+
+        /// ¿Se puede avanzar con esta bolsa? Con la carta ya revisada (o sin poder leerla), sin líneas con problema y con
+        /// todos los importes mostrables.
+        var allowsContinue: Bool {
+            validation != .validating && amountsAreValid && lines.allSatisfy { $0.issues.isEmpty }
         }
 
         /// La fila del envío solo existe en delivery (CA-CRT-08).
@@ -132,12 +139,14 @@ final class CartScreenModel {
     private var lastRemoved: RemovedLine?
     private var undoTask: Task<Void, Never>?
     private var undoCounter = 0
-    /// ¿Está encendido VoiceOver? Inyectable para las pruebas. Con VoiceOver el aviso «Deshacer» no se cierra solo.
-    private let voiceOverRunning: @MainActor () -> Bool
+    /// ¿Está encendido VoiceOver? Lo dice la vista (`accessibilityVoiceOverEnabled`) con `setVoiceOver`: el modelo no
+    /// conoce UIKit. Con VoiceOver el aviso «Deshacer» no se cierra solo.
+    private(set) var voiceOverRunning: Bool
     /// El aviso actual se cierra solo a los 5 s; con VoiceOver no (decisión de Jesús, 2026-11-22).
     private(set) var undoAutoDismisses = true
     private var isUndoing = false
-    private var isOpeningEdit = false
+    /// Se está abriendo «Editar» (esperando la carta): los botones «Editar» esperan y no se abre dos veces.
+    private(set) var isOpeningEdit = false
     private var cart: Cart?
     private var hasCart = false
     private var menu: Menu = .pending
@@ -145,7 +154,7 @@ final class CartScreenModel {
     init(
         store: any CartStore, catalog: any CatalogRepository, clock: AppClock,
         undoWindow: Duration = CartScreenModel.defaultUndoWindow,
-        voiceOverRunning: @escaping @MainActor () -> Bool = { UIAccessibility.isVoiceOverRunning }
+        voiceOverRunning: Bool = false
     ) {
         self.voiceOverRunning = voiceOverRunning
         self.store = store
@@ -195,8 +204,8 @@ final class CartScreenModel {
     /// «Continuar» (todavía no existe en iOS: llega con el checkout) solo podrá avanzar con la bolsa ya revisada y
     /// sin líneas con problema. Con la carta sin leer (`unchecked`) no bloquea.
     var canContinue: Bool {
-        guard case let .filled(filled) = state, filled.validation != .validating else { return false }
-        return filled.lines.allSatisfy { $0.issues.isEmpty }
+        guard case let .filled(filled) = state else { return false }
+        return filled.allowsContinue
     }
 
     private func rebuild() {
@@ -229,13 +238,21 @@ final class CartScreenModel {
             return
         }
         // Con VoiceOver, otro cambio en la bolsa cierra el aviso: ya no habría qué deshacer.
-        if voiceOverRunning() { forgetUndo() }
+        if voiceOverRunning { forgetUndo() }
         await write { store async throws(CartError) in try await store.changeQuantity(signature: signature, by: delta) }
     }
 
-    /// Se sale de la bolsa: con VoiceOver, el aviso «Deshacer» se va (sin VoiceOver sigue su plazo).
+    /// La vista avisa de si VoiceOver está encendido.
+    func setVoiceOver(_ running: Bool) {
+        voiceOverRunning = running
+    }
+
+    /// Se sale de la bolsa: con VoiceOver, el aviso «Deshacer» se va (sin VoiceOver sigue su plazo). Abrir «Editar» (una
+    /// ficha a pantalla completa) también hace desaparecer la bolsa, pero no es salir de ella: con la ficha abierta o
+    /// abriéndose no se hace nada.
     func leave() {
-        if voiceOverRunning() { forgetUndo() }
+        guard editing == nil, !isOpeningEdit else { return }
+        if voiceOverRunning { forgetUndo() }
     }
 
     /// Quita la línea. Si queda alguna otra, ofrece «Deshacer» durante 5 s; si era la última, la bolsa pasa a vacía
@@ -261,7 +278,7 @@ final class CartScreenModel {
         undoTask?.cancel()
         // Con VoiceOver el aviso espera: se va al tocar «Deshacer», con otro cambio o al salir de la bolsa. Quien usa
         // VoiceOver no alcanza a oír y tocar «Deshacer» en 5 s.
-        undoAutoDismisses = !voiceOverRunning()
+        undoAutoDismisses = !voiceOverRunning
         guard undoAutoDismisses else { return }
         undoTask = Task { [clock, undoWindow] in
             do { try await clock.sleep(undoWindow) } catch { return }
@@ -320,6 +337,9 @@ final class CartScreenModel {
                 detail = known
             } else {
                 detail = try await loadMenu(of: cart.businessId)
+                // La carta que se bajó para «Editar» se guarda: la bolsa se revisa con ella sin pedirla otra vez.
+                menu = .loaded(detail)
+                rebuild()
             }
         } catch {
             notices.show(ErrorText.message(for: error))
@@ -336,14 +356,22 @@ final class CartScreenModel {
         editing = EditTarget(item: item, line: line, businessId: cart.businessId, businessName: cart.businessName)
     }
 
-    /// La ficha del plato se cerró (con o sin guardar). `capped`: al fusionarse con otra línea llegó al máximo.
+    /// El plato que se editaba ya no está en la bolsa: la ficha se cierra y avisa.
     func lineGone() {
         editing = nil
         notices.show(String(localized: "Este plato ya no está en tu bolsa"))
     }
 
+    /// La ficha se cerró SIN guardar (Cerrar, el gesto de escape o deslizarla): la bolsa no cambió, así que el aviso de
+    /// «Deshacer» sigue donde estaba.
+    func cancelEditing() {
+        editing = nil
+    }
+
+    /// La ficha guardó un cambio en la bolsa. Con VoiceOver un cambio real cierra el aviso de «Deshacer». `capped`: al
+    /// fusionarse con otra línea llegó al máximo.
     func finishEditing(capped: Bool = false) {
-        if voiceOverRunning() { forgetUndo() }
+        if voiceOverRunning { forgetUndo() }
         editing = nil
         if capped { notices.show(DishScreenModel.addedMessage(capped: true)) }
     }
@@ -416,7 +444,7 @@ final class CartScreenModel {
                         },
                         note: line.note,
                         quantity: line.quantity,
-                        total: formatAmount(line.total) ?? formatSoles(line.total),
+                        total: displayAmount(line.total),
                         decreaseRemoves: line.quantity == 1,
                         canIncrease: line.quantity < CartLimits.maxQuantity,
                         decreaseLabel: line.quantity == 1
@@ -425,11 +453,15 @@ final class CartScreenModel {
                                 localized: "Quitar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
                         increaseLabel: String(
                             localized: "Agregar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
-                        issues: issues.indices.contains(index) ? issues[index].map(\.message) : [],
+                        issues: (issues.indices.contains(index) ? issues[index].map(\.message) : [])
+                            + (formatAmount(line.total) == nil
+                                ? [String(localized: "El importe de este producto no es válido")] : []),
                         canEdit: dishHasOptions(line, in: menu) ?? !line.modifiers.isEmpty
                     )
                 },
-                subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal),
+                subtotal: displayAmount(cart.subtotal),
+                amountsAreValid: formatAmount(cart.subtotal) != nil
+                    && cart.lines.allSatisfy { formatAmount($0.total) != nil },
                 method: cart.method,
                 validation: validation,
                 countLabel: String(localized: "\(cart.count) productos")
