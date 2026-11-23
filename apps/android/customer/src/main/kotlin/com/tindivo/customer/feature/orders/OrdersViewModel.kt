@@ -37,6 +37,8 @@ internal sealed interface OrdersUiState {
         val canLoadMore: Boolean,
         val loadingMore: Boolean = false,
         val loadMoreFailed: Boolean = false,
+        /** Se está pidiendo la primera página otra vez: la lista de antes sigue a la vista. */
+        val refreshing: Boolean = false,
     ) : OrdersUiState
 
     data class Failed(
@@ -99,8 +101,15 @@ internal class OrdersViewModel
                 _state.value = OrdersUiState.LoggedOut
                 return
             }
-            _state.value = OrdersUiState.Loading
-            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null, account), account) }
+            // Con algo ya a la vista (lista o «sin pedidos») se recarga en silencio: nada de pantalla de carga.
+            val previous = _state.value.takeIf { it is OrdersUiState.Loaded || it is OrdersUiState.Empty }
+            _state.value =
+                when (previous) {
+                    is OrdersUiState.Loaded -> previous.copy(refreshing = true, loadMoreFailed = false)
+                    null -> OrdersUiState.Loading
+                    else -> previous
+                }
+            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null, account), account, previous) }
         }
 
         /**
@@ -119,6 +128,7 @@ internal class OrdersViewModel
         private suspend fun onFirstPage(
             result: ApiResult<ListCustomerOrders200ResponseData>,
             account: String,
+            previous: OrdersUiState? = null,
         ) {
             when (result) {
                 is ApiResult.Success -> {
@@ -138,7 +148,16 @@ internal class OrdersViewModel
                 }
 
                 is ApiResult.Failure -> {
-                    onFailure(result.error, account)?.let { settle(OrdersUiState.Failed(it)) }
+                    onFailure(result.error, account)?.let { error ->
+                        // Una recarga que falla no tira lo que ya se veía.
+                        settle(
+                            when (previous) {
+                                is OrdersUiState.Loaded -> previous.copy(refreshing = false)
+                                null -> OrdersUiState.Failed(error)
+                                else -> previous
+                            },
+                        )
+                    }
                 }
             }
         }
