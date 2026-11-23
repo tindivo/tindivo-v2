@@ -82,6 +82,21 @@ internal data class DishSheetState(
     fun firstMissingGroup(): ModifierGroupUi? =
         item.modifierGroups.firstOrNull { it.isRequired && it.id.lowercase(Locale.ROOT) in missingGroupIds }
 
+    /** Al grupo le falta elegir lo obligatorio. */
+    fun isMissing(group: ModifierGroupUi): Boolean =
+        group.isRequired && group.id.lowercase(Locale.ROOT) in missingGroupIds
+
+    /**
+     * El grupo al que hay que llevar a la persona cuando el botón no puede agregar: el primero obligatorio sin elegir y,
+     * si no falta ninguno pero la selección sigue siendo inválida (de más, repetida), el primero que se pasó.
+     */
+    fun firstProblemGroup(): ModifierGroupUi? {
+        firstMissingGroup()?.let { return it }
+        val tooMany =
+            issues.filterIsInstance<ModifierSelectionIssue.TooMany>().map { it.groupId.lowercase(Locale.ROOT) }.toSet()
+        return item.modifierGroups.firstOrNull { it.id.lowercase(Locale.ROOT) in tooMany }
+    }
+
     // Que cada id elegido sea UNA opción del plato: si no, el precio sumaría otra cosa que lo validado.
     val isValid: Boolean
         get() = issues.isEmpty() && selectedIds.size <= MAX_MODIFIERS && selectedModifiers.size == selectedIds.size
@@ -234,3 +249,6 @@ private val ES_PE = Locale.forLanguageTag("es-PE")
 
 /** El nombre de un grupo para decir «Elige tu <nombre>»: en minúscula y sin espacios sobrantes. */
 internal fun ModifierGroupUi.chooseName(): String = name.trim().lowercase(ES_PE)
+
+/** «Elige tu guarnición» (un grupo de una opción) o «Elige salsas» (de varias): el plural no lleva «tu». */
+internal fun ModifierGroupUi.choosesOne(): Boolean = selectionType == SINGLE

@@ -25,8 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,6 +57,24 @@ internal fun ModifierGroupSection(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             GroupHeader(group = group, progress = state.progress(group))
+            if (highlighted) {
+                // No solo color: el aviso va en texto y el lector de pantalla lo anuncia como error.
+                val message =
+                    stringResource(
+                        if (state.isMissing(group)) R.string.dish_group_missing else R.string.dish_group_over,
+                    )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = scheme.error,
+                    modifier =
+                        Modifier.padding(horizontal = 4.dp).semantics {
+                            error(message)
+                            liveRegion = LiveRegionMode.Polite
+                        },
+                )
+            }
             group.options.forEach { option ->
                 OptionRow(
                     group = group,

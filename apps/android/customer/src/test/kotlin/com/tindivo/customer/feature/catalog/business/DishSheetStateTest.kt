@@ -299,4 +299,25 @@ class DishSheetStateTest {
     fun `sin grupos obligatorios no hay nada que resaltar`() {
         assertNull(DishSheetState(item(sauce, extras)).firstMissingGroup())
     }
+
+    @Test
+    fun `una seleccion invalida sin grupo faltante lleva al grupo pasado y no al agregar`() {
+        val pair = group("pair", "multi", false, max = 1, options = listOf(option("a"), option("b")))
+        val state = DishSheetState(item(pair), selectedIds = listOf("a", "b"))
+        assertFalse(state.isValid)
+        assertNull(state.firstMissingGroup())
+        assertEquals("pair", state.firstProblemGroup()?.id)
+    }
+
+    @Test
+    fun `con una seleccion valida no hay grupo con problema`() {
+        assertNull(DishSheetState(item(sauce, extras)).firstProblemGroup())
+    }
+
+    @Test
+    fun `el texto del boton usa tu solo con un grupo de una opcion`() {
+        assertTrue(size.choosesOne())
+        assertFalse(extras.choosesOne())
+        assertEquals("tamaño", group("Tamaño", "single", true, options = emptyList()).chooseName())
+    }
 }

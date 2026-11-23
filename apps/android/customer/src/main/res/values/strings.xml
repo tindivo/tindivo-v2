@@ -90,11 +90,11 @@
     <string name="dish_quantity_less">Una menos</string>
     <string name="dish_quantity_more">Una más</string>
     <string name="dish_add_cta">Agregar · %1$s</string>
-    <plurals name="dish_complete_cta">
-        <item quantity="one">Completa %1$d opción</item>
-        <item quantity="other">Completa %1$d opciones</item>
-    </plurals>
     <string name="dish_choose_cta">Elige tu %1$s</string>
+    <string name="dish_choose_many_cta">Elige %1$s</string>
+    <string name="dish_review_cta">Revisa tus opciones</string>
+    <string name="dish_group_missing">Falta elegir aquí</string>
+    <string name="dish_group_over">Elegiste más opciones de las permitidas</string>
     <string name="dish_added">Añadido a tu bolsa</string>
     <string name="dish_bag_full">Tu bolsa ya tiene %1$d platos distintos: es el máximo por pedido</string>
     <string name="dish_added_capped">Ya tienes %1$d de este plato: es el máximo por pedido</string>

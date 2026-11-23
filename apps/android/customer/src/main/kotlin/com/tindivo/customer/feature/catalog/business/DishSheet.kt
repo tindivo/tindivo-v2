@@ -97,7 +97,7 @@ internal fun DishSheet(
                         group = group,
                         state = state,
                         onToggle = { state = state.toggle(group, it) },
-                        highlighted = highlightId == group.id && !state.progress(group).done,
+                        highlighted = highlightId == group.id && (state.isMissing(group) || !state.isValid),
                         modifier = requesters[group.id]?.let { Modifier.bringIntoViewRequester(it) } ?: Modifier,
                     )
                 }
@@ -107,13 +107,14 @@ internal fun DishSheet(
                 state = state,
                 onQuantity = { state = state.withQuantity(it) },
                 onAdd = {
-                    val missing = state.firstMissingGroup()
-                    if (missing == null) {
+                    if (state.isValid) {
                         onAdd(state.toLine())
                     } else {
-                        // El botón no se apaga: lleva al primer grupo obligatorio sin elegir y lo resalta.
-                        highlightId = missing.id
-                        scope.launch { requesters[missing.id]?.bringIntoView() }
+                        // El botón no se apaga: lleva al primer grupo con problema (obligatorio sin elegir, o pasado de
+                        // opciones) y lo resalta. Nunca llama a `toLine()` con una selección inválida.
+                        val problem = state.firstProblemGroup()
+                        highlightId = problem?.id
+                        problem?.let { scope.launch { requesters[it.id]?.bringIntoView() } }
                     }
                 },
             )
@@ -221,8 +222,12 @@ private fun DishBottomBar(
             }
 
             is DishCta.Complete -> {
-                state.firstMissingGroup()?.let { stringResource(R.string.dish_choose_cta, it.chooseName()) }
-                    ?: pluralStringResource(R.plurals.dish_complete_cta, cta.missing, cta.missing)
+                val group = state.firstMissingGroup()
+                when {
+                    group == null -> stringResource(R.string.dish_review_cta)
+                    group.choosesOne() -> stringResource(R.string.dish_choose_cta, group.chooseName())
+                    else -> stringResource(R.string.dish_choose_many_cta, group.chooseName())
+                }
             }
         }
     Surface(
