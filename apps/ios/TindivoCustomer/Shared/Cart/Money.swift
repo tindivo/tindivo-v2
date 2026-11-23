@@ -33,11 +33,11 @@ func formatAmount(_ amount: Decimal) -> String? {
     return exactCents(amount).map(formatSoles)
 }
 
-/// Lo que se enseña cuando un importe calculado no se puede mostrar (por aprobar). Un importe que `formatAmount` rechaza
+/// Lo que se enseña cuando un importe calculado no se puede mostrar. Un importe que `formatAmount` rechaza
 /// es un dato roto: nunca se «arregla» enseñándolo de otra forma.
 let invalidAmountText = "—"
 
-/// Lo que VoiceOver lee en lugar de «—» (por aprobar): una raya sola no dice nada.
+/// Lo que VoiceOver lee en lugar de «—»: una raya sola no dice nada.
 var invalidAmountSpokenText: String { String(localized: "Importe no disponible") }
 
 /// `text` tal como se lee en voz alta: cada «—» pasa a «Importe no disponible». Solo para la accesibilidad.

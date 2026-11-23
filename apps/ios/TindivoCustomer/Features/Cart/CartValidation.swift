@@ -9,8 +9,8 @@ enum CartLineIssue: Sendable, Equatable {
     case unavailable
     /// Hoy no es su franja; trae cuándo vuelve («Solo sáb y dom, de 11:00 a 15:00») si se puede decir.
     case outOfWindow(returns: String?)
-    /// El precio de una unidad (plato más opciones) ya no es el de la bolsa; `delta` es lo que cambió (positivo, sube).
-    case priceChanged(delta: Decimal)
+    /// El precio de una unidad (plato más opciones) ya no es el de la bolsa: `old` es el de la bolsa y `new`, el de la carta.
+    case priceChanged(old: Decimal, new: Decimal)
     /// Una opción elegida cambió de precio.
     case optionPriceChanged(optionName: String)
     /// Una opción elegida ya no existe en el plato.
@@ -24,10 +24,9 @@ enum CartLineIssue: Sendable, Equatable {
         case .removed: String(localized: "Este producto ya no está disponible")
         case .unavailable: String(localized: "Producto agotado por ahora")
         case let .outOfWindow(returns): returns ?? String(localized: "Fuera de su horario")
-        case let .priceChanged(delta):
-            delta >= 0
-                ? String(localized: "Precio actualizado: +\(formatSoles(delta)) por unidad")
-                : String(localized: "Precio actualizado: -\(formatSoles(-delta)) por unidad")
+        // Antes y ahora, no la diferencia: así no hay que hacer la cuenta y se lee igual si el precio baja.
+        case let .priceChanged(old, new):
+            String(localized: "Precio por unidad actualizado: antes \(formatSoles(old)), ahora \(formatSoles(new))")
         case let .optionPriceChanged(name): String(localized: "La opción \"\(name)\" cambió de precio")
         case .optionRemoved: String(localized: "Una opción ya no está disponible")
         case .invalidSelection: String(localized: "El negocio cambió las opciones de este plato. Vuelve a elegirlas.")
@@ -74,7 +73,7 @@ enum CartValidation {
             if expectedUnit != line.unitPrice {
                 // El cambio de precio de una opción ya está dicho por el aviso de la unidad: un solo aviso, no dos.
                 issues.removeAll { if case .optionPriceChanged = $0 { true } else { false } }
-                issues.append(.priceChanged(delta: expectedUnit - line.unitPrice))
+                issues.append(.priceChanged(old: line.unitPrice, new: expectedUnit))
             }
             if !DishSelection(dish: item.dish, selectedIds: chosenIds).isValid { issues.append(.invalidSelection) }
         }

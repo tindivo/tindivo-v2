@@ -2,14 +2,14 @@ import SwiftUI
 import TindivoDesign
 
 /// Aviso de sistema antiguo (D-58, paridad con `OsNotice.kt` de Android): el iOS del aparato está por debajo del mínimo de
-/// `/config`. Solo avisa: la persona sigue usando la app y puede cerrarlo. Textos de `os_notice_*` de Android con
-/// «iPhone»/«iOS» en lugar de «Android» (por aprobar).
+/// `/config`. Solo avisa: la persona sigue usando la app y puede cerrarlo. El título habla de la versión de iOS, no del
+/// aparato (Jesús, 2026-11-22: «Tu iPhone es antiguo» sonaba a reproche); el texto es el de `os_notice_*` de Android.
 struct OSNoticeView: View {
     let onDismiss: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: TindivoTokens.Spacing.spaceInner) {
-            Text("Tu iPhone es antiguo")
+            Text("Tu versión de iOS es antigua")
                 .tindivoText(TindivoTokens.Typography.body)
                 .bold()
                 .foregroundStyle(Color.tindivo.ink)

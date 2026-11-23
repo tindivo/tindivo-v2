@@ -58,7 +58,7 @@ struct AmountDisplayTests {
     func bagLevelNotice() {
         #expect(
             filled(subtotal: invalidAmountText, lines: [lineRow("a")]).subtotalNotice
-                == "No pudimos calcular el subtotal de tu bolsa")
+                == "No pudimos calcular el subtotal de tu bolsa. Revisa las cantidades.")
         #expect(filled(subtotal: "S/ 10.00", lines: [lineRow("a")]).subtotalNotice == nil)
         let broken = CartLineRow(
             signature: "b", name: "b", options: [], note: nil, quantity: 1, total: invalidAmountText,

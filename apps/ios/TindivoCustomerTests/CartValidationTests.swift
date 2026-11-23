@@ -78,10 +78,14 @@ struct CartValidationTests {
         "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): el precio base cambió")
     func basePriceChanged() throws {
         let result = try issues(of: [line("i1", price: "10")], in: [Fixture.item("i1", price: "12")])
-        #expect(result == [[.priceChanged(delta: dec("2"))]])
-        #expect(CartLineIssue.priceChanged(delta: dec("2")).message.plain == "Precio actualizado: +S/ 2.00 por unidad")
+        #expect(result == [[.priceChanged(old: dec("10"), new: dec("12"))]])
         #expect(
-            CartLineIssue.priceChanged(delta: dec("-0.5")).message.plain == "Precio actualizado: -S/ 0.50 por unidad")
+            CartLineIssue.priceChanged(old: dec("10"), new: dec("12")).message.plain
+                == "Precio por unidad actualizado: antes S/ 10.00, ahora S/ 12.00")
+        // Si baja, se lee igual de claro: sin signos que interpretar.
+        #expect(
+            CartLineIssue.priceChanged(old: dec("12"), new: dec("11.5")).message.plain
+                == "Precio por unidad actualizado: antes S/ 12.00, ahora S/ 11.50")
     }
 
     @Test(
@@ -93,7 +97,7 @@ struct CartValidationTests {
             in: [Fixture.item("i1", groups: [sizes])]
         )
         // Un solo aviso (el de la unidad), no uno por la opción y otro por el total.
-        #expect(result == [[.priceChanged(delta: dec("0.5"))]])
+        #expect(result == [[.priceChanged(old: dec("13"), new: dec("13.5"))]])
     }
 
     @Test(

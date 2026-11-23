@@ -13,10 +13,10 @@ extension View {
 }
 
 extension CartScreenModel.Filled {
-    /// Aviso a nivel de bolsa (por aprobar): el subtotal no se puede mostrar aunque cada línea sí. Con una línea rota
-    /// ya avisa esa línea.
+    /// Aviso a nivel de bolsa: el subtotal no se puede mostrar aunque cada línea sí, porque la suma se sale del tope de un
+    /// importe. Reintentar no lo arregla; bajar cantidades, sí. Con una línea rota ya avisa esa línea.
     var subtotalNotice: String? {
         guard subtotal == invalidAmountText, lines.allSatisfy({ $0.total != invalidAmountText }) else { return nil }
-        return String(localized: "No pudimos calcular el subtotal de tu bolsa")
+        return String(localized: "No pudimos calcular el subtotal de tu bolsa. Revisa las cantidades.")
     }
 }

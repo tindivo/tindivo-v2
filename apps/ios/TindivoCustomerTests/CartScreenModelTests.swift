@@ -388,7 +388,10 @@ extension CartScreenModelTests {
         let (model, store, task) = try await validated(
             lines: [line("a", price: "10")], menu: validationMenu([Fixture.item("a", price: "12")])
         )
-        #expect(filled(model)?.lines.first?.issues.map(\.plain) == ["Precio actualizado: +S/ 2.00 por unidad"])
+        #expect(
+            filled(model)?.lines.first?.issues.map(\.plain) == [
+                "Precio por unidad actualizado: antes S/ 10.00, ahora S/ 12.00"
+            ])
         #expect(model.canContinue == false)
         #expect(await store.current()?.lines.first?.basePrice == dec("10"))
         task.cancel()

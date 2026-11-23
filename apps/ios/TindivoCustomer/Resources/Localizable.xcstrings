@@ -228,7 +228,7 @@
     "hoy" : {},
     "Hoy este restaurante no ha confirmado que atiende" : {},
     "Importe no disponible" : {
-      "comment" : "por aprobar: lo que VoiceOver lee en lugar de «—»"
+      "comment" : "Lo que VoiceOver lee en lugar de «—» (aprobado por Jesús, 2026-11-22)"
     },
     "Incluido" : {},
     "Información" : {},
@@ -269,8 +269,7 @@
     "Pedir por WhatsApp" : {},
     "Pide directo por WhatsApp mientras preparamos su integración completa a la plataforma." : {},
     "Plin" : {},
-    "Precio actualizado: +%@ por unidad" : {},
-    "Precio actualizado: -%@ por unidad" : {},
+    "Precio por unidad actualizado: antes %@, ahora %@" : {},
     "Probar de nuevo" : {},
     "Próximamente pedidos por la plataforma" : {},
     "Prueba con otro nombre, o con un ingrediente: también buscamos dentro de la descripción de cada plato." : {},
@@ -331,7 +330,7 @@
     "Ir a la App Store" : {},
     "Versión mínima: %@" : {},
     "Búscala en la App Store" : {},
-    "Tu iPhone es antiguo" : {},
+    "Tu versión de iOS es antigua" : {},
     "Puedes seguir usando Tindivo, pero algunas funciones podrían no ir bien en esta versión de iOS." : {},
     "Entendido" : {},
     "%lld productos" : {
@@ -378,8 +377,8 @@
     "Fuera de su horario" : {},
     "Guardar cambios · %@" : {},
     "La opción \"%@\" cambió de precio" : {},
-    "No pudimos calcular el subtotal de tu bolsa" : {
-      "comment" : "por aprobar: aviso a nivel de bolsa cuando el subtotal no se puede mostrar"
+    "No pudimos calcular el subtotal de tu bolsa. Revisa las cantidades." : {
+      "comment" : "Aviso a nivel de bolsa cuando el subtotal no se puede mostrar (aprobado por Jesús, 2026-11-22)"
     },
     "No pudimos revisar tu bolsa con la carta. Lo confirmaremos al hacer el pedido." : {},
     "Producto agotado por ahora" : {},
