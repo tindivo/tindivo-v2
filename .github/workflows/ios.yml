@@ -65,7 +65,7 @@ jobs:
           IOS_BUILD_NUMBER: ${{ github.run_number }}
         run: apps/ios/scripts/xcodebuild.sh build Prod
 
-      # SW-14: SwiftLint fijado y swift-format de la toolchain; falla si SwiftLint halla errores. Va al final y con
+      # SW-14: SwiftLint fijado y swift-format de la toolchain; falla si SwiftLint halla errores o el formato no es el de swift-format. Va al final y con
       # always() para que un error de estilo no esconda si las pruebas pasan ese día.
       - name: Lint
         if: always()

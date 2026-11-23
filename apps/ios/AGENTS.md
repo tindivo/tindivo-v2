@@ -10,7 +10,8 @@ Se suma al `AGENTS.md` raíz. La norma es `Docs/arquitectura/estandares/swift.md
   firma; otro destino con `IOS_DESTINATION`. Herramientas fijadas (XcodeGen y SwiftLint con sha256, swift-openapi-generator
   con versión exacta en `Tools/Package.swift`) en `~/Library/Caches/tindivo-ios`, compartida entre worktrees.
 - **Estilo (SW-14):** `pnpm ios:lint` corre SwiftLint (`.swiftlint.yml`, sobre las carpetas de `included`, también lo no
-  versionado; falla solo con errores) y `swift format lint` (`.swift-format`, solo lo versionado y no generado); `pnpm ios:format` aplica `swift-format` y reescribe archivos.
+  versionado; falla con errores) y `swift format lint --strict` (`.swift-format`, solo lo versionado y no generado; falla si
+  el formato no es el suyo); `pnpm ios:format` aplica `swift-format` y reescribe archivos.
   swift-format decide largo de línea y comas finales: por eso SwiftLint tiene apagados `line_length` y `trailing_comma`.
 - **Build (SW-15):** `IOS_BUILD_NUMBER` (la CI pasa `github.run_number`) fija `CURRENT_PROJECT_VERSION`. Ese número es
   por workflow y empieza en 1: el workflow que suba a TestFlight tiene que usar una base mayor que el último build subido.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SW-14: SwiftLint (versión fijada en tools.sh) y swift-format de la toolchain, sobre los fuentes no generados.
-#   apps/ios/scripts/lint.sh           comprueba: falla si SwiftLint halla errores (los avisos se muestran, no fallan)
+#   apps/ios/scripts/lint.sh           comprueba: falla si SwiftLint halla errores o si el formato no es el de swift-format
 #   apps/ios/scripts/lint.sh --format  aplica swift-format a los fuentes (reescribe archivos)
 set -euo pipefail
 
@@ -24,5 +24,5 @@ fi
 # Que falle uno no impide ver el otro: se corren ambos y se suma el resultado.
 status=0
 "$SWIFTLINT" lint --quiet || status=$?
-swift format lint --configuration .swift-format "${swift_files[@]}" || status=$?
+swift format lint --strict --configuration .swift-format "${swift_files[@]}" || status=$?
 exit "$status"
