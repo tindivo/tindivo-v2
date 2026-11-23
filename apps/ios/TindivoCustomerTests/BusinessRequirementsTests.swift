@@ -82,7 +82,7 @@ struct BusinessRequirementsTests {
         #expect(model.openDish?.id == "combo")
     }
 
-    @Test("CUS-CAT-029 la bolsa de otro restaurante no cuenta: «+» sobre ella abre la ficha, que sabe preguntar")
+    @Test("CUS-CAT-029 la bolsa de otro restaurante no cuenta: «+» pregunta si se vacía")
     func otherBusinessBag() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("simple"))
@@ -92,7 +92,8 @@ struct BusinessRequirementsTests {
         await eventually { model.cart != nil }
         #expect(model.control(for: simple) == .add)
         await model.increment(simple)
-        #expect(model.openDish?.id == "simple")
+        #expect(model.replacement?.current == "Chifa")
+        #expect(model.openDish == nil)
         #expect(await store.current()?.businessId == "otro", "no se tocó la bolsa del otro")
         observer.cancel()
     }
@@ -206,5 +207,117 @@ struct BusinessRequirementsTests {
         #expect(model.searchResults.map(\.item.id) == ["a"])
         model.closeSearch()
         #expect(model.searchResults.isEmpty)
+    }
+
+    // MARK: Una sola línea, la sencilla (B1)
+
+    private func noted(_ id: String, quantity: Int = 1, note: String? = "sin hielo") -> CartLine {
+        CartLine(itemId: id, name: "Plato \(id)", basePrice: dec("12.50"), modifiers: [], note: note, quantity: quantity, imageURL: nil)
+    }
+
+    @Test("B1 CUS-CAT-029 un plato sin opciones cuya línea lleva nota no muestra «− N +»: «En tu bolsa: N» y «Editar selección»")
+    func lineWithNoteIsNotPlain() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: noted("simple", quantity: 2))
+        let model = await loaded(menu(), store: store)
+        let simple = try item("simple", in: model)
+        let observer = Task { await model.observeCart() }
+        await eventually { model.control(for: simple) == .inBag(quantity: 2) }
+        // «+» y «−» no tocan una línea con nota: la bolsa queda igual.
+        await model.increment(simple)
+        await model.decrement(simple)
+        #expect(await store.current()?.lines.map(\.quantity) == [2])
+        observer.cancel()
+    }
+
+    @Test("B1 con varias líneas del mismo plato la tarjeta suma y no muestra «− N +»; «Editar selección» lleva a la bolsa")
+    func severalLines() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: Fixture.line("simple"))
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: noted("simple", quantity: 2))
+        let model = await loaded(menu(), store: store)
+        let simple = try item("simple", in: model)
+        let observer = Task { await model.observeCart() }
+        await eventually { model.control(for: simple) == .inBag(quantity: 3) }
+        #expect(model.chooseOptions(simple) == .bag)
+        #expect(model.openDish == nil)
+        observer.cancel()
+    }
+
+    @Test("B1 «+» y «−» actúan de forma atómica sobre la firma concreta: dos toques seguidos suman los dos")
+    func atomicSteps() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: Fixture.line("simple"))
+        let model = await loaded(menu(), store: store)
+        let simple = try item("simple", in: model)
+        let observer = Task { await model.observeCart() }
+        await eventually { model.control(for: simple) == .stepper(quantity: 1, canIncrease: true) }
+        async let first: Void = model.increment(simple)
+        async let second: Void = model.increment(simple)
+        _ = await (first, second)
+        #expect(await store.current()?.lines.first?.quantity == 3)
+        observer.cancel()
+    }
+
+    // MARK: «Editar selección» (la bolsa ya sabe editar)
+
+    @Test("«Editar selección» con UNA línea del plato abre esa línea en modo edición")
+    func editSingleLine() async throws {
+        let store = temporaryStore()
+        let model = await loaded(menu(), store: store)
+        let combo = try item("combo", in: model)
+        let line = CartLine(
+            itemId: "combo", name: "Plato combo", basePrice: dec("12.50"),
+            modifiers: [CartModifier(optionId: "o", groupName: "Grupo g", optionName: "Opción o", price: 0)],
+            note: nil, quantity: 1, imageURL: nil
+        )
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line)
+        let observer = Task { await model.observeCart() }
+        await eventually { model.control(for: combo) == .inBag(quantity: 1) }
+        #expect(model.chooseOptions(combo) == .dish)
+        #expect(model.dishModel?.isEditing == true)
+        #expect(model.dishModel?.selection.selectedIds == ["o"], "la ficha trae lo elegido")
+        model.closeDish()
+        #expect(model.dishModel == nil)
+        observer.cancel()
+    }
+
+    @Test("«Elegir» abre la ficha en blanco, y el modelo de la ficha se arma una sola vez al abrir")
+    func chooseOpensFreshDish() async throws {
+        let model = await loaded(menu())
+        let combo = try item("combo", in: model)
+        #expect(model.chooseOptions(combo) == .dish)
+        let first = try #require(model.dishModel)
+        #expect(!first.isEditing)
+        #expect(model.dishModel === first, "no se rearma al leerlo")
+    }
+
+    // MARK: «+» con la bolsa de otro negocio (A8)
+
+    @Test("A8 «+» con la bolsa de otro restaurante pregunta aquí mismo; «Vaciar y empezar» deja el plato en la bolsa nueva")
+    func replacementFromTheMenu() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("x"))
+        let model = await loaded(menu(), store: store)
+        let simple = try item("simple", in: model)
+        await model.increment(simple)
+        #expect(model.replacement == DishScreenModel.Replacement(current: "Chifa", new: "Don Lucho"))
+        #expect(model.openDish == nil, "no abre la ficha")
+        await model.confirmReplacement()
+        #expect(model.replacement == nil)
+        let cart = await store.current()
+        #expect(cart?.businessId == "negocio-1")
+        #expect(cart?.lines.map(\.itemId) == ["simple"])
+    }
+
+    @Test("A8 «Mantener» deja la bolsa del otro restaurante y no agrega nada")
+    func keepFromTheMenu() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("x"))
+        let model = await loaded(menu(), store: store)
+        await model.increment(try item("simple", in: model))
+        model.keepCurrentBag()
+        #expect(model.replacement == nil)
+        #expect(await store.current()?.businessId == "otro")
     }
 }

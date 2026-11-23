@@ -8,7 +8,7 @@ import TindivoAPI
 @MainActor
 @Suite("Plato: botón, avance y resultado")
 struct DishRequirementsTests {
-    /// «Pollo entero» con «Guarnición 1» y «Guarnición 2» obligatorias y un extra opcional (CA-CAT-P7).
+    /// «Pollo entero» con «Guarnición 1» y «Guarnición 2» obligatorias y un extra opcional (CUS-CAT-033).
     private var pollo: BusinessMenu.Item {
         func group(_ id: String, _ name: String, required: Bool, max: Int, _ options: [BusinessMenu.ModifierOption]) -> BusinessMenu.ModifierGroup {
             BusinessMenu.ModifierGroup(
@@ -44,7 +44,7 @@ struct DishRequirementsTests {
         }
     }
 
-    @Test("CA-CAT-P7 con «Guarnición 2» sin elegir el botón dice «Elige Guarnición 2» y está apagado")
+    @Test("CUS-CAT-033 con «Guarnición 2» sin elegir el botón nombra el grupo y está apagado (texto por aprobar)")
     func ctaNamesTheMissingGroup() throws {
         let model = try model()
         try choose("papas", in: model)
@@ -53,13 +53,21 @@ struct DishRequirementsTests {
         #expect(model.firstMissingGroup?.id == "g2")
     }
 
+    @Test("CUS-CAT-033 VoiceOver anuncia «Falta elegir [grupo]» al llevar la vista al grupo (texto por aprobar)")
+    func announcesTheMissingGroup() async throws {
+        let model = try model()
+        #expect(model.attentionAnnouncement == nil)
+        await model.tapAdd()
+        #expect(model.attentionAnnouncement == "Falta elegir Guarnición 1")
+    }
+
     @Test("CUS-CAT-033 sin nada elegido el botón nombra el primer grupo obligatorio, no el opcional")
     func ctaNamesTheFirstRequired() throws {
         let model = try model()
         #expect(model.ctaTitle == "Elige Guarnición 1")
     }
 
-    @Test("CA-CAT-P7 tocar el botón con algo sin elegir no agrega: lleva al grupo que falta, y cada toque cuenta")
+    @Test("CUS-CAT-033 tocar el botón con algo sin elegir no agrega: lleva al grupo que falta, y cada toque cuenta")
     func tapLeadsToTheMissingGroup() async throws {
         let store = temporaryStore()
         let model = try model(store: store)
@@ -93,7 +101,7 @@ struct DishRequirementsTests {
         #expect(try model(Fixture.item("i2")).progressText == nil)
     }
 
-    @Test("CA-CAT-P7 una vez resuelto todo, tocar el botón agrega")
+    @Test("CUS-CAT-033 una vez resuelto todo, tocar el botón agrega")
     func tapAddsWhenComplete() async throws {
         let store = temporaryStore()
         let model = try model(store: store)

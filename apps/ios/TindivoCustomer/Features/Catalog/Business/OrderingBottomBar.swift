@@ -41,25 +41,34 @@ struct CartBarView: View {
     private func button(vertical: Bool) -> some View {
         Button(action: action) {
             layout(vertical: vertical) {
-                Text("Ver mi bolsa")
-                    .tindivoText(TindivoTokens.Typography.cta)
-                    .lineLimit(1)
-                    .fixedSize()
+                // En línea el texto mide lo que mide (si no cabe, `ViewThatFits` pasa a la variante vertical); en vertical
+                // se parte en las líneas que haga falta, centrado, y nunca se sale de la pantalla.
+                fitted(Text("Ver mi bolsa").tindivoText(TindivoTokens.Typography.cta), vertical: vertical)
                 if !vertical { Spacer(minLength: 0) }
                 // Blanco sobre `primary` da 3,25:1: solo cuenta como texto grande en negrita y a 14 pt o más
                 // (decisión de Jesús, 2026-11-22; HIG: negrita, 3:1).
-                Text("\(unitsText(summary.count)) · \(summary.subtotal)")
-                    .tindivoText(TindivoTokens.Typography.body)
-                    .fontWeight(.bold)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .fixedSize()
+                fitted(
+                    Text("\(unitsText(summary.count)) · \(summary.subtotal)")
+                        .tindivoText(TindivoTokens.Typography.body)
+                        .fontWeight(.bold)
+                        .monospacedDigit(),
+                    vertical: vertical
+                )
             }
             .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
             .padding(.vertical, vertical ? TindivoTokens.Spacing.spaceInner : 0)
             .frame(maxWidth: .infinity, minHeight: TindivoTokens.Spacing.ctaHeight)
         }
         .buttonStyle(TindivoCTAButtonStyle(cornerRadius: vertical ? TindivoTokens.Radius.radiusField : nil))
+    }
+
+    @ViewBuilder
+    private func fitted(_ text: some View, vertical: Bool) -> some View {
+        if vertical {
+            text.multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+        } else {
+            text.lineLimit(1).fixedSize()
+        }
     }
 
     private func layout(vertical: Bool, @ViewBuilder _ content: () -> some View) -> some View {

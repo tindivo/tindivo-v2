@@ -16,12 +16,16 @@ final class DishScreenModel {
         case full
         /// No se pudo guardar en el teléfono.
         case failed
+        /// Se estaba editando una línea que ya no está en la bolsa.
+        case lineGone
     }
 
     /// Lo que la pantalla hace con un resultado de «Agregar» (ver `resolveOutcome`).
     enum Resolution: Equatable {
         /// Se agregó: la carta cierra la ficha y enseña su aviso.
         case added(capped: Bool)
+        /// La línea que se editaba ya no está en la bolsa: la ficha se cierra.
+        case lineGone
         /// Nada que hacer en la ficha (el aviso, si lo había, ya se encendió, o falta que la persona decida).
         case stay
     }
@@ -52,13 +56,21 @@ final class DishScreenModel {
     private let businessName: String
     private let cartStore: any CartStore
     private var pending: CartLine?
+    /// La línea de la bolsa que se está editando («Editar»); `nil` al agregar un plato.
+    private let editing: CartLine?
 
-    init(item: MenuItem, businessId: String, businessName: String, cartStore: any CartStore, clock: AppClock) {
+    var isEditing: Bool { editing != nil }
+
+    init(
+        item: MenuItem, businessId: String, businessName: String, cartStore: any CartStore, clock: AppClock,
+        editing: CartLine? = nil
+    ) {
         self.item = item
         self.businessId = businessId
         self.businessName = businessName
         self.cartStore = cartStore
-        selection = DishSelection(dish: item.dish)
+        self.editing = editing
+        selection = editing.map { DishSelection(dish: item.dish, restoring: $0) } ?? DishSelection(dish: item.dish)
         notices = TimedNotice(clock: clock)
     }
 
@@ -102,7 +114,8 @@ final class DishScreenModel {
     /// El botón de abajo: «Agregar · S/ 49.00», o «Elige [grupo]» con el grupo obligatorio que falta (CUS-CAT-033).
     var ctaTitle: String {
         switch selection.cta {
-        case let .add(total): String(localized: "Agregar · \(total)")
+        case let .add(total):
+            isEditing ? String(localized: "Guardar cambios · \(total)") : String(localized: "Agregar · \(total)")
         case .complete:
             if let group = firstMissingGroup { String(localized: "Elige \(group.name)") } else { String(localized: "Revisa tus opciones") }
         }
@@ -136,6 +149,12 @@ final class DishScreenModel {
         return ("\(used)/\(CartLimits.maxNoteLength)", String(localized: "\(used) de \(CartLimits.maxNoteLength) caracteres"))
     }
 
+    /// Lo que VoiceOver anuncia al llevar la vista a un grupo («Falta elegir Guarnición 2»; texto por aprobar).
+    var attentionAnnouncement: String? {
+        attention.flatMap { attention in item.dish.groups.first { $0.id == attention.groupID } }
+            .map { String(localized: "Falta elegir \($0.name)") }
+    }
+
     /// Un toque en el botón de abajo: con algo obligatorio sin elegir lleva al grupo que falta; si no, agrega.
     func tapAdd() async {
         if let group = firstMissingGroup {
@@ -163,6 +182,9 @@ final class DishScreenModel {
             showNotice(for: outcome)
             consumeOutcome()
             return .stay
+        case .lineGone:
+            consumeOutcome()
+            return .lineGone
         case .otherBusiness:
             return .stay
         }
@@ -176,6 +198,13 @@ final class DishScreenModel {
         isAdding = true
         defer { isAdding = false }
         do throws(CartError) {
+            if let editing {
+                switch try await cartStore.replaceLine(signature: editing.signature, with: line) {
+                case let .replaced(capped): outcome = .added(capped: capped)
+                case .notFound: outcome = .lineGone
+                }
+                return
+            }
             switch try await cartStore.add(businessId: businessId, businessName: businessName, line: line) {
             case let .added(_, capped):
                 pending = nil
@@ -229,7 +258,7 @@ final class DishScreenModel {
         switch outcome {
         case .full: notices.show(Self.fullMessage)
         case .failed: notices.show(Self.failedMessage)
-        case .added, .otherBusiness: break
+        case .added, .otherBusiness, .lineGone: break
         }
     }
 

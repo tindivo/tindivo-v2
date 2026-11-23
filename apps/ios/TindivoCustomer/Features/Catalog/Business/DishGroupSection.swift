@@ -5,6 +5,8 @@ import TindivoDesign
 struct DishGroupSection: View {
     let group: DishGroup
     let model: DishScreenModel
+    /// El foco de VoiceOver: al tocar «Elige …» se lleva al título del grupo que falta.
+    let focus: AccessibilityFocusState<String?>.Binding
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .body) private var markSize: CGFloat = 22
 
@@ -31,6 +33,7 @@ struct DishGroupSection: View {
                     .foregroundStyle(Color.tindivo.ink)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityAddTraits(.isHeader)
+                    .accessibilityFocused(focus, equals: group.id)
                 if let counter = model.counter(for: group) {
                     Text(counter.text)
                         .tindivoText(TindivoTokens.Typography.bodySecondary)
@@ -43,7 +46,7 @@ struct DishGroupSection: View {
             // «Obligatorio · elige 1» → «Listo ✓»; «Opcional · hasta 2».
             HStack(spacing: 4) {
                 if progress.required && progress.done {
-                    Image(tindivo: .checkOn).accessibilityHidden(true)
+                    Image(tindivo: .done).accessibilityHidden(true)
                 }
                 Text(model.statusText(for: group))
                     .tindivoText(TindivoTokens.Typography.bodySecondary)

@@ -43,18 +43,31 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDevelopmentRegion: es
-        UILaunchScreen: {}
+        UILaunchScreen: { UIColorName: LaunchBackground } # generado desde los tokens (scripts/ios-colorsets.mjs)
+        ITSAppUsesNonExemptEncryption: false # solo HTTPS del sistema
         UIUserInterfaceStyle: Light # el canon solo define tema claro
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         TindivoAPIBaseURL: $(API_BASE_URL)
         TindivoSupabaseURL: $(SUPABASE_URL)
         TindivoSupabasePublishableKey: $(SUPABASE_PUBLISHABLE_KEY)
+        TindivoAppStoreID: $(APP_STORE_ID)
+    # Antes de publicar en Prod, APP_STORE_ID debe tener el id de la ficha. Hoy no existe y el build Prod debe seguir
+    # compilando en CI, así que es un AVISO (warning), no un error. Cuando exista el id, cambiar `warning:` por `error:`.
+    preBuildScripts:
+      - name: Comprobar APP_STORE_ID
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ -z "$APP_STORE_ID" ] && [ "$CONFIGURATION" = "Release-Prod" ]; then
+            echo "warning: APP_STORE_ID está vacío en Prod.xcconfig: la pantalla de actualización obligatoria no tiene adónde mandar. Pon el id de la ficha antes de publicar."
+          fi
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
         TARGETED_DEVICE_FAMILY: "1" # solo iPhone
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
         SWIFT_EMIT_LOC_STRINGS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
   TindivoCustomerTests:
     type: bundle.unit-test
     platform: iOS

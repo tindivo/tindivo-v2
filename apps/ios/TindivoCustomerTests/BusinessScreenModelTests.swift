@@ -46,7 +46,7 @@ struct BusinessScreenModelTests {
         #expect(model.visible == nil)
     }
 
-    @Test("426: el modelo lo deja como estado")
+    @Test("426: la carta queda en error; la pantalla de actualización la decide la raíz (ConfigService)")
     func upgrade() async {
         let model = BusinessScreenModel(
             id: "x", catalog: StubCatalog(menus: Script(failing: .upgradeRequired(minVersion: "2.0.0"))),
@@ -54,7 +54,6 @@ struct BusinessScreenModelTests {
         )
         await model.load()
         #expect(model.state == .failed(.upgradeRequired(minVersion: "2.0.0")))
-        #expect(model.upgradeNotice == UpgradeNotice(.upgradeRequired(minVersion: "2.0.0")))
     }
 
     @Test("un precio fuera de numeric(10,2) deja la carta entera en error")

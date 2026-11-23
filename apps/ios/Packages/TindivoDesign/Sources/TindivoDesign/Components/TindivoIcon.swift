@@ -14,6 +14,10 @@ public enum TindivoIcon: Sendable, CaseIterable {
     case error
     case bag
     case plus
+    /// Quitar una línea (el «−» de una cantidad de 1).
+    case trash
+    /// Un paso resuelto («Listo»).
+    case done
     case minus
     case radioOn
     case radioOff
@@ -30,6 +34,8 @@ public enum TindivoIcon: Sendable, CaseIterable {
         case .error: "exclamationmark.triangle"
         case .bag: "bag"
         case .plus: "plus"
+        case .trash: "trash"
+        case .done: "checkmark.circle.fill"
         case .minus: "minus"
         case .radioOn: "largecircle.fill.circle"
         case .radioOff: "circle"

@@ -16,8 +16,9 @@ private struct ShakeModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .modifier(ShakeEffect(progress: progress))
-            .onChange(of: trigger) { _, _ in
-                guard !reduceMotion else { return }
+            .onChange(of: trigger) { old, new in
+                // Solo cuando el número SUBE: que el contador de otro grupo vuelva a 0 no sacude a este.
+                guard !reduceMotion, new > old else { return }
                 progress = 0
                 withAnimation(.linear(duration: 0.4)) { progress = 1 }
             }

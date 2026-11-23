@@ -10,9 +10,23 @@ protocol CartStore: Sendable {
     func add(businessId: String, businessName: String, line: CartLine) async throws(CartError) -> AddResult
     /// Empieza una bolsa nueva con `line`: solo después de que la persona aceptó vaciar la del otro negocio.
     func replace(businessId: String, businessName: String, line: CartLine) async throws(CartError)
-    func setQuantity(signature: String, quantity: Int) async throws(CartError)
-    func remove(signature: String) async throws(CartError)
+    /// Suma `delta` unidades a la cantidad que la línea tiene en el momento de escribir (1...`maxQuantity`): leer y
+    /// escribir son una sola operación, así que dos toques seguidos suman los dos.
+    func changeQuantity(signature: String, by delta: Int) async throws(CartError)
+    /// «Editar»: cambia la línea `signature` por `line` en su sitio, o la fusiona con otra idéntica (CUS-CRT-014).
+    func replaceLine(signature: String, with line: CartLine) async throws(CartError) -> LineEditResult
+    /// Quita la línea y devuelve lo necesario para deshacerlo; `nil` si ya no estaba.
+    @discardableResult func remove(signature: String) async throws(CartError) -> RemovedLine?
+    /// Devuelve una línea quitada a su sitio (o la fusiona con una igual); ver `RestoreResult`.
+    func restore(_ removed: RemovedLine) async throws(CartError) -> RestoreResult
     func clear() async throws(CartError)
+}
+
+enum LineEditResult: Sendable, Equatable {
+    /// `capped`: se fusionó con otra línea y la suma no cabía: se quedó en `maxQuantity`.
+    case replaced(capped: Bool)
+    /// La línea ya no estaba en la bolsa: no se escribió nada.
+    case notFound
 }
 
 /// La bolsa en un archivo `Codable` (`tindivo_cart.json` en Application Support). Es un `actor`: leer, cambiar y
@@ -55,14 +69,29 @@ actor FileCartStore: CartStore {
         try write(replacedWith(businessId: businessId, businessName: businessName, line: line))
     }
 
-    func setQuantity(signature: String, quantity: Int) throws(CartError) {
-        guard let cart = current() else { return }
-        try write(cart.settingQuantity(of: signature, to: quantity))
+    func replaceLine(signature: String, with line: CartLine) throws(CartError) -> LineEditResult {
+        try requireValidQuantity(line)
+        guard let cart = current(), let edited = cart.replacing(signature, with: line) else { return .notFound }
+        try write(edited.cart)
+        return .replaced(capped: edited.capped)
     }
 
-    func remove(signature: String) throws(CartError) {
+    func changeQuantity(signature: String, by delta: Int) throws(CartError) {
         guard let cart = current() else { return }
+        try write(cart.changingQuantity(of: signature, by: delta))
+    }
+
+    func remove(signature: String) throws(CartError) -> RemovedLine? {
+        guard let cart = current(), let removed = cart.removal(of: signature) else { return nil }
         try write(cart.removingLine(signature))
+        return removed
+    }
+
+    func restore(_ removed: RemovedLine) throws(CartError) -> RestoreResult {
+        guard let cart = current(), !cart.isEmpty else { return .noBag }
+        let restored = cart.restoring(removed)
+        if restored.result != .full { try write(restored.cart) }
+        return restored.result
     }
 
     func clear() throws(CartError) {

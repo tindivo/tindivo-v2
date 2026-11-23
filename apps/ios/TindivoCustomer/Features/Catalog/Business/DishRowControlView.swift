@@ -22,11 +22,12 @@ struct DishRowControlView: View {
                 .accessibilityIdentifier("menu.add")
         case let .stepper(quantity, canIncrease):
             TindivoStepper(
-                quantity: quantity, canDecrease: true, canIncrease: canIncrease,
-                decreaseLabel: String(localized: "Una menos"), increaseLabel: String(localized: "Una más"),
+                quantity: quantity, label: String(localized: "Cantidad de \(itemName)"), identifier: "menu",
+                canDecrease: true, canIncrease: canIncrease, decreaseRemoves: quantity == 1,
+                decreaseLabel: quantity == 1 ? String(localized: "Quitar \(itemName)") : String(localized: "Una menos de \(itemName)"),
+                increaseLabel: String(localized: "Una más de \(itemName)"),
                 onDecrease: action.onDecrease, onIncrease: action.onAdd
             )
-            .accessibilityIdentifier("menu.stepper")
         case .choose:
             TindivoCompactButton(String(localized: "Elegir"), action: action.onChoose)
                 .accessibilityLabel(Text("Elegir \(itemName)"))

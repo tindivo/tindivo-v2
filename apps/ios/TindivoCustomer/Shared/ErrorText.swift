@@ -11,14 +11,3 @@ enum ErrorText {
         }
     }
 }
-
-/// Un 426: la app quedó por debajo de la versión mínima. La pantalla de actualización es de otra fase; mientras
-/// tanto los modelos lo exponen para que la raíz pueda llevar a ella.
-struct UpgradeNotice: Equatable {
-    let minVersion: String?
-
-    init?(_ error: AppError) {
-        guard case let .upgradeRequired(minVersion) = error else { return nil }
-        self.minVersion = minVersion
-    }
-}

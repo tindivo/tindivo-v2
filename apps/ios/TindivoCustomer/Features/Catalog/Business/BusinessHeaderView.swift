@@ -7,6 +7,8 @@ struct BusinessHeaderView: View {
     let business: BusinessDetail
     /// «Abierto · cierra 23:00» o «Cerrado · abre hoy 18:00»; `nil` sin horario.
     let status: String?
+    /// Cómo recibe el pedido, solo como información, sin selector (CUS-CAT-017).
+    let modes: [DeliveryMode]
     let onShowInfo: () -> Void
 
     private static let logoSize: CGFloat = 56
@@ -52,6 +54,19 @@ struct BusinessHeaderView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("business.infoRow")
+            if !modes.isEmpty {
+                // Informativo: no es un botón ni un selector; el método se elige al pagar (CUS-CRT-007).
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(modes.enumerated()), id: \.offset) { _, mode in
+                        Text(mode.summary)
+                            .tindivoText(TindivoTokens.Typography.bodySecondary)
+                            .foregroundStyle(Color.tindivo.inkSecondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("business.modes")
+            }
         }
         .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
     }

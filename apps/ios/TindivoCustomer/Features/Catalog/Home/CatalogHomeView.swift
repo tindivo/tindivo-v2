@@ -35,6 +35,7 @@ struct CatalogHomeView: View {
         }
         .task { await model.load() }
         .task { await model.observeCart() }
+        .task { await model.runClock() }
     }
 
     private func list(_ loaded: CatalogHomeScreenModel.Loaded) -> some View {

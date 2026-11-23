@@ -8,14 +8,21 @@ struct DishView: View {
     let onClose: () -> Void
     /// Se agregó: la carta cierra la ficha y enseña su aviso (con `capped`, el de «máximo por pedido»).
     let onAdded: (Bool) -> Void
+    /// Solo al editar desde la bolsa: la línea ya no estaba; quien presenta cierra la ficha y avisa.
+    let onLineGone: (() -> Void)?
 
-    init(model: DishScreenModel, onClose: @escaping () -> Void, onAdded: @escaping (Bool) -> Void) {
+    init(
+        model: DishScreenModel, onClose: @escaping () -> Void, onAdded: @escaping (Bool) -> Void,
+        onLineGone: (() -> Void)? = nil
+    ) {
+        self.onLineGone = onLineGone
         _model = State(initialValue: model)
         self.onClose = onClose
         self.onAdded = onAdded
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AccessibilityFocusState private var focusedGroup: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,7 +31,7 @@ struct DishView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         header
                         ForEach(model.item.dish.groups, id: \.id) { group in
-                            DishGroupSection(group: group, model: model)
+                            DishGroupSection(group: group, model: model, focus: $focusedGroup)
                         }
                         note
                         quantity
@@ -35,6 +42,8 @@ struct DishView: View {
                 // «Elige [grupo]»: lleva la vista al primer grupo que falta (la sacudida la pone el propio grupo).
                 .onChange(of: model.attention) { _, attention in
                     guard let attention else { return }
+                    focusedGroup = attention.groupID
+                    if let message = model.attentionAnnouncement { AccessibilityNotification.Announcement(message).post() }
                     if reduceMotion {
                         proxy.scrollTo(attention.groupID, anchor: .top)
                     } else {
@@ -60,7 +69,11 @@ struct DishView: View {
             Text("Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new).")
         }
         .onChange(of: model.outcome) { _, _ in
-            if case let .added(capped) = model.resolveOutcome() { onAdded(capped) }
+            switch model.resolveOutcome() {
+            case let .added(capped): onAdded(capped)
+            case .lineGone: onLineGone?()
+            case .stay: break
+            }
         }
     }
 
@@ -148,6 +161,7 @@ struct DishView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             TindivoStepper(
                 quantity: model.selection.quantity,
+                label: String(localized: "Cantidad de \(model.item.name)"),
                 canDecrease: model.canDecrease,
                 canIncrease: model.canIncrease,
                 decreaseLabel: String(localized: "Una menos"),

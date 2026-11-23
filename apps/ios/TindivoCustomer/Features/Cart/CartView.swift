@@ -8,6 +8,7 @@ struct CartView: View {
     let onSeeBusinesses: () -> Void
 
     @State private var confirmingClear = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -21,10 +22,20 @@ struct CartView: View {
             }
         }
         .background(Color.tindivo.background)
-        .navigationTitle("Mi bolsa")
+        .navigationTitle("Tu bolsa")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if case .filled = model.state {
+            if case let .filled(filled) = model.state {
+                ToolbarItem(placement: .principal) {
+                    VStack(spacing: 0) {
+                        Text("Tu bolsa").tindivoText(TindivoTokens.Typography.titleSection)
+                            .foregroundStyle(Color.tindivo.ink)
+                        Text(filled.countLabel).tindivoText(TindivoTokens.Typography.bodySecondary)
+                            .foregroundStyle(Color.tindivo.inkSecondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     TindivoTextButton("Vaciar") { confirmingClear = true }
                         .accessibilityIdentifier("cart.clear")
@@ -35,7 +46,36 @@ struct CartView: View {
             Button("Cancelar", role: .cancel) {}
             Button("Vaciar", role: .destructive) { Task { await model.clear() } }
         }
+        .fullScreenCover(item: Binding(get: { model.editing }, set: { if $0 == nil { model.finishEditing() } })) { target in
+            DishView(
+                model: model.dishModel(for: target),
+                onClose: { model.finishEditing() },
+                onAdded: { model.finishEditing(capped: $0) },
+                onLineGone: { model.lineGone() }
+            )
+        }
+        // El aviso de error va encima de la barra de «Deshacer» (la barra reserva su sitio abajo del todo).
+        .tindivoToast(model.notices.message)
+        .safeAreaInset(edge: .bottom, spacing: 0) { undoBar }
+        // 200 ms con la curva del tablero «4 · Bolsa»; con «reducir movimiento», al instante.
+        .animation(reduceMotion ? nil : .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.2), value: model.undoOffer?.token)
+        .onChange(of: model.undoOffer?.token) { _, token in
+            if token != nil, let message = model.undoMessage { AccessibilityNotification.Announcement(message).post() }
+        }
         .task { await model.observe() }
+        .task { await model.validate() }
+        .task { await model.runClock() }
+    }
+
+    // MARK: Deshacer
+
+    /// «Quitaste "[plato]"» · «Deshacer», con una raya que se vacía en el plazo (con «reducir movimiento» no hay raya).
+    @ViewBuilder private var undoBar: some View {
+        if let offer = model.undoOffer {
+            UndoBar(offer: offer, window: model.undoWindow, onUndo: { Task { await model.undo() } })
+                .id(offer.token)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
     }
 
     // MARK: Vacía
@@ -61,10 +101,21 @@ struct CartView: View {
                     .tindivoText(TindivoTokens.Typography.titleScreen)
                     .foregroundStyle(Color.tindivo.ink)
                     .accessibilityAddTraits(.isHeader)
+                Text(filled.methodLabel)
+                    .tindivoText(TindivoTokens.Typography.bodySecondary)
+                    .foregroundStyle(Color.tindivo.inkSecondary)
+                    .accessibilityIdentifier("cart.method")
+                if filled.validation == .unchecked {
+                    Text("No pudimos revisar tu bolsa con la carta. Lo confirmaremos al hacer el pedido.")
+                        .tindivoText(TindivoTokens.Typography.bodySecondary)
+                        .foregroundStyle(Color.tindivo.inkSecondary)
+                        .accessibilityIdentifier("cart.unchecked")
+                }
                 ForEach(filled.lines, id: \.signatureKey) { line in
                     CartLineView(
                         line: line,
                         onChange: { delta in Task { await model.changeQuantity(signature: line.signature, by: delta) } },
+                        onEdit: { Task { await model.startEditing(signature: line.signature) } },
                         onRemove: { Task { await model.remove(signature: line.signature) } }
                     )
                     Divider().overlay(Color.tindivo.outlineVariant)
@@ -75,10 +126,13 @@ struct CartView: View {
                 }
                 .foregroundStyle(Color.tindivo.ink)
                 .accessibilityElement(children: .combine)
-                Text("El envío y el total final se calculan al confirmar el pedido.")
-                    .tindivoText(TindivoTokens.Typography.bodySecondary)
-                    .foregroundStyle(Color.tindivo.inkSecondary)
-                TindivoSecondaryButton("+ Agregar más") { onAddMore(filled.businessId) }
+                if filled.showsShipping {
+                    Text("Delivery · Se calcula con tu dirección")
+                        .tindivoText(TindivoTokens.Typography.bodySecondary)
+                        .foregroundStyle(Color.tindivo.inkSecondary)
+                        .accessibilityIdentifier("cart.shipping")
+                }
+                TindivoSecondaryButton("Agregar más de \(filled.businessName)") { onAddMore(filled.businessId) }
                     .accessibilityIdentifier("cart.addMore")
             }
             .padding(TindivoTokens.Spacing.spaceScreen)
@@ -109,6 +163,7 @@ extension CartView {
 private struct CartLineView: View {
     let line: CartLineRow
     let onChange: (Int) -> Void
+    let onEdit: () -> Void
     let onRemove: () -> Void
 
     var body: some View {
@@ -135,23 +190,115 @@ private struct CartLineView: View {
                     .tindivoText(TindivoTokens.Typography.bodySecondary)
                     .foregroundStyle(Color.tindivo.inkSecondary)
             }
-            HStack {
-                TindivoStepper(
-                    quantity: line.quantity,
-                    canDecrease: line.canDecrease,
-                    canIncrease: line.canIncrease,
-                    decreaseLabel: String(localized: "Quitar una unidad de \(line.name)"),
-                    increaseLabel: String(localized: "Agregar una unidad de \(line.name)"),
-                    onDecrease: { onChange(-1) },
-                    onIncrease: { onChange(1) }
-                )
-                Spacer()
-                TindivoTextButton("Quitar", action: onRemove)
-                    .accessibilityLabel(Text("Quitar \(line.name)"))
+            ForEach(Array(line.issues.enumerated()), id: \.offset) { _, issue in
+                Text(issue)
+                    .tindivoText(TindivoTokens.Typography.bodySecondary)
+                    .foregroundStyle(Color.tindivo.error)
+                    .accessibilityIdentifier("cart.issue")
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack { stepper; Spacer(); actions }
+                VStack(alignment: .leading, spacing: 4) { stepper; actions }
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("cart.line")
+    }
+
+    private var stepper: some View {
+        TindivoStepper(
+            quantity: line.quantity,
+            label: String(localized: "Cantidad de \(line.name)"),
+            identifier: "cart",
+            canDecrease: true,
+            canIncrease: line.canIncrease,
+            decreaseRemoves: line.decreaseRemoves,
+            decreaseLabel: line.decreaseLabel,
+            increaseLabel: line.increaseLabel,
+            onDecrease: { onChange(-1) },
+            onIncrease: { onChange(1) }
+        )
+    }
+
+    private var actions: some View {
+        HStack(spacing: TindivoTokens.Spacing.spaceInner) {
+            if line.canEdit {
+                TindivoTextButton("Editar", action: onEdit)
+                    .accessibilityLabel(Text("Editar \(line.name)"))
+                    .accessibilityIdentifier("cart.edit")
+            }
+            TindivoTextButton("Quitar", action: onRemove)
+                .accessibilityLabel(Text("Quitar \(line.name)"))
+                .accessibilityIdentifier("cart.remove")
+        }
+    }
+}
+
+
+/// El aviso de «Deshacer». Cada quitada es otra vista (`.id(token)`): la raya y el foco de VoiceOver arrancan de nuevo.
+private struct UndoBar: View {
+    let offer: CartScreenModel.UndoOffer
+    let window: Duration
+    let onUndo: () -> Void
+
+    @State private var start = Date()
+    @AccessibilityFocusState private var focused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: TindivoTokens.Spacing.spaceInner) {
+                    message.lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                    button
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    message
+                    button
+                }
+            }
+            .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
+            .padding(.vertical, 4)
+            if !reduceMotion { bar }
+        }
+        .background(Color.tindivo.secondary, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
+        .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
+        .padding(TindivoTokens.Spacing.spaceScreen)
+        .onAppear { focused = true }
+    }
+
+    private var message: some View {
+        Text(offer.message)
+            .tindivoText(TindivoTokens.Typography.body)
+            .foregroundStyle(Color.tindivo.onSecondary)
+    }
+
+    private var button: some View {
+        Button(action: onUndo) {
+            Text("Deshacer")
+                .tindivoText(TindivoTokens.Typography.titleSection)
+                .foregroundStyle(Color.tindivo.onSecondary)
+                .lineLimit(1)
+                .fixedSize()
+                .frame(minWidth: TindivoTokens.Spacing.touchTarget, minHeight: TindivoTokens.Spacing.touchTarget)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityFocused($focused)
+        .accessibilityIdentifier("cart.undo")
+    }
+
+    /// La raya se vacía a lo largo del plazo; se calcula del instante en que apareció, no de un estado animado.
+    private var bar: some View {
+        let total = Double(window.components.seconds) + Double(window.components.attoseconds) / 1e18
+        return TimelineView(.animation) { context in
+            let left = max(0, 1 - context.date.timeIntervalSince(start) / max(total, 0.001))
+            Rectangle()
+                .fill(Color.tindivo.onSecondary.opacity(0.6))
+                .frame(height: 3)
+                .scaleEffect(x: left, anchor: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 
@@ -163,7 +310,7 @@ private struct CartLineView: View {
 
 #Preview("Bolsa vacía") {
     NavigationStack {
-        CartView(model: CartScreenModel(store: FileCartStore.preview()), onAddMore: { _ in }, onSeeBusinesses: {})
+        CartView(model: CartScreenModel(store: FileCartStore.preview(), catalog: PreviewCatalog(), clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
     }
     .onAppear { TindivoFonts.register() }
 }
@@ -173,7 +320,7 @@ private struct CartPreviewHost: View {
 
     var body: some View {
         NavigationStack {
-            CartView(model: CartScreenModel(store: store), onAddMore: { _ in }, onSeeBusinesses: {})
+            CartView(model: CartScreenModel(store: store, catalog: PreviewCatalog(), clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
         }
         .task {
             let line = CartLine(

@@ -25,10 +25,15 @@ struct TindivoElevationModifier: ViewModifier {
     static let maxLayers = 2
     let layers: [ShadowLayer]
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content
-            .shadow(color: color(0), radius: radius(0), x: x(0), y: y(0))
-            .shadow(color: color(1), radius: radius(1), x: x(1), y: y(1))
+        if layers.isEmpty {
+            content
+        } else {
+            content
+                .shadow(color: color(0), radius: radius(0), x: x(0), y: y(0))
+                .shadow(color: color(1), radius: radius(1), x: x(1), y: y(1))
+        }
     }
 
     private func color(_ index: Int) -> Color { layers.indices.contains(index) ? layers[index].color : .clear }

@@ -22,12 +22,15 @@ final class BusinessScreenModel {
     static let jumpGrace: TimeInterval = 0.9
 
     private(set) var state: State = .idle
-    /// Hubo un 426: la pantalla de actualización es de otra fase, la raíz lo leerá de aquí.
-    private(set) var upgradeNotice: UpgradeNotice?
 
     /// `nil` = no se busca; un texto, aunque vacío, es el modo búsqueda.
     private(set) var query: String?
     private(set) var openDishID: String?
+    /// El modelo de la ficha abierta: se arma al abrir, una sola vez, no cada vez que la vista se dibuja.
+    private(set) var dishModel: DishScreenModel?
+    /// La bolsa es de otro restaurante y se tocó «+» en la carta: la pregunta «¿Empezar una bolsa nueva?».
+    private(set) var replacement: DishScreenModel.Replacement?
+    private var pendingLine: CartLine?
     /// El aviso «Añadido a tu bolsa», que se apaga solo.
     let notices: TimedNotice
     private(set) var cart: Cart?
@@ -51,12 +54,17 @@ final class BusinessScreenModel {
     private let catalog: any CatalogRepository
     private let cartStore: any CartStore
     private let clock: AppClock
+    private let menuCache: BusinessMenuCache?
     private var now: Date
     private var inFlight = false
     private var headerIndices: [Int] = []
     private var suppressSpyUntil: Date?
 
-    init(id: String, catalog: any CatalogRepository, cartStore: any CartStore, clock: AppClock) {
+    init(
+        id: String, catalog: any CatalogRepository, cartStore: any CartStore, clock: AppClock,
+        menuCache: BusinessMenuCache? = nil
+    ) {
+        self.menuCache = menuCache
         self.id = id
         self.catalog = catalog
         self.cartStore = cartStore
@@ -70,21 +78,21 @@ final class BusinessScreenModel {
     /// La primera carga de la pantalla; si ya hay carta no pide otra (volver de la bolsa no recarga).
     func load() async {
         switch state {
-        case .idle, .failed: await refresh()
+        case .idle, .failed: await refresh(reusingCache: true)
         case .loading, .loaded: break
         }
     }
 
     /// Vuelve a pedir la carta. Si ya hay una carga en curso, no lanza otra.
-    func refresh() async {
+    /// `reusingCache`: la primera carga reusa la carta que Inicio ya bajó; «Reintentar» y recargar piden una nueva.
+    func refresh(reusingCache: Bool = false) async {
         guard !inFlight else { return }
         inFlight = true
         defer { inFlight = false }
         state = .loading
         recompute()
         do throws(AppError) {
-            let menu = try await catalog.getBusiness(id: id)
-            upgradeNotice = nil
+            let menu = try await fetchMenu(reusingCache: reusingCache)
             if let detail = MenuMapping.detail(from: menu) {
                 state = .loaded(detail)
             } else {
@@ -93,10 +101,17 @@ final class BusinessScreenModel {
         } catch .cancelled {
             state = .idle
         } catch {
-            upgradeNotice = UpgradeNotice(error)
             state = .failed(error)
         }
         recompute()
+    }
+
+    private func fetchMenu(reusingCache: Bool) async throws(AppError) -> BusinessMenu {
+        guard let menuCache else { return try await catalog.getBusiness(id: id) }
+        if reusingCache { return try await menuCache.menu(id: id, catalog: catalog, now: clock.now()) }
+        let menu = try await catalog.getBusiness(id: id)
+        await menuCache.store(menu, id: id, now: clock.now())
+        return menu
     }
 
     /// Reevalúa la apertura y las franjas cada minuto: a las 15:00 se apaga el plato de mediodía sin recargar. Se
@@ -136,6 +151,7 @@ final class BusinessScreenModel {
         if let detail, let openDishID, Self.findDish(in: detail, id: openDishID) == nil {
             // Un plato apagado por su franja no se abre: si se apaga con la ficha abierta, esta se cierra sola.
             self.openDishID = nil
+            dishModel = nil
         }
         if detail == nil { query = nil }
         updateSearch()
@@ -186,20 +202,25 @@ final class BusinessScreenModel {
         visible.flatMap { detail in openDishID.flatMap { Self.findDish(in: detail, id: $0) } }
     }
 
-    /// Tocar un plato abre su ficha solo si el negocio deja pedir y el plato se puede pedir; si no, nada.
-    func open(_ item: MenuItem) {
+    /// Tocar un plato abre su ficha solo si el negocio deja pedir y el plato se puede pedir; si no, nada. Con `editing`
+    /// la ficha abre esa línea de la bolsa para cambiarla.
+    func open(_ item: MenuItem, editing: CartLine? = nil) {
         guard ordering.allowsBag, item.orderable else { return }
         openDishID = item.id
+        dishModel = makeDishModel(for: item, editing: editing)
     }
 
     func closeDish() {
         openDishID = nil
+        dishModel = nil
     }
 
-    /// Lo que pasó después de «Agregar»: la ficha se cierra y la carta enseña el aviso.
+    /// Lo que pasó después de «Agregar» (o de «Guardar cambios»): la ficha se cierra; «Añadido» solo se enseña al
+    /// agregar, no al editar.
     func dishAdded(capped: Bool) {
-        openDishID = nil
-        notices.show(DishScreenModel.addedMessage(capped: capped))
+        let wasEditing = dishModel?.isEditing ?? false
+        closeDish()
+        if capped || !wasEditing { notices.show(DishScreenModel.addedMessage(capped: capped)) }
     }
 
     private static func findDish(in detail: BusinessDetail, id: String) -> MenuItem? {
@@ -246,10 +267,10 @@ final class BusinessScreenModel {
     }
 
     /// El modelo de la ficha de un plato de ESTA carta (SW-4: la vista no conoce el entorno de la app).
-    func makeDishModel(for item: MenuItem) -> DishScreenModel {
+    func makeDishModel(for item: MenuItem, editing: CartLine? = nil) -> DishScreenModel {
         DishScreenModel(
             item: item, businessId: visible?.id ?? "", businessName: visible?.name ?? "", cartStore: cartStore,
-            clock: clock
+            clock: clock, editing: editing
         )
     }
 
@@ -279,43 +300,62 @@ final class BusinessScreenModel {
     // MARK: El contador de cada plato (CUS-CAT-029)
 
     /// Lo que la tarjeta de un plato ofrece según lo que ya hay en la bolsa de ESTE negocio; `nil` si no se puede
-    /// pedir (cerrado, modo catálogo, agotado o fuera de franja).
+    /// pedir (cerrado, modo catálogo, agotado o fuera de franja). «− N +» solo cuando hay UNA línea del plato y es la de
+    /// sin opciones y sin nota; en cualquier otro caso (opciones, nota, varias líneas) la tarjeta no sabe qué línea
+    /// tocar: dice «En tu bolsa: N» y «Editar selección».
     func control(for item: MenuItem) -> DishRowControl? {
         guard ordering.allowsBag, item.orderable else { return nil }
-        let units = unitsInBag(of: item)
-        if item.isConfigurable { return units > 0 ? .inBag(quantity: units) : .choose }
-        return units > 0 ? .stepper(quantity: units, canIncrease: units < CartLimits.maxQuantity) : .add
+        let lines = linesInBag(of: item)
+        guard !lines.isEmpty else { return item.isConfigurable ? .choose : .add }
+        let units = lines.reduce(0) { $0 + $1.quantity }
+        if let line = plainLine(of: item, in: lines) {
+            return .stepper(quantity: line.quantity, canIncrease: line.quantity < CartLimits.maxQuantity)
+        }
+        return .inBag(quantity: units)
     }
 
-    private func unitsInBag(of item: MenuItem) -> Int {
-        guard let cart, let id = visible?.id, cart.businessId.caseInsensitiveCompare(id) == .orderedSame else { return 0 }
-        return cart.lines.filter { $0.itemId == item.id }.reduce(0) { $0 + $1.quantity }
+    private func linesInBag(of item: MenuItem) -> [CartLine] {
+        guard let cart, let id = visible?.id, cart.businessId.caseInsensitiveCompare(id) == .orderedSame else { return [] }
+        return cart.lines.filter { $0.itemId == item.id }
     }
 
-    /// El «+» de un plato sin opciones: suma una unidad. Si la bolsa es de otro restaurante abre la ficha, que sabe
-    /// preguntar si se vacía; si está llena o no se pudo guardar, lo dice con un aviso.
+    /// La única línea del plato, si es la sencilla (sin opciones ni nota): la que el «−» y el «+» pueden tocar.
+    private func plainLine(of item: MenuItem, in lines: [CartLine]) -> CartLine? {
+        guard !item.isConfigurable, lines.count == 1, let line = lines.first, line.modifiers.isEmpty, line.note == nil
+        else { return nil }
+        return line
+    }
+
+    /// El «+» de una tarjeta: agrega el plato sin opciones o suma una unidad a SU línea (atómico, sobre la firma
+    /// concreta). Si la bolsa es de otro restaurante pregunta aquí mismo si se vacía; si está llena o no se pudo
+    /// guardar, lo dice con un aviso.
     func increment(_ item: MenuItem) async {
-        guard ordering.allowsBag, item.orderable, let detail = visible,
-              let line = DishSelection(dish: item.dish).toLine() else { return }
+        guard ordering.allowsBag, item.orderable, let detail = visible else { return }
+        let lines = linesInBag(of: item)
         do throws(CartError) {
-            switch try await cartStore.add(businessId: detail.id, businessName: detail.name, line: line) {
-            case let .added(_, capped): if capped { notices.show(DishScreenModel.addedMessage(capped: true)) }
-            case .otherBusiness: openDishID = item.id
-            case .full: notices.show(DishScreenModel.fullMessage)
+            if let line = plainLine(of: item, in: lines) {
+                try await cartStore.changeQuantity(signature: line.signature, by: 1)
+            } else if lines.isEmpty, !item.isConfigurable, let line = DishSelection(dish: item.dish).toLine() {
+                switch try await cartStore.add(businessId: detail.id, businessName: detail.name, line: line) {
+                case let .added(_, capped): if capped { notices.show(DishScreenModel.addedMessage(capped: true)) }
+                case let .otherBusiness(current):
+                    pendingLine = line
+                    replacement = DishScreenModel.Replacement(current: current, new: detail.name)
+                case .full: notices.show(DishScreenModel.fullMessage)
+                }
             }
         } catch {
             notices.show(DishScreenModel.failedMessage)
         }
     }
 
-    /// El «−» de un plato sin opciones: resta una unidad y, con la última, lo saca de la bolsa.
+    /// El «−» de una tarjeta: resta una unidad a la línea sencilla y, con la última, la saca de la bolsa.
     func decrement(_ item: MenuItem) async {
-        guard let line = DishSelection(dish: item.dish).toLine() else { return }
-        let units = unitsInBag(of: item)
+        guard let line = plainLine(of: item, in: linesInBag(of: item)) else { return }
         do throws(CartError) {
-            if units > 1 {
-                try await cartStore.setQuantity(signature: line.signature, quantity: units - 1)
-            } else if units == 1 {
+            if line.quantity > 1 {
+                try await cartStore.changeQuantity(signature: line.signature, by: -1)
+            } else {
                 try await cartStore.remove(signature: line.signature)
             }
         } catch {
@@ -323,9 +363,40 @@ final class BusinessScreenModel {
         }
     }
 
-    /// «Elegir» y «Editar selección»: abren la ficha del plato.
-    func chooseOptions(_ item: MenuItem) {
-        open(item)
+    /// «Vaciar y empezar» de la pregunta que sale de la carta.
+    func confirmReplacement() async {
+        guard let detail = visible, let line = pendingLine else { return }
+        pendingLine = nil
+        replacement = nil
+        do throws(CartError) {
+            try await cartStore.replace(businessId: detail.id, businessName: detail.name, line: line)
+        } catch {
+            notices.show(DishScreenModel.failedMessage)
+        }
+    }
+
+    /// «Mantener»: la bolsa del otro restaurante se queda y no se agrega nada.
+    func keepCurrentBag() {
+        pendingLine = nil
+        replacement = nil
+    }
+
+    /// Adónde lleva «Elegir» / «Editar selección».
+    enum SelectionTarget: Equatable {
+        /// Se abrió la ficha del plato (en blanco, o con la línea de la bolsa para editarla).
+        case dish
+        /// Hay varias líneas del plato en la bolsa: la tarjeta no sabe cuál editar, que lo decida en la bolsa.
+        case bag
+    }
+
+    /// «Elegir» abre la ficha; «Editar selección» abre la única línea del plato en modo edición, o lleva a la bolsa si
+    /// hay varias.
+    @discardableResult
+    func chooseOptions(_ item: MenuItem) -> SelectionTarget {
+        let lines = linesInBag(of: item)
+        if lines.count > 1 { return .bag }
+        open(item, editing: lines.first)
+        return .dish
     }
 }
 

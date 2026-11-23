@@ -24,7 +24,8 @@ jobs:
   ios:
     name: App iOS compila y pasa sus pruebas
     # Mismo Xcode que la Mac de desarrollo (27.2, 27B52; SW-1). Plan B si la imagen falla: `macos-26` con Xcode 26.6,
-    # que cumple el mínimo de App Store Connect.
+    # que cumple el mínimo de App Store Connect. `xcode-27` es etiqueta válida (docs.github.com, runners alojados, macOS
+    # arm64; actions/runner-images, imagen `xcode-27-arm64`, con Xcode_27.2.app).
     runs-on: xcode-27
     timeout-minutes: 45
     steps:
@@ -43,7 +44,7 @@ jobs:
       - name: Versiones
         run: xcodebuild -version && swift --version
 
-      # Herramientas fijadas (XcodeGen con sha256 y el generador compilado). Los paquetes de la app no van aquí: se
+      # Herramientas fijadas (XcodeGen y SwiftLint con sha256, y el generador compilado). Los paquetes de la app no van aquí: se
       # resuelven en apps/ios/build/DerivedData, solo con las versiones de Package.resolved.
       - name: Caché de herramientas
         uses: actions/cache@v5
@@ -51,11 +52,21 @@ jobs:
           path: ~/Library/Caches/tindivo-ios
           key: tindivo-ios-xcode-27.2-${{ hashFiles('apps/ios/scripts/tools.sh', 'apps/ios/Tools/Package.swift', 'apps/ios/Tools/Package.resolved') }}
 
+      # SW-15: el número de build lo pone la CI (CURRENT_PROJECT_VERSION = IOS_BUILD_NUMBER).
       - name: Compilar y probar en el simulador
         env:
           IOS_DESTINATION: platform=iOS Simulator,name=iPhone 17,OS=latest
+          IOS_BUILD_NUMBER: ${{ github.run_number }}
         run: apps/ios/scripts/xcodebuild.sh test Dev
 
       # Prod no tiene pruebas propias (mismo código), pero compila en Release con optimización: lo que solo falla ahí.
       - name: Compilar Prod (Release)
+        env:
+          IOS_BUILD_NUMBER: ${{ github.run_number }}
         run: apps/ios/scripts/xcodebuild.sh build Prod
+
+      # SW-14: SwiftLint fijado y swift-format de la toolchain; falla si SwiftLint halla errores. Va al final y con
+      # always() para que un error de estilo no esconda si las pruebas pasan ese día.
+      - name: Lint
+        if: always()
+        run: apps/ios/scripts/lint.sh

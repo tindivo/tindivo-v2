@@ -14,6 +14,7 @@ struct BusinessInfoSheet: View {
                 header
                 schedule
                 if !info.modes.isEmpty { modes }
+                payments
             }
             .padding(TindivoTokens.Spacing.spaceScreen)
         }
@@ -123,6 +124,26 @@ struct BusinessInfoSheet: View {
         case .pickup:
             row(title: String(localized: "Recojo"), detail: String(localized: "En el local"))
         }
+    }
+
+    /// «Cómo pagas»: Yape, Plin y efectivo son información, no una opción de pago (decisión de Jesús, 2026-11-19).
+    private var payments: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Cómo pagas")
+                .tindivoText(TindivoTokens.Typography.titleSection)
+                .foregroundStyle(Color.tindivo.ink)
+                .accessibilityAddTraits(.isHeader)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8, alignment: .leading)], alignment: .leading, spacing: 8) {
+                TindivoChip(String(localized: "Yape"))
+                TindivoChip(String(localized: "Plin"))
+                TindivoChip(String(localized: "Efectivo"))
+            }
+            Text("Pagas directo al negocio. Tindivo no retiene tu dinero")
+                .tindivoText(TindivoTokens.Typography.body)
+                .foregroundStyle(Color.tindivo.inkSecondary)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("info.payments")
     }
 
     private func row(title: String, detail: String?) -> some View {

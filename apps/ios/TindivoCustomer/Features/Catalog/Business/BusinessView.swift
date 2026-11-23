@@ -36,10 +36,22 @@ struct BusinessView: View {
             }
             .fullScreenCover(item: openDish) { item in
                 DishView(
-                    model: model.makeDishModel(for: item),
+                    model: model.dishModel ?? model.makeDishModel(for: item),
                     onClose: model.closeDish,
-                    onAdded: model.dishAdded
+                    onAdded: model.dishAdded,
+                    onLineGone: model.closeDish
                 )
+            }
+            // «+» con la bolsa de otro restaurante: la misma pregunta que hace la ficha.
+            .alert(
+                Text("¿Empezar una bolsa nueva?"),
+                isPresented: Binding(get: { model.replacement != nil }, set: { _ in }),
+                presenting: model.replacement
+            ) { _ in
+                Button("Mantener", role: .cancel) { model.keepCurrentBag() }
+                Button("Vaciar y empezar") { Task { await model.confirmReplacement() } }
+            } message: { names in
+                Text("Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new).")
             }
             .task { await model.load() }
             .task { await model.runClock() }
@@ -107,7 +119,9 @@ struct BusinessView: View {
                 .frame(height: 160)
         case .header:
             if let business = model.visible {
-                BusinessHeaderView(business: business, status: model.statusLine, onShowInfo: model.showInfo)
+                BusinessHeaderView(
+                    business: business, status: model.statusLine, modes: model.info?.modes ?? [], onShowInfo: model.showInfo
+                )
             }
         case let .category(category):
             CategoryHeaderView(category: category)
@@ -125,7 +139,7 @@ struct BusinessView: View {
                 control: control,
                 onAdd: { Task { await model.increment(item) } },
                 onDecrease: { Task { await model.decrement(item) } },
-                onChoose: { model.chooseOptions(item) }
+                onChoose: { if model.chooseOptions(item) == .bag { onOpenCart() } }
             )
         }
     }

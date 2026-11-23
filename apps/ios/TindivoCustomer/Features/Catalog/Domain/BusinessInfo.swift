@@ -40,6 +40,16 @@ enum DeliveryMode: Sendable, Equatable {
     case pickup
 }
 
+extension DeliveryMode {
+    /// «Delivery · 25–40 min» / «Recojo · En el local»: el texto de la fila informativa de la página del negocio.
+    var summary: String {
+        switch self {
+        case let .delivery(eta): eta.map { String(localized: "Delivery · \($0)") } ?? String(localized: "Delivery")
+        case .pickup: String(localized: "Recojo · En el local")
+        }
+    }
+}
+
 /// Los modos que acepta el negocio según su capacidad principal (CUS-CAT-017). Modo catálogo y capacidades que esta
 /// versión no conoce no ofrecen ninguno: no se inventa lo que el servidor no dijo.
 func deliveryModes(capability: PrimaryCapability?, etaMin: Int?, etaMax: Int?) -> [DeliveryMode] {

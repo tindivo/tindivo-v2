@@ -67,8 +67,9 @@ struct StubCatalog: CatalogRepository {
 final class ManualClock: Sendable {
     private struct State {
         var date: Date
-        var sleeps = 0
-        var waiters: [(number: Int, continuation: CheckedContinuation<Void, Never>)] = []
+        /// Cuántas veces se durmió, por duración: el aviso «Añadido» (3 s) y el bucle de la carta (60 s) no se mezclan.
+        var sleeps: [Duration: Int] = [:]
+        var waiters: [(duration: Duration, number: Int, continuation: CheckedContinuation<Void, Never>)] = []
     }
 
     private let state: OSAllocatedUnfairLock<State>
@@ -83,30 +84,32 @@ final class ManualClock: Sendable {
     var clock: AppClock {
         AppClock(
             now: { self.state.withLock { $0.date } },
-            sleep: { _ in
-                self.didStartSleeping()
+            sleep: { duration in
+                self.didStartSleeping(duration)
                 for await _ in self.ticks { return }
                 throw CancellationError()
             }
         )
     }
 
-    private func didStartSleeping() {
+    private func didStartSleeping(_ duration: Duration) {
         let ready = state.withLock { state -> [CheckedContinuation<Void, Never>] in
-            state.sleeps += 1
-            let due = state.waiters.filter { $0.number <= state.sleeps }.map(\.continuation)
-            state.waiters.removeAll { $0.number <= state.sleeps }
+            state.sleeps[duration, default: 0] += 1
+            let count = state.sleeps[duration, default: 0]
+            let due = state.waiters.filter { $0.duration == duration && $0.number <= count }.map(\.continuation)
+            state.waiters.removeAll { $0.duration == duration && $0.number <= count }
             return due
         }
         ready.forEach { $0.resume() }
     }
 
-    /// Vuelve cuando se han hecho al menos `number` llamadas a `sleep` (la 1.ª es la primera vez que alguien duerme).
-    func waitForSleep(number: Int) async {
+    /// Vuelve cuando alguien se ha puesto a dormir `duration` al menos `number` veces (la 1.ª es la primera vez). Por
+    /// omisión, el minuto de la carta y de Inicio.
+    func waitForSleep(number: Int, of duration: Duration = .seconds(60)) async {
         await withCheckedContinuation { continuation in
             let alreadyThere = state.withLock { state -> Bool in
-                if state.sleeps >= number { return true }
-                state.waiters.append((number, continuation))
+                if state.sleeps[duration, default: 0] >= number { return true }
+                state.waiters.append((duration, number, continuation))
                 return false
             }
             if alreadyThere { continuation.resume() }

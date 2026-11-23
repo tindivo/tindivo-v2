@@ -11,6 +11,7 @@ public struct TindivoPrimaryButton: View {
     private let title: Text
     private let loading: Bool
     private let muted: Bool
+    private let hint: LocalizedStringKey?
     private let action: () -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -18,6 +19,7 @@ public struct TindivoPrimaryButton: View {
         self.title = Text(title)
         self.loading = loading
         self.muted = false
+        self.hint = nil
         self.action = action
     }
 
@@ -34,8 +36,6 @@ public struct TindivoPrimaryButton: View {
         self.hint = hint
         self.action = action
     }
-
-    private var hint: LocalizedStringKey?
 
     public var body: some View {
         // La guarda va dentro de la acción: `allowsHitTesting` frena el dedo pero no la activación de VoiceOver.

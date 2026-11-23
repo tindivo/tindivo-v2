@@ -22,14 +22,14 @@ final class CatalogHomeScreenModel {
     }
 
     private(set) var state: State = .idle
-    /// Hubo un 426 en la última carga: la pantalla de actualización es de otra fase, la raíz lo leerá de aquí.
-    private(set) var upgradeNotice: UpgradeNotice?
 
     /// Las unidades de la bolsa, para el contador de la barra superior (CUS-CAT-030).
     private(set) var bagCount = 0
-    /// Por cada negocio cerrado de la lista, «Cerrado · abre mañana 12:00» (CA-CAT-P2). La lista no trae cuándo abre:
-    /// se arma con el horario de su carta, y mientras llega la tarjeta dice «Cerrado ahora».
-    private(set) var closedLabels: [String: String] = [:]
+    /// El horario de la carta de cada negocio cerrado de la lista. La lista no trae cuándo abre (CUS-CAT-023, del
+    /// servidor): se arma con el horario de su carta, y mientras llega la tarjeta dice «Cerrado ahora».
+    private(set) var schedules: [String: ClosedSchedule] = [:]
+    /// «Ahora»: se vuelve a leer cada minuto, para que «Cerrado · abre hoy 18:00» cambie solo.
+    private(set) var now: Date
     /// La dirección de entrega del chip «Entregar en». La app aún no tiene sesión ni direcciones: es `nil` y el chip no
     /// se muestra (ficha de Inicio: «sin sesión o sin dirección, el chip no se muestra»).
     private(set) var deliveryAddress: String?
@@ -37,13 +37,40 @@ final class CatalogHomeScreenModel {
     private let catalog: any CatalogRepository
     private let cartStore: (any CartStore)?
     private let clock: AppClock
+    private let menuCache: BusinessMenuCache
     private var inFlight = false
-    private var enrichment: Task<Void, Never>?
+    /// El armado de los textos «abre …»; las pruebas lo esperan.
+    @ObservationIgnored private(set) var enrichment: Task<Void, Never>?
 
-    init(catalog: any CatalogRepository, cartStore: (any CartStore)? = nil, clock: AppClock = .live) {
+    /// Cada cuánto se vuelve a decidir qué dice una tarjeta cerrada.
+    static let recheckEvery = Duration.seconds(60)
+    /// Cuántas cartas se piden a la vez para armar los textos de las tarjetas cerradas.
+    static let maxConcurrentMenus = 3
+
+    /// El horario de un negocio cerrado, tal como lo manda su carta.
+    struct ClosedSchedule: Equatable {
+        let days: [ScheduleDay]
+        let openingConfirmed: Bool?
+    }
+
+    init(
+        catalog: any CatalogRepository, cartStore: (any CartStore)? = nil, clock: AppClock = .live,
+        menuCache: BusinessMenuCache = BusinessMenuCache()
+    ) {
         self.catalog = catalog
         self.cartStore = cartStore
         self.clock = clock
+        self.menuCache = menuCache
+        now = clock.now()
+    }
+
+    /// Reevalúa cada minuto qué dicen las tarjetas cerradas. Se lanza con `.task`: dura lo que la pantalla esté a la vista.
+    func runClock() async {
+        now = clock.now()
+        while !Task.isCancelled {
+            do { try await clock.sleep(Self.recheckEvery) } catch { return }
+            now = clock.now()
+        }
     }
 
     /// La bolsa vigente ahora y después cada vez que cambia. Se lanza con `.task`.
@@ -64,39 +91,45 @@ final class CatalogHomeScreenModel {
         bagCount == 0 ? nil : (bagCount > 99 ? "99+" : "\(bagCount)")
     }
 
-    /// El texto de estado de una tarjeta cerrada.
+    /// El texto de estado de una tarjeta cerrada: «Cerrado · abre mañana 12:00», o «Cerrado ahora» si aún no se sabe.
     func closedLabel(for business: BusinessCard) -> String {
-        closedLabels[business.id] ?? OrderingMode.closedTitle
+        guard let schedule = schedules[business.id],
+              case let .closed(status) = openStatus(
+                  days: schedule.days, now: now, openingConfirmed: schedule.openingConfirmed
+              )
+        else { return OrderingMode.closedTitle }
+        return closedSummary(status, now: now)
     }
 
-    /// Espera a que termine el armado de los textos «abre …» (para las pruebas).
-    func waitForClosedLabels() async {
-        await enrichment?.value
-    }
-
-    private func loadClosedLabels(for cards: [BusinessCard]) {
+    /// workaround: Inicio baja la carta de cada negocio cerrado para saber cuándo abre, porque `listBusinesses` no manda
+    /// `next_change_at` (CUS-CAT-023, del servidor). Pide como mucho `maxConcurrentMenus` a la vez y comparte la caché
+    /// con Negocio. Un error en una carta deja esa tarjeta en «Cerrado ahora».
+    private func loadClosedSchedules(for cards: [BusinessCard]) {
         enrichment?.cancel()
+        let ids = cards.filter(\.closed).map(\.id)
         let catalog = catalog
+        let cache = menuCache
         let now = clock.now()
         enrichment = Task { [weak self] in
-            let labels = await withTaskGroup(of: (String, String)?.self) { group in
-                for card in cards where card.closed {
+            let loaded = await withTaskGroup(of: (String, ClosedSchedule)?.self) { group in
+                var pending = ids[...]
+                func fetch(_ id: String) {
                     group.addTask {
-                        guard let menu = try? await catalog.getBusiness(id: card.id),
-                              let detail = MenuMapping.detail(from: menu),
-                              case let .closed(status) = openStatus(
-                                  days: detail.schedule, now: now, openingConfirmed: detail.openingConfirmed
-                              )
-                        else { return nil }
-                        return (card.id, closedSummary(status, now: now))
+                        guard let menu = try? await cache.menu(id: id, catalog: catalog, now: now),
+                              let detail = MenuMapping.detail(from: menu) else { return nil }
+                        return (id, ClosedSchedule(days: detail.schedule, openingConfirmed: detail.openingConfirmed))
                     }
                 }
-                var result: [String: String] = [:]
-                for await pair in group { if let pair { result[pair.0] = pair.1 } }
+                for _ in 0..<min(Self.maxConcurrentMenus, ids.count) { if let id = pending.popFirst() { fetch(id) } }
+                var result: [String: ClosedSchedule] = [:]
+                for await pair in group {
+                    if let pair { result[pair.0] = pair.1 }
+                    if let id = pending.popFirst() { fetch(id) }
+                }
                 return result
             }
             guard !Task.isCancelled else { return }
-            self?.closedLabels = labels
+            self?.schedules = loaded
         }
     }
 
@@ -118,14 +151,12 @@ final class CatalogHomeScreenModel {
         state = previous.map { .loaded(Loaded(listing: $0.listing, refreshing: true)) } ?? .loading
         do throws(AppError) {
             let businesses = try await catalog.listBusinesses()
-            upgradeNotice = nil
             let listing = HomeMapping.listing(from: businesses)
             state = .loaded(Loaded(listing: listing))
-            loadClosedLabels(for: listing.restaurants + listing.whatsapp)
+            loadClosedSchedules(for: listing.restaurants + listing.whatsapp)
         } catch .cancelled {
             state = previous.map { .loaded(Loaded(listing: $0.listing)) } ?? .idle
         } catch {
-            upgradeNotice = UpgradeNotice(error)
             state = previous.map { .loaded(Loaded(listing: $0.listing, refreshFailed: error)) } ?? .failed(error)
         }
     }
