@@ -246,15 +246,17 @@ struct BusinessScreenModelTests {
 extension BusinessScreenModelTests {
     // MARK: Búsqueda
 
-    private let searchMenu = Fixture.menu([
-        Fixture.category(
-            "c1", name: "Pollos",
-            [
-                Fixture.item("p1", description: "Con papas", name: "Pollo a la brasa"),
-                Fixture.item("p2", order: 2, name: "Pollo broaster"),
-            ]),
-        Fixture.category("c2", order: 2, name: "Bebidas", [Fixture.item("b1", name: "Chicha morada")]),
-    ])
+    private var searchMenu: BusinessMenu {
+        Fixture.menu([
+            Fixture.category(
+                "c1", name: "Pollos",
+                [
+                    Fixture.item("p1", description: "Con papas", name: "Pollo a la brasa"),
+                    Fixture.item("p2", order: 2, name: "Pollo broaster"),
+                ]),
+            Fixture.category("c2", order: 2, name: "Bebidas", [Fixture.item("b1", name: "Chicha morada")]),
+        ])
+    }
 
     @Test("buscar: la lupa abre, escribir filtra, vaciar vuelve a la carta y salir la cierra")
     func search() async {
@@ -354,10 +356,12 @@ extension BusinessScreenModelTests {
 
     // MARK: Chips y scroll
 
-    private let sectionsMenu = Fixture.menu(
-        (1...6).map { Fixture.category("c\($0)", order: $0, [Fixture.item("i\($0)")]) },
-        banner: "https://example.com/banner.jpg"
-    )
+    private var sectionsMenu: BusinessMenu {
+        Fixture.menu(
+            (1...6).map { Fixture.category("c\($0)", order: $0, [Fixture.item("i\($0)")]) },
+            banner: "https://example.com/banner.jpg"
+        )
+    }
 
     @Test("las filas van en el orden de la carta: banner, cabecera y, por sección, título y platos")
     func rows() async {
