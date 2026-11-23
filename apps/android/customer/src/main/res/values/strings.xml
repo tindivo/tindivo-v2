@@ -335,7 +335,7 @@
 
     <string name="order_driver_label">Tu motorizado</string>
     <string name="order_wait_title">Esperando que el negocio acepte</string>
-    <string name="order_wait_status">Suele responder en pocos minutos</string>
+    <string name="order_wait_status">El negocio está revisando tu pedido</string>
     <string name="order_wait_respond">Responde en hasta %1$d min</string>
     <string name="order_wait_confirming">Confirmando…</string>
     <string name="order_eta_range">Llega en %1$d–%2$d min</string>

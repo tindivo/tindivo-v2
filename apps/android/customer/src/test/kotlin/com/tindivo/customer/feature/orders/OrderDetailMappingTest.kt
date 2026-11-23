@@ -25,6 +25,19 @@ class OrderDetailMappingTest {
     }
 
     @Test
+    fun `en recojo no hay motorizado ni aviso de llegada aunque el servidor mande uno`() {
+        val driver = GetCustomerOrder200ResponseDataDriver(name = "Luis Quispe", phone = null)
+        val ui =
+            detail(
+                status = "ready_for_pickup",
+                deliveryMethod = "pickup",
+                arrivedAtCustomerAt = "2026-10-26T15:20:00Z",
+                driver = driver,
+            ).toDetailUi()
+        assertEquals(null, ui?.driver)
+    }
+
+    @Test
     fun `CA-TRK-08 el toString del motorizado y del detalle no lleva su nombre ni su celular`() {
         val driver = GetCustomerOrder200ResponseDataDriver(name = "Luis Quispe", phone = "+51 987-654-321")
 

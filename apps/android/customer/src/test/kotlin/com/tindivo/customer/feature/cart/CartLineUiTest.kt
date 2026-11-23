@@ -13,7 +13,6 @@ class CartLineUiTest {
             null,
             quantity,
             "S/ 10.00",
-            canDecrease = quantity > 1,
             canIncrease = true,
         )
 

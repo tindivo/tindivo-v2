@@ -472,7 +472,6 @@ private fun QuantityControls(
             } else {
                 IconButton(
                     onClick = { actions.onChangeQuantity(line.signature, -1) },
-                    enabled = line.canDecrease,
                     modifier = Modifier.size(TindivoSpacing.touchTarget),
                 ) {
                     Icon(TindivoIcons.Remove, contentDescription = stringResource(R.string.cart_line_less, line.name))
@@ -593,7 +592,6 @@ private fun CartPreview() {
             note = "sin ají",
             quantity = 2,
             total = "S/ 25.00",
-            canDecrease = true,
             canIncrease = true,
         )
     TindivoTheme {
