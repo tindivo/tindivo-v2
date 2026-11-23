@@ -27,7 +27,8 @@
  * nunca con el valor del env-file.
  *
  * Contraseñas: aleatorias y NUEVAS en cada corrida (también para usuarios que ya existen). Por
- * consola solo salen emails y conteos. `push_dispatch` NO se toca (en staging está anulado).
+ * consola solo salen emails y conteos. Después del mundo siembra el catálogo de prueba
+ * (`seed-staging-catalog.ts`: 4 negocios con carta, portadas y fotos de `fixtures/staging-catalog/`). `push_dispatch` NO se toca (en staging está anulado).
  */
 import { randomBytes } from 'node:crypto'
 import { closeSync, existsSync, readFileSync, realpathSync } from 'node:fs'
@@ -35,6 +36,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { E2E } from './e2e-fixtures.ts'
+import { CATALOG_OWNERS, seedStagingCatalog } from './seed-staging-catalog.ts'
 import { seedWorld } from './seed-world.ts'
 import {
   openPrivateAccountsFile,
@@ -80,6 +82,7 @@ const ROLE_BY_ID = new Map<string, string>([
   [E2E.DRIVER_USER_ID, 'driver'],
   [E2E.DRIVER_2_USER_ID, 'driver'],
   ...E2E.CUSTOMERS.map((c) => [c.userId, 'customer'] as [string, string]),
+  ...CATALOG_OWNERS.map((o) => [o.userId, 'business'] as [string, string]),
 ])
 
 /** Secretos de esta corrida: se enmascaran en cualquier mensaje de error. */
@@ -171,6 +174,12 @@ async function seed(serviceKey: string, accountsFile: { path: string; fd: number
 
   console.log('\nusuarios')
   await seedWorld(db, ensureAuthUser, { includeAdmin: false })
+  const cat = await seedStagingCatalog(db, ensureAuthUser)
+  console.log(
+    `
+Catálogo de prueba: ${cat.businesses} negocios, ${cat.categories} categorías, ${cat.items} platos ` +
+      `(${cat.soldOut} agotados, ${cat.withoutImage} sin foto), ${cat.images} imágenes subidas`,
+  )
 
   console.log(`\nMundo de staging listo: ${count} usuarios. Contraseñas en ${accountsFile.path}\n`)
 }
