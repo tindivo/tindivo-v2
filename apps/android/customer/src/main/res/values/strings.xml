@@ -530,6 +530,8 @@
     <string name="phone_code_label">Código de 6 dígitos</string>
     <string name="phone_verify">Verificar</string>
     <string name="phone_resend">Reenviar código</string>
+    <string name="phone_resend_in">Reenviar en %1$s</string>
+    <string name="phone_verified_toast">Celular verificado</string>
     <string name="phone_resend_wait">Podrás reenviar el código en %1$d s</string>
     <string name="phone_change_number">Cambiar número</string>
     <string name="phone_sending">Enviando</string>

@@ -207,6 +207,20 @@ class PhoneVerifyViewModelTest {
         }
 
     @Test
+    fun `un codigo de seis digitos pegado con espacios verifica solo`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+
+            viewModel.onCodeTyped("123 456")
+
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+            server.takeRequest()
+            assertEquals("""{"phone":"987654321","code":"123456"}""", server.takeRequest().body?.utf8())
+        }
+
+    @Test
     fun `CA-AUT-09 el texto que la app reconoce es el del vector compartido con el servidor`() {
         val vector =
             requireNotNull(javaClass.getResourceAsStream("/fixtures/vectores/celular-otra-cuenta.json")) {

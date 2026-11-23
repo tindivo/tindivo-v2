@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -230,7 +232,12 @@ internal fun PhoneSheet(
     val viewModel = LocalCheckoutSheetModels.current.phone(key)
     DiscardOnLeave(viewModel::discardInput)
     val phone = viewModel.state.collectAsStateWithLifecycle().value
-    val deliver: (PhoneVerified) -> Unit = { actions.onPhoneVerified() }
+    val context = LocalContext.current
+    // Al verificar, la hoja se cierra sola con un aviso breve (decisión de Jesús, 2026-11-23).
+    val deliver: (PhoneVerified) -> Unit = {
+        Toast.makeText(context, R.string.phone_verified_toast, Toast.LENGTH_SHORT).show()
+        actions.onPhoneVerified()
+    }
     // La verificación sale por takeResult: una sola vez, aunque el cierre de la hoja llegue antes (CAX-005).
     LaunchedEffect(phone.step, phone.loggedOut) {
         when {
