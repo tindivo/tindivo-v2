@@ -9,6 +9,7 @@ import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.GetBusiness200ResponseDataBusiness
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
 import com.tindivo.core.network.isProfileMissing
+import com.tindivo.customer.feature.catalog.business.ScheduleDayUi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
@@ -20,6 +21,9 @@ data class CheckoutData(
     val profile: GetCustomerProfile200ResponseData,
     val addresses: List<AddressUi>,
     val business: GetBusiness200ResponseDataBusiness?,
+    /** Horario de la carta (para decir a qué hora cierra el local en un recojo). */
+    val schedule: List<ScheduleDayUi> = emptyList(),
+    val openingConfirmed: Boolean? = null,
     /** `paymentIntent` del pedido más reciente (D-50), o `null` si no hay o no se pudo leer. */
     val lastIntent: String?,
     /** `GET /customer/payment-options` dijo `trusted`; `false` si no hay compra previa o no se pudo leer. */
@@ -76,6 +80,7 @@ class CheckoutLoader
                 val options = async { checkout.paymentOptions(accountId) }
                 val profileResult = profile.await()
                 val savedResult = saved.await()
+                val businessData = (business.await() as? ApiResult.Success)?.data
                 when {
                     profileResult is ApiResult.Failure && profileResult.error.isProfileMissing() -> {
                         LoadOutcome.ProfileMissing
@@ -94,7 +99,19 @@ class CheckoutLoader
                             CheckoutData(
                                 profile = (profileResult as ApiResult.Success).data,
                                 addresses = (savedResult as ApiResult.Success).data.items.map { it.toAddressUi() },
-                                business = (business.await() as? ApiResult.Success)?.data?.business,
+                                business = businessData?.business,
+                                schedule =
+                                    businessData?.schedule.orEmpty().map {
+                                        ScheduleDayUi(
+                                            it.dayOfWeek,
+                                            it.isOpen,
+                                            it.shift1Start,
+                                            it.shift1End,
+                                            it.shift2Start,
+                                            it.shift2End,
+                                        )
+                                    },
+                                openingConfirmed = businessData?.openingConfirmed,
                                 lastIntent =
                                     (orders.await() as? ApiResult.Success)
                                         ?.data

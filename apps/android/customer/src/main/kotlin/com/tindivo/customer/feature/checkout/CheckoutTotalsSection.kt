@@ -66,7 +66,7 @@ private fun TotalsRows(
                         R.string.checkout_promo_launch
                     },
                 ),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

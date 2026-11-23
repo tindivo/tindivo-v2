@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -34,6 +36,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
+import kotlinx.coroutines.launch
+
+/** La posición de «¿Cómo pagas?» en la lista del formulario: bolsa, entrega, pago y totales, en ese orden. */
+private const val PAYMENT_ITEM_INDEX = 2
 
 @Composable
 fun CheckoutDestination(
@@ -120,7 +126,7 @@ internal fun CheckoutTopBar(
                 subtitle?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -158,11 +164,21 @@ private fun CheckoutForm(
             null
         }
     val subtitle = listOfNotNull(state.businessName.takeIf { it.isNotBlank() }, eta).joinToString(" · ")
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     Scaffold(
         topBar = { CheckoutTopBar(subtitle = subtitle.takeIf { it.isNotEmpty() }, onBack = actions.onBack) },
-        bottomBar = { CheckoutBottomBar(state = state, form = form, openSheet = openSheet) },
+        bottomBar = {
+            CheckoutBottomBar(
+                state = state,
+                form = form,
+                openSheet = openSheet,
+                goToPayment = { scope.launch { listState.animateScrollToItem(PAYMENT_ITEM_INDEX) } },
+            )
+        },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding =
                 PaddingValues(

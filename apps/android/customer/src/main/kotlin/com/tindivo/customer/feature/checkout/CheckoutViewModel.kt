@@ -255,6 +255,11 @@ class CheckoutViewModel
             if (takeSheet { it == CheckoutSheet.VerifyPhone }) refreshPhone()
         }
 
+        /** La hoja del nombre guardó el nombre del pedido: se aplica y la hoja se cierra (cerrarla sin guardar no cambia nada). */
+        fun onNameSaved(text: String) {
+            if (takeSheet { it == CheckoutSheet.EditName }) edit { copy(name = text.trim().take(MAX_NAME_LENGTH)) }
+        }
+
         /** La hoja creó el perfil: se carga el checkout, como al volver de «Completa tu perfil». */
         fun onProfileCompleted() {
             if (takeSheet { it == CheckoutSheet.CompleteProfile }) retryLoad()

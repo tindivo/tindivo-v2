@@ -78,6 +78,7 @@ internal fun CheckoutSheetHost(
         CheckoutSheet.AddAddress -> AddressSheet(editingId = null, key = key, actions = actions)
         is CheckoutSheet.EditAddress -> AddressSheet(editingId = sheet.id, key = key, actions = actions)
         CheckoutSheet.VerifyPhone -> PhoneSheet(key, actions)
+        CheckoutSheet.EditName -> NameSheet(current = state.name, actions = actions)
         CheckoutSheet.CompleteProfile -> ProfileSheet(key, actions)
         is CheckoutSheet.GpsBlock -> GpsBlockSheet(sheet, actions)
     }
