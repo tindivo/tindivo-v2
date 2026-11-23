@@ -187,6 +187,10 @@ final class CartScreenModel {
         } catch {
             // Un `.cancelled` que no viene de cerrar la pantalla es un fallo de la red: «sin validar», no bloquea.
             if case .cancelled = error, Task.isCancelled { return }
+            // Si mientras tanto «Editar» ya cargó la carta de este negocio, no se baja a «sin validar».
+            if case let .loaded(known) = menu, known.id.caseInsensitiveCompare(cart.businessId) == .orderedSame {
+                return rebuild()
+            }
             menu = .failed
         }
         rebuild()
@@ -242,17 +246,22 @@ final class CartScreenModel {
         await write { store async throws(CartError) in try await store.changeQuantity(signature: signature, by: delta) }
     }
 
-    /// La vista avisa de si VoiceOver está encendido.
+    /// La vista avisa de si VoiceOver está encendido. Si se apaga con un aviso abierto que no se cerraba solo, el plazo
+    /// de 5 s arranca ahora.
     func setVoiceOver(_ running: Bool) {
         voiceOverRunning = running
+        if !running, !undoAutoDismisses, let offer = undoOffer {
+            undoAutoDismisses = true
+            scheduleUndoDismissal(token: offer.token)
+        }
     }
 
-    /// Se sale de la bolsa: con VoiceOver, el aviso «Deshacer» se va (sin VoiceOver sigue su plazo). Abrir «Editar» (una
-    /// ficha a pantalla completa) también hace desaparecer la bolsa, pero no es salir de ella: con la ficha abierta o
-    /// abriéndose no se hace nada.
+    /// Se sale de la bolsa: si el aviso «Deshacer» no se cierra solo (se abrió con VoiceOver), se va; si tiene plazo,
+    /// sigue su plazo. Abrir «Editar» (una ficha a pantalla completa) también hace desaparecer la bolsa, pero no es
+    /// salir de ella: con la ficha abierta o abriéndose no se hace nada.
     func leave() {
         guard editing == nil, !isOpeningEdit else { return }
-        if voiceOverRunning { forgetUndo() }
+        if !undoAutoDismisses { forgetUndo() }
     }
 
     /// Quita la línea. Si queda alguna otra, ofrece «Deshacer» durante 5 s; si era la última, la bolsa pasa a vacía
@@ -279,7 +288,11 @@ final class CartScreenModel {
         // Con VoiceOver el aviso espera: se va al tocar «Deshacer», con otro cambio o al salir de la bolsa. Quien usa
         // VoiceOver no alcanza a oír y tocar «Deshacer» en 5 s.
         undoAutoDismisses = !voiceOverRunning
-        guard undoAutoDismisses else { return }
+        if undoAutoDismisses { scheduleUndoDismissal(token: token) }
+    }
+
+    private func scheduleUndoDismissal(token: Int) {
+        undoTask?.cancel()
         undoTask = Task { [clock, undoWindow] in
             do { try await clock.sleep(undoWindow) } catch { return }
             if undoOffer?.token == token { forgetUndo() }
