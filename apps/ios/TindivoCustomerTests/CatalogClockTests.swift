@@ -107,7 +107,9 @@ struct CatalogClockTests {
         task.cancel()
     }
 
-    @Test("4 la carga inicial pide la lista y una carta por negocio (de tres en tres); la recarga por reloj, solo la lista")
+    @Test(
+        "4 la carga inicial pide la lista y una carta por negocio (de tres en tres); la recarga por reloj, solo la lista"
+    )
     func requestCounts() async {
         let manual = ManualClock(at("2026-07-07", "17:59"))
         let ids = ["a", "b", "c", "d", "e"]
