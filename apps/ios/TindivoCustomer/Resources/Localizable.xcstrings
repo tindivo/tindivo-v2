@@ -98,16 +98,6 @@
         }
       }
     },
-    "%lld/%lld" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld/%2$lld"
-          }
-        }
-      }
-    },
     "%lld de %lld listas" : {
       "localizations" : {
         "es" : {
@@ -142,6 +132,7 @@
     },
     "%lld de %lld elegidas" : {},
     "%lld de %lld caracteres" : {},
+    "%@. Deshacer" : {},
     "+%@" : {},
     "Abierto · cierra %@" : {},
     "Abre el %@ a las %@" : {
@@ -189,6 +180,7 @@
     "Buscar en la carta" : {},
     "Cancelar" : {},
     "Cantidad" : {},
+    "Cantidad de %@" : {},
     "Cargando" : {},
     "Cerrado" : {},
     "Cerrado ahora" : {},
@@ -196,13 +188,11 @@
     "Cerrado · abre hoy %@" : {},
     "Cerrado · abre mañana %@" : {},
     "Cerrar" : {},
-    "Completa %lld opción" : {},
-    "Completa %lld opciones" : {},
     "Consulta su horario más tarde" : {},
     "Consultando…" : {},
-    "Continuar" : {},
     "Contrato" : {},
     "Cómo lo recibes" : {},
+    "Cómo pagas" : {},
     "de %@ a %@" : {
       "localizations" : {
         "es" : {
@@ -213,6 +203,7 @@
         }
       }
     },
+    "Delivery · %@" : {},
     "Desde %@" : {},
     "Destacados" : {},
     "Diagnóstico" : {},
@@ -220,17 +211,18 @@
     "Domingo" : {},
     "Editar selección" : {},
     "Editar selección de %@" : {},
+    "Efectivo" : {},
     "Ej. sin cebolla, bien cocido, tocar timbre 2 veces…" : {},
+    "El importe de este producto no es válido" : {},
     "Elegir" : {},
     "Elegir %@" : {},
-    "Elige %@" : {},
-    "Elige una opción" : {},
+    "Elige: %@" : {},
     "En el local" : {},
     "En tu bolsa: %lld" : {},
     "Entregar en" : {},
     "Error" : {},
     "Estado" : {},
-    "Hasta %lld" : {},
+    "Falta elegir: %@" : {},
     "Hay que actualizar la app (mínimo %@)" : {},
     "Horarios" : {},
     "hoy" : {},
@@ -266,18 +258,22 @@
     "No se pudo guardar tu bolsa. Inténtalo de nuevo." : {},
     "Nota (opcional)" : {},
     "Nota: %@" : {},
-    "Obligatorio" : {},
     "Obligatorio · elige %lld" : {},
     "Opcional" : {},
     "Opcional · hasta %lld" : {},
+    "Pagas directo al negocio. Tindivo no retiene tu dinero" : {},
     "Pedidos por WhatsApp" : {},
     "Pedir por WhatsApp" : {},
     "Pide directo por WhatsApp mientras preparamos su integración completa a la plataforma." : {},
+    "Plin" : {},
+    "Precio actualizado: +%@ por unidad" : {},
+    "Precio actualizado: -%@ por unidad" : {},
     "Probar de nuevo" : {},
     "Próximamente pedidos por la plataforma" : {},
     "Prueba con otro nombre, o con un ingrediente: también buscamos dentro de la descripción de cada plato." : {},
     "Quitar" : {},
     "Quitar %@" : {},
+    "Recojo · En el local" : {},
     "Reintentar" : {},
     "Restaurante" : {},
     "Restaurantes" : {},
@@ -312,12 +308,14 @@
       }
     },
     "Tu bolsa ya tiene %lld platos distintos: es el máximo por pedido" : {},
+    "Una menos de %@" : {},
     "Una más" : {},
     "Una menos" : {},
+    "Una más de %@" : {},
     "Vaciar" : {},
     "Vaciar y empezar" : {},
+    "Ver bolsa" : {},
     "Ver las %lld secciones de la carta" : {},
-    "Ver mi bolsa" : {},
     "Ver negocios" : {},
     "Versión" : {},
     "Versión mínima" : {},
@@ -378,8 +376,6 @@
     "Guardar cambios · %@" : {},
     "La opción \"%@\" cambió de precio" : {},
     "No pudimos revisar tu bolsa con la carta. Lo confirmaremos al hacer el pedido." : {},
-    "Precio actualizado (+%@)" : {},
-    "Precio actualizado (-%@)" : {},
     "Producto agotado por ahora" : {},
     "Quitar una unidad de %@. Llevas %@" : {
       "localizations" : {
@@ -394,7 +390,8 @@
     "Quitaste \"%@\"" : {},
     "Recojo" : {},
     "Tu bolsa" : {},
-    "Una opción ya no está disponible" : {}
+    "Una opción ya no está disponible" : {},
+    "Yape" : {}
   },
   "version" : "1.0"
 }
