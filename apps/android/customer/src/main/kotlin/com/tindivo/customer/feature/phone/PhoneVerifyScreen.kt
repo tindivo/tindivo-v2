@@ -150,9 +150,14 @@ private fun NumberStep(
     Text(text = stringResource(R.string.phone_number_hint), style = MaterialTheme.typography.bodyLarge)
     PhoneField(
         value = state.phone,
-        onValueChange = actions.onPhoneChanged,
+        onValueChange = {
+            tried = false
+            actions.onPhoneChanged(it)
+        },
         label = stringResource(R.string.phone_number_label),
         submitted = tried,
+        // Un solo error a la vez: si ya hay uno debajo (ErrorLine), el del campo se calla.
+        showValidation = state.error == null,
         imeAction = ImeAction.Done,
         onImeAction = send,
         autoFocus = true,

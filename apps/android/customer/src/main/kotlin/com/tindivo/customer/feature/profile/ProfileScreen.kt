@@ -119,9 +119,9 @@ private fun ProfileNameField(
         onValueChange = onName,
         label = stringResource(R.string.profile_name_label),
         enabled = !state.saving,
-        // El nombre ya distingue qué se marca de inmediato (letras raras, demasiado largo, vacío tras escribir).
+        // Sale al salir del campo; lo que respondió el servidor (422) sale de inmediato.
         error = errorText.takeIf { state.nameError },
-        submitted = true,
+        immediateError = errorText.takeIf { state.rejected },
         valid = state.problem == null,
         maxLength = NAME_MAX,
         imeAction = ImeAction.Done,

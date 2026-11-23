@@ -1,9 +1,12 @@
 package com.tindivo.customer.ui.fields
 
+import com.tindivo.customer.feature.checkout.parseCashInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.math.BigDecimal
 
 internal class FieldRulesTest {
     @Test
@@ -52,15 +55,39 @@ internal class FieldRulesTest {
     }
 
     @Test
-    fun `el monto se queda en cadena decimal con dos decimales como mucho`() {
-        assertEquals("50", normalizeMoneyInput("50"))
-        assertEquals("50.5", normalizeMoneyInput("50,5"))
-        assertEquals("50.55", normalizeMoneyInput("50.559"))
-        assertEquals("0.", normalizeMoneyInput("."))
-        assertEquals("7", normalizeMoneyInput("007"))
-        assertEquals("0.5", normalizeMoneyInput("0.5"))
-        assertEquals("12.5", normalizeMoneyInput("S/ 12.5.9"))
-        assertEquals("", normalizeMoneyInput("abc"))
+    fun `el monto deja el texto como lo escribe la persona y solo quita lo que no es cifra`() {
+        assertEquals("50", filterMoneyInput("50"))
+        assertEquals("50,5", filterMoneyInput("50,5"))
+        assertEquals("50.559", filterMoneyInput("50.559"))
+        assertEquals("007", filterMoneyInput("007"))
+        assertEquals("12.5.9", filterMoneyInput("S/ 12.5.9"))
+        assertEquals("", filterMoneyInput("abc"))
+    }
+
+    @Test
+    fun `el efectivo sigue rechazando 50_559 como antes`() {
+        assertNull(parseCashInput(filterMoneyInput("50.559")))
+        assertEquals(BigDecimal("50.50"), parseCashInput(filterMoneyInput("50,5")))
+        assertEquals(BigDecimal("0.50"), parseCashInput(filterMoneyInput("0.5")))
+    }
+
+    @Test
+    fun `un +51 solo no deja un numero basura`() {
+        assertEquals("", normalizePePhoneInput("+51"))
+        assertEquals("", normalizePePhoneInput("+51 "))
+    }
+
+    @Test
+    fun `0051 se toma como el codigo de pais`() {
+        assertEquals("987654321", normalizePePhoneInput("0051987654321"))
+        assertEquals("987654321", normalizePePhoneInput("00 51 987 654 321"))
+        assertTrue(isValidPePhone("0051987654321"))
+    }
+
+    @Test
+    fun `diez digitos que empiezan con 51 pierden el 51 y no valen`() {
+        assertEquals("98765432", normalizePePhoneInput("5198765432"))
+        assertFalse(isValidPePhone("5198765432"))
     }
 
     @Test

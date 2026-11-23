@@ -12,10 +12,24 @@ private const val PE_COUNTRY_CODE = "51"
 private const val PHONE_GROUP = 3
 private val PE_PHONE = Regex("""^9\d{8}$""")
 
-/** Solo los 9 dígitos locales, sin `+51`/`51` (el campo ya pinta su `+51`). */
+/**
+ * Solo los 9 dígitos locales, sin `+51`, `0051` ni `51` (el campo ya pinta su `+51`). Un `+51` pegado se quita aunque
+ * venga solo; lo que no cabe en un celular de 9 dígitos no se rellena con basura.
+ */
 internal fun localPePhone(phone: String): String {
-    val digits = phone.filter(Char::isDigit)
-    return if (digits.length > PE_PHONE_DIGITS && digits.startsWith(PE_COUNTRY_CODE)) digits.drop(2) else digits
+    val raw = phone.trim()
+    val digits = raw.filter(Char::isDigit)
+    val withoutPrefix =
+        when {
+            raw.startsWith("+$PE_COUNTRY_CODE") -> digits.drop(PE_COUNTRY_CODE.length)
+            digits.startsWith("00$PE_COUNTRY_CODE") -> digits.drop(PE_COUNTRY_CODE.length + 2)
+            else -> digits
+        }
+    return if (withoutPrefix.length > PE_PHONE_DIGITS && withoutPrefix.startsWith(PE_COUNTRY_CODE)) {
+        withoutPrefix.drop(PE_COUNTRY_CODE.length)
+    } else {
+        withoutPrefix
+    }
 }
 
 internal fun isValidPePhone(phone: String): Boolean = PE_PHONE.matches(localPePhone(phone))
@@ -38,23 +52,14 @@ internal object PePhoneVisualTransformation : VisualTransformation {
         TransformedText(AnnotatedString(formatPePhone(text.text)), PePhoneOffsets)
 }
 
-private const val MONEY_DECIMALS = 2
-private const val MONEY_MAX_INTEGER_DIGITS = 6
-
 /**
- * Lo que queda en un campo de monto: cadena decimal (nunca `Double`), con punto, dos decimales como mucho y sin ceros
- * a la izquierda. La coma del teclado cuenta como punto.
+ * Lo que queda en un campo de monto: solo cifras, punto o coma, tal como lo escribe la persona. No recorta decimales ni
+ * quita ceros: quien decide si el monto vale es la regla de quien lo usa (en efectivo, `parseCashInput`).
  */
-internal fun normalizeMoneyInput(raw: String): String {
-    val cleaned = raw.replace(',', '.').filter { it.isDigit() || it == '.' }
-    val dot = cleaned.indexOf('.')
-    val integer = (if (dot < 0) cleaned else cleaned.substring(0, dot)).trimStart('0').take(MONEY_MAX_INTEGER_DIGITS)
-    if (dot < 0) return integer
-    val decimals = cleaned.substring(dot + 1).takeWhile(Char::isDigit).take(MONEY_DECIMALS)
-    return "${integer.ifEmpty { "0" }}.$decimals"
-}
+internal fun filterMoneyInput(raw: String): String = raw.filter { it.isDigit() || it == '.' || it == ',' }
 
-internal fun isValidMoney(text: String): Boolean = text.toBigDecimalOrNull()?.let { it > BigDecimal.ZERO } == true
+internal fun isValidMoney(text: String): Boolean =
+    text.replace(',', '.').toBigDecimalOrNull()?.let { it > BigDecimal.ZERO } == true
 
 private const val COUNTER_NUMERATOR = 4
 private const val COUNTER_DENOMINATOR = 5
