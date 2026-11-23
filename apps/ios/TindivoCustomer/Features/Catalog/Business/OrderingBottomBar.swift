@@ -14,8 +14,8 @@ struct OrderingBottomBar: View {
             if let cart { CartBarView(summary: cart, action: onOpenCart) }
         case let .closed(status, opensDay):
             ClosedBarView(detail: OrderingMode.closed(status, opensDay: opensDay).closedDetail)
-        case let .contact(number):
-            if let number { ContactBarView(number: number) }
+        case .contact:
+            if let links = ordering.contactLinks { ContactBarView(links: links) }
         }
     }
 }
@@ -46,8 +46,11 @@ struct CartBarView: View {
                     .lineLimit(1)
                     .fixedSize()
                 if !vertical { Spacer(minLength: 0) }
+                // Blanco sobre `primary` da 3,25:1: solo cuenta como texto grande en negrita y a 14 pt o más
+                // (decisión de Jesús, 2026-11-22; HIG: negrita, 3:1).
                 Text("\(unitsText(summary.count)) · \(summary.subtotal)")
                     .tindivoText(TindivoTokens.Typography.body)
+                    .fontWeight(.bold)
                     .monospacedDigit()
                     .lineLimit(1)
                     .fixedSize()
@@ -90,27 +93,35 @@ struct ClosedBarView: View {
     }
 }
 
-/// «Pedir por WhatsApp» y «Llamar», en lugar de la bolsa, para un negocio en modo catálogo.
+/// «Pedir por WhatsApp» y «Llamar», en lugar de la bolsa, para un negocio en modo catálogo. Con letra grande los dos
+/// botones pasan uno sobre otro en vez de apretarse en una fila.
 struct ContactBarView: View {
-    let number: String
+    let links: ContactLinks
     @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        let whatsapp = whatsappURI(number).flatMap(URL.init(string:))
-        let tel = telURI(number).flatMap(URL.init(string:))
-        if whatsapp != nil || tel != nil {
-            TindivoBottomBar {
-                HStack(spacing: TindivoTokens.Spacing.spaceInner) {
-                    if let whatsapp {
-                        TindivoPrimaryButton("Pedir por WhatsApp") { openURL(whatsapp) }
-                    }
-                    if let tel {
+        TindivoBottomBar {
+            layout {
+                if let whatsapp = links.whatsapp {
+                    TindivoPrimaryButton("Pedir por WhatsApp") { openURL(whatsapp) }
+                }
+                if let tel = links.tel {
+                    if typeSize.isAccessibilitySize {
+                        TindivoSecondaryButton("Llamar") { openURL(tel) }
+                    } else {
                         TindivoSecondaryButton("Llamar") { openURL(tel) }
                             .fixedSize(horizontal: true, vertical: false)
                     }
                 }
             }
         }
+    }
+
+    private var layout: AnyLayout {
+        typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: TindivoTokens.Spacing.spaceInner))
+            : AnyLayout(HStackLayout(spacing: TindivoTokens.Spacing.spaceInner))
     }
 }
 
