@@ -7,6 +7,7 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.core.network.generated.model.CreateOrder201ResponseData
 import com.tindivo.core.network.generated.model.CreateOrderRequest
+import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartStore
@@ -46,6 +47,7 @@ class CheckoutViewModel
         private val sessionStore: SessionStore,
         private val debounce: QuoteDebounce,
         private val configService: ConfigService,
+        private val gps: CheckoutGps,
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(CheckoutUiState())
         val state: StateFlow<CheckoutUiState> = mutableState.asStateFlow()
@@ -55,6 +57,13 @@ class CheckoutViewModel
         private var lastIntent: String? = null
         private var loadedFor: String? = null
         private var lastFingerprint: String? = null
+
+        /**
+         * La evidencia de ubicación ya leída para un intento. Un reintento del mismo pedido (misma cuenta, misma bolsa,
+         * mismo método de pago) reusa la lectura: la clave de idempotencia es la misma y el servidor rechaza esa clave
+         * con un cuerpo distinto. Se olvida al cambiar de cuenta y al crearse el pedido.
+         */
+        private var gpsCapture: GpsCapture? = null
 
         /**
          * Cambia con cada cierre o cambio de cuenta. La carga, las cotizaciones y el envío anotan la que vieron al
@@ -126,6 +135,9 @@ class CheckoutViewModel
             loadJob = null
             lastIntent = null
             loadedFor = null
+            gpsCapture = null
+            // La lectura adelantada es de la cuenta que se va: la de la nueva se adelanta al cargar su formulario.
+            gps.reset()
             val empty = cart?.isEmpty() != false
             mutableState.update {
                 CheckoutUiState(
@@ -193,6 +205,28 @@ class CheckoutViewModel
             sheetOwner = account
             sheetGeneration = generation
             mutableState.update { it.copy(sheet = sheet) }
+        }
+
+        /** «Intentar de nuevo»: se descarta lo leído y se vuelve a confirmar, que lee de nuevo. */
+        fun gpsRetry() {
+            if (!takeSheet { it is CheckoutSheet.GpsBlock }) return
+            gpsCapture = null
+            gps.reset()
+            // «Es un reintento» viaja como argumento: una parada antes de enviar no lo deja pegado a la hoja siguiente.
+            startConfirm(skipGpsSheet = false, afterRetry = true)
+        }
+
+        /**
+         * «Continuar sin ubicación»: envía el pedido al recibir con lo que haya (sin `gpsValidation` si no hay permiso,
+         * `failed` si no hubo señal) y decide el servidor (CA-CHK-10). Vale para un único envío.
+         */
+        fun gpsContinue() {
+            if (takeSheet { it is CheckoutSheet.GpsBlock }) startConfirm(skipGpsSheet = true, afterRetry = false)
+        }
+
+        /** «Cambiar a pago por adelantado»: solo cambia el método; la persona vuelve a confirmar. */
+        fun gpsPrepay() {
+            if (takeSheet { it is CheckoutSheet.GpsBlock }) selectPay(PayMethod.Prepaid)
         }
 
         /** Atrás, tocar fuera o «Cerrar»: la hoja se va sin aplicar nada. */
@@ -322,7 +356,11 @@ class CheckoutViewModel
                         is LoadOutcome.Loaded -> {
                             lastIntent = outcome.data.lastIntent
                             mutableState.update { it.withLoaded(outcome.data, current).preferring(prefer) }
-                            if (mutableState.value.phase == CheckoutPhase.Form) requote(debounced = false)
+                            if (mutableState.value.phase == CheckoutPhase.Form) {
+                                // Como la web: la ubicación se lee al abrir el checkout, no al confirmar.
+                                gps.prefetch(viewModelScope)
+                                requote(debounced = false)
+                            }
                         }
                     }
                 }
@@ -408,7 +446,17 @@ class CheckoutViewModel
         }
 
         /** El botón fijo. Un segundo toque mientras se envía no hace nada (además del `Busy` del libro). */
-        fun confirm() {
+        fun confirm() = startConfirm(skipGpsSheet = false, afterRetry = false)
+
+        /**
+         * [skipGpsSheet] («Continuar sin ubicación») vale para ESTE envío y no se guarda en el ViewModel: viaja como
+         * argumento hasta [place], así que cualquier parada antes de enviar (total o opciones cambiadas, sin conexión,
+         * un 422 que se recotiza) la descarta y el siguiente «Confirmar» vuelve a abrir la hoja.
+         */
+        private fun startConfirm(
+            skipGpsSheet: Boolean,
+            afterRetry: Boolean,
+        ) {
             val current = mutableState.value
             if (current.phase != CheckoutPhase.Form || current.sending || !current.cta.canConfirm) return
             // La cuenta se captura UNA vez aqui y firma el pedido hasta el POST: la sesion no se vuelve a leer.
@@ -418,7 +466,7 @@ class CheckoutViewModel
             val started = generation
             mutableState.update { it.copy(sending = true, message = null) }
             viewModelScope.launch {
-                submit(started, account, bag)
+                submit(started, account, bag, skipGpsSheet, afterRetry)
                 emptyBagIfNothingLeft()
             }
         }
@@ -427,6 +475,8 @@ class CheckoutViewModel
             started: Int,
             account: String?,
             bag: Cart?,
+            skipGpsSheet: Boolean = false,
+            afterRetry: Boolean = false,
         ) {
             if (started == generation) quoteJob?.cancel()
             if (account == null) {
@@ -453,7 +503,7 @@ class CheckoutViewModel
 
                 next.pay != before.pay || !ready -> stop(CheckoutMessage.OptionsChanged)
 
-                else -> place(started, account, bag, next, fresh)
+                else -> place(started, account, bag, next, fresh, skipGpsSheet, afterRetry)
             }
         }
 
@@ -478,19 +528,52 @@ class CheckoutViewModel
 
         private fun stop(message: CheckoutMessage) = mutableState.update { it.copy(sending = false, message = message) }
 
+        /** Abre la hoja de GPS si hace falta (CUS-CHK-009) y dice si la abrió; consume «Pedir sin ubicación» y el reintento. */
+        private fun openGpsSheetIfNeeded(
+            started: Int,
+            account: String,
+            form: CheckoutUiState,
+            evidence: CreateOrderRequestGpsValidation?,
+            skipGpsSheet: Boolean,
+            afterRetry: Boolean,
+        ): Boolean {
+            if (skipGpsSheet || !gpsBlocks(form, evidence)) return false
+            sheetOwner = account
+            sheetGeneration = started
+            val sheet = CheckoutSheet.GpsBlock(noPermission = evidence == null, afterRetry = afterRetry)
+            mutableState.update { it.copy(sending = false, sheet = sheet) }
+            return true
+        }
+
         private suspend fun place(
             started: Int,
             account: String,
             current: Cart?,
             form: CheckoutUiState,
             quote: QuoteView,
+            skipGpsSheet: Boolean,
+            afterRetry: Boolean,
         ) {
-            val request = if (current == null) null else buildOrderRequest(form, current, quote)
+            // La ubicación es evidencia, nunca un requisito: sin permiso o sin señal el pedido sale igual (CUS-CHK-009).
+            val fix = if (current == null) null else evidenceFor(account, current, form.pay)
+            // Una lectura que venció mientras se esperaba (la configuración) cuenta como sin señal (CAX-223-001).
+            val evidence = fix?.let(::freshOrFailed)
+            // Sin ubicación en un pedido a domicilio que se paga al recibir: se abre la hoja y no sale nada.
+            val blocked =
+                current != null && isCurrent(started, account) &&
+                    openGpsSheetIfNeeded(started, account, form, evidence, skipGpsSheet, afterRetry)
+            // Si la cuenta cambió mientras se leía la ubicación no se arma ni se envía nada.
+            val request =
+                if (current == null || blocked || !isCurrent(started, account)) {
+                    null
+                } else {
+                    buildOrderRequest(form, current, quote, withTrustedFallback(form, evidence))
+                }
             if (current == null || request == null) {
-                stop(CheckoutMessage.Generic)
+                if (!blocked && isCurrent(started, account)) stop(CheckoutMessage.Generic)
                 return
             }
-            val result = reserveAndSend(started, account, current, request) ?: return
+            val result = reserveAndSend(started, account, current, request, fix?.readAtMs) ?: return
             // El pedido de la cuenta que salió existe y el libro ya consumió su bolsa; esta pantalla (ya de otra
             // cuenta, o de nadie) no navega a él ni muestra nada suyo.
             if (!isCurrent(started, account)) return
@@ -523,6 +606,53 @@ class CheckoutViewModel
             }
         }
 
+        private suspend fun evidenceFor(
+            account: String,
+            bag: Cart,
+            pay: PayMethod?,
+        ): CapturedFix {
+            val key = GpsKey(account, bag.fingerprint(), pay)
+            // El permiso VIGENTE manda sobre cualquier evidencia ya leída (guardada o adelantada): sin él no sale nada.
+            if (pay != PayMethod.Prepaid && !gps.permissionGranted()) {
+                gpsCapture = null
+                gps.reset()
+                return CapturedFix(null, gps.elapsedMs())
+            }
+            // La captura guardada caduca con la misma regla de la lectura adelantada (ENC-d): 2 minutos.
+            gpsCapture
+                ?.takeIf { it.key == key && !it.expired(gps.elapsedMs()) }
+                ?.let { return CapturedFix(it.evidence, it.takenAt) }
+            // Mientras se espera la lectura el botón lo dice («Verificando tu ubicación…»); pagar por adelantado no lee.
+            val waits = pay != PayMethod.Prepaid
+            if (waits) mutableState.update { it.copy(locating = true) }
+            val fix =
+                try {
+                    gps.captureFix(pay)
+                } finally {
+                    if (waits) mutableState.update { it.copy(locating = false) }
+                }
+            // La captura se fecha con la hora de la lectura que devolvió la propia captura, no con la de confirmar.
+            gpsCapture = GpsCapture(key, fix.evidence, fix.readAtMs)
+            return fix
+        }
+
+        /** ¿Ya pasaron [GPS_FIX_MAX_AGE_MS] desde [readAtMs] (en el reloj de [CheckoutGps.elapsedMs])? */
+        private fun stale(readAtMs: Long?): Boolean =
+            readAtMs != null && gps.elapsedMs() - readAtMs >= GPS_FIX_MAX_AGE_MS
+
+        /**
+         * Las coordenadas de una lectura que ya tiene 2 minutos no salen (ENC-d, CAX-223-001): el pedido queda como si el
+         * GPS no hubiera contestado (`failed`, sin coordenadas) y decide el servidor; se descartan las cachés para que el
+         * siguiente intento lea de nuevo. Lo que no lleva coordenadas (`failed`, `manual_skip_prepaid`, nada) no cambia.
+         */
+        private fun freshOrFailed(fix: CapturedFix): CreateOrderRequestGpsValidation? {
+            val evidence = fix.evidence
+            if (evidence?.lat == null || !stale(fix.readAtMs)) return evidence
+            gpsCapture = null
+            gps.reset()
+            return failedEvidence()
+        }
+
         /**
          * Reserva la bolsa y envía el pedido. `null` si no se envió nada y el estado ya quedó puesto: la bolsa era de
          * otra cuenta (se descarta), cambió, o no consta qué pasó con el pedido o con la bolsa (el siguiente intento
@@ -533,13 +663,14 @@ class CheckoutViewModel
             account: String,
             current: Cart,
             request: CreateOrderRequest,
+            readAtMs: Long?,
         ): PlaceResult<CreateOrder201ResponseData>? =
             try {
                 // La bolsa se consume DENTRO del libro, antes de olvidar el intento; el envío no se cancela.
                 if (reserve(started, account, current) && isCurrent(started, account)) {
                     val consume: suspend (String) -> Unit = { fingerprint -> cartStore.consume(account, fingerprint) }
                     ledger.place(account, current, consume) { key ->
-                        checkout.createOrder(request, key, account).also {
+                        checkout.createOrder(withCurrentEvidence(request, readAtMs), key, account).also {
                             if (it is ApiResult.Failure) reportUpgrade(it.error)
                         }
                     }
@@ -550,6 +681,36 @@ class CheckoutViewModel
                 if (isCurrent(started, account)) stop(CheckoutMessage.StillProcessing)
                 null
             }
+
+        /**
+         * EL punto de control de la ubicación: se mira justo antes de cada POST, ya pasadas todas las esperas
+         * (configuración, reserva, consulta del libro). Si la lectura ([readAtMs]) ya tiene 2 minutos, sus coordenadas no
+         * salen: la petición va con `failed` (CAX-223-001). Si revocaron el permiso, sale sin `gpsValidation`. En los dos
+         * casos, con la misma clave y descartando las cachés de ubicación.
+         */
+        private fun withCurrentEvidence(
+            request: CreateOrderRequest,
+            readAtMs: Long?,
+        ): CreateOrderRequest {
+            val evidence = request.gpsValidation ?: return request
+            // Pagar por adelantado no lee ubicación: no depende del permiso.
+            if (evidence.method == CreateOrderRequestGpsValidation.Method.manual_skip_prepaid) return request
+            // `failed` no lleva coordenadas: la falta de ubicación se guarda igual con o sin permiso.
+            if (evidence.method == CreateOrderRequestGpsValidation.Method.failed) return request
+            // El permiso va primero: «dijo que no» (sin `gpsValidation`) manda sobre «el GPS no contestó» (`failed`).
+            val replacement =
+                when {
+                    !gps.permissionGranted() -> null
+                    evidence.lat != null && stale(readAtMs) -> failedEvidence()
+                    else -> return request
+                }
+            gpsCapture = null
+            gps.reset()
+            return request.copy(gpsValidation = replacement)
+        }
+
+        private fun failedEvidence() =
+            CreateOrderRequestGpsValidation(method = CreateOrderRequestGpsValidation.Method.failed)
 
         /** La bolsa con la que otra cuenta intentó enviar no se envía ni se enseña: se descarta. */
         private suspend fun reserve(
@@ -583,6 +744,7 @@ class CheckoutViewModel
 
         // El pedido existe y el libro ya vació la bolsa (con `sending` aún activo, así que no parpadeó «bolsa vacía»).
         private fun opened(orderId: String) {
+            gpsCapture = null
             mutableState.update { it.copy(phase = CheckoutPhase.Opening, createdOrderId = orderId, sending = false) }
         }
 
@@ -604,3 +766,20 @@ class CheckoutViewModel
             }
         }
     }
+
+private data class GpsKey(
+    val account: String,
+    val fingerprint: String,
+    val pay: PayMethod?,
+)
+
+private class GpsCapture(
+    val key: GpsKey,
+    val evidence: CreateOrderRequestGpsValidation?,
+    /** El instante de la lectura, en el reloj de [CheckoutGps.elapsedMs]. */
+    val takenAt: Long,
+) {
+    fun expired(nowMs: Long): Boolean = nowMs - takenAt >= GPS_FIX_MAX_AGE_MS
+
+    override fun toString(): String = "GpsCapture(***)"
+}
