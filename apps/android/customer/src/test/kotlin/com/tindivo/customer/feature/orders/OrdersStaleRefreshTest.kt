@@ -39,4 +39,21 @@ class OrdersStaleRefreshTest : OrdersHarness() {
             assertEquals(2, server.requestCount)
             assertEquals(1, (viewModel.state.value as OrdersUiState.Loaded).items.size)
         }
+
+    @Test
+    fun `si ya pagino no recarga en silencio para no borrarle las paginas`() =
+        runTest {
+            server.enqueue(response(200, pageJson(ids(1), next = "c2")))
+            server.enqueue(response(200, pageJson(ids(2), next = null)))
+            val clock = MutableClock()
+            val viewModel = viewModel(clock = clock)
+            viewModel.settled()
+            viewModel.loadMore()
+
+            clock.advance(STALE_AFTER)
+            viewModel.refreshIfStale()
+
+            assertEquals(2, server.requestCount)
+            assertEquals(2, (viewModel.state.value as OrdersUiState.Loaded).items.size)
+        }
 }

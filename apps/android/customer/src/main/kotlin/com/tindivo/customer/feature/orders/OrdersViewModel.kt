@@ -75,6 +75,9 @@ internal class OrdersViewModel
         private var nextCursor: String? = null
         private var lastLoadedAt: Instant? = null
 
+        /** Ya se pidió una página más: la recarga en silencio solo trae la primera y borraría las demás. */
+        private var paged = false
+
         /**
          * La cuenta con la que se abrió la pantalla, leída al construirla y no dentro de la corrutina de cada carga: cada
          * petición va atada a ella y, sin cuenta, no se pide nada. Si la sesión cambia antes de que una carga arranque,
@@ -116,11 +119,12 @@ internal class OrdersViewModel
         }
 
         /**
-         * Al volver a la pestaña: recarga en silencio si lo cargado es viejo (o nunca cargó bien). Si ya hay una carga en
+         * Al volver a la pestaña: recarga en silencio si lo cargado es viejo (o nunca cargó bien), salvo que la persona ya
+         * haya paginado (se le conservan sus páginas; se refresca con reintento manual o al reabrir). Si ya hay una carga en
          * curso (la primera entrada) no lanza otra.
          */
         fun refreshIfStale() {
-            if (isStale(lastLoadedAt, clock.instant())) refresh()
+            if (!paged && isStale(lastLoadedAt, clock.instant())) refresh()
         }
 
         /**
@@ -150,6 +154,7 @@ internal class OrdersViewModel
                     } else {
                         nextCursor = page.nextCursor
                         lastLoadedAt = clock.instant()
+                        paged = false
                         settle(
                             if (page.items.isEmpty() && page.nextCursor == null) {
                                 OrdersUiState.Empty
@@ -187,6 +192,7 @@ internal class OrdersViewModel
                         settle(OrdersUiState.Failed(unreadableOrderError()))
                     } else {
                         nextCursor = page.nextCursor
+                        paged = true
                         settle(OrdersUiState.Loaded(before.items + page.items, canLoadMore = page.nextCursor != null))
                     }
                 }
