@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.checkout
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.imageResource
@@ -46,10 +49,11 @@ import com.tindivo.customer.ui.NumberedStep
 internal fun LazyListScope.paymentSection(
     state: CheckoutUiState,
     form: CheckoutFormActions,
+    titleFocus: FocusRequester = FocusRequester(),
 ) {
-    item(key = "payment") {
+    item(key = PAYMENT_ITEM_KEY) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SectionTitle(stringResource(R.string.checkout_pay_title))
+            SectionTitle(stringResource(R.string.checkout_pay_title), Modifier.focusRequester(titleFocus).focusable())
             val quote = state.quote
             if (quote == null) {
                 Text(

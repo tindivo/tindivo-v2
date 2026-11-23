@@ -49,6 +49,7 @@ import com.tindivo.customer.R
 import com.tindivo.customer.support.SupportViewModel
 import com.tindivo.customer.support.generalHelpLink
 import com.tindivo.customer.support.openSafely
+import com.tindivo.customer.ui.fields.OTP_LENGTH
 import com.tindivo.customer.ui.fields.OtpCodeField
 import com.tindivo.customer.ui.fields.PhoneField
 import com.tindivo.customer.ui.fields.formatPePhone
@@ -199,7 +200,7 @@ private fun CodeStep(
     OtpCodeField(
         value = state.code,
         onValueChange = actions.onCodeChanged,
-        label = stringResource(R.string.phone_code_label),
+        progress = stringResource(R.string.phone_code_progress, OTP_LENGTH, state.code.length),
         enabled = !state.sending,
         isError = state.error != null,
     )

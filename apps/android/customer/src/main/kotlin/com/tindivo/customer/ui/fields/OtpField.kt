@@ -33,9 +33,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -66,14 +67,15 @@ internal fun resendClock(seconds: Int): String {
 /**
  * El código del SMS en casillas: un solo campo de texto real (para el teclado numérico, el pegado y el autocompletado
  * del SMS con [ContentType.SmsOtpCode]) dibujado como [length] casillas de 56 dp de alto. Pegar un código completo, con
- * espacios o guiones, lo deja en sus dígitos. [label] es lo que lee TalkBack.
+ * espacios o guiones, lo deja en sus dígitos. [progress] es lo que lee TalkBack junto con los dígitos escritos («Código
+ * de 6 dígitos, 3 escritos»); las casillas no dicen nada por su cuenta, para que no se lean una a una.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun OtpCodeField(
     value: String,
     onValueChange: (String) -> Unit,
-    label: String,
+    progress: String,
     modifier: Modifier = Modifier,
     length: Int = OTP_LENGTH,
     enabled: Boolean = true,
@@ -98,7 +100,7 @@ internal fun OtpCodeField(
                 .onFocusChanged { focused = it.isFocused }
                 .semantics {
                     contentType = ContentType.SmsOtpCode
-                    contentDescription = label
+                    stateDescription = progress
                 },
         decorationBox = { inner ->
             // El campo real queda invisible y casi sin tamaño; las casillas son solo su dibujo.
@@ -106,6 +108,7 @@ internal fun OtpCodeField(
             Row(
                 modifier =
                     Modifier
+                        .clearAndSetSemantics {}
                         .fillMaxWidth()
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                             requester.requestFocus()

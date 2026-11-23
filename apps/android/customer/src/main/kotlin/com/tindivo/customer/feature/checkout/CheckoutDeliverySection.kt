@@ -47,7 +47,7 @@ internal fun LazyListScope.deliverySection(
     form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
 ) {
-    item(key = "delivery") {
+    item(key = DELIVERY_ITEM_KEY) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionTitle(stringResource(R.string.checkout_delivery_title))
             if (state.acceptsPickup && state.acceptsDelivery) MethodSwitch(state, form)
@@ -68,11 +68,14 @@ internal fun LazyListScope.deliverySection(
 }
 
 @Composable
-internal fun SectionTitle(text: String) {
+internal fun SectionTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.padding(start = 4.dp, top = 4.dp).semantics { heading() },
+        modifier = modifier.padding(start = 4.dp, top = 4.dp).semantics { heading() },
     )
 }
 

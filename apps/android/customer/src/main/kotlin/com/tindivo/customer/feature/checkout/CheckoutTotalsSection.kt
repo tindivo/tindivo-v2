@@ -19,7 +19,7 @@ import com.tindivo.customer.R
 
 /** Subtotal, delivery y total: todo viene de la cotización del servidor; la app no suma nada. */
 internal fun LazyListScope.totalsSection(state: CheckoutUiState) {
-    item(key = "totals") {
+    item(key = TOTALS_ITEM_KEY) {
         val quote = state.quote
         TindivoCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

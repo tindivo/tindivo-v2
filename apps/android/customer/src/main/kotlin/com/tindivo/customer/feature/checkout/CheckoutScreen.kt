@@ -23,11 +23,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -37,9 +39,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
 import kotlinx.coroutines.launch
-
-/** La posición de «¿Cómo pagas?» en la lista del formulario: bolsa, entrega, pago y totales, en ese orden. */
-private const val PAYMENT_ITEM_INDEX = 2
 
 @Composable
 fun CheckoutDestination(
@@ -166,6 +165,7 @@ private fun CheckoutForm(
     val subtitle = listOfNotNull(state.businessName.takeIf { it.isNotBlank() }, eta).joinToString(" · ")
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val paymentFocus = remember { FocusRequester() }
     Scaffold(
         topBar = { CheckoutTopBar(subtitle = subtitle.takeIf { it.isNotEmpty() }, onBack = actions.onBack) },
         bottomBar = {
@@ -173,7 +173,13 @@ private fun CheckoutForm(
                 state = state,
                 form = form,
                 openSheet = openSheet,
-                goToPayment = { scope.launch { listState.animateScrollToItem(PAYMENT_ITEM_INDEX) } },
+                goToPayment = {
+                    scope.launch {
+                        checkoutItemIndex(PAYMENT_ITEM_KEY)?.let { listState.animateScrollToItem(it) }
+                        // TalkBack sigue el foco: sin esto se quedaba en el botón de la barra de abajo.
+                        runCatching { paymentFocus.requestFocus() }
+                    }
+                },
             )
         },
     ) { padding ->
@@ -191,7 +197,7 @@ private fun CheckoutForm(
         ) {
             bagSection(state, actions.onBack)
             deliverySection(state, form, openSheet)
-            paymentSection(state, form)
+            paymentSection(state, form, paymentFocus)
             totalsSection(state)
         }
     }

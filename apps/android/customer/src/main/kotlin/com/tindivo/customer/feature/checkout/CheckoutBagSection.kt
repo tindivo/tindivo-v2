@@ -40,7 +40,7 @@ internal fun LazyListScope.bagSection(
     state: CheckoutUiState,
     onEditBag: () -> Unit,
 ) {
-    item(key = "bag") { BagCard(state, onEditBag) }
+    item(key = BAG_ITEM_KEY) { BagCard(state, onEditBag) }
 }
 
 @Composable
