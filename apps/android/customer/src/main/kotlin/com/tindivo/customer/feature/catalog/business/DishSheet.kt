@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +33,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,8 +54,9 @@ import com.tindivo.customer.R
 import com.tindivo.customer.feature.cart.CartLine
 import com.tindivo.customer.feature.cart.MAX_NOTE_LENGTH
 import com.tindivo.customer.feature.cart.MAX_QUANTITY
+import kotlinx.coroutines.launch
 
-private val PHOTO_HEIGHT = 240.dp
+private val PHOTO_HEIGHT = 180.dp
 
 /**
  * La ficha de un plato (tablero «Plato»): foto grande, nombre de 26 sp, precio, cada grupo de opciones en su
@@ -68,6 +73,10 @@ internal fun DishSheet(
     var state by rememberSaveable(item.id, stateSaver = DishSheetState.saver(item)) {
         mutableStateOf(DishSheetState(item))
     }
+    // El grupo que se resalta tras tocar el botón sin haber elegido lo obligatorio, y a dónde se baja a verlo.
+    var highlightId by remember { mutableStateOf<String?>(null) }
+    val requesters = remember(item.id) { item.modifierGroups.associate { it.id to BringIntoViewRequester() } }
+    val scope = rememberCoroutineScope()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -84,14 +93,29 @@ internal fun DishSheet(
             ) {
                 DishHeader(item, state.requiredProgress())
                 item.modifierGroups.forEach { group ->
-                    ModifierGroupSection(group = group, state = state, onToggle = { state = state.toggle(group, it) })
+                    ModifierGroupSection(
+                        group = group,
+                        state = state,
+                        onToggle = { state = state.toggle(group, it) },
+                        highlighted = highlightId == group.id && !state.progress(group).done,
+                        modifier = requesters[group.id]?.let { Modifier.bringIntoViewRequester(it) } ?: Modifier,
+                    )
                 }
                 NoteCard(note = state.note, onChange = { state = state.withNote(it) })
             }
             DishBottomBar(
                 state = state,
                 onQuantity = { state = state.withQuantity(it) },
-                onAdd = { onAdd(state.toLine()) },
+                onAdd = {
+                    val missing = state.firstMissingGroup()
+                    if (missing == null) {
+                        onAdd(state.toLine())
+                    } else {
+                        // El botón no se apaga: lleva al primer grupo obligatorio sin elegir y lo resalta.
+                        highlightId = missing.id
+                        scope.launch { requesters[missing.id]?.bringIntoView() }
+                    }
+                },
             )
         }
     }
@@ -192,8 +216,14 @@ private fun DishBottomBar(
 ) {
     val label =
         when (val cta = state.cta) {
-            is DishCta.Add -> stringResource(R.string.dish_add_cta, cta.total)
-            is DishCta.Complete -> pluralStringResource(R.plurals.dish_complete_cta, cta.missing, cta.missing)
+            is DishCta.Add -> {
+                stringResource(R.string.dish_add_cta, cta.total)
+            }
+
+            is DishCta.Complete -> {
+                state.firstMissingGroup()?.let { stringResource(R.string.dish_choose_cta, it.chooseName()) }
+                    ?: pluralStringResource(R.plurals.dish_complete_cta, cta.missing, cta.missing)
+            }
         }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -213,7 +243,6 @@ private fun DishBottomBar(
             TindivoPrimaryButton(
                 text = label,
                 onClick = onAdd,
-                enabled = state.isValid,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -240,7 +269,14 @@ private fun QuantityStepper(
                 onClick = { onChange(quantity - 1) },
                 enabled = quantity > 1,
                 modifier = Modifier.size(TindivoSpacing.touchTarget),
-                colors = IconButtonDefaults.iconButtonColors(containerColor = scheme.outlineVariant),
+                colors =
+                    IconButtonDefaults.iconButtonColors(
+                        containerColor = scheme.outlineVariant,
+                        contentColor = scheme.onSurface,
+                        // En cantidad 1 el «−» sigue legible (no se pierde en el fondo), solo que no hace nada.
+                        disabledContainerColor = scheme.outlineVariant,
+                        disabledContentColor = scheme.onSurfaceVariant,
+                    ),
             ) {
                 Icon(TindivoIcons.Remove, contentDescription = stringResource(R.string.dish_quantity_less))
             }

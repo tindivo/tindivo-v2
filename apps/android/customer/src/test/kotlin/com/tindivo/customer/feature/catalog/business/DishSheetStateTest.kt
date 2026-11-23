@@ -281,4 +281,22 @@ class DishSheetStateTest {
         assertFalse(state.isValid)
         assertTrue(state.cta is DishCta.Complete)
     }
+
+    @Test
+    fun `el boton lleva al primer grupo obligatorio sin elegir y luego al siguiente`() {
+        val cook = group("Guarnición", "single", true, options = listOf(option("medio"), option("bien")))
+        val state = DishSheetState(item(size, cook))
+        assertEquals("size", state.firstMissingGroup()?.id)
+
+        val afterSize = state.tap(size, "small")
+        assertEquals("Guarnición", afterSize.firstMissingGroup()?.id)
+        assertEquals("guarnición", afterSize.firstMissingGroup()?.chooseName())
+
+        assertNull(afterSize.toggle(cook, cook.options[0]).firstMissingGroup())
+    }
+
+    @Test
+    fun `sin grupos obligatorios no hay nada que resaltar`() {
+        assertNull(DishSheetState(item(sauce, extras)).firstMissingGroup())
+    }
 }

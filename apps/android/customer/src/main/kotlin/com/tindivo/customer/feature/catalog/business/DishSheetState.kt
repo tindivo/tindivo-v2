@@ -78,6 +78,10 @@ internal data class DishSheetState(
     /** Cuántos grupos obligatorios faltan por completar. */
     val missing: Int get() = issues.count { it is ModifierSelectionIssue.Missing }
 
+    /** El primer grupo obligatorio, en el orden de la ficha, al que aún le falta elegir; `null` si no falta ninguno. */
+    fun firstMissingGroup(): ModifierGroupUi? =
+        item.modifierGroups.firstOrNull { it.isRequired && it.id.lowercase(Locale.ROOT) in missingGroupIds }
+
     // Que cada id elegido sea UNA opción del plato: si no, el precio sumaría otra cosa que lo validado.
     val isValid: Boolean
         get() = issues.isEmpty() && selectedIds.size <= MAX_MODIFIERS && selectedModifiers.size == selectedIds.size
@@ -225,3 +229,8 @@ internal fun DishSheetState.requiredProgress(): RequiredProgress? {
     if (required.isEmpty()) return null
     return RequiredProgress(done = required.count { progress(it).done }, total = required.size)
 }
+
+private val ES_PE = Locale.forLanguageTag("es-PE")
+
+/** El nombre de un grupo para decir «Elige tu <nombre>»: en minúscula y sin espacios sobrantes. */
+internal fun ModifierGroupUi.chooseName(): String = name.trim().lowercase(ES_PE)

@@ -42,8 +42,13 @@ internal fun ModifierGroupSection(
     group: ModifierGroupUi,
     state: DishSheetState,
     onToggle: (ModifierOptionUi) -> Unit,
+    modifier: Modifier = Modifier,
+    highlighted: Boolean = false,
 ) {
-    TindivoCard(modifier = Modifier.fillMaxWidth()) {
+    val scheme = MaterialTheme.colorScheme
+    // Resaltado: borde de error de 2 dp alrededor de la tarjeta, para que se vea qué falta elegir.
+    val outline = if (highlighted) Modifier.border(2.dp, scheme.error, MaterialTheme.shapes.large) else Modifier
+    TindivoCard(modifier = modifier.fillMaxWidth().then(outline)) {
         Column(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -77,12 +82,14 @@ private fun GroupHeader(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() },
             )
-            val hint = listOfNotNull(hintText(progress), counterText(progress)).joinToString(" · ")
-            Text(
-                text = hint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // Sin contadores «0/1»: la píldora de la derecha dice «Obligatorio» o «Listo», y aquí solo cuánto se puede elegir.
+            hintText(progress)?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         GroupStatusPill(progress)
     }
@@ -125,11 +132,6 @@ private fun GroupStatusPill(progress: GroupProgress) {
         }
     }
 }
-
-@Composable
-private fun counterText(progress: GroupProgress): String =
-    progress.max?.let { stringResource(R.string.dish_group_counter, progress.count, it) }
-        ?: stringResource(R.string.dish_group_counter_unlimited, progress.count)
 
 @Composable
 private fun hintText(progress: GroupProgress): String? =
