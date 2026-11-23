@@ -15,6 +15,8 @@ XCODEGEN="$XCODEGEN_DIR/xcodegen/bin/xcodegen"
 if [ ! -f "$XCODEGEN_DIR/.verified" ]; then
   mkdir -p "$TINDIVO_IOS_CACHE"
   staging="$(mktemp -d "$TINDIVO_IOS_CACHE/xcodegen-tmp.XXXXXX")"
+  # Se carga con `source`: se guarda y se repone el trap EXIT de quien llama.
+  prev_exit_trap="$(trap -p EXIT)"
   trap 'rm -rf "$staging"' EXIT
   curl -fsSL -o "$staging/xcodegen.zip" \
     "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip"
@@ -30,7 +32,7 @@ if [ ! -f "$XCODEGEN_DIR/.verified" ]; then
   if [ -d "$XCODEGEN_DIR" ] && [ ! -f "$XCODEGEN_DIR/.verified" ]; then rm -rf "$XCODEGEN_DIR"; fi
   if [ ! -e "$XCODEGEN_DIR" ]; then mv "$staging" "$XCODEGEN_DIR" 2>/dev/null || true; fi
   rm -rf "$staging"
-  trap - EXIT
+  if [ -n "$prev_exit_trap" ]; then eval "$prev_exit_trap"; else trap - EXIT; fi
   [ -f "$XCODEGEN_DIR/.verified" ] || { echo "No se pudo instalar XcodeGen en $XCODEGEN_DIR" >&2; exit 1; }
 fi
 
@@ -43,6 +45,8 @@ SWIFTLINT="$SWIFTLINT_DIR/swiftlint"
 if [ ! -f "$SWIFTLINT_DIR/.verified" ]; then
   mkdir -p "$TINDIVO_IOS_CACHE"
   staging="$(mktemp -d "$TINDIVO_IOS_CACHE/swiftlint-tmp.XXXXXX")"
+  # Se carga con `source`: se guarda y se repone el trap EXIT de quien llama.
+  prev_exit_trap="$(trap -p EXIT)"
   trap 'rm -rf "$staging"' EXIT
   curl -fsSL -o "$staging/swiftlint.zip" \
     "https://github.com/realm/SwiftLint/releases/download/$SWIFTLINT_VERSION/portable_swiftlint.zip"
@@ -57,7 +61,7 @@ if [ ! -f "$SWIFTLINT_DIR/.verified" ]; then
   if [ -d "$SWIFTLINT_DIR" ] && [ ! -f "$SWIFTLINT_DIR/.verified" ]; then rm -rf "$SWIFTLINT_DIR"; fi
   if [ ! -e "$SWIFTLINT_DIR" ]; then mv "$staging" "$SWIFTLINT_DIR" 2>/dev/null || true; fi
   rm -rf "$staging"
-  trap - EXIT
+  if [ -n "$prev_exit_trap" ]; then eval "$prev_exit_trap"; else trap - EXIT; fi
   [ -f "$SWIFTLINT_DIR/.verified" ] || { echo "No se pudo instalar SwiftLint en $SWIFTLINT_DIR" >&2; exit 1; }
 fi
 

@@ -23,7 +23,8 @@ function_body_length:
   warning: 80
 cyclomatic_complexity:
   warning: 15
-# Nombres de dos letras (id, to, at, ok) son habituales en Swift; solo avisa de una letra.
+# Nombres de dos letras (id, to, at, ok) son habituales en Swift. Una letra baja de error a aviso porque el código
+# actual tiene 14 (n, a, b, p, l): se renombran al tocarlos y entonces vuelve el valor por defecto.
 identifier_name:
   min_length:
     warning: 2

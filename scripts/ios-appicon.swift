@@ -27,6 +27,9 @@ func hex(_ s: String) -> CGColor {
     return CGColor(srgbRed: CGFloat((h >> 16) & 255) / 255, green: CGFloat((h >> 8) & 255) / 255, blue: CGFloat(h & 255) / 255, alpha: 1)
 }
 
+// Solo se dibuja un <path> sin <group>: con más, el icono saldría incompleto sin avisar.
+precondition(fg.components(separatedBy: "<path").count == 2 && !fg.contains("<group"), "ic_launcher_foreground.xml trae más de un path o grupos: este script no los dibuja")
+
 let viewport = CGFloat(Double(capture("viewportWidth=\"([0-9.]+)\"", in: fg))!)
 let pathData = capture("pathData=\"([^\"]+)\"", in: fg)
 let fill = hex(capture("fillColor=\"(#[0-9A-Fa-f]+)\"", in: fg))

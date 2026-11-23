@@ -9,10 +9,11 @@ Se suma al `AGENTS.md` raíz. La norma es `Docs/arquitectura/estandares/swift.md
 - **Comandos:** `pnpm ios:gen`, `pnpm ios:build`, `pnpm ios:test` (los dos últimos regeneran antes). Simulador sin
   firma; otro destino con `IOS_DESTINATION`. Herramientas fijadas (XcodeGen y SwiftLint con sha256, swift-openapi-generator
   con versión exacta en `Tools/Package.swift`) en `~/Library/Caches/tindivo-ios`, compartida entre worktrees.
-- **Estilo (SW-14):** `pnpm ios:lint` corre SwiftLint (`.swiftlint.yml`; falla solo con errores) y `swift format lint`
-  (`.swift-format`) sobre lo versionado y no generado; `pnpm ios:format` aplica `swift-format` y reescribe archivos.
+- **Estilo (SW-14):** `pnpm ios:lint` corre SwiftLint (`.swiftlint.yml`, sobre las carpetas de `included`, también lo no
+  versionado; falla solo con errores) y `swift format lint` (`.swift-format`, solo lo versionado y no generado); `pnpm ios:format` aplica `swift-format` y reescribe archivos.
   swift-format decide largo de línea y comas finales: por eso SwiftLint tiene apagados `line_length` y `trailing_comma`.
-- **Build (SW-15):** `IOS_BUILD_NUMBER` (la CI pasa `github.run_number`) fija `CURRENT_PROJECT_VERSION`.
+- **Build (SW-15):** `IOS_BUILD_NUMBER` (la CI pasa `github.run_number`) fija `CURRENT_PROJECT_VERSION`. Ese número es
+  por workflow y empieza en 1: el workflow que suba a TestFlight tiene que usar una base mayor que el último build subido.
 - **Recursos:** `Resources/Assets.xcassets` lleva `AppIcon` (versionado; `scripts/ios-appicon.swift` lo rehace desde el
   icono adaptativo de Android) y, generados desde `packages/design-tokens` por `gen.sh`, `AccentColor` (`primary`) y
   `LaunchBackground` (`background`). `PrivacyInfo.xcprivacy`: sin rastreo, sin datos recogidos y sin APIs de razón

@@ -13,6 +13,8 @@ cd "$IOS"
 swift_files=()
 while IFS= read -r file; do swift_files+=("$file"); done < <(git ls-files -- '*.swift' | grep -v '/Generated/')
 
+if [ "${#swift_files[@]}" -eq 0 ]; then echo "No hay archivos .swift versionados." >&2; exit 0; fi
+
 if [ "${1:-}" = "--format" ]; then
   swift format format --configuration .swift-format --in-place "${swift_files[@]}"
   echo "swift-format aplicado a ${#swift_files[@]} archivos."

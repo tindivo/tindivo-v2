@@ -44,17 +44,13 @@ jobs:
       - name: Versiones
         run: xcodebuild -version && swift --version
 
-      # Herramientas fijadas (XcodeGen con sha256 y el generador compilado). Los paquetes de la app no van aquí: se
+      # Herramientas fijadas (XcodeGen y SwiftLint con sha256, y el generador compilado). Los paquetes de la app no van aquí: se
       # resuelven en apps/ios/build/DerivedData, solo con las versiones de Package.resolved.
       - name: Caché de herramientas
         uses: actions/cache@v5
         with:
           path: ~/Library/Caches/tindivo-ios
           key: tindivo-ios-xcode-27.2-${{ hashFiles('apps/ios/scripts/tools.sh', 'apps/ios/Tools/Package.swift', 'apps/ios/Tools/Package.resolved') }}
-
-      # SW-14: SwiftLint fijado y swift-format de la toolchain; falla si SwiftLint halla errores.
-      - name: Lint
-        run: apps/ios/scripts/lint.sh
 
       # SW-15: el número de build lo pone la CI (CURRENT_PROJECT_VERSION = IOS_BUILD_NUMBER).
       - name: Compilar y probar en el simulador
@@ -68,3 +64,9 @@ jobs:
         env:
           IOS_BUILD_NUMBER: ${{ github.run_number }}
         run: apps/ios/scripts/xcodebuild.sh build Prod
+
+      # SW-14: SwiftLint fijado y swift-format de la toolchain; falla si SwiftLint halla errores. Va al final y con
+      # always() para que un error de estilo no esconda si las pruebas pasan ese día.
+      - name: Lint
+        if: always()
+        run: apps/ios/scripts/lint.sh
