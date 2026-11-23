@@ -401,6 +401,8 @@
         <item quantity="one">%1$d producto</item>
         <item quantity="other">%1$d productos</item>
     </plurals>
+    <string name="checkout_bag_show">Ver detalle</string>
+    <string name="checkout_bag_hide">Ocultar detalle</string>
     <string name="checkout_bag_open">Toca para ver el detalle</string>
     <string name="checkout_bag_close">Toca para cerrar el detalle</string>
     <string name="checkout_bag_line">%1$d× %2$s</string>
@@ -411,13 +413,14 @@
     <string name="checkout_method_pickup">Recojo</string>
     <string name="checkout_pickup_question">¿Vas al local ahora?</string>
     <string name="checkout_pickup_now">Sí, voy y espero ahí</string>
-    <string name="checkout_pickup_now_hint">Pagas por adelantado y lo preparamos apenas confirmemos el pago.</string>
+    <string name="checkout_pickup_now_hint">Pagas por adelantado</string>
     <string name="checkout_pickup_later">No, paso más tarde</string>
-    <string name="checkout_pickup_later_hint">Te lo guardamos listo hasta que cierre el local. Si no pasas a recogerlo, no se devuelve.</string>
+    <string name="checkout_pickup_later_hint">Te lo guardamos hasta el cierre</string>
+    <string name="checkout_pickup_later_policy">Si no pasas a recogerlo, no se devuelve.</string>
     <string name="checkout_pickup_point">Punto de recojo</string>
+    <string name="checkout_pickup_closes">Cierra a las %1$s</string>
     <string name="checkout_pickup_at">Recoges tu pedido en el local</string>
     <string name="checkout_address_title">Entregar en</string>
-    <string name="checkout_address_default">Por defecto</string>
     <string name="checkout_address_line_label">%1$s · %2$s</string>
     <string name="checkout_address_change">Cambiar</string>
     <string name="checkout_address_add">Agregar dirección</string>
@@ -430,6 +433,7 @@
     <string name="checkout_address_fix">Corregir</string>
     <string name="checkout_contact_title">Contacto</string>
     <string name="checkout_name_label">Tu nombre</string>
+    <string name="checkout_name_missing">Agrega tu nombre</string>
     <string name="checkout_phone">Celular: %1$s</string>
     <string name="checkout_phone_missing">Sin teléfono verificado</string>
     <string name="checkout_phone_verify">Verificar celular</string>
@@ -455,7 +459,7 @@
     <string name="checkout_prepay_step3">Ahí pagas y subes tu captura.</string>
     <string name="checkout_prepay_direct">Le transfieres directo a %1$s. El número te llega en el seguimiento del pedido.</string>
 
-    <string name="checkout_cash_total">Tu total es %1$s. ¿Con cuánto pagas?</string>
+    <string name="checkout_cash_question">¿Con cuánto pagas?</string>
     <string name="checkout_cash_exact">Exacto</string>
     <string name="checkout_cash_no_change">sin vuelto</string>
     <string name="checkout_cash_no_change_today">sin vuelto hoy</string>
@@ -523,9 +527,11 @@
     <string name="phone_number_label">Celular (9 dígitos)</string>
     <string name="phone_send_code">Enviar código</string>
     <string name="phone_code_sent">Enviamos un código de 6 dígitos al +51 %1$s.</string>
-    <string name="phone_code_label">Código de 6 dígitos</string>
+    <string name="phone_code_progress">Código de %1$d dígitos, %2$d escritos</string>
     <string name="phone_verify">Verificar</string>
     <string name="phone_resend">Reenviar código</string>
+    <string name="phone_resend_in">Reenviar en %1$s</string>
+    <string name="phone_verified_toast">Celular verificado</string>
     <string name="phone_resend_wait">Podrás reenviar el código en %1$d s</string>
     <string name="phone_change_number">Cambiar número</string>
     <string name="phone_sending">Enviando</string>
@@ -564,14 +570,16 @@
     <string name="checkout_sheet_choose_title">Elige tu dirección</string>
     <string name="checkout_sheet_add_title">Nueva dirección</string>
     <string name="checkout_sheet_edit_title">Corrige tu dirección</string>
+    <string name="checkout_sheet_name_title">Tu nombre</string>
+    <string name="checkout_sheet_name_save">Guardar</string>
     <string name="checkout_sheet_phone_title">Verifica tu celular</string>
     <string name="checkout_sheet_profile_title">Completa tu perfil</string>
-    <string name="checkout_sheet_add_new">Agregar nueva</string>
+    <string name="checkout_sheet_add_new">+ Agregar nueva</string>
     <string name="checkout_sheet_close">Cerrar</string>
     <!-- Sin ubicación al pedir a domicilio y pagar al recibir (como GeoBlockSheet de la web). -->
     <string name="checkout_gps_title">No pudimos leer tu ubicación</string>
-    <string name="checkout_gps_body_permission">Tindivo no tiene permiso de ubicación. Actívalo en los ajustes del teléfono y vuelve a intentar. Tu bolsa y tus datos siguen como estaban.</string>
-    <string name="checkout_gps_body_signal">Tu teléfono no dio una ubicación a tiempo. Pasa con señal débil o bajo techo: sal al patio o acércate a una ventana. Tu bolsa y tus datos siguen como estaban.</string>
+    <string name="checkout_gps_body_permission">Activa el permiso de ubicación en los ajustes del teléfono y vuelve a intentar.</string>
+    <string name="checkout_gps_body_signal">Tu teléfono no dio una ubicación a tiempo: sal al patio o acércate a una ventana.</string>
     <string name="checkout_gps_after_retry">Sigue sin ubicación o sin conexión. Puedes intentar otra vez, pagar por adelantado o continuar sin ubicación.</string>
     <string name="checkout_gps_retry">Intentar de nuevo</string>
     <string name="checkout_gps_prepay">Cambiar a pago por adelantado</string>
@@ -615,8 +623,8 @@
     <string name="prepay_confirmed">%1$s confirmó tu pedido. Ahora te toca pagar para que entre a cocina.</string>
     <string name="prepay_last_try">Tu comprobante no fue válido. Revisa e intenta de nuevo. Te queda 1 intento.</string>
     <plurals name="prepay_time_left">
-        <item quantity="one">Te queda %d min para pagar</item>
-        <item quantity="other">Te quedan %d min para pagar</item>
+        <item quantity="one">Te queda %d min</item>
+        <item quantity="other">Te quedan %d min</item>
     </plurals>
     <string name="prepay_expired_title">Se acabó el tiempo para pagar</string>
     <string name="prepay_expired_body">Estamos revisando en qué quedó tu pedido.</string>
@@ -625,6 +633,12 @@
     <string name="prepay_wallet_plin">Plin</string>
     <string name="prepay_wallet_any">Yape o Plin</string>
     <string name="prepay_wallet_of_business">%1$s del restaurante</string>
+    <string name="prepay_step_copy">Copia el número</string>
+    <string name="prepay_step_pay">Paga %1$s en %2$s</string>
+    <string name="prepay_step_upload">Sube tu captura</string>
+    <string name="prepay_show_qr">Ver QR</string>
+    <string name="prepay_hide_qr">Ocultar QR</string>
+    <string name="prepay_copy_amount_description">Copiar el monto %1$s</string>
     <string name="prepay_copy">Copiar</string>
     <string name="prepay_copied">Copiado</string>
     <string name="prepay_copy_description">Copiar el número %1$s</string>

@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,22 +18,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.TindivoCard
+import com.tindivo.core.designsystem.TindivoColors
+import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
+
+private const val CHEVRON_OPEN_DEGREES = 90f
 
 /** «Tu pedido»: la bolsa en un acordeón. Los importes por línea salen de la cotización, no de los precios de la carta. */
 internal fun LazyListScope.bagSection(
     state: CheckoutUiState,
     onEditBag: () -> Unit,
 ) {
-    item(key = "bag") { BagCard(state, onEditBag) }
+    item(key = BAG_ITEM_KEY) { BagCard(state, onEditBag) }
 }
 
 @Composable
@@ -61,7 +70,7 @@ private fun BagCard(
                     )
                     Text(
                         text = pluralStringResource(R.plurals.checkout_products, units, units),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 Text(
@@ -73,11 +82,28 @@ private fun BagCard(
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
-            Text(
-                text = hint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .clickable { open = !open }
+                        .clearAndSetSemantics {},
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(if (open) R.string.checkout_bag_hide else R.string.checkout_bag_show),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TindivoColors.brandText,
+                )
+                Icon(
+                    TindivoIcons.ChevronRight,
+                    contentDescription = null,
+                    tint = TindivoColors.brandText,
+                    modifier = Modifier.size(18.dp).rotate(if (open) CHEVRON_OPEN_DEGREES else 0f),
+                )
+            }
             if (open) {
                 state.lines.forEachIndexed { index, line ->
                     BagLine(
@@ -114,14 +140,14 @@ private fun BagLine(
         line.options.forEach {
             Text(
                 text = it,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         line.note?.let {
             Text(
                 text = stringResource(R.string.cart_line_note, it),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

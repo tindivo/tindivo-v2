@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.checkout
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
 import com.tindivo.customer.feature.cart.Cart
+import java.time.Instant
 
 /** Espera entre un cambio y la cotización siguiente. Se inyecta para probar sin esperar de verdad (KT-4). */
 fun interface QuoteDebounce {
@@ -110,6 +111,7 @@ internal fun CheckoutUiState.withRejection(error: AppError): CheckoutUiState {
 internal fun CheckoutUiState.withLoaded(
     data: CheckoutData,
     cart: Cart,
+    now: Instant = Instant.now(),
 ): CheckoutUiState {
     val business = data.business
     val acceptsDelivery = business?.acceptsWebDelivery ?: true
@@ -117,6 +119,8 @@ internal fun CheckoutUiState.withLoaded(
     return copy(
         phase = if (data.profile.blocked) CheckoutPhase.Blocked else CheckoutPhase.Form,
         businessName = business?.name ?: cart.businessName,
+        businessAddress = business?.address?.takeIf { it.isNotBlank() },
+        closesAt = closingLabel(data.schedule, now, data.openingConfirmed),
         etaMin = business?.estimatedEtaMin,
         etaMax = business?.estimatedEtaMax,
         acceptsDelivery = acceptsDelivery,

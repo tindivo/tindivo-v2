@@ -1,6 +1,7 @@
 package com.tindivo.customer.feature.orders
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -202,8 +204,40 @@ private fun OrderBody(
     LaunchedEffect(order.awaitingPrepayment) {
         if (order.awaitingPrepayment) prepay.actions.load()
     }
+    val countdown = prepay.state.countdown.takeIf { order.awaitingPrepayment && prepay.state.send !is SendState.Sent }
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Fija arriba, fuera del desplazamiento: el plazo para pagar se ve mientras se copia, se paga y se sube.
+        if (countdown is PrepayCountdown.Remaining) {
+            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), contentAlignment = Alignment.Center) {
+                PrepayCountdownPill(countdown = countdown)
+            }
+        }
+        OrderScrollBody(
+            order = order,
+            onOpenLink = onOpenLink,
+            onRate = onRate,
+            prepay = prepay,
+            cancel = cancel,
+            supportLink = supportLink,
+            acceptanceMinutes = acceptanceMinutes,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun OrderScrollBody(
+    order: OrderDetailUi,
+    onOpenLink: (String) -> Unit,
+    onRate: (() -> Unit)?,
+    prepay: PrepayParts,
+    cancel: CancelSection,
+    supportLink: String?,
+    acceptanceMinutes: Int?,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
+        modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         OrderTitle(order = order)

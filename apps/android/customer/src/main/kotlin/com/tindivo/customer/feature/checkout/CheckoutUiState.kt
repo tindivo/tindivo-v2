@@ -55,6 +55,9 @@ data class BagLineUi(
 data class CheckoutUiState(
     val phase: CheckoutPhase = CheckoutPhase.Loading,
     val businessName: String = "",
+    /** Dirección del local y hora de cierre de hoy, si la carta los trae: para el recojo. */
+    val businessAddress: String? = null,
+    val closesAt: String? = null,
     val etaMin: Int? = null,
     val etaMax: Int? = null,
     val acceptsDelivery: Boolean = true,
@@ -124,6 +127,9 @@ sealed interface CheckoutSheet {
 
     data object VerifyPhone : CheckoutSheet
 
+    /** El nombre con el que se hace el pedido: se corrige aquí, sin tocar el perfil de la cuenta. */
+    data object EditName : CheckoutSheet
+
     /** La cuenta aún no tiene perfil: falta el nombre. */
     data object CompleteProfile : CheckoutSheet
 
@@ -157,6 +163,10 @@ fun Cta.sheet(selectedAddressId: String?): CheckoutSheet? =
 
         Cta.NeedPhone -> {
             CheckoutSheet.VerifyPhone
+        }
+
+        Cta.NeedName -> {
+            CheckoutSheet.EditName
         }
 
         else -> {
@@ -200,6 +210,12 @@ sealed interface Cta {
     /** Solo [Ready] crea el pedido. */
     val canConfirm: Boolean get() = this is Ready
 }
+
+/**
+ * Lo que falta se resuelve en la sección de pago: el botón baja hasta ella. Ningún método se preselecciona (decisión
+ * de Jesús, 2026-11-23: toca dinero); la persona elige cada vez.
+ */
+val Cta.goesToPayment: Boolean get() = this == Cta.NeedPay || this == Cta.NeedCash
 
 /** Lo que falta para confirmar, en el orden de la web (`useCheckoutValidation`). */
 fun ctaOf(state: CheckoutUiState): Cta {

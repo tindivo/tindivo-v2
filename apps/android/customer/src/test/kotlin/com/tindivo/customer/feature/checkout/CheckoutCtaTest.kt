@@ -1,6 +1,7 @@
 package com.tindivo.customer.feature.checkout
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -117,9 +118,28 @@ class CheckoutCtaTest {
     }
 
     @Test
+    fun `sin nombre el boton abre la hoja del nombre`() {
+        assertEquals(CheckoutSheet.EditName, Cta.NeedName.sheet("a"))
+        assertEquals(CheckoutPhase.Form, CheckoutSheet.EditName.phase)
+    }
+
+    @Test
+    fun `sin metodo de pago el boton dice Elige como pagas y lleva a la seccion de pago sin elegir nada`() {
+        val sinPago = ready().copy(pay = null)
+        assertEquals(Cta.NeedPay, sinPago.cta)
+        assertFalse(sinPago.cta.canConfirm)
+        assertTrue(sinPago.cta.goesToPayment)
+        assertNull(sinPago.pay)
+        // Con efectivo elegido pero sin monto valido tambien se baja a donde se resuelve.
+        assertTrue(Cta.NeedCash.goesToPayment)
+        listOf(Cta.NeedName, Cta.NeedAddress, Cta.NeedPhone, Cta.Ready(BigDecimal("30.00"))).forEach {
+            assertFalse(it.toString(), it.goesToPayment)
+        }
+    }
+
+    @Test
     fun `lo que se resuelve en el formulario o el boton que hace otra cosa no abre hoja`() {
         listOf(
-            Cta.NeedName,
             Cta.NeedPickupAnswer,
             Cta.NeedPay,
             Cta.NeedCash,

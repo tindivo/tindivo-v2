@@ -1,13 +1,12 @@
 package com.tindivo.customer.feature.checkout
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,6 +21,7 @@ import com.tindivo.customer.ui.fields.MoneyField
 import java.math.BigDecimal
 
 /** «¿Con cuánto pagas?»: los montos rápidos de la cotización y «Otro». Las reglas salen de `payment.cash`. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun CashSelector(
     total: BigDecimal,
@@ -32,13 +32,11 @@ internal fun CashSelector(
     val check = checkCash(choice.payingWith(total), total, rules, exact = choice is CashChoice.Exact)
     TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = stringResource(R.string.checkout_cash_total, total.soles()),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
+            // El total ya está en el resumen y en el botón: aquí solo se pregunta.
+            Text(text = stringResource(R.string.checkout_cash_question), style = MaterialTheme.typography.titleSmall)
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 cashChips(total, rules).forEach { chip -> CashChipView(chip, total, choice, onChoice) }
                 FilterChip(
@@ -91,7 +89,7 @@ private fun CashChipView(
         label = {
             Column {
                 Text(text = title)
-                Text(text = sub, style = MaterialTheme.typography.labelSmall)
+                Text(text = sub, style = MaterialTheme.typography.bodyMedium)
             }
         },
         modifier = Modifier.heightIn(min = 48.dp),
@@ -110,16 +108,16 @@ private fun CashFeedback(
         choice == CashChoice.None -> {
             Text(
                 text = stringResource(R.string.checkout_cash_can_pay_up_to, maxDeclarable(total, rules).soles()),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
 
         problem != null -> {
-            Text(text = problem, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(text = problem, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         }
 
         check is CashCheck.Ok -> {
-            Text(text = okText(check, rules), style = MaterialTheme.typography.bodySmall)
+            Text(text = okText(check, rules), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

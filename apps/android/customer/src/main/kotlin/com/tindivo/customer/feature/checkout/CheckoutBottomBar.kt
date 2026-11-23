@@ -40,6 +40,7 @@ internal fun CheckoutBottomBar(
     state: CheckoutUiState,
     form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
+    goToPayment: () -> Unit,
 ) {
     val cta = state.cta
     val confirm = rememberConfirmWithLocation(state, form.onConfirm)
@@ -64,7 +65,7 @@ internal fun CheckoutBottomBar(
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
-            val onClick = { onCta(cta, state.selectedAddressId, confirm, form, openSheet) }
+            val onClick = { onCta(cta, state.selectedAddressId, confirm, form, openSheet, goToPayment) }
             if (cta is Cta.Ready) {
                 ConfirmPill(label = cta.label(), total = cta.total.soles(), onClick = onClick)
             } else {
@@ -78,7 +79,7 @@ internal fun CheckoutBottomBar(
             supportLine(state)?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -93,10 +94,12 @@ private fun onCta(
     confirm: () -> Unit,
     form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
+    goToPayment: () -> Unit,
 ) {
     val sheet = cta.sheet(selectedAddressId)
     when {
         cta.canConfirm -> confirm()
+        cta.goesToPayment -> goToPayment()
         sheet != null -> openSheet(sheet)
         cta == Cta.QuoteProblem -> form.onRetryQuote()
     }

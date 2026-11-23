@@ -2,6 +2,8 @@ package com.tindivo.customer.feature.checkout
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -20,29 +23,37 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoCard
+import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
 import com.tindivo.customer.support.SupportViewModel
 import com.tindivo.customer.support.accountErrorHelpLink
 import com.tindivo.customer.support.openSafely
+import com.tindivo.customer.ui.NumberedStep
 
 /** «¿Cómo pagas?»: las opciones de la cotización, en su orden, agrupadas por momento. */
 internal fun LazyListScope.paymentSection(
     state: CheckoutUiState,
     form: CheckoutFormActions,
+    titleFocus: FocusRequester = FocusRequester(),
 ) {
-    item(key = "payment") {
+    item(key = PAYMENT_ITEM_KEY) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SectionTitle(stringResource(R.string.checkout_pay_title))
+            SectionTitle(stringResource(R.string.checkout_pay_title), Modifier.focusRequester(titleFocus).focusable())
             val quote = state.quote
             if (quote == null) {
                 Text(
@@ -189,29 +200,41 @@ private fun unavailableText(
 private fun PrepayExplainer(businessName: String) {
     var open by rememberSaveable { mutableStateOf(true) }
     TindivoCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = { open = !open }, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.checkout_prepay_how))
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // El título no es una acción: va en el color del texto, con un chevron que dice que se pliega.
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button) { open = !open },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.checkout_prepay_how),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    TindivoIcons.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.rotate(if (open) EXPANDED_DEGREES else 0f),
+                )
             }
             if (open) {
-                Text(
-                    text = "1. " + stringResource(R.string.checkout_prepay_step1),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = "2. " + stringResource(R.string.checkout_prepay_step2),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = "3. " + stringResource(R.string.checkout_prepay_step3),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                listOf(
+                    R.string.checkout_prepay_step1,
+                    R.string.checkout_prepay_step2,
+                    R.string.checkout_prepay_step3,
+                ).forEachIndexed { index, step ->
+                    NumberedStep(number = index + 1) {
+                        Text(text = stringResource(step), style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
                 Text(
                     text = stringResource(R.string.checkout_prepay_direct, businessName),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
     }
 }
+
+private const val EXPANDED_DEGREES = 180f

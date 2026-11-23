@@ -38,6 +38,8 @@ import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
+import com.tindivo.customer.ui.fields.formatPePhone
+import com.tindivo.customer.ui.fields.normalizePePhoneInput
 
 /** «Entrega»: delivery o recojo, la dirección (o el punto de recojo), el contacto y la nota para el motorizado. */
 internal fun LazyListScope.deliverySection(
@@ -45,7 +47,7 @@ internal fun LazyListScope.deliverySection(
     form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
 ) {
-    item(key = "delivery") {
+    item(key = DELIVERY_ITEM_KEY) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionTitle(stringResource(R.string.checkout_delivery_title))
             if (state.acceptsPickup && state.acceptsDelivery) MethodSwitch(state, form)
@@ -53,9 +55,9 @@ internal fun LazyListScope.deliverySection(
             // Tablero «Checkout»: dirección, contacto y nota en una sola tarjeta, cada fila con su icono y separadas
             // por una línea.
             TindivoCard(modifier = Modifier.fillMaxWidth()) {
-                if (state.isPickup) PickupPoint(state.businessName) else AddressBlock(state, openSheet)
+                if (state.isPickup) PickupPoint(state) else AddressBlock(state, openSheet)
                 RowDivider()
-                ContactBlock(state, form, openSheet)
+                ContactBlock(state, openSheet)
                 if (!state.isPickup) {
                     RowDivider()
                     DriverNote(state, form)
@@ -66,11 +68,14 @@ internal fun LazyListScope.deliverySection(
 }
 
 @Composable
-internal fun SectionTitle(text: String) {
+internal fun SectionTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.padding(start = 4.dp, top = 4.dp).semantics { heading() },
+        modifier = modifier.padding(start = 4.dp, top = 4.dp).semantics { heading() },
     )
 }
 
@@ -174,15 +179,26 @@ private fun PickupQuestion(
                 hint = stringResource(R.string.checkout_pickup_later_hint),
                 onClick = { form.onPickupWhen(PickupWhen.Later) },
             )
+            // La política que se le promete antes de pagar (DECISIONS «0224»): no se acorta con el texto de la opción.
+            if (state.pickupWhen == PickupWhen.Later) {
+                Text(
+                    text = stringResource(R.string.checkout_pickup_later_policy),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun PickupPoint(businessName: String) {
+private fun PickupPoint(state: CheckoutUiState) {
     IconRow(icon = TindivoIcons.Storefront) {
-        Text(text = businessName, style = MaterialTheme.typography.titleMedium)
-        Muted(stringResource(R.string.checkout_pickup_at))
+        Text(text = state.businessName, style = MaterialTheme.typography.titleMedium)
+        // Solo lo que la carta trae: sin dirección o sin horario no se inventa nada.
+        state.businessAddress?.let { Muted(it) } ?: Muted(stringResource(R.string.checkout_pickup_at))
+        state.closesAt?.let { Muted(stringResource(R.string.checkout_pickup_closes, it)) }
     }
 }
 
@@ -214,7 +230,6 @@ private fun AddressBlock(
                 ?: selected.label
         Text(text = title, style = MaterialTheme.typography.titleMedium)
         if (selected.reference.isNotBlank()) Muted(selected.reference)
-        if (selected.isDefault) Muted(stringResource(R.string.checkout_address_default))
     }
     AddressWarnings(selected, onFix = { openSheet(CheckoutSheet.EditAddress(selected.id)) })
 }
@@ -242,12 +257,12 @@ private fun AddressWarnings(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         warnings.forEach {
-            Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         }
         if (!address.lineOk) {
             Text(
                 text = stringResource(R.string.checkout_address_no_street_hint),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
         TextButton(onClick = onFix, modifier = Modifier.heightIn(min = 48.dp)) {
@@ -259,16 +274,25 @@ private fun AddressWarnings(
 @Composable
 private fun ContactBlock(
     state: CheckoutUiState,
-    form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
 ) {
     val phone = state.phone
-    if (state.phoneVerified && phone != null) {
-        IconRow(icon = TindivoIcons.Phone) {
-            Text(text = stringResource(R.string.checkout_contact_title), style = MaterialTheme.typography.titleMedium)
-            Muted(stringResource(R.string.checkout_phone, phone))
+    // «Nombre · celular · Cambiar»: una fila que abre la hoja del nombre, igual que la dirección abre la suya.
+    IconRow(
+        icon = TindivoIcons.Person,
+        trailing = stringResource(R.string.checkout_address_change),
+        onClick = { openSheet(CheckoutSheet.EditName) },
+    ) {
+        if (state.name.isBlank()) {
+            Text(text = stringResource(R.string.checkout_name_missing), style = MaterialTheme.typography.titleMedium)
+        } else {
+            Text(text = state.name, style = MaterialTheme.typography.titleMedium)
         }
-    } else {
+        if (state.phoneVerified && phone != null) {
+            Muted(stringResource(R.string.checkout_phone, formatPePhone(normalizePePhoneInput(phone))))
+        }
+    }
+    if (!state.phoneVerified || phone == null) {
         IconRow(
             icon = TindivoIcons.Phone,
             trailing = stringResource(R.string.checkout_phone_verify),
@@ -282,13 +306,6 @@ private fun ContactBlock(
             )
         }
     }
-    OutlinedTextField(
-        value = state.name,
-        onValueChange = form.onName,
-        label = { Text(stringResource(R.string.checkout_name_label)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth().padding(start = TEXT_INSET, end = 16.dp, bottom = 12.dp),
-    )
 }
 
 @Composable
