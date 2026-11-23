@@ -76,4 +76,32 @@ class OrdersRefreshKeepsListTest : OrdersHarness() {
             viewModel.state.first { it is OrdersUiState.Loaded && !it.refreshing }
             assertEquals(2, server.requestCount)
         }
+
+    @Test
+    fun `recargar desde sin pedidos no pasa por la pantalla de carga`() =
+        runTest {
+            server.enqueue(response(200, pageJson(emptyList(), next = null)))
+            server.enqueue(response(200, pageJson(ids(1), next = null), delayMillis = 300))
+            val viewModel = viewModel(Dispatchers.IO)
+            assertEquals(OrdersUiState.Empty, viewModel.settled())
+
+            viewModel.refresh()
+
+            assertEquals(OrdersUiState.Empty, viewModel.state.value)
+            viewModel.state.first { it is OrdersUiState.Loaded }
+        }
+
+    @Test
+    fun `un 401 durante una recarga cierra la sesion y no deja la lista`() =
+        runTest {
+            server.enqueue(response(200, pageJson(ids(1), next = null)))
+            server.enqueue(response(401, UNAUTHORIZED))
+            val viewModel = viewModel()
+            viewModel.settled()
+
+            viewModel.refresh()
+
+            assertEquals(OrdersUiState.LoggedOut, viewModel.state.value)
+            assertEquals(listOf("user-1"), store.signOutIfCalls)
+        }
 }
