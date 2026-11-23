@@ -49,7 +49,9 @@ package struct LiveCatalogRepository: CatalogRepository {
                 bannerURL: business.bannerUrl,
                 accentColor: business.accentColor,
                 primaryCapability: business.primaryCapability.map(PrimaryCapability.init(raw:)),
-                whatsappNumber: business.whatsappNumber
+                whatsappNumber: business.whatsappNumber,
+                estimatedEtaMin: business.estimatedEtaMin,
+                estimatedEtaMax: business.estimatedEtaMax
             ),
             categories: data.categories.map(Self.category),
             featured: data.featured.map { .init(title: $0.title, itemIds: $0.itemIds) },
@@ -106,7 +108,8 @@ package struct LiveCatalogRepository: CatalogRepository {
                                 )
                             }
                         )
-                    }
+                    },
+                    badges: item.badges
                 )
             }
         )

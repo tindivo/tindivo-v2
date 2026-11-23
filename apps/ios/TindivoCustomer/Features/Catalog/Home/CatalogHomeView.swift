@@ -5,6 +5,7 @@ import TindivoDesign
 struct CatalogHomeView: View {
     let model: CatalogHomeScreenModel
     let onOpenBusiness: (String) -> Void
+    let onOpenCart: () -> Void
     /// `nil` fuera de las compilaciones de desarrollo: Diagnóstico no es de quien pide comida.
     let onOpenDiagnostics: (() -> Void)?
 
@@ -22,7 +23,19 @@ struct CatalogHomeView: View {
             }
         }
         .background(Color.tindivo.background)
+        // La barra de abajo es la de la plataforma; la de arriba es propia y fija (CUS-CAT-030). El título solo le da
+        // nombre a la pantalla para VoiceOver y al botón «volver» de la siguiente.
+        .navigationTitle(String(localized: "Inicio"))
+        .toolbar(.hidden, for: .navigationBar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HomeTopBar(
+                address: model.deliveryAddress, bagBadge: model.bagBadgeText, bagLabel: model.bagAccessibilityLabel,
+                onOpenBag: onOpenCart
+            )
+        }
         .task { await model.load() }
+        .task { await model.observeCart() }
+        .task { await model.runClock() }
     }
 
     private func list(_ loaded: CatalogHomeScreenModel.Loaded) -> some View {
@@ -47,7 +60,9 @@ struct CatalogHomeView: View {
                         .padding(.vertical, TindivoTokens.Spacing.spaceGroup + 8)
                 }
                 ForEach(loaded.listing.restaurants, id: \.id) { business in
-                    BusinessCardView(business: business, whatsapp: false) { onOpenBusiness(business.id) }
+                    BusinessCardView(
+                        business: business, whatsapp: false, closedLabel: model.closedLabel(for: business)
+                    ) { onOpenBusiness(business.id) }
                 }
                 if !loaded.listing.whatsapp.isEmpty {
                     whatsappSection(loaded.listing.whatsapp)
@@ -93,7 +108,9 @@ struct CatalogHomeView: View {
             }
             .padding(.top, TindivoTokens.Spacing.spaceGroup)
             ForEach(businesses, id: \.id) { business in
-                BusinessCardView(business: business, whatsapp: true) { onOpenBusiness(business.id) }
+                BusinessCardView(
+                    business: business, whatsapp: true, closedLabel: model.closedLabel(for: business)
+                ) { onOpenBusiness(business.id) }
             }
         }
     }
@@ -113,7 +130,7 @@ struct CatalogHomeView: View {
 #if DEBUG
 #Preview("Inicio") {
     CatalogHomeView(
-        model: CatalogHomeScreenModel(catalog: PreviewCatalog()), onOpenBusiness: { _ in }, onOpenDiagnostics: {}
+        model: CatalogHomeScreenModel(catalog: PreviewCatalog()), onOpenBusiness: { _ in }, onOpenCart: {}, onOpenDiagnostics: {}
     )
     .onAppear { TindivoFonts.register() }
 }
@@ -121,7 +138,7 @@ struct CatalogHomeView: View {
 #Preview("Inicio sin conexión") {
     CatalogHomeView(
         model: CatalogHomeScreenModel(catalog: PreviewCatalog(businesses: .failure(.network))),
-        onOpenBusiness: { _ in }, onOpenDiagnostics: nil
+        onOpenBusiness: { _ in }, onOpenCart: {}, onOpenDiagnostics: nil
     )
     .onAppear { TindivoFonts.register() }
 }

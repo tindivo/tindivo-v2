@@ -44,9 +44,28 @@
         }
       }
     },
-    "%lld plato" : {},
-    "%lld platos" : {},
-    "%lld unidad" : {},
+    "%lld platos" : {
+      "localizations" : {
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld plato"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld platos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld unidades" : {
       "localizations" : {
         "es" : {
@@ -54,13 +73,13 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
+                  "state" : "translated",
                   "value" : "%lld unidad"
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
+                  "state" : "translated",
                   "value" : "%lld unidades"
                 }
               }
@@ -89,7 +108,42 @@
         }
       }
     },
+    "%lld de %lld listas" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld de %#@total@"
+          },
+          "substitutions" : {
+            "total" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg lista"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg listas"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld de %lld elegidas" : {},
+    "%lld de %lld caracteres" : {},
     "+%@" : {},
+    "Abierto · cierra %@" : {},
     "Abre el %@ a las %@" : {
       "localizations" : {
         "es" : {
@@ -102,17 +156,45 @@
     },
     "Abre hoy a las %@" : {},
     "Abre mañana a las %@" : {},
+    "Agregar %@" : {},
     "Agregar · %@" : {},
     "Algo salió mal. Inténtalo de nuevo." : {},
     "Añadido a tu bolsa" : {},
     "API" : {},
     "Aún no hay restaurantes disponibles." : {},
+    "Bolsa" : {},
+    "Bolsa, %lld productos" : {
+      "localizations" : {
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Bolsa, %lld producto"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Bolsa, %lld productos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Buscar en %@" : {},
     "Buscar en la carta" : {},
     "Cancelar" : {},
     "Cantidad" : {},
     "Cargando" : {},
+    "Cerrado" : {},
     "Cerrado ahora" : {},
+    "Cerrado · abre %@ %@" : {},
+    "Cerrado · abre hoy %@" : {},
+    "Cerrado · abre mañana %@" : {},
     "Cerrar" : {},
     "Completa %lld opción" : {},
     "Completa %lld opciones" : {},
@@ -120,6 +202,7 @@
     "Consultando…" : {},
     "Continuar" : {},
     "Contrato" : {},
+    "Cómo lo recibes" : {},
     "de %@ a %@" : {
       "localizations" : {
         "es" : {
@@ -130,26 +213,45 @@
         }
       }
     },
+    "Desde %@" : {},
     "Destacados" : {},
     "Diagnóstico" : {},
     "dom" : {},
+    "Domingo" : {},
+    "Editar selección" : {},
+    "Editar selección de %@" : {},
     "Ej. sin cebolla, bien cocido, tocar timbre 2 veces…" : {},
+    "Elegir" : {},
+    "Elegir %@" : {},
+    "Elige %@" : {},
     "Elige una opción" : {},
+    "En el local" : {},
+    "En tu bolsa: %lld" : {},
+    "Entregar en" : {},
     "Error" : {},
     "Estado" : {},
     "Hasta %lld" : {},
     "Hay que actualizar la app (mínimo %@)" : {},
+    "Horarios" : {},
+    "hoy" : {},
     "Hoy este restaurante no ha confirmado que atiende" : {},
     "Incluido" : {},
+    "Información" : {},
+    "Información del negocio" : {},
+    "Inicio" : {},
     "iOS mínimo" : {},
     "jue" : {},
+    "Jueves" : {},
     "Limpiar búsqueda" : {},
     "Listo" : {},
     "Llamar" : {},
     "lun" : {},
+    "Lunes" : {},
     "Mantener" : {},
     "mar" : {},
+    "Martes" : {},
     "mié" : {},
+    "Miércoles" : {},
     "No disponible" : {},
     "No encontramos “%@” en %@" : {
       "localizations" : {
@@ -165,6 +267,9 @@
     "Nota (opcional)" : {},
     "Nota: %@" : {},
     "Obligatorio" : {},
+    "Obligatorio · elige %lld" : {},
+    "Opcional" : {},
+    "Opcional · hasta %lld" : {},
     "Pedidos por WhatsApp" : {},
     "Pedir por WhatsApp" : {},
     "Pide directo por WhatsApp mientras preparamos su integración completa a la plataforma." : {},
@@ -174,7 +279,9 @@
     "Quitar" : {},
     "Quitar %@" : {},
     "Reintentar" : {},
+    "Restaurante" : {},
     "Restaurantes" : {},
+    "Revisa tus opciones" : {},
     "sáb" : {},
     "Sin conexión con la API" : {},
     "Sin conexión. Revisa tu internet e inténtalo de nuevo." : {},
@@ -190,6 +297,8 @@
       }
     },
     "Subtotal" : {},
+    "Sábado" : {},
+    "Te lleva al grupo que falta" : {},
     "Todas las secciones" : {},
     "Tu bolsa está vacía" : {},
     "Tu bolsa tiene productos de %@. Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en %@." : {
@@ -213,6 +322,7 @@
     "Versión" : {},
     "Versión mínima" : {},
     "vie" : {},
+    "Viernes" : {},
     "Volver" : {},
     "Ya tienes %lld de este plato: es el máximo por pedido" : {},
     "Actualiza la app" : {},

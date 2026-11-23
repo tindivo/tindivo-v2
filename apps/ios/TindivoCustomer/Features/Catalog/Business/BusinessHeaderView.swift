@@ -1,51 +1,82 @@
 import SwiftUI
 import TindivoDesign
 
-/// La cabecera del negocio: logo (o su inicial sobre el color de acento), nombre y eslogan.
+/// La cabecera del negocio: logo (o el isotipo sobre crema si no hay), nombre, eslogan, su estado y, debajo, la fila
+/// «Información del negocio ›» que abre la hoja (CUS-CAT-027; no hay botón «i» sobre la foto).
 struct BusinessHeaderView: View {
     let business: BusinessDetail
+    /// «Abierto · cierra 23:00» o «Cerrado · abre hoy 18:00»; `nil` sin horario.
+    let status: String?
+    /// Cómo recibe el pedido, solo como información, sin selector (CUS-CAT-017).
+    let modes: [DeliveryMode]
+    let onShowInfo: () -> Void
 
     private static let logoSize: CGFloat = 56
 
     var body: some View {
-        HStack(spacing: TindivoTokens.Spacing.spaceInner) {
-            logo
-            VStack(alignment: .leading, spacing: 2) {
-                Text(business.name)
-                    .tindivoText(TindivoTokens.Typography.titleScreen)
-                    .foregroundStyle(Color.tindivo.ink)
-                    .accessibilityAddTraits(.isHeader)
-                if let tagline = business.tagline {
-                    Text(tagline)
-                        .tindivoText(TindivoTokens.Typography.bodySecondary)
-                        .foregroundStyle(Color.tindivo.inkSecondary)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: TindivoTokens.Spacing.spaceInner) {
+                logo
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(business.name)
+                        .tindivoText(TindivoTokens.Typography.titleScreen)
+                        .foregroundStyle(Color.tindivo.ink)
+                        .accessibilityAddTraits(.isHeader)
+                    if let tagline = business.tagline {
+                        Text(tagline)
+                            .tindivoText(TindivoTokens.Typography.bodySecondary)
+                            .foregroundStyle(Color.tindivo.inkSecondary)
+                    }
+                    if let status {
+                        Text(status)
+                            .tindivoText(TindivoTokens.Typography.bodySecondary)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.tindivo.ink)
+                            .accessibilityIdentifier("business.status")
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(action: onShowInfo) {
+                HStack {
+                    Text("Información del negocio")
+                        .tindivoText(TindivoTokens.Typography.body)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.tindivo.primaryText)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 8)
+                    Image(tindivo: .forward)
+                        .accessibilityHidden(true)
+                        .foregroundStyle(Color.tindivo.primaryText)
+                }
+                .frame(minHeight: TindivoTokens.Spacing.touchTarget)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("business.infoRow")
+            if !modes.isEmpty {
+                // Informativo: no es un botón ni un selector; el método se elige al pagar (CUS-CRT-007).
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(modes.enumerated()), id: \.offset) { _, mode in
+                        Text(mode.summary)
+                            .tindivoText(TindivoTokens.Typography.bodySecondary)
+                            .foregroundStyle(Color.tindivo.inkSecondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("business.modes")
+            }
         }
         .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
     }
 
-    /// Decorativo a propósito: el nombre está al lado, y una etiqueta lo haría sonar dos veces.
+    /// Decorativo a propósito: el nombre está al lado, y una etiqueta lo haría sonar dos veces. Sin logo, el respaldo
+    /// de marca.
     private var logo: some View {
-        Group {
-            if let url = business.logoURL {
-                TindivoAsyncImage(url: url)
-            } else {
-                Text(initial)
-                    .tindivoText(TindivoTokens.Typography.titleScreen)
-                    .foregroundStyle(Color.tindivo.onPrimary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(business.accent.map { Color(argb: $0) } ?? Color.tindivo.primary)
-                    .accessibilityHidden(true)
-            }
-        }
-        .frame(width: Self.logoSize, height: Self.logoSize)
-        .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusThumb))
-    }
-
-    private var initial: String {
-        business.name.trimmingCharacters(in: .whitespacesAndNewlines).first.map { String($0).uppercased() } ?? "T"
+        TindivoAsyncImage(url: business.logoURL)
+            .frame(width: Self.logoSize, height: Self.logoSize)
+            .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusThumb))
     }
 }
 

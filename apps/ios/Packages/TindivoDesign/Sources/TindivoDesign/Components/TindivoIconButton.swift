@@ -23,6 +23,7 @@ public struct TindivoIconButton: View {
     public var body: some View {
         Button(action: action) {
             Image(tindivo: icon)
+                .accessibilityHidden(true)
                 .font(.system(size: iconSize, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(minWidth: TindivoTokens.Spacing.touchTarget, minHeight: TindivoTokens.Spacing.touchTarget)

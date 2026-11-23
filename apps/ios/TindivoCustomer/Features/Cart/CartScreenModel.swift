@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Observation
 import TindivoAPI
 
@@ -130,6 +131,10 @@ final class CartScreenModel {
     private var lastRemoved: RemovedLine?
     private var undoTask: Task<Void, Never>?
     private var undoCounter = 0
+    /// ¿Está encendido VoiceOver? Inyectable para las pruebas. Con VoiceOver el aviso «Deshacer» no se cierra solo.
+    private let voiceOverRunning: @MainActor () -> Bool
+    /// El aviso actual se cierra solo a los 5 s; con VoiceOver no (decisión de Jesús, 2026-11-22).
+    private(set) var undoAutoDismisses = true
     private var isUndoing = false
     private var isOpeningEdit = false
     private var cart: Cart?
@@ -138,8 +143,10 @@ final class CartScreenModel {
 
     init(
         store: any CartStore, catalog: any CatalogRepository, clock: AppClock,
-        undoWindow: Duration = CartScreenModel.defaultUndoWindow
+        undoWindow: Duration = CartScreenModel.defaultUndoWindow,
+        voiceOverRunning: @escaping @MainActor () -> Bool = { UIAccessibility.isVoiceOverRunning }
     ) {
+        self.voiceOverRunning = voiceOverRunning
         self.store = store
         self.catalog = catalog
         self.clock = clock
@@ -200,7 +207,8 @@ final class CartScreenModel {
         switch menu {
         case let .loaded(detail) where detail.id.caseInsensitiveCompare(cart.businessId) == .orderedSame:
             state = Self.state(
-                for: cart, validation: .checked, issues: CartValidation.issues(of: cart, against: detail, now: clock.now())
+                for: cart, validation: .checked, issues: CartValidation.issues(of: cart, against: detail, now: clock.now()),
+                menu: detail
             )
         case .failed:
             state = Self.state(for: cart, validation: .unchecked)
@@ -218,7 +226,14 @@ final class CartScreenModel {
             await remove(signature: signature)
             return
         }
+        // Con VoiceOver, otro cambio en la bolsa cierra el aviso: ya no habría qué deshacer.
+        if voiceOverRunning() { forgetUndo() }
         await write { store async throws(CartError) in try await store.changeQuantity(signature: signature, by: delta) }
+    }
+
+    /// Se sale de la bolsa: con VoiceOver, el aviso «Deshacer» se va (sin VoiceOver sigue su plazo).
+    func leave() {
+        if voiceOverRunning() { forgetUndo() }
     }
 
     /// Quita la línea. Si queda alguna otra, ofrece «Deshacer» durante 5 s; si era la última, la bolsa pasa a vacía
@@ -242,6 +257,10 @@ final class CartScreenModel {
         let token = undoCounter
         undoOffer = UndoOffer(message: String(localized: "Quitaste \"\(removed.line.name)\""), token: token)
         undoTask?.cancel()
+        // Con VoiceOver el aviso espera: se va al tocar «Deshacer», con otro cambio o al salir de la bolsa. Quien usa
+        // VoiceOver no alcanza a oír y tocar «Deshacer» en 5 s.
+        undoAutoDismisses = !voiceOverRunning()
+        guard undoAutoDismisses else { return }
         undoTask = Task { [clock, undoWindow] in
             do { try await clock.sleep(undoWindow) } catch { return }
             if undoOffer?.token == token { forgetUndo() }
@@ -319,6 +338,7 @@ final class CartScreenModel {
     }
 
     func finishEditing(capped: Bool = false) {
+        if voiceOverRunning() { forgetUndo() }
         editing = nil
         if capped { notices.show(DishScreenModel.addedMessage(capped: true)) }
     }
@@ -370,7 +390,12 @@ final class CartScreenModel {
     }
 
     /// `issues` va en el orden de las líneas; sin ella, ninguna línea tiene avisos.
-    static func state(for cart: Cart?, validation: Validation = .validating, issues: [[CartLineIssue]] = []) -> State {
+    /// `menu`: la carta ya cargada del negocio. «Editar» sale si el PLATO tiene opciones en esa carta, aunque la línea no
+    /// tenga ninguna elegida (extras opcionales sin elegir); si no hay carta o el plato no está, cae al criterio de la
+    /// línea (tiene opciones elegidas).
+    static func state(
+        for cart: Cart?, validation: Validation = .validating, issues: [[CartLineIssue]] = [], menu: BusinessDetail? = nil
+    ) -> State {
         guard let cart, !cart.isEmpty else { return .empty }
         return .filled(Filled(
             businessId: cart.businessId,
@@ -390,7 +415,7 @@ final class CartScreenModel {
                         : String(localized: "Quitar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
                     increaseLabel: String(localized: "Agregar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
                     issues: issues.indices.contains(index) ? issues[index].map(\.message) : [],
-                    canEdit: !line.modifiers.isEmpty
+                    canEdit: dishHasOptions(line, in: menu) ?? !line.modifiers.isEmpty
                 )
             },
             subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal),
@@ -398,6 +423,12 @@ final class CartScreenModel {
             validation: validation,
             countLabel: String(localized: "\(cart.count) productos")
         ))
+    }
+
+    /// ¿El plato de la línea tiene grupos de opciones en la carta vigente? `nil` si no hay carta o el plato no está.
+    private static func dishHasOptions(_ line: CartLine, in menu: BusinessDetail?) -> Bool? {
+        let wanted = line.itemId.lowercased()
+        return menu?.categories.lazy.flatMap(\.items).first { $0.id.lowercased() == wanted }.map(\.isConfigurable)
     }
 
     /// «1 unidad», «2 unidades» (plural en el catálogo de textos).

@@ -13,12 +13,33 @@ extension View {
         modifier(TindivoTextModifier(token: token))
     }
 
-    /// Las capas de sombra de una elevación del canon, en orden.
+    /// Las capas de sombra de una elevación del canon, en orden. Son como mucho `TindivoElevationModifier.maxLayers`
+    /// (las elevaciones del canon tienen una o dos): un modificador de forma fija en vez de una cadena de `AnyView`.
     public func tindivoElevation(_ layers: [ShadowLayer]) -> some View {
-        layers.reduce(AnyView(self)) { view, layer in
-            AnyView(view.shadow(color: layer.color, radius: layer.blur / 2, x: layer.x, y: layer.y))
+        modifier(TindivoElevationModifier(layers: layers))
+    }
+}
+
+/// Aplica hasta dos capas de sombra; una capa que falta se queda en una sombra transparente, que no pinta nada.
+struct TindivoElevationModifier: ViewModifier {
+    static let maxLayers = 2
+    let layers: [ShadowLayer]
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if layers.isEmpty {
+            content
+        } else {
+            content
+                .shadow(color: color(0), radius: radius(0), x: x(0), y: y(0))
+                .shadow(color: color(1), radius: radius(1), x: x(1), y: y(1))
         }
     }
+
+    private func color(_ index: Int) -> Color { layers.indices.contains(index) ? layers[index].color : .clear }
+    private func radius(_ index: Int) -> CGFloat { layers.indices.contains(index) ? layers[index].blur / 2 : 0 }
+    private func x(_ index: Int) -> CGFloat { layers.indices.contains(index) ? layers[index].x : 0 }
+    private func y(_ index: Int) -> CGFloat { layers.indices.contains(index) ? layers[index].y : 0 }
 }
 
 private struct TindivoTextModifier: ViewModifier {

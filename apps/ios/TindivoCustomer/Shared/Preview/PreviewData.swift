@@ -25,7 +25,7 @@ enum PreviewData {
     static let menu = BusinessMenu(
         business: .init(
             id: "n1", name: "Pollería Don Lucho", tagline: "Pollo a la brasa", accentColor: "F97316",
-            whatsappNumber: "+51987654321"
+            primaryCapability: .catalogFull, whatsappNumber: "+51987654321", estimatedEtaMin: 25, estimatedEtaMax: 40
         ),
         categories: [
             .init(
@@ -33,7 +33,9 @@ enum PreviewData {
                 items: [
                     .init(
                         id: "i1", name: "1/4 de pollo", description: "Con papas fritas y ensalada",
-                        basePrice: Decimal(string: "12.50") ?? 0, displayOrder: 1,
+                        basePrice: Decimal(string: "12.50") ?? 0,
+                        // `.invalid` nunca resuelve: la foto no carga y se ve el respaldo de marca, sin depender de la red.
+                        imageURL: "https://fotos.invalid/i1.jpg", displayOrder: 1,
                         modifierGroups: [
                             .init(
                                 id: "g1", name: "Cremas", selectionType: "multi", isRequired: false,
@@ -62,7 +64,10 @@ enum PreviewData {
             .init(
                 id: "c2", name: "Bebidas", displayOrder: 2,
                 items: [
-                    .init(id: "i3", name: "Chicha morada", basePrice: Decimal(string: "5.00") ?? 0, displayOrder: 1),
+                    .init(
+                        id: "i3", name: "Chicha morada", basePrice: Decimal(string: "5.00") ?? 0,
+                        imageURL: "https://fotos.invalid/i3.jpg", displayOrder: 1
+                    ),
                     // Con franja (hasta las 20:20): para probar que la ficha se cierra sola al salir de ella.
                     .init(
                         id: "i4", name: "Chicha de la noche", basePrice: Decimal(string: "4.00") ?? 0, displayOrder: 2,
@@ -71,7 +76,37 @@ enum PreviewData {
                 ]
             ),
         ],
-        featured: .init(title: "Destacados", itemIds: ["i1", "i3"])
+        featured: .init(title: "Destacados", itemIds: ["i1", "i3"]),
+        // De lunes a sábado de 18:00 a 23:00 y el domingo cerrado: el reloj de las pruebas (martes 20:00) lo ve abierto.
+        schedule: (0...6).map { day in
+            .init(
+                dayOfWeek: day, isOpen: day < 6,
+                shift1Start: day < 6 ? "18:00" : nil, shift1End: day < 6 ? "23:00" : nil
+            )
+        }
+    )
+}
+
+extension PreviewData {
+    /// La carta del negocio cerrado de la lista (`n2`): abre de 12:00 a 15:00 todos los días menos el domingo. El
+    /// martes a las 20:00 está cerrado y abre mañana a las 12:00: «Cerrado · abre mañana 12:00».
+    static let closedMenu = BusinessMenu(
+        business: .init(
+            id: "n2", name: "Chifa Lung Fung", accentColor: "166534", primaryCapability: .catalogFull,
+            estimatedEtaMin: 30, estimatedEtaMax: 45
+        ),
+        categories: [
+            .init(
+                id: "c1", name: "Platos", displayOrder: 1,
+                items: [.init(id: "i1", name: "Arroz chaufa", basePrice: Decimal(string: "15.00") ?? 0, displayOrder: 1)]
+            ),
+        ],
+        schedule: (0...6).map { day in
+            .init(
+                dayOfWeek: day, isOpen: day < 6,
+                shift1Start: day < 6 ? "12:00" : nil, shift1End: day < 6 ? "15:00" : nil
+            )
+        }
     )
 }
 
@@ -81,7 +116,11 @@ struct PreviewCatalog: CatalogRepository {
     var business: Result<BusinessMenu, AppError> = .success(PreviewData.menu)
 
     func listBusinesses() async throws(AppError) -> [BusinessSummary] { try businesses.get() }
-    func getBusiness(id: String) async throws(AppError) -> BusinessMenu { try business.get() }
+    func getBusiness(id: String) async throws(AppError) -> BusinessMenu {
+        // Cada negocio con su carta: `n2` es el cerrado de la lista.
+        if id == "n2", case .success = business { return PreviewData.closedMenu }
+        return try business.get()
+    }
 }
 
 extension FileCartStore {

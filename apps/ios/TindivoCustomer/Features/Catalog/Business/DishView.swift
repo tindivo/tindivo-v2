@@ -21,56 +21,59 @@ struct DishView: View {
         self.onAdded = onAdded
     }
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AccessibilityFocusState private var focusedGroup: String?
+
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    header
-                    ForEach(model.item.dish.groups, id: \.id) { group in
-                        DishGroupSection(group: group, model: model)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        ForEach(model.item.dish.groups, id: \.id) { group in
+                            DishGroupSection(group: group, model: model, focus: $focusedGroup)
+                        }
+                        note
+                        quantity
                     }
-                    note
-                    quantity
+                    .padding(.bottom, TindivoTokens.Spacing.spaceScreen)
                 }
-                .padding(.bottom, TindivoTokens.Spacing.spaceScreen)
+                .scrollDismissesKeyboard(.interactively)
+                // «Elige [grupo]»: lleva la vista al primer grupo que falta (la sacudida la pone el propio grupo).
+                .onChange(of: model.attention) { _, attention in
+                    guard let attention else { return }
+                    focusedGroup = attention.groupID
+                    if let message = model.attentionAnnouncement { AccessibilityNotification.Announcement(message).post() }
+                    if reduceMotion {
+                        proxy.scrollTo(attention.groupID, anchor: .top)
+                    } else {
+                        withAnimation { proxy.scrollTo(attention.groupID, anchor: .top) }
+                    }
+                }
             }
-            .scrollDismissesKeyboard(.interactively)
             addBar
         }
         .background(Color.tindivo.background)
         .overlay(alignment: .topTrailing) { closeButton }
         .tindivoToast(model.notices.message)
+        // El gesto de escape de VoiceOver (dos dedos en «Z») cierra la ficha, como el botón «Cerrar».
+        .accessibilityAction(.escape, onClose)
         .alert(
             Text("¿Empezar una bolsa nueva?"),
-            isPresented: Binding(get: { otherBusiness != nil }, set: { _ in }),
-            presenting: otherBusiness
+            isPresented: Binding(get: { model.replacement != nil }, set: { _ in }),
+            presenting: model.replacement
         ) { _ in
             Button("Mantener", role: .cancel) { model.keepCurrentBag() }
             Button("Vaciar y empezar") { model.confirmReplace() }
         } message: { names in
             Text("Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new).")
         }
-        .onChange(of: model.outcome) { _, outcome in react(to: outcome) }
-    }
-
-    private var otherBusiness: (current: String, new: String)? {
-        if case let .otherBusiness(current, new) = model.outcome { (current, new) } else { nil }
-    }
-
-    private func react(to outcome: DishScreenModel.Outcome?) {
-        guard let outcome else { return }
-        switch outcome {
-        case let .added(capped):
-            model.consumeOutcome()
-            onAdded(capped)
-        case .full, .failed:
-            model.showNotice(for: outcome)
-            model.consumeOutcome()
-        case .lineGone:
-            model.consumeOutcome()
-            onLineGone?()
-        case .otherBusiness:
-            break
+        .onChange(of: model.outcome) { _, _ in
+            switch model.resolveOutcome() {
+            case let .added(capped): onAdded(capped)
+            case .lineGone: onLineGone?()
+            case .stay: break
+            }
         }
     }
 
@@ -78,18 +81,15 @@ struct DishView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if let hero = model.item.heroURL {
-                TindivoAsyncImage(url: hero)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 220)
-            }
+            // Con o sin foto el recuadro está: sin foto se ve el isotipo sobre `#FFF7ED` (CUS-CAT-007).
+            TindivoAsyncImage(url: model.item.heroURL)
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
             Group {
                 Text(model.item.name)
                     .tindivoText(TindivoTokens.Typography.titleScreen)
                     .foregroundStyle(Color.tindivo.ink)
                     .accessibilityAddTraits(.isHeader)
-                    // Sin foto, la X cae sobre el título: se le deja su hueco a la derecha.
-                    .padding(.trailing, model.item.heroURL == nil ? TindivoTokens.Spacing.touchTarget : 0)
                 if let description = model.item.description {
                     Text(description)
                         .tindivoText(TindivoTokens.Typography.body)
@@ -98,11 +98,29 @@ struct DishView: View {
                 Text(model.item.priceText)
                     .tindivoText(TindivoTokens.Typography.titleSection)
                     .monospacedDigit()
-                    .lineLimit(1)
-                    .fixedSize()
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(Color.tindivo.ink)
+                badges
+                if let progress = model.progressText {
+                    Text(progress)
+                        .tindivoText(TindivoTokens.Typography.body)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.tindivo.ink)
+                        .padding(.top, 4)
+                        .accessibilityIdentifier("dish.progress")
+                }
             }
             .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
+            .padding(.top, 4)
+        }
+    }
+
+    /// Las etiquetas del plato tal como las escribió el restaurante (formato por aprobar: la ficha no lo dibuja).
+    @ViewBuilder private var badges: some View {
+        if !model.item.badges.isEmpty {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8, alignment: .leading)], alignment: .leading, spacing: 8) {
+                ForEach(model.item.badges, id: \.self) { TindivoChip($0) }
+            }
             .padding(.top, 4)
         }
     }
@@ -124,10 +142,12 @@ struct DishView: View {
             .background(Color.tindivo.surfaceSunken, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
             .accessibilityLabel(Text("Nota (opcional)"))
             .accessibilityIdentifier("dish.note")
-            Text("\(model.selection.note.utf16.count)/\(CartLimits.maxNoteLength)")
+            Text(model.noteCounter.text)
                 .tindivoText(TindivoTokens.Typography.bodySecondary)
+                .monospacedDigit()
                 .foregroundStyle(Color.tindivo.inkSecondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .accessibilityLabel(model.noteCounter.spoken)
         }
         .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
         .padding(.top, TindivoTokens.Spacing.spaceGroup)
@@ -141,6 +161,7 @@ struct DishView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             TindivoStepper(
                 quantity: model.selection.quantity,
+                label: String(localized: "Cantidad de \(model.item.name)"),
                 canDecrease: model.canDecrease,
                 canIncrease: model.canIncrease,
                 decreaseLabel: String(localized: "Una menos"),
@@ -155,20 +176,14 @@ struct DishView: View {
 
     private var addBar: some View {
         TindivoBottomBar {
-            TindivoPrimaryButton(verbatim: ctaTitle, loading: model.isAdding) {
-                Task { await model.add() }
+            // Apagado pero tocable: con algo obligatorio sin elegir, tocarlo lleva al grupo que falta (CA-CAT-P7).
+            TindivoPrimaryButton(
+                verbatim: model.ctaTitle, loading: model.isAdding, muted: model.ctaBlocked,
+                hint: model.ctaBlocked ? "Te lleva al grupo que falta" : nil
+            ) {
+                Task { await model.tapAdd() }
             }
-            .disabled(!model.canAdd)
             .accessibilityIdentifier("dish.add")
-        }
-    }
-
-    private var ctaTitle: String {
-        switch model.selection.cta {
-        case let .add(total):
-            model.isEditing ? String(localized: "Guardar cambios · \(total)") : String(localized: "Agregar · \(total)")
-        case let .complete(missing):
-            missing == 1 ? String(localized: "Completa \(missing) opción") : String(localized: "Completa \(missing) opciones")
         }
     }
 

@@ -11,7 +11,10 @@ struct RootView: View {
 
     init(environment: AppEnvironment) {
         self.environment = environment
-        _home = State(initialValue: CatalogHomeScreenModel(catalog: environment.catalog))
+        _home = State(initialValue: CatalogHomeScreenModel(
+            catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock,
+            menuCache: environment.menuCache
+        ))
     }
 
     var body: some View {
@@ -31,6 +34,7 @@ struct RootView: View {
                 CatalogHomeView(
                     model: home,
                     onOpenBusiness: { navigator.openBusiness($0) },
+                    onOpenCart: navigator.openCart,
                     onOpenDiagnostics: diagnosticsAction
                 )
                 .navigationDestination(for: AppRoute.self) { route in
@@ -78,14 +82,15 @@ private struct BusinessRoute: View {
     init(id: String, environment: AppEnvironment, navigator: AppNavigator) {
         routeId = id
         _model = State(initialValue: BusinessScreenModel(
-            id: id, catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock
+            id: id, catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock,
+            menuCache: environment.menuCache
         ))
         self.environment = environment
         self.navigator = navigator
     }
 
     var body: some View {
-        BusinessView(model: model, environment: environment, onOpenCart: navigator.openCart)
+        BusinessView(model: model, onOpenCart: navigator.openCart)
             // La ruta puede traer el slug; al cargar la carta se sabe cuál es el id, y «+ Agregar más» los iguala.
             .onChange(of: model.state) { _, state in
                 if case let .loaded(detail) = state { navigator.learn(routeId: routeId, businessId: detail.id) }

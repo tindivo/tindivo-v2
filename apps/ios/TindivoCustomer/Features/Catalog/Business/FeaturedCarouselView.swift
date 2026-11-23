@@ -6,6 +6,8 @@ import TindivoDesign
 struct FeaturedCarouselView: View {
     let items: [MenuItem]
     let onTap: ((MenuItem) -> Void)?
+    /// El contador de cada tarjeta (CUS-CAT-029): sincronizado con la bolsa.
+    var action: (MenuItem) -> DishRowAction? = { _ in nil }
 
     private static let cardWidth: CGFloat = 160
     private static let photoHeight: CGFloat = 120
@@ -21,14 +23,19 @@ struct FeaturedCarouselView: View {
         }
     }
 
-    @ViewBuilder
     private func card(_ item: MenuItem) -> some View {
-        if item.orderable, let onTap {
-            Button { onTap(item) } label: { content(item) }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("menu.featured")
-        } else {
-            content(item).accessibilityElement(children: .combine)
+        VStack(alignment: .leading, spacing: 8) {
+            if item.orderable, let onTap {
+                Button { onTap(item) } label: { content(item) }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("menu.featured")
+            } else {
+                content(item).accessibilityElement(children: .combine)
+            }
+            if let action = action(item) {
+                DishRowControlView(action: action, itemName: item.name)
+                    .frame(maxWidth: Self.cardWidth, alignment: .trailing)
+            }
         }
     }
 
@@ -37,20 +44,20 @@ struct FeaturedCarouselView: View {
             TindivoAsyncImage(url: item.imageURL)
                 .frame(width: Self.cardWidth, height: Self.photoHeight)
                 .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusThumb))
+                .opacity(item.orderable ? 1 : MenuItemRowView.dimmedOpacity)
             Text(item.name)
                 .tindivoText(TindivoTokens.Typography.body)
                 .fontWeight(.bold)
                 .foregroundStyle(Color.tindivo.ink)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
-            Text(item.priceText)
+            Text(item.priceLabel)
                 .tindivoText(TindivoTokens.Typography.body)
                 .fontWeight(.bold)
                 .monospacedDigit()
-                .lineLimit(1)
-                // La tarjeta tiene ancho fijo: el importe se encoge antes que partirse o pisar a la vecina.
-                .minimumScaleFactor(0.5)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(Color.tindivo.ink)
+                .opacity(item.orderable ? 1 : MenuItemRowView.dimmedOpacity)
             if let window = item.outsideWindow {
                 Text(window)
                     .tindivoText(TindivoTokens.Typography.bodySecondary)
@@ -59,7 +66,6 @@ struct FeaturedCarouselView: View {
             }
         }
         .frame(width: Self.cardWidth, alignment: .leading)
-        .opacity(item.orderable ? 1 : 0.5)
     }
 }
 

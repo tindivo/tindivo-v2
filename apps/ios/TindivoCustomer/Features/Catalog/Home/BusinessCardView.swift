@@ -5,10 +5,11 @@ import TindivoDesign
 struct BusinessCardView: View {
     let business: BusinessCard
     let whatsapp: Bool
+    /// «Cerrado · abre mañana 12:00» (CA-CAT-P2); solo se usa con el negocio cerrado.
+    var closedLabel: String = OrderingMode.closedTitle
     let onTap: () -> Void
 
     private static let logoSize: CGFloat = 72
-    private static let closedOpacity = 0.45
 
     var body: some View {
         Button(action: onTap) {
@@ -48,7 +49,7 @@ struct BusinessCardView: View {
     @ViewBuilder private var status: some View {
         HStack(spacing: 8) {
             if business.closed {
-                TindivoChip(String(localized: "Cerrado ahora"), tone: .warning)
+                TindivoChip(closedLabel, tone: .warning)
             }
             if whatsapp {
                 TindivoChip(String(localized: "Pedidos por WhatsApp"))
@@ -61,32 +62,14 @@ struct BusinessCardView: View {
         }
     }
 
-    /// Decorativo a propósito: el nombre está al lado, y una etiqueta lo haría sonar dos veces.
+    /// Decorativo a propósito: el nombre está al lado, y una etiqueta lo haría sonar dos veces. Sin logo, el respaldo de
+    /// marca. Cerrado, el logo se ve en gris y atenuado; el texto de estado no se atenúa.
     private var logo: some View {
-        Group {
-            if let url = business.logoURL {
-                TindivoAsyncImage(url: url)
-                    .grayscale(business.closed ? 1 : 0)
-            } else {
-                Text(initial)
-                    .tindivoText(TindivoTokens.Typography.titleScreen)
-                    .foregroundStyle(Color.tindivo.onPrimary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(accent)
-                    .accessibilityHidden(true)
-            }
-        }
-        .frame(width: Self.logoSize, height: Self.logoSize)
-        .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusThumb))
-        .opacity(business.closed ? Self.closedOpacity : 1)
-    }
-
-    private var accent: Color {
-        business.accent.map { Color(argb: $0) } ?? Color.tindivo.primary
-    }
-
-    private var initial: String {
-        business.name.trimmingCharacters(in: .whitespacesAndNewlines).first.map { String($0).uppercased() } ?? "T"
+        TindivoAsyncImage(url: business.logoURL)
+            .grayscale(business.closed ? 1 : 0)
+            .frame(width: Self.logoSize, height: Self.logoSize)
+            .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusThumb))
+            .opacity(business.closed ? MenuItemRowView.dimmedOpacity : 1)
     }
 }
 
@@ -102,7 +85,7 @@ struct BusinessCardView: View {
                 id: "2", name: "Chifa Lung Fung", tagline: nil, logoURL: nil, accent: nil,
                 closed: true, etaMin: 25, etaMax: 40
             ),
-            whatsapp: false
+            whatsapp: false, closedLabel: "Cerrado · abre mañana 12:00"
         ) {}
         BusinessCardView(business: open, whatsapp: true) {}
     }

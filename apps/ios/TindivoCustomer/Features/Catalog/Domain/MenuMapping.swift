@@ -15,6 +15,10 @@ struct MenuItem: Sendable, Equatable {
     let window: DishWindow
     /// «Solo sáb y dom, de 11:00 a 15:00» mientras el plato esté fuera de su franja; `nil` si se sirve ahora.
     var outsideWindow: String?
+    /// Etiquetas del plato (`badges` de la carta), tal como las escribió el restaurante.
+    let badges: [String]
+    /// «S/ 12.50» más barato posible cuando el plato pide elegir opciones obligatorias; `nil` si no las pide.
+    let startingAtText: String?
 
     init(
         dish: Dish,
@@ -23,8 +27,12 @@ struct MenuItem: Sendable, Equatable {
         isAvailable: Bool,
         window: DishWindow,
         outsideWindow: String? = nil,
-        heroURL: String? = nil
+        heroURL: String? = nil,
+        badges: [String] = [],
+        startingAtText: String? = nil
     ) {
+        self.badges = badges
+        self.startingAtText = startingAtText
         self.dish = dish
         self.description = description
         self.priceText = priceText
@@ -38,6 +46,12 @@ struct MenuItem: Sendable, Equatable {
     var name: String { dish.name }
     var basePrice: Decimal { dish.basePrice }
     var imageURL: String? { dish.imageURL }
+
+    /// Tiene foto (la grande o la miniatura): «Destacados» solo enseña platos con foto.
+    var hasPhoto: Bool { imageURL != nil || heroURL != nil }
+
+    /// Tiene opciones que elegir (obligatorias o no): se arma en la ficha, no con un «+» en la tarjeta.
+    var isConfigurable: Bool { !dish.groups.isEmpty }
 
     /// Se puede pedir: no se acabó y es su turno.
     var orderable: Bool { isAvailable && outsideWindow == nil }
@@ -70,6 +84,12 @@ struct BusinessDetail: Sendable, Equatable {
     /// Modo catálogo (`catalog_only`): se pide por WhatsApp, no por la bolsa (CUS-CAT-015).
     let catalogOnly: Bool
     let whatsappNumber: String?
+    var capability: PrimaryCapability?
+    var etaMin: Int?
+    var etaMax: Int?
+
+    /// Los platos de la carta, sin contar dos veces los de «Destacados».
+    var dishCount: Int { categories.reduce(0) { $0 + $1.items.count } }
 
     /// Lo que se pinta, de arriba abajo: «Destacados» primero y luego las secciones de la carta.
     var sections: [MenuCategory] { (featured.map { [$0] } ?? []) + categories }
@@ -88,10 +108,17 @@ struct BusinessDetail: Sendable, Equatable {
                 }
             )
         }
+        // «Destacados» solo con platos que se sirven ahora: uno fuera de su franja sale de la sección (sigue, atenuado,
+        // en la suya) y sin ninguno no hay sección (decisión de Jesús, 2026-11-22; CA-CAT-02).
+        func inWindowOnly(_ category: MenuCategory) -> MenuCategory? {
+            let items = category.items.filter { $0.outsideWindow == nil }
+            return items.isEmpty ? nil : MenuCategory(id: category.id, name: category.name, blurb: category.blurb, items: items)
+        }
         return BusinessDetail(
             id: id, name: name, tagline: tagline, logoURL: logoURL, bannerURL: bannerURL, accent: accent,
-            categories: categories.map(mark), featured: featured.map(mark), schedule: schedule,
-            openingConfirmed: openingConfirmed, catalogOnly: catalogOnly, whatsappNumber: whatsappNumber
+            categories: categories.map(mark), featured: featured.map(mark).flatMap(inWindowOnly), schedule: schedule,
+            openingConfirmed: openingConfirmed, catalogOnly: catalogOnly, whatsappNumber: whatsappNumber,
+            capability: capability, etaMin: etaMin, etaMax: etaMax
         )
     }
 }
@@ -117,7 +144,10 @@ enum MenuMapping {
             categories.flatMap(\.items).map { ($0.id, $0) },
             uniquingKeysWith: { _, last in last }
         )
-        let featuredItems = (menu.featured?.itemIds ?? []).compactMap { byID[$0] }.prefix(featuredMax)
+        // «Destacados» solo con platos que se pueden pedir y se ven bien: disponibles y con foto (CUS-CAT-028).
+        let featuredItems = (menu.featured?.itemIds ?? []).compactMap { byID[$0] }
+            .filter { $0.isAvailable && $0.hasPhoto }
+            .prefix(featuredMax)
         let business = menu.business
         return BusinessDetail(
             id: business.id,
@@ -127,7 +157,8 @@ enum MenuMapping {
             bannerURL: nonBlank(business.bannerURL),
             accent: parseAccent(business.accentColor),
             categories: categories,
-            // Un plato que el servidor mandó destacado pero ya no está en la carta se descarta; sin platos no hay sección.
+            // Un plato destacado que ya no está en la carta, está agotado o no tiene foto se descarta; sin platos no hay
+            // sección.
             featured: featuredItems.isEmpty
                 ? nil
                 : MenuCategory(
@@ -139,7 +170,10 @@ enum MenuMapping {
             schedule: menu.schedule,
             openingConfirmed: menu.openingConfirmed,
             catalogOnly: business.primaryCapability == .catalogOnly,
-            whatsappNumber: nonBlank(business.whatsappNumber)
+            whatsappNumber: nonBlank(business.whatsappNumber),
+            capability: business.primaryCapability,
+            etaMin: business.estimatedEtaMin,
+            etaMax: business.estimatedEtaMax
         )
     }
 
@@ -184,8 +218,22 @@ enum MenuMapping {
             isAvailable: raw.isAvailable,
             window: DishWindow(days: raw.availableDays, from: raw.availableFrom, to: raw.availableTo),
             // Cabecera del plato: la foto grande primero; la fila de la carta usa la miniatura (`Dish.imageURL`).
-            heroURL: nonBlank(raw.imageURL) ?? nonBlank(raw.thumbnailURL)
+            heroURL: nonBlank(raw.imageURL) ?? nonBlank(raw.thumbnailURL),
+            badges: raw.badges.compactMap(nonBlank),
+            startingAtText: startingAt(base: base, groups: groups)
         )
+    }
+
+    /// «Desde S/ x»: el precio más bajo con que se puede pedir el plato, que es el base más lo más barato de cada grupo
+    /// obligatorio (tantas opciones como pida su mínimo). `nil` si ningún grupo es obligatorio. Solo para mostrar.
+    private static func startingAt(base: Decimal, groups: [DishGroup]) -> String? {
+        let required = groups.filter(\.isRequired)
+        guard !required.isEmpty else { return nil }
+        let extras = required.reduce(Decimal.zero) { total, group in
+            let cheapest = group.options.map(\.price).sorted().prefix(max(1, group.minSelections))
+            return total + cheapest.reduce(Decimal.zero, +)
+        }
+        return formatAmount(base + extras)
     }
 
     /// Un plato que repite un grupo o una opción (sin distinguir mayúsculas) no es una carta que se pueda enseñar: la

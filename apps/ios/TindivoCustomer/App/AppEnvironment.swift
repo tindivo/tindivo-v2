@@ -9,6 +9,8 @@ struct AppEnvironment: Sendable {
     let catalog: any CatalogRepository
     let cartStore: any CartStore
     let clock: AppClock
+    /// Las cartas que Inicio ya bajó, para que Negocio no las pida otra vez (se crea sola: no entra en el inicializador).
+    let menuCache = BusinessMenuCache()
 
     @MainActor
     static func live(config: AppConfig = .fromBundle(), protocolClasses: [AnyClass]? = nil) -> AppEnvironment {
