@@ -29,6 +29,7 @@ internal class ReviewViewModel
         private val reviews: ReviewRepository,
         private val sessionStore: SessionStore,
         private val configService: ConfigService,
+        private val promptMemory: ReviewPromptMemory = ReviewPromptMemory(),
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(ReviewUiState())
         val state: StateFlow<ReviewUiState> = mutableState.asStateFlow()
@@ -55,6 +56,19 @@ internal class ReviewViewModel
         fun enableAutoPrompt() {
             autoPrompt = true
             showPromptIfDue()
+        }
+
+        /**
+         * El historial lo llama al recargar si ahora hay un pedido activo: la pregunta ya no puede salir y, si estaba
+         * abierta sin que la persona hubiera hecho nada, se retira (sin avisar al servidor) y vuelve a poder salir.
+         */
+        fun disableAutoPrompt() {
+            autoPrompt = false
+            val current = mutableState.value
+            if (current.step != ReviewStep.Prompt) return
+            current.pending?.let { promptMemory.forget(it.orderId) }
+            promptShown = false
+            mutableState.value = current.copy(step = ReviewStep.Hidden)
         }
 
         /** Abre el detalle sin nota puesta (el botón «Calificar» del pedido). */
@@ -203,7 +217,11 @@ internal class ReviewViewModel
         private fun showPromptIfDue() {
             val current = mutableState.value
             if (!autoPrompt || promptShown) return
-            if (current.pending == null || current.step != ReviewStep.Hidden) return
+            val pending = current.pending
+            if (pending == null || current.step != ReviewStep.Hidden) return
+            // Otra pantalla ya la preguntó en esta sesión: no se repite.
+            if (promptMemory.wasAsked(pending.orderId)) return
+            promptMemory.markAsked(pending.orderId)
             promptShown = true
             mutableState.value = current.copy(step = ReviewStep.Prompt)
         }

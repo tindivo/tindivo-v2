@@ -1,0 +1,59 @@
+[
+  {
+    "id": "validando",
+    "status": "validando",
+    "paso": "received",
+    "motivo": "contraentrega con llamada: aún es «Recibido»"
+  },
+  {
+    "id": "pending-acceptance",
+    "status": "pending_acceptance",
+    "paso": "received",
+    "motivo": "espera al negocio"
+  },
+  {
+    "id": "awaiting-payment",
+    "status": "awaiting_payment",
+    "paso": "received",
+    "motivo": "el negocio aceptó y falta el pago: sigue en «Recibido»"
+  },
+  {
+    "id": "confirmed",
+    "status": "confirmed",
+    "paso": "received",
+    "motivo": "el negocio aceptó: sigue en «Recibido» hasta `preparing`"
+  },
+  { "id": "preparing", "status": "preparing", "paso": "preparing", "motivo": "en cocina" },
+  {
+    "id": "waiting-driver",
+    "status": "waiting_driver",
+    "paso": "preparing",
+    "motivo": "espera motorizado"
+  },
+  {
+    "id": "heading-to-restaurant",
+    "status": "heading_to_restaurant",
+    "paso": "preparing",
+    "motivo": "el motorizado va al local"
+  },
+  {
+    "id": "waiting-at-restaurant",
+    "status": "waiting_at_restaurant",
+    "paso": "preparing",
+    "motivo": "el motorizado espera en el local"
+  },
+  { "id": "picked-up", "status": "picked_up", "paso": "ontheway", "motivo": "salió de cocina" },
+  {
+    "id": "ready-for-pickup",
+    "status": "ready_for_pickup",
+    "paso": "ontheway",
+    "motivo": "en recojo, el tercer paso se llama «Listo»"
+  },
+  { "id": "delivered", "status": "delivered", "paso": "delivered", "motivo": "terminal" },
+  {
+    "id": "cancelled",
+    "status": "cancelled",
+    "paso": "cancelled",
+    "motivo": "terminal; se muestra aparte"
+  }
+]

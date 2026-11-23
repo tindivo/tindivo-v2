@@ -48,7 +48,7 @@ internal class DeleteAccountLateUnauthorizedTest : DeleteAccountHarness() {
             val entering = CompletableDeferred<Unit>()
             backend.signInGate = { entering.await() }
             backend.signInResult = { TokenSnapshot("token-b", B, TEST_NOW + 3600) }
-            backgroundScope.launch { store.signInWithGoogle("id-token-b", "nonce") }
+            backgroundScope.launch { store.signInWithGoogle("id-token-b", "nonce", termsPending = false) }
             runCurrent()
             assertEquals(SessionState.SignedIn(A), store.state.value)
 

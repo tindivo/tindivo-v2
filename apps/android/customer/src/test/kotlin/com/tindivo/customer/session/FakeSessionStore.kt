@@ -10,6 +10,8 @@ class FakeSessionStore(
 ) : SessionStore {
     private val mutableState = MutableStateFlow(initial)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    val termsRequiredState = MutableStateFlow(false)
+    override val termsRequired: StateFlow<Boolean> = termsRequiredState.asStateFlow()
     private val signIns = MutableStateFlow(0L)
     override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 
@@ -23,6 +25,17 @@ class FakeSessionStore(
     val signInCalls = mutableListOf<Pair<String, String>>()
     var signOutCalls = 0
 
+    private val mutableClosePending = MutableStateFlow(false)
+    override val closePending: StateFlow<Boolean> = mutableClosePending.asStateFlow()
+
+    /** Con `true`, [signOutLocally] no logra borrar lo guardado: devuelve `false` y [closePending] sube. */
+    var localCloseFails = false
+
+    /** Lo que haría un reintento exitoso, o un arranque que por fin borra lo pendiente. */
+    fun clearPending() {
+        mutableClosePending.value = false
+    }
+
     /** La cuenta con la que entra [signInWithGoogle]. */
     var signInUserId = "user-1"
 
@@ -30,10 +43,24 @@ class FakeSessionStore(
 
     override suspend fun refresh(): String? = null
 
+    /** Las entradas que pidieron la marca «aceptación pendiente», en orden. */
+    val signInTermsPending = mutableListOf<Boolean>()
+
+    /** Las cuentas cuya aceptación se confirmó (`confirmTerms`), y lo que responde. */
+    val confirmTermsCalls = mutableListOf<String>()
+    var confirmTermsResult = true
+
+    override suspend fun confirmTerms(accountId: String): Boolean {
+        confirmTermsCalls += accountId
+        return confirmTermsResult
+    }
+
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): SignInResult {
+        signInTermsPending += termsPending
         signInCalls += idToken to rawNonce
         if (signInResult == SignInResult.Success) enter(signInUserId)
         return signInResult
@@ -87,6 +114,10 @@ class FakeSessionStore(
         beforeSignOutLocally()
         val mine = (mutableState.value as? SessionState.SignedIn)?.userId == accountId
         if (mine) mutableState.value = SessionState.SignedOut
+        if (mine && localCloseFails) {
+            mutableClosePending.value = true
+            return false
+        }
         return mine
     }
 }

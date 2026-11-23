@@ -89,6 +89,10 @@ export const CourierServiceStatusSchema = z.object({
     .meta({ description: 'Tal cual `app_settings.courier.hours`. Null en el respaldo de la ruta' }),
   price: legacyMoney,
   pausedMessage: z.string().nullable(),
+  maxWeightKg: z.number().positive().optional().meta({
+    description:
+      'Peso máximo de un envío, en kg: `app_settings.courier.maxWeightKg`. Opcional: no está en el respaldo de la ruta ni en servidores anteriores; la app no escribe un peso por su cuenta',
+  }),
 })
 
 /** GET /public/search — `search_catalog()`. */
@@ -220,6 +224,10 @@ const MenuItemSchema = z.object({
   image_hue: z.number().int().nullable(),
   is_available: z.boolean(),
   is_compact: z.boolean().meta({ description: '«Destacado» (nombre histórico). Van primero' }),
+  is_featured: z.boolean().optional().meta({
+    description:
+      'El restaurante lo marcó para la sección «Destacados» (0290). Opcional y aditivo: la lista ya armada va en `featured`',
+  }),
   badges: z.array(z.string()),
   display_order: z.number().int(),
   available_days: z
@@ -253,6 +261,22 @@ export const PublicBusinessDetailSchema = z.object({
       items: z.array(MenuItemSchema),
     }),
   ),
+  featured: z
+    .object({
+      title: z
+        .string()
+        .meta({ description: 'Nombre que le puso el restaurante; «Destacados» si no puso uno' }),
+      item_ids: z.array(uuidOut).meta({
+        description:
+          'De 1 a 6 platos de la carta (ids de `categories[].items[]`), disponibles y con foto, en el orden de la carta. La franja horaria de cada uno la resuelve el cliente',
+      }),
+    })
+    .nullable()
+    .optional()
+    .meta({
+      description:
+        'Sección «Destacados» (CUS-CAT-028). Ausente o null = el restaurante no marcó ningún plato. Va primero en la carta',
+    }),
   schedule: z.array(ScheduleDaySchema),
   opening_confirmed: z.boolean().nullable().meta({
     description:
@@ -285,7 +309,8 @@ export const OrderTrackingSchema = z.object({
   acceptanceMinutes: z.number().int(),
   paymentMinutes: z.number().int(),
   driverPhone: z.string().nullable().meta({
-    description: 'Solo cuando el motorizado ya llegó a la puerta del cliente',
+    description:
+      'Siempre null (0292): el seguimiento público no entrega el teléfono del motorizado. El campo se conserva por las apps ya instaladas',
   }),
   amount: legacyMoney,
   deliveryFee: legacyMoney,

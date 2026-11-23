@@ -1,0 +1,22 @@
+{
+  "name": "@tindivo/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fuente única de los tokens de diseño (tokens.json) y sus salidas para web, Android e iOS.",
+  "scripts": {
+    "generate": "node src/cli.ts",
+    "check": "node src/cli.ts --check",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@tindivo/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

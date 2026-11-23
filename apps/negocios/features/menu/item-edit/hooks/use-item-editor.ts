@@ -43,6 +43,7 @@ export function useItemEditor() {
     base_price: '',
     is_available: true,
     is_compact: false,
+    is_featured: false,
     image_url: null,
     badges: [],
     available_days: [],
@@ -61,6 +62,7 @@ export function useItemEditor() {
   const [schedule, setSchedule] = useState<ScheduleDayRow[]>([])
   /** Cuántos platos hay por categoría, para rotular el botón de aplicar en bloque. */
   const [catItemCounts, setCatItemCounts] = useState<Record<string, number>>({})
+  const [featuredOthers, setFeaturedOthers] = useState(0)
   const [applyingToCategory, setApplyingToCategory] = useState(false)
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
   // Miniatura de la misma foto (D-55). Null con foto pendiente = no se pudo generar.
@@ -140,7 +142,7 @@ export function useItemEditor() {
         // pintar nada. Traer el resto de columnas sería descargar el menú entero.
         supabase
           .from('menu_items')
-          .select('category_id')
+          .select('id,category_id,is_featured')
           .eq('business_id', biz.id)
           .is('deleted_at', null),
       ])
@@ -153,6 +155,10 @@ export function useItemEditor() {
         counts[row.category_id] = (counts[row.category_id] ?? 0) + 1
       }
       setCatItemCounts(counts)
+      // Los demás platos ya destacados: el panel no deja pasar de FEATURED_MAX_ITEMS.
+      setFeaturedOthers(
+        (siblingsRes.data ?? []).filter((row) => row.is_featured && row.id !== itemId).length,
+      )
 
       const allGroupsData = allGroupsRes.data ?? []
       const allGroupIds = allGroupsData.map((g) => g.id)
@@ -245,7 +251,7 @@ export function useItemEditor() {
         const { data: item } = await supabase
           .from('menu_items')
           .select(
-            'id,name,description,category_id,base_price,is_available,is_compact,image_url,thumbnail_url,badges,available_days,available_from,available_to',
+            'id,name,description,category_id,base_price,is_available,is_compact,is_featured,image_url,thumbnail_url,badges,available_days,available_from,available_to',
           )
           .eq('id', itemId)
           .eq('business_id', biz.id)
@@ -268,6 +274,7 @@ export function useItemEditor() {
           base_price: Number(item.base_price).toFixed(2),
           is_available: item.is_available,
           is_compact: item.is_compact,
+          is_featured: item.is_featured,
           image_url: item.image_url ?? null,
           badges: item.badges ?? [],
           // `available_days` es `smallint[]`: null en la DB = sin restricción, y
@@ -682,6 +689,7 @@ export function useItemEditor() {
             base_price: priceVal,
             is_available: formData.is_available,
             is_compact: formData.is_compact,
+            is_featured: formData.is_featured,
             badges: formData.badges,
             display_order: 9999,
             // Los tres a la vez: las tres columnas son UNA sola franja, y
@@ -710,6 +718,7 @@ export function useItemEditor() {
             base_price: priceVal,
             is_available: formData.is_available,
             is_compact: formData.is_compact,
+            is_featured: formData.is_featured,
             badges: formData.badges,
             // Con foto nueva pendiente, las columnas no se tocan aquí: las cambia
             // de una vez la publicación (más abajo), nunca foto de una y miniatura
@@ -1075,6 +1084,7 @@ export function useItemEditor() {
     formData,
     schedule,
     catItemCounts,
+    featuredOthers,
     applyingToCategory,
     applyToCategory,
     groups,

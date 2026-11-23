@@ -117,6 +117,7 @@ class AccountDeletedNoticeContentTest {
 private class NoticeTestSession : SessionStore {
     private val mutableState = MutableStateFlow<SessionState>(SessionState.SignedOut)
     override val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    override val termsRequired: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
     private val signIns = MutableStateFlow(0L)
     override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 
@@ -136,7 +137,10 @@ private class NoticeTestSession : SessionStore {
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): SignInResult = SignInResult.Failed
+
+    override suspend fun confirmTerms(accountId: String): Boolean = false
 
     override suspend fun signOut() {
         switchToSignedOut()

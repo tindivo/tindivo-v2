@@ -29,6 +29,7 @@ internal fun GetCourierServiceStatus200Response.toServiceUi(): CourierServiceUi?
         opensAt = hours?.start,
         closesAt = hours?.end,
         pausedMessage = pausedMessage?.takeIf { it.isNotBlank() },
+        maxWeightKg = maxWeightKg?.takeIf { it.signum() > 0 }?.stripTrailingZeros()?.toPlainString(),
     )
 }
 

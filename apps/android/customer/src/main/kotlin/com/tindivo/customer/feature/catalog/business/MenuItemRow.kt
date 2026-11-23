@@ -46,10 +46,10 @@ internal fun MenuItemRow(
     categoryName: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
-    val dim = if (menuItem.available) Modifier else Modifier.alpha(0.5f)
-    // Un plato agotado no se abre: se sigue viendo, atenuado.
+    val dim = if (menuItem.orderable) Modifier else Modifier.alpha(0.5f)
+    // Un plato agotado o fuera de su franja no se abre: se sigue viendo, atenuado.
     val click =
-        if (menuItem.available &&
+        if (menuItem.orderable &&
             onClick != null
         ) {
             Modifier.clickable(role = Role.Button, onClick = onClick)
@@ -95,9 +95,12 @@ internal fun MenuItemRow(
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
             )
-            if (!menuItem.available) {
+            // «Agotado» (lo marca la cajera) y «no es su turno» son cosas distintas: la franja dice cuándo vuelve.
+            if (!menuItem.available || menuItem.outsideWindow != null) {
                 Text(
-                    text = stringResource(R.string.business_item_unavailable),
+                    text =
+                        menuItem.outsideWindow.takeIf { menuItem.available }
+                            ?: stringResource(R.string.business_item_unavailable),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

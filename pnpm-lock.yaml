@@ -45,6 +45,9 @@ catalogs:
     clsx:
       specifier: ^2.1.1
       version: 2.1.1
+    geist:
+      specifier: ^1.5.1
+      version: 1.9.2
     inngest:
       specifier: ^4.5.0
       version: 4.5.0
@@ -470,6 +473,49 @@ importers:
         specifier: 'catalog:'
         version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(vite@8.0.14(@types/node@24.12.4)(jiti@2.7.0)(yaml@2.9.0))
 
+  apps/web:
+    dependencies:
+      '@tindivo/legal':
+        specifier: workspace:*
+        version: link:../../packages/legal
+      geist:
+        specifier: 'catalog:'
+        version: 1.9.2(next@16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
+      next:
+        specifier: 'catalog:'
+        version: 16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.6
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.6(react@19.2.6)
+    devDependencies:
+      '@tailwindcss/postcss':
+        specifier: 'catalog:'
+        version: 4.3.0
+      '@tindivo/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.4
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.15
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.15)
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(vite@8.0.14(@types/node@24.12.4)(jiti@2.7.0)(yaml@2.9.0))
+
   packages/api-client:
     dependencies:
       '@tindivo/contracts':
@@ -555,11 +601,41 @@ importers:
         specifier: 'catalog:'
         version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(vite@8.0.14(@types/node@24.12.4)(jiti@2.7.0)(yaml@2.9.0))
 
+  packages/design-tokens:
+    devDependencies:
+      '@tindivo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.4
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(vite@8.0.14(@types/node@24.12.4)(jiti@2.7.0)(yaml@2.9.0))
+
   packages/images:
     devDependencies:
       '@tindivo/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(vite@8.0.14(@types/node@24.12.4)(jiti@2.7.0)(yaml@2.9.0))
+
+  packages/legal:
+    devDependencies:
+      '@tindivo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.4
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2346,6 +2422,11 @@ packages:
     resolution: {integrity: sha512-zV/5HKTfCeKWnxG0Dmrw51hEWFGfcF2xiXqcA3+J90WDuP0SvoiSO5ORvcBsifmx/FoIjgQN3oNOGaQ5PhLFkg==}
     engines: {node: '>=18'}
 
+  geist@1.9.2:
+    resolution: {integrity: sha512-UU1x2q5Khob0+i4csFvXk1Ki4DePdu7xISuXyEcj1tzQMg64oN7Kbuy4e5z5QhcUWbbvOMJNs3ZxYQqpsEMV3w==}
+    peerDependencies:
+      next: '>=13.2.0'
+
   get-caller-file@2.0.5:
     resolution: {integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==}
     engines: {node: 6.* || 8.* || >= 10.*}
@@ -2746,10 +2827,6 @@ packages:
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
-
-  picomatch@4.0.4:
-    resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
-    engines: {node: '>=12'}
 
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
@@ -4975,9 +5052,9 @@ snapshots:
 
   fast-fifo@1.3.2: {}
 
-  fdir@6.5.0(picomatch@4.0.4):
+  fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:
-      picomatch: 4.0.4
+      picomatch: 4.0.7
 
   fetch-blob@3.2.0:
     dependencies:
@@ -5023,6 +5100,10 @@ snapshots:
       json-bigint: 1.0.0
     transitivePeerDependencies:
       - supports-color
+
+  geist@1.9.2(next@16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)):
+    dependencies:
+      next: 16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
 
   get-caller-file@2.0.5: {}
 
@@ -5377,8 +5458,6 @@ snapshots:
 
   picocolors@1.1.1: {}
 
-  picomatch@4.0.4: {}
-
   picomatch@4.0.7: {}
 
   playwright-core@1.62.0: {}
@@ -5583,7 +5662,7 @@ snapshots:
     dependencies:
       '@img/colour': 1.1.0
       detect-libc: 2.1.2
-      semver: 7.8.1
+      semver: 7.8.5
     optionalDependencies:
       '@img/sharp-darwin-arm64': 0.34.5
       '@img/sharp-darwin-x64': 0.34.5
@@ -5760,8 +5839,8 @@ snapshots:
 
   tinyglobby@0.2.16:
     dependencies:
-      fdir: 6.5.0(picomatch@4.0.4)
-      picomatch: 4.0.4
+      fdir: 6.5.0(picomatch@4.0.7)
+      picomatch: 4.0.7
 
   tinyrainbow@3.1.0: {}
 
@@ -5842,7 +5921,7 @@ snapshots:
   vite@8.0.14(@types/node@24.12.4)(jiti@2.7.0)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.32.0
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       postcss: 8.5.15
       rolldown: 1.0.2
       tinyglobby: 0.2.16
@@ -5866,7 +5945,7 @@ snapshots:
       magic-string: 0.30.21
       obug: 2.1.1
       pathe: 2.0.3
-      picomatch: 4.0.4
+      picomatch: 4.0.7
       std-env: 4.1.0
       tinybench: 2.9.0
       tinyexec: 1.2.3

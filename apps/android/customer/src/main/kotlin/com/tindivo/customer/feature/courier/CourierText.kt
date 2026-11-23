@@ -17,15 +17,12 @@ internal fun hoursText(service: CourierServiceUi): String? {
     }
 }
 
-/** «Desde S/ 3.00 · Hasta 5 kg», con el horario si se sabe. El precio es el del servidor, tal cual. */
+/** «Desde S/ 3.00 · Hasta 5 kg · 6 a 11 pm»: precio, peso y horario, cada uno solo si el servidor lo dijo. Tal cual. */
 @Composable
 internal fun factsText(service: CourierServiceUi): String {
-    val hours = hoursText(service)
-    return if (hours != null) {
-        stringResource(R.string.courier_facts_hours, service.priceText, hours)
-    } else {
-        stringResource(R.string.courier_facts, service.priceText)
-    }
+    val price = stringResource(R.string.courier_facts_price, service.priceText)
+    val weight = service.maxWeightKg?.let { stringResource(R.string.courier_facts_weight, it) }
+    return listOfNotNull(price, weight, hoursText(service)).joinToString(" · ")
 }
 
 /**
@@ -132,7 +129,8 @@ internal fun CourierMissing.textRes(): Int =
         CourierMissing.Item -> R.string.courier_missing_item
         CourierMissing.OriginPhone -> R.string.courier_missing_origin_phone
         CourierMissing.DestinationPhone -> R.string.courier_missing_destination_phone
-        CourierMissing.ReadyAndPaid -> R.string.courier_missing_ready
+        CourierMissing.Prepaid -> R.string.courier_missing_prepaid
+        CourierMissing.Allowed -> R.string.courier_missing_allowed
         CourierMissing.RequesterPhone -> R.string.courier_missing_requester_phone
     }
 

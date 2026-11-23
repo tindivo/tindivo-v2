@@ -1,0 +1,9 @@
+{
+  "extends": "@tindivo/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

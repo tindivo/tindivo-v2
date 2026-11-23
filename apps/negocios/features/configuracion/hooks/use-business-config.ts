@@ -36,7 +36,7 @@ export function useBusinessConfig() {
       const { data: biz, error } = await supabase
         .from('businesses')
         .select(
-          'name,phone,whatsapp_number,yape_number,tagline,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,logo_url,banner_url',
+          'name,phone,whatsapp_number,yape_number,tagline,featured_title,accent_color,estimated_eta_min,estimated_eta_max,delivery_fee,publishes_catalog,accepts_web_pickup,accepts_web_delivery,uses_tindivo_drivers,primary_capability,logo_url,banner_url',
         )
         .eq('user_id', userId)
         .maybeSingle()
@@ -51,6 +51,7 @@ export function useBusinessConfig() {
         whatsappNumber: biz.whatsapp_number ?? '',
         yapeNumber: biz.yape_number ?? '',
         tagline: biz.tagline ?? '',
+        featuredTitle: biz.featured_title ?? '',
         accentColor: biz.accent_color ?? 'f97316',
         estimatedEtaMin: biz.estimated_eta_min ?? 25,
         estimatedEtaMax: biz.estimated_eta_max ?? 35,
@@ -82,6 +83,8 @@ export function useBusinessConfig() {
           phone: form.phone,
           whatsappNumber: waParsed?.success ? waParsed.data : null,
           tagline: form.tagline,
+          // Vacío = «Destacados» (0290).
+          featuredTitle: form.featuredTitle.trim() || null,
           yapeNumber: form.yapeNumber,
           estimatedEtaMin: form.estimatedEtaMin,
           estimatedEtaMax: form.estimatedEtaMax,

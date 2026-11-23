@@ -1,5 +1,7 @@
 # CUS-ENT · Tindivo Entregas
 
+> **Migrado a `Docs/producto/entregas/` (2026-11-18).** Lo vigente está allí; este archivo queda como borrador de origen.
+
 > Estado: **propuesto**, pendiente de aprobación de Jesús · Parte de `Docs/planes/app-cliente/README.md` · Android `feature/` `courier` · Formato: `Docs/trabajo/movil/03-requisitos/00-formato-y-convenciones.md` con la columna `Est.` partida en **Android** e **iOS** (✅ hecho · 🟡 parcial · ⚠️ defecto · ⬜ por hacer · 📝 sin verificar en código · — no aplica). Rutas Android relativas a `apps/android/customer/src/main/kotlin/com/tindivo/customer/` (las de `core/` están en `apps/android/core/`; `res/` y `AndroidManifest.xml`, en `apps/android/customer/src/main/`). ⚙ = parámetro de `app_settings` (se lee de `GET /config`, nunca va escrito en la app). ★ = crítico de paridad.
 Fuentes: `Docs/negocio/servicios/entregas.md` (canon, verificado 2026-10-10) y `apps/android/customer/.../feature/courier/`. Las filas nuevas de Jesús del 16-nov (mochila, prohibidos, daños, cliente ausente) están marcadas en su Fuente. Qué se puede enviar: decisión L.
 
