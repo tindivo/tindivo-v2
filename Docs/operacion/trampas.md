@@ -363,7 +363,7 @@ Leer siempre el pie: solo vale si dice `Cached: 0 cached`. Para sacar los resúm
 
 ### db-types-drift es de versión del CLI
 **Síntoma:** tras un `db push`, regenerar `database.types.ts` da un diff enorme que parece que la migración tumbó algo; o el job `db-types-drift` del CI sigue rojo después de commitear la regeneración. Medido el 2026-08-27 (CLI local 2.109.1, tras aplicar 0190–0194 en prod): **+4 / −28 líneas** sin que el esquema `public` cambiara. Todo el diff era de formato: sale el bloque `graphql_public` entero (schema, `Functions.graphql`, y su entrada en `Constants`), entra `__InternalSupabase: { PostgrestVersion: "14.17" }`, y desaparece el salto de línea final.
-**Causa:** `pnpm db:types` genera contra el **remoto** (`zpnipajgwfthxhdtzhly`), y el job `db-types-drift` del CI hace lo mismo con `supabase/setup-cli@v1 version: latest` y exige `diff -q` idéntico. El fichero commiteado depende de la versión del CLI que lo generó, no solo del esquema.
+**Causa:** `pnpm db:types` genera contra la base **local**, y el paso «Drift de tipos» del job `api-integration` del CI hace lo mismo con el CLI fijado (`SUPABASE_CLI_VERSION`) y exige un `diff` idéntico. El fichero commiteado depende de la versión del CLI que lo generó, no solo del esquema.
 **Qué hacer:** mira el diff, no el `--stat`. Si no toca `public.Tables` / `Functions` / `Enums`, es la versión del CLI. Si el CI sigue rojo, la causa probable es que CI corre `latest` (2.116+) y se generó con uno más viejo: actualiza el CLI y regenera, no edites el fichero a mano. Relacionado: [Colisión de número de migración](#colisión-de-número-de-migración).
 
 ## Producción

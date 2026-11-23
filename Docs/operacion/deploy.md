@@ -20,7 +20,7 @@ Lo marcado **[tú]** requiere tus credenciales; el resto ya está preparado en e
 
 ```bash
 supabase db push      # aplica al remoto enlazado lo que falte
-pnpm db:types         # regenera los tipos DESPUÉS del push
+pnpm db:types         # tipos desde la base local migrada (no depende del push)
 pnpm check:deploy     # tiene que salir en verde ANTES de desplegar las apps
 ```
 
