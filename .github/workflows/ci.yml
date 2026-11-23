@@ -234,7 +234,7 @@ jobs:
       - name: Guard — el token de Supabase es obligatorio
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN: sin él no se puede comparar database.types.ts con la base y el chequeo no puede pasar en verde. Configúralo en el environment `supabase-drift` (Settings > Environments)."
+            echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN: sin él no se puede comparar database.types.ts con la base y el chequeo no puede pasar en verde. Configúralo en el environment supabase-drift (Settings > Environments)."
             exit 1
           fi
       - uses: supabase/setup-cli@v3
