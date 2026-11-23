@@ -1,24 +1,36 @@
 package com.tindivo.customer.feature.catalog.business
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.TindivoCard
+import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoSpacing
+import com.tindivo.customer.R
 
 private val CARD_WIDTH = 164.dp
 private val PHOTO_HEIGHT = 116.dp
@@ -41,7 +53,9 @@ internal fun FeaturedCarousel(
         items(items, key = { it.id }) { item ->
             val modifier = Modifier.width(CARD_WIDTH)
             if (item.orderable && onDishClick != null) {
-                TindivoCard(onClick = { onDishClick(item) }, modifier = modifier) { FeaturedContent(item) }
+                TindivoCard(onClick = { onDishClick(item) }, modifier = modifier) {
+                    FeaturedContent(item, onAdd = { onDishClick(item) })
+                }
             } else {
                 TindivoCard(modifier = modifier) { FeaturedContent(item) }
             }
@@ -50,14 +64,38 @@ internal fun FeaturedCarousel(
 }
 
 @Composable
-private fun FeaturedContent(item: MenuItemUi) {
+private fun FeaturedContent(
+    item: MenuItemUi,
+    onAdd: (() -> Unit)? = null,
+) {
     Column(modifier = if (item.orderable) Modifier else Modifier.alpha(DIMMED_ALPHA)) {
-        DishPhoto(
-            imageUrl = item.imageUrl,
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            markWidth = 48.dp,
-            modifier = Modifier.fillMaxWidth().height(PHOTO_HEIGHT),
-        )
+        Box {
+            DishPhoto(
+                imageUrl = item.imageUrl,
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                markWidth = 48.dp,
+                modifier = Modifier.fillMaxWidth().height(PHOTO_HEIGHT),
+            )
+            // El «+» tiene área de 48 dp (el círculo visible es de 32): abre la ficha, igual que tocar la tarjeta.
+            if (onAdd != null) {
+                IconButton(
+                    onClick = onAdd,
+                    modifier = Modifier.align(Alignment.BottomEnd).size(TindivoSpacing.touchTarget),
+                ) {
+                    Icon(
+                        imageVector = TindivoIcons.Add,
+                        contentDescription = stringResource(R.string.business_featured_add, item.name),
+                        tint = Color.White,
+                        modifier =
+                            Modifier
+                                .size(
+                                    32.dp,
+                                ).background(MaterialTheme.colorScheme.primary, CircleShape)
+                                .padding(6.dp),
+                    )
+                }
+            }
+        }
         Column(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),

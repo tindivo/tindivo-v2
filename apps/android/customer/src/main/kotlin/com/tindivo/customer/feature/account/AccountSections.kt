@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -58,7 +58,7 @@ internal fun initialOf(name: String): String =
 
 /**
  * La cabecera del perfil (tablero «9 · Cuenta»): avatar con la inicial, nombre, teléfono con la píldora «Verificado» y
- * el lápiz de 48 dp para editar el nombre. El correo de Google del tablero no está: la cuenta no lo trae todavía.
+ * el botón «Editar» de 48 dp de alto para cambiar el nombre. El correo de Google del tablero no está: la cuenta no lo trae todavía.
  */
 @Composable
 internal fun ProfileCard(
@@ -91,12 +91,20 @@ internal fun ProfileCard(
                 )
                 PhoneLine(profile)
             }
-            IconButton(onClick = onEditName, modifier = Modifier.size(TindivoSpacing.touchTarget)) {
-                Icon(
-                    imageVector = TindivoIcons.Edit,
-                    contentDescription = stringResource(R.string.account_name_edit),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(ROW_ICON),
+            // «Editar» en texto, no un lápiz solo; para el lector de pantalla sigue diciendo qué se edita.
+            val editDescription = stringResource(R.string.account_name_edit)
+            TextButton(
+                onClick = onEditName,
+                modifier =
+                    Modifier
+                        .heightIn(min = TindivoSpacing.touchTarget)
+                        .semantics { contentDescription = editDescription },
+            ) {
+                Text(
+                    text = stringResource(R.string.account_edit),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TindivoColors.brandText,
                 )
             }
         }
@@ -175,14 +183,11 @@ internal fun AddressesCard(onOpenAddresses: () -> Unit) {
 }
 
 /**
- * Ayuda y legal (CUS-SUP-001/002/003) y cerrar sesión, en una tarjeta con divisores. Todo lo que sale de la app lleva
+ * Ayuda y legal (CUS-SUP-001/002/003), en una tarjeta con divisores. Todo lo que sale de la app lleva
  * la flecha de «abrir fuera».
  */
 @Composable
-internal fun SettingsCard(
-    supportNumber: String,
-    onSignOut: () -> Unit,
-) {
+internal fun SettingsCard(supportNumber: String) {
     val uriHandler = LocalUriHandler.current
     val open: (String) -> Unit = uriHandler::openSafely
     TindivoCard(modifier = Modifier.fillMaxWidth()) {
@@ -206,7 +211,13 @@ internal fun SettingsCard(
         SettingsRow(stringResource(R.string.account_arco), TindivoIcons.Person, external = true) {
             open(arcoRightsLink(supportNumber))
         }
-        Divider()
+    }
+}
+
+/** «Cerrar sesión» como fila propia al final de Cuenta, aparte de la ayuda y lo legal. */
+@Composable
+internal fun SignOutCard(onSignOut: () -> Unit) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
         SettingsRow(
             stringResource(R.string.account_sign_out),
             TindivoIcons.Logout,

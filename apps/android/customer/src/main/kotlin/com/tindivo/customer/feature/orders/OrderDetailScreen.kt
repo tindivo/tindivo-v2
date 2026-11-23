@@ -40,6 +40,7 @@ import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.support.CustomerNameViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
 import com.tindivo.customer.support.orderHelpLink
@@ -59,12 +60,14 @@ internal fun OrderDetailDestination(
     cancelViewModel: CancelOrderViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
     timersViewModel: OrderTimersViewModel = hiltViewModel(),
+    nameViewModel: CustomerNameViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val acceptanceMinutes = timersViewModel.acceptanceMinutes.collectAsStateWithLifecycle().value
     val prepay = prepayViewModel.state.collectAsStateWithLifecycle().value
     val cancel = cancelViewModel.state.collectAsStateWithLifecycle().value
     val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
+    val customerName = nameViewModel.name.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
     // «Entrar con otra cuenta»: al cerrarse la sesión se va a entrar; en cualquier otro cierre, se vuelve atrás.
     var switching by rememberSaveable { mutableStateOf(false) }
@@ -114,6 +117,7 @@ internal fun OrderDetailDestination(
                     ),
             ),
         supportNumber = supportNumber,
+        customerName = customerName,
         onBackToMenu = onBackToMenu,
         acceptanceMinutes = acceptanceMinutes,
         onOpenOrders = onOpenOrders,
@@ -136,6 +140,7 @@ internal fun OrderDetailScreen(
     prepayActions: PrepayActions = PrepayActions(),
     cancel: CancelSection = CancelSection(),
     supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
+    customerName: String? = null,
     onBackToMenu: () -> Unit = {},
     acceptanceMinutes: Int? = null,
     onOpenOrders: () -> Unit = {},
@@ -162,7 +167,7 @@ internal fun OrderDetailScreen(
 
                 is OrderDetailUiState.Loaded -> {
                     val order = state.order
-                    val supportLink = orderHelpLink(supportNumber, order.shortId, order.businessName)
+                    val supportLink = orderHelpLink(supportNumber, order.shortId, order.businessName, customerName)
                     if (order.phase is OrderPhase.Cancelled) {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             OrderTitle(order = order)
@@ -249,7 +254,7 @@ private fun OrderScrollBody(
                 if (order.waitingForBusiness) {
                     AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
                 } else {
-                    OrderHeadlineBlock(headline = order.headline)
+                    OrderHeadlineBlock(headline = order.headline, driver = order.driver)
                 }
                 if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
                     OrderSteps(phase = order.phase, isPickup = order.isPickup)

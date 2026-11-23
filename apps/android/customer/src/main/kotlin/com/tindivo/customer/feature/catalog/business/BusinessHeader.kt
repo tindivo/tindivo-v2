@@ -104,6 +104,17 @@ internal fun BusinessHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        if (!closed) {
+            statusLine(business)?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
         if (closed) {
             Surface(
                 shape = CircleShape,
@@ -122,6 +133,34 @@ internal fun BusinessHeader(
         // Debajo de la hoja con portada queda aire hasta la primera sección, como el tablero.
         if (overlap != null) Box(modifier = Modifier.size(TindivoSpacing.tight))
     }
+}
+
+/**
+ * «Abierto · 25–35 min» bajo el nombre. Solo con lo que la carta ya trae: sin tiempo se omite ese trozo, y un negocio
+ * en modo catálogo no dice «Abierto» (se pide por WhatsApp). La tarifa de delivery no llega en la carta (depende de la
+ * dirección), así que no se muestra.
+ */
+@Composable
+private fun statusLine(business: BusinessDetailUi): String? {
+    val eta = business.etaLabel()?.let { stringResource(R.string.catalog_eta, it.first, it.second) }
+    return statusParts(business, open = stringResource(R.string.catalog_open_now), eta = eta)
+}
+
+/** Une los trozos que existen con « · »; `null` si no hay ninguno. */
+internal fun statusParts(
+    business: BusinessDetailUi,
+    open: String,
+    eta: String?,
+): String? =
+    listOfNotNull(open.takeIf { !business.catalogOnly }, eta.takeIf { !business.catalogOnly })
+        .takeIf { it.isNotEmpty() }
+        ?.joinToString(" · ")
+
+/** El rango de minutos si llegó entero y con sentido; si no, `null`. */
+internal fun BusinessDetailUi.etaLabel(): Pair<Int, Int>? {
+    val min = etaMin ?: return null
+    val max = etaMax ?: return null
+    return if (min in 1..max) min to max else null
 }
 
 /** El logo en un círculo con borde blanco y sombra; sin logo, el isotipo de Tindivo sobre crema. */

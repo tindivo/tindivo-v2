@@ -204,18 +204,27 @@ private fun Failure(
     }
 }
 
-/** El contenido de Cuenta desplaza; entre tarjetas, 24 dp como el tablero. */
+/**
+ * El contenido de Cuenta desplaza; entre tarjetas, 24 dp como el tablero. Toma todo el alto que deja el título
+ * (`weight(1f)`) y desplaza dentro de él: así, en una pantalla ancha o baja, «Borrar mi cuenta» queda al final del
+ * recorrido y se alcanza con el dedo, sin quedar tapado.
+ */
 @Composable
-private fun AccountColumn(content: @Composable ColumnScope.() -> Unit) {
+private fun ColumnScope.AccountColumn(content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()).padding(top = 4.dp, bottom = 24.dp),
+        modifier =
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(top = 4.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(TindivoSpacing.section),
         content = content,
     )
 }
 
 @Composable
-private fun ProfileMissing(
+private fun ColumnScope.ProfileMissing(
     onCompleteProfile: () -> Unit,
     onOpenAddresses: () -> Unit,
     onSignOut: () -> Unit,
@@ -246,14 +255,15 @@ private fun ProfileMissing(
             }
         }
         AddressesCard(onOpenAddresses = onOpenAddresses)
-        SettingsCard(supportNumber = supportNumber, onSignOut = onSignOut)
+        SettingsCard(supportNumber = supportNumber)
+        SignOutCard(onSignOut = onSignOut)
         // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
         AccountFooter(onDeleteAccount = onDeleteAccount, onOpenDiagnostics = onOpenDiagnostics)
     }
 }
 
 @Composable
-private fun Profile(
+private fun ColumnScope.Profile(
     profile: AccountProfileUi,
     onOpenAddresses: () -> Unit,
     onVerifyPhone: () -> Unit,
@@ -286,7 +296,8 @@ private fun Profile(
     AccountColumn {
         ProfileCard(profile = profile, onEditName = { editing = true }, onVerifyPhone = onVerifyPhone)
         AddressesCard(onOpenAddresses = onOpenAddresses)
-        SettingsCard(supportNumber = supportNumber, onSignOut = onSignOut)
+        SettingsCard(supportNumber = supportNumber)
+        SignOutCard(onSignOut = onSignOut)
         AccountFooter(onDeleteAccount = onDeleteAccount, onOpenDiagnostics = onOpenDiagnostics)
     }
 }

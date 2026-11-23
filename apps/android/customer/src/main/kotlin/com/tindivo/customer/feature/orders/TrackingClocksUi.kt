@@ -47,14 +47,17 @@ internal fun AcceptanceWaitBlock(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
-        Text(text = stringResource(R.string.order_wait_status), style = MaterialTheme.typography.bodyLarge)
-        // El plazo completo, como lo aprobó Jesús (CA-TRK-06); la cuenta atrás va aparte.
-        if (acceptanceMinutes != null) {
-            Text(
-                text = stringResource(R.string.order_wait_respond, acceptanceMinutes),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
+        // El plazo completo, como lo aprobó Jesús (CA-TRK-06); la cuenta atrás va aparte. Sin plazo, un subtítulo que no
+        // repite el título y sin cifra inventada.
+        Text(
+            text =
+                if (acceptanceMinutes != null) {
+                    stringResource(R.string.order_wait_respond, acceptanceMinutes)
+                } else {
+                    stringResource(R.string.order_wait_status)
+                },
+            style = MaterialTheme.typography.bodyLarge,
+        )
         when (val clock = acceptanceClockOf(start, acceptanceMinutes, now)) {
             is AcceptanceClock.Running -> {
                 Text(

@@ -92,6 +92,9 @@ data class BusinessDetailUi(
     /** Modo catálogo (`catalog_only`): se pide por WhatsApp, no por la bolsa (CUS-CAT-015). */
     val catalogOnly: Boolean = false,
     val whatsappNumber: String? = null,
+    /** Tiempo estimado en minutos que manda el servidor (rango); `null` si no llegó. */
+    val etaMin: Int? = null,
+    val etaMax: Int? = null,
 ) {
     /** Lo que se pinta, de arriba abajo: «Destacados» primero y luego las secciones de la carta. */
     val sections: List<MenuCategoryUi> get() = listOfNotNull(featured) + categories

@@ -39,7 +39,7 @@ import com.tindivo.customer.R
 
 private val BAR_HEIGHT = 56.dp
 private val MARK_HEIGHT = 28.dp
-private val BADGE_SIZE = 18.dp
+private val BADGE_SIZE = 20.dp
 
 /** Proporción del isotipo bicolor (`ic_tindivo_isotipo`, 158×93). */
 private const val MARK_RATIO = 158f / 93f
@@ -115,9 +115,9 @@ private fun BagButton(
                     Text(
                         text = if (count > BADGE_MAX) "$BADGE_MAX+" else count.toString(),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         // El alto de línea del texto heredado agrandaba la píldora y el círculo del botón la recortaba.
-                        lineHeight = 12.sp,
+                        lineHeight = 13.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }
