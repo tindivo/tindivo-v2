@@ -46,6 +46,9 @@ struct StubCatalog: CatalogRepository {
     var businesses = Script<[BusinessSummary]>([])
     var menus = Script<BusinessMenu>(failing: .network)
     var gate: Gate?
+    /// ¿La puerta también detiene las cartas? Inicio pide la carta de cada negocio por su cuenta y no debe quitarle la
+    /// puerta a la lista.
+    var gatesMenus = true
 
     func listBusinesses() async throws(AppError) -> [BusinessSummary] {
         let result = businesses.next()
@@ -55,52 +58,77 @@ struct StubCatalog: CatalogRepository {
 
     func getBusiness(id: String) async throws(AppError) -> BusinessMenu {
         let result = menus.next()
-        await gate?.wait()
+        if gatesMenus { await gate?.wait() }
         return try result.get()
     }
 }
 
-/// Un reloj que solo avanza cuando la prueba lo dice: `advance` mueve la hora y despierta a quien duerme en `sleep`.
-/// Cuenta las veces que alguien se pone a dormir: `waitForSleep(number:)` deja a la prueba esperar, sin tiempo real,
+/// Un reloj que solo avanza cuando la prueba lo dice. Quien duerme `sleep(duración)` se despierta cuando la hora
+/// manual llega a su plazo (la hora en que se durmió más la duración), y solo entonces: ni antes ni por los tics de
+/// otro. Cancelar la tarea que duerme la despierta con `CancellationError`, como el reloj de verdad.
+///
+/// Cuenta las veces que se durmió, por duración: `waitForSleep(number:of:)` deja a la prueba esperar, sin tiempo real,
 /// a que el bucle que se está probando llegue (otra vez) a dormir, que es cuando ya terminó de reaccionar al último
-/// despertar.
+/// despertar. El aviso «Añadido» (3 s) y el minuto de la carta no se mezclan.
 final class ManualClock: Sendable {
+    private struct Sleeper {
+        let deadline: Date
+        let continuation: CheckedContinuation<Void, any Error>
+    }
+
+    private struct Waiter {
+        let duration: Duration
+        let number: Int
+        let continuation: CheckedContinuation<Void, Never>
+    }
+
     private struct State {
         var date: Date
-        /// Cuántas veces se durmió, por duración: el aviso «Añadido» (3 s) y el bucle de la carta (60 s) no se mezclan.
+        var sleepers: [UUID: Sleeper] = [:]
         var sleeps: [Duration: Int] = [:]
-        var waiters: [(duration: Duration, number: Int, continuation: CheckedContinuation<Void, Never>)] = []
+        var waiters: [Waiter] = []
     }
 
     private let state: OSAllocatedUnfairLock<State>
-    private let ticks: AsyncStream<Void>
-    private let continuation: AsyncStream<Void>.Continuation
 
     init(_ start: Date) {
         state = OSAllocatedUnfairLock(initialState: State(date: start))
-        (ticks, continuation) = AsyncStream.makeStream(of: Void.self)
     }
 
     var clock: AppClock {
         AppClock(
             now: { self.state.withLock { $0.date } },
-            sleep: { duration in
-                self.didStartSleeping(duration)
-                for await _ in self.ticks { return }
-                throw CancellationError()
-            }
+            sleep: { duration in try await self.sleep(duration) }
         )
     }
 
-    private func didStartSleeping(_ duration: Duration) {
-        let ready = state.withLock { state -> [CheckedContinuation<Void, Never>] in
-            state.sleeps[duration, default: 0] += 1
-            let count = state.sleeps[duration, default: 0]
-            let due = state.waiters.filter { $0.duration == duration && $0.number <= count }.map(\.continuation)
-            state.waiters.removeAll { $0.duration == duration && $0.number <= count }
-            return due
+    private func sleep(_ duration: Duration) async throws {
+        let id = UUID()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                let outcome = state.withLock { state -> (cancelled: Bool, due: [CheckedContinuation<Void, Never>]) in
+                    if Task.isCancelled { return (true, []) }
+                    let seconds = Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+                    state.sleepers[id] = Sleeper(
+                        deadline: state.date.addingTimeInterval(seconds), continuation: continuation)
+                    state.sleeps[duration, default: 0] += 1
+                    let count = state.sleeps[duration, default: 0]
+                    let due = state.waiters.filter { $0.duration == duration && $0.number <= count }
+                    state.waiters.removeAll { $0.duration == duration && $0.number <= count }
+                    return (false, due.map(\.continuation))
+                }
+                if outcome.cancelled { continuation.resume(throwing: CancellationError()) }
+                outcome.due.forEach { $0.resume() }
+            }
+        } onCancel: {
+            let sleeper = state.withLock { $0.sleepers.removeValue(forKey: id) }
+            sleeper?.continuation.resume(throwing: CancellationError())
         }
-        ready.forEach { $0.resume() }
+    }
+
+    /// Cuántas veces se ha dormido `duration`.
+    func sleeps(of duration: Duration) -> Int {
+        state.withLock { $0.sleeps[duration, default: 0] }
     }
 
     /// Vuelve cuando alguien se ha puesto a dormir `duration` al menos `number` veces (la 1.ª es la primera vez). Por
@@ -109,7 +137,7 @@ final class ManualClock: Sendable {
         await withCheckedContinuation { continuation in
             let alreadyThere = state.withLock { state -> Bool in
                 if state.sleeps[duration, default: 0] >= number { return true }
-                state.waiters.append((duration, number, continuation))
+                state.waiters.append(Waiter(duration: duration, number: number, continuation: continuation))
                 return false
             }
             if alreadyThere { continuation.resume() }
@@ -117,13 +145,22 @@ final class ManualClock: Sendable {
     }
 
     func advance(by seconds: TimeInterval) {
-        state.withLock { $0.date = $0.date.addingTimeInterval(seconds) }
-        continuation.yield()
+        move { $0.addingTimeInterval(seconds) }
     }
 
     func set(_ new: Date) {
-        state.withLock { $0.date = new }
-        continuation.yield()
+        move { _ in new }
+    }
+
+    /// Cambia la hora y despierta a quien ya cumplió su plazo.
+    private func move(_ change: @Sendable (Date) -> Date) {
+        let due = state.withLock { state -> [Sleeper] in
+            state.date = change(state.date)
+            let ready = state.sleepers.filter { $0.value.deadline <= state.date }
+            ready.keys.forEach { state.sleepers.removeValue(forKey: $0) }
+            return Array(ready.values)
+        }
+        due.forEach { $0.continuation.resume() }
     }
 }
 
