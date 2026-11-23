@@ -332,6 +332,8 @@ internal class AddressFormLocateTest : AddressHarness() {
 
                     override fun isAvailable(): Boolean = true
 
+                    override fun hasPermission(): Boolean = true
+
                     override suspend fun current(): LocationReading {
                         calls++
                         vm.onForegroundChanged(false)

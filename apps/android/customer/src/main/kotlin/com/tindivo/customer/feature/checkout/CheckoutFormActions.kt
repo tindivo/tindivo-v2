@@ -45,6 +45,9 @@ class CheckoutSheetActions(
     val onAddressDeleted: () -> Unit,
     val onPhoneVerified: () -> Unit,
     val onProfileCompleted: () -> Unit,
+    val onGpsRetry: () -> Unit = {},
+    val onGpsPrepay: () -> Unit = {},
+    val onGpsContinue: () -> Unit = {},
 ) {
     companion object {
         fun of(viewModel: CheckoutViewModel) =
@@ -56,6 +59,9 @@ class CheckoutSheetActions(
                 onAddressDeleted = viewModel::onAddressDeleted,
                 onPhoneVerified = viewModel::onPhoneVerified,
                 onProfileCompleted = viewModel::onProfileCompleted,
+                onGpsRetry = viewModel::gpsRetry,
+                onGpsPrepay = viewModel::gpsPrepay,
+                onGpsContinue = viewModel::gpsContinue,
             )
     }
 }

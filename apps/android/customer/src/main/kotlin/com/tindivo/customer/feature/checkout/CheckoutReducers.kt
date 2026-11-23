@@ -127,6 +127,7 @@ internal fun CheckoutUiState.withLoaded(
         name = data.profile.fullName.take(MAX_NAME_LENGTH),
         phone = data.profile.phone,
         phoneVerified = data.profile.phoneVerified && data.profile.phone != null,
+        previousPurchase = data.previousPurchase,
         lines = cart.toBagLines(),
         message = null,
     )

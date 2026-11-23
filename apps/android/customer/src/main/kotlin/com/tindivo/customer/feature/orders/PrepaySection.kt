@@ -210,6 +210,7 @@ private fun SendFailure(
             SendProblem.Offline -> stringResource(R.string.prepay_error_offline)
             SendProblem.Unreadable -> stringResource(R.string.prepay_error_unreadable)
             SendProblem.TooLarge -> stringResource(R.string.prepay_error_too_large)
+            SendProblem.HeicUnsupported -> stringResource(R.string.prepay_error_heic)
             is SendProblem.Rejected -> problem.detail ?: stringResource(R.string.prepay_error_generic)
             SendProblem.Generic -> stringResource(R.string.prepay_error_generic)
         }
@@ -226,7 +227,7 @@ private fun SendFailure(
             }
         }
 
-        SendProblem.Unreadable, SendProblem.TooLarge -> {
+        SendProblem.Unreadable, SendProblem.TooLarge, SendProblem.HeicUnsupported -> {
             OutlinedButton(onClick = onPick, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(text = stringResource(R.string.prepay_pick_other))
             }
