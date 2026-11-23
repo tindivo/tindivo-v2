@@ -44,6 +44,9 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 
 - 2026-10-12 · Bloquea: publicar las apps (ya no bloquea crear los proyectos) · Detectó: Claude
 - **2026-11-22, Jesús:** sin rastreador por ahora, igual que Android; se retoma antes de publicar (CLI-12, OPS-4). Ya no bloquea crear los proyectos.
+- **2026-11-22, Jesús:** en iOS se decide antes de la primera build de TestFlight con probadores externos, no al
+  publicar. La elección cambia el manifiesto de privacidad (`PrivacyInfo.xcprivacy`): conviene cerrarla junto con su
+  auditoría de Codex. Android tampoco tiene rastreador, así que no hay uno que copiar.
 - **Contexto**: el repo no tiene hoy ningún rastreador de errores (no aparece Sentry ni Crashlytics en el código ni en el canon).
 - **Alternativas**: (a) Firebase Crashlytics, en el mismo proyecto de Firebase que el push; (b) Sentry, que también cubre web y API.
 - **Recomendación**: (a) para las apps (sin coste según Firebase; verificar las condiciones vigentes). La API y las web siguen sin rastreador hasta que se decida.
