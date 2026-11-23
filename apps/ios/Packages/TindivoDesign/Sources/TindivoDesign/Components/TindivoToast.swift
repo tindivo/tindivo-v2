@@ -22,7 +22,10 @@ private struct ToastModifier: ViewModifier {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
                         .padding(.vertical, TindivoTokens.Spacing.spaceInner)
-                        .background(Color.tindivo.secondary, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
+                        .background(
+                            Color.tindivo.secondary,
+                            in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField)
+                        )
                         .padding(TindivoTokens.Spacing.spaceScreen)
                         // Con «Reducir movimiento» el aviso aparece sin deslizarse.
                         .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))

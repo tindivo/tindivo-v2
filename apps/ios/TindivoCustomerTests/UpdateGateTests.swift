@@ -13,7 +13,8 @@ struct UpdateScreenTests {
 
     @Test("CLI-4: con el id de la App Store el enlace es el de la ficha")
     func storeURL() {
-        #expect(AppConfig.storeURL(appStoreId: "1234567890")?.absoluteString == "https://apps.apple.com/app/id1234567890")
+        #expect(
+            AppConfig.storeURL(appStoreId: "1234567890")?.absoluteString == "https://apps.apple.com/app/id1234567890")
     }
 
     @Test("CLI-4: un id que no es numérico no arma enlace")
@@ -42,9 +43,12 @@ final class UpgradeRequiredProtocol: URLProtocol, @unchecked Sendable {
 @MainActor
 @Suite("Cableado del 426 (CLI-4)")
 struct UpgradeWiringTests {
-    @Test("CLI-4: un 426 del catálogo, con los repositorios armados como en AppEnvironment.live, deja el servicio en .upgradeRequired", .timeLimit(.minutes(1)))
+    @Test(
+        "CLI-4: un 426 del catálogo, con los repositorios armados como en AppEnvironment.live, deja el servicio en .upgradeRequired",
+        .timeLimit(.minutes(1)))
     func catalogUpgradeReachesTheService() async throws {
-        let environment = AppEnvironment.live(config: .fromBundle(.main), protocolClasses: [UpgradeRequiredProtocol.self])
+        let environment = AppEnvironment.live(
+            config: .fromBundle(.main), protocolClasses: [UpgradeRequiredProtocol.self])
         let service = try #require(environment.configService as? LiveConfigService)
         #expect(service.state == .unknown)
         await #expect(throws: AppError.upgradeRequired(minVersion: "2.0.0")) {

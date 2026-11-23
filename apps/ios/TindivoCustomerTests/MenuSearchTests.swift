@@ -20,11 +20,13 @@ struct MenuSearchTests {
     /// Carta de juguete con la forma de la de Pizza Priamo.
     private var carta: [MenuCategory] {
         [
-            category("Pizzas", [
-                item("Pizza Americana", "Queso mozzarella, Jamón."),
-                item("Pizza Vegetariana", "Queso mozzarella, Cebolla, Pimentón, Champiñón."),
-                item("Pizza Hawaiana", "Queso mozzarella, Jamón, Piña."),
-            ]),
+            category(
+                "Pizzas",
+                [
+                    item("Pizza Americana", "Queso mozzarella, Jamón."),
+                    item("Pizza Vegetariana", "Queso mozzarella, Cebolla, Pimentón, Champiñón."),
+                    item("Pizza Hawaiana", "Queso mozzarella, Jamón, Piña."),
+                ]),
             category("Sánguche de pollo", [item("Sánguche clásico", "Pollo deshilachado.")]),
             category("Bebidas", [item("Inca Kola 1L"), item("Chicha morada", "Jarra para acompañar la pizza.")]),
         ]
@@ -100,8 +102,9 @@ struct MenuSearchTests {
 
     @Test("pone delante lo que casa en el nombre, no en la descripción")
     func nameFirst() {
-        #expect(names(searchMenu(carta, query: "pizza"))
-            == ["Pizza Americana", "Pizza Vegetariana", "Pizza Hawaiana", "Chicha morada"])
+        #expect(
+            names(searchMenu(carta, query: "pizza"))
+                == ["Pizza Americana", "Pizza Vegetariana", "Pizza Hawaiana", "Chicha morada"])
     }
 
     @Test("prioriza el prefijo de palabra sobre la aparición suelta")

@@ -46,7 +46,8 @@ struct CartView: View {
             Button("Cancelar", role: .cancel) {}
             Button("Vaciar", role: .destructive) { Task { await model.clear() } }
         }
-        .fullScreenCover(item: Binding(get: { model.editing }, set: { if $0 == nil { model.finishEditing() } })) { target in
+        .fullScreenCover(item: Binding(get: { model.editing }, set: { if $0 == nil { model.finishEditing() } })) {
+            target in
             DishView(
                 model: model.dishModel(for: target),
                 onClose: { model.finishEditing() },
@@ -73,9 +74,12 @@ struct CartView: View {
     /// «Quitaste "[plato]"» · «Deshacer», con una raya que se vacía en el plazo (con «reducir movimiento» no hay raya).
     @ViewBuilder private var undoBar: some View {
         if let offer = model.undoOffer {
-            UndoBar(offer: offer, window: model.undoWindow, expires: model.undoAutoDismisses, onUndo: { Task { await model.undo() } })
-                .id(offer.token)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+            UndoBar(
+                offer: offer, window: model.undoWindow, expires: model.undoAutoDismisses,
+                onUndo: { Task { await model.undo() } }
+            )
+            .id(offer.token)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
@@ -115,15 +119,20 @@ struct CartView: View {
                 ForEach(filled.lines, id: \.signatureKey) { line in
                     CartLineView(
                         line: line,
-                        onChange: { delta in Task { await model.changeQuantity(signature: line.signature, by: delta) } },
+                        onChange: { delta in Task { await model.changeQuantity(signature: line.signature, by: delta) }
+                        },
                         onEdit: { Task { await model.startEditing(signature: line.signature) } },
                         onRemove: { Task { await model.remove(signature: line.signature) } }
                     )
                     Divider().overlay(Color.tindivo.outlineVariant)
                 }
                 ViewThatFits(in: .horizontal) {
-                    HStack { subtotalLabel; Spacer(); subtotalAmount(filled.subtotal) }
-                    VStack(alignment: .leading, spacing: 2) { subtotalLabel; subtotalAmount(filled.subtotal) }
+                    HStack {
+                        subtotalLabel; Spacer(); subtotalAmount(filled.subtotal)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        subtotalLabel; subtotalAmount(filled.subtotal)
+                    }
                 }
                 .foregroundStyle(Color.tindivo.ink)
                 .accessibilityElement(children: .combine)
@@ -198,8 +207,12 @@ private struct CartLineView: View {
                     .accessibilityIdentifier("cart.issue")
             }
             ViewThatFits(in: .horizontal) {
-                HStack { stepper; Spacer(); actions }
-                VStack(alignment: .leading, spacing: 4) { stepper; actions }
+                HStack {
+                    stepper; Spacer(); actions
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    stepper; actions
+                }
             }
         }
         .accessibilityElement(children: .contain)
@@ -234,7 +247,6 @@ private struct CartLineView: View {
         }
     }
 }
-
 
 /// El aviso de «Deshacer». Cada quitada es otra vista (`.id(token)`): la raya y el foco de VoiceOver arrancan de nuevo.
 private struct UndoBar: View {
@@ -313,7 +325,9 @@ private struct UndoBar: View {
 
 #Preview("Bolsa vacía") {
     NavigationStack {
-        CartView(model: CartScreenModel(store: FileCartStore.preview(), catalog: PreviewCatalog(), clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
+        CartView(
+            model: CartScreenModel(store: FileCartStore.preview(), catalog: PreviewCatalog(), clock: .live),
+            onAddMore: { _ in }, onSeeBusinesses: {})
     }
     .onAppear { TindivoFonts.register() }
 }
@@ -323,7 +337,9 @@ private struct CartPreviewHost: View {
 
     var body: some View {
         NavigationStack {
-            CartView(model: CartScreenModel(store: store, catalog: PreviewCatalog(), clock: .live), onAddMore: { _ in }, onSeeBusinesses: {})
+            CartView(
+                model: CartScreenModel(store: store, catalog: PreviewCatalog(), clock: .live), onAddMore: { _ in },
+                onSeeBusinesses: {})
         }
         .task {
             let line = CartLine(

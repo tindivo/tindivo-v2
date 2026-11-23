@@ -20,7 +20,9 @@ struct DishSelectionTests {
     }
 
     private var size: DishGroup { group("size", "single", required: true, [option("small"), option("large", "4.00")]) }
-    private var sauce: DishGroup { group("sauce", "single", required: false, [option("ajo"), option("rocoto", "1.00")]) }
+    private var sauce: DishGroup {
+        group("sauce", "single", required: false, [option("ajo"), option("rocoto", "1.00")])
+    }
     private var extras: DishGroup {
         group(
             "extras", "multi", required: false, max: 2,
@@ -107,7 +109,8 @@ struct DishSelectionTests {
     func progress() {
         var state = full
         #expect(state.progress(of: size) == GroupProgress(required: true, done: false, single: true, count: 0, max: 1))
-        #expect(state.progress(of: extras) == GroupProgress(required: false, done: false, single: false, count: 0, max: 2))
+        #expect(
+            state.progress(of: extras) == GroupProgress(required: false, done: false, single: false, count: 0, max: 2))
         state = tap(tap(state, size, "small"), extras, "queso")
         #expect(state.progress(of: size) == GroupProgress(required: true, done: true, single: true, count: 1, max: 1))
         #expect(state.progress(of: extras).count == 1)
@@ -144,8 +147,9 @@ struct DishSelectionTests {
         #expect(state.optionPrice(of: size.options[0], in: size) == .included)
         #expect(state.optionPrice(of: size.options[1], in: size) == .delta("S/ 4.00"))
         let total = group("t", "single", required: true, display: "total", [option("grande", "2.50")])
-        #expect(DishSelection(dish: dish([total])).optionPrice(of: total.options[0], in: total)
-            == .total(formatSoles(dec("20.50"))))
+        #expect(
+            DishSelection(dish: dish([total])).optionPrice(of: total.options[0], in: total)
+                == .total(formatSoles(dec("20.50"))))
         #expect(OptionPrice.included.displayText == "Incluido")
         #expect(OptionPrice.delta("S/ 4.00").displayText == "+S/ 4.00")
     }
@@ -179,7 +183,8 @@ struct DishSelectionTests {
 
     @Test("con 20 opciones elegidas se puede cambiar la de un grupo single y siguen siendo 20")
     func swapAtTheCeiling() throws {
-        let many = group("many", "multi", required: false, (0..<(CartLimits.maxModifiers - 1)).map { option("o\($0)", "1.00") })
+        let many = group(
+            "many", "multi", required: false, (0..<(CartLimits.maxModifiers - 1)).map { option("o\($0)", "1.00") })
         let one = group("one", "single", required: true, [option("a", "2.00"), option("b", "3.00")])
         var state = tap(DishSelection(dish: dish([many, one])), one, "a")
         for option in many.options { state = state.toggling(option, in: many) }

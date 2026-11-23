@@ -53,7 +53,8 @@ enum CartValidation {
         if !item.window.isOpen(at: now) { issues.append(.outOfWindow(returns: item.window.describe())) }
 
         let options = Dictionary(
-            item.dish.groups.flatMap(\.options).map { ($0.id.lowercased(), $0) }, uniquingKeysWith: { first, _ in first }
+            item.dish.groups.flatMap(\.options).map { ($0.id.lowercased(), $0) },
+            uniquingKeysWith: { first, _ in first }
         )
         var expectedUnit = item.basePrice
         var chosenIds: [String] = []

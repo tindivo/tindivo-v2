@@ -9,7 +9,9 @@ struct CartBarSummary: Sendable, Equatable {
 /// La barra de la bolsa de `businessId`, o `nil` si no hay bolsa o es de otro negocio. El subtotal es el de la carta:
 /// se enseña, nunca se envía como importe.
 func cartBar(for cart: Cart?, businessId: String) -> CartBarSummary? {
-    guard let cart, !cart.isEmpty, cart.businessId.caseInsensitiveCompare(businessId) == .orderedSame else { return nil }
+    guard let cart, !cart.isEmpty, cart.businessId.caseInsensitiveCompare(businessId) == .orderedSame else {
+        return nil
+    }
     return CartBarSummary(count: cart.count, subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal))
 }
 

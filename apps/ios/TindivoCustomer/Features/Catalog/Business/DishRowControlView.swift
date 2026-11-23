@@ -24,7 +24,8 @@ struct DishRowControlView: View {
             TindivoStepper(
                 quantity: quantity, label: String(localized: "Cantidad de \(itemName)"), identifier: "menu",
                 canDecrease: true, canIncrease: canIncrease, decreaseRemoves: quantity == 1,
-                decreaseLabel: quantity == 1 ? String(localized: "Quitar \(itemName)") : String(localized: "Una menos de \(itemName)"),
+                decreaseLabel: quantity == 1
+                    ? String(localized: "Quitar \(itemName)") : String(localized: "Una menos de \(itemName)"),
                 increaseLabel: String(localized: "Una más de \(itemName)"),
                 onDecrease: action.onDecrease, onIncrease: action.onAdd
             )
@@ -52,7 +53,8 @@ struct DishRowControlView: View {
             [DishRowControl.add, .stepper(quantity: 2, canIncrease: true), .choose, .inBag(quantity: 2)], id: \.self
         ) { control in
             DishRowControlView(
-                action: DishRowAction(control: control, onAdd: {}, onDecrease: {}, onChoose: {}), itemName: "1/4 de pollo"
+                action: DishRowAction(control: control, onAdd: {}, onDecrease: {}, onChoose: {}),
+                itemName: "1/4 de pollo"
             )
         }
     }

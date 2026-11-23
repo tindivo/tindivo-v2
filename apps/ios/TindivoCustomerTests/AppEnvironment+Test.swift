@@ -12,7 +12,8 @@ extension AppEnvironment {
         configService: (any ConfigService)? = nil,
         catalog: any CatalogRepository = UnusedCatalogRepository(),
         cartStore: any CartStore = FileCartStore(
-            fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/cart.json")
+            fileURL: FileManager.default.temporaryDirectory.appending(
+                path: "tindivo-test-\(UUID().uuidString)/cart.json")
         ),
         clock: AppClock = .live
     ) -> AppEnvironment {

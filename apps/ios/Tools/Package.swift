@@ -8,7 +8,7 @@ let package = Package(
     name: "TindivoTools",
     platforms: [.macOS(.v14)],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.14.4"),
+        .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.14.4")
     ],
     targets: []
 )

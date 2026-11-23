@@ -117,7 +117,11 @@ final class DishScreenModel {
         case let .add(total):
             isEditing ? String(localized: "Guardar cambios · \(total)") : String(localized: "Agregar · \(total)")
         case .complete:
-            if let group = firstMissingGroup { String(localized: "Elige: \(group.name)") } else { String(localized: "Revisa tus opciones") }
+            if let group = firstMissingGroup {
+                String(localized: "Elige: \(group.name)")
+            } else {
+                String(localized: "Revisa tus opciones")
+            }
         }
     }
 
@@ -146,7 +150,10 @@ final class DishScreenModel {
     /// El contador de la nota: «12/140» a la vista y «12 de 140 caracteres» para VoiceOver.
     var noteCounter: (text: String, spoken: String) {
         let used = selection.note.utf16.count
-        return ("\(used)/\(CartLimits.maxNoteLength)", String(localized: "\(used) de \(CartLimits.maxNoteLength) caracteres"))
+        return (
+            "\(used)/\(CartLimits.maxNoteLength)",
+            String(localized: "\(used) de \(CartLimits.maxNoteLength) caracteres")
+        )
     }
 
     /// Lo que VoiceOver anuncia al llevar la vista a un grupo («Falta elegir: Guarnición 2»).

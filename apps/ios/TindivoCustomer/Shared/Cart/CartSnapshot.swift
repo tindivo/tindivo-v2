@@ -44,9 +44,11 @@ private func rejectUnknownKeys<Key: CodingKey & CaseIterable>(_ decoder: any Dec
     let present = try decoder.container(keyedBy: AnyKey.self).allKeys
     let allowed = Set(Key.allCases.map(\.stringValue))
     if let extra = present.first(where: { !allowed.contains($0.stringValue) }) {
-        throw DecodingError.dataCorrupted(.init(
-            codingPath: decoder.codingPath, debugDescription: "Clave desconocida en la bolsa guardada: \(extra.stringValue)"
-        ))
+        throw DecodingError.dataCorrupted(
+            .init(
+                codingPath: decoder.codingPath,
+                debugDescription: "Clave desconocida en la bolsa guardada: \(extra.stringValue)"
+            ))
     }
 }
 
@@ -143,8 +145,9 @@ extension Cart {
     /// del pedido, una opción repetida en una línea, o dos líneas con la misma firma descartan la bolsa entera.
     /// Nunca se arregla a medias: lo que se enseñaría podría no ser lo que la persona eligió.
     init?(snapshot: CartSnapshot) {
-        guard snapshot.version == cartSnapshotVersion, !snapshot.businessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !snapshot.lines.isEmpty, snapshot.lines.count <= CartLimits.maxLines
+        guard snapshot.version == cartSnapshotVersion,
+            !snapshot.businessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            !snapshot.lines.isEmpty, snapshot.lines.count <= CartLimits.maxLines
         else { return nil }
         // Un método que esta versión no conoce no borra la bolsa: se lee como delivery, que es lo que se elige en el checkout.
         let method = DeliveryMethod(rawValue: snapshot.method) ?? .delivery
@@ -161,19 +164,20 @@ extension Cart {
 private extension CartLine {
     init?(snapshot: CartLineSnapshot) {
         guard (1...CartLimits.maxQuantity).contains(snapshot.quantity),
-              snapshot.modifiers.count <= CartLimits.maxModifiers,
-              (snapshot.note?.utf16.count ?? 0) <= CartLimits.maxNoteLength,
-              // Una opción repetida es una selección que el pedido rechaza (`checkModifierSelection`, 0275): no se deduplica.
-              Set(snapshot.modifiers.map { $0.optionId.lowercased() }).count == snapshot.modifiers.count,
-              let base = parseMenuPrice(snapshot.basePrice)
+            snapshot.modifiers.count <= CartLimits.maxModifiers,
+            (snapshot.note?.utf16.count ?? 0) <= CartLimits.maxNoteLength,
+            // Una opción repetida es una selección que el pedido rechaza (`checkModifierSelection`, 0275): no se deduplica.
+            Set(snapshot.modifiers.map { $0.optionId.lowercased() }).count == snapshot.modifiers.count,
+            let base = parseMenuPrice(snapshot.basePrice)
         else { return nil }
         var modifiers: [CartModifier] = []
         for modifier in snapshot.modifiers {
             guard let price = parseMenuPrice(modifier.price) else { return nil }
-            modifiers.append(CartModifier(
-                optionId: modifier.optionId, groupName: modifier.groupName, optionName: modifier.optionName,
-                price: price
-            ))
+            modifiers.append(
+                CartModifier(
+                    optionId: modifier.optionId, groupName: modifier.groupName, optionName: modifier.optionName,
+                    price: price
+                ))
         }
         self.init(
             itemId: snapshot.itemId, name: snapshot.name, basePrice: base, modifiers: modifiers,

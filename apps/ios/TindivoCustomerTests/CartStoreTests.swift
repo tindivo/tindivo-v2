@@ -14,7 +14,9 @@ struct CartStoreTests {
     private func line(
         _ itemId: String = "plato", price: String = "12.50", quantity: Int = 1, modifiers: [CartModifier] = []
     ) -> CartLine {
-        CartLine(itemId: itemId, name: "Lomo", basePrice: dec(price), modifiers: modifiers, note: nil, quantity: quantity, imageURL: nil)
+        CartLine(
+            itemId: itemId, name: "Lomo", basePrice: dec(price), modifiers: modifiers, note: nil, quantity: quantity,
+            imageURL: nil)
     }
 
     @Test("sin nada guardado no hay bolsa")
@@ -106,7 +108,8 @@ struct CartStoreTests {
     func otherVersion() async throws {
         let (store, file) = makeStore()
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let json = "{\"version\":2,\"businessId\":\"n\",\"businessName\":\"N\",\"lines\":[{\"itemId\":\"a\",\"name\":\"A\",\"basePrice\":\"1.00\",\"modifiers\":[],\"note\":null,\"quantity\":1,\"imageURL\":null}]}"
+        let json =
+            "{\"version\":2,\"businessId\":\"n\",\"businessName\":\"N\",\"lines\":[{\"itemId\":\"a\",\"name\":\"A\",\"basePrice\":\"1.00\",\"modifiers\":[],\"note\":null,\"quantity\":1,\"imageURL\":null}]}"
         try Data(json.utf8).write(to: file)
         #expect(await store.current() == nil)
     }
@@ -115,7 +118,8 @@ struct CartStoreTests {
     func invalidSaved() async throws {
         let (store, file) = makeStore()
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let json = "{\"version\":1,\"businessId\":\"n\",\"businessName\":\"N\",\"lines\":[{\"itemId\":\"a\",\"name\":\"A\",\"basePrice\":\"1.005\",\"modifiers\":[],\"note\":null,\"quantity\":1,\"imageURL\":null}]}"
+        let json =
+            "{\"version\":1,\"businessId\":\"n\",\"businessName\":\"N\",\"lines\":[{\"itemId\":\"a\",\"name\":\"A\",\"basePrice\":\"1.005\",\"modifiers\":[],\"note\":null,\"quantity\":1,\"imageURL\":null}]}"
         try Data(json.utf8).write(to: file)
         #expect(await store.current() == nil)
         _ = try await store.add(businessId: "m", businessName: "Chifa", line: line())
@@ -150,8 +154,11 @@ struct CartStoreTests {
         let queso = CartModifierSnapshot(optionId: "queso", groupName: "Extras", optionName: "Queso", price: "2.50")
         var upper = queso
         upper.optionId = "QUESO"
-        let good = CartLineSnapshot(itemId: "a", name: "Lomo", basePrice: "10.00", modifiers: [], note: nil, quantity: 1, imageURL: nil)
-        let bad = CartLineSnapshot(itemId: "b", name: "Lomo", basePrice: "10.00", modifiers: [queso, upper], note: nil, quantity: 1, imageURL: nil)
+        let good = CartLineSnapshot(
+            itemId: "a", name: "Lomo", basePrice: "10.00", modifiers: [], note: nil, quantity: 1, imageURL: nil)
+        let bad = CartLineSnapshot(
+            itemId: "b", name: "Lomo", basePrice: "10.00", modifiers: [queso, upper], note: nil, quantity: 1,
+            imageURL: nil)
         let snapshot = CartSnapshot(businessId: "n", businessName: "Pollería", lines: [good, bad])
         try CartSnapshotCodec.encode(snapshot).write(to: file)
         #expect(await store.current() == nil)
@@ -241,7 +248,9 @@ struct CartStoreTests {
     @Test("remove devuelve la línea y su sitio, y restore la devuelve a él")
     func removeAndRestore() async throws {
         let (store, _) = makeStore()
-        for id in ["a", "b", "c"] { _ = try await store.add(businessId: "n", businessName: "Pollería", line: line(id, quantity: 2)) }
+        for id in ["a", "b", "c"] {
+            _ = try await store.add(businessId: "n", businessName: "Pollería", line: line(id, quantity: 2))
+        }
         let removed = try #require(try await store.remove(signature: line("b").signature))
         #expect(removed.index == 1)
         #expect(removed.wasLast == false)
@@ -302,11 +311,15 @@ struct CartStoreTests {
         _ = try await store.add(businessId: "n", businessName: "Pollería", line: a)
         _ = try await store.add(businessId: "n", businessName: "Pollería", line: b)
         // En su sitio: otra nota, misma posición.
-        let noted = CartLine(itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: "sin ají", quantity: 4, imageURL: nil)
+        let noted = CartLine(
+            itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: "sin ají", quantity: 4,
+            imageURL: nil)
         #expect(try await store.replaceLine(signature: a.signature, with: noted) == .replaced(capped: false))
         #expect(await store.current()?.lines.map(\.note) == ["sin ají", nil])
         // Fusión: la de «b» pasa a ser «a con sin ají»: 4 + 30 = 34, y la línea queda en el sitio de la otra.
-        let merged = CartLine(itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: "sin ají", quantity: 30, imageURL: nil)
+        let merged = CartLine(
+            itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: "sin ají", quantity: 30,
+            imageURL: nil)
         #expect(try await store.replaceLine(signature: b.signature, with: merged) == .replaced(capped: false))
         #expect(await store.current()?.lines.map(\.quantity) == [34])
         // Una línea que ya no está no se toca.
@@ -320,7 +333,8 @@ struct CartStoreTests {
         let b = line("b", quantity: 40)
         _ = try await store.add(businessId: "n", businessName: "Pollería", line: a)
         _ = try await store.add(businessId: "n", businessName: "Pollería", line: b)
-        let asA = CartLine(itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: nil, quantity: 40, imageURL: nil)
+        let asA = CartLine(
+            itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: nil, quantity: 40, imageURL: nil)
         #expect(try await store.replaceLine(signature: b.signature, with: asA) == .replaced(capped: true))
         #expect(await store.current()?.lines.map(\.quantity) == [50])
     }

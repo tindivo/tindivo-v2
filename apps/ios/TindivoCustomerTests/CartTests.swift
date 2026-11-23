@@ -31,8 +31,12 @@ struct CartTests {
     @Test("el subtotal es exacto en céntimos sin pasar por Double")
     func exactSubtotal() {
         // 0.10 + 0.20 en Double da 0.30000000000000004: aquí tiene que dar 0.30 exacto.
-        #expect(Cart(businessId: "n", businessName: "Negocio", lines: [line("a", price: "0.10"), line("b", price: "0.20")]).subtotal == dec("0.30"))
-        let many = Cart(businessId: "n", businessName: "Negocio", lines: (0..<3).map { line("x\($0)", price: "33.33", quantity: 3) })
+        #expect(
+            Cart(businessId: "n", businessName: "Negocio", lines: [line("a", price: "0.10"), line("b", price: "0.20")])
+                .subtotal == dec("0.30"))
+        let many = Cart(
+            businessId: "n", businessName: "Negocio", lines: (0..<3).map { line("x\($0)", price: "33.33", quantity: 3) }
+        )
         #expect(many.subtotal == dec("299.97"))
     }
 
@@ -47,7 +51,9 @@ struct CartTests {
     @Test("la misma firma suma cantidades y se queda con el precio más reciente")
     func mergesSameSignature() throws {
         let first = try added(addToCart(nil, businessId: "n", businessName: "Negocio", line: line(quantity: 2))).cart
-        let second = try added(addToCart(first, businessId: "n", businessName: "Negocio", line: line(price: "13.00", quantity: 3))).cart
+        let second = try added(
+            addToCart(first, businessId: "n", businessName: "Negocio", line: line(price: "13.00", quantity: 3))
+        ).cart
         #expect(second.lines.count == 1)
         #expect(second.lines.first?.quantity == 5)
         #expect(second.lines.first?.basePrice == dec("13.00"))
@@ -65,7 +71,9 @@ struct CartTests {
     @Test("otra nota u otras opciones son otra línea")
     func otherNote() throws {
         let cart = try added(addToCart(nil, businessId: "n", businessName: "Negocio", line: line())).cart
-        let withNote = try added(addToCart(cart, businessId: "n", businessName: "Negocio", line: line(note: "bien cocido"))).cart
+        let withNote = try added(
+            addToCart(cart, businessId: "n", businessName: "Negocio", line: line(note: "bien cocido"))
+        ).cart
         #expect(withNote.lines.count == 2)
     }
 
@@ -81,7 +89,9 @@ struct CartTests {
     @Test("un plato de otro negocio no toca la bolsa; replacedWith empieza una nueva")
     func otherBusiness() throws {
         let cart = try added(addToCart(nil, businessId: "n1", businessName: "Pollería", line: line())).cart
-        #expect(try addToCart(cart, businessId: "n2", businessName: "Chifa", line: line()) == .otherBusiness(currentBusinessName: "Pollería"))
+        #expect(
+            try addToCart(cart, businessId: "n2", businessName: "Chifa", line: line())
+                == .otherBusiness(currentBusinessName: "Pollería"))
         let fresh = try replacedWith(businessId: "n2", businessName: "Chifa", line: line("arroz"))
         #expect(fresh.businessId == "n2")
         #expect(fresh.lines.map(\.itemId) == ["arroz"])
@@ -91,7 +101,8 @@ struct CartTests {
     func caseInsensitiveBusiness() throws {
         let id = "abcdefab-1234-4000-8000-abcdef123456"
         let cart = try added(addToCart(nil, businessId: id, businessName: "Negocio", line: line())).cart
-        guard case .added = try addToCart(cart, businessId: id.uppercased(), businessName: "Negocio", line: line()) else {
+        guard case .added = try addToCart(cart, businessId: id.uppercased(), businessName: "Negocio", line: line())
+        else {
             Issue.record("era el mismo negocio")
             return
         }
@@ -100,7 +111,8 @@ struct CartTests {
     @Test("una bolsa vacía acepta cualquier negocio")
     func emptyAcceptsAny() throws {
         let empty = Cart(businessId: "n1", businessName: "Pollería", lines: [])
-        #expect(try added(addToCart(empty, businessId: "n2", businessName: "Chifa", line: line())).cart.businessId == "n2")
+        #expect(
+            try added(addToCart(empty, businessId: "n2", businessName: "Chifa", line: line())).cart.businessId == "n2")
     }
 
     @Test("la cantidad se mantiene entre 1 y 50 y quitar la línea la borra")
@@ -135,7 +147,8 @@ struct CartTests {
 
     @Test("con 50 platos distintos no entra otro y la bolsa no cambia, pero el mismo plato sí suma")
     func fullCart() throws {
-        let full = Cart(businessId: "n", businessName: "Negocio", lines: (0..<CartLimits.maxLines).map { line("p\($0)") })
+        let full = Cart(
+            businessId: "n", businessName: "Negocio", lines: (0..<CartLimits.maxLines).map { line("p\($0)") })
         #expect(try addToCart(full, businessId: "n", businessName: "Negocio", line: line("otro")) == .full)
         let merged = try added(addToCart(full, businessId: "n", businessName: "Negocio", line: line("p0")))
         #expect(merged.cart.lines.count == CartLimits.maxLines)
@@ -165,8 +178,10 @@ struct CartTests {
     @Test("la huella ordena por unidades UTF-16: un carácter fuera del plano básico va antes que U+FFFF")
     func fingerprintSortsUTF16() {
         // En UTF-16 «😀» (D83D…) < «\u{FF5E}»; por escalares Unicode sería al revés.
-        let emoji = Cart(businessId: "n", businessName: "N", lines: [line("a", note: "\u{1F600}"), line("a", note: "\u{FF5E}")])
-        let reversed = Cart(businessId: "n", businessName: "N", lines: [line("a", note: "\u{FF5E}"), line("a", note: "\u{1F600}")])
+        let emoji = Cart(
+            businessId: "n", businessName: "N", lines: [line("a", note: "\u{1F600}"), line("a", note: "\u{FF5E}")])
+        let reversed = Cart(
+            businessId: "n", businessName: "N", lines: [line("a", note: "\u{FF5E}"), line("a", note: "\u{1F600}")])
         #expect(Array(emoji.fingerprint().utf16) == Array(reversed.fingerprint().utf16))
         #expect(emoji.fingerprint().hasPrefix("n#a||"))
         #expect(emoji.fingerprint().unicodeScalars.dropFirst(5).first == "\u{1F600}")
@@ -175,7 +190,8 @@ struct CartTests {
     @Test("la huella no depende del orden ni de los precios")
     func fingerprint() {
         let a = Cart(businessId: "ABC", businessName: "N", lines: [line("a"), line("b", quantity: 2)])
-        let b = Cart(businessId: "abc", businessName: "Otro nombre", lines: [line("b", price: "99.00", quantity: 2), line("a")])
+        let b = Cart(
+            businessId: "abc", businessName: "Otro nombre", lines: [line("b", price: "99.00", quantity: 2), line("a")])
         #expect(a.fingerprint() == b.fingerprint())
         #expect(a.fingerprint() != Cart(businessId: "abc", businessName: "N", lines: [line("a")]).fingerprint())
     }

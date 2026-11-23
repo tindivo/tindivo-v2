@@ -139,7 +139,8 @@ struct Cart: Sendable, Equatable {
         let key = Array(signature.utf16)
         guard let index = lines.firstIndex(where: { $0.signatureKey == key }) else { return nil }
         var next = lines
-        guard let other = next.indices.first(where: { $0 != index && next[$0].signatureKey == line.signatureKey }) else {
+        guard let other = next.indices.first(where: { $0 != index && next[$0].signatureKey == line.signatureKey })
+        else {
             next[index] = line
             return (with(lines: next), false)
         }
@@ -169,7 +170,8 @@ struct Cart: Sendable, Equatable {
     /// La huella de la bolsa: negocio y, por plato, su firma y su cantidad (sin importar el orden). Los precios no
     /// entran: el servidor cobra con los suyos.
     func fingerprint() -> String {
-        businessId.lowercased() + "#" + lines.map { "\($0.signature)*\($0.quantity)" }.sortedByUTF16().joined(separator: ";")
+        businessId.lowercased() + "#"
+            + lines.map { "\($0.signature)*\($0.quantity)" }.sortedByUTF16().joined(separator: ";")
     }
 }
 

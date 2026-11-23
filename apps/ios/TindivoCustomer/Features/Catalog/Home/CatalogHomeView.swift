@@ -130,7 +130,8 @@ struct CatalogHomeView: View {
 #if DEBUG
 #Preview("Inicio") {
     CatalogHomeView(
-        model: CatalogHomeScreenModel(catalog: PreviewCatalog()), onOpenBusiness: { _ in }, onOpenCart: {}, onOpenDiagnostics: {}
+        model: CatalogHomeScreenModel(catalog: PreviewCatalog()), onOpenBusiness: { _ in }, onOpenCart: {},
+        onOpenDiagnostics: {}
     )
     .onAppear { TindivoFonts.register() }
 }

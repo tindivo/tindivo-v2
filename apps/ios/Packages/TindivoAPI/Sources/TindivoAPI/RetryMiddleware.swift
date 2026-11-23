@@ -23,7 +23,9 @@ package struct RetryMiddleware: ClientMiddleware {
     private let now: @Sendable () -> Date
 
     package init(
-        sleep: @escaping @Sendable (_ millis: UInt64) async throws -> Void = { try await Task.sleep(for: .milliseconds($0)) },
+        sleep: @escaping @Sendable (_ millis: UInt64) async throws -> Void = {
+            try await Task.sleep(for: .milliseconds($0))
+        },
         random: @escaping @Sendable (_ upTo: UInt64) -> UInt64 = { UInt64.random(in: 0...$0) },
         now: @escaping @Sendable () -> Date = { Date() }
     ) {

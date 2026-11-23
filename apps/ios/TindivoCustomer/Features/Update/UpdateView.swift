@@ -17,13 +17,14 @@ struct UpdateView: View {
             ScrollView {
                 content
                     .padding(TindivoTokens.Spacing.spaceScreen)
-                    .frame(maxWidth: .infinity, minHeight: proxy.size.height) // centrado vertical; con letra grande, scroll
+                    // Centrado vertical; con letra grande, scroll.
+                    .frame(maxWidth: .infinity, minHeight: proxy.size.height)
             }
             .scrollBounceBehavior(.basedOnSize)
         }
         .background(Color.tindivo.background)
         .accessibilityIdentifier("update-required")
-        .task { titleFocused = true } // VoiceOver empieza por el título, no por el fondo
+        .task { titleFocused = true }  // VoiceOver empieza por el título, no por el fondo
     }
 
     private var content: some View {
@@ -63,7 +64,9 @@ struct UpdateView: View {
     /// El botón es propio (con `TindivoCTAButtonStyle`) y no `TindivoPrimaryButton`: ese limita el texto a una línea, y con
     /// letra grande (AX5) el botón se cortaría.
     private func storeButton(_ url: URL) -> some View {
-        Button { openURL(url) } label: {
+        Button {
+            openURL(url)
+        } label: {
             Text("Ir a la App Store")
                 .tindivoText(TindivoTokens.Typography.cta)
                 .multilineTextAlignment(.center)

@@ -52,7 +52,8 @@ struct OrderingModeTests {
     func closedTexts() {
         let tomorrow = OrderingMode.closed(ClosedStatus(opensAt: "18:00", daysAhead: 1), opensDay: "mié")
         #expect(tomorrow.closedDetail == "Abre mañana a las 18:00")
-        let unconfirmed = OrderingMode.closed(ClosedStatus(opensAt: nil, daysAhead: 0, notConfirmed: true), opensDay: nil)
+        let unconfirmed = OrderingMode.closed(
+            ClosedStatus(opensAt: nil, daysAhead: 0, notConfirmed: true), opensDay: nil)
         #expect(unconfirmed.closedDetail == "Hoy este restaurante no ha confirmado que atiende")
         let none = OrderingMode.closed(ClosedStatus(opensAt: nil, daysAhead: 0), opensDay: nil)
         #expect(none.closedDetail == "Consulta su horario más tarde")
@@ -69,7 +70,8 @@ struct OrderingModeTests {
 
     @Test("CA-CAT-04 en modo catálogo se contacta aunque esté cerrado y no se agrega a la bolsa")
     func contact() {
-        let mode = orderingMode(for: business(catalogOnly: true, whatsapp: "+51987654321"), now: at("2026-07-07", "03:00"))
+        let mode = orderingMode(
+            for: business(catalogOnly: true, whatsapp: "+51987654321"), now: at("2026-07-07", "03:00"))
         #expect(mode == .contact(whatsappNumber: "+51987654321"))
         #expect(!mode.allowsBag)
     }

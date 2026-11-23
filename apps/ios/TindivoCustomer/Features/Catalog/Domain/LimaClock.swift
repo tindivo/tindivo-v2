@@ -26,7 +26,7 @@ enum LimaClock {
     /// Minutos desde medianoche de `HH:MM` o `HH:MM:SS`; `nil` si no se puede leer.
     static func parseMinutes(_ value: String?) -> Int? {
         guard let match = value?.wholeMatch(of: /(\d{2}):(\d{2})(?::\d{2})?/),
-              let hour = Int(match.1), let minute = Int(match.2), hour <= 23, minute <= 59
+            let hour = Int(match.1), let minute = Int(match.2), hour <= 23, minute <= 59
         else { return nil }
         return hour * hourMinutes + minute
     }

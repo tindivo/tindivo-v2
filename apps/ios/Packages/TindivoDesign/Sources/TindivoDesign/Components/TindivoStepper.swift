@@ -109,7 +109,9 @@ public struct TindivoRoundButton: View {
                 .font(.system(size: iconSize, weight: .bold))
                 .foregroundStyle(enabled ? (tint ?? Color.tindivo.ink) : Color.tindivo.onDisabled)
                 .frame(width: TindivoTokens.Spacing.touchTarget, height: TindivoTokens.Spacing.touchTarget)
-                .overlay(Circle().stroke(enabled ? (tint ?? Color.tindivo.outline) : Color.tindivo.disabled, lineWidth: 1))
+                .overlay(
+                    Circle().stroke(enabled ? (tint ?? Color.tindivo.outline) : Color.tindivo.disabled, lineWidth: 1)
+                )
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -125,7 +127,8 @@ public struct TindivoRoundButton: View {
             decreaseLabel: "Una menos", increaseLabel: "Una más", onDecrease: {}, onIncrease: {}
         )
         TindivoStepper(
-            quantity: 1, label: "Cantidad de Chicha morada", canDecrease: true, canIncrease: true, decreaseRemoves: true,
+            quantity: 1, label: "Cantidad de Chicha morada", canDecrease: true, canIncrease: true,
+            decreaseRemoves: true,
             decreaseLabel: "Quitar Chicha morada", increaseLabel: "Una más", onDecrease: {}, onIncrease: {}
         )
         TindivoStepper(

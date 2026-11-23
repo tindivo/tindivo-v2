@@ -96,6 +96,8 @@ struct MoneyTests {
 
     @Test("formatea en soles como la región Perú")
     func format() {
-        #expect(Money.format(Money.parse("12.5")!) == "S/\u{00A0}12.50", "es_PE separa el símbolo con un espacio duro, igual que en Android")
+        #expect(
+            Money.format(Money.parse("12.5")!) == "S/\u{00A0}12.50",
+            "es_PE separa el símbolo con un espacio duro, igual que en Android")
     }
 }

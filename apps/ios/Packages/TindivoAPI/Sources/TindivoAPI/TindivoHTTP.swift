@@ -54,7 +54,8 @@ package struct FlexibleISO8601: DateTranscoder {
     package init() {}
 
     package func encode(_ date: Date) throws -> String {
-        date.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: true).timeZone(separator: .omitted))
+        date.formatted(
+            .iso8601.year().month().day().time(includingFractionalSeconds: true).timeZone(separator: .omitted))
     }
 
     package func decode(_ string: String) throws -> Date {

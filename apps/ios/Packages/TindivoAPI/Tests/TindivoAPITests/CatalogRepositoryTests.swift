@@ -104,8 +104,11 @@ struct CatalogRepositoryTests {
     @Test("CLI-2: un campo nuevo y una capacidad desconocida no rompen la lista ni la carta")
     func forwardCompatible() async throws {
         let list = try fixture("businesses")
-            .replacingOccurrences(of: "\"tagline\":\"Pollos a la brasa\"", with: "\"campoNuevo\":{\"x\":1},\"tagline\":null")
-            .replacingOccurrences(of: "\"primary_capability\":\"catalog_full\"", with: "\"primary_capability\":\"capacidad_futura\"")
+            .replacingOccurrences(
+                of: "\"tagline\":\"Pollos a la brasa\"", with: "\"campoNuevo\":{\"x\":1},\"tagline\":null"
+            )
+            .replacingOccurrences(
+                of: "\"primary_capability\":\"catalog_full\"", with: "\"primary_capability\":\"capacidad_futura\"")
         let businesses = try await repository(.json(200, list)).listBusinesses()
         #expect(businesses[0].primaryCapability == .unknown("capacidad_futura"))
         #expect(businesses[0].tagline == nil)

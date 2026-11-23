@@ -64,8 +64,9 @@ struct DiagnosticsView: View {
         case .network: String(localized: "Sin conexión con la API")
         case let .upgradeRequired(min): String(localized: "Hay que actualizar la app (mínimo \(min ?? "?"))")
         case let .known(code, status, _, _): "\(code.rawValue) · HTTP \(status)"
-        case let .unknown(code, detail, status): [code, detail, status.map { "HTTP \($0)" }]
-            .compactMap(\.self).joined(separator: " · ")
+        case let .unknown(code, detail, status):
+            [code, detail, status.map { "HTTP \($0)" }]
+                .compactMap(\.self).joined(separator: " · ")
         case .cancelled: ""
         }
     }

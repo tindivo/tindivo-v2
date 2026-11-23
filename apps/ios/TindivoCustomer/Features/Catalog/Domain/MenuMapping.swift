@@ -112,7 +112,8 @@ struct BusinessDetail: Sendable, Equatable {
         // en la suya) y sin ninguno no hay sección (decisión de Jesús, 2026-11-22; CA-CAT-02).
         func inWindowOnly(_ category: MenuCategory) -> MenuCategory? {
             let items = category.items.filter { $0.outsideWindow == nil }
-            return items.isEmpty ? nil : MenuCategory(id: category.id, name: category.name, blurb: category.blurb, items: items)
+            return items.isEmpty
+                ? nil : MenuCategory(id: category.id, name: category.name, blurb: category.blurb, items: items)
         }
         return BusinessDetail(
             id: id, name: name, tagline: tagline, logoURL: logoURL, bannerURL: bannerURL, accent: accent,
@@ -194,16 +195,18 @@ enum MenuMapping {
             var options: [DishOption] = []
             for option in group.options {
                 guard let price = menuPriceOrNil(option.additionalPrice) else { return nil }
-                options.append(DishOption(
-                    id: option.id, name: option.name, description: nonBlank(option.description),
-                    price: price, priceText: formatSoles(price)
-                ))
+                options.append(
+                    DishOption(
+                        id: option.id, name: option.name, description: nonBlank(option.description),
+                        price: price, priceText: formatSoles(price)
+                    ))
             }
-            groups.append(DishGroup(
-                id: group.id, name: group.name, selectionType: group.selectionType, isRequired: group.isRequired,
-                minSelections: group.minSelections, maxSelections: group.maxSelections,
-                priceDisplay: group.priceDisplay, options: options
-            ))
+            groups.append(
+                DishGroup(
+                    id: group.id, name: group.name, selectionType: group.selectionType, isRequired: group.isRequired,
+                    minSelections: group.minSelections, maxSelections: group.maxSelections,
+                    priceDisplay: group.priceDisplay, options: options
+                ))
         }
         if hasRepeatedIDs(groups) { return nil }
         return MenuItem(

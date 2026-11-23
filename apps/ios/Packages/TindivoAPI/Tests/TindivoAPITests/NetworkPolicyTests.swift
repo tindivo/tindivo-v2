@@ -39,7 +39,7 @@ struct RetryMiddlewareTests {
         let script = Script(steps)
         let middleware = RetryMiddleware(
             sleep: { await script.slept($0) },
-            random: { $0 }, // la espera máxima de cada tramo, para poder afirmarla
+            random: { $0 },  // la espera máxima de cada tramo, para poder afirmarla
             now: { now }
         )
         var request = HTTPRequest(method: method, scheme: nil, authority: nil, path: "/x")
@@ -101,20 +101,23 @@ struct RetryMiddlewareTests {
 
     @Test("Retry-After como fecha HTTP")
     func retryAfterDate() async {
-        let now = Date(timeIntervalSince1970: 784_111_775) // Sun, 06 Nov 1994 08:49:35 GMT
-        let (script, _) = await run(.get, [.status(503, retryAfter: "Sun, 06 Nov 1994 08:49:37 GMT"), .status(200)], now: now)
+        let now = Date(timeIntervalSince1970: 784_111_775)  // Sun, 06 Nov 1994 08:49:35 GMT
+        let (script, _) = await run(
+            .get, [.status(503, retryAfter: "Sun, 06 Nov 1994 08:49:37 GMT"), .status(200)], now: now)
         #expect(await script.sleeps == [2000])
     }
 }
 
 @Suite("Fechas del contrato")
 struct FlexibleISO8601Tests {
-    @Test("acepta con y sin fracción, con Z y con desfase", arguments: [
-        "2026-11-22T07:30:47Z",
-        "2026-11-22T07:30:47.542Z",
-        "2026-11-22T07:30:47.542123+00:00",
-        "2026-11-22T02:30:47.542-05:00",
-    ])
+    @Test(
+        "acepta con y sin fracción, con Z y con desfase",
+        arguments: [
+            "2026-11-22T07:30:47Z",
+            "2026-11-22T07:30:47.542Z",
+            "2026-11-22T07:30:47.542123+00:00",
+            "2026-11-22T02:30:47.542-05:00",
+        ])
     func decodes(raw: String) throws {
         let date = try FlexibleISO8601().decode(raw)
         #expect(abs(date.timeIntervalSince1970 - 1_795_332_647) < 1)
@@ -134,12 +137,15 @@ final class RedirectingProtocol: URLProtocol, @unchecked Sendable {
         guard let url = request.url, url.host() == "api.test" else {
             let ok = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             client?.urlProtocol(self, didReceive: ok, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: Data(#"{"data":{"status":"ok","service":"tindivo-api","version":"v1","time":"t"}}"#.utf8))
+            client?.urlProtocol(
+                self, didLoad: Data(#"{"data":{"status":"ok","service":"tindivo-api","version":"v1","time":"t"}}"#.utf8)
+            )
             client?.urlProtocolDidFinishLoading(self)
             return
         }
         let target = URL(string: "https://evil.test/api/v1/health")!
-        let response = HTTPURLResponse(url: url, statusCode: 302, httpVersion: nil, headerFields: ["Location": target.absoluteString])!
+        let response = HTTPURLResponse(
+            url: url, statusCode: 302, httpVersion: nil, headerFields: ["Location": target.absoluteString])!
         client?.urlProtocol(self, wasRedirectedTo: URLRequest(url: target), redirectResponse: response)
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocolDidFinishLoading(self)
@@ -203,13 +209,14 @@ struct CallDeadlineTests {
         retry: RetryMiddleware = RetryMiddleware(random: { $0 }),
         _ respond: @escaping @Sendable (HTTPRequest) async throws -> (HTTPResponse, HTTPBody?)
     ) -> LiveSystemRepository {
-        LiveSystemRepository(client: TindivoAPIClient.make(
-            baseURL: URL(string: "https://api.test/api/v1")!,
-            client: ClientInfo(app: "customer", appVersion: "0.1.0", build: "1"),
-            transport: StubTransport(respond: respond),
-            retry: retry,
-            deadline: DeadlineMiddleware(timeout: .seconds(30), sleep: { _ in try await expire.wait() })
-        ))
+        LiveSystemRepository(
+            client: TindivoAPIClient.make(
+                baseURL: URL(string: "https://api.test/api/v1")!,
+                client: ClientInfo(app: "customer", appVersion: "0.1.0", build: "1"),
+                transport: StubTransport(respond: respond),
+                retry: retry,
+                deadline: DeadlineMiddleware(timeout: .seconds(30), sleep: { _ in try await expire.wait() })
+            ))
     }
 
     private func call(_ repository: LiveSystemRepository) -> Task<AppError?, Never> {
@@ -223,7 +230,7 @@ struct CallDeadlineTests {
         let expire = Latch(), entered = Latch(), never = Latch()
         let repo = repository(expire: expire) { _ in
             entered.fire()
-            try await never.wait() // solo termina cuando el plazo cancela el intento
+            try await never.wait()  // solo termina cuando el plazo cancela el intento
             throw URLError(.timedOut)
         }
         let result = call(repo)

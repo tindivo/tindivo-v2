@@ -12,7 +12,8 @@ struct CartScreenModelTests {
         _ id: String, price: String = "12.50", quantity: Int = 1, note: String? = nil, modifiers: [CartModifier] = []
     ) -> CartLine {
         CartLine(
-            itemId: id, name: "Plato \(id)", basePrice: dec(price), modifiers: modifiers, note: note, quantity: quantity,
+            itemId: id, name: "Plato \(id)", basePrice: dec(price), modifiers: modifiers, note: note,
+            quantity: quantity,
             imageURL: nil
         )
     }
@@ -33,7 +34,9 @@ struct CartScreenModelTests {
 
     @Test("hasta que se lee lo guardado no se enseña «vacía»")
     func startsLoading() {
-        let model = CartScreenModel(store: temporaryStore(), catalog: UnusedCatalogRepository(), clock: ManualClock(Fixture.tuesdayEvening).clock)
+        let model = CartScreenModel(
+            store: temporaryStore(), catalog: UnusedCatalogRepository(),
+            clock: ManualClock(Fixture.tuesdayEvening).clock)
         #expect(model.state == .loading)
     }
 
@@ -49,7 +52,8 @@ struct CartScreenModelTests {
         let store = temporaryStore()
         let modifier = CartModifier(optionId: "o1", groupName: "Tamaño", optionName: "1/4", price: dec("2.50"))
         _ = try await store.add(
-            businessId: "n1", businessName: "Don Lucho", line: line("a", price: "10", quantity: 3, note: "sin ají", modifiers: [modifier])
+            businessId: "n1", businessName: "Don Lucho",
+            line: line("a", price: "10", quantity: 3, note: "sin ají", modifiers: [modifier])
         )
         let (model, task) = await started(store)
         let state = try #require(filled(model))
@@ -196,7 +200,9 @@ struct CartScreenModelTests {
 extension CartScreenModelTests {
     // MARK: Deshacer (CA-CRT-10)
 
-    @Test("CA-CRT-10: quitar la segunda de tres líneas y tocar «Deshacer» antes de 5 s la devuelve a su sitio con su cantidad")
+    @Test(
+        "CA-CRT-10: quitar la segunda de tres líneas y tocar «Deshacer» antes de 5 s la devuelve a su sitio con su cantidad"
+    )
     func undoRestoresTheLineInPlace() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "n1", businessName: "N", line: line("a", price: "10"))
@@ -228,10 +234,12 @@ extension CartScreenModelTests {
         let sleeps = OSAllocatedUnfairLock<[Duration]>(initialState: [])
         let manual = ManualClock(Fixture.tuesdayEvening)
         let base = manual.clock
-        let clock = AppClock(now: base.now, sleep: { duration in
-            sleeps.withLock { $0.append(duration) }
-            try await base.sleep(duration)
-        })
+        let clock = AppClock(
+            now: base.now,
+            sleep: { duration in
+                sleeps.withLock { $0.append(duration) }
+                try await base.sleep(duration)
+            })
         let (model, task) = await started(store, clock: clock)
         await model.remove(signature: try #require(filled(model)?.lines.first?.signature))
         await eventually { sleeps.withLock { $0 } == [.seconds(5)] }
@@ -287,9 +295,10 @@ extension CartScreenModelTests {
     @Test("CA-CRT-08: una bolsa de recojo dice «Recojo» y no muestra la fila del envío")
     func pickupLabel() async throws {
         let cart = Cart(businessId: "n1", businessName: "N", lines: [line("a")], method: .pickup)
-        let state = try #require({ () -> CartScreenModel.Filled? in
-            if case let .filled(filled) = CartScreenModel.state(for: cart) { filled } else { nil }
-        }())
+        let state = try #require(
+            { () -> CartScreenModel.Filled? in
+                if case let .filled(filled) = CartScreenModel.state(for: cart) { filled } else { nil }
+            }())
         #expect(state.methodLabel == "Recojo")
         #expect(state.showsShipping == false)
     }
@@ -299,7 +308,9 @@ extension CartScreenModelTests {
     @Test("VoiceOver: el contador dice «2 unidades» y «1 unidad», y los botones dicen qué hacen")
     func accessibilityLabels() throws {
         let cart = Cart(businessId: "n1", businessName: "N", lines: [line("a", quantity: 1), line("b", quantity: 2)])
-        guard case let .filled(filled) = CartScreenModel.state(for: cart) else { Issue.record("debía haber platos"); return }
+        guard case let .filled(filled) = CartScreenModel.state(for: cart) else {
+            Issue.record("debía haber platos"); return
+        }
         #expect(filled.countLabel == "3 productos")
         #expect(filled.lines[0].decreaseLabel == "Quitar Plato a")
         #expect(filled.lines[1].decreaseLabel == "Quitar una unidad de Plato b. Llevas 2 unidades")
@@ -325,7 +336,9 @@ extension CartScreenModelTests {
         return (model, store, task)
     }
 
-    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): antes de que responda la carta la bolsa se ve, está «validando» y no se puede continuar")
+    @Test(
+        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): antes de que responda la carta la bolsa se ve, está «validando» y no se puede continuar"
+    )
     func validatingBeforeTheMenuAnswers() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -348,7 +361,9 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato agotado se avisa en su línea y no se puede continuar hasta quitarlo")
+    @Test(
+        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato agotado se avisa en su línea y no se puede continuar hasta quitarlo"
+    )
     func unavailableLineBlocksContinuing() async throws {
         let (model, _, task) = try await validated(
             lines: [line("a"), line("b")],
@@ -366,7 +381,9 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un precio cambiado se avisa en la línea y bloquea; la bolsa no se toca")
+    @Test(
+        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un precio cambiado se avisa en la línea y bloquea; la bolsa no se toca"
+    )
     func changedPriceBlocksContinuing() async throws {
         let (model, store, task) = try await validated(
             lines: [line("a", price: "10")], menu: validationMenu([Fixture.item("a", price: "12")])
@@ -377,7 +394,9 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato eliminado, uno fuera de franja y una opción que ya no existe se avisan en su línea")
+    @Test(
+        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato eliminado, uno fuera de franja y una opción que ya no existe se avisan en su línea"
+    )
     func otherIssuesAreShownOnTheLine() async throws {
         let sizes = Fixture.group("g", single: true, required: true, options: [Fixture.option("a", "1")])
         let stale = CartModifier(optionId: "zz", groupName: "Grupo g", optionName: "Opción zz", price: dec("1"))
@@ -396,7 +415,9 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una bolsa que coincide con la carta puede continuar")
+    @Test(
+        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una bolsa que coincide con la carta puede continuar"
+    )
     func matchingBagCanContinue() async throws {
         let (model, _, task) = try await validated(lines: [line("a")], menu: validationMenu([Fixture.item("a")]))
         #expect(filled(model)?.validation == .checked)
@@ -404,7 +425,9 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): si la carta no se puede leer no se bloquea: queda «sin validar» y sin avisos")
+    @Test(
+        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): si la carta no se puede leer no se bloquea: queda «sin validar» y sin avisos"
+    )
     func uncheckedWhenTheMenuFails() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -416,7 +439,9 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una carta que no se puede mostrar tal cual (precio con tres decimales) también queda «sin validar»")
+    @Test(
+        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una carta que no se puede mostrar tal cual (precio con tres decimales) también queda «sin validar»"
+    )
     func uncheckedWhenTheMenuIsInvalid() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -442,8 +467,11 @@ extension CartScreenModelTests {
     // MARK: Editar (CA-CRT-11)
 
     private func editableMenu(available: Bool = true) -> BusinessMenu {
-        let group = Fixture.group("g", single: true, required: true, options: [Fixture.option("a", "1"), Fixture.option("b", "2")])
-        return Fixture.menu([Fixture.category("c", [Fixture.item("i1", price: "10", available: available, groups: [group])])])
+        let group = Fixture.group(
+            "g", single: true, required: true, options: [Fixture.option("a", "1"), Fixture.option("b", "2")])
+        return Fixture.menu([
+            Fixture.category("c", [Fixture.item("i1", price: "10", available: available, groups: [group])])
+        ])
     }
 
     private func editableLine() -> CartLine {
@@ -487,7 +515,8 @@ extension CartScreenModelTests {
     func startEditingOfAnUnavailableDish() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "N", line: editableLine())
-        let (model, task) = await started(store, catalog: StubCatalog(menus: Script(just: editableMenu(available: false))))
+        let (model, task) = await started(
+            store, catalog: StubCatalog(menus: Script(just: editableMenu(available: false))))
         await model.startEditing(signature: editableLine().signature)
         #expect(model.editing == nil)
         #expect(model.notices.message == "Este producto ya no está disponible")
@@ -542,7 +571,9 @@ extension CartScreenModelTests {
         _ = try await store.add(businessId: "n1", businessName: "N", line: line("b"))
         let (model, task) = await started(store)
         await model.remove(signature: line("b").signature)
-        for i in 0..<(CartLimits.maxLines - 1) { _ = try await store.add(businessId: "n1", businessName: "N", line: line("p\(i)")) }
+        for i in 0..<(CartLimits.maxLines - 1) {
+            _ = try await store.add(businessId: "n1", businessName: "N", line: line("p\(i)"))
+        }
         #expect(await store.current()?.lines.count == CartLimits.maxLines)
         #expect(await model.undo() == false)
         #expect(model.notices.message == "Tu bolsa ya tiene 50 platos distintos: es el máximo por pedido")
@@ -665,7 +696,9 @@ private actor FailingStore: CartStore {
         return stream
     }
 
-    func add(businessId: String, businessName: String, line: CartLine) throws(CartError) -> AddResult { throw .saveFailed }
+    func add(businessId: String, businessName: String, line: CartLine) throws(CartError) -> AddResult {
+        throw .saveFailed
+    }
     func replace(businessId: String, businessName: String, line: CartLine) throws(CartError) { throw .saveFailed }
     func changeQuantity(signature: String, by delta: Int) throws(CartError) { throw .saveFailed }
     func remove(signature: String) throws(CartError) -> RemovedLine? { throw .saveFailed }
@@ -697,7 +730,9 @@ private actor RestoreFailingStore: CartStore {
     func replaceLine(signature: String, with line: CartLine) async throws(CartError) -> LineEditResult {
         try await inner.replaceLine(signature: signature, with: line)
     }
-    func remove(signature: String) async throws(CartError) -> RemovedLine? { try await inner.remove(signature: signature) }
+    func remove(signature: String) async throws(CartError) -> RemovedLine? {
+        try await inner.remove(signature: signature)
+    }
     func restore(_ removed: RemovedLine) async throws(CartError) -> RestoreResult {
         if failing { throw .saveFailed }
         return try await inner.restore(removed)

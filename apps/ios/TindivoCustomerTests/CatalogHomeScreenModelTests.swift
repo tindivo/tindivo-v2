@@ -8,9 +8,10 @@ import TindivoAPI
 struct CatalogHomeScreenModelTests {
     @Test("carga, separa los de WhatsApp y marca los cerrados")
     func loads() async {
-        let catalog = StubCatalog(businesses: Script(just: [
-            summary("a"), summary("b", open: false), summary("c", capability: .catalogOnly),
-        ]))
+        let catalog = StubCatalog(
+            businesses: Script(just: [
+                summary("a"), summary("b", open: false), summary("c", capability: .catalogOnly),
+            ]))
         let model = CatalogHomeScreenModel(catalog: catalog)
         #expect(model.state == .idle)
         await model.load()
@@ -70,9 +71,10 @@ struct CatalogHomeScreenModelTests {
 
     @Test("una recarga que sale bien borra el aviso de la anterior")
     func refreshSuccessClearsNotice() async {
-        let catalog = StubCatalog(businesses: Script([
-            .success([summary("a")]), .failure(.network), .success([summary("a"), summary("b")]),
-        ]))
+        let catalog = StubCatalog(
+            businesses: Script([
+                .success([summary("a")]), .failure(.network), .success([summary("a"), summary("b")]),
+            ]))
         let model = CatalogHomeScreenModel(catalog: catalog)
         await model.load()
         await model.refresh()
@@ -137,7 +139,8 @@ struct CatalogHomeScreenModelTests {
 
     @Test("un 426 en una recarga conserva la lista")
     func upgradeRequiredOnRefresh() async {
-        let catalog = StubCatalog(businesses: Script([.success([summary("a")]), .failure(.upgradeRequired(minVersion: nil))]))
+        let catalog = StubCatalog(
+            businesses: Script([.success([summary("a")]), .failure(.upgradeRequired(minVersion: nil))]))
         let model = CatalogHomeScreenModel(catalog: catalog)
         await model.load()
         await model.refresh()
@@ -173,8 +176,11 @@ struct ErrorTextTests {
     @Test("sin conexión se dice; todo lo demás es genérico")
     func messages() {
         #expect(ErrorText.message(for: .network) == "Sin conexión. Revisa tu internet e inténtalo de nuevo.")
-        #expect(ErrorText.message(for: .unknown(code: "x", detail: nil, status: 500)) == "Algo salió mal. Inténtalo de nuevo.")
-        #expect(ErrorText.message(for: .known(code: .internalError, status: 500, detail: nil, fieldMessage: nil))
-            == "Algo salió mal. Inténtalo de nuevo.")
+        #expect(
+            ErrorText.message(for: .unknown(code: "x", detail: nil, status: 500))
+                == "Algo salió mal. Inténtalo de nuevo.")
+        #expect(
+            ErrorText.message(for: .known(code: .internalError, status: 500, detail: nil, fieldMessage: nil))
+                == "Algo salió mal. Inténtalo de nuevo.")
     }
 }

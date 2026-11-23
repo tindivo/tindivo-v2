@@ -16,9 +16,11 @@ struct MenuSearchResultsView: View {
                 Text("No encontramos “\(query.trimmingCharacters(in: .whitespacesAndNewlines))” en \(businessName)")
                     .tindivoText(TindivoTokens.Typography.titleSection)
                     .foregroundStyle(Color.tindivo.ink)
-                Text("Prueba con otro nombre, o con un ingrediente: también buscamos dentro de la descripción de cada plato.")
-                    .tindivoText(TindivoTokens.Typography.body)
-                    .foregroundStyle(Color.tindivo.inkSecondary)
+                Text(
+                    "Prueba con otro nombre, o con un ingrediente: también buscamos dentro de la descripción de cada plato."
+                )
+                .tindivoText(TindivoTokens.Typography.body)
+                .foregroundStyle(Color.tindivo.inkSecondary)
             }
             .padding(TindivoTokens.Spacing.spaceScreen)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

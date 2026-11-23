@@ -86,7 +86,7 @@ final class LiveConfigService: ConfigService {
         if let upgradeReports {
             reports = Task { [weak self] in
                 for await minVersion in upgradeReports {
-                    guard let self else { return } // el servicio se fue: la escucha termina
+                    guard let self else { return }  // el servicio se fue: la escucha termina
                     self.reportUpgradeRequired(minVersion: minVersion)
                 }
             }
@@ -117,7 +117,9 @@ final class LiveConfigService: ConfigService {
             return
         }
         // Tarea propia: si quien llama se cancela (la escena cambia otra vez), la lectura en curso no se pierde.
-        let task = Task { await read(); inFlight = nil }
+        let task = Task {
+            await read(); inFlight = nil
+        }
         inFlight = task
         await task.value
     }

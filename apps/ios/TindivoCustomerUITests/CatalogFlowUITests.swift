@@ -140,7 +140,8 @@ final class CatalogFlowUITests: XCTestCase {
         XCTAssertFalse(element("home.deliveryChip").exists, "Sin sesión ni dirección el chip no se muestra")
         attach("cus-cat-030-barra-vacia")
         bag.tap()
-        XCTAssertTrue(app.staticTexts["Tu bolsa está vacía"].waitForExistence(timeout: 10), "Tocar la bolsa no abrió la bolsa")
+        XCTAssertTrue(
+            app.staticTexts["Tu bolsa está vacía"].waitForExistence(timeout: 10), "Tocar la bolsa no abrió la bolsa")
         goBack()
 
         // Una unidad en la bolsa (el «+» de la tarjeta de «Chicha morada») y la insignia lo cuenta.
@@ -333,7 +334,8 @@ final class CatalogFlowUITests: XCTestCase {
         if !openCards.firstMatch.waitForExistence(timeout: 20) { openCards = query("home.business.closed") }
         guard openCards.firstMatch.waitForExistence(timeout: 20) else {
             attach("01-inicio-sin-negocios-abiertos")
-            throw XCTSkip("Staging no tiene ningún negocio abierto ahora mismo (o la lista no cargó): no hay flujo que probar.")
+            throw XCTSkip(
+                "Staging no tiene ningún negocio abierto ahora mismo (o la lista no cargó): no hay flujo que probar.")
         }
         attach("01-inicio")
 
@@ -348,7 +350,9 @@ final class CatalogFlowUITests: XCTestCase {
             XCTAssertTrue(openCards.firstMatch.waitForExistence(timeout: 10))
         }
         guard dishName != nil else {
-            throw XCTSkip("Ninguno de los primeros negocios abiertos de staging tiene un plato que se pueda agregar sin opciones obligatorias.")
+            throw XCTSkip(
+                "Ninguno de los primeros negocios abiertos de staging tiene un plato que se pueda agregar sin opciones obligatorias."
+            )
         }
 
         // «Ver mi bolsa»

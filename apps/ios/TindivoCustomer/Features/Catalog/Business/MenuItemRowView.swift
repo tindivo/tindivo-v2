@@ -124,7 +124,8 @@ extension MenuItem {
         MenuItemRowView(
             item: MenuItem(
                 dish: Dish(id: "2", name: "Gaseosa", basePrice: 3, imageURL: nil, groups: []),
-                description: nil, priceText: "S/ 3.00", isAvailable: false, window: DishWindow(days: nil, from: nil, to: nil)
+                description: nil, priceText: "S/ 3.00", isAvailable: false,
+                window: DishWindow(days: nil, from: nil, to: nil)
             )
         ) {}
     }

@@ -54,9 +54,11 @@ public struct TindivoPrimaryButton: View {
             .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
             .padding(.vertical, typeSize.isAccessibilitySize ? TindivoTokens.Spacing.spaceInner : 0)
         }
-        .buttonStyle(TindivoCTAButtonStyle(
-            cornerRadius: typeSize.isAccessibilitySize ? TindivoTokens.Radius.radiusField : nil, muted: muted
-        ))
+        .buttonStyle(
+            TindivoCTAButtonStyle(
+                cornerRadius: typeSize.isAccessibilitySize ? TindivoTokens.Radius.radiusField : nil, muted: muted
+            )
+        )
         .accessibilityHint(hint.map { Text($0) } ?? Text(verbatim: ""))
         .allowsHitTesting(!loading)
         .accessibilityValue(loading ? Text("En curso", bundle: .module) : Text(verbatim: ""))
@@ -83,7 +85,8 @@ public struct TindivoCTAButtonStyle: ButtonStyle {
     }
 
     public func makeBody(configuration: Configuration) -> some View {
-        let fill = enabled
+        let fill =
+            enabled
             ? (configuration.isPressed ? Color.tindivo.primaryPressed : Color.tindivo.primary)
             : Color.tindivo.disabled
         configuration.label

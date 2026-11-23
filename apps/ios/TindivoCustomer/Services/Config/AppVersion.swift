@@ -16,7 +16,8 @@ struct AppVersion: Comparable, Equatable, Sendable {
         var numbers: [Int] = []
         for part in parts {
             guard (1...9).contains(part.count), part.allSatisfy({ $0.isASCII && $0.isNumber }),
-                  let number = Int(part) else { return nil }
+                let number = Int(part)
+            else { return nil }
             numbers.append(number)
         }
         major = numbers[0]

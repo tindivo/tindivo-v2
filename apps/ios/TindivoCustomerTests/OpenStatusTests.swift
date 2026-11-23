@@ -45,12 +45,14 @@ struct OpenStatusTests {
 
     @Test("dentro del turno está abierto y dice cuándo cierra")
     func open() {
-        #expect(openStatus(days: week, now: at("2026-07-07", "20:00"), openingConfirmed: nil) == .open(closesAt: "23:00"))
+        #expect(
+            openStatus(days: week, now: at("2026-07-07", "20:00"), openingConfirmed: nil) == .open(closesAt: "23:00"))
     }
 
     @Test("el cierre del turno no entra y la apertura sí")
     func edges() {
-        #expect(openStatus(days: week, now: at("2026-07-07", "18:00"), openingConfirmed: nil) == .open(closesAt: "23:00"))
+        #expect(
+            openStatus(days: week, now: at("2026-07-07", "18:00"), openingConfirmed: nil) == .open(closesAt: "23:00"))
         #expect(openStatus(days: week, now: at("2026-07-07", "23:00"), openingConfirmed: nil) == closed("18:00", 1))
     }
 
@@ -62,7 +64,8 @@ struct OpenStatusTests {
     @Test("un turno que cruza medianoche cubre la madrugada del día siguiente")
     func overnight() {
         let noche = [day(5, ("22:00", "02:00")), day(6)]
-        #expect(openStatus(days: noche, now: at("2026-07-12", "01:00"), openingConfirmed: nil) == .open(closesAt: "02:00"))
+        #expect(
+            openStatus(days: noche, now: at("2026-07-12", "01:00"), openingConfirmed: nil) == .open(closesAt: "02:00"))
         let atTwo = openStatus(days: noche, now: at("2026-07-12", "02:00"), openingConfirmed: nil)
         if case .closed = atTwo {} else { Issue.record("a las 02:00 debía estar cerrado: \(atTwo)") }
     }

@@ -41,9 +41,10 @@ func fold(_ text: String) -> String {
 
 private func foldScalar(_ scalar: Unicode.Scalar) -> String {
     let original = String(scalar)
-    let withoutMarks = String(String.UnicodeScalarView(
-        original.decomposedStringWithCanonicalMapping.unicodeScalars.filter { !(0x300...0x36F).contains($0.value) }
-    ))
+    let withoutMarks = String(
+        String.UnicodeScalarView(
+            original.decomposedStringWithCanonicalMapping.unicodeScalars.filter { !(0x300...0x36F).contains($0.value) }
+        ))
     let folded = withoutMarks.lowercased()
     if folded.utf16.count == original.utf16.count { return folded }
     let lower = original.lowercased()
@@ -53,7 +54,7 @@ private func foldScalar(_ scalar: Unicode.Scalar) -> String {
 private func isWordScalar(_ scalar: Unicode.Scalar) -> Bool {
     switch scalar.properties.generalCategory {
     case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter,
-         .decimalNumber, .letterNumber, .otherNumber:
+        .decimalNumber, .letterNumber, .otherNumber:
         true
     default:
         false
@@ -138,7 +139,7 @@ private func scoreName(_ foldedName: String, phrase: String, terms: [String]) ->
     if wordStarts(name, with: phrase16) { return 2 }
     if index(of: phrase16, in: name, from: 0) != nil { return 3 }
     if terms.allSatisfy({ index(of: Array($0.utf16), in: name, from: 0) != nil }) { return 4 }
-    return 5 // solo casó por descripción o por el nombre de la categoría
+    return 5  // solo casó por descripción o por el nombre de la categoría
 }
 
 /// Búsqueda dentro de la carta de UN negocio, la misma que `searchMenu` de `apps/customer/features/catalog/lib/`.
@@ -162,14 +163,15 @@ func searchMenu(_ categories: [MenuCategory], query: String) -> [MenuHit] {
             let foldedName = fold(item.name)
             let haystack = Array("\(foldedName) \(item.description.map(fold) ?? "") \(foldedCategory)".utf16)
             guard needles.allSatisfy({ index(of: $0, in: haystack, from: 0) != nil }) else { continue }
-            scored.append((
-                scoreName(foldedName, phrase: phrase, terms: terms),
-                MenuHit(
-                    item: item, categoryId: category.id, categoryName: category.name,
-                    nameRanges: ranges(in: item.name, terms: terms),
-                    descriptionRanges: ranges(in: item.description, terms: terms)
-                )
-            ))
+            scored.append(
+                (
+                    scoreName(foldedName, phrase: phrase, terms: terms),
+                    MenuHit(
+                        item: item, categoryId: category.id, categoryName: category.name,
+                        nameRanges: ranges(in: item.name, terms: terms),
+                        descriptionRanges: ranges(in: item.description, terms: terms)
+                    )
+                ))
         }
     }
     // A igual puntaje se conserva el orden de la carta (el desempate por posición hace estable la ordenación).

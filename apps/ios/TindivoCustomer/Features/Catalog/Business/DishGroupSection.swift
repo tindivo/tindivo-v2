@@ -75,7 +75,9 @@ struct DishGroupSection: View {
     private func optionRow(_ option: DishOption) -> some View {
         let selected = model.selection.isSelected(option)
         let enabled = !model.selection.isDisabled(option, in: group)
-        return Button { model.toggle(option, in: group) } label: {
+        return Button {
+            model.toggle(option, in: group)
+        } label: {
             HStack(spacing: 8) {
                 Image(tindivo: group.isSingle ? (selected ? .radioOn : .radioOff) : (selected ? .checkOn : .checkOff))
                     // La marca es decorativa: «seleccionado» lo dice el rasgo del botón, no el nombre del símbolo.

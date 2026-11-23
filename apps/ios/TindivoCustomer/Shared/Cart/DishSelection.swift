@@ -53,7 +53,8 @@ struct DishSelection: Sendable, Equatable {
     /// cantidad. Una opción que ya no existe se descarta y la selección queda incompleta hasta que se vuelva a elegir.
     init(dish: Dish, restoring line: CartLine) {
         let canonical = Dictionary(
-            dish.groups.flatMap { $0.options.map { ($0.id.lowercased(), $0.id) } }, uniquingKeysWith: { first, _ in first }
+            dish.groups.flatMap { $0.options.map { ($0.id.lowercased(), $0.id) } },
+            uniquingKeysWith: { first, _ in first }
         )
         self.init(
             dish: dish, selectedIds: line.modifiers.compactMap { canonical[$0.optionId.lowercased()] },
@@ -76,9 +77,10 @@ struct DishSelection: Sendable, Equatable {
     }
 
     private var missingGroupIds: Set<String> {
-        Set(issues.compactMap { issue in
-            if case let .missing(groupId, _, _, _) = issue { groupId } else { nil }
-        })
+        Set(
+            issues.compactMap { issue in
+                if case let .missing(groupId, _, _, _) = issue { groupId } else { nil }
+            })
     }
 
     /// Cuántos grupos obligatorios faltan por completar.

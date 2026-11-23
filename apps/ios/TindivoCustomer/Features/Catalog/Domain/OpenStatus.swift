@@ -38,9 +38,11 @@ func openStatus(days: [ScheduleDay], now: Date, openingConfirmed: Bool?) -> Open
     // Un turno de AYER que cruza medianoche cubre la madrugada de hoy, aunque hoy esté cerrado.
     let yesterday = shifts(of: byDay[(today + LimaClock.weekDays - 1) % LimaClock.weekDays])
         .first { $0.crossesMidnight && minutes < $0.end }
-    let current = yesterday ?? shifts(of: byDay[today]).first {
-        minutes >= $0.start && minutes < ($0.crossesMidnight ? LimaClock.dayMinutes : $0.end)
-    }
+    let current =
+        yesterday
+        ?? shifts(of: byDay[today]).first {
+            minutes >= $0.start && minutes < ($0.crossesMidnight ? LimaClock.dayMinutes : $0.end)
+        }
     if let current {
         return openingConfirmed == false
             ? .closed(ClosedStatus(opensAt: nil, daysAhead: 0, notConfirmed: true))

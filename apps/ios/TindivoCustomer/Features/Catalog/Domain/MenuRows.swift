@@ -67,8 +67,8 @@ func highlightRanges(in text: String, _ ranges: [MatchRange]) -> [Range<String.I
         let start = min(max(range.start, 0), length)
         let end = min(max(range.end, 0), length)
         guard start < end,
-              let from = String.Index(text.utf16.index(text.utf16.startIndex, offsetBy: start), within: text),
-              let to = String.Index(text.utf16.index(text.utf16.startIndex, offsetBy: end), within: text)
+            let from = String.Index(text.utf16.index(text.utf16.startIndex, offsetBy: start), within: text),
+            let to = String.Index(text.utf16.index(text.utf16.startIndex, offsetBy: end), within: text)
         else { return nil }
         return from..<to
     }

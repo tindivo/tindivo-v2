@@ -42,7 +42,8 @@ struct TindivoCustomerApp: App {
             quantity: 1, imageURL: nil
         )
         guard let snapshot = Cart(businessId: other.id, businessName: other.name, lines: [line]).snapshot(),
-              let data = try? CartSnapshotCodec.encode(snapshot) else { return }
+            let data = try? CartSnapshotCodec.encode(snapshot)
+        else { return }
         let url = FileCartStore.defaultFileURL
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: url, options: .atomic)
@@ -59,16 +60,18 @@ struct TindivoCustomerApp: App {
         let arguments = ProcessInfo.processInfo.arguments
         let fakeCatalog = arguments.contains("-tindivo-fake-catalog")
         let catalog: any CatalogRepository = fakeCatalog ? PreviewCatalog() : live.catalog
-        let configService: any ConfigService = if arguments.contains("-tindivo-force-upgrade") {
-            FixedConfigService(.upgradeRequired(minVersion: "9.9.9"))
-        } else if fakeCatalog {
-            FixedConfigService()
-        } else {
-            live.configService
-        }
+        let configService: any ConfigService =
+            if arguments.contains("-tindivo-force-upgrade") {
+                FixedConfigService(.upgradeRequired(minVersion: "9.9.9"))
+            } else if fakeCatalog {
+                FixedConfigService()
+            } else {
+                live.configService
+            }
         var clock = live.clock
         if let flag = arguments.firstIndex(of: "-tindivo-now"), arguments.indices.contains(flag + 1),
-           let fixed = ISO8601DateFormatter().date(from: arguments[flag + 1]) {
+            let fixed = ISO8601DateFormatter().date(from: arguments[flag + 1])
+        {
             clock = AppClock(now: { fixed }, sleep: { try await Task.sleep(for: $0) })
         }
         // `-tindivo-now-file <ruta>`: el reloj lo maneja la prueba. Cada vez que la app pregunta la hora lee el archivo (una
@@ -80,7 +83,8 @@ struct TindivoCustomerApp: App {
             clock = AppClock(
                 now: {
                     guard let text = try? String(contentsOfFile: path, encoding: .utf8),
-                          let date = ISO8601DateFormatter().date(from: text.trimmingCharacters(in: .whitespacesAndNewlines))
+                        let date = ISO8601DateFormatter().date(
+                            from: text.trimmingCharacters(in: .whitespacesAndNewlines))
                     else { return fallback }
                     return date
                 },

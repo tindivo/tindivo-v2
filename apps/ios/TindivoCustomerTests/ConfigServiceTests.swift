@@ -82,7 +82,9 @@ struct ConfigServiceTests {
         #expect(config.state == .upgradeRequired(minVersion: "2.0.0"))
     }
 
-    @Test("M3: al liberarse el servicio, la escucha del canal de avisos termina y no queda colgada", .timeLimit(.minutes(1)))
+    @Test(
+        "M3: al liberarse el servicio, la escucha del canal de avisos termina y no queda colgada",
+        .timeLimit(.minutes(1)))
     func listenerEndsWhenTheServiceIsReleased() async {
         let (stream, continuation) = AsyncStream<String?>.makeStream()
         let ended = Gate()
@@ -92,7 +94,7 @@ struct ConfigServiceTests {
             let (config, _) = service([.success(compat("0.0.0"))], reports: stream)
             released = config
         }
-        await ended.wait() // el canal se termina porque el servicio murió y canceló la escucha
+        await ended.wait()  // el canal se termina porque el servicio murió y canceló la escucha
         #expect(released == nil)
     }
 
@@ -123,7 +125,7 @@ struct ConfigServiceTests {
         let gate = Gate(), entered = Gate()
         let (config, script) = service([.success(compat("0.0.0"))], gate: gate, entered: entered)
         let first = Task { await config.refresh() }
-        await entered.wait() // la primera lectura ya está en vuelo
+        await entered.wait()  // la primera lectura ya está en vuelo
         // La segunda llamada se encola en el MainActor (cola FIFO) antes de que la lectura pueda terminar: en cuanto
         // `gate.open()` la despierta, su regreso al MainActor queda detrás de esta tarea.
         let second = Task { await config.refresh() }
@@ -177,7 +179,9 @@ struct ConfigServiceTests {
         #expect(!config.state.isBelowMinOS(18))
         #expect(!config.state.isBelowMinOS(26))
         #expect(!config.state.isUpgradeRequired)
-        #expect(!ConfigState.upgradeRequired(minVersion: "9.0.0").isBelowMinOS(1), "con actualización pendiente manda esa pantalla")
+        #expect(
+            !ConfigState.upgradeRequired(minVersion: "9.0.0").isBelowMinOS(1),
+            "con actualización pendiente manda esa pantalla")
     }
 
     @Test("CLI-4: los interruptores de config se exponen; una clave ausente usa el valor por defecto")
@@ -199,17 +203,21 @@ struct ConfigServiceTests {
 
 @Suite("Versión de la app (CLI-4)")
 struct AppVersionTests {
-    @Test("CLI-4: acepta 1, 1.2 y 1.2.3, y descarta el sufijo desde - o +", arguments: [
-        ("1", 1, 0, 0), ("1.2", 1, 2, 0), ("1.2.3", 1, 2, 3), ("1.2.3-beta.1", 1, 2, 3), ("2.0.1+45", 2, 0, 1),
-    ])
+    @Test(
+        "CLI-4: acepta 1, 1.2 y 1.2.3, y descarta el sufijo desde - o +",
+        arguments: [
+            ("1", 1, 0, 0), ("1.2", 1, 2, 0), ("1.2.3", 1, 2, 3), ("1.2.3-beta.1", 1, 2, 3), ("2.0.1+45", 2, 0, 1),
+        ])
     func parses(raw: String, major: Int, minor: Int, patch: Int) throws {
         let version = try #require(AppVersion(raw))
         #expect((version.major, version.minor, version.patch) == (major, minor, patch))
     }
 
-    @Test("CLI-4: rechaza lo que no cumple la gramática del contrato", arguments: [
-        "", "a.b", "1.2.3.4", "1..2", "1234567890", "-1", "v1.2", "١.٢",
-    ])
+    @Test(
+        "CLI-4: rechaza lo que no cumple la gramática del contrato",
+        arguments: [
+            "", "a.b", "1.2.3.4", "1..2", "1234567890", "-1", "v1.2", "١.٢",
+        ])
     func rejects(raw: String) {
         #expect(AppVersion(raw) == nil)
     }

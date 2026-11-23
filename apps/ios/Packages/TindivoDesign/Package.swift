@@ -8,7 +8,7 @@ let package = Package(
     defaultLocalization: "es",
     platforms: [.iOS(.v17)],
     products: [
-        .library(name: "TindivoDesign", targets: ["TindivoDesign"]),
+        .library(name: "TindivoDesign", targets: ["TindivoDesign"])
     ],
     targets: [
         .target(

@@ -98,8 +98,10 @@ extension PreviewData {
         categories: [
             .init(
                 id: "c1", name: "Platos", displayOrder: 1,
-                items: [.init(id: "i1", name: "Arroz chaufa", basePrice: Decimal(string: "15.00") ?? 0, displayOrder: 1)]
-            ),
+                items: [
+                    .init(id: "i1", name: "Arroz chaufa", basePrice: Decimal(string: "15.00") ?? 0, displayOrder: 1)
+                ]
+            )
         ],
         schedule: (0...6).map { day in
             .init(
@@ -126,7 +128,8 @@ struct PreviewCatalog: CatalogRepository {
 extension FileCartStore {
     /// Una bolsa en un archivo temporal propio: un preview nunca toca la bolsa real.
     static func preview() -> FileCartStore {
-        FileCartStore(fileURL: FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)/cart.json"))
+        FileCartStore(
+            fileURL: FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)/cart.json"))
     }
 }
 #endif

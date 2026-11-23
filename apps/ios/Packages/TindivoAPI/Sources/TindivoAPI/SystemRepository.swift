@@ -88,7 +88,10 @@ package enum TindivoAPIClient {
             serverURL: baseURL,
             configuration: Configuration(dateTranscoder: FlexibleISO8601()),
             transport: transport,
-            middlewares: [deadline, ClientHeadersMiddleware(client: client), ProblemMiddleware(onUpgradeRequired: onUpgradeRequired), retry]
+            middlewares: [
+                deadline, ClientHeadersMiddleware(client: client),
+                ProblemMiddleware(onUpgradeRequired: onUpgradeRequired), retry,
+            ]
         )
     }
 }

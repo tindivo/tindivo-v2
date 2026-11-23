@@ -48,7 +48,8 @@ private struct TindivoTextModifier: ViewModifier {
 
     init(token: TypeToken) {
         self.token = token
-        _spacing = ScaledMetric(wrappedValue: max(0, (token.line ?? token.size) - token.size), relativeTo: token.systemStyle)
+        _spacing = ScaledMetric(
+            wrappedValue: max(0, (token.line ?? token.size) - token.size), relativeTo: token.systemStyle)
     }
 
     func body(content: Content) -> some View {

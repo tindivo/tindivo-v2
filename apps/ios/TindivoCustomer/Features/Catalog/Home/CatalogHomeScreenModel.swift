@@ -94,9 +94,9 @@ final class CatalogHomeScreenModel {
     /// El texto de estado de una tarjeta cerrada: «Cerrado · abre mañana 12:00», o «Cerrado ahora» si aún no se sabe.
     func closedLabel(for business: BusinessCard) -> String {
         guard let schedule = schedules[business.id],
-              case let .closed(status) = openStatus(
-                  days: schedule.days, now: now, openingConfirmed: schedule.openingConfirmed
-              )
+            case let .closed(status) = openStatus(
+                days: schedule.days, now: now, openingConfirmed: schedule.openingConfirmed
+            )
         else { return OrderingMode.closedTitle }
         return closedSummary(status, now: now)
     }
@@ -116,7 +116,8 @@ final class CatalogHomeScreenModel {
                 func fetch(_ id: String) {
                     group.addTask {
                         guard let menu = try? await cache.menu(id: id, catalog: catalog, now: now),
-                              let detail = MenuMapping.detail(from: menu) else { return nil }
+                            let detail = MenuMapping.detail(from: menu)
+                        else { return nil }
                         return (id, ClosedSchedule(days: detail.schedule, openingConfirmed: detail.openingConfirmed))
                     }
                 }

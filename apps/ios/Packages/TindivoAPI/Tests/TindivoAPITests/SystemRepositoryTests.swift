@@ -25,9 +25,9 @@ struct SystemRepositoryTests {
     @Test("CLI-2: un campo nuevo y un valor nuevo de enum no rompen la decodificación")
     func forwardCompatible() async throws {
         let json = #"""
-        {"data":{"status":"degraded","service":"tindivo-api","version":"v1","time":"2026-11-22T07:00:00Z",
-        "campoNuevo":{"x":1}},"meta":"nuevo"}
-        """#
+            {"data":{"status":"degraded","service":"tindivo-api","version":"v1","time":"2026-11-22T07:00:00Z",
+            "campoNuevo":{"x":1}},"meta":"nuevo"}
+            """#
         let health = try await repository(.json(200, json)).health()
         #expect(health.status == "degraded")
     }
@@ -35,10 +35,10 @@ struct SystemRepositoryTests {
     @Test("lee la versión mínima de customer en iOS desde /config (con la forma real que dio staging el 2026-11-22)")
     func clientCompat() async throws {
         let json = #"""
-        {"data":{"minAppVersion":{"customer":{"ios":"1.2.0","android":"1.0.0"},
-        "negocios":{"ios":"0.0.0","android":"0.0.0"},"motorizados":{"ios":"0.0.0","android":"0.0.0"}},
-        "minOs":{"android":26,"ios":17},"features":{},"apiVersion":"v1","serverTime":"2026-11-22T07:30:47.542Z"}}
-        """#
+            {"data":{"minAppVersion":{"customer":{"ios":"1.2.0","android":"1.0.0"},
+            "negocios":{"ios":"0.0.0","android":"0.0.0"},"motorizados":{"ios":"0.0.0","android":"0.0.0"}},
+            "minOs":{"android":26,"ios":17},"features":{},"apiVersion":"v1","serverTime":"2026-11-22T07:30:47.542Z"}}
+            """#
         let compat = try await repository(.json(200, json)).clientCompat()
         #expect(compat == ClientCompat(minAppVersion: "1.2.0", minOS: 17))
     }
@@ -46,17 +46,18 @@ struct SystemRepositoryTests {
     @Test("CLI-4: los interruptores de /config llegan con su estado y su mensaje")
     func clientFeatures() async throws {
         let json = #"""
-        {"data":{"minAppVersion":{"customer":{"ios":"1.0.0","android":"1.0.0"},
-        "negocios":{"ios":"0.0.0","android":"0.0.0"},"motorizados":{"ios":"0.0.0","android":"0.0.0"}},
-        "minOs":{"android":26,"ios":17},
-        "features":{"checkout":{"enabled":false,"message":"Pedidos en pausa"},"reviews":{"enabled":true}},
-        "apiVersion":"v1","serverTime":"2026-11-22T07:30:47.542Z"}}
-        """#
+            {"data":{"minAppVersion":{"customer":{"ios":"1.0.0","android":"1.0.0"},
+            "negocios":{"ios":"0.0.0","android":"0.0.0"},"motorizados":{"ios":"0.0.0","android":"0.0.0"}},
+            "minOs":{"android":26,"ios":17},
+            "features":{"checkout":{"enabled":false,"message":"Pedidos en pausa"},"reviews":{"enabled":true}},
+            "apiVersion":"v1","serverTime":"2026-11-22T07:30:47.542Z"}}
+            """#
         let compat = try await repository(.json(200, json)).clientCompat()
-        #expect(compat.features == [
-            "checkout": ClientFeature(enabled: false, message: "Pedidos en pausa"),
-            "reviews": ClientFeature(enabled: true, message: nil),
-        ])
+        #expect(
+            compat.features == [
+                "checkout": ClientFeature(enabled: false, message: "Pedidos en pausa"),
+                "reviews": ClientFeature(enabled: true, message: nil),
+            ])
     }
 
     @Test("CLI-4: un 426 de cualquier operación avisa una vez con la versión mínima (salud y catálogo)")

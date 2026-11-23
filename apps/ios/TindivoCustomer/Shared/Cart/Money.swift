@@ -14,7 +14,8 @@ let maxMenuPrice = Decimal(sign: .plus, exponent: -2, significand: 9_999_999_999
 
 /// El mayor importe que puede sumar una bolsa admitida: `maxLines` platos de `maxQuantity` unidades, cada una con el
 /// precio máximo de carta en el plato y en sus `maxModifiers` opciones (`5249999999475.00`).
-let maxAmount: Decimal = maxMenuPrice
+let maxAmount: Decimal =
+    maxMenuPrice
     * Decimal(CartLimits.maxModifiers + 1) * Decimal(CartLimits.maxQuantity) * Decimal(CartLimits.maxLines)
 
 /// El precio de carta `amount` con exactamente dos decimales, o `nil` si no se puede mostrar tal cual: negativo, más

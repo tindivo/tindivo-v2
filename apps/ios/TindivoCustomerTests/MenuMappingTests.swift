@@ -26,7 +26,8 @@ struct MenuMappingTests {
     ) -> Raw.Item {
         Raw.Item(
             id: id, name: "Plato \(id)", description: description, basePrice: dec(price), imageURL: imageURL,
-            thumbnailURL: thumbnailURL, isAvailable: available, displayOrder: order, availableDays: days, availableFrom: from,
+            thumbnailURL: thumbnailURL, isAvailable: available, displayOrder: order, availableDays: days,
+            availableFrom: from,
             availableTo: to, modifierGroups: groups
         )
     }
@@ -73,32 +74,43 @@ struct MenuMappingTests {
 
     @Test("ordena categorías y platos por display_order y deja fuera las categorías vacías")
     func ordering() throws {
-        let business = try detail(menu([
-            category("c2", order: 2, [item("b", order: 2), item("a", order: 1)]),
-            category("c0", order: 0, []),
-            category("c1", order: 1, [item("z", order: 5)]),
-        ]))
+        let business = try detail(
+            menu([
+                category("c2", order: 2, [item("b", order: 2), item("a", order: 1)]),
+                category("c0", order: 0, []),
+                category("c1", order: 1, [item("z", order: 5)]),
+            ]))
         #expect(business.categories.map(\.id) == ["c1", "c2"])
         #expect(business.categories[1].items.map(\.id) == ["a", "b"])
     }
 
     @Test("D-55: la miniatura si existe; si no, la foto grande; una en blanco no cuenta")
     func thumbnail() throws {
-        let business = try detail(menu([category("c", [
-            item("a", imageURL: "big", thumbnailURL: "small"),
-            item("b", order: 2, imageURL: "big", thumbnailURL: " "),
-            item("c", order: 3),
-        ])]))
+        let business = try detail(
+            menu([
+                category(
+                    "c",
+                    [
+                        item("a", imageURL: "big", thumbnailURL: "small"),
+                        item("b", order: 2, imageURL: "big", thumbnailURL: " "),
+                        item("c", order: 3),
+                    ])
+            ]))
         #expect(business.categories[0].items.map(\.imageURL) == ["small", "big", nil])
     }
 
     @Test("la cabecera del plato usa la foto grande; sin ella, la miniatura; una en blanco no cuenta")
     func hero() throws {
-        let business = try detail(menu([category("c", [
-            item("a", imageURL: "big", thumbnailURL: "small"),
-            item("b", order: 2, imageURL: " ", thumbnailURL: "small"),
-            item("c", order: 3),
-        ])]))
+        let business = try detail(
+            menu([
+                category(
+                    "c",
+                    [
+                        item("a", imageURL: "big", thumbnailURL: "small"),
+                        item("b", order: 2, imageURL: " ", thumbnailURL: "small"),
+                        item("c", order: 3),
+                    ])
+            ]))
         #expect(business.categories[0].items.map(\.heroURL) == ["big", "small", nil])
     }
 
@@ -118,7 +130,8 @@ struct MenuMappingTests {
     func featuredMissing() throws {
         let photo = "https://x/p1.jpg"
         #expect(try detail(menu([category("c", [item("p1", imageURL: photo)])])).featured == nil)
-        let stale = menu([category("c", [item("p1", imageURL: photo)])], featured: .init(title: "X", itemIds: ["fantasma"]))
+        let stale = menu(
+            [category("c", [item("p1", imageURL: photo)])], featured: .init(title: "X", itemIds: ["fantasma"]))
         #expect(try detail(stale).featured == nil)
         let partial = menu(
             [category("c", [item("p1", imageURL: photo)])], featured: .init(title: "X", itemIds: ["fantasma", "p1"])
@@ -142,12 +155,16 @@ struct MenuMappingTests {
     func featuredOnlyAvailableWithPhoto() throws {
         let photo = "https://x/foto.jpg"
         let raw = menu(
-            [category("c", [
-                item("ok", order: 1, imageURL: photo),
-                item("agotado", order: 2, imageURL: photo, available: false),
-                item("sinfoto", order: 3),
-                item("miniatura", order: 4, thumbnailURL: "https://x/mini.jpg"),
-            ])],
+            [
+                category(
+                    "c",
+                    [
+                        item("ok", order: 1, imageURL: photo),
+                        item("agotado", order: 2, imageURL: photo, available: false),
+                        item("sinfoto", order: 3),
+                        item("miniatura", order: 4, thumbnailURL: "https://x/mini.jpg"),
+                    ])
+            ],
             featured: .init(title: "Los más pedidos", itemIds: ["ok", "agotado", "sinfoto", "miniatura"])
         )
         #expect(try detail(raw).featured?.items.map(\.id) == ["ok", "miniatura"])
@@ -177,7 +194,8 @@ struct MenuMappingTests {
 
     @Test("CA-CAT-04 el modo catálogo y su WhatsApp llegan al modelo")
     func catalogOnly() throws {
-        let business = try detail(menu([category("c", [item("p")])], capability: .catalogOnly, whatsapp: "+51987654321"))
+        let business = try detail(
+            menu([category("c", [item("p")])], capability: .catalogOnly, whatsapp: "+51987654321"))
         #expect(business.catalogOnly)
         #expect(business.whatsappNumber == "+51987654321")
         #expect(try !detail(menu([category("c", [item("p")])], capability: .unknown("nuevo"))).catalogOnly)
@@ -186,7 +204,9 @@ struct MenuMappingTests {
     @Test("un plato o una opción con tres decimales, negativa o enorme deja la carta entera en nil")
     func badPrices() {
         for bad in ["2.505", "-1", "100000000"] {
-            let inOption = menu([category("c", [item("p", groups: [group("g", [option("o1", "1"), option("o2", bad)])])])])
+            let inOption = menu([
+                category("c", [item("p", groups: [group("g", [option("o1", "1"), option("o2", bad)])])])
+            ])
             #expect(MenuMapping.detail(from: inOption) == nil, "opción \(bad)")
             #expect(MenuMapping.detail(from: menu([category("c", [item("p", price: bad)])])) == nil, "plato \(bad)")
         }
@@ -197,8 +217,10 @@ struct MenuMappingTests {
         let same = option("aaaa", "2.50")
         let upper = option("AAAA", "1")
         let lower = option("aaaa", "1")
-        #expect(MenuMapping.detail(from: menu([category("c", [item("p", groups: [group("g", [same, same])])])])) == nil)
-        #expect(MenuMapping.detail(from: menu([category("c", [item("p", groups: [group("g", [lower, upper])])])])) == nil)
+        #expect(
+            MenuMapping.detail(from: menu([category("c", [item("p", groups: [group("g", [same, same])])])])) == nil)
+        #expect(
+            MenuMapping.detail(from: menu([category("c", [item("p", groups: [group("g", [lower, upper])])])])) == nil)
         let twoGroups = [group("g", [option("a", "1")]), group("G", [option("b", "1")])]
         #expect(MenuMapping.detail(from: menu([category("c", [item("p", groups: twoGroups)])])) == nil)
         // El contraejemplo de CAX-004: 1050 veces la misma opción al precio máximo nunca llega a la ficha.
@@ -208,10 +230,15 @@ struct MenuMappingTests {
 
     @Test("fuera de su franja el plato se apaga y dice cuándo vuelve; los demás no se tocan")
     func outsideWindow() throws {
-        let business = try detail(menu([category("c", [
-            item("almuerzo", days: [5, 6], from: "11:00", to: "15:00"),
-            item("siempre", order: 2),
-        ])]))
+        let business = try detail(
+            menu([
+                category(
+                    "c",
+                    [
+                        item("almuerzo", days: [5, 6], from: "11:00", to: "15:00"),
+                        item("siempre", order: 2),
+                    ])
+            ]))
         let tuesday = business.atInstant(at("2026-07-07", "20:00"))
         #expect(tuesday.categories[0].items[0].outsideWindow == "Solo sáb y dom, de 11:00 a 15:00")
         #expect(!tuesday.categories[0].items[0].orderable)

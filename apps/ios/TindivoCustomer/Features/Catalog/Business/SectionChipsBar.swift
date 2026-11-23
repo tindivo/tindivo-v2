@@ -55,7 +55,9 @@ struct SectionChipsBar: View {
 
     private func chip(_ name: String, index: Int) -> some View {
         let isSelected = index == bar.selected
-        return Button { onSelect(index) } label: {
+        return Button {
+            onSelect(index)
+        } label: {
             Text(name)
                 .tindivoText(TindivoTokens.Typography.chip)
                 .fontWeight(isSelected ? .bold : .regular)
@@ -116,7 +118,9 @@ struct SectionIndexSheet: View {
     }
 
     private func card(_ section: MenuCategory, index: Int) -> some View {
-        Button { onSelect(index) } label: {
+        Button {
+            onSelect(index)
+        } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(section.name)
                     .tindivoText(TindivoTokens.Typography.body)
@@ -130,7 +134,9 @@ struct SectionIndexSheet: View {
             }
             .padding(TindivoTokens.Spacing.spaceInner)
             .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
-            .background(Color.tindivo.surfaceSunken, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusCard))
+            .background(
+                Color.tindivo.surfaceSunken, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusCard)
+            )
             .contentShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusCard))
         }
         .buttonStyle(.plain)

@@ -32,10 +32,12 @@ struct HomeRequirementsTests {
         let store = temporaryStore()
         let model = model(store: store)
         let observer = Task { await model.observeCart() }
-        _ = try await store.add(businessId: "n", businessName: "Don Lucho", line: Fixture.line("a", businessQuantity: 1))
+        _ = try await store.add(
+            businessId: "n", businessName: "Don Lucho", line: Fixture.line("a", businessQuantity: 1))
         await eventually { model.bagCount == 1 }
         #expect(model.bagAccessibilityLabel == "Bolsa, 1 producto")
-        _ = try await store.add(businessId: "n", businessName: "Don Lucho", line: Fixture.line("b", businessQuantity: 2))
+        _ = try await store.add(
+            businessId: "n", businessName: "Don Lucho", line: Fixture.line("b", businessQuantity: 2))
         await eventually { model.bagCount == 3 }
         #expect(model.bagBadgeText == "3")
         #expect(model.bagAccessibilityLabel == "Bolsa, 3 productos")
@@ -49,8 +51,10 @@ struct HomeRequirementsTests {
         let store = temporaryStore()
         let model = model(store: store)
         let observer = Task { await model.observeCart() }
-        _ = try await store.add(businessId: "n", businessName: "Don Lucho", line: Fixture.line("a", businessQuantity: 50))
-        _ = try await store.add(businessId: "n", businessName: "Don Lucho", line: Fixture.line("b", businessQuantity: 50))
+        _ = try await store.add(
+            businessId: "n", businessName: "Don Lucho", line: Fixture.line("a", businessQuantity: 50))
+        _ = try await store.add(
+            businessId: "n", businessName: "Don Lucho", line: Fixture.line("b", businessQuantity: 50))
         await eventually { model.bagCount == 100 }
         #expect(model.bagBadgeText == "99+")
         observer.cancel()
@@ -112,7 +116,9 @@ struct HomeRequirementsTests {
         func listBusinesses() async throws(AppError) -> [BusinessSummary] { summaries }
 
         func getBusiness(id: String) async throws(AppError) -> BusinessMenu {
-            lock.withLock { current += 1; calls += 1; peak = max(peak, current) }
+            lock.withLock {
+                current += 1; calls += 1; peak = max(peak, current)
+            }
             for _ in 0..<20 { await Task.yield() }
             lock.withLock { current -= 1 }
             return menu
@@ -136,7 +142,8 @@ struct HomeRequirementsTests {
 
     @Test("A1 la carta que Inicio bajó se reusa al abrir el negocio: una sola petición")
     func menuIsSharedWithTheBusiness() async throws {
-        let menus = Script(just: Fixture.menu([Fixture.category("c", [Fixture.item("i")])], schedule: Fixture.nightSchedule))
+        let menus = Script(
+            just: Fixture.menu([Fixture.category("c", [Fixture.item("i")])], schedule: Fixture.nightSchedule))
         let catalog = StubCatalog(businesses: Script(just: [summary("negocio-1", open: false)]), menus: menus)
         let cache = BusinessMenuCache()
         let clock = AppClock.fixed(at("2026-07-07", "12:00"))
@@ -159,7 +166,8 @@ struct HomeRequirementsTests {
         let manual = ManualClock(at("2026-07-07", "17:59"))
         let catalog = StubCatalog(
             businesses: Script(just: [summary("a", open: false)]),
-            menus: Script(just: Fixture.menu([Fixture.category("c", [Fixture.item("i")])], schedule: Fixture.nightSchedule))
+            menus: Script(
+                just: Fixture.menu([Fixture.category("c", [Fixture.item("i")])], schedule: Fixture.nightSchedule))
         )
         let model = CatalogHomeScreenModel(catalog: catalog, clock: manual.clock)
         await model.load()
@@ -174,7 +182,9 @@ struct HomeRequirementsTests {
         await manual.waitForSleep(number: 1)
         manual.set(at("2026-07-07", "18:01"))
         await manual.waitForSleep(number: 2)
-        #expect(model.closedLabel(for: card) == "Cerrado ahora", "ya abrió: el servidor aún dice cerrado, la tarjeta no inventa hora")
+        #expect(
+            model.closedLabel(for: card) == "Cerrado ahora",
+            "ya abrió: el servidor aún dice cerrado, la tarjeta no inventa hora")
         task.cancel()
     }
 }

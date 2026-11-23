@@ -46,8 +46,9 @@ struct ModifierSelectionTests {
             let multi = rule(size, type: type)
             #expect(check([], multi) == [.missing(groupId: "size", groupName: "Tamaño", single: false, min: 1)])
             #expect(check(["small"], multi).isEmpty)
-            #expect(check(["small"], rule(multi, min: 2))
-                == [.missing(groupId: "size", groupName: "Tamaño", single: false, min: 2)])
+            #expect(
+                check(["small"], rule(multi, min: 2))
+                    == [.missing(groupId: "size", groupName: "Tamaño", single: false, min: 2)])
             #expect(check(["small", "large"], rule(multi, min: 2)).isEmpty)
         }
     }
@@ -57,8 +58,9 @@ struct ModifierSelectionTests {
         for type in ["multi", "future_type"] {
             let multi = rule(size, type: type, max: .some(2))
             #expect(check(["small", "large"], multi).isEmpty)
-            #expect(check(["small", "large", "extra"], multi)
-                == [.tooMany(groupId: "size", groupName: "Tamaño", single: false, max: 2)])
+            #expect(
+                check(["small", "large", "extra"], multi)
+                    == [.tooMany(groupId: "size", groupName: "Tamaño", single: false, max: 2)])
             #expect(check(["small", "large", "extra"], rule(multi, max: .some(nil))).isEmpty)
         }
     }
@@ -69,22 +71,27 @@ struct ModifierSelectionTests {
         #expect(check([], multi).isEmpty)
         #expect(check(["small"], multi).isEmpty)
         #expect(check([], rule(multi, max: .some(0))).isEmpty)
-        #expect(check(["small"], rule(multi, max: .some(0)))
-            == [.tooMany(groupId: "size", groupName: "Tamaño", single: false, max: 0)])
+        #expect(
+            check(["small"], rule(multi, max: .some(0)))
+                == [.tooMany(groupId: "size", groupName: "Tamaño", single: false, max: 0)])
     }
 
     @Test("cuenta cada grupo por separado e incluye los obligatorios sin selección")
     func perGroup() {
         let groups = [size, rule(size, id: "sauces", name: "Salsas")]
-        #expect(checkModifierSelection(groups: groups, selectedOptionIds: ["small"], optionGroupOf: optionGroupOf)
-            == [.missing(groupId: "sauces", groupName: "Salsas", single: true, min: 1)])
-        #expect(checkModifierSelection(groups: groups, selectedOptionIds: ["small", "sauce"], optionGroupOf: optionGroupOf).isEmpty)
+        #expect(
+            checkModifierSelection(groups: groups, selectedOptionIds: ["small"], optionGroupOf: optionGroupOf)
+                == [.missing(groupId: "sauces", groupName: "Salsas", single: true, min: 1)])
+        #expect(
+            checkModifierSelection(groups: groups, selectedOptionIds: ["small", "sauce"], optionGroupOf: optionGroupOf)
+                .isEmpty)
     }
 
     @Test("informa primero las repetidas aunque el grupo admita varias")
     func duplicatesFirst() {
-        #expect(check(["small", "small"], rule(size, type: "multi")).first
-            == .duplicate(groupId: "size", groupName: "Tamaño", optionId: "small"))
+        #expect(
+            check(["small", "small"], rule(size, type: "multi")).first
+                == .duplicate(groupId: "size", groupName: "Tamaño", optionId: "small"))
         guard case .duplicate = check(["small", "small"]).first else {
             Issue.record("la repetida debía ir primero")
             return
@@ -104,20 +111,27 @@ struct ModifierSelectionTests {
     func caseInsensitiveKeys() {
         let option = "abcdefab-1234-4000-8000-abcdef123456"
         let group = "fedcbafe-1234-4000-8000-fedcba654321"
-        #expect(checkModifierSelection(groups: [size], selectedOptionIds: [option.uppercased()], optionGroupOf: [option: "size"]).isEmpty)
-        #expect(checkModifierSelection(
-            groups: [rule(size, id: group.uppercased())], selectedOptionIds: [option],
-            optionGroupOf: [option.uppercased(): group]
-        ).isEmpty)
-        #expect(checkModifierSelection(
-            groups: [rule(size, id: group)], selectedOptionIds: [option], optionGroupOf: [option: group.uppercased()]
-        ).isEmpty)
+        #expect(
+            checkModifierSelection(
+                groups: [size], selectedOptionIds: [option.uppercased()], optionGroupOf: [option: "size"]
+            ).isEmpty)
+        #expect(
+            checkModifierSelection(
+                groups: [rule(size, id: group.uppercased())], selectedOptionIds: [option],
+                optionGroupOf: [option.uppercased(): group]
+            ).isEmpty)
+        #expect(
+            checkModifierSelection(
+                groups: [rule(size, id: group)], selectedOptionIds: [option],
+                optionGroupOf: [option: group.uppercased()]
+            ).isEmpty)
     }
 
     @Test("un plato sin grupos admite vacío y detecta ids repetidos")
     func noGroups() {
         #expect(checkModifierSelection(groups: [], selectedOptionIds: [], optionGroupOf: [:]).isEmpty)
-        #expect(checkModifierSelection(groups: [], selectedOptionIds: ["x", "x"], optionGroupOf: [:])
-            == [.duplicate(groupId: nil, groupName: nil, optionId: "x")])
+        #expect(
+            checkModifierSelection(groups: [], selectedOptionIds: ["x", "x"], optionGroupOf: [:])
+                == [.duplicate(groupId: nil, groupName: nil, optionId: "x")])
     }
 }

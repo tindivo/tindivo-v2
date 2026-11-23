@@ -26,9 +26,13 @@ struct FeaturedCarouselView: View {
     private func card(_ item: MenuItem) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             if item.orderable, let onTap {
-                Button { onTap(item) } label: { content(item) }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("menu.featured")
+                Button {
+                    onTap(item)
+                } label: {
+                    content(item)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("menu.featured")
             } else {
                 content(item).accessibilityElement(children: .combine)
             }
@@ -81,7 +85,10 @@ struct FeaturedCarouselView: View {
         return item
     }
     return FeaturedCarouselView(
-        items: [item("1", "1/4 de pollo"), item("2", "Pollo entero con papas y ensalada"), item("3", "Ceviche", orderable: false)]
+        items: [
+            item("1", "1/4 de pollo"), item("2", "Pollo entero con papas y ensalada"),
+            item("3", "Ceviche", orderable: false),
+        ]
     ) { _ in }
     .padding(.vertical, TindivoTokens.Spacing.spaceScreen)
     .background(Color.tindivo.background)

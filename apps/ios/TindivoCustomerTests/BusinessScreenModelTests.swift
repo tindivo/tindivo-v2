@@ -10,7 +10,8 @@ struct BusinessScreenModelTests {
     private func loaded(
         _ menu: BusinessMenu, at date: Date = Fixture.tuesdayEvening, cartStore: (any CartStore)? = nil
     ) async -> BusinessScreenModel {
-        let model = cartStore.map { makeBusinessModel(menu, clock: .fixed(date), cartStore: $0) }
+        let model =
+            cartStore.map { makeBusinessModel(menu, clock: .fixed(date), cartStore: $0) }
             ?? makeBusinessModel(menu, clock: .fixed(date))
         await model.load()
         return model
@@ -118,11 +119,15 @@ struct BusinessScreenModelTests {
 
     // MARK: Franjas y apertura
 
-    private let windowMenu = Fixture.menu([Fixture.category("c", [
-        Fixture.item("lunch", days: [0, 1, 2, 3, 4, 5, 6], from: "11:00", to: "15:00"),
-        Fixture.item("always", order: 2),
-        Fixture.item("out", order: 3, available: false),
-    ])])
+    private let windowMenu = Fixture.menu([
+        Fixture.category(
+            "c",
+            [
+                Fixture.item("lunch", days: [0, 1, 2, 3, 4, 5, 6], from: "11:00", to: "15:00"),
+                Fixture.item("always", order: 2),
+                Fixture.item("out", order: 3, available: false),
+            ])
+    ])
 
     @Test("CA-CAT-01 un plato fuera de su franja sigue en la carta, apagado y diciendo cuándo vuelve")
     func outsideWindow() async throws {
@@ -236,13 +241,18 @@ struct BusinessScreenModelTests {
         #expect(model.notices.message == "Ya tienes 50 de este plato: es el máximo por pedido")
     }
 
+}
+
+extension BusinessScreenModelTests {
     // MARK: Búsqueda
 
     private let searchMenu = Fixture.menu([
-        Fixture.category("c1", name: "Pollos", [
-            Fixture.item("p1", description: "Con papas", name: "Pollo a la brasa"),
-            Fixture.item("p2", order: 2, name: "Pollo broaster"),
-        ]),
+        Fixture.category(
+            "c1", name: "Pollos",
+            [
+                Fixture.item("p1", description: "Con papas", name: "Pollo a la brasa"),
+                Fixture.item("p2", order: 2, name: "Pollo broaster"),
+            ]),
         Fixture.category("c2", order: 2, name: "Bebidas", [Fixture.item("b1", name: "Chicha morada")]),
     ])
 
@@ -304,8 +314,10 @@ struct BusinessScreenModelTests {
 
     @Test("la barra suma unidades y subtotal de la bolsa de este negocio")
     func cartBarForThisBusiness() async throws {
-        let store = FileCartStore(fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/c.json"))
-        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: Fixture.line("i1", businessQuantity: 2))
+        let store = FileCartStore(
+            fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/c.json"))
+        _ = try await store.add(
+            businessId: "negocio-1", businessName: "Don Lucho", line: Fixture.line("i1", businessQuantity: 2))
         let model = await loaded(simple, cartStore: store)
         let observing = Task { await model.observeCart() }
         await eventually { model.cartBarSummary != nil }
@@ -316,7 +328,8 @@ struct BusinessScreenModelTests {
 
     @Test("la barra solo sale si la bolsa es de este negocio")
     func cartBarOnlyForThisBusiness() async throws {
-        let store = FileCartStore(fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/c.json"))
+        let store = FileCartStore(
+            fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/c.json"))
         _ = try await store.add(businessId: "otro", businessName: "Otro", line: Fixture.line())
         let model = await loaded(simple, cartStore: store)
         let observing = Task { await model.observeCart() }
@@ -327,7 +340,8 @@ struct BusinessScreenModelTests {
 
     @Test("la barra se actualiza cuando la bolsa cambia")
     func cartBarFollowsStore() async throws {
-        let store = FileCartStore(fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/c.json"))
+        let store = FileCartStore(
+            fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/c.json"))
         let model = await loaded(simple, cartStore: store)
         let observing = Task { await model.observeCart() }
         #expect(model.cartBarSummary == nil)

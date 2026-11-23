@@ -78,7 +78,10 @@ struct BusinessInfoSheet: View {
         .padding(.horizontal, TindivoTokens.Spacing.spaceInner)
         .padding(.vertical, 10)
         .frame(minHeight: TindivoTokens.Spacing.touchTarget)
-        .background(row.isToday ? Color.tindivo.primaryContainer : Color.clear, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusThumb))
+        .background(
+            row.isToday ? Color.tindivo.primaryContainer : Color.clear,
+            in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusThumb)
+        )
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(row.isToday ? "info.day.today" : "info.day")
     }
@@ -133,7 +136,10 @@ struct BusinessInfoSheet: View {
                 .tindivoText(TindivoTokens.Typography.titleSection)
                 .foregroundStyle(Color.tindivo.ink)
                 .accessibilityAddTraits(.isHeader)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8, alignment: .leading)], alignment: .leading, spacing: 8) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 88), spacing: 8, alignment: .leading)], alignment: .leading,
+                spacing: 8
+            ) {
                 TindivoChip(String(localized: "Yape"))
                 TindivoChip(String(localized: "Plin"))
                 TindivoChip(String(localized: "Efectivo"))

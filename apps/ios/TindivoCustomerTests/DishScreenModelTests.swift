@@ -27,7 +27,6 @@ private actor GatedStore: CartStore {
         try await inner.replace(businessId: businessId, businessName: businessName, line: line)
     }
 
-
     func changeQuantity(signature: String, by delta: Int) async throws(CartError) {
         try await inner.changeQuantity(signature: signature, by: delta)
     }
@@ -36,13 +35,16 @@ private actor GatedStore: CartStore {
         try await inner.replaceLine(signature: signature, with: line)
     }
 
-    func remove(signature: String) async throws(CartError) -> RemovedLine? { try await inner.remove(signature: signature) }
+    func remove(signature: String) async throws(CartError) -> RemovedLine? {
+        try await inner.remove(signature: signature)
+    }
     func restore(_ removed: RemovedLine) async throws(CartError) -> RestoreResult { try await inner.restore(removed) }
     func clear() async throws(CartError) { try await inner.clear() }
 }
 
 func temporaryStore() -> FileCartStore {
-    FileCartStore(fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/cart.json"))
+    FileCartStore(
+        fileURL: FileManager.default.temporaryDirectory.appending(path: "tindivo-test-\(UUID().uuidString)/cart.json"))
 }
 
 /// Un archivo que ya existe donde la bolsa quiere un directorio: guardar falla siempre.
@@ -73,15 +75,20 @@ struct DishScreenModelTests {
     // MARK: Editar (CA-CRT-11)
 
     private func editable() -> BusinessMenu.Item {
-        Fixture.item("i1", price: "10", groups: [
-            Fixture.group("g", single: true, required: true, options: [Fixture.option("a", "1"), Fixture.option("b", "2")]),
-        ])
+        Fixture.item(
+            "i1", price: "10",
+            groups: [
+                Fixture.group(
+                    "g", single: true, required: true, options: [Fixture.option("a", "1"), Fixture.option("b", "2")])
+            ])
     }
 
     private func editedLine(_ option: String, price: String, quantity: Int, note: String? = nil) -> CartLine {
         CartLine(
             itemId: "i1", name: "Plato i1", basePrice: dec("10"),
-            modifiers: [CartModifier(optionId: option, groupName: "Grupo g", optionName: "Opción \(option)", price: dec(price))],
+            modifiers: [
+                CartModifier(optionId: option, groupName: "Grupo g", optionName: "Opción \(option)", price: dec(price))
+            ],
             note: note, quantity: quantity, imageURL: nil
         )
     }
@@ -112,7 +119,8 @@ struct DishScreenModelTests {
     @Test("CA-CRT-11: si al editar la línea queda idéntica a otra, se fusionan sumando cantidades")
     func editMergesWithAnIdenticalLine() async throws {
         let store = temporaryStore()
-        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: editedLine("a", price: "1", quantity: 1))
+        _ = try await store.add(
+            businessId: "negocio-1", businessName: "Don Lucho", line: editedLine("a", price: "1", quantity: 1))
         let second = editedLine("b", price: "2", quantity: 2)
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: second)
         let model = try model(editable(), store: store, editing: second)
@@ -163,9 +171,12 @@ struct DishScreenModelTests {
 
     @Test("agregar lleva la cantidad, la nota y las opciones elegidas")
     func addCarriesSelection() async throws {
-        let raw = Fixture.item("i1", price: "10", groups: [
-            Fixture.group("g1", single: true, required: true, options: [Fixture.option("o1", "2.50"), Fixture.option("o2")]),
-        ])
+        let raw = Fixture.item(
+            "i1", price: "10",
+            groups: [
+                Fixture.group(
+                    "g1", single: true, required: true, options: [Fixture.option("o1", "2.50"), Fixture.option("o2")])
+            ])
         let store = temporaryStore()
         let model = try model(raw, store: store)
         let group = try #require(model.item.dish.groups.first)
@@ -270,7 +281,8 @@ struct DishScreenModelTests {
 
     @Test("sin completar un grupo obligatorio no se puede agregar")
     func invalidSelectionDoesNotAdd() async throws {
-        let raw = Fixture.item("i1", groups: [Fixture.group("g1", single: true, required: true, options: [Fixture.option("o1")])])
+        let raw = Fixture.item(
+            "i1", groups: [Fixture.group("g1", single: true, required: true, options: [Fixture.option("o1")])])
         let store = temporaryStore()
         let model = try model(raw, store: store)
         #expect(!model.canAdd)
@@ -284,9 +296,11 @@ struct DishScreenModelTests {
 
     @Test("elegir una opción obligatoria habilita Agregar con el total")
     func completingEnablesAdd() throws {
-        let raw = Fixture.item("i1", price: "10", groups: [
-            Fixture.group("g1", single: true, required: true, options: [Fixture.option("o1", "2.50")]),
-        ])
+        let raw = Fixture.item(
+            "i1", price: "10",
+            groups: [
+                Fixture.group("g1", single: true, required: true, options: [Fixture.option("o1", "2.50")])
+            ])
         let model = try model(raw, store: temporaryStore())
         let group = try #require(model.item.dish.groups.first)
         model.toggle(group.options[0], in: group)

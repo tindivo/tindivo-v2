@@ -20,10 +20,12 @@ struct DiagnosticsScreenModelTests {
     func loads() async {
         let model = DiagnosticsScreenModel(system: FakeSystem(), config: config)
         await model.load()
-        #expect(model.state == .loaded(
-            health: ApiHealth(status: "ok", version: "v1"),
-            compat: ClientCompat(minAppVersion: "0.0.0", minOS: 17)
-        ))
+        #expect(
+            model.state
+                == .loaded(
+                    health: ApiHealth(status: "ok", version: "v1"),
+                    compat: ClientCompat(minAppVersion: "0.0.0", minOS: 17)
+                ))
     }
 
     @Test("un fallo de cualquiera de las dos queda como error")

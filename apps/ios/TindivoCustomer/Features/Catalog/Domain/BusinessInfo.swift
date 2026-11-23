@@ -20,7 +20,8 @@ func weekSchedule(days: [ScheduleDay], now: Date) -> [WeekScheduleRow] {
     let today = LimaClock.dayIndex(now)
     return (0..<LimaClock.weekDays).map { index in
         WeekScheduleRow(
-            dayIndex: index, name: LimaClock.dayName(index), shifts: shiftLabels(of: byDay[index]), isToday: index == today
+            dayIndex: index, name: LimaClock.dayName(index), shifts: shiftLabels(of: byDay[index]),
+            isToday: index == today
         )
     }
 }

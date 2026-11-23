@@ -11,7 +11,9 @@ struct CartSnapshotTests {
     ) -> CartLine {
         CartLine(
             itemId: itemId, name: "Lomo saltado", basePrice: dec(price),
-            modifiers: modifiers ?? [CartModifier(optionId: "queso", groupName: "Extras", optionName: "Queso", price: dec("2.50"))],
+            modifiers: modifiers ?? [
+                CartModifier(optionId: "queso", groupName: "Extras", optionName: "Queso", price: dec("2.50"))
+            ],
             note: note, quantity: quantity, imageURL: "https://img/x.webp"
         )
     }
@@ -78,13 +80,16 @@ struct CartSnapshotTests {
         #expect(try Cart(snapshot: with([lineSnapshot(quantity: 0)])) == nil)
         #expect(try Cart(snapshot: with([lineSnapshot(quantity: CartLimits.maxQuantity + 1)])) == nil)
         #expect(try Cart(snapshot: with([lineSnapshot(quantity: -3)])) == nil)
-        #expect(try Cart(snapshot: with([lineSnapshot(quantity: CartLimits.maxQuantity)]))?.count == CartLimits.maxQuantity)
+        #expect(
+            try Cart(snapshot: with([lineSnapshot(quantity: CartLimits.maxQuantity)]))?.count == CartLimits.maxQuantity)
     }
 
     @Test("más opciones que el máximo del pedido descartan la bolsa")
     func tooManyOptions() throws {
         func options(_ n: Int) -> [CartModifierSnapshot] {
-            (0..<n).map { CartModifierSnapshot(optionId: "o\($0)", groupName: "Extras", optionName: "Opción \($0)", price: "1.00") }
+            (0..<n).map {
+                CartModifierSnapshot(optionId: "o\($0)", groupName: "Extras", optionName: "Opción \($0)", price: "1.00")
+            }
         }
         #expect(try Cart(snapshot: with([lineSnapshot(modifiers: options(CartLimits.maxModifiers + 1))])) == nil)
         #expect(try Cart(snapshot: with([lineSnapshot(modifiers: options(CartLimits.maxModifiers))])) != nil)
@@ -104,7 +109,8 @@ struct CartSnapshotTests {
 
     @Test("una opción repetida en una línea descarta la bolsa entera")
     func repeatedOption() throws {
-        let queso = CartModifierSnapshot(optionId: "6f1c0000-0000-4000-8000-00000000000a", groupName: "Extras", optionName: "Queso", price: "2.50")
+        let queso = CartModifierSnapshot(
+            optionId: "6f1c0000-0000-4000-8000-00000000000a", groupName: "Extras", optionName: "Queso", price: "2.50")
         var upper = queso
         upper.optionId = queso.optionId.uppercased()
         let valid = lineSnapshot(itemId: "otro")
@@ -160,8 +166,8 @@ struct CartSnapshotTests {
     @Test("CA-CRT-01: un snapshot viejo, sin el campo del método, se lee como delivery")
     func oldSnapshotReadsAsDelivery() throws {
         let old = """
-        {"businessId":"negocio","businessName":"Pollería","lines":[{"basePrice":"12.50","itemId":"plato","modifiers":[],"name":"Lomo","quantity":2}],"version":1}
-        """
+            {"businessId":"negocio","businessName":"Pollería","lines":[{"basePrice":"12.50","itemId":"plato","modifiers":[],"name":"Lomo","quantity":2}],"version":1}
+            """
         let decoded = try CartSnapshotCodec.decode(Data(old.utf8))
         #expect(decoded.method == "delivery")
         let restored = try #require(Cart(snapshot: decoded))
@@ -171,7 +177,9 @@ struct CartSnapshotTests {
 
     @Test("CA-CRT-01: el método recojo se guarda y se lee")
     func pickupRoundTrips() throws {
-        let pickup = Cart(businessId: "negocio", businessName: "Pollería", lines: [line("a", modifiers: [], note: nil)], method: .pickup)
+        let pickup = Cart(
+            businessId: "negocio", businessName: "Pollería", lines: [line("a", modifiers: [], note: nil)],
+            method: .pickup)
         let data = try CartSnapshotCodec.encode(try #require(pickup.snapshot()))
         #expect(String(decoding: data, as: UTF8.self).contains("\"method\":\"pickup\""))
         let restored = try #require(Cart(snapshot: try CartSnapshotCodec.decode(data)))

@@ -73,7 +73,7 @@ struct CatalogRequirementsTests {
 
     @Test("CA-CAT-P2 «Cerrado · abre [día] [hora]»: hoy, mañana o el día de la semana")
     func closedSummaryDays() {
-        let now = at("2026-07-12", "12:00") // domingo
+        let now = at("2026-07-12", "12:00")  // domingo
         #expect(closedSummary(ClosedStatus(opensAt: "18:00", daysAhead: 0), now: now) == "Cerrado · abre hoy 18:00")
         #expect(closedSummary(ClosedStatus(opensAt: "18:00", daysAhead: 1), now: now) == "Cerrado · abre mañana 18:00")
         #expect(closedSummary(ClosedStatus(opensAt: "18:00:00", daysAhead: 2), now: now) == "Cerrado · abre mar 18:00")
@@ -83,7 +83,8 @@ struct CatalogRequirementsTests {
     func closedSummaryUnknown() {
         let now = at("2026-07-12", "12:00")
         #expect(closedSummary(ClosedStatus(opensAt: nil, daysAhead: 0), now: now) == "Cerrado ahora")
-        #expect(closedSummary(ClosedStatus(opensAt: nil, daysAhead: 0, notConfirmed: true), now: now) == "Cerrado ahora")
+        #expect(
+            closedSummary(ClosedStatus(opensAt: nil, daysAhead: 0, notConfirmed: true), now: now) == "Cerrado ahora")
     }
 
     @Test("CA-CAT-P5 la barra dice «Abierto · cierra [hora]»; sin horario no dice nada")
@@ -91,7 +92,9 @@ struct CatalogRequirementsTests {
         let now = at("2026-07-07", "20:00")
         #expect(openStatusLine(.open(closesAt: "23:00"), now: now) == "Abierto · cierra 23:00")
         #expect(openStatusLine(.noSchedule, now: now) == nil)
-        #expect(openStatusLine(.closed(ClosedStatus(opensAt: "18:00", daysAhead: 1)), now: now) == "Cerrado · abre mañana 18:00")
+        #expect(
+            openStatusLine(.closed(ClosedStatus(opensAt: "18:00", daysAhead: 1)), now: now)
+                == "Cerrado · abre mañana 18:00")
     }
 
     // MARK: Modo catálogo (A10: los enlaces salen del modelo)
@@ -136,11 +139,17 @@ struct DishExtrasMappingTests {
 
     @Test("CUS-CAT-029 «Desde S/»: base más lo más barato de cada grupo obligatorio; sin obligatorios, nada")
     func startingAt() throws {
-        let raw = Fixture.item("i1", price: "10", groups: [
-            Fixture.group("g1", single: true, required: true, min: 1, max: 1, options: [Fixture.option("a", "3"), Fixture.option("b", "1.50")]),
-            Fixture.group("g2", required: true, min: 2, max: 3, options: [Fixture.option("c", "1"), Fixture.option("d", "2"), Fixture.option("e", "4")]),
-            Fixture.group("g3", options: [Fixture.option("f", "0.50")]),
-        ])
+        let raw = Fixture.item(
+            "i1", price: "10",
+            groups: [
+                Fixture.group(
+                    "g1", single: true, required: true, min: 1, max: 1,
+                    options: [Fixture.option("a", "3"), Fixture.option("b", "1.50")]),
+                Fixture.group(
+                    "g2", required: true, min: 2, max: 3,
+                    options: [Fixture.option("c", "1"), Fixture.option("d", "2"), Fixture.option("e", "4")]),
+                Fixture.group("g3", options: [Fixture.option("f", "0.50")]),
+            ])
         // 10 + 1.50 + (1 + 2)
         #expect(try mapped(raw).startingAtText.plain == "S/ 14.50")
         let optionalOnly = Fixture.item("i2", groups: [Fixture.group("g", options: [Fixture.option("o", "1")])])

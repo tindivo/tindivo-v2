@@ -10,7 +10,9 @@ import TindivoAPI
 struct DishRequirementsTests {
     /// «Pollo entero» con «Guarnición 1» y «Guarnición 2» obligatorias y un extra opcional (CUS-CAT-033).
     private var pollo: BusinessMenu.Item {
-        func group(_ id: String, _ name: String, required: Bool, max: Int, _ options: [BusinessMenu.ModifierOption]) -> BusinessMenu.ModifierGroup {
+        func group(_ id: String, _ name: String, required: Bool, max: Int, _ options: [BusinessMenu.ModifierOption])
+            -> BusinessMenu.ModifierGroup
+        {
             BusinessMenu.ModifierGroup(
                 id: id, name: name, selectionType: "single", isRequired: required, minSelections: required ? 1 : 0,
                 maxSelections: max, priceDisplay: "delta", options: options
@@ -23,7 +25,9 @@ struct DishRequirementsTests {
             id: "pollo", name: "Pollo entero", basePrice: dec("46"), displayOrder: 1,
             modifierGroups: [
                 group("g1", "Guarnición 1", required: true, max: 1, [option("papas", "Papas fritas")]),
-                group("g2", "Guarnición 2", required: true, max: 1, [option("ensalada", "Ensalada fresca"), option("arroz", "Arroz")]),
+                group(
+                    "g2", "Guarnición 2", required: true, max: 1,
+                    [option("ensalada", "Ensalada fresca"), option("arroz", "Arroz")]),
                 group("g3", "Extra", required: false, max: 1, [option("crema", "Crema", "3")]),
             ]
         )
@@ -96,7 +100,9 @@ struct DishRequirementsTests {
 
     @Test("CA-CAT-P8 con un solo grupo obligatorio el avance dice «lista» en singular; sin obligatorios no hay avance")
     func progressPlural() throws {
-        let single = Fixture.item("i1", groups: [Fixture.group("g", single: true, required: true, min: 1, max: 1, options: [Fixture.option("o")])])
+        let single = Fixture.item(
+            "i1",
+            groups: [Fixture.group("g", single: true, required: true, min: 1, max: 1, options: [Fixture.option("o")])])
         #expect(try model(single).progressText == "0 de 1 lista")
         #expect(try model(Fixture.item("i2")).progressText == nil)
     }
@@ -124,10 +130,13 @@ struct DishRequirementsTests {
 
     @Test("M3 los contadores se leen en voz alta con palabras: «2 de 3 elegidas», «12 de 140 caracteres»")
     func spokenCounters() throws {
-        let raw = Fixture.item("i1", groups: [
-            Fixture.group("g", min: 0, max: 3, options: [Fixture.option("a"), Fixture.option("b"), Fixture.option("c")]),
-            Fixture.group("sin-tope", options: [Fixture.option("x")]),
-        ])
+        let raw = Fixture.item(
+            "i1",
+            groups: [
+                Fixture.group(
+                    "g", min: 0, max: 3, options: [Fixture.option("a"), Fixture.option("b"), Fixture.option("c")]),
+                Fixture.group("sin-tope", options: [Fixture.option("x")]),
+            ])
         let model = try model(raw)
         let groups = model.item.dish.groups
         try choose("a", in: model)

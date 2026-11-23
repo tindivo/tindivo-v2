@@ -11,7 +11,9 @@ struct TindivoComponentsTests {
 
     @Test("M9 ninguna elevación del canon pasa de las dos capas que aplica el modificador fijo")
     func elevationsFit() {
-        for layers in [TindivoTokens.Elevation.elevation1, TindivoTokens.Elevation.elevation2, TindivoTokens.Elevation.elevation3] {
+        for layers in [
+            TindivoTokens.Elevation.elevation1, TindivoTokens.Elevation.elevation2, TindivoTokens.Elevation.elevation3,
+        ] {
             #expect(layers.count <= TindivoElevationModifier.maxLayers)
         }
     }

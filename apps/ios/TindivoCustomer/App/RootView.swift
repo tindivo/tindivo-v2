@@ -11,10 +11,11 @@ struct RootView: View {
 
     init(environment: AppEnvironment) {
         self.environment = environment
-        _home = State(initialValue: CatalogHomeScreenModel(
-            catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock,
-            menuCache: environment.menuCache
-        ))
+        _home = State(
+            initialValue: CatalogHomeScreenModel(
+                catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock,
+                menuCache: environment.menuCache
+            ))
     }
 
     var body: some View {
@@ -42,7 +43,9 @@ struct RootView: View {
                 }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
-                if !osNoticeDismissed, config.state.isBelowMinOS(ProcessInfo.processInfo.operatingSystemVersion.majorVersion) {
+                if !osNoticeDismissed,
+                    config.state.isBelowMinOS(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)
+                {
                     OSNoticeView { osNoticeDismissed = true }
                 }
             }
@@ -81,10 +84,11 @@ private struct BusinessRoute: View {
 
     init(id: String, environment: AppEnvironment, navigator: AppNavigator) {
         routeId = id
-        _model = State(initialValue: BusinessScreenModel(
-            id: id, catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock,
-            menuCache: environment.menuCache
-        ))
+        _model = State(
+            initialValue: BusinessScreenModel(
+                id: id, catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock,
+                menuCache: environment.menuCache
+            ))
         self.environment = environment
         self.navigator = navigator
     }
@@ -103,7 +107,9 @@ private struct CartRoute: View {
     private let navigator: AppNavigator
 
     init(environment: AppEnvironment, navigator: AppNavigator) {
-        _model = State(initialValue: CartScreenModel(store: environment.cartStore, catalog: environment.catalog, clock: environment.clock))
+        _model = State(
+            initialValue: CartScreenModel(
+                store: environment.cartStore, catalog: environment.catalog, clock: environment.clock))
         self.navigator = navigator
     }
 

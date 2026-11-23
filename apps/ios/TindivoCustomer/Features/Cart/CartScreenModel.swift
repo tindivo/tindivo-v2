@@ -100,7 +100,8 @@ final class CartScreenModel {
         // Solo pruebas de interfaz: `-tindivo-undo-seconds 60` alarga el plazo para poder tocar «Deshacer» sin prisa.
         let arguments = ProcessInfo.processInfo.arguments
         if let flag = arguments.firstIndex(of: "-tindivo-undo-seconds"), arguments.indices.contains(flag + 1),
-           let seconds = Double(arguments[flag + 1]), seconds > 0 {
+            let seconds = Double(arguments[flag + 1]), seconds > 0
+        {
             return .seconds(seconds)
         }
         #endif
@@ -207,7 +208,8 @@ final class CartScreenModel {
         switch menu {
         case let .loaded(detail) where detail.id.caseInsensitiveCompare(cart.businessId) == .orderedSame:
             state = Self.state(
-                for: cart, validation: .checked, issues: CartValidation.issues(of: cart, against: detail, now: clock.now()),
+                for: cart, validation: .checked,
+                issues: CartValidation.issues(of: cart, against: detail, now: clock.now()),
                 menu: detail
             )
         case .failed:
@@ -291,7 +293,8 @@ final class CartScreenModel {
             return true
         case .full:
             forgetUndo()
-            notices.show(String(localized: "Tu bolsa ya tiene \(CartLimits.maxLines) platos distintos: es el máximo por pedido"))
+            notices.show(
+                String(localized: "Tu bolsa ya tiene \(CartLimits.maxLines) platos distintos: es el máximo por pedido"))
             return false
         case .noBag:
             forgetUndo()
@@ -309,7 +312,8 @@ final class CartScreenModel {
         isOpeningEdit = true
         defer { isOpeningEdit = false }
         guard let cart = await store.current(),
-              let line = cart.lines.first(where: { $0.signatureKey == Array(signature.utf16) }) else { return }
+            let line = cart.lines.first(where: { $0.signatureKey == Array(signature.utf16) })
+        else { return }
         let detail: BusinessDetail
         do throws(AppError) {
             if case let .loaded(known) = menu, known.id.caseInsensitiveCompare(cart.businessId) == .orderedSame {
@@ -322,8 +326,9 @@ final class CartScreenModel {
             return
         }
         let wanted = line.itemId.lowercased()
-        guard let item = detail.atInstant(clock.now()).categories.lazy.flatMap(\.items)
-            .first(where: { $0.id.lowercased() == wanted && $0.orderable })
+        guard
+            let item = detail.atInstant(clock.now()).categories.lazy.flatMap(\.items)
+                .first(where: { $0.id.lowercased() == wanted && $0.orderable })
         else {
             notices.show(String(localized: "Este producto ya no está disponible"))
             return
@@ -394,35 +399,41 @@ final class CartScreenModel {
     /// tenga ninguna elegida (extras opcionales sin elegir); si no hay carta o el plato no está, cae al criterio de la
     /// línea (tiene opciones elegidas).
     static func state(
-        for cart: Cart?, validation: Validation = .validating, issues: [[CartLineIssue]] = [], menu: BusinessDetail? = nil
+        for cart: Cart?, validation: Validation = .validating, issues: [[CartLineIssue]] = [],
+        menu: BusinessDetail? = nil
     ) -> State {
         guard let cart, !cart.isEmpty else { return .empty }
-        return .filled(Filled(
-            businessId: cart.businessId,
-            businessName: cart.businessName,
-            lines: cart.lines.enumerated().map { index, line in
-                CartLineRow(
-                    signature: line.signature,
-                    name: line.name,
-                    options: line.modifiers.map { CartOptionText(id: $0.optionId, group: $0.groupName, option: $0.optionName) },
-                    note: line.note,
-                    quantity: line.quantity,
-                    total: formatAmount(line.total) ?? formatSoles(line.total),
-                    decreaseRemoves: line.quantity == 1,
-                    canIncrease: line.quantity < CartLimits.maxQuantity,
-                    decreaseLabel: line.quantity == 1
-                        ? String(localized: "Quitar \(line.name)")
-                        : String(localized: "Quitar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
-                    increaseLabel: String(localized: "Agregar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
-                    issues: issues.indices.contains(index) ? issues[index].map(\.message) : [],
-                    canEdit: dishHasOptions(line, in: menu) ?? !line.modifiers.isEmpty
-                )
-            },
-            subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal),
-            method: cart.method,
-            validation: validation,
-            countLabel: String(localized: "\(cart.count) productos")
-        ))
+        return .filled(
+            Filled(
+                businessId: cart.businessId,
+                businessName: cart.businessName,
+                lines: cart.lines.enumerated().map { index, line in
+                    CartLineRow(
+                        signature: line.signature,
+                        name: line.name,
+                        options: line.modifiers.map {
+                            CartOptionText(id: $0.optionId, group: $0.groupName, option: $0.optionName)
+                        },
+                        note: line.note,
+                        quantity: line.quantity,
+                        total: formatAmount(line.total) ?? formatSoles(line.total),
+                        decreaseRemoves: line.quantity == 1,
+                        canIncrease: line.quantity < CartLimits.maxQuantity,
+                        decreaseLabel: line.quantity == 1
+                            ? String(localized: "Quitar \(line.name)")
+                            : String(
+                                localized: "Quitar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
+                        increaseLabel: String(
+                            localized: "Agregar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
+                        issues: issues.indices.contains(index) ? issues[index].map(\.message) : [],
+                        canEdit: dishHasOptions(line, in: menu) ?? !line.modifiers.isEmpty
+                    )
+                },
+                subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal),
+                method: cart.method,
+                validation: validation,
+                countLabel: String(localized: "\(cart.count) productos")
+            ))
     }
 
     /// ¿El plato de la línea tiene grupos de opciones en la carta vigente? `nil` si no hay carta o el plato no está.

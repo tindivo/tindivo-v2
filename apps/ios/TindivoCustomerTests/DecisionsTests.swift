@@ -9,7 +9,8 @@ import TindivoAPI
 struct DecisionsTests {
     private func line(_ id: String, quantity: Int = 1, modifiers: [CartModifier] = []) -> CartLine {
         CartLine(
-            itemId: id, name: "Plato \(id)", basePrice: dec("12.50"), modifiers: modifiers, note: nil, quantity: quantity,
+            itemId: id, name: "Plato \(id)", basePrice: dec("12.50"), modifiers: modifiers, note: nil,
+            quantity: quantity,
             imageURL: nil
         )
     }
@@ -66,7 +67,8 @@ struct DecisionsTests {
 
     @Test("decisión 1: con VoiceOver el aviso se va al salir de la bolsa")
     func undoGoesWhenLeavingWithVoiceOver() async throws {
-        let (model, task) = await started(try await twoLines(), clock: ManualClock(Fixture.tuesdayEvening).clock, voiceOver: true)
+        let (model, task) = await started(
+            try await twoLines(), clock: ManualClock(Fixture.tuesdayEvening).clock, voiceOver: true)
         await model.remove(signature: try #require(filled(model)?.lines.first?.signature))
         #expect(model.undoMessage != nil)
         model.leave()
@@ -90,10 +92,16 @@ struct DecisionsTests {
     // MARK: 2. «Editar» si el plato tiene opciones
 
     private func menuWithOptionalExtras() -> BusinessMenu {
-        Fixture.menu([Fixture.category("c", [
-            Fixture.item("combo", groups: [Fixture.group("extras", min: 0, max: 2, options: [Fixture.option("o1", "1")])]),
-            Fixture.item("simple"),
-        ])])
+        Fixture.menu([
+            Fixture.category(
+                "c",
+                [
+                    Fixture.item(
+                        "combo", groups: [Fixture.group("extras", min: 0, max: 2, options: [Fixture.option("o1", "1")])]
+                    ),
+                    Fixture.item("simple"),
+                ])
+        ])
     }
 
     @Test("decisión 2: un plato con extras opcionales sin elegir tiene «Editar»; uno sin opciones, no")
@@ -102,7 +110,8 @@ struct DecisionsTests {
         _ = try await store.add(businessId: "negocio-1", businessName: "N", line: line("combo"))
         _ = try await store.add(businessId: "negocio-1", businessName: "N", line: line("simple"))
         let catalog = StubCatalog(menus: Script(just: menuWithOptionalExtras()))
-        let (model, task) = await started(store, clock: .fixed(Fixture.tuesdayEvening), catalog: catalog, voiceOver: false)
+        let (model, task) = await started(
+            store, clock: .fixed(Fixture.tuesdayEvening), catalog: catalog, voiceOver: false)
         #expect(filled(model)?.lines.map(\.canEdit) == [false, false], "sin carta, cae al criterio de la línea")
         await model.validate()
         await eventually { filled(model)?.validation == .checked }
@@ -131,10 +140,14 @@ struct DecisionsTests {
     func featuredOutsideItsWindowLeaves() async throws {
         let photo = "https://x/f.jpg"
         let menu = Fixture.menu(
-            [Fixture.category("c", [
-                Fixture.item("noche", days: nil, from: "18:00", to: "23:00", image: photo),
-                Fixture.item("almuerzo", order: 2, days: nil, from: "12:00", to: "15:00", image: photo),
-            ])],
+            [
+                Fixture.category(
+                    "c",
+                    [
+                        Fixture.item("noche", days: nil, from: "18:00", to: "23:00", image: photo),
+                        Fixture.item("almuerzo", order: 2, days: nil, from: "12:00", to: "15:00", image: photo),
+                    ])
+            ],
             featured: .init(title: "Los más pedidos", itemIds: ["noche", "almuerzo"])
         )
         let model = makeBusinessModel(menu, clock: .fixed(Fixture.tuesdayEvening))
@@ -148,7 +161,10 @@ struct DecisionsTests {
     @Test("CA-CAT-02 decisión 4: si ningún destacado está en su franja, no hay sección")
     func noFeaturedWhenNoneIsInWindow() async {
         let menu = Fixture.menu(
-            [Fixture.category("c", [Fixture.item("almuerzo", days: nil, from: "12:00", to: "15:00", image: "https://x/f.jpg")])],
+            [
+                Fixture.category(
+                    "c", [Fixture.item("almuerzo", days: nil, from: "12:00", to: "15:00", image: "https://x/f.jpg")])
+            ],
             featured: .init(title: "Los más pedidos", itemIds: ["almuerzo"])
         )
         let model = makeBusinessModel(menu, clock: .fixed(Fixture.tuesdayEvening))
@@ -161,7 +177,10 @@ struct DecisionsTests {
     @Test("CA-CAT-02 decisión 4: se reevalúa cada minuto: a las 20:20 el destacado de «hasta las 20:20» sale solo")
     func featuredLeavesWithTheClock() async throws {
         let menu = Fixture.menu(
-            [Fixture.category("c", [Fixture.item("noche", days: nil, from: "12:00", to: "20:20", image: "https://x/f.jpg")])],
+            [
+                Fixture.category(
+                    "c", [Fixture.item("noche", days: nil, from: "12:00", to: "20:20", image: "https://x/f.jpg")])
+            ],
             featured: .init(title: "Los más pedidos", itemIds: ["noche"])
         )
         let manual = ManualClock(at("2026-07-07", "20:19"))

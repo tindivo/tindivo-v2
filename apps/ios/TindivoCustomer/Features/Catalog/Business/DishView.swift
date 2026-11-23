@@ -43,7 +43,9 @@ struct DishView: View {
                 .onChange(of: model.attention) { _, attention in
                     guard let attention else { return }
                     focusedGroup = attention.groupID
-                    if let message = model.attentionAnnouncement { AccessibilityNotification.Announcement(message).post() }
+                    if let message = model.attentionAnnouncement {
+                        AccessibilityNotification.Announcement(message).post()
+                    }
                     if reduceMotion {
                         proxy.scrollTo(attention.groupID, anchor: .top)
                     } else {
@@ -66,7 +68,9 @@ struct DishView: View {
             Button("Mantener", role: .cancel) { model.keepCurrentBag() }
             Button("Vaciar y empezar") { model.confirmReplace() }
         } message: { names in
-            Text("Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new).")
+            Text(
+                "Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new)."
+            )
         }
         .onChange(of: model.outcome) { _, _ in
             switch model.resolveOutcome() {
@@ -118,7 +122,10 @@ struct DishView: View {
     /// Las etiquetas del plato tal como las escribió el restaurante (formato por aprobar: la ficha no lo dibuja).
     @ViewBuilder private var badges: some View {
         if !model.item.badges.isEmpty {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8, alignment: .leading)], alignment: .leading, spacing: 8) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 88), spacing: 8, alignment: .leading)], alignment: .leading,
+                spacing: 8
+            ) {
                 ForEach(model.item.badges, id: \.self) { TindivoChip($0) }
             }
             .padding(.top, 4)
@@ -139,7 +146,9 @@ struct DishView: View {
             .lineLimit(2...4)
             .tindivoText(TindivoTokens.Typography.body)
             .padding(TindivoTokens.Spacing.spaceInner)
-            .background(Color.tindivo.surfaceSunken, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
+            .background(
+                Color.tindivo.surfaceSunken, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField)
+            )
             .accessibilityLabel(Text("Nota (opcional)"))
             .accessibilityIdentifier("dish.note")
             Text(model.noteCounter.text)

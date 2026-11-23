@@ -27,7 +27,8 @@ struct HomeMappingTests {
 
     @Test("solo isOpenNow == false cierra la tarjeta: null no la apaga")
     func closedOnlyWhenFalse() {
-        let cards = HomeMapping.listing(from: [summary("a", open: false), summary("b", open: nil), summary("c")]).restaurants
+        let cards = HomeMapping.listing(from: [summary("a", open: false), summary("b", open: nil), summary("c")])
+            .restaurants
         #expect(cards.map(\.closed) == [true, false, false])
     }
 

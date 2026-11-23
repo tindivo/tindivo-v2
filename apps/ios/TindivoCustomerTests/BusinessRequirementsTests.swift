@@ -7,9 +7,11 @@ import TindivoAPI
 @MainActor
 @Suite("Negocio: tarjetas, información y barra")
 struct BusinessRequirementsTests {
-    private let configurable = Fixture.item("combo", order: 2, groups: [
-        Fixture.group("g", single: true, required: true, min: 1, max: 1, options: [Fixture.option("o")]),
-    ])
+    private let configurable = Fixture.item(
+        "combo", order: 2,
+        groups: [
+            Fixture.group("g", single: true, required: true, min: 1, max: 1, options: [Fixture.option("o")])
+        ])
 
     private func menu(schedule: [BusinessMenu.ScheduleDay] = Fixture.nightSchedule) -> BusinessMenu {
         Fixture.menu(
@@ -63,7 +65,9 @@ struct BusinessRequirementsTests {
         observer.cancel()
     }
 
-    @Test("CUS-CAT-029 un plato con opciones dice «Elegir» y, con unidades en la bolsa, «En tu bolsa: N» y «Editar selección»")
+    @Test(
+        "CUS-CAT-029 un plato con opciones dice «Elegir» y, con unidades en la bolsa, «En tu bolsa: N» y «Editar selección»"
+    )
     func configurableControl() async throws {
         let store = temporaryStore()
         let model = await loaded(menu(), store: store)
@@ -162,9 +166,10 @@ struct BusinessRequirementsTests {
 
     @Test("CA-CAT-P5 el modo catálogo no tiene estado de apertura en la barra")
     func statusLineContact() async {
-        let model = await loaded(Fixture.menu(
-            [Fixture.category("c", [Fixture.item("a")])], schedule: Fixture.nightSchedule, capability: .catalogOnly
-        ))
+        let model = await loaded(
+            Fixture.menu(
+                [Fixture.category("c", [Fixture.item("a")])], schedule: Fixture.nightSchedule, capability: .catalogOnly
+            ))
         #expect(model.statusLine == nil)
     }
 
@@ -187,7 +192,9 @@ struct BusinessRequirementsTests {
         let one = await loaded(menu(1))
         #expect(one.sectionBar == nil)
         let two = await loaded(menu(2))
-        #expect(two.sectionBar == .init(ids: ["c1", "c2"], names: ["Sección c1", "Sección c2"], selected: 0, showsIndex: false))
+        #expect(
+            two.sectionBar
+                == .init(ids: ["c1", "c2"], names: ["Sección c1", "Sección c2"], selected: 0, showsIndex: false))
         let five = await loaded(menu(5))
         #expect(five.sectionBar?.showsIndex == true)
         five.startSearch()
@@ -196,7 +203,9 @@ struct BusinessRequirementsTests {
 
     @Test("M8 la búsqueda se calcula al cambiar la consulta y no antes de tener dos caracteres útiles")
     func searchIsStored() async {
-        let raw = Fixture.menu([Fixture.category("c", [Fixture.item("a", name: "Ceviche"), Fixture.item("b", order: 2, name: "Arroz")])])
+        let raw = Fixture.menu([
+            Fixture.category("c", [Fixture.item("a", name: "Ceviche"), Fixture.item("b", order: 2, name: "Arroz")])
+        ])
         let model = await loaded(raw)
         #expect(model.searchResults.isEmpty)
         model.startSearch()
@@ -212,10 +221,14 @@ struct BusinessRequirementsTests {
     // MARK: Una sola línea, la sencilla (B1)
 
     private func noted(_ id: String, quantity: Int = 1, note: String? = "sin hielo") -> CartLine {
-        CartLine(itemId: id, name: "Plato \(id)", basePrice: dec("12.50"), modifiers: [], note: note, quantity: quantity, imageURL: nil)
+        CartLine(
+            itemId: id, name: "Plato \(id)", basePrice: dec("12.50"), modifiers: [], note: note, quantity: quantity,
+            imageURL: nil)
     }
 
-    @Test("B1 CUS-CAT-029 un plato sin opciones cuya línea lleva nota no muestra «− N +»: «En tu bolsa: N» y «Editar selección»")
+    @Test(
+        "B1 CUS-CAT-029 un plato sin opciones cuya línea lleva nota no muestra «− N +»: «En tu bolsa: N» y «Editar selección»"
+    )
     func lineWithNoteIsNotPlain() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: noted("simple", quantity: 2))
@@ -230,7 +243,9 @@ struct BusinessRequirementsTests {
         observer.cancel()
     }
 
-    @Test("B1 con varias líneas del mismo plato la tarjeta suma y no muestra «− N +»; «Editar selección» lleva a la bolsa")
+    @Test(
+        "B1 con varias líneas del mismo plato la tarjeta suma y no muestra «− N +»; «Editar selección» lleva a la bolsa"
+    )
     func severalLines() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: Fixture.line("simple"))
@@ -294,7 +309,9 @@ struct BusinessRequirementsTests {
 
     // MARK: «+» con la bolsa de otro negocio (A8)
 
-    @Test("A8 «+» con la bolsa de otro restaurante pregunta aquí mismo; «Vaciar y empezar» deja el plato en la bolsa nueva")
+    @Test(
+        "A8 «+» con la bolsa de otro restaurante pregunta aquí mismo; «Vaciar y empezar» deja el plato en la bolsa nueva"
+    )
     func replacementFromTheMenu() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("x"))

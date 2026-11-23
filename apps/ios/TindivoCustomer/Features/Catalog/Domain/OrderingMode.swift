@@ -18,7 +18,9 @@ enum OrderingMode: Sendable, Equatable {
     /// El aviso de un negocio cerrado: cuándo abre, o por qué no atiende hoy. `nil` si no está cerrado.
     var closedDetail: String? {
         guard case let .closed(status, opensDay) = self else { return nil }
-        guard !status.notConfirmed else { return String(localized: "Hoy este restaurante no ha confirmado que atiende") }
+        guard !status.notConfirmed else {
+            return String(localized: "Hoy este restaurante no ha confirmado que atiende")
+        }
         guard let opensAt = status.opensAt else { return String(localized: "Consulta su horario más tarde") }
         switch status.daysAhead {
         case 0: return String(localized: "Abre hoy a las \(opensAt)")
@@ -40,7 +42,8 @@ extension OrderingMode {
     /// `nil` fuera del modo catálogo o sin número; también `nil` si ni WhatsApp ni teléfono salen del número.
     var contactLinks: ContactLinks? {
         guard case let .contact(number?) = self else { return nil }
-        let links = ContactLinks(whatsapp: whatsappURI(number).flatMap(URL.init(string:)), tel: telURI(number).flatMap(URL.init(string:)))
+        let links = ContactLinks(
+            whatsapp: whatsappURI(number).flatMap(URL.init(string:)), tel: telURI(number).flatMap(URL.init(string:)))
         return links.whatsapp == nil && links.tel == nil ? nil : links
     }
 }
@@ -71,9 +74,11 @@ func openStatusLine(_ status: OpenStatus, now: Date) -> String? {
 /// Catálogo primero (WhatsApp es el pedido y no lo cierra el horario); luego el horario del negocio.
 func orderingMode(for business: BusinessDetail, now: Date) -> OrderingMode {
     if business.catalogOnly { return .contact(whatsappNumber: business.whatsappNumber) }
-    guard case let .closed(status) = openStatus(
-        days: business.schedule, now: now, openingConfirmed: business.openingConfirmed
-    ) else { return .open }
+    guard
+        case let .closed(status) = openStatus(
+            days: business.schedule, now: now, openingConfirmed: business.openingConfirmed
+        )
+    else { return .open }
     let day = LimaClock.dayLabel((LimaClock.dayIndex(now) + status.daysAhead) % LimaClock.weekDays)
     return .closed(status, opensDay: day)
 }

@@ -143,7 +143,10 @@ final class BusinessScreenModel {
         visible = detail
         ordering = detail.map { orderingMode(for: $0, now: now) } ?? .open
         statusLine = detail.flatMap { detail in
-            detail.catalogOnly ? nil : openStatusLine(openStatus(days: detail.schedule, now: now, openingConfirmed: detail.openingConfirmed), now: now)
+            detail.catalogOnly
+                ? nil
+                : openStatusLine(
+                    openStatus(days: detail.schedule, now: now, openingConfirmed: detail.openingConfirmed), now: now)
         }
         rows = detail.map(menuRows(for:)) ?? []
         headerIndices = categoryHeaderIndices(rows)
@@ -260,9 +263,12 @@ final class BusinessScreenModel {
     }
 
     var sectionBar: SectionBar? {
-        guard let sections = visible?.sections, sections.count >= Self.chipsMinSections, !isSearching else { return nil }
+        guard let sections = visible?.sections, sections.count >= Self.chipsMinSections, !isSearching else {
+            return nil
+        }
         return SectionBar(
-            ids: sections.map(\.id), names: sections.map(\.name), selected: selectedSection, showsIndex: sections.count >= Self.indexMinSections
+            ids: sections.map(\.id), names: sections.map(\.name), selected: selectedSection,
+            showsIndex: sections.count >= Self.indexMinSections
         )
     }
 
@@ -315,7 +321,9 @@ final class BusinessScreenModel {
     }
 
     private func linesInBag(of item: MenuItem) -> [CartLine] {
-        guard let cart, let id = visible?.id, cart.businessId.caseInsensitiveCompare(id) == .orderedSame else { return [] }
+        guard let cart, let id = visible?.id, cart.businessId.caseInsensitiveCompare(id) == .orderedSame else {
+            return []
+        }
         return cart.lines.filter { $0.itemId == item.id }
     }
 

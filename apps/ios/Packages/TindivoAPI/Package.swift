@@ -8,7 +8,7 @@ let package = Package(
     name: "TindivoAPI",
     platforms: [.iOS(.v17)],
     products: [
-        .library(name: "TindivoAPI", targets: ["TindivoAPI"]),
+        .library(name: "TindivoAPI", targets: ["TindivoAPI"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.13.4"),

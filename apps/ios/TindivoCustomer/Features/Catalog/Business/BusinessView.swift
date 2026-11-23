@@ -26,7 +26,8 @@ struct BusinessView: View {
                 OrderingBottomBar(ordering: model.ordering, cart: model.cartBarSummary, onOpenCart: onOpenCart)
             }
             .sheet(isPresented: $showingIndex) {
-                SectionIndexSheet(sections: model.visible?.sections ?? [], total: model.visible?.dishCount ?? 0) { index in
+                SectionIndexSheet(sections: model.visible?.sections ?? [], total: model.visible?.dishCount ?? 0) {
+                    index in
                     showingIndex = false
                     jump(to: index)
                 }
@@ -51,7 +52,9 @@ struct BusinessView: View {
                 Button("Mantener", role: .cancel) { model.keepCurrentBag() }
                 Button("Vaciar y empezar") { Task { await model.confirmReplacement() } }
             } message: { names in
-                Text("Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new).")
+                Text(
+                    "Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new)."
+                )
             }
             .task { await model.load() }
             .task { await model.runClock() }
@@ -120,7 +123,8 @@ struct BusinessView: View {
         case .header:
             if let business = model.visible {
                 BusinessHeaderView(
-                    business: business, status: model.statusLine, modes: model.info?.modes ?? [], onShowInfo: model.showInfo
+                    business: business, status: model.statusLine, modes: model.info?.modes ?? [],
+                    onShowInfo: model.showInfo
                 )
             }
         case let .category(category):
