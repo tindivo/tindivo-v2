@@ -220,30 +220,24 @@ jobs:
     name: DB types drift (database.types.ts vs Supabase)
     runs-on: ubuntu-24.04
     # `secrets` NO es un contexto válido en `if` de job (rechaza el workflow entero).
-    # Se mapea a env y un step-guard condiciona los pasos siguientes.
+    # Se mapea a env y el primer paso falla si el token no está: un drift sin comprobar no es un verde.
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: zpnipajgwfthxhdtzhly
     steps:
       - uses: actions/checkout@v7
-      - name: Guard — ¿hay token de Supabase configurado?
-        id: guard
+      - name: Guard — el token de Supabase es obligatorio
         run: |
-          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "Sin SUPABASE_ACCESS_TOKEN; se omite el chequeo de drift."
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN: sin él no se puede comparar database.types.ts con la base y el chequeo no puede pasar en verde. Configúralo en Settings > Secrets and variables > Actions."
+            exit 1
           fi
       - uses: supabase/setup-cli@v3
-        if: steps.guard.outputs.run == 'true'
         with:
           version: latest
       - name: Generar tipos desde la DB
-        if: steps.guard.outputs.run == 'true'
         run: supabase gen types typescript --project-id "$SUPABASE_PROJECT_ID" --schema public > /tmp/database.types.ts
       - name: Verificar que no hay drift
-        if: steps.guard.outputs.run == 'true'
         run: |
           if ! diff -q packages/supabase/src/database.types.ts /tmp/database.types.ts > /dev/null; then
             echo "::error::database.types.ts está desactualizado. Corre 'pnpm db:types' y commitea."
@@ -278,6 +272,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: 9.8.1
+
+      # El jar del generador va en caché; el script lo verifica por sha256 antes de usarlo, así que una caché
+      # corrupta o ajena se descarta sola. Con la caché puesta, un 429 de Maven Central ya no tumba el job.
+      - name: Caché del generador (openapi-generator-cli)
+        uses: actions/cache@v4
+        with:
+          path: build/mobile-models/.tools
+          key: openapi-generator-${{ hashFiles('scripts/generate-mobile-models.mjs') }}
+          restore-keys: openapi-generator-
 
       - name: Generar y compilar los modelos de Kotlin
         run: node scripts/generate-mobile-models.mjs kotlin --compile
