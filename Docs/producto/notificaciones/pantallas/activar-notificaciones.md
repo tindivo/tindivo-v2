@@ -1,6 +1,6 @@
 ---
 canvas: [Onboarding-4-notificaciones]
-requisitos: [CUS-NOT-001, CUS-NOT-004, CUS-NOT-005, CUS-NOT-006]
+requisitos: [CUS-NOT-001, CUS-NOT-002, CUS-NOT-004, CUS-NOT-005, CUS-NOT-006]
 operaciones: [registerPushDevice, unregisterPushDevice]
 textos: []
 tokens: []
@@ -36,7 +36,7 @@ Nada del pedido depende del permiso: el seguimiento sigue funcionando por sondeo
 |---|---|---|
 | Primer pedido confirmado | La hoja sube sobre el seguimiento | CUS-NOT-001, CA-NOT-01 |
 | Ya preguntada | No se vuelve a mostrar | CUS-NOT-005, CA-NOT-01 |
-| Permiso ya concedido | No se muestra | CUS-NOT-001 |
+| Permiso ya concedido | No se muestra | CUS-NOT-001, CA-NOT-09 |
 | Permiso bloqueado por el sistema | No se muestra; el interruptor de Cuenta lleva a Ajustes | CUS-NOT-002, CA-NOT-06 |
 | Android anterior a 13 | «Sí, activar» registra el dispositivo, sin diálogo del sistema | CA-NOT-07 |
 | «Sí, activar» con el permiso denegado | La hoja se cierra igual; el interruptor de Cuenta queda apagado | CUS-NOT-004 |

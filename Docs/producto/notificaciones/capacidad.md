@@ -42,7 +42,7 @@ reglas: [NATIVE_PUSH_PAYLOAD_VERSION, PUSH_ENVIRONMENTS]
 | CUS-NOT-002 | La app debe ofrecer en Cuenta un solo interruptor, «Avisos de tus pedidos», que muestra el estado efectivo y lleva a Ajustes del sistema si este ya bloqueó el diálogo. | Decisión de Jesús, 2026-11-16 y 2026-11-17 | |
 | CUS-NOT-003 | Mientras las notificaciones estén desactivadas, la app debe mostrar en el detalle del pedido la franja «Notificaciones desactivadas» con su salida («Abrir Ajustes» o «Activar en Cuenta»). | Decisión de Jesús, 2026-11-16 y 2026-11-17 | |
 | CUS-NOT-004 | La app no debe condicionar ninguna parte del pedido al permiso de notificaciones. | Decisión de Jesús, 2026-11-16 | ★ |
-| CUS-NOT-005 | La app no debe obligar las notificaciones: debe pedir el permiso una sola vez, tras el primer pedido confirmado, con un solo interruptor «Avisos de tus pedidos» en Cuenta. | Decisión de Jesús, 2026-11-17 (decisión 7) | |
+| CUS-NOT-005 | Resumen de CUS-NOT-001, CUS-NOT-002 y CUS-NOT-004, sin regla propia: las notificaciones no son obligatorias; se pide el permiso una sola vez y hay un solo interruptor «Avisos de tus pedidos» en Cuenta. | Decisión de Jesús, 2026-11-17 (decisión 7) | |
 | CUS-NOT-006 | La app no debe ofrecer avisos de promociones en el lanzamiento: sin interruptor, casilla ni consentimiento comercial. | Decisión de Jesús, 2026-11-17 (decisiones 7 y 18) | |
 
 ## Criterios de aceptación
@@ -57,6 +57,7 @@ reglas: [NATIVE_PUSH_PAYLOAD_VERSION, PUSH_ENVIRONMENTS]
 | CA-NOT-06 | Dado el interruptor de Cuenta, entonces refleja el estado efectivo (permiso y registro) y, si el sistema ya bloqueó el diálogo, al tocarlo lleva a Ajustes. | CUS-NOT-002 |
 | CA-NOT-07 | Dado un Android anterior a 13, cuando toca «Sí, activar», entonces el dispositivo se registra sin diálogo del sistema. | CUS-NOT-001 |
 | CA-NOT-08 | Dado «Sí, activar» sin conexión, entonces la hoja se cierra, el registro se reintenta en silencio y no se muestra ningún error. | CUS-NOT-001, CUS-NOT-004 |
+| CA-NOT-09 | Dado un dispositivo que ya tiene el permiso concedido, cuando se confirma su primer pedido, entonces no ve la hoja y el dispositivo queda registrado. | CUS-NOT-001 |
 
 ## Reglas
 
@@ -67,8 +68,6 @@ reglas: [NATIVE_PUSH_PAYLOAD_VERSION, PUSH_ENVIRONMENTS]
 
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
-| 1 | CUS-NOT-001, CUS-NOT-002, CUS-NOT-003, CUS-NOT-005 | Android no tiene hoja, interruptor ni franja en `develop`: no existe el módulo `feature/notifications`. | `apps/android/customer/` |
+| 1 | CUS-NOT-001, CUS-NOT-002, CUS-NOT-003 | Android no tiene hoja, interruptor ni franja en `develop`: no existe el módulo `feature/notifications`. | `apps/android/customer/` |
 | 2 | CUS-NOT-001 | La web del cliente ofrece el permiso en cada pedido y deja repetir tras un descarte, y registra Web Push, no el dispositivo nativo; se apaga y no se corrige. | `apps/customer/lib/use-push-offer.ts` |
-| 3 | CUS-NOT-001 | `send-push` pone al aviso de iOS un `thread-id` igual a su etiqueta: los avisos de un mismo pedido no se agrupan en la bandeja, a diferencia de Android. | `supabase/functions/send-push/native.ts` |
-| 4 | todos | Los textos del push y los de la app dicen lo mismo con otras palabras («Tu pedido salió» frente a «Tu pedido va en camino»); falta una tabla única y aprobada (backlog del 16-nov). | `supabase/functions/send-push/index.ts` |
-| 5 | invariante 5 | La etiqueta del aviso lleva el tipo de evento, la acción y el `shortId`, no solo el tipo y el `shortId` que dice `AGENTS.md`. | `supabase/functions/send-push/index.ts` |
+| 3 | todos | Los textos del push y los de la app dicen lo mismo con otras palabras: el push parte el aviso («Tu pedido salió» y, aparte, «<nombre> va en camino») y la app lo junta («Tu pedido salió. El motorizado va en camino»); falta una tabla única y aprobada (backlog del 16-nov). | `supabase/functions/send-push/index.ts` (~812), `apps/customer/features/tracking/lib/alerts.ts` (~93) |
