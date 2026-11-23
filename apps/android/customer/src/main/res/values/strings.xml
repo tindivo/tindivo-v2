@@ -181,6 +181,13 @@
     <string name="addresses_edit">Editar</string>
     <string name="addresses_make_default">Hacer predeterminada</string>
     <string name="addresses_action_failed">No se pudo cambiar la dirección predeterminada. Inténtalo de nuevo.</string>
+    <string name="field_counter">%1$d/%2$d</string>
+    <string name="field_phone_label">Celular</string>
+    <string name="field_phone_prefix">+51</string>
+    <string name="field_phone_error">Escribe los 9 dígitos de tu celular. Empieza con 9.</string>
+    <string name="field_name_label">Nombre</string>
+    <string name="field_money_label">Monto</string>
+    <string name="field_money_prefix">S/</string>
     <string name="address_form_new_title">Nueva dirección</string>
     <string name="address_form_edit_title">Editar dirección</string>
     <string name="address_form_cancel">Cancelar</string>
