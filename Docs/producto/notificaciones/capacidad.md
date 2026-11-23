@@ -16,7 +16,7 @@ reglas: [NATIVE_PUSH_PAYLOAD_VERSION, PUSH_ENVIRONMENTS]
 
 # Notificaciones
 
-> Verificado: 2026-11-19 · entorno: develop@25a6d537 (código) · Aprobado por Jesús el AAAA-MM-DD (medio) — pendiente de su visto bueno
+> Verificado: 2026-11-19 · entorno: develop@25a6d537 (código) · Aprobado por Jesús el 2026-11-19 (conversación con Claude Code; fecha confirmada por él el 2026-11-23: «si»)
 
 ## Antes de tocar
 
