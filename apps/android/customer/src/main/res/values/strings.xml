@@ -183,6 +183,7 @@
     <string name="addresses_action_failed">No se pudo cambiar la dirección predeterminada. Inténtalo de nuevo.</string>
     <string name="field_counter">%1$d/%2$d</string>
     <string name="field_phone_label">Celular</string>
+    <string name="field_valid">Válido</string>
     <string name="field_phone_prefix">+51</string>
     <string name="field_phone_error">Escribe los 9 dígitos de tu celular. Empieza con 9.</string>
     <string name="field_name_label">Nombre</string>
@@ -199,9 +200,9 @@
     <string name="address_form_outside_zone">Esa ubicación está fuera de nuestra zona de reparto en San Jacinto</string>
     <string name="address_form_line">Calle y número *</string>
     <string name="address_form_line_placeholder">Ej. Jr. Sucre 412</string>
-    <string name="address_form_line_error">Falta calle/número</string>
+    <string name="address_form_line_error">Escribe tu calle y número (mínimo 5 caracteres, no solo números)</string>
     <string name="address_form_reference">Referencia *</string>
-    <string name="address_form_reference_error">Cuéntanos cómo reconocer tu puerta (mínimo 15 letras)</string>
+    <string name="address_form_reference_error">Cuéntanos cómo reconocer tu puerta (mínimo 15 caracteres)</string>
     <string name="address_step_map_hint">Mueve el mapa hasta tu puerta</string>
     <string name="address_step_confirm">Confirmar este punto</string>
     <string name="address_step_point_ok">Punto marcado en el mapa</string>
@@ -519,7 +520,6 @@
     <string name="phone_back">Volver</string>
     <string name="phone_title">Verificar mi número</string>
     <string name="phone_number_hint">Te enviaremos un código por SMS para confirmar que el número es tuyo.</string>
-    <string name="phone_prefix">+51</string>
     <string name="phone_number_label">Celular (9 dígitos)</string>
     <string name="phone_send_code">Enviar código</string>
     <string name="phone_code_sent">Enviamos un código de 6 dígitos al +51 %1$s.</string>
@@ -547,7 +547,6 @@
     <string name="profile_title">¿Cómo te llamas?</string>
     <string name="profile_support">Así te llamarán el negocio y el motorizado cuando llegue tu pedido.</string>
     <string name="profile_name_label">Tu nombre</string>
-    <string name="profile_name_hint">Mínimo 2 letras · %1$d/%2$d</string>
     <string name="profile_name_error">Escribe tu nombre, solo con letras</string>
     <string name="profile_terms">Al continuar aceptas los Términos y la Política de privacidad de Tindivo.</string>
     <string name="profile_terms_link">Términos</string>
