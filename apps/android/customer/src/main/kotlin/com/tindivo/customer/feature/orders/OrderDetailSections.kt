@@ -71,7 +71,7 @@ internal fun OrderHeadlineBlock(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
-                if (headline.copy.nothingCharged(headline.alreadyPaid)) {
+                if (headline.copy.nothingCharged(headline.prepaid)) {
                     Surface(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.tertiaryContainer,

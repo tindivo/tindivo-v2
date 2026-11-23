@@ -20,30 +20,39 @@ class TrackingArrivalTest {
         assertNull(driverFirstName("   "))
     }
 
+    private fun pills(
+        reason: String,
+        payment: PaymentFacts,
+    ): Boolean {
+        val headline = headlineOf(OrderPhase.Cancelled(reason), "cancelled", payment, isPickup = false)
+        val cancelled = headline as OrderHeadline.Cancelled
+        return cancelled.copy.nothingCharged(cancelled.prepaid)
+    }
+
+    private val cashOnDelivery = PaymentFacts(prepaid = false, proofSent = false, verified = false)
+    private val prepaidNoProof = PaymentFacts(prepaid = true, proofSent = false, verified = false)
+    private val prepaidWithProof = PaymentFacts(prepaid = true, proofSent = true, verified = false)
+    private val prepaidVerified = PaymentFacts(prepaid = true, proofSent = true, verified = true)
+
     @Test
-    fun `no se te cobro nada solo si no hubo dinero de por medio`() {
-        assertTrue(CancelCopy.BusinessCancelled.nothingCharged(alreadyPaid = false))
-        assertTrue(CancelCopy.CustomerCancelled.nothingCharged(alreadyPaid = false))
-        assertTrue(CancelCopy.CouldNotConfirm.nothingCharged(alreadyPaid = false))
-        assertTrue(CancelCopy.BusinessNoResponse.nothingCharged(alreadyPaid = false))
+    fun `contraentrega cancelada por los cuatro motivos lleva la pastilla`() {
+        listOf("customer_cancelled", "validation_timeout", "business_cancelled", "pending_acceptance_timeout")
+            .forEach { assertTrue(it, pills(it, cashOnDelivery)) }
     }
 
     @Test
-    fun `con comprobante enviado o pago verificado nunca se dice que no se cobro`() {
-        CancelCopy.entries.forEach { assertFalse(it.name, it.nothingCharged(alreadyPaid = true)) }
+    fun `un prepago nunca lleva la pastilla, ni sin comprobante`() {
+        listOf("customer_cancelled", "validation_timeout", "business_cancelled", "pending_acceptance_timeout")
+            .forEach {
+                assertFalse(it, pills(it, prepaidNoProof))
+                assertFalse(it, pills(it, prepaidWithProof))
+                assertFalse(it, pills(it, prepaidVerified))
+            }
     }
 
     @Test
-    fun `los motivos que no lo prometen no lo resaltan`() {
-        listOf(
-            CancelCopy.PrepayTimeout,
-            CancelCopy.PrepayProofNotReviewed,
-            CancelCopy.PrepayProofRejected,
-            CancelCopy.AdminCancelled,
-            CancelCopy.ProofRejected,
-            CancelCopy.PickupNoShow,
-            CancelCopy.DeliveryNoShow,
-            CancelCopy.Generic,
-        ).forEach { assertFalse(it.name, it.nothingCharged(alreadyPaid = false)) }
+    fun `los motivos que no lo prometen no lo resaltan ni en contraentrega`() {
+        listOf("prepay_timeout", "admin_cancelled", "proof_rejected_final", "no_show", "otro")
+            .forEach { assertFalse(it, pills(it, cashOnDelivery)) }
     }
 }

@@ -10,7 +10,7 @@ internal fun headlineOf(
     when (phase) {
         is OrderPhase.Cancelled -> {
             val copy = cancelCopyOf(phase.reason, isPickup, payment)
-            OrderHeadline.Cancelled(copy, alreadyPaid = payment.alreadyPaid)
+            OrderHeadline.Cancelled(copy, alreadyPaid = payment.alreadyPaid, prepaid = payment.prepaid)
         }
 
         OrderPhase.Delivered -> {
@@ -114,12 +114,12 @@ internal fun driverFirstName(fullName: String?): String? =
         ?.takeIf { it.isNotEmpty() }
 
 /**
- * «No se te cobró nada» solo es cierto cuando el pedido se canceló sin cobro posible: el motivo es uno de los cuatro en
- * que la web dice «sin costo» y no hay comprobante enviado ni pago verificado ([alreadyPaid] en falso). Con dinero de
- * por medio, o en los motivos que no lo prometen (no_show, pago rechazado…), no se resalta.
+ * «No se te cobró nada» solo es cierto cuando no pudo salir dinero: el pedido es de pago al recibir ([prepaid] en falso)
+ * y el motivo es uno de los cuatro en que la web dice «sin costo». En un prepago nunca: el Yape va directo al negocio y
+ * Tindivo no sabe si ya se pagó, aunque no haya comprobante.
  */
-internal fun CancelCopy.nothingCharged(alreadyPaid: Boolean): Boolean =
-    !alreadyPaid &&
+internal fun CancelCopy.nothingCharged(prepaid: Boolean): Boolean =
+    !prepaid &&
         when (this) {
             CancelCopy.CustomerCancelled,
             CancelCopy.CouldNotConfirm,

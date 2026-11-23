@@ -140,19 +140,22 @@ class OrderDetailMappingTest {
 
         val verified = "2026-10-26T15:10:00Z"
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.CustomerCancelled, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.CustomerCancelled, alreadyPaid = true, prepaid = true),
             cancelled("customer_cancelled", proofAttempt = 1),
         )
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.BusinessCancelled, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.BusinessCancelled, alreadyPaid = true, prepaid = true),
             cancelled("business_cancelled", verifiedAt = verified),
         )
         // Un comprobante rechazado cuenta: pudo haber pagado, así que tampoco se le dice «sin costo».
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.AdminCancelled, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.AdminCancelled, alreadyPaid = true, prepaid = true),
             cancelled("admin_cancelled", proofAttempt = 2),
         )
-        assertEquals(OrderHeadline.Cancelled(CancelCopy.CouldNotConfirm), cancelled("validation_timeout"))
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.CouldNotConfirm, prepaid = true),
+            cancelled("validation_timeout"),
+        )
         // Solo el prepago: en efectivo no hay pago adelantado aunque llegue un dato de pago.
         assertEquals(
             OrderHeadline.Cancelled(CancelCopy.CustomerCancelled),
@@ -221,13 +224,16 @@ class OrderDetailMappingTest {
             .toDetailUi()
             ?.headline
 
-        assertEquals(OrderHeadline.Cancelled(CancelCopy.PrepayTimeout), cancelled("prepay_timeout", proofAttempt = 0))
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.PrepayProofNotReviewed, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.PrepayTimeout, prepaid = true),
+            cancelled("prepay_timeout", proofAttempt = 0),
+        )
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.PrepayProofNotReviewed, alreadyPaid = true, prepaid = true),
             cancelled("prepay_timeout", proofAttempt = 1),
         )
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse, alreadyPaid = true, prepaid = true),
             cancelled("pending_acceptance_timeout", proofAttempt = 1),
         )
         assertEquals(
