@@ -63,7 +63,9 @@ struct DishGroupSection: View {
     }
 
     private func price(of option: DishOption, enabled: Bool) -> some View {
-        Text(model.selection.optionPrice(of: option, in: group).displayText)
+        let text = model.selection.optionPrice(of: option, in: group).displayText
+        return Text(text)
+            .amountAccessibility(text)
             .tindivoText(TindivoTokens.Typography.bodySecondary)
             .monospacedDigit()
             .lineLimit(1)

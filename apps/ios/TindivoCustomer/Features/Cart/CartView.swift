@@ -146,6 +146,12 @@ struct CartView: View {
                 }
                 .foregroundStyle(Color.tindivo.ink)
                 .accessibilityElement(children: .combine)
+                if let notice = filled.subtotalNotice {
+                    Text(notice)
+                        .tindivoText(TindivoTokens.Typography.bodySecondary)
+                        .foregroundStyle(Color.tindivo.error)
+                        .accessibilityIdentifier("cart.subtotalNotice")
+                }
                 if filled.showsShipping {
                     Text("Delivery · Se calcula con tu dirección")
                         .tindivoText(TindivoTokens.Typography.bodySecondary)
@@ -171,6 +177,7 @@ extension CartView {
 
     fileprivate func subtotalAmount(_ text: String) -> some View {
         Text(text)
+            .amountAccessibility(text)
             .tindivoText(TindivoTokens.Typography.titleSection)
             .monospacedDigit()
             .lineLimit(1)
@@ -196,6 +203,7 @@ private struct CartLineView: View {
                     .foregroundStyle(Color.tindivo.ink)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(line.total)
+                    .amountAccessibility(line.total)
                     .tindivoText(TindivoTokens.Typography.body)
                     .monospacedDigit()
                     .lineLimit(1)

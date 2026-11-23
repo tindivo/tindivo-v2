@@ -47,8 +47,10 @@ struct CartBarView: View {
                 if !vertical { Spacer(minLength: 0) }
                 // Blanco sobre `primary` da 3,25:1: solo cuenta como texto grande en negrita y a 14 pt o más
                 // (decisión de Jesús, 2026-11-22; HIG: negrita, 3:1).
+                let summaryText = "\(unitsText(summary.count)) · \(summary.subtotal)"
                 fitted(
-                    Text("\(unitsText(summary.count)) · \(summary.subtotal)")
+                    Text(summaryText)
+                        .amountAccessibility(summaryText)
                         .tindivoText(TindivoTokens.Typography.body)
                         .fontWeight(.bold)
                         .monospacedDigit(),

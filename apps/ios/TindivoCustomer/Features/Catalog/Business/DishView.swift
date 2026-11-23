@@ -184,6 +184,8 @@ struct DishView: View {
             ) {
                 Task { await model.tapAdd() }
             }
+            .disabled(model.ctaDisabled)
+            .amountAccessibility(model.ctaTitle)
             .accessibilityIdentifier("dish.add")
         }
     }

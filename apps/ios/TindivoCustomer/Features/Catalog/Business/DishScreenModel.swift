@@ -90,7 +90,9 @@ final class DishScreenModel {
 
     var canDecrease: Bool { selection.quantity > 1 }
     var canIncrease: Bool { selection.quantity < CartLimits.maxQuantity }
-    var canAdd: Bool { selection.isValid }
+    var canAdd: Bool { selection.isValid && selection.totalIsDisplayable }
+    /// La selección está completa pero el total es un importe que no se puede mostrar («—»): no se agrega.
+    var ctaDisabled: Bool { selection.isValid && !selection.totalIsDisplayable }
 
     // MARK: Lo que dice la pantalla
 
@@ -201,7 +203,7 @@ final class DishScreenModel {
 
     /// Un segundo toque mientras se guarda el primero no suma otra vez.
     func add() async {
-        guard !isAdding, let line = selection.toLine() else { return }
+        guard !isAdding, selection.totalIsDisplayable, let line = selection.toLine() else { return }
         isAdding = true
         defer { isAdding = false }
         do throws(CartError) {

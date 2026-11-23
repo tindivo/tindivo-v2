@@ -227,6 +227,9 @@
     "Horarios" : {},
     "hoy" : {},
     "Hoy este restaurante no ha confirmado que atiende" : {},
+    "Importe no disponible" : {
+      "comment" : "por aprobar: lo que VoiceOver lee en lugar de «—»"
+    },
     "Incluido" : {},
     "Información" : {},
     "Información del negocio" : {},
@@ -375,6 +378,9 @@
     "Fuera de su horario" : {},
     "Guardar cambios · %@" : {},
     "La opción \"%@\" cambió de precio" : {},
+    "No pudimos calcular el subtotal de tu bolsa" : {
+      "comment" : "por aprobar: aviso a nivel de bolsa cuando el subtotal no se puede mostrar"
+    },
     "No pudimos revisar tu bolsa con la carta. Lo confirmaremos al hacer el pedido." : {},
     "Producto agotado por ahora" : {},
     "Quitar una unidad de %@. Llevas %@" : {

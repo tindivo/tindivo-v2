@@ -37,6 +37,15 @@ func formatAmount(_ amount: Decimal) -> String? {
 /// es un dato roto: nunca se «arregla» enseñándolo de otra forma.
 let invalidAmountText = "—"
 
+/// Lo que VoiceOver lee en lugar de «—» (por aprobar): una raya sola no dice nada.
+var invalidAmountSpokenText: String { String(localized: "Importe no disponible") }
+
+/// `text` tal como se lee en voz alta: cada «—» pasa a «Importe no disponible». Solo para la accesibilidad.
+func spokenAmountText(_ text: String) -> String {
+    text.contains(invalidAmountText)
+        ? text.replacingOccurrences(of: invalidAmountText, with: invalidAmountSpokenText) : text
+}
+
 /// `formatAmount`, o «—» si el importe es un dato roto. No cambia ningún cálculo: solo lo que se muestra.
 func displayAmount(_ amount: Decimal) -> String {
     formatAmount(amount) ?? invalidAmountText

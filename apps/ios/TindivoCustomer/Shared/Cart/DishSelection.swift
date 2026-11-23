@@ -104,6 +104,9 @@ struct DishSelection: Sendable, Equatable {
 
     var total: Decimal { unitPrice * Decimal(quantity) }
 
+    /// ¿El total se puede mostrar? Si no (un dato roto), el botón «Agregar» no deja agregar.
+    var totalIsDisplayable: Bool { formatAmount(total) != nil }
+
     var cta: DishCTA {
         // Un total que `formatAmount` rechaza es un dato roto: se muestra «—», no se «arregla».
         isValid ? .add(total: displayAmount(total)) : .complete(missing: missing)
