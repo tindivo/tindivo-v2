@@ -41,6 +41,8 @@ final class CatalogHomeScreenModel {
     private let clock: AppClock
     private let menuCache: BusinessMenuCache
     private var inFlight = false
+    /// Recargas seguidas por reloj que no cambiaron lo que contradecía al reloj, para el cambio en curso.
+    private var clockRetries = 0
     /// El armado de los textos «abre …»; las pruebas lo esperan.
     @ObservationIgnored private(set) var enrichment: Task<Void, Never>?
 
@@ -48,6 +50,8 @@ final class CatalogHomeScreenModel {
     static let recheckEvery = Duration.seconds(60)
     /// Cuántas cartas se piden a la vez para armar los textos de las tarjetas cerradas.
     static let maxConcurrentMenus = 3
+    /// Reintentos por cambio cuando la lista (en caché de la CDN) sigue contradiciendo al reloj.
+    static let maxClockRetries = 2
 
     /// El horario de un negocio, tal como lo manda su carta.
     struct ClosedSchedule: Equatable {
@@ -66,15 +70,14 @@ final class CatalogHomeScreenModel {
         now = clock.now()
     }
 
-    /// Reevalúa cada minuto qué dicen las tarjetas cerradas. Si el reloj dice que un negocio cambió de estado (abrió o
-    /// cerró) vuelve a pedir la lista, una vez por cambio: la tarjeta deja de decir «cerrado» (CUS-CAT-012). Se lanza
-    /// con `.task`: dura lo que la pantalla esté a la vista.
+    /// Reevalúa qué dicen las tarjetas cerradas: al arrancar (volver a Inicio no espera un minuto) y cada minuto. Si el
+    /// reloj dice que un negocio cambió de estado (abrió o cerró) vuelve a pedir la lista (CUS-CAT-012). Se lanza con
+    /// `.task`: dura lo que la pantalla esté a la vista.
     func runClock() async {
-        now = clock.now()
+        await clockTick()
         while !Task.isCancelled {
             do { try await clock.sleep(Self.recheckEvery) } catch { return }
-            now = clock.now()
-            if clockChangedAnyBusiness() { await refresh() }
+            await clockTick()
         }
     }
 
@@ -82,18 +85,42 @@ final class CatalogHomeScreenModel {
         openStatus(days: schedule.days, now: now, openingConfirmed: schedule.openingConfirmed).allowsOrders
     }
 
-    /// ¿Cambió de estado, según el reloj, algún negocio desde la última vez? Anota el estado nuevo: un cambio se
-    /// atiende una sola vez.
-    private func clockChangedAnyBusiness() -> Bool {
-        var changed = false
+    /// workaround: la CDN guarda `/public/businesses` hasta ~60 s, así que la lista recién pedida puede seguir diciendo
+    /// lo de antes. Un cambio del reloj se atiende con una recarga; si la lista sigue contradiciendo al reloj, se
+    /// reintenta en los tics siguientes, como mucho `maxClockRetries` veces por cambio. Un cambio solo se da por
+    /// atendido si la recarga se hizo de verdad. Se retira cuando el servidor mande `next_change_at`.
+    private func clockTick() async {
+        now = clock.now()
+        let changes = clockChanges()
+        guard !changes.isEmpty || (listContradictsClock() && clockRetries < Self.maxClockRetries) else {
+            if !listContradictsClock() { clockRetries = 0 }
+            return
+        }
+        guard await reload(automatic: true) else { return }
+        if changes.isEmpty {
+            clockRetries += 1
+        } else {
+            baselineOpen.merge(changes) { _, new in new }
+            clockRetries = 0
+        }
+    }
+
+    /// Los negocios cuyo estado según el reloj ya no es el que se anotó.
+    private func clockChanges() -> [String: Bool] {
+        var changes: [String: Bool] = [:]
         for (id, schedule) in schedules {
             let open = isOpenByClock(schedule)
-            if baselineOpen[id] != open {
-                baselineOpen[id] = open
-                changed = true
-            }
+            if baselineOpen[id] != open { changes[id] = open }
         }
-        return changed
+        return changes
+    }
+
+    /// ¿La lista del servidor dice algo distinto al reloj para algún negocio con horario conocido?
+    private func listContradictsClock() -> Bool {
+        guard let listing = loaded?.listing else { return false }
+        return (listing.restaurants + listing.whatsapp).contains { card in
+            schedules[card.id].map { isOpenByClock($0) == card.closed } ?? false
+        }
     }
 
     /// La bolsa vigente ahora y después cada vez que cambia. Se lanza con `.task`.
@@ -169,7 +196,13 @@ final class CatalogHomeScreenModel {
     /// Vuelve a pedir la lista. Con una lista ya cargada la deja a la vista mientras recarga, y si la recarga falla
     /// la conserva y marca `refreshFailed`. Si ya hay una carga en curso, no lanza otra.
     func refresh() async {
-        guard !inFlight else { return }
+        if await reload(automatic: false) { clockRetries = 0 }
+    }
+
+    /// Pide la lista. `true` si la recarga se hizo y salió bien. Una recarga automática (la del reloj) pide solo la
+    /// lista, conserva los horarios ya obtenidos y, si falla, no muestra el error: la lista sigue como estaba.
+    private func reload(automatic: Bool) async -> Bool {
+        guard !inFlight else { return false }
         inFlight = true
         defer { inFlight = false }
         let previous = loaded
@@ -178,12 +211,15 @@ final class CatalogHomeScreenModel {
             let businesses = try await catalog.listBusinesses()
             let listing = HomeMapping.listing(from: businesses)
             state = .loaded(Loaded(listing: listing))
-            loadClosedSchedules(for: listing.restaurants + listing.whatsapp)
+            if !automatic { loadClosedSchedules(for: listing.restaurants + listing.whatsapp) }
+            return true
         } catch .cancelled {
             state = previous.map { .loaded(Loaded(listing: $0.listing)) } ?? .idle
         } catch {
-            state = previous.map { .loaded(Loaded(listing: $0.listing, refreshFailed: error)) } ?? .failed(error)
+            let failure = automatic ? nil : error
+            state = previous.map { .loaded(Loaded(listing: $0.listing, refreshFailed: failure)) } ?? .failed(error)
         }
+        return false
     }
 
     private var loaded: Loaded? {

@@ -191,3 +191,72 @@ func summary(
         estimatedEtaMin: 20, estimatedEtaMax: 35, isOpenNow: open
     )
 }
+
+/// Cartas que se quedan esperando hasta que la prueba las suelta: cuenta cuántas se pidieron, cuántas esperan a la vez
+/// (y el máximo) y a cuántas las cancelaron. La lista de negocios responde de inmediato.
+final class HeldMenus: CatalogRepository, Sendable {
+    private struct State {
+        var started = 0
+        var waiting: [UUID: CheckedContinuation<Void, Never>] = [:]
+        var peak = 0
+        var cancelled = 0
+        var listCalls = 0
+    }
+
+    private let state = OSAllocatedUnfairLock(initialState: State())
+    private let businesses: [BusinessSummary]
+    private let menu: BusinessMenu
+
+    init(businesses: [BusinessSummary], menu: BusinessMenu) {
+        self.businesses = businesses
+        self.menu = menu
+    }
+
+    var menuCalls: Int { state.withLock { $0.started } }
+    var listCalls: Int { state.withLock { $0.listCalls } }
+    var waiting: Int { state.withLock { $0.waiting.count } }
+    var peak: Int { state.withLock { $0.peak } }
+    var cancelled: Int { state.withLock { $0.cancelled } }
+
+    func listBusinesses() async throws(AppError) -> [BusinessSummary] {
+        state.withLock { $0.listCalls += 1 }
+        return businesses
+    }
+
+    func getBusiness(id: String) async throws(AppError) -> BusinessMenu {
+        let token = UUID()
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                let cancelledAlready = state.withLock { state -> Bool in
+                    state.started += 1
+                    if Task.isCancelled {
+                        state.cancelled += 1
+                        return true
+                    }
+                    state.waiting[token] = continuation
+                    state.peak = max(state.peak, state.waiting.count)
+                    return false
+                }
+                if cancelledAlready { continuation.resume() }
+            }
+        } onCancel: {
+            let continuation = state.withLock { state -> CheckedContinuation<Void, Never>? in
+                guard let continuation = state.waiting.removeValue(forKey: token) else { return nil }
+                state.cancelled += 1
+                return continuation
+            }
+            continuation?.resume()
+        }
+        if Task.isCancelled { throw .cancelled }
+        return menu
+    }
+
+    /// Suelta a todas las cartas que esperan.
+    func releaseAll() {
+        let all = state.withLock { state -> [CheckedContinuation<Void, Never>] in
+            defer { state.waiting.removeAll() }
+            return Array(state.waiting.values)
+        }
+        all.forEach { $0.resume() }
+    }
+}
