@@ -57,6 +57,7 @@ class CheckoutCtaTest {
     @Test
     fun `cada cosa que falta tiene su texto, en el orden de la web`() {
         assertEquals(Cta.Sending, ready().copy(sending = true).cta)
+        assertEquals(Cta.Locating, ready().copy(sending = true, locating = true).cta)
         assertEquals(Cta.NeedName, ready().copy(name = "  ").cta)
         assertEquals(Cta.NeedAddress, ready().copy(selectedAddressId = null).cta)
         assertEquals(Cta.NeedFixAddress, ready().copy(addresses = listOf(home.copy(line = "Jr"))).cta)
@@ -123,6 +124,7 @@ class CheckoutCtaTest {
             Cta.NeedPay,
             Cta.NeedCash,
             Cta.Sending,
+            Cta.Locating,
             Cta.Calculating,
             Cta.QuoteProblem,
             Cta.Ready(BigDecimal("30.00")),

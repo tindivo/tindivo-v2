@@ -24,11 +24,15 @@ class FakeAttemptLookup(
 ) : AttemptLookup {
     val asked = mutableListOf<UUID>()
 
+    /** Si se pone, la consulta espera a que se complete (un servidor que tarda en contestar). */
+    var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
     override suspend fun lookup(
         key: UUID,
         accountId: String,
     ): LookupResult {
         asked += key
+        gate?.await()
         return next
     }
 }

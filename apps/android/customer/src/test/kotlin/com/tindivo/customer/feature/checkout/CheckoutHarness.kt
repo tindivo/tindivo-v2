@@ -13,6 +13,7 @@ import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
+import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.cart.Cart
 import com.tindivo.customer.feature.cart.CartLine
@@ -116,6 +117,7 @@ abstract class CheckoutHarness {
                 CustomerRepository(baseUrl, client, io),
                 AddressRepository(baseUrl, client, io),
                 CatalogRepository(baseUrl, client, io),
+                checkout,
             )
         configService = ConfigService(SystemRepository(baseUrl, client, io), "0.1.0", CoroutineScope(dispatcher))
     }
@@ -175,17 +177,86 @@ abstract class CheckoutHarness {
 
     protected fun cart(quantity: Int = 2) = Cart(BUSINESS_ID, "Pollería Don Lucho", listOf(line(quantity)))
 
+    /**
+     * Lo que contesta la lectura de ubicación de la prueba; por defecto, una posición precisa (y nada al pagar por
+     * adelantado, que no lee). Una prueba de «sin ubicación» pone `{ null }` y ve la hoja de GPS.
+     */
+    protected var gpsAnswer: (PayMethod?) -> CreateOrderRequestGpsValidation? = { pay ->
+        if (pay == PayMethod.Prepaid) null else preciseFix()
+    }
+
+    /** El permiso de ubicación que ve el ViewModel: una prueba lo pone en `false` para simular que se negó o se revocó. */
+    protected var gpsPermission = true
+
+    /** El reloj de la lectura de ubicación: una prueba lo adelanta para caducar una lectura guardada. */
+    protected var gpsClockMs = 0L
+
+    /** Cuánto hace que se leyó la ubicación que devuelve la captura (una lectura adelantada ya vieja). */
+    protected var gpsReadAgeMs = 0L
+
+    protected fun preciseFix() =
+        CreateOrderRequestGpsValidation(
+            method = CreateOrderRequestGpsValidation.Method.gps_high_accuracy,
+            lat = BigDecimal("-9.1547000"),
+            lng = BigDecimal("-78.5042000"),
+            accuracyM = BigDecimal("12.0"),
+            distanceToCenterKm = BigDecimal("0.000"),
+        )
+
+    /** Con qué método de pago se leyó la ubicación, en orden. */
+    protected val gpsReads = mutableListOf<PayMethod?>()
+
+    /** Si se pone, la lectura espera a que se complete (un GPS que tarda). */
+    protected var gpsGate: CompletableDeferred<Unit>? = null
+
+    /** Cuántas veces el formulario adelantó la lectura al abrirse. */
+    protected var gpsPrefetches = 0
+
+    /** Cuántas veces el formulario descartó la lectura adelantada (cambio o cierre de cuenta). */
+    protected var gpsResets = 0
+
     /** Cada llamada arma un libro nuevo sobre el mismo almacén: así se simula reabrir la pantalla o la app. */
     protected fun viewModel(): CheckoutViewModel =
         CheckoutViewModel(
             loader = loader,
             checkout = checkout,
             cartStore = cartStore,
-            ledger = OrderAttemptLedger(ledgerStore, lookup),
+            ledger = OrderAttemptLedger(ledgerStore, lookup, clock = { ledgerClock() }),
             sessionStore = session,
             debounce = QuoteDebounce { },
             configService = configService,
+            gps = gpsOverride ?: fakeGps(),
         )
+
+    /** Si se pone, el ViewModel usa esta lectura (por ejemplo la real con un GPS falso) en vez de [fakeGps]. */
+    protected var gpsOverride: CheckoutGps? = null
+
+    /** El reloj del libro de intentos: una prueba lo adelanta para agotar la ventana de vuelo. */
+    protected var ledgerClock: () -> Long = System::currentTimeMillis
+
+    private fun fakeGps() =
+        object : CheckoutGps {
+            override suspend fun capture(pay: PayMethod?): CreateOrderRequestGpsValidation? {
+                gpsReads += pay
+                gpsGate?.await()
+                return gpsAnswer(pay)
+            }
+
+            override fun prefetch(scope: CoroutineScope) {
+                gpsPrefetches++
+            }
+
+            override fun reset() {
+                gpsResets++
+            }
+
+            override fun permissionGranted(): Boolean = gpsPermission
+
+            override fun elapsedMs(): Long = gpsClockMs
+
+            override suspend fun captureFix(pay: PayMethod?): CapturedFix =
+                CapturedFix(capture(pay), gpsClockMs - gpsReadAgeMs)
+        }
 
     protected companion object {
         const val BUSINESS_ID = "8f1f2b5e-6d3c-4a7b-9e10-1a2b3c4d5e6f"

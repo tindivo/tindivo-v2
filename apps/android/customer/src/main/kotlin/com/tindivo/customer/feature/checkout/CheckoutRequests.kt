@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.checkout
 
 import com.tindivo.core.network.generated.model.CreateOrderRequest
 import com.tindivo.core.network.generated.model.CreateOrderRequestCoordinates
+import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
 import com.tindivo.core.network.generated.model.CreateOrderRequestItemsInner
 import com.tindivo.core.network.generated.model.QuoteCheckoutRequest
 import com.tindivo.core.network.generated.model.QuoteCheckoutRequestItemsInner
@@ -88,12 +89,14 @@ private fun BigDecimal.toAccuracy(): Int = setScale(0, RoundingMode.CEILING).toI
 /**
  * La petición de `POST /customer/orders`. `customerPhone` va por compatibilidad (el servidor usa el verificado). En un
  * recojo NO viaja nada de la entrega ni el billete (§8). `cashPayingWith` sale del texto del monto, nunca de un
- * `Double`, y solo en delivery con efectivo. `null` si falta algo que la pantalla ya habría pedido.
+ * `Double`, y solo en delivery con efectivo. [gps] es la evidencia de la ubicación (CUS-CHK-009): `null` si no la hay
+ * (permiso negado o sin lectura), y el pedido sale igual. `null` si falta algo que la pantalla ya habría pedido.
  */
 fun buildOrderRequest(
     state: CheckoutUiState,
     cart: Cart,
     quote: QuoteView,
+    gps: CreateOrderRequestGpsValidation? = null,
 ): CreateOrderRequest? {
     val businessId = cart.businessId.toUuidOrNull()
     val items = cart.menuItems()
@@ -112,6 +115,7 @@ fun buildOrderRequest(
             customerName = state.name.trim(),
             customerPhone = phone,
             items = orderItems,
+            gpsValidation = gps,
         )
     return if (state.isPickup) {
         base.copy(pickupTiming = state.pickupWhen?.orderWire())
