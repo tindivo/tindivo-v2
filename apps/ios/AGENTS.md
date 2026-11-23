@@ -13,13 +13,23 @@ Se suma al `AGENTS.md` raíz. La norma es `Docs/arquitectura/estandares/swift.md
   lee un documento tolerante que deriva `scripts/ios-openapi-tolerant.mjs` (abre objetos y enums de las respuestas):
   sin ese paso, un campo o valor nuevo del backend tumba la decodificación (CLI-2). Lo cubre
   `SystemRepositoryTests` («CLI-2: un campo nuevo…»).
-- **Los tipos generados (`Operations.*`) no salen de `TindivoAPI`:** cada repositorio los traduce a modelos propios.
+- **Los tipos generados (`Operations.*`, `Client`) no salen de `TindivoAPI`** (el generador los emite `package`; la app
+  recibe `TindivoAPIServices`): cada repositorio los traduce a modelos propios.
   Los errores no se traducen por operación: `ProblemMiddleware` convierte todo no-2xx en `AppError` y `apiCall`
   deja `AppError` como único error.
 - **En un `.xcconfig`, `//` abre comentario:** las URL se escriben `https:/$()/host`.
-- **Red (CLI-10):** `TindivoHTTP` (30 s por intento, sin seguir redirecciones) y `RetryMiddleware` (misma política que
-  `RetryInterceptor.kt`). Desviación: `URLSession` no tiene plazo solo para conectar; los 10 s de CLI-10 quedan dentro
-  de los 30 s del intento. Fechas `date-time` con `FlexibleISO8601` (con o sin fracción de segundo).
+- **Red (CLI-10):** `TindivoHTTP` (30 s por intento, sin seguir redirecciones), `DeadlineMiddleware` (30 s para la
+  llamada completa, reintentos y esperas incluidos: el `callTimeout` de Android; al vencer devuelve `AppError.network`)
+  y `RetryMiddleware` (mismas reglas de qué reintentar, cuántas veces y `Retry-After` que `RetryInterceptor.kt`; la
+  espera va dentro del plazo total). El plazo total cubre hasta recibir las cabeceras; el cuerpo de la respuesta lo acota
+  `timeoutIntervalForResource` (30 s) del último intento, no `DeadlineMiddleware`. Desviación: `URLSession` no tiene plazo solo para conectar; los 10 s de CLI-10
+  quedan dentro de los 30 s del intento. Fechas `date-time` con `FlexibleISO8601` (con o sin fracción de segundo).
+- **Actualización obligatoria (CLI-4):** `ConfigService` (`Services/Config`) lee `/config` al abrir y al pasar de
+  segundo plano a `.active`; todo 426 llega por `ProblemMiddleware` → `ConfigService` y la raíz muestra `UpdateView`.
+  `/config` se pide por una sesión que ignora la `URLCache`. **Antes de publicar** hay que poner el id de la ficha en
+  `APP_STORE_ID` (`Dev.xcconfig`/`Prod.xcconfig`): vacío, la pantalla dice «Búscala en la App Store» y el build Prod
+  avisa con un `warning:` (cuando exista el id, subirlo a `error:` en el script «Comprobar APP_STORE_ID» de `project.yml`).
+  Ganchos DEBUG: `-tindivo-force-upgrade` y `-tindivo-fake-catalog` (con configuración fija).
 - **Dinero heredado:** los campos `legacyMoney` del contrato (número JSON) llegan como `ExactMoney` (`Decimal`), por
   `typeOverrides`; los campos nuevos (texto, D-39) se leen con `Money.parse`. Nunca `Double` (SW-8).
 - **Textos:** catálogo `Localizable.xcstrings` en la app y en cada paquete con UI; en un paquete, `Text(…, bundle: .module)`.

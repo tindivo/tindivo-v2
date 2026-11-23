@@ -7,6 +7,16 @@ struct AppConfig: Sendable {
     let supabasePublishableKey: String
     let appVersion: String
     let build: String
+    /// Id numérico de la ficha en la App Store; vacío hasta que exista la ficha (`APP_STORE_ID` en el `.xcconfig`).
+    let appStoreId: String
+
+    var storeURL: URL? { Self.storeURL(appStoreId: appStoreId) }
+
+    static func storeURL(appStoreId: String) -> URL? {
+        let id = appStoreId.trimmingCharacters(in: .whitespaces)
+        guard !id.isEmpty, id.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        return URL(string: "https://apps.apple.com/app/id\(id)")
+    }
 
     /// Falta un valor solo si el proyecto está mal generado: es un error de programación y la raíz de composición
     /// puede pararse (SW-6).
@@ -28,7 +38,8 @@ struct AppConfig: Sendable {
             supabaseURL: url("TindivoSupabaseURL"),
             supabasePublishableKey: string("TindivoSupabasePublishableKey"),
             appVersion: string("CFBundleShortVersionString"),
-            build: string("CFBundleVersion")
+            build: string("CFBundleVersion"),
+            appStoreId: (bundle.object(forInfoDictionaryKey: "TindivoAppStoreID") as? String) ?? ""
         )
     }
 }

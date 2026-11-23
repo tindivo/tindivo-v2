@@ -5,3 +5,6 @@ APP_DISPLAY_NAME = Tindivo
 API_BASE_URL = https:/$()/apiv2.tindivo.com/api/v1
 SUPABASE_URL = https:/$()/zpnipajgwfthxhdtzhly.supabase.co
 SUPABASE_PUBLISHABLE_KEY = sb_publishable_J8M8nH_cb2eYjAt2E5L27w_EhMnwS0W
+// Id numérico de la ficha en la App Store (solo dígitos). Vacío hasta crear la ficha: la pantalla de actualización
+// obligatoria deja su botón deshabilitado mientras esté vacío.
+APP_STORE_ID =

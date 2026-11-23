@@ -58,4 +58,33 @@ struct AppNavigatorTests {
         navigator.seeBusinesses()
         #expect(navigator.path.isEmpty)
     }
+
+    @Test("un negocio abierto por slug y pedido por id es el mismo: «+ Agregar más» no lo apila dos veces")
+    func addMoreMatchesSlugAndId() {
+        let navigator = AppNavigator()
+        navigator.openBusiness("Chifa-Lung-Fung")
+        navigator.learn(routeId: "Chifa-Lung-Fung", businessId: "9F1C0A52-0000-4000-8000-000000000002")
+        navigator.openCart()
+        navigator.addMore(to: "9f1c0a52-0000-4000-8000-000000000002")
+        #expect(navigator.path == [.business(id: "Chifa-Lung-Fung")])
+    }
+
+    @Test("sin haber aprendido el slug, un slug y un id distintos no se confunden")
+    func unknownSlugIsNotMatched() {
+        let navigator = AppNavigator()
+        navigator.openBusiness("chifa-lung-fung")
+        navigator.openCart()
+        navigator.addMore(to: "9f1c0a52-0000-4000-8000-000000000002")
+        #expect(navigator.path.count == 3)
+    }
+
+    @Test("abrir el negocio que ya está arriba, por id o por slug, no lo apila otra vez")
+    func openingTheVisibleBusinessDoesNothing() {
+        let navigator = AppNavigator()
+        navigator.openBusiness("slug-a")
+        navigator.learn(routeId: "slug-a", businessId: "ID-A")
+        navigator.openBusiness("id-a")
+        navigator.openBusiness(" SLUG-A ")
+        #expect(navigator.path == [.business(id: "slug-a")])
+    }
 }

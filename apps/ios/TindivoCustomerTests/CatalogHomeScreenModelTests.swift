@@ -126,23 +126,21 @@ struct CatalogHomeScreenModelTests {
         #expect(!loaded.refreshing)
     }
 
-    @Test("426: el modelo lo deja como estado para que la raíz lleve a actualizar")
+    @Test("426: la carga queda en error; la pantalla de actualización la decide la raíz (ConfigService), no el modelo")
     func upgradeRequired() async {
         let model = CatalogHomeScreenModel(
             catalog: StubCatalog(businesses: Script(failing: .upgradeRequired(minVersion: "1.2.0")))
         )
         await model.load()
         #expect(model.state == .failed(.upgradeRequired(minVersion: "1.2.0")))
-        #expect(model.upgradeNotice == UpgradeNotice(.upgradeRequired(minVersion: "1.2.0")))
     }
 
-    @Test("un 426 en una recarga también se expone y conserva la lista")
+    @Test("un 426 en una recarga conserva la lista")
     func upgradeRequiredOnRefresh() async {
         let catalog = StubCatalog(businesses: Script([.success([summary("a")]), .failure(.upgradeRequired(minVersion: nil))]))
         let model = CatalogHomeScreenModel(catalog: catalog)
         await model.load()
         await model.refresh()
-        #expect(model.upgradeNotice == UpgradeNotice(.upgradeRequired(minVersion: nil)))
         guard case let .loaded(loaded) = model.state else {
             Issue.record("se esperaba .loaded: \(model.state)")
             return

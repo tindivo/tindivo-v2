@@ -49,6 +49,16 @@ targets:
         TindivoAPIBaseURL: $(API_BASE_URL)
         TindivoSupabaseURL: $(SUPABASE_URL)
         TindivoSupabasePublishableKey: $(SUPABASE_PUBLISHABLE_KEY)
+        TindivoAppStoreID: $(APP_STORE_ID)
+    # Antes de publicar en Prod, APP_STORE_ID debe tener el id de la ficha. Hoy no existe y el build Prod debe seguir
+    # compilando en CI, así que es un AVISO (warning), no un error. Cuando exista el id, cambiar `warning:` por `error:`.
+    preBuildScripts:
+      - name: Comprobar APP_STORE_ID
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ -z "$APP_STORE_ID" ] && [ "$CONFIGURATION" = "Release-Prod" ]; then
+            echo "warning: APP_STORE_ID está vacío en Prod.xcconfig: la pantalla de actualización obligatoria no tiene adónde mandar. Pon el id de la ficha antes de publicar."
+          fi
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)

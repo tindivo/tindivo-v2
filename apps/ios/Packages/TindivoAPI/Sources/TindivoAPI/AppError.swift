@@ -1,5 +1,5 @@
-import Foundation
-import HTTPTypes
+public import Foundation
+public import HTTPTypes
 
 /// Códigos de negocio del contrato (`packages/contracts/src/errors.ts`, `API_ERROR_CODES`). El OpenAPI no los declara
 /// como enum (solo como `x-known-values`), así que esta lista va escrita a mano: si el contrato añade uno, se añade
@@ -51,7 +51,7 @@ struct ProblemDetails: Decodable {
 extension AppError {
     /// Traduce una respuesta de error a `AppError`. Nunca lanza: un cuerpo ausente, que no es JSON o que no tiene la
     /// forma de `ProblemDetails` termina en `.unknown` con el status HTTP.
-    public static func from(status: Int, headers: HTTPFields, body: Data?) -> AppError {
+    package static func from(status: Int, headers: HTTPFields, body: Data?) -> AppError {
         let problem = body.flatMap { try? JSONDecoder().decode(ProblemDetails.self, from: $0) }
         if status == 426 || problem?.code == ApiErrorCode.clientUpgradeRequired.rawValue {
             return .upgradeRequired(minVersion: headers[ClientHeaders.minVersion])

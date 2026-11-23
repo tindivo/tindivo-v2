@@ -8,6 +8,7 @@ struct TindivoCustomerApp: App {
 
     init() {
         TindivoFonts.register()
+        URLCache.shared = AppEnvironment.makeImageCache()
         #if DEBUG
         // Las pruebas de interfaz parten de una bolsa vacía: la de una corrida anterior abriría otra pregunta.
         if ProcessInfo.processInfo.arguments.contains("-tindivo-reset-cart") {
@@ -50,10 +51,20 @@ struct TindivoCustomerApp: App {
     /// Ganchos de las pruebas de interfaz, solo en DEBUG:
     /// - `-tindivo-now 2026-07-07T20:00:00-05:00` fija el reloj de la app: no depende de la hora a la que corre.
     /// - `-tindivo-seed-other-bag` empieza con una bolsa de otro negocio (`n2`).
-    /// - `-tindivo-fake-catalog` usa la carta de las vistas previas en vez de la API: el flujo no depende de staging.
+    /// - `-tindivo-fake-catalog` usa la carta de las vistas previas en vez de la API: el flujo no depende de staging,
+    ///   y tampoco `/config` (una configuración fija que nunca pide actualizar).
+    /// - `-tindivo-force-upgrade` deja la app en «actualización obligatoria», sin red.
     private static func debugEnvironment(_ live: AppEnvironment) -> AppEnvironment {
         let arguments = ProcessInfo.processInfo.arguments
-        let catalog: any CatalogRepository = arguments.contains("-tindivo-fake-catalog") ? PreviewCatalog() : live.catalog
+        let fakeCatalog = arguments.contains("-tindivo-fake-catalog")
+        let catalog: any CatalogRepository = fakeCatalog ? PreviewCatalog() : live.catalog
+        let configService: any ConfigService = if arguments.contains("-tindivo-force-upgrade") {
+            FixedConfigService(.upgradeRequired(minVersion: "9.9.9"))
+        } else if fakeCatalog {
+            FixedConfigService()
+        } else {
+            live.configService
+        }
         var clock = live.clock
         if let flag = arguments.firstIndex(of: "-tindivo-now"), arguments.indices.contains(flag + 1),
            let fixed = ISO8601DateFormatter().date(from: arguments[flag + 1]) {
@@ -70,7 +81,8 @@ struct TindivoCustomerApp: App {
             )
         }
         return AppEnvironment(
-            config: live.config, system: live.system, catalog: catalog, cartStore: live.cartStore, clock: clock
+            config: live.config, system: live.system, configService: configService, catalog: catalog,
+            cartStore: live.cartStore, clock: clock
         )
     }
     #endif

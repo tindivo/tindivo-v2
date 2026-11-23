@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// Dinero (SW-8, API-8): en la API viaja como cadena decimal (`"12.50"`); en la app es `Decimal`, nunca `Double`.
 public enum Money {

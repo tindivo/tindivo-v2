@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// Dinero heredado: un número JSON que sale de un `numeric(10,2)` (`legacyMoney` del contrato; los campos nuevos
 /// viajan como texto, D-39, y se leen con `Money.parse`). El generador lo usaría como `Double`; este tipo lo
