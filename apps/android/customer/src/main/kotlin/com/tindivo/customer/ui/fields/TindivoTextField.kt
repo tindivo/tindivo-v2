@@ -27,6 +27,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -84,7 +85,14 @@ internal fun TindivoTextField(
     var touched by rememberSaveable { mutableStateOf(false) }
     var hadFocus by remember { mutableStateOf(false) }
     val requester = focusRequester ?: remember { FocusRequester() }
-    if (autoFocus) LaunchedEffect(Unit) { requester.requestFocus() }
+    // Una sola vez por pantalla: al girar o restaurar no se vuelve a pedir el foco (ni a abrir el teclado).
+    var autoFocused by rememberSaveable { mutableStateOf(false) }
+    if (autoFocus && !autoFocused) {
+        LaunchedEffect(Unit) {
+            requester.requestFocus()
+            autoFocused = true
+        }
+    }
     val shownError = immediateError ?: error?.takeIf { shouldShowError(error, touched, submitted) }
     val counter = maxLength?.takeIf { showsCounter(value.length, it) }
     OutlinedTextField(
@@ -123,6 +131,7 @@ internal fun TindivoTextField(
                 .fillMaxWidth()
                 .heightIn(min = FieldHeight)
                 .focusRequester(requester)
+                .semantics { if (shownError != null) error(shownError) }
                 .onFocusChanged {
                     if (it.isFocused) {
                         hadFocus = true
@@ -136,7 +145,11 @@ internal fun TindivoTextField(
 }
 
 private val ValidCheck: @Composable () -> Unit = {
-    Icon(imageVector = TindivoIcons.Check, contentDescription = null, tint = TindivoColors.success)
+    Icon(
+        imageVector = TindivoIcons.Check,
+        contentDescription = stringResource(R.string.field_valid),
+        tint = TindivoColors.success,
+    )
 }
 
 private fun supporting(

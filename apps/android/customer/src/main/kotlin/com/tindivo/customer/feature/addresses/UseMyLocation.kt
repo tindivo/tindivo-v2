@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -61,7 +62,6 @@ internal fun UseMyLocation(
     onPermission: (LocationPermission) -> Unit,
     onLeave: () -> Unit,
     onForegroundChanged: (Boolean) -> Unit,
-    floating: Boolean = false,
 ) {
     val locate = state.locate
     if (!locate.available) return
@@ -96,27 +96,7 @@ internal fun UseMyLocation(
     val label =
         stringResource(if (locate.locating) R.string.address_form_locating else R.string.address_form_use_location)
     val enabled = !locate.locating && !state.busy
-    if (floating) {
-        FloatingLocate(label, enabled, onClick, locate.notice) { openAppSettings(context) }
-        return
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(text = label)
-        }
-        locate.notice?.let { notice ->
-            Text(
-                text = stringResource(notice.messageRes()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-            if (notice == LocateNotice.DeniedForever) {
-                TextButton(onClick = { openAppSettings(context) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(R.string.address_form_locate_settings))
-                }
-            }
-        }
-    }
+    FloatingLocate(label, enabled, onClick, locate.notice) { openAppSettings(context) }
 }
 
 /** «Usar mi ubicación» flotando sobre el mapa de pantalla completa: 56 dp, y el aviso en una tarjeta encima. */
@@ -154,7 +134,8 @@ private fun FloatingLocate(
             onClick = { if (enabled) onClick() },
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = TindivoColors.brandText,
-            modifier = Modifier.height(TindivoSpacing.primaryButtonHeight),
+            modifier =
+                Modifier.height(TindivoSpacing.primaryButtonHeight).semantics { if (!enabled) disabled() },
         ) {
             Icon(imageVector = TindivoIcons.Place, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))

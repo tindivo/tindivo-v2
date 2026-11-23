@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.addresses
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -128,6 +129,8 @@ private fun AddressSteps(
     header: @Composable () -> Unit,
 ) {
     var onMap by rememberSaveable { mutableStateOf(state.point == null) }
+    // Atrás en los datos vuelve al mapa sin perder lo escrito (vive en el ViewModel); atrás en el mapa cierra como antes.
+    BackHandler(enabled = !onMap) { onMap = true }
     if (onMap) {
         MapStep(state, actions, modifier, showCloseOnMap, onConfirm = { onMap = false })
     } else {
@@ -189,7 +192,6 @@ private fun MapStep(
                     onPermission = actions.onLocationPermission,
                     onLeave = actions.onStopLocating,
                     onForegroundChanged = actions.onForegroundChanged,
-                    floating = true,
                 )
             }
             ConfirmPanel(outside = outside, enabled = point != null && !outside, onConfirm = onConfirm)
@@ -238,8 +240,8 @@ private fun DetailsStep(
     val lineFocus = remember { FocusRequester() }
     val referenceFocus = remember { FocusRequester() }
     // El foco va solo al primer campo vacío (y solo al llegar: girar la pantalla no vuelve a abrir el teclado).
-    val focusLine = rememberSaveable { state.line.isBlank() }
-    val focusReference = rememberSaveable { state.line.isNotBlank() && state.reference.isBlank() }
+    val focusLine = remember { state.line.isBlank() }
+    val focusReference = remember { state.line.isNotBlank() && state.reference.isBlank() }
     // «Guardar» siempre se puede tocar: si falta algo, lleva a ese campo y enseña el error.
     val trySave: () -> Unit = {
         submitted = true

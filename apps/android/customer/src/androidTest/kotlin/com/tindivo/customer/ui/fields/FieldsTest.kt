@@ -4,6 +4,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTextInput
@@ -65,5 +68,18 @@ class FieldsTest {
         compose.onNodeWithText("Monto").performTextInput("50,559")
 
         assertEquals("50.55", amount)
+    }
+
+    @Test
+    fun autoFocusIsAskedOnlyOnceAcrossRotation() {
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { NameField(value = "", onValueChange = {}, autoFocus = true) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Nombre").assertIsFocused()
+
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Nombre").assertIsNotFocused()
     }
 }
