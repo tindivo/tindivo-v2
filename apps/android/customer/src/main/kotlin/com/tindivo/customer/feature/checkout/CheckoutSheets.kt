@@ -47,8 +47,6 @@ import com.tindivo.customer.feature.addresses.AddressFormActions
 import com.tindivo.customer.feature.addresses.AddressFormContent
 import com.tindivo.customer.feature.addresses.AddressFormViewModel
 import com.tindivo.customer.feature.addresses.FormOutcome
-import com.tindivo.customer.feature.addresses.SaveBar
-import com.tindivo.customer.feature.addresses.showsSaveBar
 import com.tindivo.customer.feature.phone.PhoneActions
 import com.tindivo.customer.feature.phone.PhoneStep
 import com.tindivo.customer.feature.phone.PhoneVerified
@@ -185,7 +183,7 @@ internal fun AddressSheet(
         closeIfIdle = { viewModel.closeIfIdle().deliverPending(deliver) },
         holdsMap = true,
     ) {
-        Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
+        Box(modifier = Modifier.weight(1f)) {
             AddressFormContent(
                 state = form,
                 actions =
@@ -207,7 +205,6 @@ internal fun AddressSheet(
                     ),
             )
         }
-        if (form.showsSaveBar) SaveBar(form, viewModel::save)
     }
 }
 

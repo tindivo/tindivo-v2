@@ -13,21 +13,35 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.tindivo.core.designsystem.TindivoColors
+import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.customer.R
 
 /** Los dos permisos de ubicación en tiempo de uso: la persona puede dar solo el aproximado y también sirve. */
@@ -47,6 +61,7 @@ internal fun UseMyLocation(
     onPermission: (LocationPermission) -> Unit,
     onLeave: () -> Unit,
     onForegroundChanged: (Boolean) -> Unit,
+    floating: Boolean = false,
 ) {
     val locate = state.locate
     if (!locate.available) return
@@ -71,24 +86,23 @@ internal fun UseMyLocation(
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
             onPermission(permissionAnswer(grants, activity))
         }
+    val onClick = {
+        if (hasLocationPermission(context)) {
+            onPermission(LocationPermission.Granted)
+        } else {
+            launcher.launch(LOCATION_PERMISSIONS)
+        }
+    }
+    val label =
+        stringResource(if (locate.locating) R.string.address_form_locating else R.string.address_form_use_location)
+    val enabled = !locate.locating && !state.busy
+    if (floating) {
+        FloatingLocate(label, enabled, onClick, locate.notice) { openAppSettings(context) }
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedButton(
-            onClick = {
-                if (hasLocationPermission(context)) {
-                    onPermission(LocationPermission.Granted)
-                } else {
-                    launcher.launch(LOCATION_PERMISSIONS)
-                }
-            },
-            enabled = !locate.locating && !state.busy,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(
-                text =
-                    stringResource(
-                        if (locate.locating) R.string.address_form_locating else R.string.address_form_use_location,
-                    ),
-            )
+        OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(text = label)
         }
         locate.notice?.let { notice ->
             Text(
@@ -101,6 +115,50 @@ internal fun UseMyLocation(
                     Text(text = stringResource(R.string.address_form_locate_settings))
                 }
             }
+        }
+    }
+}
+
+/** «Usar mi ubicación» flotando sobre el mapa de pantalla completa: 56 dp, y el aviso en una tarjeta encima. */
+@Composable
+private fun FloatingLocate(
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    notice: LocateNotice?,
+    onOpenSettings: () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (notice != null) {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 4.dp,
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = stringResource(notice.messageRes()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    )
+                    if (notice == LocateNotice.DeniedForever) {
+                        TextButton(onClick = onOpenSettings, modifier = Modifier.heightIn(min = 48.dp)) {
+                            Text(text = stringResource(R.string.address_form_locate_settings))
+                        }
+                    }
+                }
+            }
+        }
+        ExtendedFloatingActionButton(
+            onClick = { if (enabled) onClick() },
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = TindivoColors.brandText,
+            modifier = Modifier.height(TindivoSpacing.primaryButtonHeight),
+        ) {
+            Icon(imageVector = TindivoIcons.Place, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = label)
         }
     }
 }
