@@ -297,7 +297,7 @@ struct CartScreenModelTests {
     func accessibilityLabels() throws {
         let cart = Cart(businessId: "n1", businessName: "N", lines: [line("a", quantity: 1), line("b", quantity: 2)])
         guard case let .filled(filled) = CartScreenModel.state(for: cart) else { Issue.record("debía haber platos"); return }
-        #expect(filled.lines.map(\.quantityLabel) == ["1 unidad", "2 unidades"])
+        #expect(filled.countLabel == "3 productos")
         #expect(filled.lines[0].decreaseLabel == "Quitar Plato a")
         #expect(filled.lines[1].decreaseLabel == "Quitar una unidad de Plato b. Llevas 2 unidades")
         #expect(filled.lines[1].increaseLabel == "Agregar una unidad de Plato b. Llevas 2 unidades")
@@ -319,7 +319,7 @@ struct CartScreenModelTests {
         return (model, store, task)
     }
 
-    @Test("CA-CRT-05: antes de que responda la carta la bolsa se ve, está «validando» y no se puede continuar")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): antes de que responda la carta la bolsa se ve, está «validando» y no se puede continuar")
     func validatingBeforeTheMenuAnswers() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -342,7 +342,7 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05: un plato agotado se avisa en su línea y no se puede continuar hasta quitarlo")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato agotado se avisa en su línea y no se puede continuar hasta quitarlo")
     func unavailableLineBlocksContinuing() async throws {
         let (model, _, task) = try await validated(
             lines: [line("a"), line("b")],
@@ -360,7 +360,7 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05: un precio cambiado se avisa en la línea y bloquea; la bolsa no se toca")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un precio cambiado se avisa en la línea y bloquea; la bolsa no se toca")
     func changedPriceBlocksContinuing() async throws {
         let (model, store, task) = try await validated(
             lines: [line("a", price: "10")], menu: validationMenu([Fixture.item("a", price: "12")])
@@ -371,7 +371,7 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05: un plato eliminado, uno fuera de franja y una opción que ya no existe se avisan en su línea")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato eliminado, uno fuera de franja y una opción que ya no existe se avisan en su línea")
     func otherIssuesAreShownOnTheLine() async throws {
         let sizes = Fixture.group("g", single: true, required: true, options: [Fixture.option("a", "1")])
         let stale = CartModifier(optionId: "zz", groupName: "Grupo g", optionName: "Opción zz", price: dec("1"))
@@ -390,7 +390,7 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05: una bolsa que coincide con la carta puede continuar")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una bolsa que coincide con la carta puede continuar")
     func matchingBagCanContinue() async throws {
         let (model, _, task) = try await validated(lines: [line("a")], menu: validationMenu([Fixture.item("a")]))
         #expect(filled(model)?.validation == .checked)
@@ -398,7 +398,7 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05: si la carta no se puede leer no se bloquea: queda «sin validar» y sin avisos")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): si la carta no se puede leer no se bloquea: queda «sin validar» y sin avisos")
     func uncheckedWhenTheMenuFails() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -410,7 +410,7 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05: una carta que no se puede mostrar tal cual (precio con tres decimales) también queda «sin validar»")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una carta que no se puede mostrar tal cual (precio con tres decimales) también queda «sin validar»")
     func uncheckedWhenTheMenuIsInvalid() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -496,6 +496,128 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
+    // MARK: Deshacer: casos límite
+
+    @Test("dos «Quitar» seguidos de la misma línea no tocan el «Deshacer» de la primera")
+    func doubleRemoveKeepsTheUndo() async throws {
+        let store = temporaryStore()
+        for id in ["a", "b", "c"] { _ = try await store.add(businessId: "n1", businessName: "N", line: line(id)) }
+        let (model, task) = await started(store)
+        await model.remove(signature: line("b").signature)
+        let first = model.undoOffer
+        #expect(first?.message == "Quitaste \"Plato b\"")
+        await model.remove(signature: line("b").signature)
+        #expect(model.undoOffer == first)
+        #expect(await model.undo() == true)
+        #expect(await store.current()?.lines.map(\.itemId) == ["a", "b", "c"])
+        task.cancel()
+    }
+
+    @Test("«Deshacer» con una línea igual ya en la bolsa suma las cantidades")
+    func undoMergesWithAnIdenticalLine() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("a"))
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("b", quantity: 2))
+        let (model, task) = await started(store)
+        await model.remove(signature: line("b").signature)
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("b", quantity: 3))
+        #expect(await model.undo() == true)
+        #expect(await store.current()?.lines.map(\.quantity) == [1, 5])
+        task.cancel()
+    }
+
+    @Test("«Deshacer» con 50 platos distintos avisa y la bolsa no cambia")
+    func undoWhenTheBagIsFull() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("a"))
+        _ = try await store.add(businessId: "n1", businessName: "N", line: line("b"))
+        let (model, task) = await started(store)
+        await model.remove(signature: line("b").signature)
+        for i in 0..<(CartLimits.maxLines - 1) { _ = try await store.add(businessId: "n1", businessName: "N", line: line("p\(i)")) }
+        #expect(await store.current()?.lines.count == CartLimits.maxLines)
+        #expect(await model.undo() == false)
+        #expect(model.notices.message == "Tu bolsa ya tiene 50 platos distintos: es el máximo por pedido")
+        #expect(await store.current()?.lines.count == CartLimits.maxLines)
+        task.cancel()
+    }
+
+    @Test("si «Deshacer» no se puede guardar, avisa y sigue ofreciéndolo")
+    func undoThatFailsToSaveIsOfferedAgain() async throws {
+        let inner = temporaryStore()
+        _ = try await inner.add(businessId: "n1", businessName: "N", line: line("a"))
+        _ = try await inner.add(businessId: "n1", businessName: "N", line: line("b"))
+        let store = RestoreFailingStore(inner: inner)
+        let (model, task) = await started(store)
+        await model.remove(signature: line("b").signature)
+        #expect(await model.undo() == false)
+        #expect(model.notices.message == "No se pudo guardar tu bolsa. Inténtalo de nuevo.")
+        #expect(model.undoMessage != nil)
+        await store.allowRestore()
+        #expect(await model.undo() == true)
+        #expect(await inner.current()?.lines.map(\.itemId) == ["a", "b"])
+        task.cancel()
+    }
+
+    // MARK: Validación: casos límite
+
+    @Test("un .cancelled que no viene de cerrar la pantalla es un fallo: «sin validar», sin bloquear")
+    func strayCancelledIsAFailure() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let (model, task) = await started(store, catalog: StubCatalog(menus: Script(failing: .cancelled)))
+        await model.validate()
+        #expect(filled(model)?.validation == .unchecked)
+        #expect(model.canContinue == true)
+        task.cancel()
+    }
+
+    @Test("con la carta ya cargada del mismo negocio no se vuelve a pedir")
+    func menuIsNotRequestedTwice() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let catalog = StubCatalog(menus: Script(just: validationMenu([Fixture.item("a")])))
+        let (model, task) = await started(store, catalog: catalog)
+        await model.validate()
+        await model.validate()
+        #expect(catalog.menus.calls == 1)
+        task.cancel()
+    }
+
+    @Test("con la pantalla abierta, un plato que sale de su franja se avisa al pasar el minuto")
+    func windowIsRecomputedEveryMinute() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let manual = ManualClock(at("2026-07-07", "22:59"))
+        let menu = validationMenu([Fixture.item("a", from: "18:00", to: "23:00")])
+        let (model, task) = await started(store, clock: manual.clock, catalog: StubCatalog(menus: Script(just: menu)))
+        await model.validate()
+        #expect(filled(model)?.lines.first?.issues.isEmpty == true)
+        let ticking = Task { await model.runClock() }
+        manual.advance(by: 120)
+        await eventually { filled(model)?.lines.first?.issues.isEmpty == false }
+        #expect(model.canContinue == false)
+        ticking.cancel()
+        task.cancel()
+    }
+
+    @Test("dos toques rápidos a «Editar» piden la carta una sola vez")
+    func doubleTapOnEditOpensOnce() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "N", line: editableLine())
+        let gate = Gate()
+        let catalog = StubCatalog(menus: Script(just: editableMenu()), gate: gate)
+        let (model, task) = await started(store, catalog: catalog)
+        let signature = editableLine().signature
+        let first = Task { await model.startEditing(signature: signature) }
+        await eventually { catalog.menus.calls == 1 }
+        await model.startEditing(signature: signature)
+        gate.open()
+        await first.value
+        #expect(catalog.menus.calls == 1)
+        #expect(model.editing != nil)
+        task.cancel()
+    }
+
     // MARK: Si no se puede guardar
 
     @Test("si falla guardar, se avisa «No se pudo guardar tu bolsa» y la bolsa se queda como estaba")
@@ -533,10 +655,40 @@ private actor FailingStore: CartStore {
 
     func add(businessId: String, businessName: String, line: CartLine) throws(CartError) -> AddResult { throw .saveFailed }
     func replace(businessId: String, businessName: String, line: CartLine) throws(CartError) { throw .saveFailed }
-    func setQuantity(signature: String, quantity: Int) throws(CartError) { throw .saveFailed }
     func changeQuantity(signature: String, by delta: Int) throws(CartError) { throw .saveFailed }
     func remove(signature: String) throws(CartError) -> RemovedLine? { throw .saveFailed }
-    func restore(_ removed: RemovedLine) throws(CartError) -> Bool { throw .saveFailed }
+    func restore(_ removed: RemovedLine) throws(CartError) -> RestoreResult { throw .saveFailed }
     func replaceLine(signature: String, with line: CartLine) throws(CartError) -> LineEditResult { throw .saveFailed }
     func clear() throws(CartError) { throw .saveFailed }
+}
+
+/// Una bolsa real cuyo `restore` falla hasta que la prueba lo permite.
+private actor RestoreFailingStore: CartStore {
+    private let inner: FileCartStore
+    private var failing = true
+
+    init(inner: FileCartStore) { self.inner = inner }
+
+    func allowRestore() { failing = false }
+
+    func current() async -> Cart? { await inner.current() }
+    func updates() async -> AsyncStream<Cart?> { await inner.updates() }
+    func add(businessId: String, businessName: String, line: CartLine) async throws(CartError) -> AddResult {
+        try await inner.add(businessId: businessId, businessName: businessName, line: line)
+    }
+    func replace(businessId: String, businessName: String, line: CartLine) async throws(CartError) {
+        try await inner.replace(businessId: businessId, businessName: businessName, line: line)
+    }
+    func changeQuantity(signature: String, by delta: Int) async throws(CartError) {
+        try await inner.changeQuantity(signature: signature, by: delta)
+    }
+    func replaceLine(signature: String, with line: CartLine) async throws(CartError) -> LineEditResult {
+        try await inner.replaceLine(signature: signature, with: line)
+    }
+    func remove(signature: String) async throws(CartError) -> RemovedLine? { try await inner.remove(signature: signature) }
+    func restore(_ removed: RemovedLine) async throws(CartError) -> RestoreResult {
+        if failing { throw .saveFailed }
+        return try await inner.restore(removed)
+    }
+    func clear() async throws(CartError) { try await inner.clear() }
 }

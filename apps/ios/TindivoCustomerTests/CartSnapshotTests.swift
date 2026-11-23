@@ -179,10 +179,12 @@ struct CartSnapshotTests {
         #expect(restored == pickup)
     }
 
-    @Test("un método de entrega desconocido descarta la bolsa entera")
-    func unknownMethodIsRejected() throws {
+    @Test("un método de entrega desconocido no borra la bolsa: se lee como delivery")
+    func unknownMethodFallsBackToDelivery() throws {
         var snapshot = try snapshot()
         snapshot.method = "drone"
-        #expect(Cart(snapshot: snapshot) == nil)
+        let restored = try #require(Cart(snapshot: snapshot))
+        #expect(restored.method == .delivery)
+        #expect(restored.lines.count == 2)
     }
 }

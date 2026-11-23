@@ -67,6 +67,17 @@ enum DeliveryMethod: String, Sendable, Equatable {
     case pickup
 }
 
+/// Lo que pasó al deshacer una quitada.
+enum RestoreResult: Sendable, Equatable {
+    case restored
+    /// Ya había una línea igual: se sumaron las cantidades; `capped` si la suma pasaba del máximo.
+    case merged(capped: Bool)
+    /// La bolsa ya tiene el máximo de platos distintos: no cabe.
+    case full
+    /// La bolsa se vació o ya no existe: no hay a qué devolverla.
+    case noBag
+}
+
 /// La bolsa: platos de un solo negocio. Inmutable; cada cambio devuelve otra.
 struct Cart: Sendable, Equatable {
     let businessId: String
@@ -138,14 +149,21 @@ struct Cart: Sendable, Equatable {
         return (with(lines: next), wanted > CartLimits.maxQuantity)
     }
 
-    /// Devuelve `removed` a su sitio (o al final si la bolsa ya es más corta). Es `nil` si no cabe: ya hay una línea
-    /// igual o la bolsa tiene `maxLines` platos.
-    func inserting(_ removed: RemovedLine) -> Cart? {
+    /// Devuelve `removed` a su sitio (o al final si la bolsa ya es más corta). Si ya hay una línea igual (la persona
+    /// volvió a pedir ese plato), se fusionan sumando cantidades (tope `maxQuantity`); si la bolsa ya tiene
+    /// `maxLines` platos distintos no cabe y no cambia.
+    func restoring(_ removed: RemovedLine) -> (cart: Cart, result: RestoreResult) {
         let key = removed.line.signatureKey
-        guard !lines.contains(where: { $0.signatureKey == key }), lines.count < CartLimits.maxLines else { return nil }
+        if let existing = lines.firstIndex(where: { $0.signatureKey == key }) {
+            let wanted = lines[existing].quantity + removed.line.quantity
+            var next = lines
+            next[existing] = lines[existing].with(quantity: min(wanted, CartLimits.maxQuantity))
+            return (with(lines: next), .merged(capped: wanted > CartLimits.maxQuantity))
+        }
+        guard lines.count < CartLimits.maxLines else { return (self, .full) }
         var next = lines
         next.insert(removed.line, at: min(max(removed.index, 0), next.count))
-        return with(lines: next)
+        return (with(lines: next), .restored)
     }
 
     /// La huella de la bolsa: negocio y, por plato, su firma y su cantidad (sin importar el orden). Los precios no

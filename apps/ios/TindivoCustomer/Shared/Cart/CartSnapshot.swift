@@ -139,14 +139,15 @@ extension Cart {
     }
 
     /// La bolsa que representa `snapshot`, o `nil` si algo no cuadra. Falla cerrado: una versión distinta, un importe
-    /// que no es un precio de carta, un método de entrega desconocido, más platos, una cantidad, una lista de opciones o una nota fuera de los límites
+    /// que no es un precio de carta, más platos, una cantidad, una lista de opciones o una nota fuera de los límites
     /// del pedido, una opción repetida en una línea, o dos líneas con la misma firma descartan la bolsa entera.
     /// Nunca se arregla a medias: lo que se enseñaría podría no ser lo que la persona eligió.
     init?(snapshot: CartSnapshot) {
         guard snapshot.version == cartSnapshotVersion, !snapshot.businessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !snapshot.lines.isEmpty, snapshot.lines.count <= CartLimits.maxLines,
-              let method = DeliveryMethod(rawValue: snapshot.method)
+              !snapshot.lines.isEmpty, snapshot.lines.count <= CartLimits.maxLines
         else { return nil }
+        // Un método que esta versión no conoce no borra la bolsa: se lee como delivery, que es lo que se elige en el checkout.
+        let method = DeliveryMethod(rawValue: snapshot.method) ?? .delivery
         var restored: [CartLine] = []
         for line in snapshot.lines {
             guard let restoredLine = CartLine(snapshot: line) else { return nil }

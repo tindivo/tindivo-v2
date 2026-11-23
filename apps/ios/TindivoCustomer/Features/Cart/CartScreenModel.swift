@@ -21,8 +21,8 @@ struct CartLineRow: Equatable {
     /// Con 1 unidad el «−» quita la línea (CUS-CRT-003): no baja de 1.
     let decreaseRemoves: Bool
     let canIncrease: Bool
-    /// Para VoiceOver: el contador dice «2 unidades» y los botones, qué hacen y cuántas hay (con 1 unidad, «−» quita).
-    let quantityLabel: String
+    /// Para VoiceOver: qué hace cada botón y cuántas unidades hay («2 unidades»). TindivoStepper no deja ponerle
+    /// etiqueta al número: por eso la cantidad va en las etiquetas de los botones.
     let decreaseLabel: String
     let increaseLabel: String
     /// Lo que la carta vigente dice de esta línea (CUS-CRT-005): vacío si se puede pedir.
@@ -46,6 +46,8 @@ final class CartScreenModel {
         let subtotal: String
         let method: DeliveryMethod
         let validation: Validation
+        /// «[n] productos» de la barra (unidades en total).
+        let countLabel: String
 
         /// La etiqueta del método de entrega (CUS-CRT-007, CUS-CRT-010).
         var methodLabel: String {
@@ -91,14 +93,31 @@ final class CartScreenModel {
         let businessName: String
     }
 
-    /// Cuánto dura «Deshacer» (CUS-CRT-013).
-    static let undoWindow: Duration = .seconds(5)
+    /// Cuánto dura «Deshacer» (CUS-CRT-013); lo decide Jesús, no se cambia.
+    static let defaultUndoWindow: Duration = {
+        #if DEBUG
+        // Solo pruebas de interfaz: `-tindivo-undo-seconds 60` alarga el plazo para poder tocar «Deshacer» sin prisa.
+        let arguments = ProcessInfo.processInfo.arguments
+        if let flag = arguments.firstIndex(of: "-tindivo-undo-seconds"), arguments.indices.contains(flag + 1),
+           let seconds = Double(arguments[flag + 1]), seconds > 0 {
+            return .seconds(seconds)
+        }
+        #endif
+        return .seconds(5)
+    }()
+
+    /// El aviso «Quitaste "[plato]"» con su «Deshacer»; `token` cambia con cada quitada.
+    struct UndoOffer: Equatable {
+        let message: String
+        let token: Int
+    }
 
     private(set) var state: State = .loading
-    /// «Quitaste "[plato]"» mientras se puede deshacer; `nil` pasados 5 s. La pantalla lo enseña con su botón.
-    var undoMessage: String? { undoNotice.message }
-    /// Cambia con cada quitada: la raya que se vacía en la pantalla arranca de nuevo.
-    private(set) var undoToken = 0
+    /// Hay algo que deshacer; `nil` pasado el plazo.
+    private(set) var undoOffer: UndoOffer?
+    var undoMessage: String? { undoOffer?.message }
+    /// Lo que dura la raya que se vacía.
+    let undoWindow: Duration
     /// Los avisos de error («No se pudo guardar tu bolsa»).
     let notices: TimedNotice
 
@@ -108,19 +127,24 @@ final class CartScreenModel {
     private let store: any CartStore
     private let catalog: any CatalogRepository
     private let clock: AppClock
-    private let undoNotice: TimedNotice
     private var lastRemoved: RemovedLine?
+    private var undoTask: Task<Void, Never>?
+    private var undoCounter = 0
+    private var isUndoing = false
     private var isOpeningEdit = false
     private var cart: Cart?
     private var hasCart = false
     private var menu: Menu = .pending
 
-    init(store: any CartStore, catalog: any CatalogRepository, clock: AppClock) {
+    init(
+        store: any CartStore, catalog: any CatalogRepository, clock: AppClock,
+        undoWindow: Duration = CartScreenModel.defaultUndoWindow
+    ) {
         self.store = store
         self.catalog = catalog
         self.clock = clock
+        self.undoWindow = undoWindow
         notices = TimedNotice(clock: clock)
-        undoNotice = TimedNotice(clock: clock, duration: Self.undoWindow)
     }
 
     /// La bolsa vigente ahora y después cada vez que cambia. Se lanza con `.task`.
@@ -137,16 +161,27 @@ final class CartScreenModel {
     /// misma carta, sin pedirla otra vez.
     func validate() async {
         guard let cart = await store.current(), !cart.isEmpty else { return }
+        // Ya cargada la carta de este negocio (por ejemplo tras cerrar «Editar»): no se vuelve a pedir.
+        if case let .loaded(known) = menu, known.id.caseInsensitiveCompare(cart.businessId) == .orderedSame { return }
         menu = .pending
         rebuild()
         do throws(AppError) {
             menu = .loaded(try await loadMenu(of: cart.businessId))
-        } catch .cancelled {
-            return
         } catch {
+            // Un `.cancelled` que no viene de cerrar la pantalla es un fallo de la red: «sin validar», no bloquea.
+            if case .cancelled = error, Task.isCancelled { return }
             menu = .failed
         }
         rebuild()
+    }
+
+    /// Reevalúa cada minuto las franjas de los platos con la pantalla abierta: un plato que se apaga a las 15:00 se
+    /// avisa sin volver a entrar. Se lanza con `.task`.
+    func runClock() async {
+        while !Task.isCancelled {
+            do { try await clock.sleep(.seconds(60)) } catch { return }
+            rebuild()
+        }
     }
 
     /// «Continuar» (todavía no existe en iOS: llega con el checkout) solo podrá avanzar con la bolsa ya revisada y
@@ -196,24 +231,51 @@ final class CartScreenModel {
             showSaveFailed()
             return
         }
-        guard let removed, !removed.wasLast else {
+        // Un segundo toque a la misma línea ya no la encuentra: no toca el aviso de la primera quitada.
+        guard let removed else { return }
+        if removed.wasLast {
             forgetUndo()
             return
         }
         lastRemoved = removed
-        undoToken += 1
-        undoNotice.show(String(localized: "Quitaste \"\(removed.line.name)\""))
+        undoCounter += 1
+        let token = undoCounter
+        undoOffer = UndoOffer(message: String(localized: "Quitaste \"\(removed.line.name)\""), token: token)
+        undoTask?.cancel()
+        undoTask = Task { [clock, undoWindow] in
+            do { try await clock.sleep(undoWindow) } catch { return }
+            if undoOffer?.token == token { forgetUndo() }
+        }
     }
 
-    /// «Deshacer»: devuelve la línea quitada a su sitio con su cantidad. No hace nada pasados los 5 s o si ya no cabe.
+    /// «Deshacer»: devuelve la línea quitada a su sitio con su cantidad (o la suma a una igual). No hace nada pasados
+    /// los 5 s. Si no cabe (50 platos distintos) avisa; si no se puede guardar, avisa y sigue ofreciendo «Deshacer».
     @discardableResult
     func undo() async -> Bool {
-        guard undoNotice.message != nil, let removed = lastRemoved else { return false }
-        forgetUndo()
+        guard undoOffer != nil, let removed = lastRemoved, !isUndoing else { return false }
+        isUndoing = true
+        defer { isUndoing = false }
+        let result: RestoreResult
         do throws(CartError) {
-            return try await store.restore(removed)
+            result = try await store.restore(removed)
         } catch {
             showSaveFailed()
+            return false
+        }
+        switch result {
+        case .restored:
+            forgetUndo()
+            return true
+        case let .merged(capped):
+            forgetUndo()
+            if capped { notices.show(DishScreenModel.addedMessage(capped: true)) }
+            return true
+        case .full:
+            forgetUndo()
+            notices.show(String(localized: "Tu bolsa ya tiene \(CartLimits.maxLines) platos distintos: es el máximo por pedido"))
+            return false
+        case .noBag:
+            forgetUndo()
             return false
         }
     }
@@ -223,10 +285,12 @@ final class CartScreenModel {
     /// Abre el plato de una línea con lo elegido. Pide la carta vigente: sus opciones son las de hoy, no las de cuando
     /// se agregó. Si el plato ya no se puede pedir o no se puede leer la carta, avisa y no abre nada.
     func startEditing(signature: String) async {
-        guard editing == nil, !isOpeningEdit, let cart = await store.current(),
-              let line = cart.lines.first(where: { $0.signatureKey == Array(signature.utf16) }) else { return }
+        // La marca va antes del primer `await`: dos toques rápidos no abren dos veces.
+        guard editing == nil, !isOpeningEdit else { return }
         isOpeningEdit = true
         defer { isOpeningEdit = false }
+        guard let cart = await store.current(),
+              let line = cart.lines.first(where: { $0.signatureKey == Array(signature.utf16) }) else { return }
         let detail: BusinessDetail
         do throws(AppError) {
             if case let .loaded(known) = menu, known.id.caseInsensitiveCompare(cart.businessId) == .orderedSame {
@@ -249,6 +313,11 @@ final class CartScreenModel {
     }
 
     /// La ficha del plato se cerró (con o sin guardar). `capped`: al fusionarse con otra línea llegó al máximo.
+    func lineGone() {
+        editing = nil
+        notices.show(String(localized: "Este plato ya no está en tu bolsa"))
+    }
+
     func finishEditing(capped: Bool = false) {
         editing = nil
         if capped { notices.show(DishScreenModel.addedMessage(capped: true)) }
@@ -277,7 +346,8 @@ final class CartScreenModel {
 
     private func forgetUndo() {
         lastRemoved = nil
-        undoNotice.clear()
+        undoTask?.cancel()
+        undoOffer = nil
     }
 
     private func showSaveFailed() {
@@ -315,7 +385,6 @@ final class CartScreenModel {
                     total: formatAmount(line.total) ?? formatSoles(line.total),
                     decreaseRemoves: line.quantity == 1,
                     canIncrease: line.quantity < CartLimits.maxQuantity,
-                    quantityLabel: Self.unitsText(line.quantity),
                     decreaseLabel: line.quantity == 1
                         ? String(localized: "Quitar \(line.name)")
                         : String(localized: "Quitar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
@@ -326,7 +395,8 @@ final class CartScreenModel {
             },
             subtotal: formatAmount(cart.subtotal) ?? formatSoles(cart.subtotal),
             method: cart.method,
-            validation: validation
+            validation: validation,
+            countLabel: String(localized: "\(cart.count) productos")
         ))
     }
 

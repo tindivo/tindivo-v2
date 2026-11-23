@@ -30,25 +30,25 @@ struct CartValidationTests {
 
     private let sizes = Fixture.group("g", single: true, required: true, options: [Fixture.option("a", "1"), Fixture.option("b", "2")])
 
-    @Test("CA-CRT-05: una línea igual a la carta no tiene avisos, aunque el precio se escriba distinto (12.5 y 12.50)")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una línea igual a la carta no tiene avisos, aunque el precio se escriba distinto (12.5 y 12.50)")
     func validLine() throws {
         let result = try issues(of: [line("i1", price: "12.5")], in: [Fixture.item("i1", price: "12.50")])
         #expect(result == [[]])
     }
 
-    @Test("CA-CRT-05: un plato que ya no está en la carta")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato que ya no está en la carta")
     func removedDish() throws {
         let result = try issues(of: [line("gone")], in: [Fixture.item("i1")])
         #expect(result == [[.removed]])
     }
 
-    @Test("CA-CRT-05: un plato agotado")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato agotado")
     func unavailableDish() throws {
         let result = try issues(of: [line("i1")], in: [Fixture.item("i1", available: false)])
         #expect(result == [[.unavailable]])
     }
 
-    @Test("CA-CRT-05: un plato fuera de su franja dice cuándo vuelve")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato fuera de su franja dice cuándo vuelve")
     func outOfWindowDish() throws {
         let result = try issues(of: [line("i1")], in: [Fixture.item("i1", from: "11:00", to: "15:00")])
         let returns = DishWindow(days: nil, from: "11:00", to: "15:00").describe()
@@ -56,13 +56,13 @@ struct CartValidationTests {
         #expect(result == [[.outOfWindow(returns: returns)]])
     }
 
-    @Test("CA-CRT-05: un plato dentro de su franja se puede pedir")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato dentro de su franja se puede pedir")
     func insideWindowDish() throws {
         let result = try issues(of: [line("i1")], in: [Fixture.item("i1", from: "18:00", to: "23:00")])
         #expect(result == [[]])
     }
 
-    @Test("CA-CRT-05: el precio base cambió")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): el precio base cambió")
     func basePriceChanged() throws {
         let result = try issues(of: [line("i1", price: "10")], in: [Fixture.item("i1", price: "12")])
         #expect(result == [[.priceChanged(delta: dec("2"))]])
@@ -70,7 +70,7 @@ struct CartValidationTests {
         #expect(CartLineIssue.priceChanged(delta: dec("-0.5")).message.plain == "Precio actualizado (-S/ 0.50)")
     }
 
-    @Test("CA-CRT-05: el precio de una opción cambió")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): el precio de una opción cambió")
     func optionPriceChanged() throws {
         let result = try issues(
             of: [line("i1", modifiers: [modifier("a", "0.50")])],
@@ -79,7 +79,7 @@ struct CartValidationTests {
         #expect(result == [[.optionPriceChanged(optionName: "Opción a"), .priceChanged(delta: dec("0.5"))]])
     }
 
-    @Test("CA-CRT-05: una opción que ya no existe")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una opción que ya no existe")
     func optionRemoved() throws {
         let result = try issues(
             of: [line("i1", modifiers: [modifier("zz", "1")])],
@@ -88,13 +88,13 @@ struct CartValidationTests {
         #expect(result == [[.optionRemoved]])
     }
 
-    @Test("CA-CRT-05: el negocio añadió un grupo obligatorio y lo elegido ya no cumple las reglas")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): el negocio añadió un grupo obligatorio y lo elegido ya no cumple las reglas")
     func invalidSelection() throws {
         let result = try issues(of: [line("i1")], in: [Fixture.item("i1", groups: [sizes])])
         #expect(result == [[.invalidSelection]])
     }
 
-    @Test("CA-CRT-05: opciones iguales a la carta no dan aviso")
+    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): opciones iguales a la carta no dan aviso")
     func matchingOptions() throws {
         let result = try issues(
             of: [line("i1", modifiers: [modifier("b", "2")])],

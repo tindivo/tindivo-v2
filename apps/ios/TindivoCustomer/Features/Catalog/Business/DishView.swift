@@ -8,8 +8,14 @@ struct DishView: View {
     let onClose: () -> Void
     /// Se agregó: la carta cierra la ficha y enseña su aviso (con `capped`, el de «máximo por pedido»).
     let onAdded: (Bool) -> Void
+    /// Solo al editar desde la bolsa: la línea ya no estaba; quien presenta cierra la ficha y avisa.
+    let onLineGone: (() -> Void)?
 
-    init(model: DishScreenModel, onClose: @escaping () -> Void, onAdded: @escaping (Bool) -> Void) {
+    init(
+        model: DishScreenModel, onClose: @escaping () -> Void, onAdded: @escaping (Bool) -> Void,
+        onLineGone: (() -> Void)? = nil
+    ) {
+        self.onLineGone = onLineGone
         _model = State(initialValue: model)
         self.onClose = onClose
         self.onAdded = onAdded
@@ -60,6 +66,9 @@ struct DishView: View {
         case .full, .failed:
             model.showNotice(for: outcome)
             model.consumeOutcome()
+        case .lineGone:
+            model.consumeOutcome()
+            onLineGone?()
         case .otherBusiness:
             break
         }

@@ -16,6 +16,8 @@ final class DishScreenModel {
         case full
         /// No se pudo guardar en el teléfono.
         case failed
+        /// Se estaba editando una línea que ya no está en la bolsa.
+        case lineGone
     }
 
     let item: MenuItem
@@ -76,7 +78,7 @@ final class DishScreenModel {
             if let editing {
                 switch try await cartStore.replaceLine(signature: editing.signature, with: line) {
                 case let .replaced(capped): outcome = .added(capped: capped)
-                case .notFound: outcome = .failed
+                case .notFound: outcome = .lineGone
                 }
                 return
             }
@@ -133,7 +135,7 @@ final class DishScreenModel {
         switch outcome {
         case .full: notices.show(String(localized: "Tu bolsa ya tiene \(CartLimits.maxLines) platos distintos: es el máximo por pedido"))
         case .failed: notices.show(String(localized: "No se pudo guardar tu bolsa. Inténtalo de nuevo."))
-        case .added, .otherBusiness: break
+        case .added, .otherBusiness, .lineGone: break
         }
     }
 

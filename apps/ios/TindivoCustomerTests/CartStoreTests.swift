@@ -64,7 +64,7 @@ struct CartStoreTests {
         _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b"))
         let signature = try #require(await store.current()?.lines.first?.signature)
 
-        try await store.setQuantity(signature: signature, quantity: 4)
+        try await store.changeQuantity(signature: signature, by: 3)
         #expect(await store.current()?.count == 5)
 
         try await store.remove(signature: signature)
@@ -247,26 +247,51 @@ struct CartStoreTests {
         #expect(removed.wasLast == false)
         #expect(removed.line.quantity == 2)
         #expect(await store.current()?.lines.map(\.itemId) == ["a", "c"])
-        #expect(try await store.restore(removed) == true)
+        #expect(try await store.restore(removed) == .restored)
         #expect(await store.current()?.lines.map(\.itemId) == ["a", "b", "c"])
     }
 
-    @Test("restore no hace nada si la bolsa ya tiene esa línea o se vació")
-    func restoreRefusesWhenItNoLongerFits() async throws {
+    @Test("restore: si ya hay una línea igual suma las cantidades con tope 50; si la bolsa se vació, no hace nada")
+    func restoreMergesOrRefuses() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b", quantity: 30))
+        let removed = try #require(try await store.remove(signature: line("b").signature))
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b", quantity: 15))
+        #expect(try await store.restore(removed) == .merged(capped: false))
+        #expect(await store.current()?.lines.map(\.quantity) == [1, 45])
+        let again = try #require(try await store.remove(signature: line("b").signature))
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b", quantity: 40))
+        #expect(try await store.restore(again) == .merged(capped: true))
+        #expect(await store.current()?.lines.map(\.quantity) == [1, 50])
+
+        let last = try #require(try await store.remove(signature: line("a").signature))
+        _ = try await store.remove(signature: line("b").signature)
+        #expect(await store.current() == nil)
+        #expect(try await store.restore(last) == .noBag)
+        #expect(await store.current() == nil)
+    }
+
+    @Test("restore: con 50 platos distintos no cabe y la bolsa no cambia")
+    func restoreWhenFull() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("x"))
+        let removed = try #require(try await store.remove(signature: line("x").signature))
+        for i in 0..<CartLimits.maxLines {
+            _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("p\(i)"))
+        }
+        #expect(try await store.restore(removed) == .full)
+        #expect(await store.current()?.lines.count == CartLimits.maxLines)
+    }
+
+    @Test("remove de una línea que ya no está devuelve nil y no escribe")
+    func removeTwice() async throws {
         let (store, _) = makeStore()
         _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
         _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b"))
-        let removed = try #require(try await store.remove(signature: line("b").signature))
-        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b"))
-        #expect(try await store.restore(removed) == false)
-        #expect(await store.current()?.lines.map(\.itemId) == ["a", "b"])
-
-        let last = try #require(try await store.remove(signature: line("a").signature))
-        let lastOne = try #require(try await store.remove(signature: line("b").signature))
-        #expect(lastOne.wasLast == true)
-        #expect(await store.current() == nil)
-        #expect(try await store.restore(last) == false)
-        #expect(await store.current() == nil)
+        #expect(try await store.remove(signature: line("a").signature) != nil)
+        #expect(try await store.remove(signature: line("a").signature) == nil)
+        #expect(await store.current()?.lines.map(\.itemId) == ["b"])
     }
 
     @Test("replaceLine cambia la línea en su sitio y fusiona con otra idéntica, con el tope de unidades")

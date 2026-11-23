@@ -27,9 +27,6 @@ private actor GatedStore: CartStore {
         try await inner.replace(businessId: businessId, businessName: businessName, line: line)
     }
 
-    func setQuantity(signature: String, quantity: Int) async throws(CartError) {
-        try await inner.setQuantity(signature: signature, quantity: quantity)
-    }
 
     func changeQuantity(signature: String, by delta: Int) async throws(CartError) {
         try await inner.changeQuantity(signature: signature, by: delta)
@@ -40,7 +37,7 @@ private actor GatedStore: CartStore {
     }
 
     func remove(signature: String) async throws(CartError) -> RemovedLine? { try await inner.remove(signature: signature) }
-    func restore(_ removed: RemovedLine) async throws(CartError) -> Bool { try await inner.restore(removed) }
+    func restore(_ removed: RemovedLine) async throws(CartError) -> RestoreResult { try await inner.restore(removed) }
     func clear() async throws(CartError) { try await inner.clear() }
 }
 
@@ -128,6 +125,16 @@ struct DishScreenModelTests {
         #expect(cart.lines.count == 1)
         #expect(cart.lines[0].modifiers.map(\.optionId) == ["a"])
         #expect(cart.lines[0].quantity == 3)
+    }
+
+    @Test("editar una línea que ya no está en la bolsa lo dice con su propio resultado")
+    func editOfALineThatIsGone() async throws {
+        let store = temporaryStore()
+        let gone = editedLine("a", price: "1", quantity: 1)
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: Fixture.line("i2"))
+        let model = try model(editable(), store: store, editing: gone)
+        await model.add()
+        #expect(model.outcome == .lineGone)
     }
 
     @Test("editar una opción que la carta ya no tiene deja la selección incompleta hasta elegir otra")

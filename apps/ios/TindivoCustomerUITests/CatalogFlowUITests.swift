@@ -19,7 +19,10 @@ final class CatalogFlowUITests: XCTestCase {
     /// La bolsa de una corrida anterior (de otro negocio) abriría la pregunta de vaciarla. El reloj de la app se fija
     /// en un martes a las 20:00 de Lima: el horario nocturno no depende de cuándo corra.
     private func launch(fakeCatalog: Bool, seedOtherBag: Bool = false, fastClock: Bool = false, largeType: Bool = false) {
-        app.launchArguments = ["-tindivo-reset-cart", "-tindivo-now", "2026-07-07T20:00:00-05:00"]
+        // El plazo de «Deshacer» se alarga (solo DEBUG) para que el toque no dependa de la velocidad del simulador.
+        app.launchArguments = [
+            "-tindivo-reset-cart", "-tindivo-now", "2026-07-07T20:00:00-05:00", "-tindivo-undo-seconds", "60",
+        ]
         if largeType {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         }
@@ -135,7 +138,9 @@ final class CatalogFlowUITests: XCTestCase {
         attach("ax5-bolsa-dos-platos")
 
         // Con 1 unidad, «−» quita el plato y aparece «Deshacer».
-        app.buttons["Quitar Chicha morada"].firstMatch.tap()
+        // Los botones de cantidad llevan el identificador «cart.stepper» (primero «−», luego «+» de cada línea): el «−»
+        // de la segunda línea es el tercero. «Quitar» (texto) es otro botón, «cart.remove».
+        app.buttons.matching(identifier: "cart.stepper").element(boundBy: 2).tap()
         XCTAssertTrue(element("cart.undo").waitForExistence(timeout: 5), "No apareció «Deshacer»")
         XCTAssertEqual(query("cart.line").count, 1)
         attach("ax5-bolsa-deshacer")
