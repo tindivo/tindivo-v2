@@ -622,8 +622,8 @@
     <string name="prepay_confirmed">%1$s confirmó tu pedido. Ahora te toca pagar para que entre a cocina.</string>
     <string name="prepay_last_try">Tu comprobante no fue válido. Revisa e intenta de nuevo. Te queda 1 intento.</string>
     <plurals name="prepay_time_left">
-        <item quantity="one">Te queda %d min para pagar</item>
-        <item quantity="other">Te quedan %d min para pagar</item>
+        <item quantity="one">Te queda %d min</item>
+        <item quantity="other">Te quedan %d min</item>
     </plurals>
     <string name="prepay_expired_title">Se acabó el tiempo para pagar</string>
     <string name="prepay_expired_body">Estamos revisando en qué quedó tu pedido.</string>
@@ -632,6 +632,12 @@
     <string name="prepay_wallet_plin">Plin</string>
     <string name="prepay_wallet_any">Yape o Plin</string>
     <string name="prepay_wallet_of_business">%1$s del restaurante</string>
+    <string name="prepay_step_copy">Copia el número</string>
+    <string name="prepay_step_pay">Paga %1$s en %2$s</string>
+    <string name="prepay_step_upload">Sube tu captura</string>
+    <string name="prepay_show_qr">Ver QR</string>
+    <string name="prepay_hide_qr">Ocultar QR</string>
+    <string name="prepay_copy_amount_description">Copiar el monto %1$s</string>
     <string name="prepay_copy">Copiar</string>
     <string name="prepay_copied">Copiado</string>
     <string name="prepay_copy_description">Copiar el número %1$s</string>
