@@ -167,6 +167,15 @@ struct BusinessRequirementsTests {
         #expect(model.statusLine == nil)
     }
 
+    @Test("A9 la fábrica arma el modelo del plato con el negocio de la carta, sin que la vista toque el entorno")
+    func dishModelFactory() async throws {
+        let model = await loaded(menu())
+        let dish = model.makeDishModel(for: try item("simple", in: model))
+        #expect(dish.item.id == "simple")
+        await dish.add()
+        #expect(dish.outcome == .added(capped: false))
+    }
+
     // MARK: Secciones y búsqueda (A10, M8)
 
     @Test("A10 la barra de secciones aparece desde 2 secciones, el índice desde 5, y se esconde buscando")
@@ -177,7 +186,7 @@ struct BusinessRequirementsTests {
         let one = await loaded(menu(1))
         #expect(one.sectionBar == nil)
         let two = await loaded(menu(2))
-        #expect(two.sectionBar == .init(names: ["Sección c1", "Sección c2"], selected: 0, showsIndex: false))
+        #expect(two.sectionBar == .init(ids: ["c1", "c2"], names: ["Sección c1", "Sección c2"], selected: 0, showsIndex: false))
         let five = await loaded(menu(5))
         #expect(five.sectionBar?.showsIndex == true)
         five.startSearch()

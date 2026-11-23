@@ -11,6 +11,8 @@ struct MenuItemRowView: View {
     var description: AttributedString?
     var categoryName: String?
     var onTap: (() -> Void)?
+    /// El contador de la tarjeta (CUS-CAT-029); `nil` si el plato no se puede pedir ahora.
+    var action: DishRowAction?
 
     static let thumbnailSize: CGFloat = 92
 
@@ -19,8 +21,10 @@ struct MenuItemRowView: View {
         name: AttributedString? = nil,
         description: AttributedString? = nil,
         categoryName: String? = nil,
+        action: DishRowAction? = nil,
         onTap: (() -> Void)?
     ) {
+        self.action = action
         self.item = item
         self.name = name ?? AttributedString(item.name)
         self.description = description ?? item.description.map { AttributedString($0) }
@@ -31,12 +35,19 @@ struct MenuItemRowView: View {
     private var tappable: Bool { item.orderable && onTap != nil }
 
     var body: some View {
-        if tappable, let onTap {
-            Button(action: onTap) { row }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("menu.dish")
-        } else {
-            row.accessibilityElement(children: .combine)
+        VStack(alignment: .trailing, spacing: 8) {
+            if tappable, let onTap {
+                Button(action: onTap) { row }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("menu.dish")
+            } else {
+                row.accessibilityElement(children: .combine)
+            }
+            // Fuera de la foto y fuera del botón que abre la ficha: cada toque es de una sola cosa.
+            if let action {
+                DishRowControlView(action: action, itemName: item.name)
+                    .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
+            }
         }
     }
 
@@ -58,13 +69,14 @@ struct MenuItemRowView: View {
                         .foregroundStyle(Color.tindivo.inkSecondary)
                         .lineLimit(2)
                 }
-                Text(item.priceText)
+                Text(item.priceLabel)
                     .tindivoText(TindivoTokens.Typography.body)
                     .fontWeight(.bold)
                     .monospacedDigit()
-                    .lineLimit(1)
-                    .fixedSize()
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(Color.tindivo.ink)
+                    // Atenuar solo precio y foto: el texto de estado se queda legible, en el color secundario.
+                    .opacity(item.orderable ? 1 : Self.dimmedOpacity)
                 if let status {
                     Text(status)
                         .tindivoText(TindivoTokens.Typography.bodySecondary)
@@ -75,16 +87,25 @@ struct MenuItemRowView: View {
             TindivoAsyncImage(url: item.imageURL)
                 .frame(width: Self.thumbnailSize, height: Self.thumbnailSize)
                 .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusThumb))
+                .opacity(item.orderable ? 1 : Self.dimmedOpacity)
         }
         .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
-        .opacity(item.orderable ? 1 : 0.5)
         .contentShape(Rectangle())
     }
+
+    static let dimmedOpacity = 0.5
 
     /// «Agotado» (lo marca la cajera) y «no es su turno» son cosas distintas: la franja dice cuándo vuelve.
     private var status: String? {
         if item.isAvailable, let window = item.outsideWindow { return window }
         return item.isAvailable ? nil : String(localized: "No disponible")
+    }
+}
+
+extension MenuItem {
+    /// «Desde S/ 12.50» cuando el plato pide elegir opciones obligatorias; si no, su precio.
+    var priceLabel: String {
+        startingAtText.map { String(localized: "Desde \($0)") } ?? priceText
     }
 }
 

@@ -232,6 +232,7 @@ final class BusinessScreenModel {
 
     /// La barra de secciones: `nil` con una sola sección o mientras se busca. `showsIndex`: desde 5 secciones.
     struct SectionBar: Equatable {
+        let ids: [String]
         let names: [String]
         let selected: Int
         let showsIndex: Bool
@@ -240,7 +241,15 @@ final class BusinessScreenModel {
     var sectionBar: SectionBar? {
         guard let sections = visible?.sections, sections.count >= Self.chipsMinSections, !isSearching else { return nil }
         return SectionBar(
-            names: sections.map(\.name), selected: selectedSection, showsIndex: sections.count >= Self.indexMinSections
+            ids: sections.map(\.id), names: sections.map(\.name), selected: selectedSection, showsIndex: sections.count >= Self.indexMinSections
+        )
+    }
+
+    /// El modelo de la ficha de un plato de ESTA carta (SW-4: la vista no conoce el entorno de la app).
+    func makeDishModel(for item: MenuItem) -> DishScreenModel {
+        DishScreenModel(
+            item: item, businessId: visible?.id ?? "", businessName: visible?.name ?? "", cartStore: cartStore,
+            clock: clock
         )
     }
 
@@ -321,7 +330,7 @@ final class BusinessScreenModel {
 }
 
 /// Lo que la tarjeta de un plato ofrece junto a la foto (CUS-CAT-029).
-enum DishRowControl: Sendable, Equatable {
+enum DishRowControl: Sendable, Hashable {
     /// Plato sin opciones y nada en la bolsa: un «+».
     case add
     /// Plato sin opciones con unidades en la bolsa: «− 1 +».

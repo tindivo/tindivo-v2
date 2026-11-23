@@ -9,7 +9,9 @@ struct RootView: View {
 
     init(environment: AppEnvironment) {
         self.environment = environment
-        _home = State(initialValue: CatalogHomeScreenModel(catalog: environment.catalog))
+        _home = State(initialValue: CatalogHomeScreenModel(
+            catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock
+        ))
     }
 
     var body: some View {
@@ -17,6 +19,7 @@ struct RootView: View {
             CatalogHomeView(
                 model: home,
                 onOpenBusiness: navigator.openBusiness,
+                onOpenCart: navigator.openCart,
                 onOpenDiagnostics: diagnosticsAction
             )
             .navigationDestination(for: AppRoute.self) { route in
@@ -63,7 +66,7 @@ private struct BusinessRoute: View {
     }
 
     var body: some View {
-        BusinessView(model: model, environment: environment, onOpenCart: navigator.openCart)
+        BusinessView(model: model, onOpenCart: navigator.openCart)
     }
 }
 

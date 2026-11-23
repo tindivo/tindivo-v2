@@ -4,18 +4,20 @@ import TindivoDesign
 
 struct BusinessView: View {
     let model: BusinessScreenModel
-    let environment: AppEnvironment
     let onOpenCart: () -> Void
 
     @State private var position: String?
     @State private var showingIndex = false
     @FocusState private var searchFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         content
             .background(Color.tindivo.background)
             .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle(model.showTitle && !model.isSearching ? (model.visible?.name ?? "") : "")
+            // El título siempre está (VoiceOver y el botón «volver» de la pantalla siguiente lo leen); lo que se ve en la
+            // barra es la vista de `.principal`, que solo aparece al pasar la portada.
+            .navigationTitle(model.visible?.name ?? String(localized: "Restaurante"))
             .navigationBarBackButtonHidden(model.isSearching)
             .toolbar { toolbar }
             .tindivoToast(model.notices.message)
@@ -24,17 +26,17 @@ struct BusinessView: View {
                 OrderingBottomBar(ordering: model.ordering, cart: model.cartBarSummary, onOpenCart: onOpenCart)
             }
             .sheet(isPresented: $showingIndex) {
-                SectionIndexSheet(sections: model.visible?.sections ?? []) { index in
+                SectionIndexSheet(sections: model.visible?.sections ?? [], total: model.visible?.dishCount ?? 0) { index in
                     showingIndex = false
                     jump(to: index)
                 }
             }
+            .sheet(isPresented: Binding(get: { model.isShowingInfo }, set: { if !$0 { model.hideInfo() } })) {
+                if let info = model.info { BusinessInfoSheet(info: info, onClose: model.hideInfo) }
+            }
             .fullScreenCover(item: openDish) { item in
                 DishView(
-                    model: DishScreenModel(
-                        item: item, businessId: model.visible?.id ?? "", businessName: model.visible?.name ?? "",
-                        cartStore: environment.cartStore, clock: environment.clock
-                    ),
+                    model: model.makeDishModel(for: item),
                     onClose: model.closeDish,
                     onAdded: model.dishAdded
                 )
@@ -74,7 +76,8 @@ struct BusinessView: View {
             .overlay {
                 if model.isSearching, model.hasSearchTerms {
                     MenuSearchResultsView(
-                        hits: model.searchResults, query: model.query ?? "", businessName: business.name, onTap: tap
+                        hits: model.searchResults, query: model.query ?? "", businessName: business.name, onTap: tap,
+                        action: rowAction
                     )
                     .background(Color.tindivo.background)
                 }
@@ -103,32 +106,45 @@ struct BusinessView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 160)
         case .header:
-            if let business = model.visible { BusinessHeaderView(business: business) }
+            if let business = model.visible {
+                BusinessHeaderView(business: business, status: model.statusLine, onShowInfo: model.showInfo)
+            }
         case let .category(category):
             CategoryHeaderView(category: category)
         case let .carousel(items):
-            FeaturedCarouselView(items: items, onTap: tap)
+            FeaturedCarouselView(items: items, onTap: tap, action: rowAction)
         case let .dish(item, _):
-            MenuItemRowView(item: item, onTap: tap.map { tap in { tap(item) } })
+            MenuItemRowView(item: item, action: rowAction(item), onTap: tap.map { tap in { tap(item) } })
+        }
+    }
+
+    /// El contador de la tarjeta de un plato y qué hace cada toque (CUS-CAT-029).
+    private func rowAction(_ item: MenuItem) -> DishRowAction? {
+        model.control(for: item).map { control in
+            DishRowAction(
+                control: control,
+                onAdd: { Task { await model.increment(item) } },
+                onDecrease: { Task { await model.decrement(item) } },
+                onChoose: { model.chooseOptions(item) }
+            )
         }
     }
 
     // MARK: Barra superior
 
     @ViewBuilder private var chips: some View {
-        if let sections = model.visible?.sections, sections.count >= 2, !model.isSearching {
-            SectionChipsBar(
-                sections: sections,
-                selected: model.selectedSection,
-                onSelect: jump,
-                onShowIndex: sections.count >= BusinessScreenModel.indexMinSections ? { showingIndex = true } : nil
-            )
+        if let bar = model.sectionBar {
+            SectionChipsBar(bar: bar, onSelect: jump, onShowIndex: { showingIndex = true })
         }
     }
 
     private func jump(to section: Int) {
         guard let key = model.jump(toSection: section) else { return }
-        withAnimation { position = key }
+        if reduceMotion {
+            position = key
+        } else {
+            withAnimation { position = key }
+        }
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
@@ -142,12 +158,37 @@ struct BusinessView: View {
                     TindivoIconButton(.close, label: "Limpiar búsqueda") { model.setQuery("") }
                 }
             }
-        } else if model.visible != nil {
+        } else if let business = model.visible {
+            // Al pasar la portada, la barra muestra el nombre y el estado (CA-CAT-P5).
+            // Siempre presente (si no, la barra enseña el título de navegación): invisible y oculto a VoiceOver hasta
+            // que se pasa la portada.
+            ToolbarItem(placement: .principal) {
+                titleBar(business.name)
+                    .opacity(model.showTitle ? 1 : 0)
+                    .accessibilityHidden(!model.showTitle)
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 TindivoIconButton(.search, label: "Buscar en la carta") { model.startSearch() }
                     .accessibilityIdentifier("menu.searchButton")
             }
         }
+    }
+
+    private func titleBar(_ name: String) -> some View {
+        VStack(spacing: 0) {
+            Text(name)
+                .tindivoText(TindivoTokens.Typography.chip)
+                .foregroundStyle(Color.tindivo.ink)
+                .lineLimit(1)
+            if let status = model.statusLine {
+                Text(status)
+                    .tindivoText(TindivoTokens.Typography.bodySecondary)
+                    .foregroundStyle(Color.tindivo.inkSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("business.titleBar")
     }
 
     private var searchField: some View {
@@ -178,7 +219,7 @@ struct BusinessView: View {
             model: BusinessScreenModel(
                 id: "n1", catalog: environment.catalog, cartStore: environment.cartStore, clock: environment.clock
             ),
-            environment: environment, onOpenCart: {}
+            onOpenCart: {}
         )
     }
     .onAppear { TindivoFonts.register() }

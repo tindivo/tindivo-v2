@@ -2,34 +2,38 @@ import SwiftUI
 import TindivoDesign
 
 /// La fila de chips que sigue a la sección visible, con el botón del índice a la derecha desde 5 secciones. El chip
-/// activo va en negrita y subrayado en el color del texto (no pastilla) y se centra solo.
+/// activo va en negrita y subrayado en el color del texto (no pastilla) y se centra solo. Cuántas secciones hay y desde
+/// cuántas aparece cada cosa lo decide `BusinessScreenModel.sectionBar`; aquí solo se dibuja.
 struct SectionChipsBar: View {
-    let sections: [MenuCategory]
-    let selected: Int
+    let bar: BusinessScreenModel.SectionBar
     let onSelect: (Int) -> Void
-    /// `nil` = menos de 5 secciones: no hay índice.
-    let onShowIndex: (() -> Void)?
+    let onShowIndex: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 0) {
-                        ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                            chip(section.name, index: index)
+                        ForEach(Array(bar.names.enumerated()), id: \.offset) { index, name in
+                            chip(name, index: index)
                         }
                     }
                 }
-                .onChange(of: selected) { _, new in
-                    guard let section = sections[safe: new] else { return }
-                    withAnimation { proxy.scrollTo(section.id, anchor: .center) }
+                .onChange(of: bar.selected) { _, new in
+                    guard let id = bar.ids[safe: new] else { return }
+                    if reduceMotion {
+                        proxy.scrollTo(id, anchor: .center)
+                    } else {
+                        withAnimation { proxy.scrollTo(id, anchor: .center) }
+                    }
                 }
             }
-            if let onShowIndex {
+            if bar.showsIndex {
                 Button(action: onShowIndex) {
                     HStack(spacing: 4) {
-                        Image(tindivo: .index)
-                        Text(verbatim: "\(sections.count)").monospacedDigit()
+                        Image(tindivo: .index).accessibilityHidden(true)
+                        Text(verbatim: "\(bar.names.count)").monospacedDigit()
                     }
                     .tindivoText(TindivoTokens.Typography.chip)
                     .foregroundStyle(Color.tindivo.ink)
@@ -38,7 +42,7 @@ struct SectionChipsBar: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("Ver las \(sections.count) secciones de la carta"))
+                .accessibilityLabel(Text("Ver las \(bar.names.count) secciones de la carta"))
                 .accessibilityIdentifier("menu.indexButton")
             }
         }
@@ -50,7 +54,7 @@ struct SectionChipsBar: View {
     }
 
     private func chip(_ name: String, index: Int) -> some View {
-        let isSelected = index == selected
+        let isSelected = index == bar.selected
         return Button { onSelect(index) } label: {
             Text(name)
                 .tindivoText(TindivoTokens.Typography.chip)
@@ -66,7 +70,7 @@ struct SectionChipsBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-        .id(sections[index].id)
+        .id(bar.ids[safe: index] ?? "")
     }
 }
 
@@ -79,11 +83,11 @@ private extension Array {
 /// La hoja con todas las secciones de la carta; tocar una la cierra y salta a ella.
 struct SectionIndexSheet: View {
     let sections: [MenuCategory]
+    /// Los platos de la carta, sin contar dos veces los de «Destacados» (`BusinessDetail.dishCount`).
+    let total: Int
     let onSelect: (Int) -> Void
 
     var body: some View {
-        // «Destacados» repite platos de su sección: no se cuenta dos veces.
-        let total = sections.filter { $0.id != MenuMapping.featuredID }.reduce(0) { $0 + $1.items.count }
         ScrollView {
             VStack(alignment: .leading, spacing: TindivoTokens.Spacing.spaceInner) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -135,11 +139,12 @@ struct SectionIndexSheet: View {
 
 #if DEBUG
 #Preview("Chips e índice") {
-    let sections = ["Destacados", "Pollos", "Parrillas", "Bebidas", "Postres"].enumerated().map { index, name in
-        MenuCategory(id: "c\(index)", name: name, blurb: nil, items: [])
-    }
+    let names = ["Destacados", "Pollos", "Parrillas", "Bebidas", "Postres"]
     return VStack {
-        SectionChipsBar(sections: sections, selected: 1, onSelect: { _ in }, onShowIndex: {})
+        SectionChipsBar(
+            bar: .init(ids: names.indices.map { "c\($0)" }, names: names, selected: 1, showsIndex: true),
+            onSelect: { _ in }, onShowIndex: {}
+        )
         Spacer()
     }
     .background(Color.tindivo.background)
@@ -151,6 +156,7 @@ struct SectionIndexSheet: View {
         sections: ["Pollos", "Parrillas", "Bebidas"].enumerated().map {
             MenuCategory(id: "c\($0.offset)", name: $0.element, blurb: nil, items: [])
         },
+        total: 12,
         onSelect: { _ in }
     )
     .onAppear { TindivoFonts.register() }

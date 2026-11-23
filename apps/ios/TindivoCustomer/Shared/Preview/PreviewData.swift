@@ -25,7 +25,7 @@ enum PreviewData {
     static let menu = BusinessMenu(
         business: .init(
             id: "n1", name: "Pollería Don Lucho", tagline: "Pollo a la brasa", accentColor: "F97316",
-            whatsappNumber: "+51987654321"
+            primaryCapability: .catalogFull, whatsappNumber: "+51987654321", estimatedEtaMin: 25, estimatedEtaMax: 40
         ),
         categories: [
             .init(
@@ -76,7 +76,14 @@ enum PreviewData {
                 ]
             ),
         ],
-        featured: .init(title: "Destacados", itemIds: ["i1", "i3"])
+        featured: .init(title: "Destacados", itemIds: ["i1", "i3"]),
+        // De lunes a sábado de 18:00 a 23:00 y el domingo cerrado: el reloj de las pruebas (martes 20:00) lo ve abierto.
+        schedule: (0...6).map { day in
+            .init(
+                dayOfWeek: day, isOpen: day < 6,
+                shift1Start: day < 6 ? "18:00" : nil, shift1End: day < 6 ? "23:00" : nil
+            )
+        }
     )
 }
 
