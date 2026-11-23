@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.courier
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,6 +28,7 @@ import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
+import com.tindivo.customer.ui.StatusPill
 
 /** «Mis entregas» dentro de la lista de la portada: cargando, vacía, con fallo o de 20 en 20 con «Ver más». */
 internal fun LazyListScope.myDeliveries(
@@ -110,17 +112,18 @@ private fun CourierCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             val fee = if (card.phase.wasFree()) stringResource(R.string.courier_free) else card.feeText
-            Text(
-                text =
-                    stringResource(
-                        R.string.courier_card_meta,
-                        card.shortId,
-                        stringResource(card.phase.labelRes()),
-                        fee,
-                    ),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.padding(top = TindivoSpacing.hairline),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
+            ) {
+                StatusPill(text = stringResource(card.phase.labelRes()), tone = card.phase.statusTone())
+                Text(
+                    text = stringResource(R.string.courier_card_meta_short, card.shortId, fee),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

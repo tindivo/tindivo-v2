@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.tindivo.customer.R
+import com.tindivo.customer.ui.StatusTone
 
 /** El horario dicho como la web (`formatCourierHours`): «6 a 11 pm», o «10 am a 2 pm» si cambia de am a pm. */
 @Composable
@@ -151,4 +152,13 @@ internal fun cancelMessageText(message: CourierMessage): String =
         is CourierMessage.Server -> message.text
         CourierMessage.Network -> stringResource(R.string.courier_cancel_error_network)
         CourierMessage.Generic, CourierMessage.StillProcessing -> stringResource(R.string.courier_cancel_error_generic)
+    }
+
+/** El tono de la pastilla de estado: entregado verde, cancelado rojo suave, en curso naranja suave. */
+internal fun CourierPhase.statusTone(): StatusTone =
+    when (this) {
+        is CourierPhase.Active -> StatusTone.Active
+        CourierPhase.Delivered -> StatusTone.Success
+        is CourierPhase.Cancelled -> StatusTone.Cancelled
+        CourierPhase.Unknown -> StatusTone.Neutral
     }
