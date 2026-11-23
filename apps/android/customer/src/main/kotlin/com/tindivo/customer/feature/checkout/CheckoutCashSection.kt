@@ -8,18 +8,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.customer.R
+import com.tindivo.customer.ui.fields.MoneyField
 import java.math.BigDecimal
 
 /** «¿Con cuánto pagas?»: los montos rápidos de la cotización y «Otro». Las reglas salen de `payment.cash`. */
@@ -50,13 +49,14 @@ internal fun CashSelector(
                 )
             }
             if (choice is CashChoice.Other) {
-                OutlinedTextField(
+                val focus = LocalFocusManager.current
+                MoneyField(
                     value = choice.text,
                     onValueChange = { onChoice(CashChoice.Other(it)) },
-                    label = { Text(stringResource(R.string.checkout_cash_input)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(R.string.checkout_cash_input),
+                    valid = check is CashCheck.Ok,
+                    onImeAction = { focus.clearFocus() },
+                    autoFocus = true,
                 )
             }
             CashFeedback(choice, check, total, rules)

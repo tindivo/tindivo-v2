@@ -150,6 +150,16 @@ class PhoneVerifyViewModelTest {
         }
 
     @Test
+    fun `un numero pegado con +51 y espacios queda en los 9 digitos`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.onPhoneChanged("+51 987 654 321")
+
+            assertEquals("987654321", viewModel.state.value.phone)
+        }
+
+    @Test
     fun `un codigo de menos de 6 digitos no sale a la red`() =
         runTest {
             val viewModel = viewModel()

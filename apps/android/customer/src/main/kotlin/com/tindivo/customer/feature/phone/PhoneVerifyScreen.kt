@@ -20,6 +20,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
@@ -30,6 +34,7 @@ import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,6 +45,7 @@ import com.tindivo.customer.R
 import com.tindivo.customer.support.SupportViewModel
 import com.tindivo.customer.support.generalHelpLink
 import com.tindivo.customer.support.openSafely
+import com.tindivo.customer.ui.fields.PhoneField
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -135,22 +141,32 @@ private fun NumberStep(
     state: PhoneUiState,
     actions: PhoneActions,
 ) {
+    // Tocar «Enviar código» con el número incompleto enseña el error del campo.
+    var tried by rememberSaveable { mutableStateOf(false) }
+    val send = {
+        tried = true
+        if (!state.sending) actions.onSendCode()
+    }
     Text(text = stringResource(R.string.phone_number_hint), style = MaterialTheme.typography.bodyLarge)
-    OutlinedTextField(
+    PhoneField(
         value = state.phone,
-        onValueChange = actions.onPhoneChanged,
-        label = { Text(text = stringResource(R.string.phone_number_label)) },
-        prefix = { Text(text = stringResource(R.string.phone_prefix)) },
-        singleLine = true,
-        isError = state.error != null,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth(),
+        onValueChange = {
+            tried = false
+            actions.onPhoneChanged(it)
+        },
+        label = stringResource(R.string.phone_number_label),
+        submitted = tried,
+        // Un solo error a la vez: si ya hay uno debajo (ErrorLine), el del campo se calla.
+        showValidation = state.error == null,
+        imeAction = ImeAction.Done,
+        onImeAction = send,
+        autoFocus = true,
     )
     ErrorLine(state.error, actions)
     ActionButton(
         text = stringResource(if (state.sending) R.string.phone_sending else R.string.phone_send_code),
         enabled = !state.sending,
-        onClick = actions.onSendCode,
+        onClick = send,
     )
 }
 
