@@ -37,3 +37,16 @@ fun tabNeedsSignIn(
     tab: RootTab,
     signedIn: Boolean,
 ): Boolean = !signedIn && (tab == RootTab.Orders || tab == RootTab.Account)
+
+/**
+ * `true` si ir de [from] a [to] es un cambio entre dos pestañas raíz distintas. Ahí no se anima: el fundido por defecto
+ * de Navigation dura 700 ms y deja las dos pantallas superpuestas, lo que se siente lento y «sin contenido».
+ */
+fun isTabSwitch(
+    from: String?,
+    to: String?,
+): Boolean {
+    val a = rootTabFor(from)
+    val b = rootTabFor(to)
+    return a != null && b != null && a != b
+}

@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.core.designsystem.TindivoTheme
@@ -49,6 +50,10 @@ internal fun OrdersDestination(
     val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
     val customerName = nameViewModel.name.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshIfStale()
+        onPauseOrDispose {}
+    }
     LaunchedEffect(state) {
         if (state is OrdersUiState.LoggedOut) onBack()
     }

@@ -1,5 +1,10 @@
 package com.tindivo.customer.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -67,6 +72,8 @@ import com.tindivo.customer.feature.terms.TermsGateViewModel
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
 
+private const val NAV_FADE_MS = 120
+
 @Serializable
 data object CatalogHomeRoute
 
@@ -125,6 +132,35 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             NavHost(
                 navController = navController,
                 startDestination = CatalogHomeRoute,
+                // Entre pestañas no se anima; en el resto, un fundido corto en vez de los 700 ms por defecto.
+                enterTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        EnterTransition.None
+                    } else {
+                        fadeIn(tween(NAV_FADE_MS))
+                    }
+                },
+                exitTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        ExitTransition.None
+                    } else {
+                        fadeOut(tween(NAV_FADE_MS))
+                    }
+                },
+                popEnterTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        EnterTransition.None
+                    } else {
+                        fadeIn(tween(NAV_FADE_MS))
+                    }
+                },
+                popExitTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        ExitTransition.None
+                    } else {
+                        fadeOut(tween(NAV_FADE_MS))
+                    }
+                },
                 modifier =
                     (
                         if (tab !=
