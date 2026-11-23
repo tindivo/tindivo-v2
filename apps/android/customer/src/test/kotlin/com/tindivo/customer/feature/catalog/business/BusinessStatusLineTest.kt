@@ -26,7 +26,8 @@ class BusinessStatusLineTest {
     @Test
     fun `con tiempo dice Abierto y el rango`() {
         val b = business()
-        val eta = b.etaLabel()!!.let { "${it.first}–${it.second} min" }
+        val range = requireNotNull(b.etaLabel())
+        val eta = "${range.first}–${range.second} min"
         assertEquals("Abierto · 25–35 min", statusParts(b, "Abierto", eta))
     }
 
