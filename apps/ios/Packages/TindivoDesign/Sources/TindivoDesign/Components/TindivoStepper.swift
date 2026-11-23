@@ -63,8 +63,8 @@ public struct TindivoStepper: View {
         String(localized: "\(quantity) unidades", bundle: .module)
     }
 
-    @ViewBuilder private var adjustable: some View {
-        let stepper = Stepper {
+    private var adjustable: some View {
+        Stepper {
             Text(verbatim: label)
         } onIncrement: {
             if canIncrease { onIncrease() }
@@ -75,10 +75,9 @@ public struct TindivoStepper: View {
             }
         }
         .accessibilityValue(Text(verbatim: Self.spokenQuantity(quantity)))
-        if decreaseRemoves {
-            stepper.accessibilityAction(named: Text(verbatim: decreaseLabel), onDecrease)
-        } else {
-            stepper
+        // Una sola vista para cualquier cantidad: la acción «Quitar» aparece y desaparece sin cambiar la identidad.
+        .accessibilityActions {
+            if decreaseRemoves { Button(action: onDecrease) { Text(verbatim: decreaseLabel) } }
         }
     }
 
