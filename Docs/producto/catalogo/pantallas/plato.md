@@ -31,14 +31,14 @@ codigo:
    es el del tamaño»; los extras muestran su recargo (CUS-CAT-034). Todos los campos llevan el mismo borde (CUS-CAT-033).
 6. **«Nota para el negocio» (opcional)**, campo de una línea, hasta `CART_MAX_NOTE_LENGTH` caracteres (CUS-CAT-009).
 7. **Barra inferior fija:** selector de cantidad y botón. Falta una elección obligatoria: botón gris con el nombre del
-   grupo que falta, «Elige la guarnición 2» (solo los grupos obligatorios bloquean, CUS-CAT-033). Todo resuelto: botón
+   grupo que falta, «Elige: Guarnición 2» (solo los grupos obligatorios bloquean, CUS-CAT-033). Todo resuelto: botón
    naranja «Agregar · S/ [TOTAL]», con (precio base + recargos) × cantidad.
 
 ## Estados
 
 | Estado | Qué se ve | Requisito o CA |
 |---|---|---|
-| Faltan elecciones obligatorias | Botón gris «Elige la [grupo]»; tocarlo desplaza hasta el primer grupo faltante y lo sacude | CUS-CAT-033, CA-CAT-P7 |
+| Faltan elecciones obligatorias | Botón gris «Elige: [grupo]» (con el nombre del grupo tal cual, sin artículo); tocarlo desplaza hasta el primer grupo faltante y lo sacude | CUS-CAT-033, CA-CAT-P7 |
 | Todo elegido | Botón naranja «Agregar · S/ [TOTAL]»; el total cuenta hacia el nuevo monto | CUS-CAT-009, CA-CAT-P8 |
 | Plato sin foto | Isotipo sobre `#FFF7ED`, igual que en la carta | CUS-CAT-007 |
 | Plato agotado | Aviso «No disponible» y botón deshabilitado | CUS-CAT-010 |
@@ -55,7 +55,7 @@ codigo:
 
 | CA | Criterio | Requisitos |
 |---|---|---|
-| CA-CAT-P7 | Dado «Pollo entero» con «Guarnición 1» resuelta y «Guarnición 2» obligatoria sin elegir, entonces el botón inferior está gris y dice «Elige la guarnición 2», y al tocarlo la pantalla se desplaza a ese grupo y este se sacude suave. | CUS-CAT-033, CUS-CAT-008 |
+| CA-CAT-P7 | Dado «Pollo entero» con «Guarnición 1» resuelta y «Guarnición 2» obligatoria sin elegir, entonces el botón inferior está gris y dice «Elige: Guarnición 2» (Decisión de Jesús, 2026-11-22 (conversación con Claude Code): sin artículo, porque la app no conoce el género del grupo), y al tocarlo la pantalla se desplaza a ese grupo y este se sacude suave. | CUS-CAT-033, CUS-CAT-008 |
 | CA-CAT-P8 | Dado el estado anterior, cuando se elige «Ensalada fresca» y una opción con «+ S/ 3.00», entonces el botón pasa a naranja y dice «Agregar · S/ 49.00», y «1 de 2 listas» pasa a «2 de 2 listas». | CUS-CAT-008, CUS-CAT-009 |
 | CA-CAT-P9 | Dado base S/ 46.00, una opción de + S/ 3.00 y cantidad 2, entonces el botón dice «Agregar · S/ 98.00» y el servidor recalcula el mismo importe al pedir. | CUS-CAT-009, CUS-CAT-034 |
 
