@@ -134,6 +134,7 @@ final class CatalogFlowUITests: CatalogUITestCase {
         XCTAssertEqual(decrease.label, "Quitar Chicha morada")
         decrease.tap()
         XCTAssertTrue(element("cart.undo").waitForExistence(timeout: 5), "No apareció «Deshacer»")
+        XCTAssertTrue(element("cart.undo.progress").exists, "Sin VoiceOver el aviso lleva la raya de su plazo")
         XCTAssertEqual(query("cart.line").count, 1)
         attach("ax5-bolsa-deshacer")
         element("cart.undo").tap()

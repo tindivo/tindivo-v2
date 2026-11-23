@@ -4,6 +4,40 @@ import TindivoAPI
 
 @testable import TindivoCustomer
 
+/// Una bolsa cuyo `replace` espera la puerta: así un segundo «Vaciar y empezar» llega con el primero a medias.
+private actor GatedReplaceStore: CartStore {
+    private let inner: FileCartStore
+    private let gate: Gate
+    private(set) var replaceCalls = 0
+
+    init(inner: FileCartStore, gate: Gate) {
+        self.inner = inner
+        self.gate = gate
+    }
+
+    func current() async -> Cart? { await inner.current() }
+    func updates() async -> AsyncStream<Cart?> { await inner.updates() }
+    func add(businessId: String, businessName: String, line: CartLine) async throws(CartError) -> AddResult {
+        try await inner.add(businessId: businessId, businessName: businessName, line: line)
+    }
+    func replace(businessId: String, businessName: String, line: CartLine) async throws(CartError) {
+        replaceCalls += 1
+        await gate.wait()
+        try await inner.replace(businessId: businessId, businessName: businessName, line: line)
+    }
+    func changeQuantity(signature: String, by delta: Int) async throws(CartError) {
+        try await inner.changeQuantity(signature: signature, by: delta)
+    }
+    func replaceLine(signature: String, with line: CartLine) async throws(CartError) -> LineEditResult {
+        try await inner.replaceLine(signature: signature, with: line)
+    }
+    func remove(signature: String) async throws(CartError) -> RemovedLine? {
+        try await inner.remove(signature: signature)
+    }
+    func restore(_ removed: RemovedLine) async throws(CartError) -> RestoreResult { try await inner.restore(removed) }
+    func clear() async throws(CartError) { try await inner.clear() }
+}
+
 /// La última ronda de la integración: «Editar» y «Deshacer», dinero, caché de cartas, sección elegida y avisos.
 @MainActor
 @Suite("Ronda final")
@@ -148,7 +182,9 @@ struct FinalRoundTests {
         let now = Fixture.tuesdayEvening
         async let first = cache.menu(id: "ABC-Slug", catalog: catalog, now: now)
         async let second = cache.menu(id: "abc-slug", catalog: catalog, now: now)
-        await eventually { menus.calls >= 1 }
+        // El segundo pedido ya está esperando la misma petición antes de abrir la puerta.
+        for _ in 0..<10_000 where await cache.waiters(for: "abc-slug") < 2 { await Task.yield() }
+        #expect(await cache.waiters(for: "abc-slug") == 2)
         gate.open()
         let results = try await (first, second)
         #expect(results.0 == results.1)
@@ -200,6 +236,33 @@ struct FinalRoundTests {
         let cart = await store.current()
         #expect(cart?.lines.map(\.itemId) == ["simple"])
         #expect(cart?.lines.first?.quantity == 1)
+    }
+
+    @Test("7 isReplacing: con «Vaciar y empezar» a medias, otra pregunta confirmada no lanza un segundo replace")
+    func replacementGuardWhileSaving() async throws {
+        let inner = temporaryStore()
+        _ = try await inner.add(businessId: "otro", businessName: "Chifa", line: line("x"))
+        let gate = Gate()
+        let store = GatedReplaceStore(inner: inner, gate: gate)
+        let model = await businessModel(
+            Fixture.menu([Fixture.category("c", [Fixture.item("simple"), Fixture.item("otro-plato", order: 2)])]),
+            store: store, clock: .fixed(Fixture.tuesdayEvening, sleepsUntil: Gate()))
+        let items = try #require(model.visible?.categories.first?.items)
+        await model.increment(items[0])
+        let first = Task { await model.confirmReplacement() }
+        for _ in 0..<10_000 where await store.replaceCalls < 1 { await Task.yield() }
+        #expect(await store.replaceCalls == 1, "el primero está a medias, esperando la puerta")
+
+        // Mientras tanto la persona toca otro plato: vuelve a salir la pregunta y la confirma.
+        await model.increment(items[1])
+        #expect(model.replacement != nil, "hay otra pregunta pendiente")
+        await model.confirmReplacement()
+        #expect(await store.replaceCalls == 1, "la guarda isReplacing no deja lanzar otro replace")
+
+        gate.open()
+        await first.value
+        #expect(await store.replaceCalls == 1)
+        #expect(await inner.current()?.lines.map(\.itemId) == ["simple"])
     }
 
     @Test("8 si la línea que se edita desde «Editar selección» ya no está, se dice «Este plato ya no está en tu bolsa»")

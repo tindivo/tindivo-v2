@@ -173,6 +173,10 @@ final class CatalogDetailUITests: CatalogUITestCase {
         XCTAssertTrue(decrease.waitForExistence(timeout: 5))
         decrease.tap()
         XCTAssertTrue(element("cart.undo").waitForExistence(timeout: 5), "No apareció «Deshacer»")
+        // Solo con VoiceOver el aviso no se cierra solo y no lleva la raya que se vacía: si el gancho
+        // `-tindivo-voiceover` no estuviera activo, la raya estaría (en las pruebas sin el gancho sí está).
+        XCTAssertFalse(
+            element("cart.undo.progress").exists, "El gancho -tindivo-voiceover no está activo: hay raya de plazo")
         element("cart.edit").tap()
         XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10), "«Editar» no abrió el plato")
         element("dish.close").tap()

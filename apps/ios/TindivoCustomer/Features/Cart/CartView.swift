@@ -337,6 +337,7 @@ private struct UndoBar: View {
                 .frame(height: 3)
                 .scaleEffect(x: left, anchor: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("cart.undo.progress")
         }
     }
 }
