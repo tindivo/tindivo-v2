@@ -1,0 +1,5 @@
+# SW-6 prohíbe `!`, `try!` y `as!` solo fuera de las pruebas: aquí no aplican. El resto de reglas sí (config padre).
+disabled_rules:
+  - force_unwrapping
+  - force_try
+  - force_cast
