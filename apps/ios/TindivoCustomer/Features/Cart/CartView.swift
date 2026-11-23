@@ -65,6 +65,7 @@ struct CartView: View {
         .task { await model.observe() }
         .task { await model.validate() }
         .task { await model.runClock() }
+        .onDisappear { model.leave() }
     }
 
     // MARK: Deshacer
@@ -72,7 +73,7 @@ struct CartView: View {
     /// «Quitaste "[plato]"» · «Deshacer», con una raya que se vacía en el plazo (con «reducir movimiento» no hay raya).
     @ViewBuilder private var undoBar: some View {
         if let offer = model.undoOffer {
-            UndoBar(offer: offer, window: model.undoWindow, onUndo: { Task { await model.undo() } })
+            UndoBar(offer: offer, window: model.undoWindow, expires: model.undoAutoDismisses, onUndo: { Task { await model.undo() } })
                 .id(offer.token)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
@@ -239,6 +240,8 @@ private struct CartLineView: View {
 private struct UndoBar: View {
     let offer: CartScreenModel.UndoOffer
     let window: Duration
+    /// Con VoiceOver el aviso no se cierra solo: no hay raya que se vacíe.
+    let expires: Bool
     let onUndo: () -> Void
 
     @State private var start = Date()
@@ -259,7 +262,7 @@ private struct UndoBar: View {
             }
             .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
             .padding(.vertical, 4)
-            if !reduceMotion { bar }
+            if !reduceMotion, expires { bar }
         }
         .background(Color.tindivo.secondary, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
         .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField))
