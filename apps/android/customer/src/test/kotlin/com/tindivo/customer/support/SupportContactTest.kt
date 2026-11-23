@@ -182,6 +182,20 @@ class SupportContactTest {
     }
 
     @Test
+    fun `Ayuda con este pedido se firma con el nombre y sin nombre no`() {
+        assertEquals(
+            "https://wa.me/51987654321?text=Hola%2C%20soy%20Mar%C3%ADa.%20Necesito%20ayuda%20con%20mi%20pedido" +
+                "%20%23TDV-ABCD2345%20de%20Poller%C3%ADa%20Don%20Beto.",
+            orderHelpLink("51987654321", "ABCD2345", "Pollería Don Beto", "María"),
+        )
+        assertEquals(
+            "https://wa.me/51987654321?text=Hola%2C%20necesito%20ayuda%20con%20mi%20pedido%20%23TDV-ABCD2345" +
+                "%20de%20Poller%C3%ADa%20Don%20Beto.",
+            orderHelpLink("51987654321", "ABCD2345", "Pollería Don Beto", " "),
+        )
+    }
+
+    @Test
     fun `sin nombre el problema con un pedido cancelado sale sin firma ni motivo`() {
         val expected =
             "https://wa.me/51987654321?text=Hola%2C%20tengo%20un%20problema%20con%20mi%20pedido%20%23TDV-ABCD2345."

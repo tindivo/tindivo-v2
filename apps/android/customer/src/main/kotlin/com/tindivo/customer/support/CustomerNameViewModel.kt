@@ -14,32 +14,42 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * El nombre de la persona para firmar los mensajes de ayuda por WhatsApp («Hola, soy María…»). Se lee una vez de
- * `GET /customer/profile` atado a la cuenta de la sesión; si no hay sesión o la lectura falla, queda en `null` y el
- * mensaje sale sin nombre (nunca bloquea la ayuda).
+ * El nombre de la persona para firmar los mensajes de ayuda por WhatsApp («Hola, soy María…»). Sigue a la sesión: lee
+ * `GET /customer/profile` atado a la cuenta cada vez que la sesión pasa a una cuenta distinta (también si entra después
+ * de crearse el ViewModel) y lo borra al cerrarse. Si la lectura falla, queda en `null` y el mensaje sale sin nombre
+ * (nunca bloquea la ayuda).
  */
 @HiltViewModel
 internal class CustomerNameViewModel
     @Inject
     constructor(
-        customer: CustomerRepository,
+        private val customer: CustomerRepository,
         sessionStore: SessionStore,
     ) : ViewModel() {
         private val mutableName = MutableStateFlow<String?>(null)
         val name: StateFlow<String?> = mutableName.asStateFlow()
 
         init {
-            val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId
-            if (account != null) {
-                viewModelScope.launch {
-                    val result = customer.profile(account)
-                    if (result is ApiResult.Success) {
-                        mutableName.value =
-                            result.data.fullName
-                                .trim()
-                                .takeIf { it.isNotEmpty() }
+            viewModelScope.launch {
+                var loadedFor: String? = null
+                sessionStore.state.collect { session ->
+                    val account = (session as? SessionState.SignedIn)?.userId
+                    if (account != loadedFor) {
+                        loadedFor = account
+                        mutableName.value = null
+                        if (account != null) load(account)
                     }
                 }
+            }
+        }
+
+        private suspend fun load(account: String) {
+            val result = customer.profile(account)
+            if (result is ApiResult.Success) {
+                mutableName.value =
+                    result.data.fullName
+                        .trim()
+                        .takeIf { it.isNotEmpty() }
             }
         }
     }
