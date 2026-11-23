@@ -3,7 +3,8 @@
 #   1. el contrato copiado está al día (CLI-1)
 #   2. documento tolerante (CLI-2) y cliente Swift con el generador fijado (SW-7)
 #   3. tokens de diseño desde packages/design-tokens
-#   4. xcodegen
+#   4. colorsets del catálogo de assets (AccentColor, LaunchBackground) desde los mismos tokens
+#   5. xcodegen
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -28,6 +29,9 @@ swift run --package-path "$IOS/Tools" --scratch-path "$TINDIVO_IOS_CACHE/tools" 
 mkdir -p "$IOS/Packages/TindivoDesign/Sources/TindivoDesign/Generated"
 cp "$ROOT/packages/design-tokens/generated/swift/TindivoTokens.swift" \
   "$IOS/Packages/TindivoDesign/Sources/TindivoDesign/Generated/TindivoTokens.swift"
+
+node "$ROOT/scripts/ios-colorsets.mjs" "$ROOT/packages/design-tokens/tokens.json" \
+  "$IOS/TindivoCustomer/Resources/Assets.xcassets"
 
 "$XCODEGEN" generate --quiet --spec "$IOS/project.yml"
 echo "iOS listo: $IOS/TindivoCustomer.xcodeproj"
