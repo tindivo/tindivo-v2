@@ -190,7 +190,11 @@ private fun SectionChips(
         rowState.animateScrollToItem(selected, offset)
     }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    // Fondo sólido: al fijarse bajo la barra, la carta que pasa por detrás no debe verse entre los chips.
+    Row(
+        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLowest),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         LazyRow(
             modifier = Modifier.weight(1f),
             state = rowState,
