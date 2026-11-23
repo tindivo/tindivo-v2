@@ -108,9 +108,15 @@ struct BusinessDetail: Sendable, Equatable {
                 }
             )
         }
+        // «Destacados» solo con platos que se sirven ahora: uno fuera de su franja sale de la sección (sigue, atenuado,
+        // en la suya) y sin ninguno no hay sección (decisión de Jesús, 2026-11-22; CA-CAT-02).
+        func inWindowOnly(_ category: MenuCategory) -> MenuCategory? {
+            let items = category.items.filter { $0.outsideWindow == nil }
+            return items.isEmpty ? nil : MenuCategory(id: category.id, name: category.name, blurb: category.blurb, items: items)
+        }
         return BusinessDetail(
             id: id, name: name, tagline: tagline, logoURL: logoURL, bannerURL: bannerURL, accent: accent,
-            categories: categories.map(mark), featured: featured.map(mark), schedule: schedule,
+            categories: categories.map(mark), featured: featured.map(mark).flatMap(inWindowOnly), schedule: schedule,
             openingConfirmed: openingConfirmed, catalogOnly: catalogOnly, whatsappNumber: whatsappNumber,
             capability: capability, etaMin: etaMin, etaMax: etaMax
         )
