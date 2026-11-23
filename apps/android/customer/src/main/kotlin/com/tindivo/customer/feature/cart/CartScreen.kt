@@ -122,7 +122,6 @@ fun CartScreen(
             CartTopBar(
                 units = (state as? CartUiState.Filled)?.lines?.sumOf { it.quantity },
                 onBack = actions.onBack,
-                onClear = { confirmingClear = true },
             )
         },
         bottomBar = {
@@ -133,9 +132,17 @@ fun CartScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when (state) {
-                CartUiState.Loading -> Unit
-                CartUiState.Empty -> EmptyBag(onSeeBusinesses = actions.onSeeBusinesses)
-                is CartUiState.Filled -> FilledBag(state = state, actions = actions)
+                CartUiState.Loading -> {
+                    Unit
+                }
+
+                CartUiState.Empty -> {
+                    EmptyBag(onSeeBusinesses = actions.onSeeBusinesses)
+                }
+
+                is CartUiState.Filled -> {
+                    FilledBag(state = state, actions = actions, onClear = { confirmingClear = true })
+                }
             }
         }
     }
@@ -150,12 +157,11 @@ fun CartScreen(
     }
 }
 
-/** [units] es `null` con la bolsa vacía: entonces no hay contador ni «Vaciar». */
+/** [units] es `null` con la bolsa vacía: entonces no hay contador. «Vaciar» no va aquí: está al final de la lista. */
 @Composable
 private fun CartTopBar(
     units: Int?,
     onBack: () -> Unit,
-    onClear: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shadowElevation = 4.dp) {
         Row(
@@ -191,15 +197,6 @@ private fun CartTopBar(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
                         )
                     }
-                }
-            }
-            if (units != null) {
-                TextButton(
-                    onClick = onClear,
-                    modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget),
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                ) {
-                    Text(text = stringResource(R.string.cart_clear), fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
         }
@@ -297,6 +294,7 @@ private fun EmptyBag(onSeeBusinesses: () -> Unit) {
 private fun FilledBag(
     state: CartUiState.Filled,
     actions: CartActions,
+    onClear: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -323,6 +321,16 @@ private fun FilledBag(
         }
         item { AddMorePill(businessName = state.businessName, onClick = { actions.onAddMore(state.businessId) }) }
         item { TotalsCard(subtotal = state.subtotal) }
+        // Destructivo y poco frecuente: al final, como texto, y con confirmación antes de vaciar.
+        item {
+            TextButton(
+                onClick = onClear,
+                modifier = Modifier.fillMaxWidth().heightIn(min = TindivoSpacing.touchTarget),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) {
+                Text(text = stringResource(R.string.cart_clear), fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -449,12 +457,26 @@ private fun QuantityControls(
                     .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                onClick = { actions.onChangeQuantity(line.signature, -1) },
-                enabled = line.canDecrease,
-                modifier = Modifier.size(TindivoSpacing.touchTarget),
-            ) {
-                Icon(TindivoIcons.Remove, contentDescription = stringResource(R.string.cart_line_less, line.name))
+            if (line.minusRemoves) {
+                // Con una sola unidad el «−» es un tacho: quita el plato, y por eso «Quitar» ya no hace falta.
+                IconButton(
+                    onClick = { actions.onRemove(line.signature) },
+                    modifier = Modifier.size(TindivoSpacing.touchTarget),
+                ) {
+                    Icon(
+                        TindivoIcons.Delete,
+                        contentDescription = stringResource(R.string.cart_line_remove, line.name),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            } else {
+                IconButton(
+                    onClick = { actions.onChangeQuantity(line.signature, -1) },
+                    enabled = line.canDecrease,
+                    modifier = Modifier.size(TindivoSpacing.touchTarget),
+                ) {
+                    Icon(TindivoIcons.Remove, contentDescription = stringResource(R.string.cart_line_less, line.name))
+                }
             }
             Text(text = line.quantity.toString(), style = MaterialTheme.typography.titleMedium)
             IconButton(
@@ -466,10 +488,13 @@ private fun QuantityControls(
             }
         }
         Spacer(modifier = Modifier.weight(1f))
-        TextButton(onClick = {
-            actions.onRemove(line.signature)
-        }, modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget)) {
-            Text(text = stringResource(R.string.cart_remove), fontWeight = FontWeight.SemiBold)
+        if (!line.minusRemoves) {
+            TextButton(
+                onClick = { actions.onRemove(line.signature) },
+                modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget),
+            ) {
+                Text(text = stringResource(R.string.cart_remove), fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }

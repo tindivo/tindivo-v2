@@ -28,7 +28,10 @@ data class CartLineUi(
     /** Con 1 unidad el «−» está deshabilitado: para quitar el plato está «Quitar». */
     val canDecrease: Boolean,
     val canIncrease: Boolean,
-)
+) {
+    /** Con 1 unidad, «−» pasa a ser un tacho que quita el plato (y «Quitar» sale). */
+    val minusRemoves: Boolean get() = quantity <= 1
+}
 
 sealed interface CartUiState {
     /** Aún no se leyó lo guardado: no se enseña «vacía» por un instante. */
