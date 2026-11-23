@@ -43,6 +43,8 @@ import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.customer.R
 import com.tindivo.customer.support.cancelledOrderSupportLink
+import com.tindivo.customer.ui.StatusPill
+import com.tindivo.customer.ui.StatusTone
 
 private val THUMB = 48.dp
 private val THUMB_MARK_WIDTH = 24.dp
@@ -218,7 +220,7 @@ private fun PastOrderItem(
         if (order.phase is OrderPhase.Cancelled) {
             Box(modifier = linkModifier) {
                 SupportLink(
-                    link = cancelledOrderSupportLink(actions.supportNumber, order.shortId),
+                    link = cancelledOrderSupportLink(actions.supportNumber, order.shortId, actions.customerName),
                     onOpenLink = actions.onOpenLink,
                     label = R.string.order_support_cancelled,
                 )
@@ -227,24 +229,17 @@ private fun PastOrderItem(
     }
 }
 
-/** El estado con icono y color: el texto dice lo mismo que el color. */
+/** El estado como pastilla: «Entregado» en verde y «Cancelado» en rojo suave, con su check o su cruz. */
 @Composable
 private fun PhaseLabel(order: OrderCardUi) {
-    val (icon, color) =
+    val tone =
         when (order.phase) {
-            OrderPhase.Delivered -> TindivoIcons.Check to MaterialTheme.colorScheme.onTertiaryContainer
-            is OrderPhase.Cancelled -> TindivoIcons.Close to MaterialTheme.colorScheme.onErrorContainer
-            else -> null to MaterialTheme.colorScheme.onSurfaceVariant
+            OrderPhase.Delivered -> StatusTone.Success
+            is OrderPhase.Cancelled -> StatusTone.Cancelled
+            is OrderPhase.Active -> StatusTone.Active
+            OrderPhase.Unknown -> StatusTone.Neutral
         }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (icon != null) Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
-        Text(
-            text = stringResource(order.phase.labelRes(order.isPickup)),
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold,
-            color = color,
-        )
-    }
+    StatusPill(text = stringResource(order.phase.labelRes(order.isPickup)), tone = tone)
 }
 
 @Composable

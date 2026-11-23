@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.support.CustomerNameViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
 import java.util.UUID
@@ -42,9 +43,11 @@ internal fun OrdersDestination(
     onReviewMoment: (open: Boolean) -> Unit = {},
     viewModel: OrdersViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
+    nameViewModel: CustomerNameViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
+    val customerName = nameViewModel.name.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
     LaunchedEffect(state) {
         if (state is OrdersUiState.LoggedOut) onBack()
@@ -61,6 +64,7 @@ internal fun OrdersDestination(
         cardActions =
             OrderCardActions(
                 supportNumber = supportNumber,
+                customerName = customerName,
                 onReorder = onReorder,
                 onOpenLink = { link ->
                     try {
@@ -76,6 +80,8 @@ internal fun OrdersDestination(
 /** Lo que una tarjeta del historial puede hacer además de abrir el pedido. */
 internal data class OrderCardActions(
     val supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
+    /** El nombre para firmar el mensaje de ayuda; `null` si no se pudo leer. */
+    val customerName: String? = null,
     val onReorder: (businessId: String) -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
 )

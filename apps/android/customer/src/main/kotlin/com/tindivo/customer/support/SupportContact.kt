@@ -93,13 +93,24 @@ internal fun orderHelpLink(
 }
 
 /**
- * «¿Problema con este pedido?» de un pedido cancelado en el historial: el texto de la web (`pedidos/page.tsx`), que
- * deja el motivo para que la persona lo escriba.
+ * «¿Problema con este pedido?» de un pedido cancelado en el historial (decisión de Jesús, 2026-11-23): «Hola, soy
+ * [NOMBRE]. Tengo un problema con mi pedido #TDV-[CÓDIGO].», sin «Motivo:». Sin nombre, «Hola, tengo un problema con mi
+ * pedido #TDV-[CÓDIGO].».
  */
 internal fun cancelledOrderSupportLink(
     number: String,
     shortId: String,
-): String = whatsappLink(number, "Hola, tengo un problema con mi pedido #TDV-$shortId. Motivo: ")
+    customerName: String? = null,
+): String {
+    val name = customerName.orEmpty().trim()
+    val text =
+        if (name.isEmpty()) {
+            "Hola, tengo un problema con mi pedido #TDV-$shortId."
+        } else {
+            "Hola, soy $name. Tengo un problema con mi pedido #TDV-$shortId."
+        }
+    return whatsappLink(number, text)
+}
 
 /** «Ayuda por WhatsApp» sin pedido (Cuenta): un saludo para que la persona escriba lo suyo. */
 internal fun generalHelpLink(number: String): String = whatsappLink(number, "Hola, necesito ayuda con Tindivo. ")
