@@ -71,7 +71,7 @@ struct BusinessInfo: Sendable, Equatable {
     let status: String?
 }
 
-private func both(_ a: Int?, _ b: Int?) -> (Int, Int)? {
-    guard let a, let b else { return nil }
-    return (a, b)
+private func both(_ first: Int?, _ second: Int?) -> (Int, Int)? {
+    guard let first, let second else { return nil }
+    return (first, second)
 }

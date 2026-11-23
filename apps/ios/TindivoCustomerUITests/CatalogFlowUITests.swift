@@ -20,12 +20,13 @@ final class CatalogFlowUITests: XCTestCase {
     /// en un martes a las 20:00 de Lima: el horario nocturno no depende de cuándo corra.
     private func launch(
         fakeCatalog: Bool, seedOtherBag: Bool = false, fastClock: Bool = false, largeType: Bool = false,
-        now: String = "2026-07-07T20:00:00-05:00"
+        now: String = "2026-07-07T20:00:00-05:00", nowFile: String? = nil
     ) {
         // El plazo de «Deshacer» se alarga (solo DEBUG) para que el toque no dependa de la velocidad del simulador.
         app.launchArguments = [
             "-tindivo-reset-cart", "-tindivo-now", now, "-tindivo-undo-seconds", "60",
         ]
+        if let nowFile { app.launchArguments += ["-tindivo-now-file", nowFile] }
         if largeType {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         }
@@ -88,18 +89,19 @@ final class CatalogFlowUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Arroz chaufa"].exists, "Sigue el plato del otro negocio")
     }
 
-    /// Un plato con franja hasta las 20:20: con la ficha abierta antes de las 20:20 (reloj acelerado, un minuto por segundo),
-    /// al salir de la franja la ficha se cierra sola y la carta ya no deja abrirlo.
+    /// Un plato con franja hasta las 20:20: con la ficha abierta, al pasar el reloj de la app de las 20:20 la ficha se
+    /// cierra sola. El reloj lo mueve la prueba (`-tindivo-now-file`): no depende de la velocidad del simulador.
     func testTheDishClosesItselfWhenItsWindowEnds() throws {
-        // Se arranca a las 19:30 (50 minutos de reloj acelerado = 50 s antes de las 20:20): con el simulador cargado, abrir
-        // el negocio puede tardar decenas de segundos y la franja no debe acabarse antes de abrir la ficha.
-        launch(fakeCatalog: true, fastClock: true, now: "2026-07-07T19:30:00-05:00")
+        let clockFile = NSTemporaryDirectory() + "tindivo-now-\(UUID().uuidString).txt"
+        try "2026-07-07T19:30:00-05:00".write(toFile: clockFile, atomically: true, encoding: .utf8)
+        launch(fakeCatalog: true, nowFile: clockFile)
         openDonLucho()
         let dish = dishRow("Chicha de la noche")
-        XCTAssertTrue(dish.waitForExistence(timeout: 20), "No está «Chicha de la noche» a las 19:30")
+        XCTAssertTrue(dish.waitForExistence(timeout: 30), "No está «Chicha de la noche» a las 19:30")
         dish.tap()
-        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 5))
-        XCTAssertTrue(element("dish.add").waitForNonExistence(timeout: 90), "La ficha siguió abierta pasada su franja")
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10))
+        try "2026-07-07T20:21:00-05:00".write(toFile: clockFile, atomically: true, encoding: .utf8)
+        XCTAssertTrue(element("dish.add").waitForNonExistence(timeout: 20), "La ficha siguió abierta pasada su franja")
     }
 
     /// Con la letra más grande (AX5): el flujo se recorre igual y las pantallas quedan adjuntas para revisarlas a ojo.
@@ -165,7 +167,68 @@ final class CatalogFlowUITests: XCTestCase {
         XCTAssertEqual(query("info.day").count + query("info.day.today").count, 7)
         XCTAssertTrue(element("info.day.today").label.contains("Martes"), "El reloj fijado es martes")
         XCTAssertFalse(app.buttons["Llamar"].exists, "La hoja no lleva datos de contacto")
+        // «Cómo pagas» con el texto fijo de la ficha.
+        XCTAssertTrue(element("info.payments").exists, "Falta «Cómo pagas»")
+        XCTAssertTrue(app.staticTexts["Pagas directo al negocio. Tindivo no retiene tu dinero"].exists)
         attach("info-del-negocio")
+    }
+
+    /// CUS-CAT-017 en la página del negocio: una fila informativa con los modos que acepta, sin selector.
+    func testBusinessPageShowsTheDeliveryModesWithoutASelector() throws {
+        launch(fakeCatalog: true)
+        openDonLucho()
+        let modes = element("business.modes")
+        XCTAssertTrue(modes.waitForExistence(timeout: 20), "No está la fila de modos de entrega")
+        XCTAssertTrue(modes.label.contains("Delivery · 25–40 min"), modes.label)
+        XCTAssertTrue(modes.label.contains("Recojo · En el local"), modes.label)
+        XCTAssertEqual(app.segmentedControls.count, 0, "No debe haber selector")
+        XCTAssertFalse(app.buttons["Delivery"].exists)
+        XCTAssertFalse(app.buttons["Recojo"].exists)
+        attach("cus-cat-017-modos")
+    }
+
+    /// CA-CAT-P2: la tarjeta de un negocio cerrado dice «Cerrado · abre [día] [hora]» (con el horario de su carta).
+    func testClosedCardSaysWhenItOpens() throws {
+        launch(fakeCatalog: true)
+        XCTAssertTrue(app.staticTexts["¿Qué pedimos hoy?"].waitForExistence(timeout: 30), "Inicio no cargó")
+        let closed = element("home.business.closed")
+        XCTAssertTrue(closed.waitForExistence(timeout: 20), "No hay tarjeta cerrada")
+        let predicate = NSPredicate(format: "label CONTAINS %@", "Cerrado · abre mañana 12:00")
+        expectation(for: predicate, evaluatedWith: closed)
+        waitForExpectations(timeout: 20)
+        attach("ca-cat-p2-tarjeta-cerrada")
+    }
+
+    /// «Elige [grupo]» (texto por aprobar): con letra grande el grupo que falta queda fuera de pantalla; al tocar el
+    /// botón la vista lo trae y queda a la vista.
+    func testTappingChooseBringsTheMissingGroupIntoView() throws {
+        launch(fakeCatalog: true, largeType: true)
+        openDonLucho()
+        let dish = dishRow("1/4 de pollo")
+        XCTAssertTrue(dish.waitForExistence(timeout: 30))
+        dish.tap()
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10))
+        let group = app.staticTexts["Presa"].firstMatch
+        XCTAssertTrue(group.exists)
+        XCTAssertFalse(group.isHittable, "Con letra grande «Presa» empieza fuera de pantalla")
+        element("dish.add").tap()
+        expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: group)
+        waitForExpectations(timeout: 10)
+        attach("ax5-elige-grupo-visible")
+    }
+
+    /// A8: «+» en la carta con la bolsa de otro restaurante pregunta ahí mismo.
+    func testPlusWithAnotherBagAsksFromTheMenu() throws {
+        launch(fakeCatalog: true, seedOtherBag: true)
+        openDonLucho()
+        let plus = element("menu.add")
+        XCTAssertTrue(plus.waitForExistence(timeout: 30))
+        plus.tap()
+        let replace = app.alerts.buttons["Vaciar y empezar"]
+        XCTAssertTrue(replace.waitForExistence(timeout: 10), "No apareció la pregunta de la bolsa nueva")
+        XCTAssertFalse(element("dish.add").exists, "No debe abrir la ficha")
+        replace.tap()
+        XCTAssertTrue(element("business.cartBar").waitForExistence(timeout: 10), "No quedó el plato en la bolsa nueva")
     }
 
     /// Recorre Inicio, Negocio (con la hoja de información) y Plato y deja una captura de cada uno, en tamaño normal y en
@@ -232,7 +295,13 @@ final class CatalogFlowUITests: XCTestCase {
         // Con 1 unidad, «−» quita el plato y aparece «Deshacer».
         // Cada botón de cantidad lleva su identificador: el «−» (tacho con 1 unidad) de la segunda línea es el segundo
         // «cart.decrease». «Quitar» (texto) es otro botón, «cart.remove».
-        app.buttons.matching(identifier: "cart.decrease").element(boundBy: 1).tap()
+        let decrease = app.buttons.matching(identifier: "cart.decrease").element(boundBy: 1)
+        XCTAssertTrue(decrease.waitForExistence(timeout: 5), "No está el «−» de la segunda línea")
+        // Con letra grande la segunda línea queda cortada por el borde: se sube la lista para tocar su centro.
+        app.swipeUp()
+        XCTAssertTrue(decrease.isHittable, "El «−» de la segunda línea no se puede tocar")
+        XCTAssertEqual(decrease.label, "Quitar Chicha morada")
+        decrease.tap()
         XCTAssertTrue(element("cart.undo").waitForExistence(timeout: 5), "No apareció «Deshacer»")
         XCTAssertEqual(query("cart.line").count, 1)
         attach("ax5-bolsa-deshacer")

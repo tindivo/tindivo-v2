@@ -87,13 +87,40 @@ enum PreviewData {
     )
 }
 
+extension PreviewData {
+    /// La carta del negocio cerrado de la lista (`n2`): abre de 12:00 a 15:00 todos los días menos el domingo. El
+    /// martes a las 20:00 está cerrado y abre mañana a las 12:00: «Cerrado · abre mañana 12:00».
+    static let closedMenu = BusinessMenu(
+        business: .init(
+            id: "n2", name: "Chifa Lung Fung", accentColor: "166534", primaryCapability: .catalogFull,
+            estimatedEtaMin: 30, estimatedEtaMax: 45
+        ),
+        categories: [
+            .init(
+                id: "c1", name: "Platos", displayOrder: 1,
+                items: [.init(id: "i1", name: "Arroz chaufa", basePrice: Decimal(string: "15.00") ?? 0, displayOrder: 1)]
+            ),
+        ],
+        schedule: (0...6).map { day in
+            .init(
+                dayOfWeek: day, isOpen: day < 6,
+                shift1Start: day < 6 ? "12:00" : nil, shift1End: day < 6 ? "15:00" : nil
+            )
+        }
+    )
+}
+
 /// Un catálogo que responde siempre lo mismo: lo que un `#Preview` necesita para pintar la pantalla.
 struct PreviewCatalog: CatalogRepository {
     var businesses: Result<[BusinessSummary], AppError> = .success(PreviewData.summaries)
     var business: Result<BusinessMenu, AppError> = .success(PreviewData.menu)
 
     func listBusinesses() async throws(AppError) -> [BusinessSummary] { try businesses.get() }
-    func getBusiness(id: String) async throws(AppError) -> BusinessMenu { try business.get() }
+    func getBusiness(id: String) async throws(AppError) -> BusinessMenu {
+        // Cada negocio con su carta: `n2` es el cerrado de la lista.
+        if id == "n2", case .success = business { return PreviewData.closedMenu }
+        return try business.get()
+    }
 }
 
 extension FileCartStore {
