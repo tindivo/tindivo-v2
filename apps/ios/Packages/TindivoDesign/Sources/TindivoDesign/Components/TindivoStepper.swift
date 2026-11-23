@@ -46,18 +46,39 @@ public struct TindivoStepper: View {
 
     public var body: some View {
         if voiceOver {
-            controls.accessibilityRepresentation {
-                Stepper {
-                    Text(verbatim: label)
-                } onIncrement: {
-                    if canIncrease { onIncrease() }
-                } onDecrement: {
-                    if canDecrease { onDecrease() }
-                }
-                .accessibilityValue(Text(verbatim: "\(quantity)"))
-            }
+            controls.accessibilityRepresentation { adjustable }
         } else {
             controls
+        }
+    }
+
+    /// ¿Puede el control ajustable de VoiceOver bajar la cantidad? No si bajar quitaría la línea: eso es la acción
+    /// «Quitar», aparte.
+    static func adjustableDecrementAllowed(canDecrease: Bool, decreaseRemoves: Bool) -> Bool {
+        canDecrease && !decreaseRemoves
+    }
+
+    /// El valor que VoiceOver dice: «1 unidad», «3 unidades» (plural del catálogo de textos).
+    static func spokenQuantity(_ quantity: Int) -> String {
+        String(localized: "\(quantity) unidades", bundle: .module)
+    }
+
+    @ViewBuilder private var adjustable: some View {
+        let stepper = Stepper {
+            Text(verbatim: label)
+        } onIncrement: {
+            if canIncrease { onIncrease() }
+        } onDecrement: {
+            // El decremento ajustable NO quita la línea: bajar de 1 es un acto distinto, con su propia acción.
+            if Self.adjustableDecrementAllowed(canDecrease: canDecrease, decreaseRemoves: decreaseRemoves) {
+                onDecrease()
+            }
+        }
+        .accessibilityValue(Text(verbatim: Self.spokenQuantity(quantity)))
+        if decreaseRemoves {
+            stepper.accessibilityAction(named: Text(verbatim: decreaseLabel), onDecrease)
+        } else {
+            stepper
         }
     }
 
