@@ -51,8 +51,8 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
 | CUS-CRT-010 | En una bolsa de recojo, la etiqueta debe decir «Recojo» y no mostrar el envío. | Canvas v3.1, tablero «4 · Bolsa» | |
 | CUS-CRT-011 | La app debe respetar los topes `CART_MAX_LINES`, `CART_MAX_QUANTITY` y `CART_MAX_MODIFIERS`, los mismos que valida el servidor. | Decisión de Jesús, 2026-11-18 (fuente única en `packages/contracts`) | |
 | CUS-CRT-012 | «Volver a pedir» debe reponer la bolsa con los platos de un pedido anterior, revalidados contra la carta vigente. | `getCustomerReorder` · `CRT.md` (defecto 6) | |
-| CUS-CRT-013 | Al quitar una línea, la app debe ofrecer «Deshacer» durante 5 s, que la devuelve a su sitio con su cantidad. | Canvas v3.1, tablero «4 · Bolsa» | |
-| CUS-CRT-014 | La app debe permitir «Editar» una línea con opciones: abre el plato con lo elegido y, al guardar, reemplaza la línea. | Canvas v3.1, tablero «4 · Bolsa» | |
+| CUS-CRT-013 | Al quitar una línea, la app debe ofrecer «Deshacer» durante 5 s, que la devuelve a su sitio con su cantidad. Con el lector de pantalla activo (VoiceOver, TalkBack) el aviso no se cierra solo: se va al tocar «Deshacer», al hacer otro cambio en la bolsa o al salir de ella (WCAG 2.2.1). | Canvas v3.1, tablero «4 · Bolsa» · Decisión de Jesús, 2026-11-22 (conversación con Claude Code) (lector de pantalla) | |
+| CUS-CRT-014 | La app debe permitir «Editar» una línea si el plato tiene opciones en la carta vigente, aunque la línea no tenga ninguna elegida: abre el plato con lo elegido y, al guardar, reemplaza la línea. | Canvas v3.1, tablero «4 · Bolsa» · Decisión de Jesús, 2026-11-22 (conversación con Claude Code) (plato, no línea) | |
 | CUS-CRT-015 | El botón «Continuar» debe mostrar el mismo monto que el subtotal. | Canvas v3.1, tablero «4 · Bolsa» | |
 | CUS-CRT-016 | La app debe permitir vaciar la bolsa, con confirmación. | Canvas v3.1, tablero «4 · Bolsa» | |
 
@@ -70,7 +70,7 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
 | CA-CRT-08 | Dado una bolsa con el método recojo, entonces la etiqueta dice «Recojo» y no aparece la fila del envío. | CUS-CRT-010 |
 | CA-CRT-09 | Dado el vector compartido de topes, entonces la bolsa no deja pasar de `CART_MAX_LINES` líneas, `CART_MAX_QUANTITY` unidades ni `CART_MAX_MODIFIERS` opciones, y el servidor rechaza con 422 el mismo exceso. | CUS-CRT-011 |
 | CA-CRT-10 | Dado tres líneas, cuando se quita la segunda y se toca «Deshacer» antes de 5 s, entonces vuelve en la segunda posición con su cantidad y el subtotal regresa; pasados 5 s ya no se puede. | CUS-CRT-013 |
-| CA-CRT-11 | Dado una línea con opciones, cuando se edita y se guardan otras opciones, entonces la línea cambia en su sitio; si queda idéntica a otra, se fusionan. | CUS-CRT-014, CUS-CRT-002 |
+| CA-CRT-11 | Dado una línea de un plato con opciones, cuando se edita y se guardan otras opciones, entonces la línea cambia en su sitio; si queda idéntica a otra, se fusionan. | CUS-CRT-014, CUS-CRT-002 |
 | CA-CRT-12 | Dado cualquier cambio de cantidad, quitar o deshacer, entonces el monto de «Continuar» es igual al subtotal. | CUS-CRT-015 |
 | CA-CRT-13 | Dado una bolsa con líneas, cuando se toca «Vaciar» y se confirma, entonces queda vacía; si se cancela, no cambia. | CUS-CRT-016 |
 

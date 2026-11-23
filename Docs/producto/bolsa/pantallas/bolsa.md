@@ -37,7 +37,7 @@ codigo:
 | Línea inválida | Aviso en la línea (agotado, ya no está, otro precio, fuera de horario) y «Continuar» no avanza | CUS-CRT-005, CA-CRT-05 |
 | Negocio cerrado | «Continuar» dice «El restaurante está cerrado ahora» | CUS-CRT-009, CA-CRT-07 |
 | Recojo | Etiqueta «Recojo», sin la fila del envío | CUS-CRT-010, CA-CRT-08 |
-| Quitar una línea | «Quitaste "[plato]"» con «Deshacer» y una raya que se vacía en 5 s | CUS-CRT-013, CA-CRT-10 |
+| Quitar una línea | «Quitaste "[plato]"» con «Deshacer» y una raya que se vacía en 5 s; con lector de pantalla, sin plazo (CUS-CRT-013) | CUS-CRT-013, CA-CRT-10 |
 | Quitar la última | Pasa a vacía, sin aviso | CUS-CRT-003 |
 | Vaciar | «¿Vaciar tu bolsa?» · «Cancelar» / «Vaciar» (rojo) | CUS-CRT-016, CA-CRT-13 |
 | Tope alcanzado | «+» deshabilitado | CUS-CRT-011, CA-CRT-09 |
