@@ -32,8 +32,17 @@ class ProofImageEncoderDeviceTest {
         val proof = encode(width = 3000, height = 2000)
         assertTrue("se esperaba Ready y salió $proof", proof is EncodedProof.Ready)
         val jpeg = (proof as EncodedProof.Ready).jpeg
-        assertEquals(PixelSize(MAX_PROOF_SIDE, MAX_PROOF_SIDE * 2 / 3), jpegDimensions(jpeg))
+        assertEquals(proofTargetSize(3000, 2000), jpegDimensions(jpeg))
+        assertEquals(MAX_PROOF_SIDE, jpegDimensions(jpeg)?.width)
+        assertTrue(jpeg.size <= MAX_PROOF_BYTES)
         assertFalse(hasJpegMetadata(jpeg))
+    }
+
+    @Test
+    fun unaCapturaDe1080x2400_conservaElAnchoMinimo() {
+        val proof = encode(width = 1080, height = 2400)
+        assertTrue("se esperaba Ready y salió $proof", proof is EncodedProof.Ready)
+        assertEquals(PixelSize(1080, 2400), jpegDimensions((proof as EncodedProof.Ready).jpeg))
     }
 
     @Test

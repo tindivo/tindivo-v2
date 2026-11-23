@@ -14,6 +14,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import mockwebserver3.RecordedRequest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -166,7 +167,7 @@ class CheckoutViewModelTest : CheckoutHarness() {
             assertEquals("Jr. Lima 123", body.getValue("deliveryAddress").jsonPrimitive.content)
             assertEquals("Toca el timbre", body.getValue("customerNotes").jsonPrimitive.content)
             assertEquals("50.00", body.getValue("cashPayingWith").jsonPrimitive.content)
-            assertTrue(body.absent("gpsValidation"))
+            assertFalse(body.absent("gpsValidation"))
             assertTrue(body.absent("pickupTiming"))
             val item =
                 body

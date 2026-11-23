@@ -281,6 +281,7 @@ class CheckoutSheetDeliveryTest {
         val addresses = AddressRepository(TEST_BASE_URL, api.client, io)
         val catalog = CatalogRepository(TEST_BASE_URL, api.client, io)
         val customer = CustomerRepository(TEST_BASE_URL, api.client, io)
+        val checkoutRepository = CheckoutRepository(TEST_BASE_URL, api.client, io)
         models =
             ManualSheetModels(
                 newAddress = { id -> AddressFormViewModel(id, addresses, catalog, session, config, NoLocation) },
@@ -297,13 +298,14 @@ class CheckoutSheetDeliveryTest {
             viewModelFactory {
                 initializer {
                     CheckoutViewModel(
-                        loader = CheckoutLoader(customer, addresses, catalog),
-                        checkout = CheckoutRepository(TEST_BASE_URL, api.client, io),
+                        loader = CheckoutLoader(customer, addresses, catalog, checkoutRepository),
+                        checkout = checkoutRepository,
                         cartStore = cartStore,
                         ledger = OrderAttemptLedger(SheetTestLedgerStore(), NoAttempts),
                         configService = config,
                         sessionStore = session,
                         debounce = QuoteDebounce { },
+                        gps = CheckoutGps { null },
                     )
                 }
             }

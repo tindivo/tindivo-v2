@@ -92,19 +92,86 @@ class ProofSenderTest {
         }
 
     @Test
-    fun `un PUT sin respuesta no se confirma y el reintento pide otra URL firmada`() =
+    fun `un PUT sin respuesta se reintenta una vez con otra URL firmada y luego se confirma`() =
         runTest {
             gateway.uploadOutcomes += UploadOutcome.Network(IOException("corte"))
 
-            val first = deliver()
-            val retry = deliver()
+            val step = deliver()
 
-            assertEquals(SendStep.Stopped(SendProblem.Offline), first)
-            assertEquals(SendStep.Done, retry)
-            // La foto ya preparada se reutiliza; la URL firmada (de un solo uso) no.
+            assertEquals(SendStep.Done, step)
+            // La foto ya preparada se reutiliza; la URL firmada (de un solo uso) no: sale otra.
             assertEquals(1, encoder.photos.size)
             assertEquals(2, gateway.count("uploadSlot"))
+            assertEquals(2, gateway.count("upload"))
             assertEquals(listOf(prepayPath(2)), gateway.confirmedPaths)
+        }
+
+    @Test
+    fun `dos cortes seguidos paran en Offline y el siguiente envio vuelve a intentarlo`() =
+        runTest {
+            gateway.uploadOutcomes += UploadOutcome.Network(IOException("corte"))
+            gateway.uploadOutcomes += UploadOutcome.Network(IOException("corte"))
+
+            val first = deliver()
+
+            assertEquals(SendStep.Stopped(SendProblem.Offline), first)
+            // Un solo reintento automatico: dos PUT, ninguna confirmacion.
+            assertEquals(2, gateway.count("upload"))
+            assertEquals(0, gateway.count("confirm"))
+
+            val retry = deliver()
+
+            assertEquals(SendStep.Done, retry)
+            assertEquals(1, encoder.photos.size)
+            assertEquals(listOf(prepayPath(3)), gateway.confirmedPaths)
+        }
+
+    @Test
+    fun `el reintento espera un momento antes de pedir otra URL firmada`() =
+        runTest {
+            gateway.uploadOutcomes += UploadOutcome.Network(IOException("corte"))
+
+            val step = deliver()
+
+            assertEquals(SendStep.Done, step)
+            // La espera es de tiempo virtual: el reintento no sale pegado al corte (CUS-PAY-003).
+            assertEquals(1_500L, testScheduler.currentTime)
+        }
+
+    @Test
+    fun `si la segunda URL firmada tampoco llega por la red, es Offline y no un fallo de la API`() =
+        runTest {
+            gateway.uploadOutcomes += UploadOutcome.Network(IOException("corte"))
+            gateway.slotResults += ApiResult.Success(prepaySlot(prepayPath(1)))
+            gateway.slotResults += ApiResult.Failure(AppError.Network(IOException("sin red")))
+
+            val step = deliver()
+
+            assertEquals(SendStep.Stopped(SendProblem.Offline), step)
+            assertEquals(0, gateway.count("confirm"))
+        }
+
+    @Test
+    fun `si la sesion cambia entre el corte y el reintento no se vuelve a subir`() =
+        runTest {
+            gateway.uploadOutcomes += UploadOutcome.Network(IOException("corte"))
+            gateway.onStep = { if (it == "upload") current = false }
+
+            val step = deliver()
+
+            assertEquals(SendStep.Abandoned, step)
+            assertEquals(1, gateway.count("upload"))
+        }
+
+    @Test
+    fun `un HEIC en Android 8 llega a la persona como el mensaje de la captura de pantalla`() =
+        runTest {
+            encoder.result = { EncodedProof.HeicUnsupported }
+
+            val step = deliver()
+
+            assertEquals(SendStep.Stopped(SendProblem.HeicUnsupported), step)
+            assertEquals(0, gateway.count("uploadSlot"))
         }
 
     @Test
@@ -234,6 +301,7 @@ class ProofSenderTest {
                 mapOf(
                     EncodedProof.Unreadable to SendProblem.Unreadable,
                     EncodedProof.TooLarge to SendProblem.TooLarge,
+                    EncodedProof.HeicUnsupported to SendProblem.HeicUnsupported,
                 )
             for ((encoded, problem) in cases) {
                 val gateway = FakePrepayGateway()

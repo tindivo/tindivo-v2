@@ -1,7 +1,8 @@
 # Antifraude: a quién se le fía la comida
 
 > Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: `app_settings`, funciones de riesgo, conteos) +
-> `develop@7d00aa4` · enmienda 2026-11-17: «En el mostrador no se fía», contra `0283` y `payment-rules.ts` · Fuente de las reglas: `DECISIONS.md §8` · Pedidos: `Docs/negocio/servicios/pedidos-restaurante.md`
+> `develop@7d00aa4` · enmienda 2026-11-17: «En el mostrador no se fía», contra `0283` y `payment-rules.ts` · Fuente de las reglas: `DECISIONS.md §8` · Pedidos: `Docs/negocio/servicios/pedidos-restaurante.md` ·
+> Enmienda 2026-11-21 (Jesús): reglas 4 y 6 (sin GPS; sin compra previa, solo prepago)
 
 ## Qué se protege
 
@@ -22,14 +23,24 @@ strikes. En este orden; el riesgo manda sobre cualquier historial:
 2. **Con strikes** (`customer_requires_prepayment`; strikes anclados al teléfono **y** a la dirección, de modo que
    cambiar uno no limpia el otro): con **2**, solo prepago; con **3**, bloqueo de **30 días**, tampoco prepago.
 3. **Monto grande**: por encima de **S/ 80** (`prepay_threshold`), prepago aunque sea conocido.
-4. **Compra previa** (`customer_trusted_for_contraentrega`), resuelta por el teléfono verificado por SMS: basta una
-   entrega de esta cuenta, una entrega a este teléfono (también las manuales de la cajera) o cualquier fila de este
-   teléfono en el directorio de direcciones. Con eso, contraentrega **sin llamada**. La tercera vía se puede conseguir
-   llamando al restaurante y cancelando: se acepta a propósito, porque los strikes se evalúan antes.
+4. **Compra previa** (`customer_contraentrega_decision`, en su versión de la `0286`), resuelta por el teléfono
+   verificado por SMS: basta una entrega de esta cuenta, una entrega a este teléfono (también las manuales de la cajera)
+   o una fila de este teléfono en el directorio de direcciones usada dentro de la ventana de
+   `app_settings.data_retention.addressDirectoryMonths` (24 meses; cuenta lo más reciente entre `last_used_at`,
+   `updated_at` y `created_at`). Si el número tiene otro dueño, o lo tuvo con una asignación terminada dentro de la
+   ventana de `phoneAssignmentsMonths` (24 meses), solo vale una entrega de esta cuenta a ese número hecha durante su
+   asignación actual (`0277`). Con eso, contraentrega **sin llamada**. La tercera vía se puede conseguir
+   llamando al restaurante y cancelando: se acepta a propósito, porque los strikes se evalúan antes. **Sin GPS** (permiso
+   negado o sin señal), la compra previa sigue pudiendo pagar al recibir: negarlo nunca impide pedir. El GPS no condiciona la
+   **elegibilidad** por compra previa, pero si se envía, una distancia de más de 400 m al punto de entrega pasa el pedido a la
+   llamada (`validando`, `gps_warning_zone`). Sin GPS (`failed`) ese disparador no se evalúa; siguen el bloqueo, los
+   strikes, el tope de S/ 80, la zona de entrega y las reglas generales de validación (`app_settings.validation`).
+   Consecuencia aceptada (Jesús, 2026-11-21): a quien tiene compra previa, negar el GPS le evita esa llamada por distancia
+   y las hojas «lejos» y «señal mala» de la app.
 5. **Sin historial pero con GPS en vivo dentro de San Jacinto**: puede pagar al recibir, **con llamada** (`validando`).
    **Por qué no sin llamada:** el GPS del navegador se falsifica fácil; tratarlo como compra previa regalaría
    contraentrega libre a un primer pedido falso.
-6. **Cliente nuevo sin nada de lo anterior**: prepago, o llamada.
+6. **Cliente nuevo sin nada de lo anterior**: solo prepago (el servidor ya lo hace así; decisión de Jesús, 2026-11-21).
 
 Los pedidos manuales de la cajera no pasan por estas reglas: ella tiene al cliente al teléfono.
 

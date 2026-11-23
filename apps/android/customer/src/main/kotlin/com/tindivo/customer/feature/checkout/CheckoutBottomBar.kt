@@ -42,6 +42,7 @@ internal fun CheckoutBottomBar(
     openSheet: (CheckoutSheet) -> Unit,
 ) {
     val cta = state.cta
+    val confirm = rememberConfirmWithLocation(state, form.onConfirm)
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
@@ -63,14 +64,14 @@ internal fun CheckoutBottomBar(
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
-            val onClick = { onCta(cta, state.selectedAddressId, form, openSheet) }
+            val onClick = { onCta(cta, state.selectedAddressId, confirm, form, openSheet) }
             if (cta is Cta.Ready) {
                 ConfirmPill(label = cta.label(), total = cta.total.soles(), onClick = onClick)
             } else {
                 TindivoPrimaryButton(
                     text = cta.label(),
                     onClick = onClick,
-                    enabled = cta != Cta.Sending,
+                    enabled = cta != Cta.Sending && cta != Cta.Locating,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -89,12 +90,13 @@ internal fun CheckoutBottomBar(
 private fun onCta(
     cta: Cta,
     selectedAddressId: String?,
+    confirm: () -> Unit,
     form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
 ) {
     val sheet = cta.sheet(selectedAddressId)
     when {
-        cta.canConfirm -> form.onConfirm()
+        cta.canConfirm -> confirm()
         sheet != null -> openSheet(sheet)
         cta == Cta.QuoteProblem -> form.onRetryQuote()
     }

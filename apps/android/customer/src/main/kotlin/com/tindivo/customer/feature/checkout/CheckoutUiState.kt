@@ -66,6 +66,11 @@ data class CheckoutUiState(
     val name: String = "",
     val phone: String? = null,
     val phoneVerified: Boolean = false,
+    /**
+     * Compra previa (`GET /customer/payment-options` con `reason = "trusted"`): puede pagar al recibir sin ubicación.
+     * Si la lectura falla es `false` (el lado seguro: se muestra la hoja de GPS).
+     */
+    val previousPurchase: Boolean = false,
     val note: String = "",
     val lines: List<BagLineUi> = emptyList(),
     val pay: PayMethod? = null,
@@ -73,6 +78,8 @@ data class CheckoutUiState(
     val quote: QuoteView? = null,
     val quoteStatus: QuoteStatus = QuoteStatus.Loading,
     val sending: Boolean = false,
+    /** Mientras `sending`, se está esperando la lectura de la ubicación (solo en pedidos que la leen). */
+    val locating: Boolean = false,
     val message: CheckoutMessage? = null,
     val blockedDetail: String? = null,
     /** Ya abrió «Mis pedidos» desde la vista de reconciliación: recién entonces puede decir «Ya revisé». */
@@ -93,8 +100,10 @@ data class CheckoutUiState(
         "CheckoutUiState(phase=$phase, businessName=$businessName, etaMin=$etaMin, etaMax=$etaMax, " +
             "acceptsDelivery=$acceptsDelivery, acceptsPickup=$acceptsPickup, method=$method, pickupWhen=$pickupWhen, " +
             "addresses=${addresses.size}, selectedAddressId=$selectedAddressId, name=***, " +
-            "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, note=***, " +
+            "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, " +
+            "previousPurchase=$previousPurchase, note=***, " +
             "lines=${lines.size}, pay=$pay, cash=$cash, quote=$quote, quoteStatus=$quoteStatus, sending=$sending, " +
+            "locating=$locating, " +
             "message=$message, blockedDetail=$blockedDetail, reconcileSeen=$reconcileSeen, " +
             "createdOrderId=$createdOrderId, sheet=$sheet)"
 }
@@ -117,6 +126,15 @@ sealed interface CheckoutSheet {
 
     /** La cuenta aún no tiene perfil: falta el nombre. */
     data object CompleteProfile : CheckoutSheet
+
+    /**
+     * Sin ubicación al confirmar un pedido a domicilio que se paga al recibir. [noPermission]: sin permiso (si no,
+     * sin señal); [afterRetry]: es el resultado de un «Intentar de nuevo».
+     */
+    data class GpsBlock(
+        val noPermission: Boolean,
+        val afterRetry: Boolean,
+    ) : CheckoutSheet
 
     /** La fase del checkout en la que esta hoja tiene sentido: fuera de ella no se abre ni se aplica. */
     val phase: CheckoutPhase
@@ -149,6 +167,9 @@ fun Cta.sheet(selectedAddressId: String?): CheckoutSheet? =
 /** Qué dice y qué hace el botón fijo. */
 sealed interface Cta {
     data object Sending : Cta
+
+    /** Se envía, pero antes se espera la lectura de la ubicación: «Verificando tu ubicación…» (como la web). */
+    data object Locating : Cta
 
     data object Calculating : Cta
 
@@ -184,6 +205,8 @@ sealed interface Cta {
 fun ctaOf(state: CheckoutUiState): Cta {
     val quote = state.quote
     return when {
+        state.sending && state.locating -> Cta.Locating
+
         state.sending -> Cta.Sending
 
         state.name.trim().isEmpty() -> Cta.NeedName
