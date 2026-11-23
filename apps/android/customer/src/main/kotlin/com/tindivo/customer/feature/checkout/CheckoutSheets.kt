@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.feature.addresses.AddressFormActions
@@ -144,13 +145,15 @@ private fun ChooseAddressSheet(
                     selected = address.id == state.selectedAddressId,
                     enabled = true,
                     title = address.label,
-                    hint = address.line,
+                    hint = addressChoiceHint(address),
                     onClick = { actions.onPickAddress(address.id) },
                 )
             }
-            TextButton(onClick = onAddNew, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.checkout_sheet_add_new))
-            }
+            TindivoSecondaryButton(
+                text = stringResource(R.string.checkout_sheet_add_new),
+                onClick = onAddNew,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }
@@ -436,3 +439,10 @@ private fun SheetHeader(
         }
     }
 }
+
+/** La calle y la referencia de una dirección guardada, una debajo de la otra; `null` si no tiene ninguna. */
+internal fun addressChoiceHint(address: AddressUi): String? =
+    listOfNotNull(address.line, address.reference.takeIf { it.isNotBlank() })
+        .filter { it.isNotBlank() }
+        .joinToString("\n")
+        .takeIf { it.isNotEmpty() }

@@ -1,18 +1,18 @@
 package com.tindivo.customer.feature.checkout
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSecondaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 
 /**
@@ -31,7 +31,7 @@ internal fun GpsBlockSheet(
             Column(modifier = Modifier.fillMaxWidth()) {
                 val body =
                     if (sheet.noPermission) R.string.checkout_gps_body_permission else R.string.checkout_gps_body_signal
-                Text(text = stringResource(body), style = MaterialTheme.typography.bodyMedium)
+                Text(text = stringResource(body), style = MaterialTheme.typography.bodyLarge)
                 // «Sin conexión» solo aparece en el reintento: la primera vez no se sabe si es la red.
                 if (sheet.afterRetry) {
                     Text(
@@ -40,23 +40,21 @@ internal fun GpsBlockSheet(
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
-                Button(
-                    onClick = actions.onGpsRetry,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(top = 16.dp),
-                ) {
-                    Text(text = stringResource(R.string.checkout_gps_retry))
-                }
-                OutlinedButton(
-                    onClick = actions.onGpsPrepay,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(top = 8.dp),
-                ) {
-                    Text(text = stringResource(R.string.checkout_gps_prepay))
-                }
-                TextButton(
-                    onClick = actions.onGpsContinue,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(top = 8.dp),
-                ) {
-                    Text(text = stringResource(R.string.checkout_gps_continue))
+                Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Cada botón lleva su alto (56 dp) y la separación va en el Column, no en un padding que se lo coma.
+                    TindivoPrimaryButton(
+                        text = stringResource(R.string.checkout_gps_retry),
+                        onClick = actions.onGpsRetry,
+                    )
+                    TindivoSecondaryButton(
+                        text = stringResource(R.string.checkout_gps_prepay),
+                        onClick = actions.onGpsPrepay,
+                    )
+                    TindivoTextButton(
+                        text = stringResource(R.string.checkout_gps_continue),
+                        onClick = actions.onGpsContinue,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }
