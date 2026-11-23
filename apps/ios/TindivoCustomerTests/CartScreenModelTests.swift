@@ -191,6 +191,9 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
+}
+
+extension CartScreenModelTests {
     // MARK: Deshacer (CA-CRT-10)
 
     @Test("CA-CRT-10: quitar la segunda de tres líneas y tocar «Deshacer» antes de 5 s la devuelve a su sitio con su cantidad")
@@ -303,6 +306,9 @@ struct CartScreenModelTests {
         #expect(filled.lines[1].increaseLabel == "Agregar una unidad de Plato b. Llevas 2 unidades")
     }
 
+}
+
+extension CartScreenModelTests {
     // MARK: Validación contra la carta (CA-CRT-05)
 
     private func validationMenu(_ items: [BusinessMenu.Item]) -> BusinessMenu {
@@ -430,6 +436,9 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
+}
+
+extension CartScreenModelTests {
     // MARK: Editar (CA-CRT-11)
 
     private func editableMenu(available: Bool = true) -> BusinessMenu {
@@ -558,6 +567,9 @@ struct CartScreenModelTests {
         task.cancel()
     }
 
+}
+
+extension CartScreenModelTests {
     // MARK: Validación: casos límite
 
     @Test("un .cancelled que no viene de cerrar la pantalla es un fallo: «sin validar», sin bloquear")
