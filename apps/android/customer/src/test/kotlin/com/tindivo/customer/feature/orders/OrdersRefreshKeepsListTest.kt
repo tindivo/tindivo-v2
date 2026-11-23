@@ -55,5 +55,7 @@ class OrdersRefreshKeepsListTest : OrdersHarness() {
             viewModel.refresh()
 
             assertEquals(OrdersUiState.Loading, viewModel.state.value)
+            // Que la carga termine antes de cerrar la prueba: no deja corrutinas sueltas tras restaurar Main.
+            viewModel.settled()
         }
 }

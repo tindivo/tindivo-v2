@@ -8,6 +8,7 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.isStale
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SessionWatch
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 
 internal sealed interface OrdersUiState {
@@ -71,6 +73,7 @@ internal class OrdersViewModel
 
         private var loadJob: Job? = null
         private var nextCursor: String? = null
+        private var lastLoadedAt: Instant? = null
 
         /**
          * La cuenta con la que se abrió la pantalla, leída al construirla y no dentro de la corrutina de cada carga: cada
@@ -113,6 +116,14 @@ internal class OrdersViewModel
         }
 
         /**
+         * Al volver a la pestaña: recarga en silencio si lo cargado es viejo (o nunca cargó bien). Si ya hay una carga en
+         * curso (la primera entrada) no lanza otra.
+         */
+        fun refreshIfStale() {
+            if (isStale(lastLoadedAt, clock.instant())) refresh()
+        }
+
+        /**
          * Pide la página siguiente. Sin `nextCursor`, o con una petición de más en curso, no hace nada. Lo decide el
          * estado y no `loadJob`: la carga anterior publica `Loaded` y termina después, y en ese hueco un toque se perdía.
          */
@@ -137,6 +148,7 @@ internal class OrdersViewModel
                         settle(OrdersUiState.Failed(unreadableOrderError()))
                     } else {
                         nextCursor = page.nextCursor
+                        lastLoadedAt = clock.instant()
                         settle(
                             if (page.items.isEmpty() && page.nextCursor == null) {
                                 OrdersUiState.Empty

@@ -8,6 +8,8 @@ import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.config.ConfigState
+import com.tindivo.customer.feature.MutableClock
+import com.tindivo.customer.feature.STALE_AFTER
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,6 +27,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Duration
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CatalogHomeViewModelTest {
@@ -113,6 +116,26 @@ class CatalogHomeViewModelTest {
 
             assertEquals(listOf("Don Lucho"), state.restaurants.map { it.name })
             assertEquals(AppError.Unknown(code = "codigo_nuevo", detail = null, status = 409), state.refreshFailed)
+        }
+
+    @Test
+    fun `al volver a la pestana solo recarga si lo cargado es viejo`() =
+        runTest {
+            server.enqueue(response(200, "{\"data\":[${business(id = UUID_1, name = "Don Lucho")}]}"))
+            server.enqueue(response(200, "{\"data\":[${business(id = UUID_2, name = "Chifa")}]}"))
+            val clock = MutableClock()
+            val viewModel = CatalogHomeViewModel(catalog, configService, clock)
+            viewModel.settled()
+
+            clock.advance(STALE_AFTER.minusSeconds(1))
+            viewModel.refreshIfStale()
+            assertEquals(1, server.requestCount)
+
+            clock.advance(Duration.ofSeconds(1))
+            viewModel.refreshIfStale()
+            assertEquals(2, server.requestCount)
+            val state = viewModel.state.value as CatalogHomeUiState.Loaded
+            assertEquals(listOf("Chifa"), state.restaurants.map { it.name })
         }
 
     @Test
