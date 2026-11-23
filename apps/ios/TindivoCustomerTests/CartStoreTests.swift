@@ -64,7 +64,7 @@ struct CartStoreTests {
         _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b"))
         let signature = try #require(await store.current()?.lines.first?.signature)
 
-        try await store.setQuantity(signature: signature, quantity: 4)
+        try await store.changeQuantity(signature: signature, by: 3)
         #expect(await store.current()?.count == 5)
 
         try await store.remove(signature: signature)
@@ -213,5 +213,158 @@ struct CartStoreTests {
         }
         #expect(await store.current()?.businessId == "n")
         #expect(try Data(contentsOf: file) == bytesBefore)
+    }
+
+    @Test("changeQuantity: veinte toques a la vez suman veinte, no pierden unidades")
+    func concurrentChangeQuantity() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        let signature = line("a").signature
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0..<20 { group.addTask { try await store.changeQuantity(signature: signature, by: 1) } }
+            try await group.waitForAll()
+        }
+        #expect(await store.current()?.lines.first?.quantity == 21)
+    }
+
+    @Test("changeQuantity se queda dentro de 1...50")
+    func changeQuantityClamps() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a", quantity: 49))
+        let signature = line("a").signature
+        try await store.changeQuantity(signature: signature, by: 5)
+        #expect(await store.current()?.lines.first?.quantity == 50)
+        try await store.changeQuantity(signature: signature, by: -80)
+        #expect(await store.current()?.lines.first?.quantity == 1)
+    }
+
+    @Test("remove devuelve la línea y su sitio, y restore la devuelve a él")
+    func removeAndRestore() async throws {
+        let (store, _) = makeStore()
+        for id in ["a", "b", "c"] { _ = try await store.add(businessId: "n", businessName: "Pollería", line: line(id, quantity: 2)) }
+        let removed = try #require(try await store.remove(signature: line("b").signature))
+        #expect(removed.index == 1)
+        #expect(removed.wasLast == false)
+        #expect(removed.line.quantity == 2)
+        #expect(await store.current()?.lines.map(\.itemId) == ["a", "c"])
+        #expect(try await store.restore(removed) == .restored)
+        #expect(await store.current()?.lines.map(\.itemId) == ["a", "b", "c"])
+    }
+
+    @Test("restore: si ya hay una línea igual suma las cantidades con tope 50; si la bolsa se vació, no hace nada")
+    func restoreMergesOrRefuses() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b", quantity: 30))
+        let removed = try #require(try await store.remove(signature: line("b").signature))
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b", quantity: 15))
+        #expect(try await store.restore(removed) == .merged(capped: false))
+        #expect(await store.current()?.lines.map(\.quantity) == [1, 45])
+        let again = try #require(try await store.remove(signature: line("b").signature))
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b", quantity: 40))
+        #expect(try await store.restore(again) == .merged(capped: true))
+        #expect(await store.current()?.lines.map(\.quantity) == [1, 50])
+
+        let last = try #require(try await store.remove(signature: line("a").signature))
+        _ = try await store.remove(signature: line("b").signature)
+        #expect(await store.current() == nil)
+        #expect(try await store.restore(last) == .noBag)
+        #expect(await store.current() == nil)
+    }
+
+    @Test("restore: con 50 platos distintos no cabe y la bolsa no cambia")
+    func restoreWhenFull() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("x"))
+        let removed = try #require(try await store.remove(signature: line("x").signature))
+        for i in 0..<CartLimits.maxLines {
+            _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("p\(i)"))
+        }
+        #expect(try await store.restore(removed) == .full)
+        #expect(await store.current()?.lines.count == CartLimits.maxLines)
+    }
+
+    @Test("remove de una línea que ya no está devuelve nil y no escribe")
+    func removeTwice() async throws {
+        let (store, _) = makeStore()
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("b"))
+        #expect(try await store.remove(signature: line("a").signature) != nil)
+        #expect(try await store.remove(signature: line("a").signature) == nil)
+        #expect(await store.current()?.lines.map(\.itemId) == ["b"])
+    }
+
+    @Test("replaceLine cambia la línea en su sitio y fusiona con otra idéntica, con el tope de unidades")
+    func replaceLine() async throws {
+        let (store, _) = makeStore()
+        let a = line("a", quantity: 30)
+        let b = line("b", quantity: 30)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: a)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: b)
+        // En su sitio: otra nota, misma posición.
+        let noted = CartLine(itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: "sin ají", quantity: 4, imageURL: nil)
+        #expect(try await store.replaceLine(signature: a.signature, with: noted) == .replaced(capped: false))
+        #expect(await store.current()?.lines.map(\.note) == ["sin ají", nil])
+        // Fusión: la de «b» pasa a ser «a con sin ají»: 4 + 30 = 34, y la línea queda en el sitio de la otra.
+        let merged = CartLine(itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: "sin ají", quantity: 30, imageURL: nil)
+        #expect(try await store.replaceLine(signature: b.signature, with: merged) == .replaced(capped: false))
+        #expect(await store.current()?.lines.map(\.quantity) == [34])
+        // Una línea que ya no está no se toca.
+        #expect(try await store.replaceLine(signature: "no-existe", with: merged) == .notFound)
+    }
+
+    @Test("replaceLine: la suma de una fusión no pasa de 50 y lo avisa")
+    func replaceLineCaps() async throws {
+        let (store, _) = makeStore()
+        let a = line("a", quantity: 40)
+        let b = line("b", quantity: 40)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: a)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: b)
+        let asA = CartLine(itemId: "a", name: "Lomo", basePrice: dec("12.50"), modifiers: [], note: nil, quantity: 40, imageURL: nil)
+        #expect(try await store.replaceLine(signature: b.signature, with: asA) == .replaced(capped: true))
+        #expect(await store.current()?.lines.map(\.quantity) == [50])
+    }
+
+    // MARK: Método de entrega (CA-CRT-01)
+
+    /// Escribe en disco una bolsa de recojo, como la dejaría el checkout.
+    private func seedPickup(_ file: URL) throws {
+        let cart = Cart(businessId: "n", businessName: "Pollería", lines: [line("a"), line("b")], method: .pickup)
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try CartSnapshotCodec.encode(try #require(cart.snapshot())).write(to: file)
+    }
+
+    @Test("CA-CRT-01: cambiar cantidades, agregar o quitar del mismo negocio conserva el método")
+    func methodSurvivesEdits() async throws {
+        let (store, file) = makeStore()
+        try seedPickup(file)
+        #expect(await store.current()?.method == .pickup)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("c"))
+        try await store.changeQuantity(signature: line("a").signature, by: 2)
+        try await store.remove(signature: line("b").signature)
+        #expect(await store.current()?.method == .pickup)
+        #expect(await store.current()?.lines.map(\.itemId) == ["a", "c"])
+    }
+
+    @Test("CA-CRT-01: reemplazar la bolsa por la de otro negocio vuelve a delivery")
+    func replacingResetsTheMethod() async throws {
+        let (store, file) = makeStore()
+        try seedPickup(file)
+        try await store.replace(businessId: "m", businessName: "Chifa", line: line("arroz"))
+        #expect(await store.current()?.method == .delivery)
+        #expect(await store.current()?.businessId == "m")
+    }
+
+    @Test("CA-CRT-03: al vaciarse la bolsa no queda negocio ni método; la siguiente empieza en delivery")
+    func emptyingResetsTheMethod() async throws {
+        let (store, file) = makeStore()
+        try seedPickup(file)
+        try await store.remove(signature: line("a").signature)
+        try await store.remove(signature: line("b").signature)
+        #expect(await store.current() == nil)
+        _ = try await store.add(businessId: "n", businessName: "Pollería", line: line("a"))
+        #expect(await store.current()?.method == .delivery)
+        try await store.clear()
+        #expect(await store.current() == nil)
     }
 }

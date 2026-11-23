@@ -10,6 +10,8 @@ struct CartSnapshot: Codable, Sendable, Equatable {
     var businessId: String
     var businessName: String
     var lines: [CartLineSnapshot]
+    /// `delivery` o `pickup`. Una bolsa guardada antes de que existiera el campo se lee como `delivery`.
+    var method: String = DeliveryMethod.delivery.rawValue
 }
 
 struct CartLineSnapshot: Codable, Sendable, Equatable {
@@ -50,7 +52,7 @@ private func rejectUnknownKeys<Key: CodingKey & CaseIterable>(_ decoder: any Dec
 
 extension CartSnapshot {
     private enum CodingKeys: String, CodingKey, CaseIterable {
-        case version, businessId, businessName, lines
+        case version, businessId, businessName, lines, method
     }
 
     init(from decoder: any Decoder) throws {
@@ -60,6 +62,7 @@ extension CartSnapshot {
         businessId = try container.decode(String.self, forKey: .businessId)
         businessName = try container.decode(String.self, forKey: .businessName)
         lines = try container.decode([CartLineSnapshot].self, forKey: .lines)
+        method = try container.decodeIfPresent(String.self, forKey: .method) ?? DeliveryMethod.delivery.rawValue
     }
 }
 
@@ -130,7 +133,8 @@ extension Cart {
                     },
                     note: line.note, quantity: line.quantity, imageURL: line.imageURL
                 )
-            }
+            },
+            method: method.rawValue
         )
     }
 
@@ -142,13 +146,15 @@ extension Cart {
         guard snapshot.version == cartSnapshotVersion, !snapshot.businessId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !snapshot.lines.isEmpty, snapshot.lines.count <= CartLimits.maxLines
         else { return nil }
+        // Un método que esta versión no conoce no borra la bolsa: se lee como delivery, que es lo que se elige en el checkout.
+        let method = DeliveryMethod(rawValue: snapshot.method) ?? .delivery
         var restored: [CartLine] = []
         for line in snapshot.lines {
             guard let restoredLine = CartLine(snapshot: line) else { return nil }
             restored.append(restoredLine)
         }
         guard Set(restored.map(\.signatureKey)).count == restored.count else { return nil }
-        self.init(businessId: snapshot.businessId, businessName: snapshot.businessName, lines: restored)
+        self.init(businessId: snapshot.businessId, businessName: snapshot.businessName, lines: restored, method: method)
     }
 }
 

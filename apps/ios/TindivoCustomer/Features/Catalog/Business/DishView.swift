@@ -8,8 +8,14 @@ struct DishView: View {
     let onClose: () -> Void
     /// Se agregó: la carta cierra la ficha y enseña su aviso (con `capped`, el de «máximo por pedido»).
     let onAdded: (Bool) -> Void
+    /// Solo al editar desde la bolsa: la línea ya no estaba; quien presenta cierra la ficha y avisa.
+    let onLineGone: (() -> Void)?
 
-    init(model: DishScreenModel, onClose: @escaping () -> Void, onAdded: @escaping (Bool) -> Void) {
+    init(
+        model: DishScreenModel, onClose: @escaping () -> Void, onAdded: @escaping (Bool) -> Void,
+        onLineGone: (() -> Void)? = nil
+    ) {
+        self.onLineGone = onLineGone
         _model = State(initialValue: model)
         self.onClose = onClose
         self.onAdded = onAdded
@@ -60,6 +66,9 @@ struct DishView: View {
         case .full, .failed:
             model.showNotice(for: outcome)
             model.consumeOutcome()
+        case .lineGone:
+            model.consumeOutcome()
+            onLineGone?()
         case .otherBusiness:
             break
         }
@@ -156,7 +165,8 @@ struct DishView: View {
 
     private var ctaTitle: String {
         switch model.selection.cta {
-        case let .add(total): String(localized: "Agregar · \(total)")
+        case let .add(total):
+            model.isEditing ? String(localized: "Guardar cambios · \(total)") : String(localized: "Agregar · \(total)")
         case let .complete(missing):
             missing == 1 ? String(localized: "Completa \(missing) opción") : String(localized: "Completa \(missing) opciones")
         }

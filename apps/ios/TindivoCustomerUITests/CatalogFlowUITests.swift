@@ -19,7 +19,10 @@ final class CatalogFlowUITests: XCTestCase {
     /// La bolsa de una corrida anterior (de otro negocio) abriría la pregunta de vaciarla. El reloj de la app se fija
     /// en un martes a las 20:00 de Lima: el horario nocturno no depende de cuándo corra.
     private func launch(fakeCatalog: Bool, seedOtherBag: Bool = false, fastClock: Bool = false, largeType: Bool = false) {
-        app.launchArguments = ["-tindivo-reset-cart", "-tindivo-now", "2026-07-07T20:00:00-05:00"]
+        // El plazo de «Deshacer» se alarga (solo DEBUG) para que el toque no dependa de la velocidad del simulador.
+        app.launchArguments = [
+            "-tindivo-reset-cart", "-tindivo-now", "2026-07-07T20:00:00-05:00", "-tindivo-undo-seconds", "60",
+        ]
         if largeType {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         }
@@ -109,6 +112,50 @@ final class CatalogFlowUITests: XCTestCase {
         bar.tap()
         XCTAssertTrue(element("cart.line").waitForExistence(timeout: 10))
         attach("ax5-bolsa")
+    }
+
+    /// La bolsa con la letra más grande (AX5): «−» con 1 unidad quita el plato, «Deshacer» lo devuelve a su sitio y
+    /// «Editar» (solo en el plato con opciones) abre la ficha con lo elegido. Las pantallas quedan adjuntas.
+    func testRemoveUndoAndEditInTheBagWithTheLargestType() throws {
+        launch(fakeCatalog: true, largeType: true)
+        openDonLucho()
+        let pollo = dishRow("1/4 de pollo")
+        XCTAssertTrue(pollo.waitForExistence(timeout: 20))
+        pollo.tap()
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 5))
+        app.staticTexts["Pecho"].firstMatch.tap()
+        element("dish.add").tap()
+        let chicha = dishRow("Chicha morada")
+        XCTAssertTrue(chicha.waitForExistence(timeout: 10))
+        chicha.tap()
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 5))
+        element("dish.add").tap()
+        let bar = element("business.cartBar")
+        XCTAssertTrue(bar.waitForExistence(timeout: 10))
+        bar.tap()
+        XCTAssertTrue(element("cart.line").waitForExistence(timeout: 10))
+        XCTAssertEqual(query("cart.line").count, 2, "La bolsa debía tener dos platos")
+        attach("ax5-bolsa-dos-platos")
+
+        // Con 1 unidad, «−» quita el plato y aparece «Deshacer».
+        // Los botones de cantidad llevan el identificador «cart.stepper» (primero «−», luego «+» de cada línea): el «−»
+        // de la segunda línea es el tercero. «Quitar» (texto) es otro botón, «cart.remove».
+        app.buttons.matching(identifier: "cart.stepper").element(boundBy: 2).tap()
+        XCTAssertTrue(element("cart.undo").waitForExistence(timeout: 5), "No apareció «Deshacer»")
+        XCTAssertEqual(query("cart.line").count, 1)
+        attach("ax5-bolsa-deshacer")
+        element("cart.undo").tap()
+        XCTAssertTrue(element("cart.undo").waitForNonExistence(timeout: 5))
+        XCTAssertEqual(query("cart.line").count, 2, "«Deshacer» no devolvió el plato")
+
+        // «Editar» solo en el plato con opciones: abre la ficha.
+        XCTAssertEqual(query("cart.edit").count, 1)
+        element("cart.edit").tap()
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10), "«Editar» no abrió el plato")
+        attach("ax5-bolsa-editar")
+        element("dish.close").tap()
+        XCTAssertTrue(element("cart.line").waitForExistence(timeout: 5))
+        attach("ax5-bolsa-despues-de-editar")
     }
 
     func testAddADishFromTheFirstOpenBusiness() throws {

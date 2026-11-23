@@ -47,7 +47,28 @@
     "%lld plato" : {},
     "%lld platos" : {},
     "%lld unidad" : {},
-    "%lld unidades" : {},
+    "%lld unidades" : {
+      "localizations" : {
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "new",
+                  "value" : "%lld unidad"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "new",
+                  "value" : "%lld unidades"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld–%lld min" : {
       "localizations" : {
         "es" : {
@@ -68,7 +89,6 @@
         }
       }
     },
-    "+ Agregar más" : {},
     "+%@" : {},
     "Abre el %@ a las %@" : {
       "localizations" : {
@@ -83,7 +103,6 @@
     "Abre hoy a las %@" : {},
     "Abre mañana a las %@" : {},
     "Agregar · %@" : {},
-    "Agregar una unidad de %@" : {},
     "Algo salió mal. Inténtalo de nuevo." : {},
     "Añadido a tu bolsa" : {},
     "API" : {},
@@ -115,7 +134,6 @@
     "Diagnóstico" : {},
     "dom" : {},
     "Ej. sin cebolla, bien cocido, tocar timbre 2 veces…" : {},
-    "El envío y el total final se calculan al confirmar el pedido." : {},
     "Elige una opción" : {},
     "Error" : {},
     "Estado" : {},
@@ -131,7 +149,6 @@
     "lun" : {},
     "Mantener" : {},
     "mar" : {},
-    "Mi bolsa" : {},
     "mié" : {},
     "No disponible" : {},
     "No encontramos “%@” en %@" : {
@@ -156,7 +173,6 @@
     "Prueba con otro nombre, o con un ingrediente: también buscamos dentro de la descripción de cada plato." : {},
     "Quitar" : {},
     "Quitar %@" : {},
-    "Quitar una unidad de %@" : {},
     "Reintentar" : {},
     "Restaurantes" : {},
     "sáb" : {},
@@ -206,7 +222,69 @@
     "Búscala en la App Store" : {},
     "Tu iPhone es antiguo" : {},
     "Puedes seguir usando Tindivo, pero algunas funciones podrían no ir bien en esta versión de iOS." : {},
-    "Entendido" : {}
+    "Entendido" : {},
+    "%lld productos" : {
+      "localizations" : {
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "new",
+                  "value" : "%lld producto"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "new",
+                  "value" : "%lld productos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Agregar más de %@" : {},
+    "Agregar una unidad de %@. Llevas %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Agregar una unidad de %1$@. Llevas %2$@"
+          }
+        }
+      }
+    },
+    "Delivery" : {},
+    "Delivery · Se calcula con tu dirección" : {},
+    "Deshacer" : {},
+    "Editar" : {},
+    "Editar %@" : {},
+    "El negocio cambió las opciones de este plato. Vuelve a elegirlas." : {},
+    "Este plato ya no está en tu bolsa" : {},
+    "Este producto ya no está disponible" : {},
+    "Fuera de su horario" : {},
+    "Guardar cambios · %@" : {},
+    "La opción \"%@\" cambió de precio" : {},
+    "No pudimos revisar tu bolsa con la carta. Lo confirmaremos al hacer el pedido." : {},
+    "Precio actualizado (+%@)" : {},
+    "Precio actualizado (-%@)" : {},
+    "Producto agotado por ahora" : {},
+    "Quitar una unidad de %@. Llevas %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Quitar una unidad de %1$@. Llevas %2$@"
+          }
+        }
+      }
+    },
+    "Quitaste \"%@\"" : {},
+    "Recojo" : {},
+    "Tu bolsa" : {},
+    "Una opción ya no está disponible" : {}
   },
   "version" : "1.0"
 }
