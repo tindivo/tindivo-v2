@@ -18,8 +18,11 @@ final class CatalogFlowUITests: XCTestCase {
 
     /// La bolsa de una corrida anterior (de otro negocio) abriría la pregunta de vaciarla. El reloj de la app se fija
     /// en un martes a las 20:00 de Lima: el horario nocturno no depende de cuándo corra.
-    private func launch(fakeCatalog: Bool, seedOtherBag: Bool = false, fastClock: Bool = false, largeType: Bool = false) {
-        app.launchArguments = ["-tindivo-reset-cart", "-tindivo-now", "2026-07-07T20:00:00-05:00"]
+    private func launch(
+        fakeCatalog: Bool, seedOtherBag: Bool = false, fastClock: Bool = false, largeType: Bool = false,
+        now: String = "2026-07-07T20:00:00-05:00"
+    ) {
+        app.launchArguments = ["-tindivo-reset-cart", "-tindivo-now", now]
         if largeType {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         }
@@ -43,9 +46,14 @@ final class CatalogFlowUITests: XCTestCase {
         dish.tap()
         let add = element("dish.add")
         XCTAssertTrue(add.waitForExistence(timeout: 5))
-        XCTAssertFalse(add.isEnabled, "Con la presa sin elegir no se puede agregar")
+        // CA-CAT-P7: el botón nombra el grupo que falta y, tocado, no agrega: lleva a él.
+        XCTAssertEqual(add.label, "Elige Presa", "El botón debe nombrar el grupo obligatorio que falta")
+        add.tap()
+        XCTAssertTrue(element("dish.add").exists, "Tocar el botón con algo sin elegir no debe cerrar la ficha")
+        XCTAssertEqual(element("dish.progress").label, "0 de 1 lista")
         app.staticTexts["Pecho"].firstMatch.tap()
-        XCTAssertTrue(add.isEnabled, "Con «Pecho» elegido debe poder agregarse")
+        XCTAssertTrue(add.label.hasPrefix("Agregar"), "Con «Pecho» elegido debe poder agregarse: \(add.label)")
+        XCTAssertEqual(element("dish.progress").label, "1 de 1 lista")
         add.tap()
         let bar = element("business.cartBar")
         XCTAssertTrue(bar.waitForExistence(timeout: 10), "No apareció «Ver mi bolsa»")
@@ -77,16 +85,18 @@ final class CatalogFlowUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Arroz chaufa"].exists, "Sigue el plato del otro negocio")
     }
 
-    /// Un plato con franja hasta las 20:20: con la ficha abierta entre 20:00 y 20:20 (reloj acelerado, un minuto por segundo),
+    /// Un plato con franja hasta las 20:20: con la ficha abierta antes de las 20:20 (reloj acelerado, un minuto por segundo),
     /// al salir de la franja la ficha se cierra sola y la carta ya no deja abrirlo.
     func testTheDishClosesItselfWhenItsWindowEnds() throws {
-        launch(fakeCatalog: true, fastClock: true)
+        // Se arranca a las 19:30 (50 minutos de reloj acelerado = 50 s antes de las 20:20): con el simulador cargado, abrir
+        // el negocio puede tardar decenas de segundos y la franja no debe acabarse antes de abrir la ficha.
+        launch(fakeCatalog: true, fastClock: true, now: "2026-07-07T19:30:00-05:00")
         openDonLucho()
         let dish = dishRow("Chicha de la noche")
-        XCTAssertTrue(dish.waitForExistence(timeout: 20), "No está «Chicha de la noche» a las 20:00")
+        XCTAssertTrue(dish.waitForExistence(timeout: 20), "No está «Chicha de la noche» a las 19:30")
         dish.tap()
         XCTAssertTrue(element("dish.add").waitForExistence(timeout: 5))
-        XCTAssertTrue(element("dish.add").waitForNonExistence(timeout: 30), "La ficha siguió abierta pasada su franja")
+        XCTAssertTrue(element("dish.add").waitForNonExistence(timeout: 90), "La ficha siguió abierta pasada su franja")
     }
 
     /// Con la letra más grande (AX5): el flujo se recorre igual y las pantallas quedan adjuntas para revisarlas a ojo.
@@ -109,6 +119,88 @@ final class CatalogFlowUITests: XCTestCase {
         bar.tap()
         XCTAssertTrue(element("cart.line").waitForExistence(timeout: 10))
         attach("ax5-bolsa")
+    }
+
+    /// CUS-CAT-030 (★): la barra de Inicio tiene el logo y la bolsa, siempre visible, también vacía; sin sesión no hay
+    /// chip «Entregar en»; tocar la bolsa abre la bolsa, y con una unidad en ella la insignia dice «1».
+    func testHomeTopBarShowsTheLogoAndTheBagEvenWhenEmpty() throws {
+        launch(fakeCatalog: true)
+        XCTAssertTrue(app.staticTexts["¿Qué pedimos hoy?"].waitForExistence(timeout: 30), "Inicio no cargó")
+        XCTAssertTrue(element("home.topBar").exists, "No está la barra superior")
+        XCTAssertTrue(element("home.logo").exists, "No está el logo")
+        let bag = element("home.bag")
+        XCTAssertTrue(bag.exists, "La bolsa debe verse también vacía")
+        XCTAssertEqual(bag.label, "Bolsa")
+        XCTAssertFalse(element("home.bag.badge").exists, "Con la bolsa vacía no hay insignia")
+        XCTAssertFalse(element("home.deliveryChip").exists, "Sin sesión ni dirección el chip no se muestra")
+        attach("cus-cat-030-barra-vacia")
+        bag.tap()
+        XCTAssertTrue(app.staticTexts["Tu bolsa está vacía"].waitForExistence(timeout: 10), "Tocar la bolsa no abrió la bolsa")
+        goBack()
+
+        // Una unidad en la bolsa (el «+» de la tarjeta de «Chicha morada») y la insignia lo cuenta.
+        openDonLucho()
+        let plus = element("menu.add")
+        XCTAssertTrue(plus.waitForExistence(timeout: 20), "No está el «+» de la tarjeta")
+        plus.tap()
+        XCTAssertTrue(element("menu.stepper").waitForExistence(timeout: 10), "La tarjeta no pasó a «− 1 +»")
+        goBack()
+        XCTAssertTrue(element("home.bag.badge").waitForExistence(timeout: 10), "No apareció la insignia de la bolsa")
+        XCTAssertEqual(element("home.bag").label, "Bolsa, 1 producto")
+        attach("cus-cat-030-barra-con-bolsa")
+    }
+
+    /// CUS-CAT-027 y CA-CAT-P6: la fila «Información del negocio ›» abre la hoja con los siete días, hoy resaltado y
+    /// «Cerrado» el día sin turno; sin contacto.
+    func testBusinessInfoSheetListsTheWeek() throws {
+        launch(fakeCatalog: true)
+        openDonLucho()
+        let row = element("business.infoRow")
+        XCTAssertTrue(row.waitForExistence(timeout: 20), "No está la fila «Información del negocio»")
+        row.tap()
+        XCTAssertTrue(element("info.day.today").waitForExistence(timeout: 10), "La hoja no marca el día de hoy")
+        XCTAssertEqual(query("info.day").count + query("info.day.today").count, 7)
+        XCTAssertTrue(element("info.day.today").label.contains("Martes"), "El reloj fijado es martes")
+        XCTAssertFalse(app.buttons["Llamar"].exists, "La hoja no lleva datos de contacto")
+        attach("info-del-negocio")
+    }
+
+    /// Recorre Inicio, Negocio (con la hoja de información) y Plato y deja una captura de cada uno, en tamaño normal y en
+    /// AX5, para revisarlas a ojo.
+    func testCatalogScreens() throws {
+        launch(fakeCatalog: true)
+        try visitCatalogScreens(prefix: "normal")
+    }
+
+    func testCatalogScreensWithTheLargestType() throws {
+        launch(fakeCatalog: true, largeType: true)
+        try visitCatalogScreens(prefix: "ax5")
+    }
+
+    private func visitCatalogScreens(prefix: String) throws {
+        XCTAssertTrue(app.staticTexts["¿Qué pedimos hoy?"].waitForExistence(timeout: 60), "Inicio no cargó")
+        XCTAssertTrue(element("home.bag").waitForExistence(timeout: 10))
+        attach("\(prefix)-1-inicio")
+        let card = app.staticTexts["Pollería Don Lucho"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 20))
+        card.tap()
+        let row = element("business.infoRow")
+        XCTAssertTrue(row.waitForExistence(timeout: 30), "No está la fila de información")
+        attach("\(prefix)-2-negocio")
+        row.tap()
+        XCTAssertTrue(element("info.day.today").waitForExistence(timeout: 10))
+        attach("\(prefix)-3-informacion")
+        let close = element("info.close")
+        if close.waitForExistence(timeout: 5) { close.tap() }
+        let dish = dishRow("1/4 de pollo")
+        XCTAssertTrue(dish.waitForExistence(timeout: 20), "No está «1/4 de pollo»")
+        dish.tap()
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10))
+        attach("\(prefix)-4-plato-incompleto")
+        element("dish.add").tap()
+        attach("\(prefix)-5-plato-tras-tocar-el-boton")
+        app.staticTexts["Pecho"].firstMatch.tap()
+        attach("\(prefix)-6-plato-completo")
     }
 
     func testAddADishFromTheFirstOpenBusiness() throws {
@@ -187,7 +279,8 @@ final class CatalogFlowUITests: XCTestCase {
             let add = element("dish.add")
             guard add.waitForExistence(timeout: 5) else { continue }
             attach(index == 0 ? "03-plato" : "03-plato-\(index)")
-            if add.isEnabled {
+            // Con algo obligatorio sin elegir el botón dice «Elige …» (y, tocado, solo lleva al grupo).
+            if add.label.hasPrefix("Agregar") {
                 add.tap()
                 return name
             }
