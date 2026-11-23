@@ -61,13 +61,14 @@ class FieldsTest {
     }
 
     @Test
-    fun moneyKeepsADecimalStringWithTwoDecimals() {
+    fun moneyKeepsWhatWasTypedAndOnlyDropsWhatIsNotADigitOrSeparator() {
         var amount by mutableStateOf("")
         compose.setContent { MoneyField(value = amount, onValueChange = { amount = it }) }
 
-        compose.onNodeWithText("Monto").performTextInput("50,559")
+        compose.onNodeWithText("Monto").performTextInput("S/ 50,559")
 
-        assertEquals("50.55", amount)
+        // El campo no recorta ni cambia la coma: quien usa el monto decide si vale (parseCashInput rechaza 3 decimales).
+        assertEquals("50,559", amount)
     }
 
     @Test
