@@ -44,30 +44,30 @@ struct DishRequirementsTests {
         }
     }
 
-    @Test("CUS-CAT-033 con «Guarnición 2» sin elegir el botón nombra el grupo y está apagado (texto por aprobar)")
+    @Test("CA-CAT-P7 con «Guarnición 2» sin elegir el botón dice «Elige: Guarnición 2» y está apagado")
     func ctaNamesTheMissingGroup() throws {
         let model = try model()
         try choose("papas", in: model)
-        #expect(model.ctaTitle == "Elige Guarnición 2")
+        #expect(model.ctaTitle == "Elige: Guarnición 2")
         #expect(model.ctaBlocked)
         #expect(model.firstMissingGroup?.id == "g2")
     }
 
-    @Test("CUS-CAT-033 VoiceOver anuncia «Falta elegir [grupo]» al llevar la vista al grupo (texto por aprobar)")
+    @Test("CA-CAT-P7 VoiceOver anuncia «Falta elegir: [grupo]» al llevar la vista al grupo")
     func announcesTheMissingGroup() async throws {
         let model = try model()
         #expect(model.attentionAnnouncement == nil)
         await model.tapAdd()
-        #expect(model.attentionAnnouncement == "Falta elegir Guarnición 1")
+        #expect(model.attentionAnnouncement == "Falta elegir: Guarnición 1")
     }
 
     @Test("CUS-CAT-033 sin nada elegido el botón nombra el primer grupo obligatorio, no el opcional")
     func ctaNamesTheFirstRequired() throws {
         let model = try model()
-        #expect(model.ctaTitle == "Elige Guarnición 1")
+        #expect(model.ctaTitle == "Elige: Guarnición 1")
     }
 
-    @Test("CUS-CAT-033 tocar el botón con algo sin elegir no agrega: lleva al grupo que falta, y cada toque cuenta")
+    @Test("CA-CAT-P7 tocar el botón con algo sin elegir no agrega: lleva al grupo que falta, y cada toque cuenta")
     func tapLeadsToTheMissingGroup() async throws {
         let store = temporaryStore()
         let model = try model(store: store)
@@ -101,7 +101,7 @@ struct DishRequirementsTests {
         #expect(try model(Fixture.item("i2")).progressText == nil)
     }
 
-    @Test("CUS-CAT-033 una vez resuelto todo, tocar el botón agrega")
+    @Test("CA-CAT-P7 una vez resuelto todo, tocar el botón agrega")
     func tapAddsWhenComplete() async throws {
         let store = temporaryStore()
         let model = try model(store: store)

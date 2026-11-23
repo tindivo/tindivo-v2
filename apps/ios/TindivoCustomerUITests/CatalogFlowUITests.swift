@@ -50,8 +50,8 @@ final class CatalogFlowUITests: XCTestCase {
         dish.tap()
         let add = element("dish.add")
         XCTAssertTrue(add.waitForExistence(timeout: 5))
-        // CUS-CAT-033 (texto por aprobar): el botón nombra el grupo que falta y, tocado, no agrega: lleva a él.
-        XCTAssertEqual(add.label, "Elige Presa", "El botón debe nombrar el grupo obligatorio que falta")
+        // CA-CAT-P7: el botón dice «Elige: [grupo]» y, tocado, no agrega: lleva al grupo que falta.
+        XCTAssertEqual(add.label, "Elige: Presa", "El botón debe nombrar el grupo obligatorio que falta")
         add.tap()
         XCTAssertTrue(element("dish.add").exists, "Tocar el botón con algo sin elegir no debe cerrar la ficha")
         XCTAssertEqual(element("dish.progress").label, "0 de 1 lista")
@@ -199,7 +199,7 @@ final class CatalogFlowUITests: XCTestCase {
         attach("ca-cat-p2-tarjeta-cerrada")
     }
 
-    /// «Elige [grupo]» (texto por aprobar): con letra grande el grupo que falta queda fuera de pantalla; al tocar el
+    /// CA-CAT-P7, «Elige: [grupo]»: con letra grande el grupo que falta queda fuera de pantalla; al tocar el
     /// botón la vista lo trae y queda a la vista.
     func testTappingChooseBringsTheMissingGroupIntoView() throws {
         launch(fakeCatalog: true, largeType: true)

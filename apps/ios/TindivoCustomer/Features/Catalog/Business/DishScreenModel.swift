@@ -117,7 +117,7 @@ final class DishScreenModel {
         case let .add(total):
             isEditing ? String(localized: "Guardar cambios · \(total)") : String(localized: "Agregar · \(total)")
         case .complete:
-            if let group = firstMissingGroup { String(localized: "Elige \(group.name)") } else { String(localized: "Revisa tus opciones") }
+            if let group = firstMissingGroup { String(localized: "Elige: \(group.name)") } else { String(localized: "Revisa tus opciones") }
         }
     }
 
@@ -149,10 +149,10 @@ final class DishScreenModel {
         return ("\(used)/\(CartLimits.maxNoteLength)", String(localized: "\(used) de \(CartLimits.maxNoteLength) caracteres"))
     }
 
-    /// Lo que VoiceOver anuncia al llevar la vista a un grupo («Falta elegir Guarnición 2»; texto por aprobar).
+    /// Lo que VoiceOver anuncia al llevar la vista a un grupo («Falta elegir: Guarnición 2»).
     var attentionAnnouncement: String? {
         attention.flatMap { attention in item.dish.groups.first { $0.id == attention.groupID } }
-            .map { String(localized: "Falta elegir \($0.name)") }
+            .map { String(localized: "Falta elegir: \($0.name)") }
     }
 
     /// Un toque en el botón de abajo: con algo obligatorio sin elegir lleva al grupo que falta; si no, agrega.
