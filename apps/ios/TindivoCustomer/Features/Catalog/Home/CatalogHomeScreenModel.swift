@@ -25,9 +25,11 @@ final class CatalogHomeScreenModel {
 
     /// Las unidades de la bolsa, para el contador de la barra superior (CUS-CAT-030).
     private(set) var bagCount = 0
-    /// El horario de la carta de cada negocio cerrado de la lista. La lista no trae cuándo abre (CUS-CAT-023, del
-    /// servidor): se arma con el horario de su carta, y mientras llega la tarjeta dice «Cerrado ahora».
+    /// El horario de la carta de cada negocio de la lista. La lista no trae cuándo abre (CUS-CAT-023, del servidor): se
+    /// arma con el horario de su carta, y mientras llega la tarjeta dice «Cerrado ahora».
     private(set) var schedules: [String: ClosedSchedule] = [:]
+    /// Lo que decía el reloj de cada negocio (¿abierto?) cuando se armó la lista: si cambia, la lista se vuelve a pedir.
+    private var baselineOpen: [String: Bool] = [:]
     /// «Ahora»: se vuelve a leer cada minuto, para que «Cerrado · abre hoy 18:00» cambie solo.
     private(set) var now: Date
     /// La dirección de entrega del chip «Entregar en». La app aún no tiene sesión ni direcciones: es `nil` y el chip no
@@ -47,7 +49,7 @@ final class CatalogHomeScreenModel {
     /// Cuántas cartas se piden a la vez para armar los textos de las tarjetas cerradas.
     static let maxConcurrentMenus = 3
 
-    /// El horario de un negocio cerrado, tal como lo manda su carta.
+    /// El horario de un negocio, tal como lo manda su carta.
     struct ClosedSchedule: Equatable {
         let days: [ScheduleDay]
         let openingConfirmed: Bool?
@@ -64,13 +66,34 @@ final class CatalogHomeScreenModel {
         now = clock.now()
     }
 
-    /// Reevalúa cada minuto qué dicen las tarjetas cerradas. Se lanza con `.task`: dura lo que la pantalla esté a la vista.
+    /// Reevalúa cada minuto qué dicen las tarjetas cerradas. Si el reloj dice que un negocio cambió de estado (abrió o
+    /// cerró) vuelve a pedir la lista, una vez por cambio: la tarjeta deja de decir «cerrado» (CUS-CAT-012). Se lanza
+    /// con `.task`: dura lo que la pantalla esté a la vista.
     func runClock() async {
         now = clock.now()
         while !Task.isCancelled {
             do { try await clock.sleep(Self.recheckEvery) } catch { return }
             now = clock.now()
+            if clockChangedAnyBusiness() { await refresh() }
         }
+    }
+
+    private func isOpenByClock(_ schedule: ClosedSchedule) -> Bool {
+        openStatus(days: schedule.days, now: now, openingConfirmed: schedule.openingConfirmed).allowsOrders
+    }
+
+    /// ¿Cambió de estado, según el reloj, algún negocio desde la última vez? Anota el estado nuevo: un cambio se
+    /// atiende una sola vez.
+    private func clockChangedAnyBusiness() -> Bool {
+        var changed = false
+        for (id, schedule) in schedules {
+            let open = isOpenByClock(schedule)
+            if baselineOpen[id] != open {
+                baselineOpen[id] = open
+                changed = true
+            }
+        }
+        return changed
     }
 
     /// La bolsa vigente ahora y después cada vez que cambia. Se lanza con `.task`.
@@ -101,12 +124,12 @@ final class CatalogHomeScreenModel {
         return closedSummary(status, now: now)
     }
 
-    /// workaround: Inicio baja la carta de cada negocio cerrado para saber cuándo abre, porque `listBusinesses` no manda
+    /// workaround: Inicio baja la carta de cada negocio para saber cuándo abre o cierra, porque `listBusinesses` no manda
     /// `next_change_at` (CUS-CAT-023, del servidor). Pide como mucho `maxConcurrentMenus` a la vez y comparte la caché
     /// con Negocio. Un error en una carta deja esa tarjeta en «Cerrado ahora».
     private func loadClosedSchedules(for cards: [BusinessCard]) {
         enrichment?.cancel()
-        let ids = cards.filter(\.closed).map(\.id)
+        let ids = cards.map(\.id)
         let catalog = catalog
         let cache = menuCache
         let now = clock.now()
@@ -129,8 +152,9 @@ final class CatalogHomeScreenModel {
                 }
                 return result
             }
-            guard !Task.isCancelled else { return }
-            self?.schedules = loaded
+            guard !Task.isCancelled, let self else { return }
+            schedules = loaded
+            baselineOpen = loaded.mapValues { isOpenByClock($0) }
         }
     }
 

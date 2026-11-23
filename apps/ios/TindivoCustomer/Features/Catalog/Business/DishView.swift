@@ -2,7 +2,8 @@ import SwiftUI
 import TindivoDesign
 
 /// La ficha de un plato, a pantalla completa (decisión de Jesús, 2026-11-19; Android usa una hoja). Es un
-/// `fullScreenCover` que se presenta en UN solo sitio, `BusinessView`: cambiarla a `sheet` es cambiar esa línea.
+/// `fullScreenCover` que se presenta desde dos sitios, `BusinessView` (agregar) y `CartView` (editar una línea):
+/// cambiarla a `sheet` es cambiar esas dos líneas.
 struct DishView: View {
     @State private var model: DishScreenModel
     let onClose: () -> Void
@@ -60,18 +61,9 @@ struct DishView: View {
         .tindivoToast(model.notices.message)
         // El gesto de escape de VoiceOver (dos dedos en «Z») cierra la ficha, como el botón «Cerrar».
         .accessibilityAction(.escape, onClose)
-        .alert(
-            Text("¿Empezar una bolsa nueva?"),
-            isPresented: Binding(get: { model.replacement != nil }, set: { _ in }),
-            presenting: model.replacement
-        ) { _ in
-            Button("Mantener", role: .cancel) { model.keepCurrentBag() }
-            Button("Vaciar y empezar") { model.confirmReplace() }
-        } message: { names in
-            Text(
-                "Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new)."
-            )
-        }
+        .replaceBagAlert(
+            model.replacement, onKeep: model.keepCurrentBag, onReplace: { model.confirmReplace() }
+        )
         .onChange(of: model.outcome) { _, _ in
             switch model.resolveOutcome() {
             case let .added(capped): onAdded(capped)

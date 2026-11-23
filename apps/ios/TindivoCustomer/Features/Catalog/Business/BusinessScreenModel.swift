@@ -31,11 +31,17 @@ final class BusinessScreenModel {
     /// La bolsa es de otro restaurante y se tocó «+» en la carta: la pregunta «¿Empezar una bolsa nueva?».
     private(set) var replacement: DishScreenModel.Replacement?
     private var pendingLine: CartLine?
+    private var isReplacing = false
     /// El aviso «Añadido a tu bolsa», que se apaga solo.
     let notices: TimedNotice
     private(set) var cart: Cart?
     /// La sección marcada en los chips: sigue a la carta al hacer scroll y salta al tocar un chip.
-    private(set) var selectedSection = 0
+    /// La sección elegida se recuerda por su id, no por su posición: si «Destacados» aparece o desaparece, la elegida no cambia.
+    private var selectedSectionID: String?
+    var selectedSection: Int {
+        let ids = visible?.sections.map(\.id) ?? []
+        return selectedSectionID.flatMap { ids.firstIndex(of: $0) } ?? 0
+    }
     private(set) var showTitle = false
 
     /// Lo derivado de la carta y del instante `now`: se recalcula al cargar y cada minuto.
@@ -150,7 +156,10 @@ final class BusinessScreenModel {
         }
         rows = detail.map(menuRows(for:)) ?? []
         headerIndices = categoryHeaderIndices(rows)
-        selectedSection = min(selectedSection, max(0, headerIndices.count - 1))
+        // Si la sección elegida ya no existe (desapareció «Destacados», por ejemplo), se vuelve a la primera.
+        if let id = selectedSectionID, visible?.sections.contains(where: { $0.id == id }) != true {
+            selectedSectionID = nil
+        }
         if let detail, let openDishID, Self.findDish(in: detail, id: openDishID) == nil {
             // Un plato apagado por su franja no se abre: si se apaga con la ficha abierta, esta se cierra sola.
             self.openDishID = nil
@@ -160,7 +169,7 @@ final class BusinessScreenModel {
         updateSearch()
     }
 
-    /// La barra «Ver mi bolsa» de ESTE negocio, o `nil` si la bolsa es de otro o no hay.
+    /// La barra «Ver bolsa» de ESTE negocio, o `nil` si la bolsa es de otro o no hay.
     var cartBarSummary: CartBarSummary? {
         visible.flatMap { cartBar(for: cart, businessId: $0.id) }
     }
@@ -218,6 +227,12 @@ final class BusinessScreenModel {
         dishModel = nil
     }
 
+    /// La ficha abierta para editar una línea ya no la encuentra en la bolsa: se cierra y lo dice.
+    func lineGone() {
+        closeDish()
+        notices.show(String(localized: "Este plato ya no está en tu bolsa"))
+    }
+
     /// Lo que pasó después de «Agregar» (o de «Guardar cambios»): la ficha se cierra; «Añadido» solo se enseña al
     /// agregar, no al editar.
     func dishAdded(capped: Bool) {
@@ -238,13 +253,14 @@ final class BusinessScreenModel {
         showTitle = index > businessHeaderIndex(rows)
         if let until = suppressSpyUntil, clock.now() < until { return }
         suppressSpyUntil = nil
-        selectedSection = activeCategoryIndex(headerIndices: headerIndices, firstVisibleIndex: index)
+        selectedSectionID =
+            visible?.sections[safe: activeCategoryIndex(headerIndices: headerIndices, firstVisibleIndex: index)]?.id
     }
 
     /// Tocar un chip: marca la sección y devuelve la fila a la que hay que llevar la carta.
     func jump(toSection section: Int) -> String? {
         guard let header = headerIndices[safe: section], let row = rows[safe: header] else { return nil }
-        selectedSection = section
+        selectedSectionID = visible?.sections[safe: section]?.id
         suppressSpyUntil = clock.now().addingTimeInterval(Self.jumpGrace)
         return row.key
     }
@@ -324,7 +340,7 @@ final class BusinessScreenModel {
         guard let cart, let id = visible?.id, cart.businessId.caseInsensitiveCompare(id) == .orderedSame else {
             return []
         }
-        return cart.lines.filter { $0.itemId == item.id }
+        return cart.lines.filter { $0.itemId.caseInsensitiveCompare(item.id) == .orderedSame }
     }
 
     /// La única línea del plato, si es la sencilla (sin opciones ni nota): la que el «−» y el «+» pueden tocar.
@@ -371,13 +387,17 @@ final class BusinessScreenModel {
         }
     }
 
-    /// «Vaciar y empezar» de la pregunta que sale de la carta.
+    /// «Vaciar y empezar» de la pregunta que sale de la carta. Un segundo toque mientras se guarda el primero no hace
+    /// nada; al terminar dice «Añadido a tu bolsa», igual que la ficha.
     func confirmReplacement() async {
-        guard let detail = visible, let line = pendingLine else { return }
+        guard !isReplacing, let detail = visible, let line = pendingLine else { return }
+        isReplacing = true
+        defer { isReplacing = false }
         pendingLine = nil
         replacement = nil
         do throws(CartError) {
             try await cartStore.replace(businessId: detail.id, businessName: detail.name, line: line)
+            notices.show(DishScreenModel.addedMessage(capped: false))
         } catch {
             notices.show(DishScreenModel.failedMessage)
         }

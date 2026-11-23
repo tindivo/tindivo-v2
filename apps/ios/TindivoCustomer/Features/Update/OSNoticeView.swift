@@ -16,10 +16,14 @@ struct OSNoticeView: View {
             Text("Puedes seguir usando Tindivo, pero algunas funciones podrían no ir bien en esta versión de iOS.")
                 .tindivoText(TindivoTokens.Typography.bodySecondary)
                 .foregroundStyle(Color.tindivo.ink)
-            Button("Entendido", action: onDismiss)
-                .tindivoText(TindivoTokens.Typography.bodySecondary)
-                .frame(minHeight: 44)
-                .accessibilityIdentifier("os-notice.dismiss")
+            Button(action: onDismiss) {
+                // El área de 44 pt va DENTRO de la etiqueta: si no, el toque no la alcanza.
+                Text("Entendido")
+                    .tindivoText(TindivoTokens.Typography.bodySecondary)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("os-notice.dismiss")
         }
         .padding(TindivoTokens.Spacing.spaceScreen)
         .frame(maxWidth: .infinity, alignment: .leading)

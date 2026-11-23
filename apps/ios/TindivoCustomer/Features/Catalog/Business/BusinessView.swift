@@ -40,22 +40,14 @@ struct BusinessView: View {
                     model: model.dishModel ?? model.makeDishModel(for: item),
                     onClose: model.closeDish,
                     onAdded: model.dishAdded,
-                    onLineGone: model.closeDish
+                    onLineGone: model.lineGone
                 )
             }
             // «+» con la bolsa de otro restaurante: la misma pregunta que hace la ficha.
-            .alert(
-                Text("¿Empezar una bolsa nueva?"),
-                isPresented: Binding(get: { model.replacement != nil }, set: { _ in }),
-                presenting: model.replacement
-            ) { _ in
-                Button("Mantener", role: .cancel) { model.keepCurrentBag() }
-                Button("Vaciar y empezar") { Task { await model.confirmReplacement() } }
-            } message: { names in
-                Text(
-                    "Tu bolsa tiene productos de \(names.current). Solo puedes pedir de un restaurante a la vez. Si continúas, vaciaremos tu bolsa para empezar en \(names.new)."
-                )
-            }
+            .replaceBagAlert(
+                model.replacement, onKeep: model.keepCurrentBag,
+                onReplace: { Task { await model.confirmReplacement() } }
+            )
             .task { await model.load() }
             .task { await model.runClock() }
             .task { await model.observeCart() }

@@ -82,7 +82,7 @@ struct HomeRequirementsTests {
         }
         let closed = try #require(loaded.listing.restaurants.first { $0.id == "a" })
         #expect(model.closedLabel(for: closed) == "Cerrado · abre hoy 18:00")
-        #expect(model.schedules["b"] == nil, "un negocio abierto no pide su carta")
+        #expect(model.schedules["b"] != nil, "también se pide la de los abiertos: el reloj sabe cuándo cierran")
     }
 
     @Test("CA-CAT-P2 si la carta no llega, la tarjeta cerrada dice «Cerrado ahora» sin romper la lista")
@@ -161,13 +161,63 @@ struct HomeRequirementsTests {
         #expect(menus.calls == 2, "recargar pide una carta nueva")
     }
 
-    @Test("A2 la tarjeta cerrada se reevalúa cada minuto: pasa de «abre hoy 18:00» a «Cerrado ahora» cuando ya abrió")
-    func closedLabelFollowsTheClock() async throws {
+    @Test(
+        "CUS-CAT-012 A2 cuando el reloj dice que un negocio abrió, Inicio vuelve a pedir la lista UNA vez y la tarjeta deja de decir cerrado"
+    )
+    func listRefreshesWhenTheClockSaysABusinessOpened() async throws {
         let manual = ManualClock(at("2026-07-07", "17:59"))
+        let businesses = Script([
+            .success([summary("a", open: false)]),
+            .success([summary("a", open: true)]),
+        ])
         let catalog = StubCatalog(
-            businesses: Script(just: [summary("a", open: false)]),
+            businesses: businesses,
             menus: Script(
                 just: Fixture.menu([Fixture.category("c", [Fixture.item("i")])], schedule: Fixture.nightSchedule))
+        )
+        let model = CatalogHomeScreenModel(catalog: catalog, clock: manual.clock)
+        await model.load()
+        await model.enrichment?.value
+        guard case let .loaded(before) = model.state else {
+            Issue.record("se esperaba .loaded")
+            return
+        }
+        let card = try #require(before.listing.restaurants.first)
+        #expect(card.closed)
+        #expect(model.closedLabel(for: card) == "Cerrado · abre hoy 18:00")
+        #expect(businesses.calls == 1)
+
+        let task = Task { await model.runClock() }
+        await manual.waitForSleep(number: 1)
+        manual.set(at("2026-07-07", "18:01"))
+        await manual.waitForSleep(number: 2)
+        #expect(businesses.calls == 2, "el cambio se atiende con una recarga")
+        guard case let .loaded(after) = model.state else {
+            Issue.record("se esperaba .loaded")
+            return
+        }
+        #expect(after.listing.restaurants.first?.closed == false, "la tarjeta ya no dice cerrado")
+
+        // Otro minuto sin cambios: no hay otra recarga.
+        manual.set(at("2026-07-07", "18:02"))
+        await manual.waitForSleep(number: 3)
+        #expect(businesses.calls == 2, "una recarga por cambio, no por minuto")
+        task.cancel()
+    }
+
+    @Test(
+        "A2 la tarjeta cerrada se reevalúa cada minuto: «abre hoy 18:00» pasa a «abre mañana» al cerrar el turno de hoy"
+    )
+    func closedLabelFollowsTheClockAcrossShifts() async throws {
+        let manual = ManualClock(at("2026-07-07", "10:59"))
+        let schedule: [BusinessMenu.ScheduleDay] = (0...6).map {
+            .init(
+                dayOfWeek: $0, isOpen: true, shift1Start: "11:00", shift1End: "11:01", shift2Start: "18:00",
+                shift2End: "23:00")
+        }
+        let catalog = StubCatalog(
+            businesses: Script(just: [summary("a", open: false)]),
+            menus: Script(just: Fixture.menu([Fixture.category("c", [Fixture.item("i")])], schedule: schedule))
         )
         let model = CatalogHomeScreenModel(catalog: catalog, clock: manual.clock)
         await model.load()
@@ -177,14 +227,12 @@ struct HomeRequirementsTests {
             return
         }
         let card = try #require(loaded.listing.restaurants.first)
-        #expect(model.closedLabel(for: card) == "Cerrado · abre hoy 18:00")
+        #expect(model.closedLabel(for: card) == "Cerrado · abre hoy 11:00")
         let task = Task { await model.runClock() }
         await manual.waitForSleep(number: 1)
-        manual.set(at("2026-07-07", "18:01"))
+        manual.set(at("2026-07-07", "11:02"))
         await manual.waitForSleep(number: 2)
-        #expect(
-            model.closedLabel(for: card) == "Cerrado ahora",
-            "ya abrió: el servidor aún dice cerrado, la tarjeta no inventa hora")
+        #expect(model.closedLabel(for: card) == "Cerrado · abre hoy 18:00")
         task.cancel()
     }
 }

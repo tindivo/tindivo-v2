@@ -100,7 +100,7 @@ struct CatalogHomeScreenModelTests {
     func noSecondLoadWhileInFlight() async {
         let gate = Gate()
         let businesses = Script(just: [summary("a")])
-        let model = CatalogHomeScreenModel(catalog: StubCatalog(businesses: businesses, gate: gate))
+        let model = CatalogHomeScreenModel(catalog: StubCatalog(businesses: businesses, gate: gate, gatesMenus: false))
         let first = Task { await model.refresh() }
         await eventually { model.state == .loading }
         await model.refresh()
@@ -114,7 +114,7 @@ struct CatalogHomeScreenModelTests {
     func listStaysWhileRefreshing() async {
         let gate = Gate()
         let businesses = Script(just: [summary("a")])
-        let model = CatalogHomeScreenModel(catalog: StubCatalog(businesses: businesses, gate: gate))
+        let model = CatalogHomeScreenModel(catalog: StubCatalog(businesses: businesses, gate: gate, gatesMenus: false))
         gate.open()
         await model.load()
         let second = Task { await model.refresh() }
