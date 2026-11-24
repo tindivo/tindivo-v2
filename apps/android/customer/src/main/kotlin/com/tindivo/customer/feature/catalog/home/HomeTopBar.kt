@@ -2,7 +2,10 @@ package com.tindivo.customer.feature.catalog.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
@@ -28,7 +31,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,14 +53,16 @@ private const val MARK_RATIO = 158f / 93f
 private const val BADGE_MAX = 99
 
 /**
- * La barra superior fija del Inicio (v3.1): isotipo a la izquierda y la bolsa con su contador a la derecha. Falta, a
- * propósito, la píldora «Entregar en · <dirección>»: la app no guarda la dirección elegida fuera de la API y esta
- * pantalla no la pide (cambiaría la red del Inicio).
+ * La barra superior fija del Inicio (v3.1, CUS-CAT-030): isotipo, el chip de dos líneas «Entregar en» / [dirección] y la
+ * bolsa con su contador. [address] es la dirección elegida; nulo (sin sesión o sin libreta) dice «Elige tu dirección».
+ * Tocar el chip es [onOpenAddress]: la pantalla decide si lleva a la libreta o a la entrada.
  */
 @Composable
 internal fun HomeTopBar(
     bagCount: Int,
     onOpenBag: () -> Unit,
+    address: String? = null,
+    onOpenAddress: () -> Unit = {},
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -74,9 +83,44 @@ internal fun HomeTopBar(
                 contentDescription = stringResource(R.string.home_logo_description),
                 modifier = Modifier.height(MARK_HEIGHT).aspectRatio(MARK_RATIO),
             )
-            Box(modifier = Modifier.weight(1f))
+            DeliverToChip(address = address, onClick = onOpenAddress, modifier = Modifier.weight(1f))
             BagButton(count = bagCount, onClick = onOpenBag)
         }
+    }
+}
+
+/** «Entregar en» pequeño y, debajo, la dirección en una línea con elipsis. Toque de 48 dp como mínimo. */
+@Composable
+internal fun DeliverToChip(
+    address: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shown = address ?: stringResource(R.string.home_pick_address)
+    val description = stringResource(R.string.home_deliver_to_description, shown)
+    Column(
+        modifier =
+            modifier
+                .padding(horizontal = TindivoSpacing.screen)
+                .defaultMinSize(minHeight = TindivoSpacing.touchTarget)
+                .clickable(role = Role.Button, onClick = onClick)
+                .clearAndSetSemantics { contentDescription = description },
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.home_deliver_to),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+        Text(
+            text = shown,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

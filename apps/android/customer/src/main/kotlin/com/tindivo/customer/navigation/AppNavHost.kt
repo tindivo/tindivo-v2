@@ -202,6 +202,8 @@ private fun NavGraphBuilder.catalogGraph(navController: NavHostController) {
             onOpenCart = { navController.navigate(CartRoute) },
             onOpenCourier = { navController.navigate(CourierHomeRoute()) { launchSingleTop = true } },
             onOpenStore = { navController.navigate(StoreListRoute()) { launchSingleTop = true } },
+            onOpenAddresses = { navController.navigate(AddressesRoute) },
+            onSignIn = { navController.navigate(SignInRoute) },
         )
         // «¿Cómo estuvo tu pedido?»: sale sola si hay una reseña pendiente. Sin sesión no consulta nada.
         ReviewHost(rememberReviewController(autoPrompt = true))
