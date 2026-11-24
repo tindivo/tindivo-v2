@@ -12,8 +12,12 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.tindivo.core.designsystem.TindivoTheme
@@ -63,10 +67,12 @@ class BusinessHeaderTest {
             categories = listOf(category("Pollos"), category("Bebidas"), category("Postres")),
         )
 
+    private var backClicks = 0
+
     private fun show() {
         compose.setContent {
             TindivoTheme {
-                BusinessScreen(state = BusinessUiState.Loaded(business), onRefresh = {}, onBack = {})
+                BusinessScreen(state = BusinessUiState.Loaded(business), onRefresh = {}, onBack = { backClicks++ })
             }
         }
     }
@@ -172,5 +178,35 @@ class BusinessHeaderTest {
         list.performScrollToIndex(headers[1])
         compose.waitForIdle()
         pinnedChip("Bebidas").assertIsSelected()
+    }
+
+    @Test
+    fun volver_y_buscar_responden_al_toque_con_la_barra_que_consume_toques() {
+        show()
+
+        compose.onNodeWithContentDescription("Volver").performClick()
+        assertTrue("Volver no llegó a onBack", backClicks == 1)
+
+        compose.onNodeWithContentDescription("Buscar en la carta").performClick()
+        // Con la búsqueda abierta aparece el campo de búsqueda del negocio.
+        compose.onNodeWithText("Buscar en Pollería Don Lucho").assertIsDisplayed()
+    }
+
+    @Test
+    fun deslizar_sobre_los_chips_pegados_o_la_barra_mueve_la_carta() {
+        show()
+        list.performScrollToIndex(headers[0] + 3)
+        compose.waitForIdle()
+        val before = list.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+
+        compose.onNodeWithTag(PINNED_CHIPS_TAG).performTouchInput { swipeUp(startY = bottom - 1f, endY = top + 1f) }
+        compose.waitForIdle()
+        val afterChips = list.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        assertTrue("los chips no pasaron el gesto ($before -> $afterChips)", afterChips > before)
+
+        compose.onNodeWithTag(TOP_BAR_TAG).performTouchInput { swipeDown(startY = top + 1f, endY = bottom - 1f) }
+        compose.waitForIdle()
+        val afterBar = list.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        assertTrue("la barra no pasó el gesto ($afterChips -> $afterBar)", afterBar < afterChips)
     }
 }

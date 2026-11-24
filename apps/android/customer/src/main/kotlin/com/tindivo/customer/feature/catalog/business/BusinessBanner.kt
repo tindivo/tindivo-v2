@@ -63,7 +63,7 @@ internal fun BusinessBanner(
                 Modifier
                     .fillMaxWidth()
                     .height(statusBar + 24.dp)
-                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent))),
+                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent))),
         )
     }
 }
