@@ -3688,6 +3688,10 @@ export type Database = {
       }
       close_drivers_outside_schedule: { Args: never; Returns: number }
       complete_push_event: { Args: { p_event_id: string }; Returns: boolean }
+      confirm_delivery_payment: {
+        Args: { p_actor_user_id: string; p_order_id: string }
+        Returns: Json
+      }
       confirm_order_cash: {
         Args: { p_business_user_id: string; p_settlement_id: string }
         Returns: Json
@@ -3933,6 +3937,10 @@ export type Database = {
       delivery_band_for_point: {
         Args: { p_lat: number; p_lng: number }
         Returns: Database["public"]["Enums"]["distance_band"]
+      }
+      delivery_payment_proof_next_attempt: {
+        Args: { p_customer_user_id: string; p_order_id: string }
+        Returns: number
       }
       derive_business_primary_capability: {
         Args: {
@@ -4214,6 +4222,10 @@ export type Database = {
         }
         Returns: Json
       }
+      register_delivery_payment_proof: {
+        Args: { p_customer_user_id: string; p_order_id: string; p_path: string }
+        Returns: Json
+      }
       register_prepay_proof: {
         Args: { p_customer_user_id: string; p_order_id: string; p_path: string }
         Returns: Json
@@ -4263,6 +4275,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      reject_delivery_payment_proof: {
+        Args: {
+          p_actor_user_id: string
+          p_attempt: number
+          p_order_id: string
+          p_reason_code: string
+        }
+        Returns: Json
       }
       release_phone_code: {
         Args: { p_attempt_id: string; p_user_id: string }

@@ -1,5 +1,6 @@
 import { DomainError } from '@tindivo/core'
 import type { TypedSupabaseClient } from '@tindivo/supabase'
+import { deliveryProofNextAttempt } from './delivery-payment'
 
 const BUCKET = 'payment-proofs'
 /** Lo que Supabase documenta para las URL firmadas de subida, si el token no trae `exp`. */
@@ -22,8 +23,13 @@ export async function nextProofAttempt(
   if (error) {
     if (error.code === 'P0002') throw new DomainError('Pedido no encontrado', 'not_found')
     if (error.code === 'P0001') {
-      if (error.hint === 'order_not_awaiting_proof')
+      if (error.hint === 'order_not_awaiting_proof') {
+        // No espera un prepago: puede ser el pago único del cliente de confianza (0294), que
+        // sube su captura con las mismas rutas. Si tampoco lo es, vale la negativa del prepago.
+        const attempt = await deliveryProofNextAttempt(db, orderId, customerUserId)
+        if (attempt !== null) return attempt
         throw new DomainError(error.message, 'invalid_state_transition')
+      }
       // Intentos agotados: lo mismo que responde `prepay-proof`.
       throw new DomainError(error.message, 'forbidden')
     }
