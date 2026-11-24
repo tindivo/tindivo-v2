@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * La categoría marcada en los chips: sigue a la carta al hacer scroll y salta a una sección al tocar un chip.
@@ -18,14 +20,15 @@ import androidx.compose.runtime.snapshotFlow
 internal class SectionSpy(
     private val listState: LazyListState,
     private val headerIndices: List<Int>,
+    private val scope: CoroutineScope,
 ) {
     var selected by mutableIntStateOf(0)
         private set
 
     private var jumps = 0
 
-    /** Alto en píxeles del selector pegado: lo que tapa de la carta, y por tanto cuánto se deja libre al saltar. */
-    var stickyHeightPx: Int = 0
+    /** Alto en píxeles del selector pegado bajo la barra: lo que tapa de la carta, y por tanto cuánto se deja libre al saltar. */
+    var stickyHeightPx by mutableIntStateOf(0)
 
     /** Corre mientras la pantalla esté; se lanza con `LaunchedEffect`. */
     suspend fun follow() {
@@ -43,7 +46,15 @@ internal class SectionSpy(
         return activeCategoryIndex(headerIndices, first, lookahead = hidden)
     }
 
-    suspend fun jumpTo(category: Int) {
+    /**
+     * Salta a [category]. Corre en el scope de la pantalla y no en el del chip: la fila de chips de la carta sale de
+     * pantalla en cuanto el salto la hace subir, y su scope cancelaría el desplazamiento a medias.
+     */
+    fun jumpTo(category: Int) {
+        scope.launch { scrollTo(category) }
+    }
+
+    private suspend fun scrollTo(category: Int) {
         val header = headerIndices.getOrNull(category) ?: return
         selected = category
         jumps++

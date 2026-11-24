@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -147,6 +149,8 @@ internal fun DishPage(
                 }
             }
         }
+    // Iconos de la barra de estado claros sobre la foto y oscuros con la barra sólida; al salir se restauran.
+    StatusBarIconsOverBanner { barProgress() < 0.5f }
     Column(
         modifier =
             Modifier
@@ -160,12 +164,24 @@ internal fun DishPage(
             Column(modifier = Modifier.fillMaxSize().verticalScroll(scroll)) {
                 if (hasPhoto) {
                     // Decorativa a propósito: el nombre del plato está justo debajo.
-                    DishPhoto(
-                        imageUrl = item.imageUrl,
-                        shape = RectangleShape,
-                        markWidth = 72.dp,
-                        modifier = Modifier.fillMaxWidth().height(DISH_PHOTO_HEIGHT + statusBar),
-                    )
+                    Box(modifier = Modifier.fillMaxWidth().height(DISH_PHOTO_HEIGHT + statusBar)) {
+                        DishPhoto(
+                            imageUrl = item.imageUrl,
+                            shape = RectangleShape,
+                            markWidth = 72.dp,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        // Velo oscuro bajo la barra de estado: sus iconos y el botón se leen sobre cualquier foto.
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(statusBar + 24.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent)),
+                                    ),
+                        )
+                    }
                 } else {
                     Spacer(modifier = Modifier.height(statusBar + TOP_BAR_HEIGHT))
                 }
