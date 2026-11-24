@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -73,7 +74,15 @@ class HomeTopBarTest {
             }
         }
 
-        compose.onNodeWithText("Casa", substring = true).assertIsDisplayed()
+        try {
+            compose.onNodeWithText("Casa", substring = true).assertIsDisplayed()
+        } catch (e: AssertionError) {
+            val n = compose.onNodeWithText("Casa", substring = true).fetchSemanticsNode()
+            throw AssertionError(
+                "bounds=${n.boundsInRoot} size=${n.size} root=${compose.onRoot().fetchSemanticsNode().size}",
+                e,
+            )
+        }
         compose.onNodeWithText("Entregar en").assertIsDisplayed()
     }
 }
