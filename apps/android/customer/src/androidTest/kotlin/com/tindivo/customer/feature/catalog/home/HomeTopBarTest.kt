@@ -1,10 +1,14 @@
 package com.tindivo.customer.feature.catalog.home
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.tindivo.core.designsystem.TindivoTheme
@@ -24,7 +28,12 @@ class HomeTopBarTest {
         var taps = 0
         compose.setContent {
             TindivoTheme {
-                HomeTopBar(bagCount = 0, onOpenBag = {}, address = "Casa · Jr. Sucre 412", onOpenAddress = { taps++ })
+                HomeTopBar(
+                    bagCount = 0,
+                    onOpenBag = {},
+                    chip = HomeChip.Address("Casa · Jr. Sucre 412"),
+                    onOpenAddress = { taps++ },
+                )
             }
         }
 
@@ -35,8 +44,30 @@ class HomeTopBarTest {
 
     @Test
     fun sinDireccionPideElegirla() {
-        compose.setContent { TindivoTheme { HomeTopBar(bagCount = 0, onOpenBag = {}, address = null) } }
+        compose.setContent { TindivoTheme { HomeTopBar(bagCount = 0, onOpenBag = {}, chip = HomeChip.Pick) } }
 
-        compose.onNodeWithContentDescription("Entregar en Elige tu dirección. Cambiar").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Elige tu dirección de entrega").assertIsDisplayed()
+    }
+
+    @Test
+    fun sinSaberAunNoDiceQueNoTengasDirecciones() {
+        compose.setContent { TindivoTheme { HomeTopBar(bagCount = 0, onOpenBag = {}, chip = HomeChip.Library) } }
+
+        compose.onNodeWithContentDescription("Entregar en. Abrir mis direcciones").assertIsDisplayed()
+    }
+
+    @Test
+    fun conLetraGrandeNoSeRecortaLaSegundaLinea() {
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                TindivoTheme {
+                    HomeTopBar(bagCount = 0, onOpenBag = {}, chip = HomeChip.Address("Casa · Jr. Sucre 412"))
+                }
+            }
+        }
+
+        compose.onNodeWithText("Casa", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Entregar en").assertIsDisplayed()
     }
 }

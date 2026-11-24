@@ -22,6 +22,9 @@
     <string name="home_deliver_to">Entregar en</string>
     <string name="home_pick_address">Elige tu dirección</string>
     <string name="home_deliver_to_description">Entregar en %1$s. Cambiar</string>
+    <string name="home_pick_address_description">Elige tu dirección de entrega</string>
+    <string name="home_my_addresses">Mis direcciones</string>
+    <string name="home_my_addresses_description">Entregar en. Abrir mis direcciones</string>
     <plurals name="home_bag_description">
         <item quantity="one">Mi bolsa, %1$d producto</item>
         <item quantity="other">Mi bolsa, %1$d productos</item>

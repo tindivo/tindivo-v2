@@ -69,7 +69,7 @@ fun CatalogHomeDestination(
         onOpenCart = onOpenCart,
         onOpenCourier = onOpenCourier,
         onOpenStore = onOpenStore,
-        address = address.text,
+        chip = address.chip(),
         // La libreta pide sesión: sin ella, el chip lleva a la entrada, como el resto de la app.
         onOpenAddress = if (address.signedIn) onOpenAddresses else onSignIn,
     )
@@ -85,12 +85,12 @@ fun CatalogHomeScreen(
     onOpenCart: () -> Unit = {},
     onOpenCourier: () -> Unit = {},
     onOpenStore: () -> Unit = {},
-    address: String? = null,
+    chip: HomeChip? = HomeChip.Pick,
     onOpenAddress: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
-            HomeTopBar(bagCount = bagCount, onOpenBag = onOpenCart, address = address, onOpenAddress = onOpenAddress)
+            HomeTopBar(bagCount = bagCount, onOpenBag = onOpenCart, chip = chip, onOpenAddress = onOpenAddress)
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {

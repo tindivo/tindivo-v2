@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -54,14 +55,14 @@ private const val BADGE_MAX = 99
 
 /**
  * La barra superior fija del Inicio (v3.1, CUS-CAT-030): isotipo, el chip de dos líneas «Entregar en» / [dirección] y la
- * bolsa con su contador. [address] es la dirección elegida; nulo (sin sesión o sin libreta) dice «Elige tu dirección».
+ * bolsa con su contador. [chip] dice qué mostrar (ver `HomeAddressState.chip`).
  * Tocar el chip es [onOpenAddress]: la pantalla decide si lleva a la libreta o a la entrada.
  */
 @Composable
 internal fun HomeTopBar(
     bagCount: Int,
     onOpenBag: () -> Unit,
-    address: String? = null,
+    chip: HomeChip? = HomeChip.Pick,
     onOpenAddress: () -> Unit = {},
 ) {
     Surface(
@@ -73,7 +74,7 @@ internal fun HomeTopBar(
             modifier =
                 Modifier
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .height(BAR_HEIGHT)
+                    .heightIn(min = BAR_HEIGHT)
                     .padding(start = TindivoSpacing.screen, end = TindivoSpacing.hairline),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -83,43 +84,70 @@ internal fun HomeTopBar(
                 contentDescription = stringResource(R.string.home_logo_description),
                 modifier = Modifier.height(MARK_HEIGHT).aspectRatio(MARK_RATIO),
             )
-            DeliverToChip(address = address, onClick = onOpenAddress, modifier = Modifier.weight(1f))
+            if (chip != null) {
+                DeliverToChip(chip = chip, onClick = onOpenAddress, modifier = Modifier.weight(1f))
+            } else {
+                Box(modifier = Modifier.weight(1f))
+            }
             BagButton(count = bagCount, onClick = onOpenBag)
         }
     }
 }
 
-/** «Entregar en» pequeño y, debajo, la dirección en una línea con elipsis. Toque de 48 dp como mínimo. */
+/**
+ * «Entregar en» pequeño y, debajo, la dirección en una línea con elipsis, con un chevron que dice que se toca. Toque de
+ * 48 dp como mínimo.
+ */
 @Composable
 internal fun DeliverToChip(
-    address: String?,
+    chip: HomeChip,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shown = address ?: stringResource(R.string.home_pick_address)
-    val description = stringResource(R.string.home_deliver_to_description, shown)
-    Column(
+    val (shown, description) =
+        when (chip) {
+            is HomeChip.Address -> {
+                chip.text to stringResource(R.string.home_deliver_to_description, chip.text)
+            }
+
+            HomeChip.Pick -> {
+                stringResource(R.string.home_pick_address) to stringResource(R.string.home_pick_address_description)
+            }
+
+            HomeChip.Library -> {
+                stringResource(R.string.home_my_addresses) to stringResource(R.string.home_my_addresses_description)
+            }
+        }
+    Row(
         modifier =
             modifier
                 .padding(horizontal = TindivoSpacing.screen)
                 .defaultMinSize(minHeight = TindivoSpacing.touchTarget)
                 .clickable(role = Role.Button, onClick = onClick)
                 .clearAndSetSemantics { contentDescription = description },
-        verticalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = stringResource(R.string.home_deliver_to),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
-        Text(
-            text = shown,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        Column(modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.Center) {
+            Text(
+                text = stringResource(R.string.home_deliver_to),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+            Text(
+                text = shown,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Icon(
+            imageVector = TindivoIcons.ExpandMore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
         )
     }
 }

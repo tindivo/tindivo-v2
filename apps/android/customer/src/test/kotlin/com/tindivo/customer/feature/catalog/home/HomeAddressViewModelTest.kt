@@ -23,37 +23,52 @@ internal class HomeAddressViewModelTest : AddressHarness() {
     ) = AddressUi(UUID.randomUUID(), label, line, "", null, confirmed = true, isDefault = isDefault)
 
     @Test
-    fun `el chip muestra la predeterminada con su etiqueta y su calle`() =
+    fun `abrir no pide nada hasta el primer refresh y entonces es una sola peticion`() =
         runTest {
             server.enqueue(addressList(address(ID_B, isDefault = false, line = "Jr. Lima 1"), address()))
-
             val vm = HomeAddressViewModel(addressRepo(), store)
+            assertEquals(0, server.requestCount)
+            assertEquals(HomeChip.Library, vm.state.value.chip())
 
-            val state = vm.state.first { it.text != null }
-            assertEquals(true, state.signedIn)
-            assertEquals("Casa · Jr. Sucre 412", state.text)
+            vm.refresh()
+
+            val state = vm.state.first { it.loaded }
+            assertEquals(HomeChip.Address("Casa · Jr. Sucre 412"), state.chip())
+            assertEquals(1, server.requestCount)
         }
 
     @Test
-    fun `sin direcciones guardadas no hay texto y el chip pide elegir`() =
+    fun `sin direcciones guardadas el chip pide elegir`() =
         runTest {
             server.enqueue(addressList())
-
             val vm = HomeAddressViewModel(addressRepo(), store)
 
-            assertNull(vm.state.value.text)
-            assertEquals(true, vm.state.value.signedIn)
+            vm.refresh()
+
+            assertEquals(HomeChip.Pick, vm.state.first { it.loaded }.chip())
         }
 
     @Test
-    fun `sin sesion no llama a la API y no hay texto`() =
+    fun `si la lectura falla no dice que no hay direcciones`() =
+        runTest {
+            server.enqueue(problem(500, "internal_error"))
+            val vm = HomeAddressViewModel(addressRepo(), store)
+
+            vm.refresh()
+
+            assertFalse(vm.state.value.loaded)
+            assertEquals(HomeChip.Library, vm.state.value.chip())
+        }
+
+    @Test
+    fun `sin sesion no llama a la API y el chip pide elegir`() =
         runTest {
             val vm = HomeAddressViewModel(addressRepo(), FakeSessionStore(SessionState.SignedOut))
 
             vm.refresh()
 
             assertFalse(vm.state.value.signedIn)
-            assertNull(vm.state.value.text)
+            assertEquals(HomeChip.Pick, vm.state.value.chip())
             assertEquals(0, server.requestCount)
         }
 
