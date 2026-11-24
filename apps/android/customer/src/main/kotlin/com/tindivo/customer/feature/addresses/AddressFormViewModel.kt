@@ -149,6 +149,9 @@ internal class AddressFormViewModel
         private var locateJob: Job? = null
         private var suggestJob: Job? = null
 
+        /** El punto para el que llegó la calle sugerida que hay en el campo: si el punto confirmado cambia, esa calle ya no vale. */
+        private var suggestedFor: GeoPoint? = null
+
         /** El punto y su precisión al abrir el mapa desde «Cambiar»: si la persona vuelve con Atrás, se restauran. */
         private var changeSnapshot: PointSnapshot? = null
 
@@ -250,13 +253,22 @@ internal class AddressFormViewModel
             val point = s.point ?: return
             if (s.busy || (s.line.isNotBlank() && !s.lineSuggested)) return
             suggestJob?.cancel()
-            _state.update { it.copy(suggesting = true, localityOnly = null) }
+            // La calle sugerida para otro punto, que la persona no tocó, ya no vale: se descarta antes de buscar la nueva.
+            val stale = s.lineSuggested && suggestedFor != point
+            _state.update {
+                if (stale) {
+                    it.copy(suggesting = true, localityOnly = null, line = "", lineSuggested = false)
+                } else {
+                    it.copy(suggesting = true, localityOnly = null)
+                }
+            }
             suggestJob =
                 viewModelScope.launch {
                     // Tope propio: si el geocodificador no contesta, la persona sigue escribiendo y guarda.
                     val suggestion =
                         withTimeoutOrNull(GEOCODE_TIMEOUT_MS) { streets.suggest(point) } ?: StreetSuggestion.None
                     settle { it.withSuggestion(suggestion) }
+                    if (_state.value.lineSuggested) suggestedFor = point
                 }
         }
 

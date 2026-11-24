@@ -6,6 +6,7 @@ import android.location.Geocoder
 import android.os.Build
 import com.tindivo.customer.di.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -34,7 +35,19 @@ internal class GeocoderStreetSuggester
             // Antes de la API 33 la llamada bloquea el hilo y no responde a la cancelación: corre en un alcance aparte y
             // aquí solo se espera con tope; si pasa, se deja de esperar aunque el hilo siga (acaba solo).
             val found =
-                withHardTimeout(GEOCODE_TIMEOUT_MS, CoroutineScope(SupervisorJob() + io)) { lookup(geocoder, point) }
+                try {
+                    withHardTimeout(
+                        GEOCODE_TIMEOUT_MS,
+                        CoroutineScope(SupervisorJob() + io),
+                    ) { lookup(geocoder, point) }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") failure: Exception,
+                ) {
+                    // Un servicio de geocodificación que falla (en alguna ROM, con excepciones propias) no cierra la app.
+                    null
+                }
             return if (found == null) StreetSuggestion.None else suggestionFrom(found.map { it.toGeocoded() })
         }
 

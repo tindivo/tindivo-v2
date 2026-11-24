@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -55,6 +56,10 @@ class AddressStepsTest {
     }
 
     private val inside = GeoPoint(-9.1547, -78.5042)
+
+    private companion object {
+        const val WAIT_MILLIS = 5_000L
+    }
 
     @Test
     fun withoutAPointTheWelcomeCardInvitesToMarkTheDoor() {
@@ -168,6 +173,9 @@ class AddressStepsTest {
     fun backOnTheMapAfterChangeReturnsToTheDetailsWithWhatWasTyped() {
         show(AddressFormState(loading = false, point = inside, line = "Jr. Sucre 412"))
         compose.onNodeWithText("Cambiar").performClick()
+        compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithText("Sí, aquí es mi puerta").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Sí, aquí es mi puerta").assertIsDisplayed()
 
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }

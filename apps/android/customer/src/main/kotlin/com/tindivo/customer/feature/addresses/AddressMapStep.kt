@@ -103,7 +103,7 @@ internal fun MapStep(
                 },
                 modifier = Modifier.fillMaxSize().semantics { contentDescription = mapDescription },
             )
-            MapTopBar(showClose, actions.onCancel, satellite) { satellite = it }
+            MapTopBar(showClose, !state.busy, actions.onCancel, satellite) { satellite = it }
             if (started && state.point == null) HintPill(Modifier.align(Alignment.TopCenter).padding(top = 64.dp))
             if (requester.available) {
                 LocateFab(
@@ -135,6 +135,7 @@ internal fun MapStep(
 @Composable
 private fun MapTopBar(
     showClose: Boolean,
+    closeEnabled: Boolean,
     onClose: () -> Unit,
     satellite: Boolean,
     onSatellite: (Boolean) -> Unit,
@@ -146,7 +147,7 @@ private fun MapTopBar(
     ) {
         if (showClose) {
             Surface(shape = CircleShape, shadowElevation = 4.dp) {
-                IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
+                IconButton(onClick = onClose, enabled = closeEnabled, modifier = Modifier.size(48.dp)) {
                     Icon(TindivoIcons.Close, contentDescription = stringResource(R.string.address_form_close))
                 }
             }

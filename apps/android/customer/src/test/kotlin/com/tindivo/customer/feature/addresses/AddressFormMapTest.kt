@@ -292,4 +292,35 @@ internal class AddressFormMapTest : AddressHarness() {
 
             assertEquals(FormOutcome.Saved(ID_C), vm.state.value.outcome)
         }
+
+    @Test
+    fun `al confirmar otro punto la calle sugerida del anterior se descarta mientras llega la nueva`() =
+        runTest {
+            streets.next = StreetSuggestion.Street("Jr. Sucre 412")
+            val vm = ready()
+            vm.onPointChosen(manual)
+            vm.onPointConfirmed()
+            assertEquals("Jr. Sucre 412", vm.state.value.line)
+
+            streets.delayMs = 30_000
+            vm.onPointChosen(gps)
+            vm.onPointConfirmed()
+
+            assertEquals("", vm.state.value.line)
+            assertTrue(vm.state.value.suggesting)
+        }
+
+    @Test
+    fun `confirmar el mismo punto otra vez conserva la calle sugerida`() =
+        runTest {
+            streets.next = StreetSuggestion.Street("Jr. Sucre 412")
+            val vm = ready()
+            vm.onPointChosen(manual)
+            vm.onPointConfirmed()
+
+            streets.delayMs = 30_000
+            vm.onPointConfirmed()
+
+            assertEquals("Jr. Sucre 412", vm.state.value.line)
+        }
 }
