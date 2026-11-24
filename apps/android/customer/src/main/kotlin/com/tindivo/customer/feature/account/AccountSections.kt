@@ -163,26 +163,6 @@ private fun PhoneLine(profile: AccountProfileUi) {
 }
 
 /**
- * «Mis direcciones» como bloque propio. El tablero lista las direcciones aquí mismo; la cuenta no las trae, así que la
- * fila abre la libreta (listarlas aquí es un cambio de datos).
- */
-@Composable
-internal fun AddressesCard(onOpenAddresses: () -> Unit) {
-    TindivoCard(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.account_addresses),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).semantics { heading() },
-        )
-        SettingsRow(
-            label = stringResource(R.string.account_addresses_open),
-            icon = TindivoIcons.Place,
-            onClick = onOpenAddresses,
-        )
-    }
-}
-
-/**
  * Ayuda y legal (CUS-SUP-001/002/003), en una tarjeta con divisores. Todo lo que sale de la app lleva
  * la flecha de «abrir fuera».
  */

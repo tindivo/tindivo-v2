@@ -263,6 +263,8 @@ private fun NavGraphBuilder.accountGraph(navController: NavHostController) {
                     onOpen = { navController.navigate(ProfileRoute) },
                 ),
             onDeleteAccount = { navController.navigate(DeleteAccountRoute) },
+            onAddAddress = { navController.navigate(AddressFormRoute()) },
+            onEditAddress = { id -> navController.navigate(AddressFormRoute(id)) },
             // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
             onOpenDiagnostics =
                 if (BuildConfig.DEBUG) {

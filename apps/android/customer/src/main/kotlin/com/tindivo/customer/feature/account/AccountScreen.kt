@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.core.designsystem.TindivoPrimaryButton
@@ -41,8 +42,11 @@ import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.addresses.AddressListUiState
+import com.tindivo.customer.feature.addresses.AddressListViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
+import java.util.UUID
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -54,10 +58,21 @@ fun AccountDestination(
     onPhoneChangeHandled: () -> Unit,
     profile: ProfileLink,
     onDeleteAccount: () -> Unit,
+    onAddAddress: () -> Unit,
+    onEditAddress: (String) -> Unit,
     onOpenDiagnostics: (() -> Unit)? = null,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val addressList = hiltViewModel<AddressListViewModel>()
+    val addresses = addressList.state.collectAsStateWithLifecycle().value
+    // Al volver de la libreta o del formulario la lista que se tenía ya no es la del servidor; el primer cuadro ya la
+    // trajo el ViewModel al crearse.
+    var firstResume by remember { mutableStateOf(true) }
+    LifecycleResumeEffect(Unit) {
+        if (firstResume) firstResume = false else addressList.refresh(quiet = true)
+        onPauseOrDispose {}
+    }
     val supportNumber = hiltViewModel<SupportViewModel>().number.collectAsStateWithLifecycle().value
     val nameEdit = viewModel.nameEdit.collectAsStateWithLifecycle().value
     // Volvió de «Completa tu perfil» con el perfil ya creado: se carga la cuenta.
@@ -97,6 +112,10 @@ fun AccountDestination(
         nameEdit = nameEdit,
         onSaveName = viewModel::saveName,
         onDismissNameEdit = viewModel::dismissNameEdit,
+        addresses = addresses,
+        onAddAddress = onAddAddress,
+        onEditAddress = { onEditAddress(it.toString()) },
+        onRetryAddresses = { addressList.refresh() },
     )
 }
 
@@ -108,7 +127,7 @@ class ProfileLink(
 )
 
 @Composable
-fun AccountScreen(
+internal fun AccountScreen(
     state: AccountUiState,
     onRetry: () -> Unit,
     onOpenAddresses: () -> Unit,
@@ -121,7 +140,19 @@ fun AccountScreen(
     nameEdit: NameEditState = NameEditState.Idle,
     onSaveName: (String) -> Unit = {},
     onDismissNameEdit: () -> Unit = {},
+    addresses: AddressListUiState = AddressListUiState.Loading,
+    onAddAddress: () -> Unit = {},
+    onEditAddress: (UUID) -> Unit = {},
+    onRetryAddresses: () -> Unit = {},
 ) {
+    val addressesCard =
+        AddressesCardModel(
+            state = addresses,
+            onOpenAll = onOpenAddresses,
+            onAdd = onAddAddress,
+            onEdit = onEditAddress,
+            onRetry = onRetryAddresses,
+        )
     Scaffold { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp),
@@ -144,7 +175,7 @@ fun AccountScreen(
                 is AccountUiState.ProfileMissing -> {
                     ProfileMissing(
                         onCompleteProfile = onCompleteProfile,
-                        onOpenAddresses = onOpenAddresses,
+                        addresses = addressesCard,
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
                         onOpenDiagnostics = onOpenDiagnostics,
@@ -155,7 +186,7 @@ fun AccountScreen(
                 is AccountUiState.Loaded -> {
                     Profile(
                         profile = state.profile,
-                        onOpenAddresses = onOpenAddresses,
+                        addresses = addressesCard,
                         onVerifyPhone = onVerifyPhone,
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
@@ -226,7 +257,7 @@ private fun ColumnScope.AccountColumn(content: @Composable ColumnScope.() -> Uni
 @Composable
 private fun ColumnScope.ProfileMissing(
     onCompleteProfile: () -> Unit,
-    onOpenAddresses: () -> Unit,
+    addresses: AddressesCardModel,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
@@ -254,7 +285,7 @@ private fun ColumnScope.ProfileMissing(
                 )
             }
         }
-        AddressesCard(onOpenAddresses = onOpenAddresses)
+        AddressesCard(addresses)
         SettingsCard(supportNumber = supportNumber)
         SignOutCard(onSignOut = onSignOut)
         // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
@@ -265,7 +296,7 @@ private fun ColumnScope.ProfileMissing(
 @Composable
 private fun ColumnScope.Profile(
     profile: AccountProfileUi,
-    onOpenAddresses: () -> Unit,
+    addresses: AddressesCardModel,
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
@@ -295,7 +326,7 @@ private fun ColumnScope.Profile(
     }
     AccountColumn {
         ProfileCard(profile = profile, onEditName = { editing = true }, onVerifyPhone = onVerifyPhone)
-        AddressesCard(onOpenAddresses = onOpenAddresses)
+        AddressesCard(addresses)
         SettingsCard(supportNumber = supportNumber)
         SignOutCard(onSignOut = onSignOut)
         AccountFooter(onDeleteAccount = onDeleteAccount, onOpenDiagnostics = onOpenDiagnostics)

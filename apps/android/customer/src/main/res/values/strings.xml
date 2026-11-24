@@ -167,7 +167,15 @@
     <string name="account_sign_out">Cerrar sesión</string>
 
     <string name="account_addresses">Mis direcciones</string>
-    <string name="account_addresses_open">Ver y editar mis direcciones</string>
+    <string name="account_addresses_empty">Aún no tienes direcciones</string>
+    <string name="account_addresses_add_first">Agregar dirección</string>
+    <string name="account_addresses_add">+ Agregar dirección</string>
+    <string name="account_addresses_see_all">Ver todas (%1$d)</string>
+    <string name="account_addresses_error">No pudimos cargar tus direcciones</string>
+    <string name="account_addresses_retry">Reintentar</string>
+    <string name="account_addresses_loading">Cargando tus direcciones</string>
+    <string name="account_addresses_row">%1$s, %2$s. Toca para editar</string>
+    <string name="account_addresses_row_default">%1$s, %2$s, predeterminada. Toca para editar</string>
     <string name="account_verified">Verificado</string>
     <string name="account_version">Tindivo %1$s</string>
     <string name="addresses_title">Mis direcciones</string>

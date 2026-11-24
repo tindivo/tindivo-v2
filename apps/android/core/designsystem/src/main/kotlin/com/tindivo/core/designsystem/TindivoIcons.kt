@@ -243,6 +243,16 @@ object TindivoIcons {
         )
     }
 
+    /** Maletín: la dirección «Trabajo». */
+    val Work: ImageVector by lazy {
+        icon(
+            "Work",
+            "M20,6h-4V4c0,-1.11 -0.89,-2 -2,-2h-4c-1.11,0 -2,0.89 -2,2v2H4c-1.11,0 -1.99,0.89 -1.99,2L2,19" +
+                "c0,1.11 0.89,2 2,2h16" +
+                "c1.11,0 2,-0.89 2,-2V8c0,-1.11 -0.89,-2 -2,-2zM10,4h4v2h-4V4z",
+        )
+    }
+
     /** Tienda: recoger en el local. */
     val Storefront: ImageVector by lazy {
         icon("Storefront", "M20,4H4v2h16V4zM21,14v-2l-1,-5H4l-1,5v2h1v6h10v-6h4v6h2v-6h1zM12,18H6v-4h6v4z")
