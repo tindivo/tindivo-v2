@@ -1,6 +1,9 @@
 package com.tindivo.customer.feature.catalog.home
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
@@ -62,7 +65,10 @@ class HomeTopBarTest {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
                 TindivoTheme {
-                    HomeTopBar(bagCount = 0, onOpenBag = {}, chip = HomeChip.Address("Casa · Jr. Sucre 412"))
+                    // 360 dp de ancho, el teléfono común, sea cual sea el aparato donde corra la prueba.
+                    Box(modifier = Modifier.width(360.dp)) {
+                        HomeTopBar(bagCount = 0, onOpenBag = {}, chip = HomeChip.Address("Casa · Jr. Sucre 412"))
+                    }
                 }
             }
         }
