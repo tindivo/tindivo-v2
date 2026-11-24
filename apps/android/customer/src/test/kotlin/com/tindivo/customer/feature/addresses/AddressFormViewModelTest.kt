@@ -31,6 +31,7 @@ internal class AddressFormViewModelTest : AddressHarness() {
         store,
         configService,
         FakeLocationSource(),
+        FakeStreetSuggester(),
     )
 
     private suspend fun AddressFormViewModel.ready(): AddressFormState = state.first { !it.loading }
