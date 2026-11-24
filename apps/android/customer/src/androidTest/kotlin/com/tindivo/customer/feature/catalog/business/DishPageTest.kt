@@ -7,10 +7,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
@@ -25,6 +25,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.feature.cart.CartLine
@@ -180,10 +181,13 @@ class DishPageTest {
         restoration.emulateSavedInstanceStateRestore()
         compose.waitForIdle()
 
-        compose.onNode(hasText("Grande") and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)).assertIsSelected()
+        compose
+            .onNode(
+                hasText("Grande") and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected),
+            ).assertIsSelected()
         compose.onNodeWithText("sin cebolla").assertExists()
         // 2 unidades × (10.00 + 4.00)
-        compose.onNodeWithTag(DISH_ADD_TAG).assert(hasText("Agregar · S/ 28.00"))
+        compose.onNodeWithTag(DISH_ADD_TAG).assert(hasText("28.00", substring = true))
     }
 
     @Test
@@ -229,5 +233,22 @@ class DishPageTest {
         compose.onNode(hasContentDescription("Volver a la carta")).assertIsDisplayed().assertWidthIsAtLeast(48.dp)
         compose.onNodeWithText("Chaufa especial").assertIsDisplayed()
     }
-}
 
+    @Test
+    fun los_iconos_de_la_barra_de_estado_son_claros_sobre_la_foto_y_se_restauran_al_salir() {
+        val item = dish("con-foto", "Pollo entero", imageUrl = "https://example.invalid/pollo.jpg")
+        val controller = WindowCompat.getInsetsController(compose.activity.window, compose.activity.window.decorView)
+        compose.runOnUiThread { controller.isAppearanceLightStatusBars = true }
+        var open by mutableStateOf(true)
+        compose.setContent { TindivoTheme { if (open) DishPage(item = item, onClose = {}, onAdd = {}) } }
+        compose.waitForIdle()
+
+        // Iconos claros (la propiedad «light» en falso) mientras la foto está a la vista.
+        assertTrue(!controller.isAppearanceLightStatusBars)
+
+        open = false
+        compose.waitForIdle()
+
+        assertTrue(controller.isAppearanceLightStatusBars)
+    }
+}

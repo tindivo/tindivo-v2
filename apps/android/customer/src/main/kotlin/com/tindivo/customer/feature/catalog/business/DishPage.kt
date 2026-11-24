@@ -28,9 +28,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,6 +43,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoSpacing
@@ -163,25 +164,7 @@ internal fun DishPage(
         Box(modifier = Modifier.weight(1f)) {
             Column(modifier = Modifier.fillMaxSize().verticalScroll(scroll)) {
                 if (hasPhoto) {
-                    // Decorativa a propósito: el nombre del plato está justo debajo.
-                    Box(modifier = Modifier.fillMaxWidth().height(DISH_PHOTO_HEIGHT + statusBar)) {
-                        DishPhoto(
-                            imageUrl = item.imageUrl,
-                            shape = RectangleShape,
-                            markWidth = 72.dp,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                        // Velo oscuro bajo la barra de estado: sus iconos y el botón se leen sobre cualquier foto.
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(statusBar + 24.dp)
-                                    .background(
-                                        Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent)),
-                                    ),
-                        )
-                    }
+                    DishPhotoBlock(item.imageUrl, statusBar)
                 } else {
                     Spacer(modifier = Modifier.height(statusBar + TOP_BAR_HEIGHT))
                 }
@@ -279,6 +262,27 @@ private fun DishTopBar(
                     .padding(horizontal = 8.dp)
                     .graphicsLayer { alpha = progress() }
                     .clearAndSetSemantics { },
+        )
+    }
+}
+
+/** La foto a sangre, bajo la barra de estado, con un velo oscuro arriba para que los iconos y el botón se lean. */
+@Composable
+private fun DishPhotoBlock(
+    imageUrl: String?,
+    statusBar: Dp,
+) {
+    // Decorativa a propósito: el nombre del plato está justo debajo.
+    Box(modifier = Modifier.fillMaxWidth().height(DISH_PHOTO_HEIGHT + statusBar)) {
+        DishPhoto(imageUrl = imageUrl, shape = RectangleShape, markWidth = 72.dp, modifier = Modifier.fillMaxSize())
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(statusBar + 24.dp)
+                    .background(
+                        Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent)),
+                    ),
         )
     }
 }

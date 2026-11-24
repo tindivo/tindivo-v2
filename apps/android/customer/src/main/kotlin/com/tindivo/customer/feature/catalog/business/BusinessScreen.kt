@@ -103,7 +103,10 @@ internal fun BusinessScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = { OrderingBottomBar(ordering, cart.bar, cartActions.onOpenCart) },
             // La barra superior flota sobre la portada y pone ella misma la barra de estado: el contenido sube hasta arriba.
-            contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+            contentWindowInsets =
+                WindowInsets.safeDrawing.only(
+                    WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                ),
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                 when {
