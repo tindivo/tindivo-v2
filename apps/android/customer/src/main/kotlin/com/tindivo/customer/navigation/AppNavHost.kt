@@ -410,7 +410,7 @@ private fun OrderDetailWithReview(
  * Cambia de pestaña: siempre se vuelve a la raíz de esa pestaña, con la pila de Inicio por debajo (atrás sale de la
  * app desde cualquier pestaña) y sin duplicar destinos. Sin sesión, «Pedidos» y «Cuenta» abren la entrada.
  */
-private fun NavHostController.openTab(
+internal fun NavHostController.openTab(
     tab: RootTab,
     signedIn: Boolean,
 ) {
@@ -426,6 +426,8 @@ private fun NavHostController.openTab(
     navigate(destination) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
-        restoreState = tab != RootTab.Account && !needsSignIn
+        // Inicio nunca restaura: el `popUpTo` hacia él guarda lo que quitó (Entregas, si se llegó por su tarjeta) y
+        // `restoreState` lo devolvía enseguida, así que la pestaña Inicio no volvía al Inicio.
+        restoreState = tab != RootTab.Account && tab != RootTab.Home && !needsSignIn
     }
 }
