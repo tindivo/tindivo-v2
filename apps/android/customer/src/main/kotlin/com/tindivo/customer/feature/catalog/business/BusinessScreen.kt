@@ -3,15 +3,19 @@ package com.tindivo.customer.feature.catalog.business
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.layout.plus
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
@@ -23,25 +27,29 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
 import java.math.BigDecimal
+
+/** Lo que ocupa la barra fija de la ficha (cantidad y botón): el aviso se pone justo encima. */
+private val DISH_BAR_CLEARANCE = 96.dp
 
 @Composable
 internal fun BusinessScreen(
@@ -60,11 +68,12 @@ internal fun BusinessScreen(
     val business = (state as? BusinessUiState.Loaded)?.business
     val rows = remember(business) { business?.let(::menuRows).orEmpty() }
     val headerIndices = remember(rows) { categoryHeaderIndices(rows) }
-    val spy = remember(listState, headerIndices) { SectionSpy(listState, headerIndices) }
+    val scope = rememberCoroutineScope()
+    val spy = remember(listState, headerIndices, scope) { SectionSpy(listState, headerIndices, scope) }
     LaunchedEffect(spy) { spy.follow() }
-    val showTitle by remember(rows) {
-        derivedStateOf { listState.firstVisibleItemIndex > businessHeaderIndex(rows) }
-    }
+    // 0 con la portada a la vista, 1 con la barra ya sólida: crece mientras la portada sube bajo la barra.
+    val density = LocalDensity.current
+    val barProgress = remember(listState, density) { { barProgressOf(listState, density) } }
     val searching = query != null && business != null
     BackHandler(enabled = searching) { query = null }
     // La ficha abierta se recuerda por id: sobrevive a girar la pantalla y se cierra sola si el plato sale de la carta.
@@ -73,6 +82,13 @@ internal fun BusinessScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     // Cerrado o en modo catálogo la carta se ve, pero no se abre la ficha para agregar (CUS-CAT-012, CUS-CAT-015).
     val onDishClick = dishClickFor(ordering) { openDishId = it.id }
+    // Va después del de la búsqueda: con la ficha abierta, «Atrás» la cierra a ella primero y la carta queda como estaba.
+    BackHandler(enabled = openDish != null) { openDishId = null }
+    var dishOverPhoto by remember { mutableStateOf(false) }
+    val openDishNow = rememberUpdatedState(openDish)
+    if (state is BusinessUiState.Loaded) {
+        StatusBarOwner({ openDishNow.value != null }, { dishOverPhoto }, { query != null }, barProgress)
+    }
     BagFeedback(
         outcome = cart.outcome,
         snackbarHostState = snackbarHostState,
@@ -80,89 +96,134 @@ internal fun BusinessScreen(
         actions = cartActions,
     )
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = { OrderingBottomBar(ordering, cart.bar, cartActions.onOpenCart) },
-        topBar = {
-            MenuTopBar(
-                business = business,
-                showTitle = showTitle,
-                query = query,
-                spy = spy,
-                onQueryChange = { query = it },
-                onBack = onBack,
-            )
-        },
-    ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            when (state) {
-                BusinessUiState.Loading -> {
-                    LoadingIndicator()
-                }
+    // La ficha del plato es una capa a pantalla completa sobre la carta, que sigue debajo y conserva su scroll.
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            // Con la ficha encima, la carta no existe para el lector de pantalla.
+            modifier = if (openDish != null) Modifier.clearAndSetSemantics { } else Modifier,
+            // Con la ficha encima, el aviso va en la capa de arriba (más abajo): aquí quedaría tapado.
+            snackbarHost = { if (openDish == null) SnackbarHost(snackbarHostState) },
+            bottomBar = { OrderingBottomBar(ordering, cart.bar, cartActions.onOpenCart) },
+            // La barra superior flota sobre la portada y pone ella misma la barra de estado: el contenido sube hasta arriba.
+            contentWindowInsets =
+                WindowInsets.safeDrawing.only(
+                    WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                ),
+        ) { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                when {
+                    searching && business != null -> {
+                        SearchResultsPane(business = business, query = query.orEmpty(), onQueryChange = {
+                            query = it
+                        }, onDishClick = onDishClick)
+                    }
 
-                is BusinessUiState.Failed -> {
-                    ErrorContent(error = state.error, onRetry = onRefresh)
-                }
-
-                is BusinessUiState.Loaded -> {
-                    val text = query.orEmpty()
-                    if (parseTerms(text).isNotEmpty()) {
-                        MenuSearchResults(business = state.business, query = text, onDishClick = onDishClick)
-                    } else {
+                    state is BusinessUiState.Loaded -> {
                         MenuList(
                             rows = rows,
                             listState = listState,
+                            spy = spy,
                             onDishClick = onDishClick,
                             closed = ordering is OrderingMode.Closed,
+                            topBar = {
+                                BusinessTopBar(
+                                    business = business,
+                                    progress = barProgress,
+                                    onSearch = { query = "" },
+                                    onBack = onBack,
+                                    modifier = Modifier.align(Alignment.TopStart),
+                                )
+                            },
                         )
+                    }
+
+                    else -> {
+                        PendingContent(state = state, onRefresh = onRefresh, onBack = onBack)
                     }
                 }
             }
         }
-    }
-    openDish?.let { dish ->
-        DishSheet(item = dish, onDismiss = { openDishId = null }, onAdd = cartActions.onAdd)
+        DishPageHost(
+            item = openDish,
+            onDismiss = { openDishId = null },
+            onAdd = cartActions.onAdd,
+            onOverPhoto = { dishOverPhoto = it },
+        )
+        if (openDish != null) DishSnackbar(snackbarHostState)
     }
 }
 
+/**
+ * Un solo dueño del estilo de los iconos de la barra de estado, para la carta y para la ficha: claros mientras la
+ * portada (o la foto del plato) está a la vista, oscuros con una barra sólida.
+ */
 @Composable
-private fun MenuList(
-    rows: List<MenuRow>,
-    listState: LazyListState,
-    onDishClick: ((MenuItemUi) -> Unit)?,
-    closed: Boolean = false,
+private fun StatusBarOwner(
+    dishOpen: () -> Boolean,
+    dishOverPhoto: () -> Boolean,
+    searching: () -> Boolean,
+    barProgress: () -> Float,
 ) {
-    val hasBanner = rows.firstOrNull() is MenuRow.Banner
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        state = listState,
-        contentPadding = PaddingValues(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        items(rows, key = { it.key }) { row ->
-            when (row) {
-                is MenuRow.Banner -> {
-                    BusinessBanner(row.url)
-                }
+    StatusBarIconsOverBanner { if (dishOpen()) dishOverPhoto() else !searching() && barProgress() < 0.5f }
+}
 
-                is MenuRow.Header -> {
-                    // Con portada, la hoja de la cabecera sube sobre ella: 28 dp del tablero más el espacio entre filas.
-                    BusinessHeader(row.business, closed = closed, overlap = if (hasBanner) 40.dp else null)
-                }
+/** Por encima de la ficha y fuera del árbol que se oculta: «No se pudo guardar» o «Bolsa llena» se ven y se leen. */
+@Composable
+private fun BoxScope.DishSnackbar(hostState: SnackbarHostState) {
+    SnackbarHost(
+        hostState = hostState,
+        modifier =
+            Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .imePadding()
+                .padding(bottom = DISH_BAR_CLEARANCE),
+    )
+}
 
-                is MenuRow.Category -> {
-                    CategoryHeader(row.category)
-                }
+/** El modo búsqueda: barra sólida con el campo y, debajo, los resultados. */
+@Composable
+private fun SearchResultsPane(
+    business: BusinessDetailUi,
+    query: String,
+    onQueryChange: (String?) -> Unit,
+    onDishClick: ((MenuItemUi) -> Unit)?,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        SearchTopBar(businessName = business.name, query = query, onQueryChange = onQueryChange)
+        Box(modifier = Modifier.weight(1f)) {
+            if (parseTerms(query).isNotEmpty()) {
+                MenuSearchResults(business = business, query = query, onDishClick = onDishClick)
+            }
+        }
+    }
+}
 
-                is MenuRow.Carousel -> {
-                    FeaturedCarousel(items = row.items, onDishClick = onDishClick)
-                }
-
-                is MenuRow.Dish -> {
-                    MenuItemRow(row.item, onClick = onDishClick?.let { click -> { click(row.item) } })
+/** Carga o error: la misma portada de marca arriba y, sobre ella, solo «Atrás». */
+@Composable
+private fun PendingContent(
+    state: BusinessUiState,
+    onRefresh: () -> Unit,
+    onBack: () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            BusinessBanner(url = null, name = "")
+            Box(modifier = Modifier.weight(1f)) {
+                when (state) {
+                    is BusinessUiState.Failed -> ErrorContent(error = state.error, onRetry = onRefresh)
+                    else -> LoadingIndicator()
                 }
             }
         }
+        StatusBarIconsOverBanner { true }
+        BusinessTopBar(
+            business = null,
+            progress = { 0f },
+            onSearch = {},
+            onBack = onBack,
+            modifier = Modifier.align(Alignment.TopStart),
+        )
     }
 }
 

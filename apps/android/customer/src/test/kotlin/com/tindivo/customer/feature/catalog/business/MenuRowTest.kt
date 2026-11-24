@@ -48,38 +48,53 @@ class MenuRowTest {
         val destacados = MenuCategoryUi("featured", "Destacados", null, pizzas.items.take(1))
         val rows = menuRows(business(null, pizzas, bebidas).copy(featured = destacados))
 
-        // cabecera, Destacados, carrusel, Pizzas, 2 platos, Bebidas, 1 plato
-        assertEquals(listOf(1, 3, 6), categoryHeaderIndices(rows))
-        assertTrue(rows[2] is MenuRow.Carousel)
+        // portada, cabecera, selector, Destacados, carrusel, Pizzas, 2 platos, Bebidas, 1 plato
+        assertEquals(listOf(3, 5, 8), categoryHeaderIndices(rows))
+        assertTrue(rows[4] is MenuRow.Carousel)
         val keys = rows.map { it.key }
         assertEquals(keys.size, keys.toSet().size)
     }
 
     @Test
-    fun `sin banner la cabecera del negocio es la primera fila y las categorias siguen a sus platos`() {
+    fun `sin foto la portada sigue siendo la primera fila y el selector va bajo la cabecera`() {
         val rows = menuRows(business(null, pizzas, bebidas))
 
-        assertEquals(listOf(0), listOf(businessHeaderIndex(rows)))
-        // cabecera, Pizzas, 2 platos, Bebidas, 1 plato
-        assertEquals(listOf(1, 4), categoryHeaderIndices(rows))
-        assertEquals(6, rows.size)
+        assertEquals(MenuRow.Banner(null, "Pizza Priamo"), rows.first())
+        assertTrue(rows[2] is MenuRow.Sections)
+        // portada, cabecera, selector, Pizzas, 2 platos, Bebidas, 1 plato
+        assertEquals(listOf(3, 6), categoryHeaderIndices(rows))
+        assertEquals(8, rows.size)
     }
 
     @Test
-    fun `con banner todo se corre una fila`() {
+    fun `con foto la portada lleva su url`() {
         val rows = menuRows(business("https://img/banner.webp", pizzas, bebidas))
 
-        assertTrue(rows.first() is MenuRow.Banner)
-        assertEquals(1, businessHeaderIndex(rows))
-        assertEquals(listOf(2, 5), categoryHeaderIndices(rows))
-        assertEquals(7, rows.size)
+        assertEquals(MenuRow.Banner("https://img/banner.webp", "Pizza Priamo"), rows.first())
+        assertEquals(8, rows.size)
+    }
+
+    @Test
+    fun `con una sola seccion no hay selector`() {
+        val rows = menuRows(business(null, pizzas))
+
+        assertTrue(rows.none { it is MenuRow.Sections })
+    }
+
+    @Test
+    fun `la cabecera que sigue a la primera fila visible cuenta como activa con el selector pegado`() {
+        val headers = listOf(3, 6)
+        assertEquals(0, activeCategoryIndex(headers, 4, lookahead = false))
+        assertEquals(1, activeCategoryIndex(headers, 5, lookahead = true))
+        assertEquals(0, activeCategoryIndex(headers, 4, lookahead = true))
     }
 
     @Test
     fun `una carta sin categorias solo tiene la cabecera`() {
         val rows = menuRows(business(null))
 
-        assertEquals(1, rows.size)
+        // portada y cabecera
+        assertEquals(2, rows.size)
         assertEquals(emptyList<Int>(), categoryHeaderIndices(rows))
     }
 
