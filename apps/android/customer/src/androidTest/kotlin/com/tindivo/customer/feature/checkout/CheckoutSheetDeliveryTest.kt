@@ -381,7 +381,6 @@ class CheckoutSheetDeliveryTest {
             )
         return CheckoutFormActions(
             onSetMethod = base.onSetMethod,
-            onPickupWhen = base.onPickupWhen,
             onSelectAddress = base.onSelectAddress,
             onName = base.onName,
             onNote = base.onNote,

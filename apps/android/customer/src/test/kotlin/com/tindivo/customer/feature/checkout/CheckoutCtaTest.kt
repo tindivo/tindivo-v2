@@ -80,10 +80,9 @@ class CheckoutCtaTest {
     }
 
     @Test
-    fun `un recojo no pide direccion pero si saber si va ahora`() {
+    fun `un recojo no pide direccion ni pregunta nada mas`() {
         val pickup = ready().copy(method = DeliveryChoice.Pickup, selectedAddressId = null, pay = PayMethod.Prepaid)
-        assertEquals(Cta.NeedPickupAnswer, pickup.cta)
-        assertTrue(pickup.copy(pickupWhen = PickupWhen.Later).cta.canConfirm)
+        assertTrue(pickup.cta.canConfirm)
     }
 
     @Test
@@ -140,7 +139,6 @@ class CheckoutCtaTest {
     @Test
     fun `lo que se resuelve en el formulario o el boton que hace otra cosa no abre hoja`() {
         listOf(
-            Cta.NeedPickupAnswer,
             Cta.NeedPay,
             Cta.NeedCash,
             Cta.Sending,

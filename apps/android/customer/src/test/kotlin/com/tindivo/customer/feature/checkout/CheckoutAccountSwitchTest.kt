@@ -338,7 +338,6 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
             viewModel.selectPay(PayMethod.Yape)
             viewModel.selectCash(CashChoice.Exact)
             viewModel.setMethod(DeliveryChoice.Pickup)
-            viewModel.setPickupWhen(PickupWhen.Later)
             viewModel.retryQuote()
             runCurrent()
             release.countDown()

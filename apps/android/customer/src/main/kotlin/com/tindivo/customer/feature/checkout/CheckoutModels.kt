@@ -6,14 +6,6 @@ import java.math.BigDecimal
 
 enum class DeliveryChoice { Delivery, Pickup }
 
-/** Lo que la persona contestó a «¿Vas al local ahora?». Va en `pickupTiming` (§8 del contrato). */
-enum class PickupWhen(
-    val wire: String,
-) {
-    Now("now"),
-    Later("later"),
-}
-
 /** Cómo declara el billete con el que paga en efectivo. */
 sealed interface CashChoice {
     data object None : CashChoice

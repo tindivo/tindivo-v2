@@ -383,12 +383,6 @@ class CheckoutViewModel
             requote(debounced = true)
         }
 
-        fun setPickupWhen(choice: PickupWhen) {
-            if (locked()) return
-            edit { copy(pickupWhen = choice) }
-            requote(debounced = true)
-        }
-
         fun selectAddress(id: String) {
             if (locked()) return
             edit { copy(selectedAddressId = id) }

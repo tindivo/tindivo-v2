@@ -3,7 +3,6 @@ package com.tindivo.customer.feature.checkout
 /** Lo que el formulario del checkout le pide al [CheckoutViewModel]. En las pruebas de pantalla se arma a mano. */
 class CheckoutFormActions(
     val onSetMethod: (DeliveryChoice) -> Unit,
-    val onPickupWhen: (PickupWhen) -> Unit,
     val onSelectAddress: (String) -> Unit,
     val onName: (String) -> Unit,
     val onNote: (String) -> Unit,
@@ -20,7 +19,6 @@ class CheckoutFormActions(
         fun of(viewModel: CheckoutViewModel) =
             CheckoutFormActions(
                 onSetMethod = viewModel::setMethod,
-                onPickupWhen = viewModel::setPickupWhen,
                 onSelectAddress = viewModel::selectAddress,
                 onName = viewModel::setName,
                 onNote = viewModel::setNote,

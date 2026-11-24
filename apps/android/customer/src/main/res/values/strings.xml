@@ -418,12 +418,6 @@
     <string name="checkout_delivery_title">Entrega</string>
     <string name="checkout_method_delivery">Delivery</string>
     <string name="checkout_method_pickup">Recojo</string>
-    <string name="checkout_pickup_question">¿Vas al local ahora?</string>
-    <string name="checkout_pickup_now">Sí, voy y espero ahí</string>
-    <string name="checkout_pickup_now_hint">Pagas por adelantado</string>
-    <string name="checkout_pickup_later">No, paso más tarde</string>
-    <string name="checkout_pickup_later_hint">Te lo guardamos hasta el cierre</string>
-    <string name="checkout_pickup_later_policy">Si no pasas a recogerlo, no se devuelve.</string>
     <string name="checkout_pickup_point">Punto de recojo</string>
     <string name="checkout_pickup_closes">Cierra a las %1$s</string>
     <string name="checkout_pickup_at">Recoges tu pedido en el local</string>
@@ -498,7 +492,6 @@
     <string name="checkout_cta_calculating">Calculando tu pedido…</string>
     <string name="checkout_cta_quote_problem">Calcular de nuevo</string>
     <string name="checkout_cta_name">Agrega tu nombre</string>
-    <string name="checkout_cta_pickup_answer">Responde si vas ahora</string>
     <string name="checkout_cta_address">Agrega tu dirección</string>
     <string name="checkout_cta_fix_address">Completa tu dirección</string>
     <string name="checkout_cta_reference">Agrega una referencia</string>
