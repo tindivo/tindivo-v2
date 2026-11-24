@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
@@ -174,16 +176,24 @@ private fun TopBarOverBannerPreview() {
 internal fun StatusBarIconsOverBanner(overBanner: () -> Boolean) {
     val view = LocalView.current
     val window = view.context.findWindow() ?: return
-    DisposableEffect(window) {
-        val controller = WindowCompat.getInsetsController(window, view)
-        val original = controller.isAppearanceLightStatusBars
-        onDispose { controller.isAppearanceLightStatusBars = original }
+    val controller = remember(window, view) { WindowCompat.getInsetsController(window, view) }
+    // Al salir se vuelve al valor fijo de la app (iconos oscuros, `MainActivity`) y no a uno capturado: con dos
+    // pantallas solapadas en una transición, la que sale pisaría el valor de la que entra.
+    DisposableEffect(controller) {
+        onDispose { controller.isAppearanceLightStatusBars = APP_LIGHT_STATUS_BAR }
     }
-    LaunchedEffect(window) {
-        val controller = WindowCompat.getInsetsController(window, view)
+    // Cada vez que la pantalla vuelve a primer plano manda ella, no la que se está yendo.
+    LifecycleResumeEffect(controller) {
+        controller.isAppearanceLightStatusBars = !overBanner()
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(controller) {
         snapshotFlow(overBanner).collect { controller.isAppearanceLightStatusBars = !it }
     }
 }
+
+/** Iconos oscuros de la barra de estado: el estilo de toda la app (`SystemBarStyle.light` en `MainActivity`). */
+private const val APP_LIGHT_STATUS_BAR = true
 
 private tailrec fun Context.findWindow(): Window? =
     when (this) {

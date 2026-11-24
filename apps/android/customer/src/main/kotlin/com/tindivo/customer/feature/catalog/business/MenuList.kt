@@ -1,5 +1,7 @@
 package com.tindivo.customer.feature.catalog.business
 
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -21,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -71,17 +74,23 @@ internal fun MenuList(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             rows.forEach { row ->
-                item(key = row.key) { MenuRowContent(row, barHeight, spy, onDishClick, closed) }
+                item(key = row.key) { MenuRowContent(row, barHeight, spy, onDishClick, closed, pinned) }
             }
         }
         if (pinned && sections != null) {
             SectionChips(
                 categories = sections.categories,
                 spy = spy,
-                modifier = Modifier.align(Alignment.TopStart).padding(top = barHeight).testTag(PINNED_CHIPS_TAG),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(top = barHeight)
+                        .testTag(PINNED_CHIPS_TAG)
+                        .verticalScrollOf(listState),
             )
         }
-        topBar()
+        // Hermana de la lista: sin esto, el deslizamiento que empieza sobre la barra no mueve la carta.
+        Box(modifier = Modifier.align(Alignment.TopStart).verticalScrollOf(listState)) { topBar() }
     }
 }
 
@@ -92,6 +101,7 @@ private fun MenuRowContent(
     spy: SectionSpy,
     onDishClick: ((MenuItemUi) -> Unit)?,
     closed: Boolean,
+    pinned: Boolean,
 ) {
     when (row) {
         is MenuRow.Banner -> {
@@ -103,7 +113,12 @@ private fun MenuRowContent(
         }
 
         is MenuRow.Sections -> {
-            SectionChips(categories = row.categories, spy = spy)
+            // Mientras la copia pegada tapa esta fila, TalkBack no debe anunciar las pestañas dos veces.
+            SectionChips(
+                categories = row.categories,
+                spy = spy,
+                modifier = if (pinned) Modifier.clearAndSetSemantics { } else Modifier,
+            )
         }
 
         is MenuRow.Category -> {
@@ -119,3 +134,7 @@ private fun MenuRowContent(
         }
     }
 }
+
+/** Pasa el deslizamiento vertical a la carta: la barra y los chips pegados son hermanos de la lista, no hijos. */
+private fun Modifier.verticalScrollOf(listState: LazyListState): Modifier =
+    scrollable(state = listState, orientation = Orientation.Vertical, reverseDirection = true)

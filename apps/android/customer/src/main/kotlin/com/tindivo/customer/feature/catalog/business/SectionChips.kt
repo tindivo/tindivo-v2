@@ -28,8 +28,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.customer.R
+import kotlinx.coroutines.flow.first
 
 /** Desde cuántas categorías aparece el botón del índice (D-61). */
 private const val INDEX_MIN_CATEGORIES = 5
@@ -54,13 +57,21 @@ internal fun SectionChips(
     val rowState = rememberLazyListState()
     var showIndex by remember { mutableStateOf(false) }
     val selected = spy.selected.coerceIn(0, categories.lastIndex)
+    // La primera vez (la copia pegada nace en mitad del scroll) el chip activo se centra sin animar y la fila no se
+    // muestra hasta entonces: así no se ve un deslizamiento al pegarse.
+    var placed by remember { mutableStateOf(false) }
 
     // El chip activo se centra solo; si aún no se ve, se lleva al borde y el resto se ajusta al dibujarse.
     LaunchedEffect(selected) {
+        if (!placed) {
+            rowState.scrollToItem(selected)
+            snapshotFlow { rowState.layoutInfo.visibleItemsInfo.any { it.index == selected } }.first { it }
+        }
         val info = rowState.layoutInfo
         val item = info.visibleItemsInfo.firstOrNull { it.index == selected }
         val offset = if (item != null) -(info.viewportSize.width - item.size) / 2 else 0
-        rowState.animateScrollToItem(selected, offset)
+        if (placed) rowState.animateScrollToItem(selected, offset) else rowState.scrollToItem(selected, offset)
+        placed = true
     }
 
     // Fondo sólido: al fijarse bajo la barra, la carta que pasa por detrás no debe verse entre los chips.
@@ -69,7 +80,8 @@ internal fun SectionChips(
             modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceContainerLowest)
-                .onSizeChanged { spy.stickyHeightPx = it.height },
+                .onSizeChanged { spy.stickyHeightPx = it.height }
+                .graphicsLayer { alpha = if (placed) 1f else 0f },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LazyRow(
