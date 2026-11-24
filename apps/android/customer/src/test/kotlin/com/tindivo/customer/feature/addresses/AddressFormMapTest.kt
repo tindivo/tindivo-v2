@@ -2,6 +2,8 @@ package com.tindivo.customer.feature.addresses
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import org.junit.Assert.assertEquals
@@ -239,5 +241,55 @@ internal class AddressFormMapTest : AddressHarness() {
             assertEquals("", vm.state.value.line)
             assertFalse(vm.state.value.suggesting)
             assertNull(vm.state.value.localityOnly)
+        }
+
+    @Test
+    fun `un geocodificador que tarda mas de 4 s no deja al campo esperando`() =
+        runTest {
+            streets.next = StreetSuggestion.Street("Jr. Sucre 412")
+            streets.delayMs = 30_000
+            val vm = ready()
+            vm.onPointChosen(manual)
+
+            vm.onPointConfirmed()
+            assertTrue(vm.state.value.suggesting)
+            advanceTimeBy(GEOCODE_TIMEOUT_MS + 1)
+            runCurrent()
+
+            assertFalse(vm.state.value.suggesting)
+            assertEquals("", vm.state.value.line)
+        }
+
+    @Test
+    fun `mientras busca la calle la persona puede escribir y lo suyo gana`() =
+        runTest {
+            streets.next = StreetSuggestion.Street("Av. Otra 99")
+            streets.delayMs = 3_000
+            val vm = ready()
+            vm.onPointChosen(manual)
+
+            vm.onPointConfirmed()
+            vm.onLine("Mi calle 5")
+            advanceTimeBy(5_000)
+            runCurrent()
+
+            assertEquals("Mi calle 5", vm.state.value.line)
+            assertFalse(vm.state.value.suggesting)
+            assertFalse(vm.state.value.lineSuggested)
+        }
+
+    @Test
+    fun `se puede guardar mientras el geocodificador sigue buscando`() =
+        runTest {
+            streets.delayMs = 30_000
+            val vm = ready()
+            server.enqueue(response(201, """{"data":${address(id = ID_C)}}"""))
+            vm.onPointChosen(manual)
+            vm.fillTexts()
+            vm.onPointConfirmed()
+
+            vm.save()
+
+            assertEquals(FormOutcome.Saved(ID_C), vm.state.value.outcome)
         }
 }

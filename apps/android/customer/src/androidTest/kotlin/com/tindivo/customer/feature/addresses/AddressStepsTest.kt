@@ -217,10 +217,29 @@ class AddressStepsTest {
     }
 
     @Test
-    fun whileSearchingTheStreetTheFieldIsASkeleton() {
+    fun whileSearchingTheStreetTheFieldStaysEditable() {
         show(AddressFormState(loading = false, point = inside, suggesting = true))
 
         compose.onNodeWithContentDescription("Buscando tu calle…").assertIsDisplayed()
+        compose.onNodeWithText("Calle y número *").assertIsDisplayed()
+    }
+
+    @Test
+    fun theMiniMapIsNotFocusableByTalkBack() {
+        show(AddressFormState(loading = false, point = inside))
+
+        compose.onNodeWithContentDescription("Mapa con la ubicación que marcaste.").assertDoesNotExist()
+        compose.onNodeWithText("Ubicación confirmada").assertIsDisplayed()
+        compose.onNodeWithText("Cambiar").assertIsDisplayed()
+    }
+
+    @Test
+    fun whileReadingTheGpsThePanelSaysSo() {
+        show(AddressFormState(loading = false, locate = LocateState(available = true, locating = true)))
+
+        compose.onNodeWithText("Marcar en el mapa").performClick()
+
+        compose.onNodeWithText("Buscando tu ubicación…").assertIsDisplayed()
     }
 
     @Test

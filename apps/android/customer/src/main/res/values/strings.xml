@@ -196,6 +196,7 @@
     <string name="address_form_new_title">Nueva dirección</string>
     <string name="address_form_edit_title">Editar dirección</string>
     <string name="address_form_cancel">Cancelar</string>
+    <string name="address_form_close">Cerrar</string>
     <string name="address_form_place">¿Qué lugar es?</string>
     <string name="address_label_casa">Casa</string>
     <string name="address_label_trabajo">Trabajo</string>

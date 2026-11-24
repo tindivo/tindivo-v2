@@ -20,8 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.CameraPosition
@@ -46,11 +45,10 @@ internal fun PointSummary(
     outside: Boolean,
     onChange: () -> Unit,
 ) {
-    val description = stringResource(R.string.address_summary_map_description)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(modifier = Modifier.fillMaxWidth().height(MINI_MAP_HEIGHT.dp).clip(RoundedCornerShape(12.dp))) {
             if (point != null) {
-                MiniMap(point, Modifier.matchParentSize().semantics { contentDescription = description })
+                MiniMap(point, Modifier.matchParentSize().clearAndSetSemantics { })
             }
             Surface(
                 shape = CircleShape,
@@ -104,6 +102,8 @@ private fun MiniMap(
             modifier = Modifier.matchParentSize(),
             cameraPositionState = camera,
             googleMapOptionsFactory = { GoogleMapOptions().liteMode(true) },
+            // Sin esto, tocar un mapa «lite» abre la app de Google Maps.
+            onMapClick = {},
             uiSettings =
                 MapUiSettings(
                     zoomControlsEnabled = false,

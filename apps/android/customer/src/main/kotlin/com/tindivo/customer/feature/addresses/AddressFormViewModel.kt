@@ -195,8 +195,18 @@ internal class AddressFormViewModel
 
         fun onLabel(value: String) = edit { it.copy(label = value) }
 
-        fun onLine(value: String) =
-            edit { it.copy(line = value.take(ADDRESS_LINE_MAX), lineSuggested = false, localityOnly = null) }
+        fun onLine(value: String) {
+            // Lo que la persona escribe gana: la búsqueda de la calle deja de importar.
+            suggestJob?.cancel()
+            edit {
+                it.copy(
+                    line = value.take(ADDRESS_LINE_MAX),
+                    lineSuggested = false,
+                    localityOnly = null,
+                    suggesting = false,
+                )
+            }
+        }
 
         fun onReference(value: String) = edit { it.copy(reference = value.take(ADDRESS_REFERENCE_MAX)) }
 
@@ -243,7 +253,9 @@ internal class AddressFormViewModel
             _state.update { it.copy(suggesting = true, localityOnly = null) }
             suggestJob =
                 viewModelScope.launch {
-                    val suggestion = streets.suggest(point)
+                    // Tope propio: si el geocodificador no contesta, la persona sigue escribiendo y guarda.
+                    val suggestion =
+                        withTimeoutOrNull(GEOCODE_TIMEOUT_MS) { streets.suggest(point) } ?: StreetSuggestion.None
                     settle { it.withSuggestion(suggestion) }
                 }
         }
@@ -312,7 +324,8 @@ internal class AddressFormViewModel
             val account = accountId ?: return endSession()
             // Lo que se guarda es el punto de ahora: una lectura del GPS que llegue después no lo cambia.
             stopLocating()
-            _state.update { it.copy(saving = true, saveError = null) }
+            suggestJob?.cancel()
+            _state.update { it.copy(saving = true, saveError = null, suggesting = false) }
             job =
                 viewModelScope.launch {
                     val result =

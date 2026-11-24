@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -54,6 +55,8 @@ private val ZONE_FILL = Color(ZONE_FILL_ARGB)
  * salvo mientras la persona mueve el mapa: nadie ha marcado nada todavía. La cámara no sale del polígono de la zona
  * más un 25 % y su zoom va de [MIN_ZOOM] a [MAX_ZOOM].
  *
+ * Con [ghostPin] el pin se dibuja atenuado aunque no haya punto (Entregas conserva ese comportamiento).
+ *
  * [located] es la última lectura de «Usar mi ubicación»: al cambiar, la cámara va hasta ese punto con zoom [FIX_ZOOM].
  * [onMotion] avisa cuándo el mapa se mueve y si es por un gesto: el panel de abajo lo necesita para apagar el botón.
  *
@@ -66,6 +69,7 @@ internal fun AddressMap(
     point: GeoPoint?,
     located: Located?,
     satellite: Boolean = false,
+    ghostPin: Boolean = false,
     onPointChosen: (GeoPoint) -> Unit,
     onMotion: (moving: Boolean, byGesture: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
@@ -110,8 +114,12 @@ internal fun AddressMap(
         ) {
             ZoneOutline(area)
         }
-        if (point != null || gesturing) {
-            Pin(moving = camera.isMoving, outside = outside, modifier = Modifier.align(Alignment.Center))
+        if (point != null || gesturing || ghostPin) {
+            Pin(
+                moving = camera.isMoving,
+                outside = outside,
+                modifier = Modifier.align(Alignment.Center).alpha(if (point != null || gesturing) 1f else GHOST_ALPHA),
+            )
         }
     }
 }
@@ -184,6 +192,7 @@ internal fun rememberReduceMotion(): Boolean {
 private fun reduceMotion(context: Context): Boolean =
     Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 
+private const val GHOST_ALPHA = 0.45f
 private const val PIN_WIDTH = 40
 private const val PIN_HEIGHT = 52
 private const val PIN_LIFT = 8

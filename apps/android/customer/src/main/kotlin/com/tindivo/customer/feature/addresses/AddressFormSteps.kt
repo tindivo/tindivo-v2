@@ -22,6 +22,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -140,7 +141,8 @@ private fun AddressSteps(
         fromChange = false
         onMap = true
     }
-    BackHandler(enabled = onMap && fromChange) {
+    // Sin punto (el formulario se rehízo tras morir el proceso) no hay datos a los que volver: Atrás cierra.
+    BackHandler(enabled = onMap && fromChange && state.point != null) {
         actions.onCancelChange()
         fromChange = false
         onMap = false
@@ -198,11 +200,11 @@ private fun DetailsStep(
     // «Guardar» siempre se puede tocar: si falta algo, lleva a ese campo y enseña el error.
     val trySave: () -> Unit = {
         submitted = true
-        when (if (state.suggesting) null else state.missing) {
+        when (state.missing) {
             MissingField.Location, MissingField.OutsideZone -> onChangePoint()
             MissingField.Line -> lineFocus.requestFocus()
             MissingField.Reference -> referenceFocus.requestFocus()
-            null -> if (!state.suggesting) actions.onSave()
+            null -> actions.onSave()
         }
     }
     val lineOk = isLineOk(state.line)
@@ -218,7 +220,10 @@ private fun DetailsStep(
                 outside = state.missing == MissingField.OutsideZone,
                 onChange = onChangePoint,
             )
-            StreetField(state, actions.onLine, lineFocus, submitted, lineOk)
+            StreetField(state, {
+                focused = true
+                actions.onLine(it)
+            }, lineFocus, submitted, lineOk)
             NoteField(
                 value = state.reference,
                 onValueChange = actions.onReference,
@@ -265,18 +270,7 @@ private fun StreetField(
     lineOk: Boolean,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (state.suggesting) {
-            val searching = stringResource(R.string.address_street_searching)
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .semantics { contentDescription = searching },
-            )
-        } else {
+        run {
             AddressLineField(
                 value = state.line,
                 onValueChange = onLine,
@@ -290,7 +284,12 @@ private fun StreetField(
                 focusRequester = focus,
             )
             val locality = state.localityOnly
-            if (state.lineSuggested && state.line.isNotBlank()) {
+            if (state.suggesting) {
+                val searching = stringResource(R.string.address_street_searching)
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = searching },
+                )
+            } else if (state.lineSuggested && state.line.isNotBlank()) {
                 Text(
                     text = stringResource(R.string.address_street_suggested),
                     style = MaterialTheme.typography.bodySmall,

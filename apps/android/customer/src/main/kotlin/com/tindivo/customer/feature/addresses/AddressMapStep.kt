@@ -147,7 +147,7 @@ private fun MapTopBar(
         if (showClose) {
             Surface(shape = CircleShape, shadowElevation = 4.dp) {
                 IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
-                    Icon(TindivoIcons.Close, contentDescription = stringResource(R.string.address_form_cancel))
+                    Icon(TindivoIcons.Close, contentDescription = stringResource(R.string.address_form_close))
                 }
             }
         } else {
@@ -290,6 +290,7 @@ private fun Question(
     onConfirm: () -> Unit,
 ) {
     val imprecise = state.imprecise && panel == MapPanel.Settled
+    if (state.locate.locating) LocatingLine()
     if (imprecise) ImpreciseNotice(state.accuracyM)
     val text =
         when (panel) {
@@ -312,6 +313,19 @@ private fun Question(
             else -> R.string.address_map_confirm
         }
     TindivoPrimaryButton(text = stringResource(button), onClick = onConfirm, enabled = panel.canConfirm && !state.busy)
+}
+
+/** «Buscando tu ubicación…» a la vista mientras el GPS lee. */
+@Composable
+private fun LocatingLine() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+        Text(
+            text = stringResource(R.string.address_form_locating),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
+    }
 }
 
 /** El aviso de que la ubicación no se pudo leer, en una tarjeta neutra (no es un error de la persona). */

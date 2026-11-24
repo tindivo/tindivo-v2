@@ -1,6 +1,12 @@
 package com.tindivo.customer.feature.addresses
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Cómo se arma la calle sugerida con lo que contesta el Geocoder de Android. */
@@ -50,5 +56,34 @@ internal class StreetSuggestionTest {
     fun `sin resultados no se sugiere nada`() {
         assertEquals(StreetSuggestion.None, suggestionFrom(emptyList()))
         assertEquals(StreetSuggestion.None, suggestionFrom(listOf(GeocodedAddress(thoroughfare = "  "))))
+    }
+
+    @Test
+    fun `el tope duro corta aunque la llamada este bloqueada sin responder a la cancelacion`() {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val started = System.nanoTime()
+
+        val result =
+            runBlocking {
+                withHardTimeout(200, scope) {
+                    // Como el Geocoder anterior a la API 33: duerme el hilo y no mira la cancelación.
+                    @Suppress("SleepInsteadOfDelay")
+                    Thread.sleep(3_000)
+                    "tarde"
+                }
+            }
+
+        val tookMs = (System.nanoTime() - started) / 1_000_000
+        assertNull(result)
+        assertTrue("tardó $tookMs ms", tookMs < 2_000)
+    }
+
+    @Test
+    fun `el tope duro devuelve lo que llega a tiempo`() {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        val result = runBlocking { withHardTimeout(2_000, scope) { "listo" } }
+
+        assertEquals("listo", result)
     }
 }
