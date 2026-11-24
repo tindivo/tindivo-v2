@@ -24,12 +24,16 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.core.designsystem.TindivoColors
@@ -100,6 +104,7 @@ private fun ProgressPill(progress: RequiredProgress) {
 internal fun NoteCard(
     note: String,
     onChange: (String) -> Unit,
+    topMargin: Dp = 0.dp,
 ) {
     // Al enfocar la nota sube el teclado y la barra de abajo con él: mientras el teclado se mueve, el campo se vuelve a
     // llevar a la vista para que quede encima de la barra, nunca tapado.
@@ -107,10 +112,15 @@ internal fun NoteCard(
     var focused by remember { mutableStateOf(false) }
     val ime = WindowInsets.ime
     val density = LocalDensity.current
+    var size by remember { mutableStateOf(IntSize.Zero) }
     LaunchedEffect(focused) {
         if (focused) {
-            requester.bringIntoView()
-            snapshotFlow { ime.getBottom(density) }.collect { requester.bringIntoView() }
+            // La barra superior flota sobre el scroll: el rectángulo que se lleva a la vista incluye su alto por arriba,
+            // para que el campo no quede debajo de ella (teclado en horizontal o letra grande).
+            val margin = with(density) { topMargin.toPx() }
+            val target = { Rect(0f, -margin, size.width.toFloat(), size.height.toFloat()) }
+            requester.bringIntoView(target())
+            snapshotFlow { ime.getBottom(density) }.collect { requester.bringIntoView(target()) }
         }
     }
     TindivoCard(modifier = Modifier.fillMaxWidth().padding(bottom = TindivoSpacing.screen)) {
@@ -122,6 +132,7 @@ internal fun NoteCard(
                     Modifier
                         .fillMaxWidth()
                         .bringIntoViewRequester(requester)
+                        .onSizeChanged { size = it }
                         .onFocusChanged { focused = it.isFocused },
                 shape = MaterialTheme.shapes.medium,
                 label = { Text(stringResource(R.string.dish_note_label)) },

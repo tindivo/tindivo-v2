@@ -3,12 +3,15 @@ package com.tindivo.customer.feature.catalog.business
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
@@ -28,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,6 +47,9 @@ import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
 import java.math.BigDecimal
+
+/** Lo que ocupa la barra fija de la ficha (cantidad y botón): el aviso se pone justo encima. */
+private val DISH_BAR_CLEARANCE = 96.dp
 
 @Composable
 internal fun BusinessScreen(
@@ -77,6 +84,11 @@ internal fun BusinessScreen(
     val onDishClick = dishClickFor(ordering) { openDishId = it.id }
     // Va después del de la búsqueda: con la ficha abierta, «Atrás» la cierra a ella primero y la carta queda como estaba.
     BackHandler(enabled = openDish != null) { openDishId = null }
+    var dishOverPhoto by remember { mutableStateOf(false) }
+    val openDishNow = rememberUpdatedState(openDish)
+    if (state is BusinessUiState.Loaded) {
+        StatusBarOwner({ openDishNow.value != null }, { dishOverPhoto }, { query != null }, barProgress)
+    }
     BagFeedback(
         outcome = cart.outcome,
         snackbarHostState = snackbarHostState,
@@ -89,7 +101,8 @@ internal fun BusinessScreen(
         Scaffold(
             // Con la ficha encima, la carta no existe para el lector de pantalla.
             modifier = if (openDish != null) Modifier.clearAndSetSemantics { } else Modifier,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
+            // Con la ficha encima, el aviso va en la capa de arriba (más abajo): aquí quedaría tapado.
+            snackbarHost = { if (openDish == null) SnackbarHost(snackbarHostState) },
             bottomBar = { OrderingBottomBar(ordering, cart.bar, cartActions.onOpenCart) },
             // La barra superior flota sobre la portada y pone ella misma la barra de estado: el contenido sube hasta arriba.
             contentWindowInsets =
@@ -106,7 +119,6 @@ internal fun BusinessScreen(
                     }
 
                     state is BusinessUiState.Loaded -> {
-                        StatusBarIconsOverBanner { barProgress() < 0.5f }
                         MenuList(
                             rows = rows,
                             listState = listState,
@@ -131,8 +143,42 @@ internal fun BusinessScreen(
                 }
             }
         }
-        DishPageHost(item = openDish, onDismiss = { openDishId = null }, onAdd = cartActions.onAdd)
+        DishPageHost(
+            item = openDish,
+            onDismiss = { openDishId = null },
+            onAdd = cartActions.onAdd,
+            onOverPhoto = { dishOverPhoto = it },
+        )
+        if (openDish != null) DishSnackbar(snackbarHostState)
     }
+}
+
+/**
+ * Un solo dueño del estilo de los iconos de la barra de estado, para la carta y para la ficha: claros mientras la
+ * portada (o la foto del plato) está a la vista, oscuros con una barra sólida.
+ */
+@Composable
+private fun StatusBarOwner(
+    dishOpen: () -> Boolean,
+    dishOverPhoto: () -> Boolean,
+    searching: () -> Boolean,
+    barProgress: () -> Float,
+) {
+    StatusBarIconsOverBanner { if (dishOpen()) dishOverPhoto() else !searching() && barProgress() < 0.5f }
+}
+
+/** Por encima de la ficha y fuera del árbol que se oculta: «No se pudo guardar» o «Bolsa llena» se ven y se leen. */
+@Composable
+private fun BoxScope.DishSnackbar(hostState: SnackbarHostState) {
+    SnackbarHost(
+        hostState = hostState,
+        modifier =
+            Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .imePadding()
+                .padding(bottom = DISH_BAR_CLEARANCE),
+    )
 }
 
 /** El modo búsqueda: barra sólida con el campo y, debajo, los resultados. */

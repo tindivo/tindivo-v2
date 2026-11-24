@@ -5,6 +5,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -22,7 +23,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -80,7 +83,12 @@ class DishPageTest {
             id = "cat-$name",
             name = name,
             blurb = null,
-            items = (1..12).map { dish("$name-$it", "$name plato $it") },
+            items =
+                (1..12).map {
+                    // «Pollos plato 1» lleva foto: es el plato con foto de las pruebas de los iconos de la barra de estado.
+                    val photo = if (name == "Pollos" && it == 1) "https://example.invalid/pollo.jpg" else null
+                    dish("$name-$it", "$name plato $it", imageUrl = photo)
+                },
         )
 
     private val business =
@@ -94,7 +102,10 @@ class DishPageTest {
             categories = listOf(category("Pollos"), category("Bebidas")),
         )
 
-    private fun showMenu(onAdd: (CartLine) -> Unit = {}) {
+    private fun showMenu(
+        result: AddOutcome = AddOutcome.Added(capped = false),
+        onAdd: (CartLine) -> Unit = {},
+    ) {
         var outcome by mutableStateOf<AddOutcome?>(null)
         compose.setContent {
             TindivoTheme {
@@ -107,7 +118,7 @@ class DishPageTest {
                         BusinessCartActions(
                             onAdd = {
                                 onAdd(it)
-                                outcome = AddOutcome.Added(capped = false)
+                                outcome = result
                             },
                             onReplace = {},
                             onConsumeOutcome = { outcome = null },
@@ -132,9 +143,21 @@ class DishPageTest {
         compose.waitForIdle()
     }
 
+    // Desplaza la carta una fracción de su alto (negativa = la carta baja): deja el plato bajo la barra y los chips.
+    private fun scrollListBy(fraction: Float) {
+        val list = compose.onNode(verticalScroll)
+        val height = list.fetchSemanticsNode().size.height
+        list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, fraction * height) }
+        compose.waitForIdle()
+    }
+
     private fun openDishFromDeepInTheMenu(name: String) {
         compose.onNode(verticalScroll).performScrollToNode(hasText(name))
-        compose.onNodeWithText(name).performClick()
+        // El plato queda pegado al borde de arriba, bajo la barra flotante y los chips: se baja la carta un poco para
+        // tocarlo donde se ve de verdad (da igual el tamaño de la pantalla).
+        scrollListBy(-0.4f)
+        compose.waitForIdle()
+        compose.onNodeWithText(name).assertIsDisplayed().performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(DISH_PAGE_TAG).assertIsDisplayed()
     }
@@ -234,21 +257,77 @@ class DishPageTest {
         compose.onNodeWithText("Chaufa especial").assertIsDisplayed()
     }
 
+    private fun lightIcons(): Boolean {
+        var light = false
+        compose.runOnUiThread {
+            val window = compose.activity.window
+            light = WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars
+        }
+        return light
+    }
+
     @Test
-    fun los_iconos_de_la_barra_de_estado_son_claros_sobre_la_foto_y_se_restauran_al_salir() {
-        val item = dish("con-foto", "Pollo entero", imageUrl = "https://example.invalid/pollo.jpg")
-        val controller = WindowCompat.getInsetsController(compose.activity.window, compose.activity.window.decorView)
-        compose.runOnUiThread { controller.isAppearanceLightStatusBars = true }
-        var open by mutableStateOf(true)
-        compose.setContent { TindivoTheme { if (open) DishPage(item = item, onClose = {}, onAdd = {}) } }
+    fun los_iconos_de_la_barra_de_estado_siguen_a_la_carta_y_al_plato_con_y_sin_foto() {
+        showMenu()
+        compose.waitForIdle()
+        // Carta arriba, con la portada a la vista: iconos claros (la propiedad «light» en falso).
+        assertTrue(!lightIcons())
+
+        // Plato con foto: claros mientras se ve la foto.
+        compose.onNode(verticalScroll).performScrollToNode(hasText("Pollos plato 1"))
+        scrollListBy(-0.4f)
+        compose.waitForIdle()
+        compose.onNodeWithText("Pollos plato 1").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(DISH_PAGE_TAG).assertIsDisplayed()
+        // La carta no está arriba (se bajó a buscar el plato): con la foto del plato a la vista siguen claros.
+        assertTrue(!lightIcons())
+        pressBack()
+
+        // Plato sin foto: barra sólida desde el inicio, iconos oscuros; y al volver, los de la carta.
+        compose.onNode(verticalScroll).performScrollToNode(hasText("Pollos plato 3"))
+        scrollListBy(-0.4f)
+        compose.waitForIdle()
+        compose.onNodeWithText("Pollos plato 3").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(DISH_PAGE_TAG).assertIsDisplayed()
+        assertTrue(lightIcons())
+        pressBack()
+        compose.onNode(verticalScroll).performScrollToIndex(0)
+        compose.waitForIdle()
+        assertTrue(!lightIcons())
+    }
+
+    @Test
+    fun dos_toques_seguidos_en_agregar_solo_agregan_una_vez() {
+        var added = 0
+        showMenu(onAdd = { added++ })
+        openDishFromDeepInTheMenu("Pollos plato 2")
+
+        // Se congela el reloj: la página sigue viva durante la salida y el segundo toque la encuentra.
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithTag(DISH_ADD_TAG).performClick()
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithTag(DISH_ADD_TAG).performClick()
+        compose.mainClock.autoAdvance = true
         compose.waitForIdle()
 
-        // Iconos claros (la propiedad «light» en falso) mientras la foto está a la vista.
-        assertTrue(!controller.isAppearanceLightStatusBars)
+        assertTrue("agregó $added veces", added == 1)
+    }
 
-        open = false
+    @Test
+    fun el_aviso_de_error_se_ve_y_se_lee_con_la_pagina_abierta() {
+        showMenu(result = AddOutcome.Failed)
+        openDishFromDeepInTheMenu("Pollos plato 2")
+
+        compose.onNodeWithTag(DISH_ADD_TAG).performClick()
         compose.waitForIdle()
 
-        assertTrue(controller.isAppearanceLightStatusBars)
+        // La página sigue abierta (no se agregó) y el aviso está encima, dentro de una región viva.
+        compose.onNodeWithTag(DISH_PAGE_TAG).assertIsDisplayed()
+        val live = SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)
+        compose
+            .onNode(hasText("No se pudo guardar tu bolsa. Inténtalo de nuevo.") and hasAnyAncestor(live))
+            .assertIsDisplayed()
     }
 }

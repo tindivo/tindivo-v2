@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -32,12 +33,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -50,10 +54,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,7 +91,10 @@ internal fun DishPageHost(
     item: MenuItemUi?,
     onDismiss: () -> Unit,
     onAdd: (CartLine) -> Unit,
+    onOverPhoto: (Boolean) -> Unit = {},
 ) {
+    // Durante los 180 ms de salida la página sigue viva: lo que llega de ella ya no cuenta (ni un segundo «Agregar»).
+    val current by rememberUpdatedState(item)
     val context = LocalContext.current
     val animate =
         remember(context) {
@@ -111,7 +121,14 @@ internal fun DishPageHost(
         },
         label = "dish-page",
     ) { dish ->
-        if (dish != null) DishPage(item = dish, onClose = onDismiss, onAdd = onAdd)
+        if (dish != null) {
+            DishPage(
+                item = dish,
+                onClose = { if (current?.id == dish.id) onDismiss() },
+                onAdd = { line -> if (current?.id == dish.id) onAdd(line) },
+                onOverPhoto = onOverPhoto,
+            )
+        }
     }
 }
 
@@ -125,6 +142,7 @@ internal fun DishPage(
     item: MenuItemUi,
     onClose: () -> Unit,
     onAdd: (CartLine) -> Unit,
+    onOverPhoto: (Boolean) -> Unit = {},
 ) {
     var state by rememberSaveable(item.id, stateSaver = DishSheetState.saver(item)) {
         mutableStateOf(DishSheetState(item))
@@ -134,29 +152,17 @@ internal fun DishPage(
     val requesters = remember(item.id) { item.modifierGroups.associate { it.id to BringIntoViewRequester() } }
     val scope = rememberCoroutineScope()
     val scroll = rememberScrollState()
-    val density = LocalDensity.current
     val statusBar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val hasPhoto = item.imageUrl != null
-    // 0 con la foto a la vista, 1 con la barra ya sólida; sin foto la barra es sólida desde el inicio.
-    val barProgress =
-        remember(scroll, density, hasPhoto, statusBar) {
-            {
-                if (hasPhoto) {
-                    val end = with(density) { (DISH_PHOTO_HEIGHT - TOP_BAR_HEIGHT).toPx() }
-                    val range = with(density) { TOP_BAR_HEIGHT.toPx() }
-                    ((scroll.value - (end - range)) / range).coerceIn(0f, 1f)
-                } else {
-                    1f
-                }
-            }
-        }
-    // Iconos de la barra de estado claros sobre la foto y oscuros con la barra sólida; al salir se restauran.
-    StatusBarIconsOverBanner { barProgress() < 0.5f }
+    val barProgress = rememberBarProgress(scroll, hasPhoto)
+    NotifyOverPhoto(hasPhoto, barProgress, onOverPhoto)
+    ClearFocusOnEnter(item.id)
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .testTag(DISH_PAGE_TAG)
+                .semantics { paneTitle = item.name }
                 .background(MaterialTheme.colorScheme.background)
                 // Nada de lo que hay debajo (la carta) recibe toques mientras la página está encima.
                 .pointerInput(Unit) { detectTapGestures { } },
@@ -182,7 +188,11 @@ internal fun DishPage(
                             modifier = requesters[group.id]?.let { Modifier.bringIntoViewRequester(it) } ?: Modifier,
                         )
                     }
-                    NoteCard(note = state.note, onChange = { state = state.withNote(it) })
+                    NoteCard(
+                        note = state.note,
+                        onChange = { state = state.withNote(it) },
+                        topMargin = statusBar + TOP_BAR_HEIGHT,
+                    )
                 }
             }
             DishTopBar(
@@ -284,5 +294,50 @@ private fun DishPhotoBlock(
                         Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent)),
                     ),
         )
+    }
+}
+
+/** 0 con la foto a la vista, 1 con la barra ya sólida; sin foto la barra es sólida desde el inicio. */
+@Composable
+private fun rememberBarProgress(
+    scroll: ScrollState,
+    hasPhoto: Boolean,
+): () -> Float {
+    val density = LocalDensity.current
+    return remember(scroll, density, hasPhoto) {
+        {
+            if (hasPhoto) {
+                val end = with(density) { (DISH_PHOTO_HEIGHT - TOP_BAR_HEIGHT).toPx() }
+                val range = with(density) { TOP_BAR_HEIGHT.toPx() }
+                ((scroll.value - (end - range)) / range).coerceIn(0f, 1f)
+            } else {
+                1f
+            }
+        }
+    }
+}
+
+/**
+ * El estilo de los iconos de la barra de estado lo decide un solo dueño (BusinessScreen): aquí solo se avisa si la foto
+ * está a la vista.
+ */
+@Composable
+private fun NotifyOverPhoto(
+    hasPhoto: Boolean,
+    barProgress: () -> Float,
+    onOverPhoto: (Boolean) -> Unit,
+) {
+    val current by rememberUpdatedState(onOverPhoto)
+    LaunchedEffect(hasPhoto) { snapshotFlow { hasPhoto && barProgress() < 0.5f }.collect { current(it) } }
+}
+
+/** La carta de debajo no puede quedarse con el foco ni con el teclado (venga de la búsqueda o de un teclado físico). */
+@Composable
+private fun ClearFocusOnEnter(key: String) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(key) {
+        focusManager.clearFocus()
+        keyboard?.hide()
     }
 }
