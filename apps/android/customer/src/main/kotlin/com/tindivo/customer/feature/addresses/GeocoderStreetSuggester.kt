@@ -43,7 +43,7 @@ internal class GeocoderStreetSuggester
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (
-                    @Suppress("TooGenericExceptionCaught") failure: Exception,
+                    @Suppress("TooGenericExceptionCaught") ignored: Exception,
                 ) {
                     // Un servicio de geocodificación que falla (en alguna ROM, con excepciones propias) no cierra la app.
                     null
