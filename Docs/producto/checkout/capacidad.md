@@ -105,7 +105,7 @@ Estado en Android contrastado el 2026-11-19 contra `develop@25a6d537`. Solo lo q
 
 | # | Requisito | Estado | Hallazgo | Dónde |
 |---|---|---|---|---|
-| 1 | CUS-CHK-028, CUS-CHK-013, CUS-CHK-018 | FALTA | Android todavía pregunta «¿Vas al local ahora?» y manda `pickupTiming` según la respuesta; el botón dice «Responde si vas ahora». | `feature/checkout/CheckoutDeliverySection.kt` · `CheckoutUiState.kt` · `CheckoutRequests.kt` |
+| 1 | CUS-CHK-028, CUS-CHK-013, CUS-CHK-018 | HECHO (Android, 2026-11-23, `da6d9261`) | Android ya no pregunta «¿Vas al local ahora?», no envía `pickupTiming` (el servidor lo trata como opcional y fuerza el prepago) y el botón sigue CUS-CHK-013 sin el paso de la pregunta. | `feature/checkout/CheckoutDeliverySection.kt` · `CheckoutUiState.kt` · `CheckoutRequests.kt` |
 | 2 | CUS-CHK-024, CUS-CHK-006, CUS-CHK-025 | FALTA | Las opciones se agrupan «Al recibir» / «Antes de recibir» y «Yape o Plin» al motorizado sigue existiendo; sin logos ni rediseño de «¿Cómo pagas?». | `feature/checkout/CheckoutPaymentSection.kt` · `PaymentChoice.kt` |
 | 3 | CUS-CHK-023 | FALTA | Cada opción apagada repite su motivo; falta decirlo una sola vez, con candado y vibración. | `feature/checkout/CheckoutPaymentSection.kt` |
 | 4 | CUS-CHK-026 | FALTA | El resumen rotula la fila «Delivery» y no «Envío». | `feature/checkout/CheckoutTotalsSection.kt` |
@@ -114,6 +114,6 @@ Estado en Android contrastado el 2026-11-19 contra `develop@25a6d537`. Solo lo q
 | 7 | CUS-CHK-011 | FALTA | La bolsa se consume y se abre el seguimiento, pero no suena. | `feature/checkout/CheckoutViewModel.kt` |
 | 8 | CUS-CHK-012, CUS-CHK-020 | FALTA | El bloqueo se detecta con una expresión regular sobre el texto del error; los mensajes por código no cubren todos los códigos. | `feature/checkout/CheckoutReducers.kt` · `res/values/strings.xml` |
 | 9 | CUS-CHK-014 | FALTA | Solo hay «Calculando tu pedido…»; falta «Estamos verificando tu bolsa con el menú actual.». | `res/values/strings.xml` · `feature/checkout/CheckoutUiState.kt` |
-| 10 | CUS-CHK-015 | FALTA | La explicación del prepago cuenta los tres pasos pero no dice los plazos, y la app conserva el texto del recojo «más tarde» («no se devuelve»), que ya no existe. | `res/values/strings.xml` |
+| 10 | CUS-CHK-015 | FALTA (parcial) | Hecho en `da6d9261`: la app ya no conserva el texto del recojo «más tarde» («no se devuelve»). Sigue pendiente que la explicación del prepago diga los plazos. | `res/values/strings.xml` |
 | 11 | CUS-CHK-019, CUS-CRT-008 | FALTA | No hay compuerta de caso de pago sin resolver; la regla solo existe en el cliente web. Decidido el 2026-11-19: `createOrder` devuelve un código de error y la app solo lo muestra; falta el código en el servidor y mostrarlo en la app. | `apps/customer/lib/payment-block.ts` |
 | 12 | CUS-CHK-017 | DIFIERE | Promoción vencida; se retoma con las promociones. | `res/values/strings.xml` (`checkout_promo_launch`) |
