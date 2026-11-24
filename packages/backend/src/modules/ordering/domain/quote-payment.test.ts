@@ -18,21 +18,35 @@ const opt = (input: QuotePaymentInput, intent: string) => {
 }
 
 describe('planQuotePayment', () => {
-  it('delivery con cliente de confianza: las tres, en orden, y el efectivo declara billete', () => {
+  it('delivery con cliente de confianza: solo las dos de al recibir, sin prepaid, y el efectivo declara billete', () => {
     const r = planQuotePayment(base)
-    expect(r.options.map((o) => o.intent)).toEqual(['pending_cash', 'pending_yape', 'prepaid'])
+    expect(r.options.map((o) => o.intent)).toEqual(['pending_cash', 'pending_yape'])
     expect(r.options.every((o) => o.available && o.unavailableReason === null)).toBe(true)
     expect(r.cash).toEqual({ maxBill: '100.00', maxChange: '20.00', step: CASH_STEP_TEXT })
     expect(CASH_STEP_TEXT).toBe('0.50')
   })
 
-  it('prepaid siempre disponible', () => {
+  it('sin opción al recibir disponible, prepaid sigue disponible', () => {
     const input = { ...base, contraentregaAllowed: false, exceedsPrepayThreshold: true }
     expect(opt(input, 'prepaid')).toEqual({
       intent: 'prepaid',
       available: true,
       unavailableReason: null,
     })
+  })
+
+  it('risk_blocked: prepaid disponible y el efectivo apagado', () => {
+    const input = { ...base, contraentregaAllowed: false }
+    expect(planQuotePayment(input).options.map((o) => [o.intent, o.available])).toEqual([
+      ['pending_cash', false],
+      ['pending_yape', false],
+      ['prepaid', true],
+    ])
+  })
+
+  it('total sobre el umbral: prepaid disponible', () => {
+    const input = { ...base, exceedsPrepayThreshold: true }
+    expect(opt(input, 'prepaid').available).toBe(true)
   })
 
   it('sin confianza: la contraentrega es prepay_required y no hay bloque de efectivo', () => {

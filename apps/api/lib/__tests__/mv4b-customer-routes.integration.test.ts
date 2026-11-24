@@ -21,7 +21,7 @@ import { GET as getAddresses, POST as postAddress } from '../../app/api/v1/custo
 import { POST as postQuote } from '../../app/api/v1/customer/checkout/quote/route'
 import { GET as getCourierHistory } from '../../app/api/v1/customer/courier-orders/route'
 import { GET as getOrder } from '../../app/api/v1/customer/orders/[id]/route'
-import { GET as getOrders } from '../../app/api/v1/customer/orders/route'
+import { GET as getOrders, POST as postOrder } from '../../app/api/v1/customer/orders/route'
 import { POST as postTerms } from '../../app/api/v1/customer/terms-acceptance/route'
 import { E2E as FIXTURES } from '../../scripts/e2e-fixtures'
 import { localClient as db } from './helpers/local-db'
@@ -91,12 +91,14 @@ async function pedir(
     bearer?: string
     method?: string
     body?: unknown
+    headers?: Record<string, string>
     params?: Record<string, string>
     qs?: string
   } = {},
 ): Promise<{ status: number; body: any; headers: Headers }> {
   const headers: Record<string, string> = { 'content-type': 'application/json' }
   if (opts.bearer) headers.authorization = `Bearer ${opts.bearer}`
+  Object.assign(headers, opts.headers)
   const res = await (handler as Handler)(
     new Request(`http://localhost:3001/api/v1/x${opts.qs ?? ''}`, {
       method: opts.method ?? 'GET',
@@ -921,7 +923,7 @@ describe('POST /customer/checkout/quote · payment', () => {
   const cotizar = async (c: Cliente, extra: Record<string, unknown> = {}) =>
     pedir(postQuote, { bearer: c.token, method: 'POST', body: bolsa(extra) })
 
-  it('cliente de confianza en delivery: las tres disponibles y el efectivo declara billete', async () => {
+  it('cliente de confianza en delivery: solo las dos de al recibir (sin prepaid) y el efectivo declara billete', async () => {
     const c = await clienteDeConfianza()
     const r = await cotizar(c)
     expect(r.status).toBe(200)
@@ -929,7 +931,6 @@ describe('POST /customer/checkout/quote · payment', () => {
     expect(r.body.data.payment.options).toEqual([
       { intent: 'pending_cash', available: true, unavailableReason: null },
       { intent: 'pending_yape', available: true, unavailableReason: null },
-      { intent: 'prepaid', available: true, unavailableReason: null },
     ])
     const { data: ajuste } = await db
       .from('app_settings')
@@ -943,13 +944,44 @@ describe('POST /customer/checkout/quote · payment', () => {
     })
   })
 
+  it('API-3 · POST con prepaid de un confiable sigue aceptándose (201), aunque la cotización ya no lo ofrezca', async () => {
+    const c = await clienteDeConfianza()
+    const cot = await cotizar(c)
+    expect(cot.body.data.payment.options.map((o: { intent: string }) => o.intent)).not.toContain(
+      'prepaid',
+    )
+    const r = await pedir(postOrder, {
+      bearer: c.token,
+      method: 'POST',
+      headers: { 'idempotency-key': crypto.randomUUID() },
+      body: {
+        businessId: FIXTURES.BUSINESS_ID,
+        deliveryMethod: 'delivery',
+        paymentIntent: 'prepaid',
+        customerName: NOMBRE,
+        customerPhone: c.tel9,
+        deliveryAddress: 'Jr. Prueba 1',
+        deliveryReference: REF,
+        deliveryLat: PIN.lat,
+        deliveryLng: PIN.lng,
+        items: [
+          {
+            menuItemId: FIXTURES.ITEM_POLLO_ID,
+            quantity: 1,
+            modifiers: [FIXTURES.MODOPT_QUESO_ID],
+          },
+        ],
+      },
+    })
+    expect(r.status, JSON.stringify(r.body)).toBe(201)
+  })
+
   it('cliente sin historial: la contraentrega sigue disponible (la creación decide con GPS o mostrador)', async () => {
     const c = await crearCliente()
     const r = await cotizar(c)
     expect(r.body.data.payment.options).toEqual([
       { intent: 'pending_cash', available: true, unavailableReason: null },
       { intent: 'pending_yape', available: true, unavailableReason: null },
-      { intent: 'prepaid', available: true, unavailableReason: null },
     ])
     expect(r.body.data.payment.cash).not.toBeNull()
   })

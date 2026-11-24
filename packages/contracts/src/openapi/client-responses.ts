@@ -327,7 +327,7 @@ export const CheckoutQuoteSchema = z.object({
         )
         .meta({
           description:
-            'En este orden. El recojo no trae `pending_yape` (no hay motorizado a quien transferirle)',
+            'En este orden. El recojo no trae `pending_yape` (no hay motorizado a quien transferirle). Si hay alguna opción al recibir disponible (`pending_cash` o `pending_yape`), `prepaid` no viene en la lista; `POST /customer/orders` lo sigue aceptando',
         }),
       cash: z
         .object({

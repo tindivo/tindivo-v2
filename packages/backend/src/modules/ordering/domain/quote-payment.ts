@@ -42,7 +42,8 @@ export interface QuotePaymentPlan {
 
 /**
  * Qué métodos de pago puede usar el cliente en este pedido (H-7). Pura: la ruta
- * reúne los datos. `prepaid` siempre; la contraentrega solo en delivery, si el
+ * reúne los datos. `prepaid` solo cuando no queda ninguna opción al recibir
+ * disponible; la contraentrega solo en delivery, si el
  * cliente es de confianza y el total no pasa del umbral. Un recojo solo ofrece
  * `prepaid` (0283). El motivo no distingue riesgo de falta de historial
  * (antifraude).
@@ -52,7 +53,7 @@ export interface QuotePaymentPlan {
  */
 export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
   const intents = customerPaymentIntents(input.deliveryMethod, null)
-  const options = intents.map((intent) => {
+  const all = intents.map((intent) => {
     if (intent === 'prepaid') {
       return { intent, available: true, unavailableReason: null }
     }
@@ -64,6 +65,12 @@ export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
           : null
     return { intent, available: unavailableReason === null, unavailableReason }
   })
+  // Un confiable con alguna opción al recibir disponible no ve `prepaid`: la app
+  // instalada pinta el grupo «Antes de recibir» con lo que llegue. `POST
+  // /customer/orders` sigue aceptándolo (API-3). Si falta toda opción al recibir
+  // (riesgo, umbral, ajustes dudosos, recojo), `prepaid` sale como siempre.
+  const receiveAvailable = all.some((o) => o.intent !== 'prepaid' && o.available)
+  const options = receiveAvailable ? all.filter((o) => o.intent !== 'prepaid') : all
   const cashAvailable = options.some((o) => o.intent === 'pending_cash' && o.available)
   return {
     options,
