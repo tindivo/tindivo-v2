@@ -50,83 +50,10 @@ import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.customer.R
 
 private val LOGO = 76.dp
+
+/** Lo que la hoja de la cabecera sube sobre la portada: 28 dp del tablero más el espacio entre filas. */
+private val HEADER_OVERLAP = 40.dp
 private const val MARK_RATIO = 158f / 93f
-
-/** Alto de la portada bajo la barra de estado (tablero «Negocio y carta»). */
-internal val BANNER_HEIGHT = 208.dp
-
-/** Etiqueta de pruebas del placeholder de la portada. */
-internal const val BANNER_PLACEHOLDER_TAG = "business_banner_placeholder"
-
-/** Alto de la barra superior sin contar la barra de estado. */
-internal val TOP_BAR_HEIGHT = 56.dp
-
-/**
- * La portada del negocio: foto de [BANNER_HEIGHT] más la barra de estado, que queda bajo ella (edge-to-edge). Sin
- * [url], o mientras la foto carga o si falla, se ve [BannerPlaceholder] en el mismo alto: nunca un hueco.
- */
-@Composable
-internal fun BusinessBanner(
-    url: String?,
-    name: String,
-    modifier: Modifier = Modifier,
-) {
-    val statusBar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    Box(modifier = modifier.fillMaxWidth().height(BANNER_HEIGHT + statusBar)) {
-        BannerPlaceholder(name = name)
-        if (url != null) {
-            AsyncImage(
-                model = url,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-    }
-}
-
-/**
- * Portada sin foto: degradado de marca con dos círculos concéntricos muy tenues y la inicial del negocio. Sin
- * imágenes: todo sale de [TindivoColors] y de un `Canvas`.
- */
-@Composable
-internal fun BannerPlaceholder(
-    name: String,
-    modifier: Modifier = Modifier,
-) {
-    val initial =
-        name
-            .trim()
-            .firstOrNull()
-            ?.uppercaseChar()
-            ?.toString()
-            .orEmpty()
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .testTag(BANNER_PLACEHOLDER_TAG)
-                .background(Brush.linearGradient(TindivoColors.gradientCta))
-                .drawBehind {
-                    val ring = Color.White.copy(alpha = 0.10f)
-                    val center = Offset(size.width * 0.85f, size.height * 0.2f)
-                    drawCircle(ring, radius = size.height * 0.9f, center = center)
-                    drawCircle(ring, radius = size.height * 0.55f, center = center)
-                },
-        contentAlignment = Alignment.Center,
-    ) {
-        if (initial.isNotEmpty()) {
-            // Decorativa: el nombre se lee en la cabecera.
-            Text(
-                text = initial,
-                style = MaterialTheme.typography.displayLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White.copy(alpha = 0.28f),
-                modifier = Modifier.clearAndSetSemantics { },
-            )
-        }
-    }
-}
 
 /**
  * Sube [by] el contenido sobre lo que tiene encima, sin dejar hueco debajo: la hoja de la cabecera monta sobre la
@@ -141,30 +68,26 @@ internal fun Modifier.pullUp(by: Dp): Modifier =
 
 /**
  * La cabecera: logo redondo de 76 dp, nombre de 26 sp, el giro y, si está cerrado, la píldora «Cerrado ahora».
- * Con portada, la hoja blanca se monta sobre ella ([overlap] = alto que sube, contando el espacio entre filas).
+ * La hoja blanca se monta sobre ella ([overlap] = alto que sube, contando el espacio entre filas).
  */
 @Composable
 internal fun BusinessHeader(
     business: BusinessDetailUi,
     closed: Boolean = false,
-    overlap: Dp? = null,
+    overlap: Dp = HEADER_OVERLAP,
 ) {
     val sheet =
-        if (overlap != null) {
-            Modifier
-                .pullUp(overlap)
-                .background(
-                    MaterialTheme.colorScheme.surfaceContainerLowest,
-                    RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                )
-        } else {
-            Modifier.padding(top = TindivoSpacing.tight)
-        }
+        Modifier
+            .pullUp(overlap)
+            .background(
+                MaterialTheme.colorScheme.surfaceContainerLowest,
+                RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            )
     Column(
         modifier = Modifier.fillMaxWidth().then(sheet).padding(horizontal = TindivoSpacing.screen),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        BusinessLogo(business, modifier = if (overlap != null) Modifier.pullUp(LOGO / 2) else Modifier)
+        BusinessLogo(business, modifier = Modifier.pullUp(LOGO / 2))
         Text(
             text = business.name,
             style = MaterialTheme.typography.headlineMedium,
@@ -204,7 +127,7 @@ internal fun BusinessHeader(
             }
         }
         // Debajo de la hoja con portada queda aire hasta la primera sección, como el tablero.
-        if (overlap != null) Box(modifier = Modifier.size(TindivoSpacing.tight))
+        Box(modifier = Modifier.size(TindivoSpacing.tight))
     }
 }
 

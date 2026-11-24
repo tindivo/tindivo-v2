@@ -80,9 +80,6 @@ internal fun menuRows(business: BusinessDetailUi): List<MenuRow> =
 internal fun categoryHeaderIndices(rows: List<MenuRow>): List<Int> =
     rows.indices.filter { rows[it] is MenuRow.Category }
 
-/** Índice de la cabecera del negocio: lo que queda por encima es la portada. */
-internal fun businessHeaderIndex(rows: List<MenuRow>): Int = rows.indexOfFirst { it is MenuRow.Header }.coerceAtLeast(0)
-
 /**
  * Categoría que se está leyendo: la última cuya cabecera ya pasó o está arriba del todo. Mientras se ve la portada
  * (todavía no llegó la primera cabecera) vale la primera. Con [lookahead], la cabecera que sigue a la primera fila

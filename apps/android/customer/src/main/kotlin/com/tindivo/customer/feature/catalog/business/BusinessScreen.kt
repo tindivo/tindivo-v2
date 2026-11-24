@@ -34,6 +34,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,10 +54,6 @@ import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
 import java.math.BigDecimal
 
-/** La barra empieza a ganar color cuando la portada ya subió esto, y llega a sólida [BAR_RAMP] después. */
-private val BAR_RAMP_START = 60.dp
-private val BAR_RAMP = 50.dp
-
 @Composable
 internal fun BusinessScreen(
     state: BusinessUiState,
@@ -74,7 +71,8 @@ internal fun BusinessScreen(
     val business = (state as? BusinessUiState.Loaded)?.business
     val rows = remember(business) { business?.let(::menuRows).orEmpty() }
     val headerIndices = remember(rows) { categoryHeaderIndices(rows) }
-    val spy = remember(listState, headerIndices) { SectionSpy(listState, headerIndices) }
+    val scope = rememberCoroutineScope()
+    val spy = remember(listState, headerIndices, scope) { SectionSpy(listState, headerIndices, scope) }
     LaunchedEffect(spy) { spy.follow() }
     // 0 con la portada a la vista, 1 con la barra ya sólida: crece mientras la portada sube bajo la barra.
     val density = LocalDensity.current
@@ -109,19 +107,22 @@ internal fun BusinessScreen(
                 }
 
                 state is BusinessUiState.Loaded -> {
+                    StatusBarIconsOverBanner { barProgress() < 0.5f }
                     MenuList(
                         rows = rows,
                         listState = listState,
                         spy = spy,
                         onDishClick = onDishClick,
                         closed = ordering is OrderingMode.Closed,
-                    )
-                    BusinessTopBar(
-                        business = business,
-                        progress = barProgress,
-                        onSearch = { query = "" },
-                        onBack = onBack,
-                        modifier = Modifier.align(Alignment.TopStart),
+                        topBar = {
+                            BusinessTopBar(
+                                business = business,
+                                progress = barProgress,
+                                onSearch = { query = "" },
+                                onBack = onBack,
+                                modifier = Modifier.align(Alignment.TopStart),
+                            )
+                        },
                     )
                 }
 
@@ -133,83 +134,6 @@ internal fun BusinessScreen(
     }
     openDish?.let { dish ->
         DishSheet(item = dish, onDismiss = { openDishId = null }, onAdd = cartActions.onAdd)
-    }
-}
-
-/** Progreso de la barra superior (0 = transparente, 1 = sólida) según cuánto subió la portada. */
-private fun barProgressOf(
-    listState: LazyListState,
-    density: Density,
-): Float {
-    if (listState.firstVisibleItemIndex > 0) return 1f
-    val start = with(density) { BAR_RAMP_START.toPx() }
-    val range = with(density) { BAR_RAMP.toPx() }
-    return ((listState.firstVisibleItemScrollOffset - start) / range).coerceIn(0f, 1f)
-}
-
-@Composable
-private fun MenuList(
-    rows: List<MenuRow>,
-    listState: LazyListState,
-    spy: SectionSpy,
-    onDishClick: ((MenuItemUi) -> Unit)?,
-    closed: Boolean = false,
-) {
-    // La barra superior flota: el contenido empieza bajo ella y las secciones se pegan justo ahí. La portada sube
-    // ese mismo alto para quedar detrás de la barra, desde el borde de la pantalla.
-    val barHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + TOP_BAR_HEIGHT
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        state = listState,
-        contentPadding = PaddingValues(top = barHeight, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        rows.forEach { row ->
-            when (row) {
-                is MenuRow.Sections -> {
-                    stickyHeader(key = row.key) { SectionChips(categories = row.categories, spy = spy) }
-                }
-
-                else -> {
-                    item(key = row.key) { MenuRowContent(row, barHeight, onDishClick, closed) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MenuRowContent(
-    row: MenuRow,
-    barHeight: Dp,
-    onDishClick: ((MenuItemUi) -> Unit)?,
-    closed: Boolean,
-) {
-    when (row) {
-        is MenuRow.Banner -> {
-            BusinessBanner(row.url, row.name, modifier = Modifier.pullUp(barHeight))
-        }
-
-        is MenuRow.Header -> {
-            // La hoja de la cabecera sube sobre la portada: 28 dp del tablero más el espacio entre filas.
-            BusinessHeader(row.business, closed = closed, overlap = 40.dp)
-        }
-
-        is MenuRow.Category -> {
-            CategoryHeader(row.category)
-        }
-
-        is MenuRow.Carousel -> {
-            FeaturedCarousel(items = row.items, onDishClick = onDishClick)
-        }
-
-        is MenuRow.Dish -> {
-            MenuItemRow(row.item, onClick = onDishClick?.let { click -> { click(row.item) } })
-        }
-
-        is MenuRow.Sections -> {
-            Unit
-        }
     }
 }
 
@@ -248,6 +172,7 @@ private fun PendingContent(
                 }
             }
         }
+        StatusBarIconsOverBanner { true }
         BusinessTopBar(
             business = null,
             progress = { 0f },

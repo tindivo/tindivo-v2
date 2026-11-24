@@ -60,7 +60,6 @@ class MenuRowTest {
         val rows = menuRows(business(null, pizzas, bebidas))
 
         assertEquals(MenuRow.Banner(null, "Pizza Priamo"), rows.first())
-        assertEquals(1, businessHeaderIndex(rows))
         assertTrue(rows[2] is MenuRow.Sections)
         // portada, cabecera, selector, Pizzas, 2 platos, Bebidas, 1 plato
         assertEquals(listOf(3, 6), categoryHeaderIndices(rows))
