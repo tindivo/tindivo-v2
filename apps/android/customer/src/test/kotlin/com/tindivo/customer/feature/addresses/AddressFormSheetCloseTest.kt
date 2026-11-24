@@ -32,6 +32,7 @@ internal class AddressFormSheetCloseTest : AddressHarness() {
         store,
         configService,
         FakeLocationSource(available = false),
+        FakeStreetSuggester(),
     )
 
     private suspend fun AddressFormViewModel.ready(): AddressFormState = state.first { !it.loading }

@@ -55,6 +55,19 @@ internal data class AddressFormState(
     val reference: String = "",
     /** El punto elegido en el mapa. Nulo = nadie lo ha marcado (o la dirección vieja nunca tuvo uno confirmado). */
     val point: GeoPoint? = null,
+    /**
+     * La precisión en metros de la lectura del GPS que dio [point]; nula si lo marcó la persona a mano (al arrastrar el
+     * mapa se anula) o el proveedor no la dio. Viaja al guardar como `accuracyM` (CUS-ADR-001, CA-ADR-06).
+     */
+    val accuracyM: Float? = null,
+    /** Lo más impreciso que se acepta de una lectura (`location_validation.maxAccuracyM`); 30 m si la configuración no llega. */
+    val maxAccuracyM: Float = DEFAULT_MAX_ACCURACY_M,
+    /** Buscando la calle del punto en el geocodificador (el campo muestra un esqueleto). */
+    val suggesting: Boolean = false,
+    /** La calle del campo vino del geocodificador y la persona aún no la tocó. */
+    val lineSuggested: Boolean = false,
+    /** El geocodificador solo dio la localidad: se pide escribir la calle. */
+    val localityOnly: String? = null,
     val makeDefault: Boolean = false,
     /** Ya es la predeterminada, o es la primera dirección: el servidor la deja predeterminada y no hay interruptor. */
     val hideDefaultSwitch: Boolean = false,
@@ -72,6 +85,34 @@ internal data class AddressFormState(
     val missing: MissingField? get() = missingField(point, line, reference, area)
     val busy: Boolean get() = saving || deleting
     val canSave: Boolean get() = !loading && loadError == null && !busy && missing == null
+
+    /** La lectura del GPS fue peor de lo que pide la configuración: se avisa y se pide revisar el pin. */
+    val imprecise: Boolean get() = isImprecise(accuracyM, maxAccuracyM)
+}
+
+/** El punto (y la precisión de su lectura) de antes de abrir el mapa desde «Cambiar». */
+private data class PointSnapshot(
+    val point: GeoPoint?,
+    val accuracyM: Float?,
+)
+
+/** Aplica lo que contestó el geocodificador al campo de la calle. Con algo ya escrito por la persona, no se toca. */
+internal fun AddressFormState.withSuggestion(suggestion: StreetSuggestion): AddressFormState {
+    val free = line.isBlank() || lineSuggested
+    if (!free) return copy(suggesting = false)
+    return when (suggestion) {
+        is StreetSuggestion.Street -> {
+            copy(suggesting = false, line = suggestion.line, lineSuggested = true, localityOnly = null)
+        }
+
+        is StreetSuggestion.LocalityOnly -> {
+            copy(suggesting = false, line = "", lineSuggested = false, localityOnly = suggestion.locality)
+        }
+
+        StreetSuggestion.None -> {
+            copy(suggesting = false)
+        }
+    }
 }
 
 /**
@@ -89,6 +130,7 @@ internal class AddressFormViewModel
         private val sessionStore: SessionStore,
         private val configService: ConfigService,
         private val locations: LocationSource,
+        private val streets: StreetSuggester,
     ) : ViewModel() {
         @AssistedFactory
         interface Factory {
@@ -105,6 +147,10 @@ internal class AddressFormViewModel
 
         private var job: Job? = null
         private var locateJob: Job? = null
+        private var suggestJob: Job? = null
+
+        /** El punto y su precisión al abrir el mapa desde «Cambiar»: si la persona vuelve con Atrás, se restauran. */
+        private var changeSnapshot: PointSnapshot? = null
 
         /**
          * El formulario está a la vista (la app en primer plano). Fuera de ella no se empieza ni se aplica ninguna
@@ -131,6 +177,7 @@ internal class AddressFormViewModel
                     if (watch.ended(it)) {
                         job?.cancel()
                         locateJob?.cancel()
+                        suggestJob?.cancel()
                         _state.update { s -> s.copy(outcome = FormOutcome.LoggedOut) }
                     }
                 }
@@ -148,7 +195,8 @@ internal class AddressFormViewModel
 
         fun onLabel(value: String) = edit { it.copy(label = value) }
 
-        fun onLine(value: String) = edit { it.copy(line = value.take(ADDRESS_LINE_MAX)) }
+        fun onLine(value: String) =
+            edit { it.copy(line = value.take(ADDRESS_LINE_MAX), lineSuggested = false, localityOnly = null) }
 
         fun onReference(value: String) = edit { it.copy(reference = value.take(ADDRESS_REFERENCE_MAX)) }
 
@@ -161,7 +209,43 @@ internal class AddressFormViewModel
         fun onPointChosen(point: GeoPoint) {
             if (_state.value.busy) return
             stopLocating()
-            edit { it.copy(point = point, locate = it.locate.copy(notice = null, located = null)) }
+            // Un punto marcado a mano ya no es la lectura del GPS: su precisión deja de valer.
+            edit { it.copy(point = point, accuracyM = null, locate = it.locate.copy(notice = null, located = null)) }
+        }
+
+        /** La persona toca «Cambiar» en los datos: se guarda el punto de ahora por si vuelve con Atrás. */
+        fun beginChange() {
+            val s = _state.value
+            changeSnapshot = PointSnapshot(s.point, s.accuracyM)
+        }
+
+        /** Atrás en el mapa venido de «Cambiar»: vuelve el punto de antes, con lo escrito intacto. */
+        fun cancelChange() {
+            val snapshot = changeSnapshot ?: return
+            changeSnapshot = null
+            stopLocating()
+            edit {
+                it.copy(point = snapshot.point, accuracyM = snapshot.accuracyM, locate = it.locate.copy(located = null))
+            }
+        }
+
+        /**
+         * «Sí, aquí es mi puerta»: el punto queda confirmado y se le pide la calle al geocodificador del sistema. Solo
+         * rellena el campo si está vacío o si lo que hay es una sugerencia anterior que la persona no tocó: lo que escribió
+         * ella no se pisa (CUS-ADR-016, CUS-ADR-017).
+         */
+        fun onPointConfirmed() {
+            changeSnapshot = null
+            val s = _state.value
+            val point = s.point ?: return
+            if (s.busy || (s.line.isNotBlank() && !s.lineSuggested)) return
+            suggestJob?.cancel()
+            _state.update { it.copy(suggesting = true, localityOnly = null) }
+            suggestJob =
+                viewModelScope.launch {
+                    val suggestion = streets.suggest(point)
+                    settle { it.withSuggestion(suggestion) }
+                }
         }
 
         /**
@@ -318,6 +402,7 @@ internal class AddressFormViewModel
                             point.lat.toWireCoordinate(),
                             point.lng.toWireCoordinate(),
                         ),
+                    accuracyM = s.accuracyM.toWireAccuracy(),
                     // Solo si la persona lo prendió: sin `isDefault` decide el servidor (la primera queda predeterminada).
                     isDefault = if (s.makeDefault) true else null,
                 ),
@@ -344,6 +429,7 @@ internal class AddressFormViewModel
                     reference = s.reference.trim(),
                     // El sello del punto lo mueve el punto: si no cambió, no se manda y el servidor conserva el suyo.
                     coordinates = if (moved) UpdateCustomerAddressRequestCoordinates(lat, lng) else null,
+                    accuracyM = if (moved) s.accuracyM.toWireAccuracy() else null,
                     isDefault = if (s.makeDefault) true else null,
                 ),
                 account,
@@ -352,7 +438,10 @@ internal class AddressFormViewModel
 
         private suspend fun loadAll(account: String) {
             // Sin la zona de la configuración se usa la de respaldo (la misma que la web).
-            val area = CoverageArea.from((catalog.publicConfig() as? ApiResult.Success)?.data)
+            val config = (catalog.publicConfig() as? ApiResult.Success)?.data
+            val area = CoverageArea.from(config)
+            // El umbral de precisión viene de `app_settings` (CUS-ADR-006); sin configuración, 30 m.
+            val maxAccuracyM = config?.locationValidation?.maxAccuracyM?.toFloat() ?: DEFAULT_MAX_ACCURACY_M
             when (val result = addresses.list(account)) {
                 is ApiResult.Failure -> {
                     onLoadFailure(result.error, account)
@@ -365,7 +454,7 @@ internal class AddressFormViewModel
                         // La borraron en otro teléfono: se muestra como no encontrada.
                         onLoadFailure(AppError.Unknown(code = "not_found", detail = null), account)
                     } else {
-                        applyLoaded(area, items.isEmpty(), current)
+                        applyLoaded(area, maxAccuracyM, items.isEmpty(), current)
                     }
                 }
             }
@@ -373,6 +462,7 @@ internal class AddressFormViewModel
 
         private fun applyLoaded(
             area: CoverageArea,
+            maxAccuracyM: Float,
             noAddresses: Boolean,
             current: AddressUi?,
         ) {
@@ -383,6 +473,7 @@ internal class AddressFormViewModel
                     loading = false,
                     loadError = null,
                     area = area,
+                    maxAccuracyM = maxAccuracyM,
                     hideDefaultSwitch = noAddresses || current?.isDefault == true,
                     label = current?.label?.takeIf { l -> l in ADDRESS_LABELS } ?: it.label,
                     line = current?.line.orEmpty(),
