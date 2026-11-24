@@ -407,8 +407,9 @@ private fun OrderDetailWithReview(
 }
 
 /**
- * Cambia de pestaña: siempre se vuelve a la raíz de esa pestaña, con la pila de Inicio por debajo (atrás sale de la
- * app desde cualquier pestaña) y sin duplicar destinos. Sin sesión, «Pedidos» y «Cuenta» abren la entrada.
+ * Cambia de pestaña con la pila de Inicio por debajo (atrás sale de la app desde cualquier pestaña) y sin duplicar
+ * destinos. Entregas y Pedidos recuperan la subpila en la que se dejaron (por ejemplo, el detalle de un pedido);
+ * Inicio y Cuenta siempre abren su raíz. Sin sesión, «Pedidos» y «Cuenta» abren la entrada.
  */
 internal fun NavHostController.openTab(
     tab: RootTab,
