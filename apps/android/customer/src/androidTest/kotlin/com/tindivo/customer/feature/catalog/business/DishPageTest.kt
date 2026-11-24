@@ -293,9 +293,26 @@ class DishPageTest {
         compose.onNodeWithTag(DISH_PAGE_TAG).assertIsDisplayed()
         assertTrue(lightIcons())
         pressBack()
+
+        // Carta abajo (barra sólida): justo al cerrar un plato, sin desplazar, mandan los iconos oscuros de la carta.
+        openDishFromDeepInTheMenu("Bebidas plato 6")
+        pressBack()
+        assertTrue(lightIcons())
         compose.onNode(verticalScroll).performScrollToIndex(0)
         compose.waitForIdle()
         assertTrue(!lightIcons())
+
+        // Carta arriba con la portada a la vista: se abre un plato sin foto y, justo al cerrar y sin desplazar, vuelven
+        // los iconos claros. Solo si la pantalla es lo bastante alta para tocar un plato sin bajar la carta.
+        val visibleAtTop = runCatching { compose.onNodeWithText("Pollos plato 3").assertIsDisplayed() }.isSuccess
+        if (visibleAtTop) {
+            compose.onNodeWithText("Pollos plato 3").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(DISH_PAGE_TAG).assertIsDisplayed()
+            assertTrue(lightIcons())
+            pressBack()
+            assertTrue(!lightIcons())
+        }
     }
 
     @Test

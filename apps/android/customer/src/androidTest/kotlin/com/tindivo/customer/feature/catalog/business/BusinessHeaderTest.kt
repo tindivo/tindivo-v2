@@ -121,6 +121,10 @@ class BusinessHeaderTest {
         show()
         val chip = hasText("Postres") and SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected)
 
+        // En una pantalla baja los chips aún no están compuestos (van bajo la cabecera): se llevan a la vista antes.
+        // (La fila de secciones es el tercer elemento de la lista: portada, cabecera y chips.)
+        list.performScrollToIndex(2)
+        compose.waitForIdle()
         compose.onNode(chip).performClick()
         compose.waitForIdle()
 
