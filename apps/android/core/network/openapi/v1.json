@@ -4571,6 +4571,35 @@
                           "description": "Hoy es `orders.updated_at`, no el reloj de `awaiting_payment`",
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "totalText": {
+                          "type": "string",
+                          "pattern": "^\\d+\\.\\d{2}$",
+                          "description": "Total (comida + envío) como texto decimal, D-39. `total` sigue siendo número por compatibilidad y no debe usarse en código nuevo"
+                        },
+                        "proofOptional": {
+                          "type": "boolean",
+                          "description": "Verdadero en el pago único del cliente de confianza (`pending_yape`): la captura es opcional y no frena al pedido"
+                        },
+                        "canUploadProof": {
+                          "type": "boolean",
+                          "description": "Si ahora se puede subir una captura (estado del pedido, ingreso sin confirmar e intentos). Las apps no deben deducirlo de `status`"
+                        },
+                        "paymentProofStatus": {
+                          "nullable": true,
+                          "description": "Estado de la captura según el negocio; null si no hay ninguna",
+                          "type": "string",
+                          "x-known-values": [
+                            "pending",
+                            "verified",
+                            "rejected"
+                          ]
+                        },
+                        "paymentVerifiedAt": {
+                          "nullable": true,
+                          "description": "Cuándo el negocio confirmó el ingreso; null si no lo ha confirmado",
+                          "type": "string",
+                          "format": "date-time"
                         }
                       },
                       "required": [
@@ -4583,7 +4612,12 @@
                         "hasProof",
                         "proofAttempt",
                         "comprobantePrepagoUrl",
-                        "awaitingPaymentAt"
+                        "awaitingPaymentAt",
+                        "totalText",
+                        "proofOptional",
+                        "canUploadProof",
+                        "paymentProofStatus",
+                        "paymentVerifiedAt"
                       ],
                       "additionalProperties": false
                     }
