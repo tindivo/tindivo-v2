@@ -5,11 +5,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.plus
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -32,16 +39,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
 import java.math.BigDecimal
+
+/** La barra empieza a ganar color cuando la portada ya subió esto, y llega a sólida [BAR_RAMP] después. */
+private val BAR_RAMP_START = 60.dp
+private val BAR_RAMP = 50.dp
 
 @Composable
 internal fun BusinessScreen(
@@ -62,9 +76,9 @@ internal fun BusinessScreen(
     val headerIndices = remember(rows) { categoryHeaderIndices(rows) }
     val spy = remember(listState, headerIndices) { SectionSpy(listState, headerIndices) }
     LaunchedEffect(spy) { spy.follow() }
-    val showTitle by remember(rows) {
-        derivedStateOf { listState.firstVisibleItemIndex > businessHeaderIndex(rows) }
-    }
+    // 0 con la portada a la vista, 1 con la barra ya sólida: crece mientras la portada sube bajo la barra.
+    val density = LocalDensity.current
+    val barProgress = remember(listState, density) { { barProgressOf(listState, density) } }
     val searching = query != null && business != null
     BackHandler(enabled = searching) { query = null }
     // La ficha abierta se recuerda por id: sobrevive a girar la pantalla y se cierra sola si el plato sale de la carta.
@@ -83,39 +97,36 @@ internal fun BusinessScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = { OrderingBottomBar(ordering, cart.bar, cartActions.onOpenCart) },
-        topBar = {
-            MenuTopBar(
-                business = business,
-                showTitle = showTitle,
-                query = query,
-                spy = spy,
-                onQueryChange = { query = it },
-                onBack = onBack,
-            )
-        },
+        // La barra superior flota sobre la portada y pone ella misma la barra de estado: el contenido sube hasta arriba.
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            when (state) {
-                BusinessUiState.Loading -> {
-                    LoadingIndicator()
+            when {
+                searching && business != null -> {
+                    SearchResultsPane(business = business, query = query.orEmpty(), onQueryChange = {
+                        query = it
+                    }, onDishClick = onDishClick)
                 }
 
-                is BusinessUiState.Failed -> {
-                    ErrorContent(error = state.error, onRetry = onRefresh)
+                state is BusinessUiState.Loaded -> {
+                    MenuList(
+                        rows = rows,
+                        listState = listState,
+                        spy = spy,
+                        onDishClick = onDishClick,
+                        closed = ordering is OrderingMode.Closed,
+                    )
+                    BusinessTopBar(
+                        business = business,
+                        progress = barProgress,
+                        onSearch = { query = "" },
+                        onBack = onBack,
+                        modifier = Modifier.align(Alignment.TopStart),
+                    )
                 }
 
-                is BusinessUiState.Loaded -> {
-                    val text = query.orEmpty()
-                    if (parseTerms(text).isNotEmpty()) {
-                        MenuSearchResults(business = state.business, query = text, onDishClick = onDishClick)
-                    } else {
-                        MenuList(
-                            rows = rows,
-                            listState = listState,
-                            onDishClick = onDishClick,
-                            closed = ordering is OrderingMode.Closed,
-                        )
-                    }
+                else -> {
+                    PendingContent(state = state, onRefresh = onRefresh, onBack = onBack)
                 }
             }
         }
@@ -125,44 +136,125 @@ internal fun BusinessScreen(
     }
 }
 
+/** Progreso de la barra superior (0 = transparente, 1 = sólida) según cuánto subió la portada. */
+private fun barProgressOf(
+    listState: LazyListState,
+    density: Density,
+): Float {
+    if (listState.firstVisibleItemIndex > 0) return 1f
+    val start = with(density) { BAR_RAMP_START.toPx() }
+    val range = with(density) { BAR_RAMP.toPx() }
+    return ((listState.firstVisibleItemScrollOffset - start) / range).coerceIn(0f, 1f)
+}
+
 @Composable
 private fun MenuList(
     rows: List<MenuRow>,
     listState: LazyListState,
+    spy: SectionSpy,
     onDishClick: ((MenuItemUi) -> Unit)?,
     closed: Boolean = false,
 ) {
-    val hasBanner = rows.firstOrNull() is MenuRow.Banner
+    // La barra superior flota: el contenido empieza bajo ella y las secciones se pegan justo ahí. La portada sube
+    // ese mismo alto para quedar detrás de la barra, desde el borde de la pantalla.
+    val barHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + TOP_BAR_HEIGHT
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         state = listState,
-        contentPadding = PaddingValues(bottom = 16.dp),
+        contentPadding = PaddingValues(top = barHeight, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(rows, key = { it.key }) { row ->
+        rows.forEach { row ->
             when (row) {
-                is MenuRow.Banner -> {
-                    BusinessBanner(row.url)
+                is MenuRow.Sections -> {
+                    stickyHeader(key = row.key) { SectionChips(categories = row.categories, spy = spy) }
                 }
 
-                is MenuRow.Header -> {
-                    // Con portada, la hoja de la cabecera sube sobre ella: 28 dp del tablero más el espacio entre filas.
-                    BusinessHeader(row.business, closed = closed, overlap = if (hasBanner) 40.dp else null)
-                }
-
-                is MenuRow.Category -> {
-                    CategoryHeader(row.category)
-                }
-
-                is MenuRow.Carousel -> {
-                    FeaturedCarousel(items = row.items, onDishClick = onDishClick)
-                }
-
-                is MenuRow.Dish -> {
-                    MenuItemRow(row.item, onClick = onDishClick?.let { click -> { click(row.item) } })
+                else -> {
+                    item(key = row.key) { MenuRowContent(row, barHeight, onDishClick, closed) }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MenuRowContent(
+    row: MenuRow,
+    barHeight: Dp,
+    onDishClick: ((MenuItemUi) -> Unit)?,
+    closed: Boolean,
+) {
+    when (row) {
+        is MenuRow.Banner -> {
+            BusinessBanner(row.url, row.name, modifier = Modifier.pullUp(barHeight))
+        }
+
+        is MenuRow.Header -> {
+            // La hoja de la cabecera sube sobre la portada: 28 dp del tablero más el espacio entre filas.
+            BusinessHeader(row.business, closed = closed, overlap = 40.dp)
+        }
+
+        is MenuRow.Category -> {
+            CategoryHeader(row.category)
+        }
+
+        is MenuRow.Carousel -> {
+            FeaturedCarousel(items = row.items, onDishClick = onDishClick)
+        }
+
+        is MenuRow.Dish -> {
+            MenuItemRow(row.item, onClick = onDishClick?.let { click -> { click(row.item) } })
+        }
+
+        is MenuRow.Sections -> {
+            Unit
+        }
+    }
+}
+
+/** El modo búsqueda: barra sólida con el campo y, debajo, los resultados. */
+@Composable
+private fun SearchResultsPane(
+    business: BusinessDetailUi,
+    query: String,
+    onQueryChange: (String?) -> Unit,
+    onDishClick: ((MenuItemUi) -> Unit)?,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        SearchTopBar(businessName = business.name, query = query, onQueryChange = onQueryChange)
+        Box(modifier = Modifier.weight(1f)) {
+            if (parseTerms(query).isNotEmpty()) {
+                MenuSearchResults(business = business, query = query, onDishClick = onDishClick)
+            }
+        }
+    }
+}
+
+/** Carga o error: la misma portada de marca arriba y, sobre ella, solo «Atrás». */
+@Composable
+private fun PendingContent(
+    state: BusinessUiState,
+    onRefresh: () -> Unit,
+    onBack: () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            BusinessBanner(url = null, name = "")
+            Box(modifier = Modifier.weight(1f)) {
+                when (state) {
+                    is BusinessUiState.Failed -> ErrorContent(error = state.error, onRetry = onRefresh)
+                    else -> LoadingIndicator()
+                }
+            }
+        }
+        BusinessTopBar(
+            business = null,
+            progress = { 0f },
+            onSearch = {},
+            onBack = onBack,
+            modifier = Modifier.align(Alignment.TopStart),
+        )
     }
 }
 

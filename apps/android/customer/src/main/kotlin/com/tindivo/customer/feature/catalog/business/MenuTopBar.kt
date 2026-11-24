@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -44,12 +47,19 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,54 +75,114 @@ import java.math.BigDecimal
 /** Desde cuántas categorías aparece el botón del índice (D-61). */
 private const val INDEX_MIN_CATEGORIES = 5
 
+/** Los botones de la barra miden 40 dp; el toque, 48. */
+private val ROUND_BUTTON = 40.dp
+
+/** Blanco con el que los botones se ven sobre cualquier foto. */
+private const val BUTTON_ALPHA = 0.92f
+
 /**
- * Barra fija de la carta (D-61): volver, el nombre del negocio una vez que la portada salió de pantalla y la lupa; con
- * la lupa abierta, el campo de búsqueda. Debajo, los chips de categorías.
- *
- * [query] es `null` mientras no se busca; un texto (aun vacío) es el modo búsqueda. [onQueryChange] con `""` abre la
- * búsqueda, con `null` la cierra y con cualquier otro texto la actualiza. [business] es `null` sin la carta
- * cargada: entonces no hay título, ni lupa, ni chips.
+ * Barra superior de la carta, encima de la portada: transparente al inicio, con «Atrás» y «Buscar» en círculos
+ * blancos; al salir la portada se vuelve sólida y muestra el nombre. [progress] va de 0 (portada) a 1 (barra sólida) y
+ * se lee solo al dibujar, así que el scroll no recompone nada. [business] es `null` sin la carta cargada: entonces
+ * solo hay «Atrás».
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun MenuTopBar(
+internal fun BusinessTopBar(
     business: BusinessDetailUi?,
-    showTitle: Boolean,
-    query: String?,
-    spy: SectionSpy,
-    onQueryChange: (String?) -> Unit,
+    progress: () -> Float,
+    onSearch: () -> Unit,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        if (query != null && business != null) {
-            TopAppBar(
-                title = { SearchField(businessName = business.name, query = query, onQueryChange = onQueryChange) },
-                navigationIcon = { BackButton(onClick = { onQueryChange(null) }) },
+    val surface = MaterialTheme.colorScheme.surfaceContainerLowest
+    val divider = MaterialTheme.colorScheme.outlineVariant
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                // Lo primero que se lee: la barra va encima en pantalla pero después en la composición.
+                .semantics {
+                    isTraversalGroup = true
+                    traversalIndex = -1f
+                }.drawBehind {
+                    val p = progress()
+                    drawRect(surface.copy(alpha = p))
+                    drawRect(
+                        divider.copy(alpha = p),
+                        topLeft = Offset(0f, size.height - 1.dp.toPx()),
+                        size = Size(size.width, 1.dp.toPx()),
+                    )
+                }.windowInsetsPadding(WindowInsets.statusBars)
+                .height(TOP_BAR_HEIGHT)
+                .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RoundBarButton(
+            icon = TindivoIcons.ArrowBack,
+            description = stringResource(R.string.business_back),
+            progress = progress,
+            onClick = onBack,
+        )
+        Text(
+            text = business?.name.orEmpty(),
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp)
+                    .graphicsLayer { alpha = progress() },
+        )
+        if (business != null) {
+            RoundBarButton(
+                icon = TindivoIcons.Search,
+                description = stringResource(R.string.business_search_open),
+                progress = progress,
+                onClick = onSearch,
             )
-        } else {
-            TopAppBar(
-                title = {
-                    if (showTitle && business != null) {
-                        Text(text = business.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                },
-                navigationIcon = { BackButton(onClick = onBack) },
-                actions = {
-                    if (business != null) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(
-                                imageVector = TindivoIcons.Search,
-                                contentDescription = stringResource(R.string.business_search_open),
-                            )
-                        }
-                    }
-                },
-            )
-        }
-        if (business != null && query == null && business.sections.size >= 2) {
-            SectionChips(categories = business.sections, spy = spy)
         }
     }
+}
+
+/** Círculo de 40 dp en un toque de 48: blanco con sombra sobre la portada, que se funde con la barra al volverse sólida. */
+@Composable
+private fun RoundBarButton(
+    icon: ImageVector,
+    description: String,
+    progress: () -> Float,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick, modifier = Modifier.size(TindivoSpacing.touchTarget)) {
+        Box(
+            modifier =
+                Modifier
+                    .size(ROUND_BUTTON)
+                    .graphicsLayer {
+                        shadowElevation = (1f - progress()) * 4.dp.toPx()
+                        shape = CircleShape
+                        clip = false
+                    }.drawBehind { drawCircle(Color.White.copy(alpha = BUTTON_ALPHA * (1f - progress()))) },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(imageVector = icon, contentDescription = description, tint = MaterialTheme.colorScheme.onSurface)
+        }
+    }
+}
+
+/** Barra sólida del modo búsqueda: volver cierra la búsqueda y el campo ocupa el resto. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SearchTopBar(
+    businessName: String,
+    query: String,
+    onQueryChange: (String?) -> Unit,
+) {
+    TopAppBar(
+        title = { SearchField(businessName = businessName, query = query, onQueryChange = onQueryChange) },
+        navigationIcon = { BackButton(onClick = { onQueryChange(null) }) },
+    )
 }
 
 @Composable
@@ -173,7 +243,7 @@ private fun SearchField(
 
 /** Fila de chips que sigue a la sección visible, con el botón del índice a la derecha desde 5 categorías. */
 @Composable
-private fun SectionChips(
+internal fun SectionChips(
     categories: List<MenuCategoryUi>,
     spy: SectionSpy,
 ) {
@@ -192,7 +262,11 @@ private fun SectionChips(
 
     // Fondo sólido: al fijarse bajo la barra, la carta que pasa por detrás no debe verse entre los chips.
     Row(
-        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+                .onSizeChanged { spy.stickyHeightPx = it.height },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LazyRow(
@@ -305,36 +379,18 @@ private fun IndexButton(
 @Preview(showBackground = true)
 @Composable
 private fun SearchBarPreview() {
-    val dish =
-        MenuItemUi(
-            "1",
-            "Pizza americana",
-            null,
-            "S/ 30.00",
-            BigDecimal("30.00"),
-            emptyList(),
-            null,
-            true,
-            DishWindow(null, null, null),
-        )
-    val business =
-        BusinessDetailUi(
-            id = "negocio",
-            name = "Pizza Priamo",
-            tagline = null,
-            logoUrl = null,
-            bannerUrl = null,
-            accent = null,
-            categories = listOf(MenuCategoryUi("c1", "Pizzas", null, listOf(dish))),
-        )
     TindivoTheme {
-        MenuTopBar(
-            business = business,
-            showTitle = true,
-            query = "pizza",
-            spy = SectionSpy(rememberLazyListState(), listOf(1)),
-            onQueryChange = {},
-            onBack = {},
-        )
+        SearchTopBar(businessName = "Pizza Priamo", query = "pizza", onQueryChange = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TopBarOverBannerPreview() {
+    TindivoTheme {
+        Box {
+            BannerPlaceholder(name = "Pizza Priamo", modifier = Modifier.height(BANNER_HEIGHT))
+            BusinessTopBar(business = null, progress = { 0f }, onSearch = {}, onBack = {})
+        }
     }
 }

@@ -24,11 +24,23 @@ internal class SectionSpy(
 
     private var jumps = 0
 
+    /** Alto en píxeles del selector pegado: lo que tapa de la carta, y por tanto cuánto se deja libre al saltar. */
+    var stickyHeightPx: Int = 0
+
     /** Corre mientras la pantalla esté; se lanza con `LaunchedEffect`. */
     suspend fun follow() {
-        snapshotFlow { activeCategoryIndex(headerIndices, listState.firstVisibleItemIndex) }.collect {
+        snapshotFlow { activeIndex() }.collect {
             if (jumps == 0) selected = it
         }
+    }
+
+    private fun activeIndex(): Int {
+        val first = listState.firstVisibleItemIndex
+        val info = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == first }
+        // Lo que se ve de la primera fila cabe bajo el selector pegado: la fila que cuenta es la siguiente.
+        val hidden =
+            info != null && stickyHeightPx > 0 && info.size - listState.firstVisibleItemScrollOffset <= stickyHeightPx
+        return activeCategoryIndex(headerIndices, first, lookahead = hidden)
     }
 
     suspend fun jumpTo(category: Int) {
@@ -36,7 +48,7 @@ internal class SectionSpy(
         selected = category
         jumps++
         try {
-            listState.animateScrollToItem(header)
+            listState.animateScrollToItem(header, -stickyHeightPx)
         } finally {
             jumps--
         }
