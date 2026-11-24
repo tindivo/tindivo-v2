@@ -6,7 +6,7 @@ textos: []
 tokens: []
 codigo:
   web: [apps/customer/features/catalog/components/product-modal.tsx, apps/customer/features/catalog/components/modifier-group.tsx, apps/customer/features/catalog/hooks/use-product-options.ts]
-  android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishSheet.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishSheetGroups.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishSheetState.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishWindow.kt]
+  android: [apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishPage.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishContent.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishBottomBar.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishSheetGroups.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishSheetState.kt, apps/android/customer/src/main/kotlin/com/tindivo/customer/feature/catalog/business/DishWindow.kt]
   ios: []
 ---
 
@@ -30,15 +30,18 @@ codigo:
    tarjeta pasa de blanco a `#FFF7ED`. El grupo de tamaño muestra el precio completo de cada tamaño y el texto «El precio
    es el del tamaño»; los extras muestran su recargo (CUS-CAT-034). Todos los campos llevan el mismo borde (CUS-CAT-033).
 6. **«Nota para el negocio» (opcional)**, campo de una línea, hasta `CART_MAX_NOTE_LENGTH` caracteres (CUS-CAT-009).
-7. **Barra inferior fija:** selector de cantidad y botón. Falta una elección obligatoria: botón gris con el nombre del
-   grupo que falta, «Elige la guarnición 2» (solo los grupos obligatorios bloquean, CUS-CAT-033). Todo resuelto: botón
-   naranja «Agregar · S/ [TOTAL]», con (precio base + recargos) × cantidad.
+7. **Barra inferior fija:** selector de cantidad y botón de 56 dp. El botón **nunca se apaga**. Falta una elección
+   obligatoria: el botón dice qué falta («Elige tu guarnición 2»), y al tocarlo la página baja a ese grupo y lo resalta
+   (solo los grupos obligatorios cuentan, CUS-CAT-033). Todo resuelto: «Agregar · S/ [TOTAL]», con (precio base +
+   recargos) × cantidad. Decisión de Jesús, 2026-11-23: aprobó la auditoría de UX de Fable, cuya regla §4 dice «El primario
+   no se deshabilita en gris: dice lo que falta y lleva ahí» (`tindivo-auditorias/2026-11-23-auditoria-ux-fable/auditoria.md`,
+   §4 y «Decisión de Jesús»); sustituye al botón gris del canvas.
 
 ## Estados
 
 | Estado | Qué se ve | Requisito o CA |
 |---|---|---|
-| Faltan elecciones obligatorias | Botón gris «Elige la [grupo]»; tocarlo desplaza hasta el primer grupo faltante y lo sacude | CUS-CAT-033, CA-CAT-P7 |
+| Faltan elecciones obligatorias | El botón (no apagado) dice «Elige tu [grupo]»; tocarlo desplaza hasta el primer grupo faltante y lo resalta con borde de error y «Falta elegir aquí» | CUS-CAT-033, CA-CAT-P7 |
 | Todo elegido | Botón naranja «Agregar · S/ [TOTAL]»; el total cuenta hacia el nuevo monto | CUS-CAT-009, CA-CAT-P8 |
 | Plato sin foto | Isotipo sobre `#FFF7ED`, igual que en la carta | CUS-CAT-007 |
 | Plato agotado | Aviso «No disponible» y botón deshabilitado | CUS-CAT-010 |
@@ -49,14 +52,14 @@ codigo:
 | Bolsa llena | «Tu bolsa ya tiene [N] platos distintos: es el máximo por pedido» | CUS-CRT-011 |
 | Tope por plato | «Ya tienes [N] de este plato: es el máximo por pedido» | CUS-CRT-011 |
 | No se pudo guardar | «No se pudo guardar tu bolsa. Inténtalo de nuevo.» | CUS-CRT-002 |
-| Añadido | «Añadido a tu bolsa» | CUS-CRT-002 |
+| Agregado | «Agregado a tu bolsa» (aviso de región viva: TalkBack lo lee) | CUS-CRT-002 |
 
 ## Criterios de aceptación
 
 | CA | Criterio | Requisitos |
 |---|---|---|
-| CA-CAT-P7 | Dado «Pollo entero» con «Guarnición 1» resuelta y «Guarnición 2» obligatoria sin elegir, entonces el botón inferior está gris y dice «Elige la guarnición 2», y al tocarlo la pantalla se desplaza a ese grupo y este se sacude suave. | CUS-CAT-033, CUS-CAT-008 |
-| CA-CAT-P8 | Dado el estado anterior, cuando se elige «Ensalada fresca» y una opción con «+ S/ 3.00», entonces el botón pasa a naranja y dice «Agregar · S/ 49.00», y «1 de 2 listas» pasa a «2 de 2 listas». | CUS-CAT-008, CUS-CAT-009 |
+| CA-CAT-P7 | Dado «Pollo entero» con «Guarnición 1» resuelta y «Guarnición 2» obligatoria sin elegir, entonces el botón inferior sigue activo y dice «Elige tu guarnición 2», y al tocarlo la pantalla se desplaza a ese grupo y lo resalta (decisión de Jesús, 2026-11-23: el primario no se deshabilita en gris). | CUS-CAT-033, CUS-CAT-008 |
+| CA-CAT-P8 | Dado el estado anterior, cuando se elige «Ensalada fresca» y una opción con «+ S/ 3.00», entonces el botón pasa a «Agregar · S/ 49.00», y «1 de 2 listas» pasa a «2 de 2 listas». | CUS-CAT-008, CUS-CAT-009 |
 | CA-CAT-P9 | Dado base S/ 46.00, una opción de + S/ 3.00 y cantidad 2, entonces el botón dice «Agregar · S/ 98.00» y el servidor recalcula el mismo importe al pedir. | CUS-CAT-009, CUS-CAT-034 |
 
 ## Movimiento
@@ -68,7 +71,6 @@ la foto vuela a la pastilla de bolsa. Con «reducir movimiento»: sin parallax n
 
 ## Pendiente
 
-- Es una **pantalla completa**, como el canvas (decisión de Jesús, 2026-11-19); la hoja modal de Android se reemplaza.
 - «Compartir» no tiene destino ni requisito (DA-17 de `Docs/trabajo/decisiones-abiertas.md`): el botón no se dibuja hasta que se defina.
 - La etiqueta de la nota («Nota para el negocio» en el canvas; «Nota (opcional)» y un ejemplo con «tocar timbre» en el código):
   el ejemplo habla del motorizado, no del negocio.
