@@ -169,13 +169,14 @@
     <string name="account_addresses">Mis direcciones</string>
     <string name="account_addresses_empty">Aún no tienes direcciones</string>
     <string name="account_addresses_add_first">Agregar dirección</string>
+    <string name="account_addresses_edit">Editar</string>
     <string name="account_addresses_add">+ Agregar dirección</string>
     <string name="account_addresses_see_all">Ver todas (%1$d)</string>
     <string name="account_addresses_error">No pudimos cargar tus direcciones</string>
     <string name="account_addresses_retry">Reintentar</string>
     <string name="account_addresses_loading">Cargando tus direcciones</string>
-    <string name="account_addresses_row">%1$s, %2$s. Toca para editar</string>
-    <string name="account_addresses_row_default">%1$s, %2$s, predeterminada. Toca para editar</string>
+    <string name="account_addresses_row">%1$s, %2$s</string>
+    <string name="account_addresses_row_default">%1$s, %2$s, predeterminada</string>
     <string name="account_verified">Verificado</string>
     <string name="account_version">Tindivo %1$s</string>
     <string name="addresses_title">Mis direcciones</string>
@@ -426,6 +427,7 @@
     <string name="checkout_delivery_title">Entrega</string>
     <string name="checkout_method_delivery">Delivery</string>
     <string name="checkout_method_pickup">Recojo</string>
+    <string name="checkout_pickup_policy">Te lo guardamos hasta el cierre. Si no pasas a recogerlo, no se devuelve.</string>
     <string name="checkout_pickup_point">Punto de recojo</string>
     <string name="checkout_pickup_closes">Cierra a las %1$s</string>
     <string name="checkout_pickup_at">Recoges tu pedido en el local</string>

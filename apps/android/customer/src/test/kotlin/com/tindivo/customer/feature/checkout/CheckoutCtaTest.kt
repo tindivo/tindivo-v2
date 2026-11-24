@@ -163,4 +163,21 @@ class CheckoutCtaTest {
         val none = ready().copy(selectedAddressId = null)
         assertEquals(CheckoutSheet.AddAddress, none.cta.sheet(none.selectedAddressId))
     }
+
+    @Test
+    fun `en recojo una cotizacion que trae efectivo solo ofrece prepago`() {
+        val view =
+            quote().copy(
+                options =
+                    listOf(
+                        PayOption(PayMethod.Cash, true, null),
+                        PayOption(PayMethod.Yape, true, null),
+                        PayOption(PayMethod.Prepaid, true, null),
+                    ),
+            )
+        val state = CheckoutUiState(method = DeliveryChoice.Pickup).withQuote(QuoteOutcome.Ok(view), null)
+        assertEquals(listOf(PayMethod.Prepaid), state.quote?.options?.map { it.method })
+        assertEquals(PayMethod.Prepaid, state.pay)
+        assertNull(state.quote?.cash)
+    }
 }

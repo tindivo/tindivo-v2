@@ -68,16 +68,21 @@ class CheckoutPickupPrepaidTest {
     }
 
     @Test
-    fun `en un recojo no aparece la pregunta de si va ahora ni el boton que la pide`() {
+    fun en_un_recojo_no_aparece_la_pregunta_de_si_va_ahora_ni_el_boton_que_la_pide() {
         show()
         compose.onNodeWithText("¿Vas al local ahora?").assertDoesNotExist()
         compose.onNodeWithText("Responde si vas ahora").assertDoesNotExist()
         compose.onNodeWithText("No, paso más tarde").assertDoesNotExist()
-        compose.onNodeWithText("Si no pasas a recogerlo, no se devuelve.").assertDoesNotExist()
     }
 
     @Test
-    fun `en un recojo la unica forma de pago es Yape o Plin adelantado, sin efectivo`() {
+    fun en_todo_recojo_se_avisa_antes_de_pagar_que_no_se_devuelve_si_no_pasa() {
+        show()
+        compose.onNodeWithText(text(R.string.checkout_pickup_policy)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun en_un_recojo_la_unica_forma_de_pago_es_Yape_o_Plin_adelantado_sin_efectivo() {
         show()
         compose.onNodeWithText(text(R.string.checkout_pay_prepaid)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(text(R.string.checkout_pay_cash)).assertDoesNotExist()
@@ -86,7 +91,7 @@ class CheckoutPickupPrepaidTest {
     }
 
     @Test
-    fun `con nombre, celular y pago elegido el boton ya deja confirmar el recojo`() {
+    fun con_nombre_celular_y_pago_elegido_el_boton_ya_deja_confirmar_el_recojo() {
         show()
         compose.onNodeWithText(text(R.string.checkout_cta_confirm_short), substring = true).assertIsDisplayed()
     }

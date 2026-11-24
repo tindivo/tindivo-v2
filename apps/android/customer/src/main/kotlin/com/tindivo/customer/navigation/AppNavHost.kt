@@ -250,6 +250,11 @@ private fun NavGraphBuilder.accountGraph(navController: NavHostController) {
                 .getStateFlow(PHONE_CHANGED_KEY, false)
                 .collectAsStateWithLifecycle()
                 .value
+        val addressesChanged =
+            entry.savedStateHandle
+                .getStateFlow(ADDRESSES_CHANGED_KEY, false)
+                .collectAsStateWithLifecycle()
+                .value
         AccountDestination(
             onLeave = { navController.popBackStack() },
             onOpenAddresses = { navController.navigate(AddressesRoute) },
@@ -263,6 +268,8 @@ private fun NavGraphBuilder.accountGraph(navController: NavHostController) {
                     onOpen = { navController.navigate(ProfileRoute) },
                 ),
             onDeleteAccount = { navController.navigate(DeleteAccountRoute) },
+            addressesChanged = addressesChanged,
+            onAddressesChangeHandled = { entry.savedStateHandle[ADDRESSES_CHANGED_KEY] = false },
             onAddAddress = { navController.navigate(AddressFormRoute()) },
             onEditAddress = { id -> navController.navigate(AddressFormRoute(id)) },
             // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
@@ -308,7 +315,11 @@ private fun NavGraphBuilder.addressesGraph(navController: NavHostController) {
         AddressesDestination(
             changed = changed,
             onChangeHandled = { entry.savedStateHandle[ADDRESSES_CHANGED_KEY] = false },
-            onBack = { navController.popBackStack() },
+            // La libreta también cambia por dentro (predeterminada): Cuenta vuelve a leerla al salir de ella.
+            onBack = {
+                navController.previousBackStackEntry?.savedStateHandle?.set(ADDRESSES_CHANGED_KEY, true)
+                navController.popBackStack()
+            },
             onAdd = { navController.navigate(AddressFormRoute()) },
             onEdit = { id -> navController.navigate(AddressFormRoute(id)) },
         )

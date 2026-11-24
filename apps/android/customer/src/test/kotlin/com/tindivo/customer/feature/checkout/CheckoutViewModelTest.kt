@@ -212,6 +212,25 @@ class CheckoutViewModelTest : CheckoutHarness() {
         }
 
     @Test
+    fun `al pasar de delivery a recojo la cotizacion vieja no queda como elegible`() =
+        runTest(dispatcher) {
+            val vm = ready()
+            assertTrue(vm.state.value.quote != null)
+
+            vm.setMethod(DeliveryChoice.Pickup)
+
+            assertNull(vm.state.value.quote)
+            assertNull(vm.state.value.pay)
+            advanceUntilIdle()
+            assertEquals(
+                listOf(PayMethod.Prepaid),
+                vm.state.value.quote
+                    ?.options
+                    ?.map { it.method },
+            )
+        }
+
+    @Test
     fun `el recojo es prepago, no manda pickupTiming ni nada de la entrega`() =
         runTest(dispatcher) {
             val vm = ready()

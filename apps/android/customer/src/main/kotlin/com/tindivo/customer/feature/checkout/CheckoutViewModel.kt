@@ -379,7 +379,16 @@ class CheckoutViewModel
             val current = mutableState.value
             val allowed = if (method == DeliveryChoice.Pickup) current.acceptsPickup else current.acceptsDelivery
             if (!allowed || current.method == method) return
-            edit { copy(method = method, pay = null, cash = CashChoice.None) }
+            // La cotización del otro método no vale para este: no se enseña como elegible mientras llega la nueva.
+            edit {
+                copy(
+                    method = method,
+                    pay = null,
+                    cash = CashChoice.None,
+                    quote = null,
+                    quoteStatus = QuoteStatus.Loading,
+                )
+            }
             requote(debounced = true)
         }
 

@@ -98,6 +98,7 @@ private fun AddressRow(
     address: AddressUi,
     onClick: () -> Unit,
 ) {
+    val editLabel = stringResource(R.string.account_addresses_edit)
     val place = address.line ?: address.reference.ifBlank { stringResource(R.string.addresses_no_line) }
     val description =
         stringResource(
@@ -110,7 +111,7 @@ private fun AddressRow(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
-                .clickable(onClick = onClick)
+                .clickable(onClickLabel = editLabel, onClick = onClick)
                 .semantics(mergeDescendants = true) {
                     contentDescription = description
                     role = Role.Button

@@ -69,7 +69,7 @@ class AccountAddressesCardTest {
     }
 
     @Test
-    fun `sin direcciones dice que no hay y ofrece agregar la primera`() {
+    fun sin_direcciones_dice_que_no_hay_y_ofrece_agregar_la_primera() {
         show(AddressListUiState.Empty)
         compose.onNodeWithText(text(R.string.account_addresses_empty)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(text(R.string.account_addresses_see_all, 0)).assertDoesNotExist()
@@ -78,12 +78,12 @@ class AccountAddressesCardTest {
     }
 
     @Test
-    fun `con dos direcciones las lista, marca la predeterminada y no ofrece ver todas`() {
+    fun con_dos_direcciones_las_lista_marca_la_predeterminada_y_no_ofrece_ver_todas() {
         val casa = address("Casa", "Jr. Lima 123", isDefault = true)
         val trabajo = address("Trabajo", "Av. Perú 45")
         show(AddressListUiState.Loaded(listOf(casa, trabajo)))
         compose.onNodeWithText("Jr. Lima 123").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Av. Perú 45").assertIsDisplayed()
+        compose.onNodeWithText("Av. Perú 45").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(text(R.string.addresses_default_badge)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.account_addresses_see_all, 2)).assertDoesNotExist()
         compose
@@ -98,7 +98,7 @@ class AccountAddressesCardTest {
     }
 
     @Test
-    fun `con cinco direcciones muestra tres y Ver todas con el total`() {
+    fun con_cinco_direcciones_muestra_tres_y_Ver_todas_con_el_total() {
         val items = (1..5).map { address(if (it == 1) "Casa" else "Otro $it", "Calle $it") }
         show(AddressListUiState.Loaded(items))
         compose.onNodeWithText("Calle 3").performScrollTo().assertIsDisplayed()
@@ -111,7 +111,7 @@ class AccountAddressesCardTest {
     }
 
     @Test
-    fun `mientras carga hay un esqueleto y al fallar se puede reintentar`() {
+    fun mientras_carga_hay_un_esqueleto_con_su_descripcion() {
         show(AddressListUiState.Loading)
         compose
             .onNode(
@@ -121,9 +121,10 @@ class AccountAddressesCardTest {
     }
 
     @Test
-    fun `si no se pudo cargar avisa y reintenta`() {
+    fun si_no_se_pudo_cargar_avisa_y_reintenta() {
         show(AddressListUiState.Failed(AppError.Network(java.io.IOException("sin red"))))
         compose.onNodeWithText(text(R.string.account_addresses_error)).performScrollTo().assertIsDisplayed()
+        assertEquals(0, retried)
         compose.onNodeWithText(text(R.string.account_addresses_retry)).performScrollTo().performClick()
         assertEquals(1, retried)
     }

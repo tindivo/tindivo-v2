@@ -34,7 +34,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.core.designsystem.TindivoPrimaryButton
@@ -60,18 +59,20 @@ fun AccountDestination(
     onDeleteAccount: () -> Unit,
     onAddAddress: () -> Unit,
     onEditAddress: (String) -> Unit,
+    addressesChanged: Boolean,
+    onAddressesChangeHandled: () -> Unit,
     onOpenDiagnostics: (() -> Unit)? = null,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val addressList = hiltViewModel<AddressListViewModel>()
     val addresses = addressList.state.collectAsStateWithLifecycle().value
-    // Al volver de la libreta o del formulario la lista que se tenía ya no es la del servidor; el primer cuadro ya la
-    // trajo el ViewModel al crearse.
-    var firstResume by remember { mutableStateOf(true) }
-    LifecycleResumeEffect(Unit) {
-        if (firstResume) firstResume = false else addressList.refresh(quiet = true)
-        onPauseOrDispose {}
+    // Volvió del formulario o de la libreta con algo cambiado: la lista que se tenía ya no es la del servidor.
+    LaunchedEffect(addressesChanged) {
+        if (addressesChanged) {
+            addressList.refresh(quiet = true)
+            onAddressesChangeHandled()
+        }
     }
     val supportNumber = hiltViewModel<SupportViewModel>().number.collectAsStateWithLifecycle().value
     val nameEdit = viewModel.nameEdit.collectAsStateWithLifecycle().value

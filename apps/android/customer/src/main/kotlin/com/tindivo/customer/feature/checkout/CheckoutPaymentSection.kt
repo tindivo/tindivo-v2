@@ -79,6 +79,14 @@ internal fun LazyListScope.paymentSection(
                     quote,
                     form,
                 )
+                // Todo recojo es prepago y el dinero no se devuelve si no pasa (DECISIONS §0224): se dice antes de pagar.
+                if (state.isPickup) {
+                    Text(
+                        text = stringResource(R.string.checkout_pickup_policy),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 if (quote.options.any { it.unavailableReason == PREPAY_REQUIRED }) PrepayErrorHelp()
                 if (state.pay == PayMethod.Prepaid) PrepayExplainer(state.businessName)
                 val rules = quote.cash
