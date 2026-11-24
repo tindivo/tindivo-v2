@@ -73,7 +73,7 @@ internal fun BusinessDetailUi?.findDish(id: String?): MenuItemUi? =
     }
 
 /**
- * Lo que pasa después de «Agregar»: el aviso de «Añadido a tu bolsa» (y cerrar la ficha), el error de guardado, o la
+ * Lo que pasa después de «Agregar»: el aviso de «Agregado a tu bolsa» (y cerrar la ficha), el error de guardado, o la
  * pregunta de vaciar la bolsa de otro restaurante.
  */
 @Composable

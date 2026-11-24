@@ -148,7 +148,7 @@ internal fun BusinessTopBar(
 
 /** Círculo de 40 dp en un toque de 48: blanco con sombra sobre la portada, que se funde con la barra al volverse sólida. */
 @Composable
-private fun RoundBarButton(
+internal fun RoundBarButton(
     icon: ImageVector,
     description: String,
     progress: () -> Float,

@@ -95,7 +95,8 @@
     <string name="dish_review_cta">Revisa tus opciones</string>
     <string name="dish_group_missing">Falta elegir aquí</string>
     <string name="dish_group_over">Elegiste más opciones de las permitidas</string>
-    <string name="dish_added">Añadido a tu bolsa</string>
+    <string name="dish_added">Agregado a tu bolsa</string>
+    <string name="dish_back">Volver a la carta</string>
     <string name="dish_bag_full">Tu bolsa ya tiene %1$d platos distintos: es el máximo por pedido</string>
     <string name="dish_added_capped">Ya tienes %1$d de este plato: es el máximo por pedido</string>
     <string name="dish_save_failed">No se pudo guardar tu bolsa. Inténtalo de nuevo.</string>

@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -87,6 +88,8 @@ internal fun BusinessScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     // Cerrado o en modo catálogo la carta se ve, pero no se abre la ficha para agregar (CUS-CAT-012, CUS-CAT-015).
     val onDishClick = dishClickFor(ordering) { openDishId = it.id }
+    // Va después del de la búsqueda: con la ficha abierta, «Atrás» la cierra a ella primero y la carta queda como estaba.
+    BackHandler(enabled = openDish != null) { openDishId = null }
     BagFeedback(
         outcome = cart.outcome,
         snackbarHostState = snackbarHostState,
@@ -94,45 +97,48 @@ internal fun BusinessScreen(
         actions = cartActions,
     )
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = { OrderingBottomBar(ordering, cart.bar, cartActions.onOpenCart) },
-        // La barra superior flota sobre la portada y pone ella misma la barra de estado: el contenido sube hasta arriba.
-        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
-    ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            when {
-                searching && business != null -> {
-                    SearchResultsPane(business = business, query = query.orEmpty(), onQueryChange = {
-                        query = it
-                    }, onDishClick = onDishClick)
-                }
+    // La ficha del plato es una capa a pantalla completa sobre la carta, que sigue debajo y conserva su scroll.
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            // Con la ficha encima, la carta no existe para el lector de pantalla.
+            modifier = if (openDish != null) Modifier.clearAndSetSemantics { } else Modifier,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            bottomBar = { OrderingBottomBar(ordering, cart.bar, cartActions.onOpenCart) },
+            // La barra superior flota sobre la portada y pone ella misma la barra de estado: el contenido sube hasta arriba.
+            contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+        ) { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                when {
+                    searching && business != null -> {
+                        SearchResultsPane(business = business, query = query.orEmpty(), onQueryChange = {
+                            query = it
+                        }, onDishClick = onDishClick)
+                    }
 
-                state is BusinessUiState.Loaded -> {
-                    MenuList(
-                        rows = rows,
-                        listState = listState,
-                        spy = spy,
-                        onDishClick = onDishClick,
-                        closed = ordering is OrderingMode.Closed,
-                    )
-                    BusinessTopBar(
-                        business = business,
-                        progress = barProgress,
-                        onSearch = { query = "" },
-                        onBack = onBack,
-                        modifier = Modifier.align(Alignment.TopStart),
-                    )
-                }
+                    state is BusinessUiState.Loaded -> {
+                        MenuList(
+                            rows = rows,
+                            listState = listState,
+                            spy = spy,
+                            onDishClick = onDishClick,
+                            closed = ordering is OrderingMode.Closed,
+                        )
+                        BusinessTopBar(
+                            business = business,
+                            progress = barProgress,
+                            onSearch = { query = "" },
+                            onBack = onBack,
+                            modifier = Modifier.align(Alignment.TopStart),
+                        )
+                    }
 
-                else -> {
-                    PendingContent(state = state, onRefresh = onRefresh, onBack = onBack)
+                    else -> {
+                        PendingContent(state = state, onRefresh = onRefresh, onBack = onBack)
+                    }
                 }
             }
         }
-    }
-    openDish?.let { dish ->
-        DishSheet(item = dish, onDismiss = { openDishId = null }, onAdd = cartActions.onAdd)
+        DishPageHost(item = openDish, onDismiss = { openDishId = null }, onAdd = cartActions.onAdd)
     }
 }
 
