@@ -41,6 +41,7 @@ import com.tindivo.customer.feature.addresses.AddressFormRoute
 import com.tindivo.customer.feature.addresses.AddressFormViewModel
 import com.tindivo.customer.feature.addresses.AddressesDestination
 import com.tindivo.customer.feature.addresses.AddressesRoute
+import com.tindivo.customer.feature.addresses.signalAddressesChanged
 import com.tindivo.customer.feature.cart.CartDestination
 import com.tindivo.customer.feature.catalog.business.BusinessDestination
 import com.tindivo.customer.feature.catalog.business.BusinessRoute
@@ -315,11 +316,8 @@ private fun NavGraphBuilder.addressesGraph(navController: NavHostController) {
         AddressesDestination(
             changed = changed,
             onChangeHandled = { entry.savedStateHandle[ADDRESSES_CHANGED_KEY] = false },
-            // La libreta también cambia por dentro (predeterminada): Cuenta vuelve a leerla al salir de ella.
-            onBack = {
-                navController.previousBackStackEntry?.savedStateHandle?.set(ADDRESSES_CHANGED_KEY, true)
-                navController.popBackStack()
-            },
+            onLibraryChanged = navController::signalAddressesChanged,
+            onBack = { navController.popBackStack() },
             onAdd = { navController.navigate(AddressFormRoute()) },
             onEdit = { id -> navController.navigate(AddressFormRoute(id)) },
         )

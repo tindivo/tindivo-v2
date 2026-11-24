@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -63,6 +64,15 @@ internal fun CheckoutBottomBar(
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+            }
+            // Todo recojo es prepago y no se devuelve si no pasa (DECISIONS §0224): se ve junto al botón, no se confirma sin verlo.
+            if (state.isPickup) {
+                Text(
+                    text = stringResource(R.string.checkout_pickup_policy),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(PICKUP_POLICY_BAR_TAG),
                 )
             }
             val onClick = { onCta(cta, state.selectedAddressId, confirm, form, openSheet, goToPayment) }
@@ -154,3 +164,5 @@ private fun ConfirmPill(
         }
     }
 }
+
+internal const val PICKUP_POLICY_BAR_TAG = "pickup-policy-bar"

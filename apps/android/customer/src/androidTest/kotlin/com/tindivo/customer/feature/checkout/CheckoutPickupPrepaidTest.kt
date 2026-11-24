@@ -2,8 +2,11 @@ package com.tindivo.customer.feature.checkout
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -55,11 +58,11 @@ class CheckoutPickupPrepaidTest {
             pay = PayMethod.Prepaid,
         )
 
-    private fun show() {
+    private fun show(state: CheckoutUiState = pickupState) {
         compose.setContent {
             TindivoTheme {
                 CheckoutScreen(
-                    state = pickupState,
+                    state = state,
                     actions = CheckoutActions({}, {}, {}, {}, {}),
                     form = noopForm(),
                 )
@@ -78,7 +81,21 @@ class CheckoutPickupPrepaidTest {
     @Test
     fun en_todo_recojo_se_avisa_antes_de_pagar_que_no_se_devuelve_si_no_pasa() {
         show()
-        compose.onNodeWithText(text(R.string.checkout_pickup_policy)).performScrollTo().assertIsDisplayed()
+        // Dos copias: una en la sección de pago y otra junto al botón.
+        compose.onAllNodesWithText(text(R.string.checkout_pickup_policy)).assertCountEquals(2)
+        compose.onNodeWithText(text(R.string.checkout_pay_prepaid)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun el_aviso_tambien_esta_junto_al_boton_y_no_sale_en_delivery() {
+        show()
+        compose.onNodeWithTag(PICKUP_POLICY_BAR_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun en_delivery_no_hay_aviso_de_recojo_junto_al_boton() {
+        show(pickupState.copy(method = DeliveryChoice.Delivery, quote = null, quoteStatus = QuoteStatus.Loading))
+        compose.onNodeWithTag(PICKUP_POLICY_BAR_TAG).assertDoesNotExist()
     }
 
     @Test
