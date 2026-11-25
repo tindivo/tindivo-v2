@@ -91,7 +91,9 @@ describe('deliveryPaymentDomainError', () => {
     ['P0001', 'invalid_proof_path', 'validation_error'],
     ['P0001', 'proof_file_missing', 'validation_error'],
   ])('%s/%s -> %s', (code, hint, expected) => {
-    expect(deliveryPaymentDomainError({ code, hint, message: 'm' })?.code).toBe(expected)
+    expect(deliveryPaymentDomainError({ code, hint: hint ?? null, message: 'm' })?.code).toBe(
+      expected,
+    )
   })
 
   it('un fallo que no es de negocio no se disfraza', () => {
