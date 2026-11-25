@@ -53,7 +53,7 @@ const post = (path: string, body?: unknown) =>
   new Request(`http://localhost${path}`, {
     method: 'POST',
     headers: { authorization: 'Bearer jwt', 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
 
 describe('POST /business/orders/{id}/payment-confirmation', () => {
@@ -72,7 +72,7 @@ describe('POST /business/orders/{id}/payment-confirmation', () => {
     })
     const res = await businessPaymentConfirmationHandler.withDeps(deps)(req(), { id: ORDER_ID })
     expect(res.status).toBe(200)
-    expect((await res.json()).data).toEqual({
+    expect(((await res.json()) as { data: unknown }).data).toEqual({
       id: ORDER_ID,
       status: 'preparing',
       paymentProofStatus: 'verified',
@@ -120,7 +120,7 @@ describe('POST /business/orders/{id}/payment-proof/reject', () => {
       { id: ORDER_ID },
     )
     expect(res.status).toBe(200)
-    expect((await res.json()).data).toMatchObject({
+    expect(((await res.json()) as { data: unknown }).data).toMatchObject({
       paymentProofStatus: 'rejected',
       attemptsLeft: 1,
     })
@@ -178,7 +178,7 @@ describe('GET /driver/orders/{id}/prepay-proof', () => {
     const { deps, signed } = makeDeps(['driver'], { driver: { id: 'drv-1' }, order: mine })
     const res = await driverPrepayProofHandler.withDeps(deps)(req(), { id: ORDER_ID })
     expect(res.status).toBe(200)
-    expect((await res.json()).data).toMatchObject({
+    expect(((await res.json()) as { data: unknown }).data).toMatchObject({
       expiresInSeconds: 120,
       paymentProofStatus: 'pending',
     })

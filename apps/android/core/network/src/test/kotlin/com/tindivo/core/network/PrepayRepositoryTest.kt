@@ -200,7 +200,9 @@ class PrepayRepositoryTest {
             """{"data":{"businessName":"Pollería Rosa","yapeNumber":"987654321","qrUrl":null,""" +
                 """"paymentQr":{"slot":1,"wallet":"yape","accountNumber":"987654321","accountName":"Rosa P.",""" +
                 """"qrUrl":null,"isDefault":true},"total":43.5,"status":"awaiting_payment","hasProof":false,""" +
-                """"proofAttempt":0,"comprobantePrepagoUrl":null,"awaitingPaymentAt":"2026-11-10T15:00:00.000Z"}}"""
+                """"proofAttempt":0,"comprobantePrepagoUrl":null,"awaitingPaymentAt":"2026-11-10T15:00:00.000Z",""" +
+                """"totalText":"43.50","proofOptional":false,"canUploadProof":true,"paymentProofStatus":null,""" +
+                """"paymentVerifiedAt":null}}"""
         val UPLOAD_URL =
             """{"data":{"path":"$PATH","uploadUrl":"$STORAGE/storage/v1/object/upload/sign/payment-proofs/$PATH""" +
                 """?token=tok","token":"tok","expiresAt":"2026-11-10T17:00:00.000Z"}}"""
