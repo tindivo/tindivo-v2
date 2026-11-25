@@ -118,7 +118,7 @@ private fun SubmitBar(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun CourierRequestFormPreview() {
     val noop: (CourierEnd, String) -> Unit = { _, _ -> }

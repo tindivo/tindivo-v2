@@ -8,6 +8,7 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.isStale
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SessionWatch
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 
 internal sealed interface OrdersUiState {
@@ -37,6 +39,8 @@ internal sealed interface OrdersUiState {
         val canLoadMore: Boolean,
         val loadingMore: Boolean = false,
         val loadMoreFailed: Boolean = false,
+        /** Se está pidiendo la primera página otra vez: la lista de antes sigue a la vista. */
+        val refreshing: Boolean = false,
     ) : OrdersUiState
 
     data class Failed(
@@ -69,6 +73,10 @@ internal class OrdersViewModel
 
         private var loadJob: Job? = null
         private var nextCursor: String? = null
+        private var lastLoadedAt: Instant? = null
+
+        /** Ya se pidió una página más: la recarga en silencio solo trae la primera y borraría las demás. */
+        private var paged = false
 
         /**
          * La cuenta con la que se abrió la pantalla, leída al construirla y no dentro de la corrutina de cada carga: cada
@@ -99,8 +107,24 @@ internal class OrdersViewModel
                 _state.value = OrdersUiState.LoggedOut
                 return
             }
-            _state.value = OrdersUiState.Loading
-            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null, account), account) }
+            // Con algo ya a la vista (lista o «sin pedidos») se recarga en silencio: nada de pantalla de carga.
+            val previous = _state.value.takeIf { it is OrdersUiState.Loaded || it is OrdersUiState.Empty }
+            _state.value =
+                when (previous) {
+                    is OrdersUiState.Loaded -> previous.copy(refreshing = true, loadMoreFailed = false)
+                    null -> OrdersUiState.Loading
+                    else -> previous
+                }
+            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null, account), account, previous) }
+        }
+
+        /**
+         * Al volver a la pestaña: recarga en silencio si lo cargado es viejo (o nunca cargó bien), salvo que la persona ya
+         * haya paginado (se le conservan sus páginas; se refresca con reintento manual o al reabrir). Si ya hay una carga en
+         * curso (la primera entrada) no lanza otra.
+         */
+        fun refreshIfStale() {
+            if (!paged && isStale(lastLoadedAt, clock.instant())) refresh()
         }
 
         /**
@@ -110,7 +134,8 @@ internal class OrdersViewModel
         fun loadMore() {
             val current = _state.value as? OrdersUiState.Loaded ?: return
             val account = accountId ?: return
-            if (!current.canLoadMore || current.loadingMore) return
+            // Con una recarga en curso no se pide más: pisaría `loadJob` y el cursor.
+            if (!current.canLoadMore || current.loadingMore || current.refreshing) return
             _state.value = current.copy(loadingMore = true, loadMoreFailed = false)
             val cursor = nextCursor
             loadJob = viewModelScope.launch { onNextPage(current, customer.orders(cursor, account), account) }
@@ -119,6 +144,7 @@ internal class OrdersViewModel
         private suspend fun onFirstPage(
             result: ApiResult<ListCustomerOrders200ResponseData>,
             account: String,
+            previous: OrdersUiState? = null,
         ) {
             when (result) {
                 is ApiResult.Success -> {
@@ -127,6 +153,8 @@ internal class OrdersViewModel
                         settle(OrdersUiState.Failed(unreadableOrderError()))
                     } else {
                         nextCursor = page.nextCursor
+                        lastLoadedAt = clock.instant()
+                        paged = false
                         settle(
                             if (page.items.isEmpty() && page.nextCursor == null) {
                                 OrdersUiState.Empty
@@ -138,7 +166,16 @@ internal class OrdersViewModel
                 }
 
                 is ApiResult.Failure -> {
-                    onFailure(result.error, account)?.let { settle(OrdersUiState.Failed(it)) }
+                    onFailure(result.error, account)?.let { error ->
+                        // Una recarga que falla no tira lo que ya se veía.
+                        settle(
+                            when (previous) {
+                                is OrdersUiState.Loaded -> previous.copy(refreshing = false)
+                                null -> OrdersUiState.Failed(error)
+                                else -> previous
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -155,6 +192,7 @@ internal class OrdersViewModel
                         settle(OrdersUiState.Failed(unreadableOrderError()))
                     } else {
                         nextCursor = page.nextCursor
+                        paged = true
                         settle(OrdersUiState.Loaded(before.items + page.items, canLoadMore = page.nextCursor != null))
                     }
                 }

@@ -102,7 +102,7 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
         address = if (pickup) null else deliveryAddress,
         reference = if (pickup) null else deliveryReference,
         customerNotes = customerNotes,
-        driver = driverOf(phase),
+        driver = if (pickup) null else driverOf(phase),
         appealViaSupport = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPrepayment = payment.prepaid && status == "awaiting_payment",
         cancel = cancelOfferOf(status, payment),

@@ -15,6 +15,7 @@ import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import com.tindivo.customer.ui.fields.normalizePePhoneInput
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -134,7 +135,7 @@ internal class PhoneVerifyViewModel
 
         fun onPhoneChanged(text: String) {
             if (closed || _state.value.step != PhoneStep.Number) return
-            _state.update { if (it.loggedOut) it else it.copy(phone = text.digitsOnly(PHONE_LENGTH), error = null) }
+            _state.update { if (it.loggedOut) it else it.copy(phone = normalizePePhoneInput(text), error = null) }
         }
 
         fun onCodeChanged(text: String) {

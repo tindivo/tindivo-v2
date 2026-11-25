@@ -45,11 +45,9 @@ class AccountHelpContentTest {
                 AccountScreen(
                     state = AccountUiState.Loaded(AccountProfileUi("Rosa Quispe", phoneVerified = false)),
                     onRetry = {},
-                    onOpenOrders = {},
                     onOpenAddresses = {},
                     onVerifyPhone = {},
                     onSignOut = {},
-                    onBack = {},
                     supportNumber = "51987654321",
                 )
             }

@@ -183,6 +183,7 @@ private fun PinSheet(
     val start = remember(end) { current.geoPointOrNull() }
     var point by remember(end) { mutableStateOf(start) }
     var reference by remember(end) { mutableStateOf(current.reference) }
+    var moving by remember(end) { mutableStateOf(false) }
     val inside = point?.let(state.area::contains) == true
     val referenceOk = isReferenceOk(reference)
     SheetFrame(title = stringResource(end.chooseTitle()), onClose = onClose, holdsMap = true) {
@@ -192,7 +193,10 @@ private fun PinSheet(
                 point = point,
                 // Entregas no ofrece «Usar mi ubicación»: el mapa solo sigue al pin que marca la persona.
                 located = null,
+                // El pin atenuado antes del primer gesto es el comportamiento de Entregas desde siempre.
+                ghostPin = true,
                 onPointChosen = { point = it },
+                onMotion = { isMoving, _ -> moving = isMoving },
                 modifier = Modifier.matchParentSize(),
             )
         }
@@ -212,7 +216,8 @@ private fun PinSheet(
             TindivoPrimaryButton(
                 text = stringResource(end.confirmLabel()),
                 onClick = { point?.let { onConfirm(it, reference) } },
-                enabled = inside && referenceOk,
+                // Mientras el mapa se mueve, el punto es el anterior: no se confirma.
+                enabled = inside && referenceOk && !moving,
             )
         }
     }

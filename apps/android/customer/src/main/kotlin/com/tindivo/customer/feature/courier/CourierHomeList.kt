@@ -1,9 +1,13 @@
 package com.tindivo.customer.feature.courier
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -12,9 +16,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import com.tindivo.core.designsystem.EmptyState
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.tindivo.core.designsystem.ErrorState
 import com.tindivo.core.designsystem.LoadingState
 import com.tindivo.core.designsystem.TindivoCard
@@ -22,6 +28,7 @@ import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
+import com.tindivo.customer.ui.StatusPill
 
 /** «Mis entregas» dentro de la lista de la portada: cargando, vacía, con fallo o de 20 en 20 con «Ver más». */
 internal fun LazyListScope.myDeliveries(
@@ -40,12 +47,7 @@ internal fun LazyListScope.myDeliveries(
         }
 
         CourierListState.Empty -> {
-            item {
-                EmptyState(
-                    title = stringResource(R.string.courier_my_empty),
-                    body = stringResource(R.string.courier_my_empty_body),
-                )
-            }
+            item { CourierEmpty() }
         }
 
         is CourierListState.Failed -> {
@@ -110,17 +112,49 @@ private fun CourierCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             val fee = if (card.phase.wasFree()) stringResource(R.string.courier_free) else card.feeText
-            Text(
-                text =
-                    stringResource(
-                        R.string.courier_card_meta,
-                        card.shortId,
-                        stringResource(card.phase.labelRes()),
-                        fee,
-                    ),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.padding(top = TindivoSpacing.hairline),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
+            ) {
+                StatusPill(text = stringResource(card.phase.labelRes()), tone = card.phase.statusTone())
+                Text(
+                    text = stringResource(R.string.courier_card_meta_short, card.shortId, fee),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
+
+/** «Aún no pides entregas»: la moto ilustrada en vez del icono de bandeja, como el vacío de Pedidos. */
+@Composable
+private fun CourierEmpty() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = TindivoSpacing.section),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
+    ) {
+        Image(
+            painter = painterResource(R.drawable.img_moto_tindivo),
+            contentDescription = null,
+            modifier = Modifier.width(EMPTY_MOTO_WIDTH).aspectRatio(EMPTY_MOTO_RATIO),
+        )
+        Text(
+            text = stringResource(R.string.courier_my_empty),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = TindivoSpacing.item),
+        )
+        Text(
+            text = stringResource(R.string.courier_my_empty_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+private val EMPTY_MOTO_WIDTH = 160.dp
+private const val EMPTY_MOTO_RATIO = 440f / 398f

@@ -10,11 +10,9 @@ class TrackingTextsTest {
 
     @Test
     fun `CA-TRK-08 el aviso de llegada dice el nombre del motorizado y que salga a recibir el pedido`() {
-        assertTrue(
-            strings.contains(
-                """<string name="order_driver_arrived">%1${'$'}s llegó · Sal a recibir tu pedido</string>""",
-            ),
-        )
+        assertTrue(strings.contains("""<string name="order_driver_arrived_title">%1${'$'}s llegó</string>"""))
+        assertTrue(strings.contains("""<string name="order_driver_arrived_sub">Sal a recibir tu pedido</string>"""))
+        assertTrue(strings.contains("""<string name="order_driver_arrived_anonymous">Tu pedido llegó</string>"""))
         assertTrue("sin contacto", !strings.contains("order_driver_whatsapp"))
     }
 

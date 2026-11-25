@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -13,20 +14,23 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.customer.R
 
 /** Subtotal, delivery y total: todo viene de la cotización del servidor; la app no suma nada. */
 internal fun LazyListScope.totalsSection(state: CheckoutUiState) {
-    item(key = "totals") {
+    item(key = TOTALS_ITEM_KEY) {
         val quote = state.quote
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (quote == null) {
-                Text(
-                    text = stringResource(R.string.checkout_totals_loading),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            } else {
-                TotalsRows(quote = quote, pickup = state.isPickup)
+        TindivoCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (quote == null) {
+                    Text(
+                        text = stringResource(R.string.checkout_totals_loading),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                } else {
+                    TotalsRows(quote = quote, pickup = state.isPickup)
+                }
             }
         }
     }
@@ -62,17 +66,16 @@ private fun TotalsRows(
                         R.string.checkout_promo_launch
                     },
                 ),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(
             text = stringResource(R.string.checkout_totals_total),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLarge,
         )
-        Text(text = quote.total.soles(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(text = quote.total.soles(), style = MaterialTheme.typography.titleLarge)
     }
 }
 
@@ -82,7 +85,7 @@ private fun AmountRow(
     amount: String,
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = label)
-        Text(text = amount)
+        Text(text = label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = amount, fontWeight = FontWeight.SemiBold)
     }
 }

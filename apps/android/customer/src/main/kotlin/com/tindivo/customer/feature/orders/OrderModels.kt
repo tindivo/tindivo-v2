@@ -85,6 +85,8 @@ internal sealed interface OrderHeadline {
     data class Cancelled(
         val copy: CancelCopy,
         val alreadyPaid: Boolean = false,
+        /** El pedido era prepago: Tindivo no ve el dinero que pudo salir por fuera, así que nunca se dice «no se cobró». */
+        val prepaid: Boolean = false,
     ) : OrderHeadline
 }
 
