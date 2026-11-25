@@ -125,7 +125,7 @@ pnpm install · pnpm dev · pnpm lint · pnpm type-check · pnpm test
 # revisa qué tareas se ejecutaron y cuáles salieron de caché (la base no entra en el hash de Turbo):
 # un verde entero puede no haber ejecutado nada; para verificar de nuevo, usa --force
 pnpm db:cycle            # base local bajo candado: reset → seed e2e → tests de la API
-pnpm db:types            # tipos desde tindivo-prod (después del db push)
+pnpm db:types            # tipos desde la base local (en la última migración); el CI los compara
 pnpm test:e2e            # Playwright
 graphify update .        # grafo al día (AST, sin coste)
 ```
