@@ -34,10 +34,11 @@ import { randomBytes } from 'node:crypto'
 import { closeSync, existsSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createClient } from '@supabase/supabase-js'
 import { E2E } from './e2e-fixtures.ts'
 import { CATALOG_OWNERS, seedStagingCatalog } from './seed-staging-catalog.ts'
 import { seedWorld } from './seed-world.ts'
+import { makeEnsureAuthUser } from './staging-auth-user.ts'
+import { createStagingClient } from './staging-client.ts'
 import {
   openPrivateAccountsFile,
   recordThenActivate,
@@ -47,7 +48,6 @@ import {
 import {
   assertOutsideRepo,
   assertStagingTarget,
-  STAGING_ORIGIN,
   stagingSettings,
 } from './staging-target.ts'
 
@@ -109,17 +109,16 @@ async function main(): Promise<void> {
   // Sin archivo privado no hay siembra: aborta antes de la primera petición.
   const accountsFile = openPrivateAccountsFile(outDir, new Date().toISOString(), securePrivateDir)
   try {
-    await seed(serviceKey, accountsFile)
+    await seed(url, serviceKey, accountsFile)
   } finally {
     closeSync(accountsFile.fd)
   }
 }
 
-async function seed(serviceKey: string, accountsFile: { path: string; fd: number }): Promise<void> {
-  const db = createClient(STAGING_ORIGIN, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
-  // biome-ignore lint/suspicious/noExplicitAny: database.types.ts está desactualizado
+async function seed(url: string, serviceKey: string, accountsFile: { path: string; fd: number }): Promise<void> {
+  // Valida destino y huella de la clave y crea el cliente en un solo paso (el origen es la constante).
+  const db = createStagingClient(url, serviceKey)
+  // biome-ignore lint/suspicious/noExplicitAny: las filas se escriben por nombre de tabla dinámico, sin tipar
   const raw = db as any
 
   console.log('\nSeed staging — mundo (idempotente, IDs fijos, contraseñas nuevas)\n')
@@ -147,37 +146,26 @@ async function seed(serviceKey: string, accountsFile: { path: string; fd: number
   // ── usuarios con contraseña al azar ────────────────────────────────────────
   let count = 0
 
-  async function ensureAuthUser(id: string, email: string, fullName: string): Promise<void> {
-    const password = randomBytes(18).toString('base64url')
-    secretsInRun.push(password)
-    const role = ROLE_BY_ID.get(id) ?? 'desconocido'
-    const { data } = await db.auth.admin.getUserById(id)
-    await recordThenActivate(accountsFile.fd, { email, role, password }, async () => {
-      if (data?.user) {
-        const { error } = await db.auth.admin.updateUserById(id, { password })
-        if (error) throw new Error(`actualizar contraseña de ${email} falló: ${error.message}`)
-        console.log(`  ✓ auth.users                  ${email} (ya existía, contraseña nueva)`)
-      } else {
-        const { error } = await db.auth.admin.createUser({
-          id,
-          email,
-          password,
-          email_confirm: true,
-          user_metadata: { full_name: fullName },
-        })
-        if (error) throw new Error(`crear auth user ${email} falló: ${error.message}`)
-        console.log(`  ✓ auth.users                  ${email} (creado)`)
-      }
-    })
-    count++
-  }
+  const ensureAuthUser = makeEnsureAuthUser({
+    admin: db.auth.admin,
+    record: (entry, activate) => recordThenActivate(accountsFile.fd, entry, activate),
+    roleOf: (id) => ROLE_BY_ID.get(id) ?? 'desconocido',
+    newPassword: () => {
+      const password = randomBytes(18).toString('base64url')
+      secretsInRun.push(password)
+      return password
+    },
+    log: (line) => {
+      count++
+      console.log(line)
+    },
+  })
 
   console.log('\nusuarios')
   await seedWorld(db, ensureAuthUser, { includeAdmin: false })
   const cat = await seedStagingCatalog(db, ensureAuthUser)
   console.log(
-    `
-Catálogo de prueba: ${cat.businesses} negocios, ${cat.categories} categorías, ${cat.items} platos ` +
+    `\nCatálogo de prueba: ${cat.businesses} negocios, ${cat.categories} categorías, ${cat.items} platos ` +
       `(${cat.soldOut} agotados, ${cat.withoutImage} sin foto), ${cat.images} imágenes subidas`,
   )
 

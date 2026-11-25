@@ -11,17 +11,22 @@
  * IMÁGENES: viven en `fixtures/staging-catalog/*.jpg` (JPEG ≤ 200 KB; generadas para pruebas, sin
  * logos de marcas reales). Son pocas y se REUTILIZAN: un plato representativo por familia
  * (pollo, menú, chifa, jugo, postre, parrilla) y una portada por negocio. La portada va a
- * `business-logos/<negocio>/banner.jpg` (`businesses.banner_url`); cada plato con foto apunta a su
- * copia (una por foto y negocio) a `menu-items/<negocio>/items/seed-<foto>.jpg` y fija `image_url` y `thumbnail_url`. La
- * «Bodega» queda SIN portada ni fotos, para probar el estado vacío.
+ * `business-logos/<negocio>/banner.jpg` (`businesses.banner_url`). Cada plato con foto tiene SU PROPIA
+ * copia, con la convención de Negocios (`itemImagePaths`): `menu-items/<negocio>/items/<itemId>.seed` y su
+ * miniatura WebP de 384 px `…<itemId>.seed-t` (`fixtures/staging-catalog/thumb-<foto>.webp`, generadas
+ * una vez a partir de los JPEG), de modo que borrar la foto de un plato no deje sin foto a sus hermanos.
+ * La «Bodega» queda SIN portada ni fotos, para probar el estado vacío.
+ *
+ * GUARDIA: `seedStagingCatalog` exige un cliente creado con `createStagingClient` (destino y huella
+ * de la service role verificados); con cualquier otro aborta antes de la primera petición.
  */
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { E2E } from './e2e-fixtures.ts'
-import type { EnsureAuthUser } from './seed-world.ts'
+import { type EnsureAuthUser, qrDe } from './seed-world.ts'
+import { assertVerifiedStagingClient, type StagingClient } from './staging-client.ts'
 
 const IMG_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'staging-catalog')
 
@@ -176,7 +181,7 @@ export const CATALOG_BUSINESSES: Biz[] = [
     tagline: 'Menú del día y platos criollos',
     categoria: ['menu', 'criollo'],
     phone: '+51900000022',
-    accent: 'f97316',
+    accent: 'be185d',
     fee: 2,
     eta: [20, 30],
     cover: 'portada-menu',
@@ -444,10 +449,16 @@ export const CATALOG_OWNERS = CATALOG_BUSINESSES.map((b) => ({
   business: b,
 }))
 
-function readImage(key: string): Buffer {
-  const path = join(IMG_DIR, `${key}.jpg`)
+function readFixture(file: string): Buffer {
+  const path = join(IMG_DIR, file)
   if (!existsSync(path)) throw new Error(`Falta la imagen de prueba ${path}`)
   return readFileSync(path)
+}
+
+/** Rutas de la foto de UN plato y de su miniatura (misma convención que `itemImagePaths` de Negocios). */
+export function catalogImagePaths(bizId: string, itemId: string): { full: string; thumb: string } {
+  const full = `${bizId}/items/${itemId}.seed`
+  return { full, thumb: `${full}-t` }
 }
 
 export interface CatalogSummary {
@@ -460,11 +471,12 @@ export interface CatalogSummary {
 }
 
 export async function seedStagingCatalog(
-  // biome-ignore lint/suspicious/noExplicitAny: el cliente se inyecta sin tipar (database.types.ts está desactualizado)
-  db: SupabaseClient<any, any, any>,
+  db: StagingClient,
   ensureAuthUser: EnsureAuthUser,
 ): Promise<CatalogSummary> {
-  // biome-ignore lint/suspicious/noExplicitAny: database.types.ts está desactualizado
+  // Antes de cualquier petición o activación de cuentas.
+  assertVerifiedStagingClient(db)
+  // biome-ignore lint/suspicious/noExplicitAny: las filas se escriben por nombre de tabla dinámico, sin tipar
   const raw = db as any
   const summary: CatalogSummary = {
     businesses: 0,
@@ -486,10 +498,15 @@ export async function seedStagingCatalog(
     console.log(`  ✓ ${table.padEnd(28)} ${rows.length} fila(s)`)
   }
 
-  async function upload(bucket: string, path: string, key: string): Promise<string> {
-    const { error } = await db.storage.from(bucket).upload(path, readImage(key), {
+  async function upload(
+    bucket: string,
+    path: string,
+    file: string,
+    contentType = 'image/jpeg',
+  ): Promise<string> {
+    const { error } = await db.storage.from(bucket).upload(path, readFixture(file), {
       upsert: true,
-      contentType: 'image/jpeg',
+      contentType,
       cacheControl: '3600',
     })
     if (error) throw new Error(`subir ${bucket}/${path} falló: ${error.message}`)
@@ -525,7 +542,7 @@ export async function seedStagingCatalog(
     console.log(`\n${b.name}`)
 
     // Portada (banner_url) en el bucket de identidad del negocio.
-    const bannerUrl = b.cover ? await upload('business-logos', `${bid}/banner.jpg`, b.cover) : null
+    const bannerUrl = b.cover ? await upload('business-logos', `${bid}/banner.jpg`, `${b.cover}.jpg`) : null
 
     await upsert(
       'businesses',
@@ -567,6 +584,7 @@ export async function seedStagingCatalog(
           wallet: 'yape',
           account_number: b.phone.slice(3),
           account_name: b.name,
+          qr_url: qrDe(b.phone.slice(3)),
         },
       ],
       'business_id,slot',
@@ -621,7 +639,6 @@ export async function seedStagingCatalog(
       'id',
     )
 
-    const uploaded = new Map<string, string>()
     const cats: Record<string, unknown>[] = []
     const items: Record<string, unknown>[] = []
     const links: Record<string, unknown>[] = []
@@ -631,10 +648,16 @@ export async function seedStagingCatalog(
       for (const [di, [name, price, description, flags = '']] of c.dishes.entries()) {
         const itemId = stableId(`item:${b.key}:${c.name}:${name}`)
         let imageUrl: string | null = null
+        let thumbnailUrl: string | null = null
         if (flags !== 'n' && c.image && b.cover) {
-          const path = `${bid}/items/seed-${c.image}.jpg`
-          imageUrl = uploaded.get(path) ?? (await upload('menu-items', path, c.image))
-          uploaded.set(path, imageUrl)
+          const paths = catalogImagePaths(bid, itemId)
+          imageUrl = await upload('menu-items', paths.full, `${c.image}.jpg`)
+          thumbnailUrl = await upload(
+            'menu-items',
+            paths.thumb,
+            `thumb-${c.image}.webp`,
+            'image/webp',
+          )
         } else {
           summary.withoutImage++
         }
@@ -648,7 +671,7 @@ export async function seedStagingCatalog(
           description,
           base_price: Number(price.toFixed(2)),
           image_url: imageUrl,
-          thumbnail_url: imageUrl,
+          thumbnail_url: thumbnailUrl,
           display_order: di,
           is_available: !soldOut,
         })
