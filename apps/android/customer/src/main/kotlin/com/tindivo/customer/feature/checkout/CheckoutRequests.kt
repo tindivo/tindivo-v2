@@ -50,8 +50,9 @@ private fun AddressUi.coordinates(): CreateOrderRequestCoordinates? {
 }
 
 /**
- * La petición de `POST /customer/checkout/quote`. En un recojo no lleva coordenadas ni `pickupTiming` (todo recojo es
- * prepago y el servidor lo fuerza); en un delivery, las de la dirección elegida. `null` si la bolsa trae un id que no es un uuid.
+ * La petición de `POST /customer/checkout/quote`. En un recojo no lleva coordenadas y lleva `pickupTiming = later`
+ * (todo recojo es prepago y la app ya no pregunta «¿vas al local ahora?»); en un delivery, las de la dirección elegida.
+ * `null` si la bolsa trae un id que no es un uuid.
  */
 fun buildQuoteRequest(
     state: CheckoutUiState,
@@ -66,6 +67,7 @@ fun buildQuoteRequest(
         deliveryMethod = state.method.wire(),
         items = items.map { (id, quantity, modifiers) -> QuoteCheckoutRequestItemsInner(id, quantity, modifiers) },
         coordinates = if (pickup) null else state.selectedAddress?.coordinates(),
+        pickupTiming = if (pickup) QuoteCheckoutRequest.PickupTiming.later else null,
     )
 }
 
@@ -111,7 +113,9 @@ fun buildOrderRequest(
             gpsValidation = gps,
         )
     return if (state.isPickup) {
-        base
+        // CreateOrderRequestSchema exige `pickupTiming` en todo recojo (requests.ts): sin él, el servidor lo rechaza con
+        // 422 antes de llegar al valor por defecto de la base. Todo recojo es prepago, así que siempre es `later`.
+        base.copy(pickupTiming = CreateOrderRequest.PickupTiming.later)
     } else {
         deliveryPart(base, state, quote)
     }

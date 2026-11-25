@@ -231,7 +231,7 @@ class CheckoutViewModelTest : CheckoutHarness() {
         }
 
     @Test
-    fun `el recojo es prepago, no manda pickupTiming ni nada de la entrega`() =
+    fun `el recojo es prepago, manda pickupTiming later sin preguntarlo y nada de la entrega`() =
         runTest(dispatcher) {
             val vm = ready()
             vm.setNote("sin ají")
@@ -240,7 +240,7 @@ class CheckoutViewModelTest : CheckoutHarness() {
 
             assertEquals(PayMethod.Prepaid, vm.state.value.pay)
             val quote = json(quotes().last())
-            assertTrue(quote.absent("pickupTiming"))
+            assertEquals("later", quote.getValue("pickupTiming").jsonPrimitive.content)
             assertTrue(quote.absent("coordinates"))
 
             vm.confirm()
@@ -249,8 +249,8 @@ class CheckoutViewModelTest : CheckoutHarness() {
             val body = json(orders().single())
             assertEquals("pickup", body.getValue("deliveryMethod").jsonPrimitive.content)
             assertEquals("prepaid", body.getValue("paymentIntent").jsonPrimitive.content)
+            assertEquals("later", body.getValue("pickupTiming").jsonPrimitive.content)
             listOf(
-                "pickupTiming",
                 "cashPayingWith",
                 "deliveryAddress",
                 "deliveryReference",
@@ -258,6 +258,25 @@ class CheckoutViewModelTest : CheckoutHarness() {
                 "coordinates",
                 "gpsValidation",
             ).forEach { assertTrue(it, body.absent(it)) }
+        }
+
+    @Test
+    fun `el cuerpo del recojo es el del vector que el esquema real del contrato acepta`() =
+        runTest(dispatcher) {
+            val vm = ready()
+            vm.setMethod(DeliveryChoice.Pickup)
+            advanceUntilIdle()
+            vm.confirm()
+            advanceUntilIdle()
+
+            val vector =
+                Json
+                    .parseToJsonElement(
+                        requireNotNull(javaClass.getResourceAsStream("/fixtures/vectores/crear-pedido-recojo.json")) {
+                            "falta el recurso fixtures/vectores/crear-pedido-recojo.json"
+                        }.bufferedReader().readText(),
+                    ).jsonObject
+            assertEquals(vector.getValue("cuerpo").jsonObject, json(orders().single()))
         }
 
     @Test
