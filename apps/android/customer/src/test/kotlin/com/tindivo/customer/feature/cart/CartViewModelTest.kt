@@ -88,8 +88,8 @@ class CartViewModelTest {
         // (10.10 + 2.50) × 3 = 37.80; más 12.50 = 50.30.
         assertEquals("S/ 37.80", ui.lines[0].total.plain())
         assertEquals("S/ 50.30", ui.subtotal.plain())
-        assertTrue(ui.lines[0].canDecrease)
-        assertFalse(ui.lines[1].canDecrease)
+        assertFalse(ui.lines[0].minusRemoves)
+        assertTrue(ui.lines[1].minusRemoves)
     }
 
     @Test

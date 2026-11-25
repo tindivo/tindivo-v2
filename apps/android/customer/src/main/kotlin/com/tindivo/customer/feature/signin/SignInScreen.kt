@@ -1,18 +1,26 @@
 package com.tindivo.customer.feature.signin
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -23,19 +31,33 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoColors
+import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
@@ -95,10 +117,25 @@ fun SignInScreen(
     }
     Scaffold { innerPadding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(text = stringResource(R.string.signin_title), style = MaterialTheme.typography.headlineMedium)
+            SignInArt()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = stringResource(R.string.signin_title), style = MaterialTheme.typography.headlineMedium)
+                if (googleAvailable) {
+                    Text(
+                        text = stringResource(R.string.signin_subtitle),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             if (closePending) {
                 Text(
                     text = stringResource(R.string.signin_close_pending),
@@ -153,7 +190,32 @@ fun SignInScreen(
     }
 }
 
-/** La casilla va siempre, desmarcada; los dos enlaces abren la web en el navegador (CUS-AUT-020). */
+/** La ilustración del tablero «Entrar», sobre crema. Decorativa: el título dice qué es la pantalla. */
+@Composable
+private fun SignInArt() {
+    // imageResource y no painterResource: solo decodifica el webp, sin el lector de vectores XML.
+    Image(
+        bitmap = ImageBitmap.imageResource(R.drawable.img_signin),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(ART_HEIGHT)
+                .clip(RoundedCornerShape(28.dp))
+                .background(ArtCream),
+    )
+}
+
+private val ART_HEIGHT = 240.dp
+
+/** El crema del fondo de la ilustración (#FEF6ED del tablero), para que no se le note el borde. */
+private val ArtCream = Color(color = 0xFFFEF6ED)
+
+/**
+ * La casilla va siempre, desmarcada. Toda la fila se toca (48 dp) y «Términos» y «Política de privacidad» son enlaces
+ * dentro de la misma frase: abren la web en el navegador (CUS-AUT-020).
+ */
 @Composable
 private fun TermsCheckbox(
     checked: Boolean,
@@ -161,23 +223,37 @@ private fun TermsCheckbox(
     onOpenLink: (String) -> Unit,
     focusRequester: FocusRequester,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = onChecked,
-                modifier = Modifier.heightIn(min = 48.dp).focusRequester(focusRequester),
-            )
-            Text(text = stringResource(R.string.signin_terms_label), style = MaterialTheme.typography.bodyMedium)
-        }
-        Row {
-            TextButton(onClick = { onOpenLink(TERMS_PATH) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.signin_terms_link))
+    val linkStyles =
+        TextLinkStyles(
+            style = SpanStyle(color = TindivoColors.brandText, textDecoration = TextDecoration.Underline),
+        )
+    val intro = stringResource(R.string.signin_terms_intro)
+    val joiner = stringResource(R.string.signin_terms_joiner)
+    val terms = stringResource(R.string.signin_terms_link)
+    val privacy = stringResource(R.string.signin_privacy_link)
+    val label =
+        remember(intro, joiner, terms, privacy, onOpenLink) {
+            buildAnnotatedString {
+                append(intro)
+                withLink(LinkAnnotation.Clickable("terms", linkStyles) { onOpenLink(TERMS_PATH) }) { append(terms) }
+                append(joiner)
+                withLink(
+                    LinkAnnotation.Clickable("privacy", linkStyles) { onOpenLink(PRIVACY_PATH) },
+                ) { append(privacy) }
             }
-            TextButton(onClick = { onOpenLink(PRIVACY_PATH) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.signin_privacy_link))
-            }
         }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .focusRequester(focusRequester)
+                .toggleable(value = checked, role = Role.Checkbox, onValueChange = onChecked),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // El control solo dibuja: el toque lo recibe toda la fila.
+        Checkbox(checked = checked, onCheckedChange = null, modifier = Modifier.padding(horizontal = 12.dp))
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 8.dp))
     }
 }
 
@@ -190,35 +266,33 @@ private fun GoogleButton(
     looksOff: Boolean,
     onClick: () -> Unit,
 ) {
-    // Con la casilla vacía el botón se ve apagado pero responde al toque: avisa que falta marcarla (CA-AUT-P1).
+    // Con la casilla vacía el botón se ve igual de activo: al tocarlo se explica qué falta (CA-AUT-P1). Solo el lector
+    // de pantalla recibe el aviso de estado.
     val offHint = stringResource(R.string.signin_terms_talkback)
     Button(
         onClick = onClick,
         enabled = !loading,
-        colors =
-            if (looksOff) {
-                ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = OFF_CONTAINER_ALPHA),
-                    contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = OFF_CONTENT_ALPHA),
-                )
-            } else {
-                ButtonDefaults.buttonColors()
-            },
         modifier =
-            Modifier.heightIn(min = 48.dp).semantics {
+            Modifier.fillMaxWidth().height(GOOGLE_BUTTON_HEIGHT).semantics {
                 if (looksOff) stateDescription = offHint
             },
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
     ) {
         if (loading) {
             CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp).size(20.dp), strokeWidth = 2.dp)
+        } else {
+            // Ícono neutro: el logo de Google es de un tercero y la app no trae el recurso oficial.
+            Icon(
+                imageVector = TindivoIcons.Person,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 12.dp).size(24.dp),
+            )
         }
-        Text(text = stringResource(R.string.signin_google))
+        Text(text = stringResource(R.string.signin_google), style = MaterialTheme.typography.titleMedium)
     }
 }
 
-private const val OFF_CONTAINER_ALPHA = 0.12f
-private const val OFF_CONTENT_ALPHA = 0.38f
+private val GOOGLE_BUTTON_HEIGHT = 56.dp
 
 @Preview(showBackground = true)
 @Composable

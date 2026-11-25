@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,7 +33,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
+import com.tindivo.customer.ui.NumberedStep
 
 /**
  * «Paga tu pedido»: cuánto y a quién pagar, el tiempo que queda y la subida de la captura. [amount] es el total del
@@ -95,7 +100,8 @@ private fun ReadyContent(
             color = MaterialTheme.colorScheme.error,
         )
     }
-    state.countdown?.let { CountdownLine(countdown = it) }
+    // «Te quedan N min» va fija arriba de la pantalla (PrepayCountdownPill); aquí solo se avisa si ya venció.
+    if (state.countdown == PrepayCountdown.Expired) ExpiredNotice()
     PrepayPayeeCard(amount = amount, payee = details.payee)
     if (state.send is SendState.Sent) {
         SentNotice()
@@ -104,30 +110,39 @@ private fun ReadyContent(
     }
 }
 
+/**
+ * La pastilla fija de arriba: «Te quedan N min», en rojo cuando se ve menos de 3. Vive fuera del desplazamiento del
+ * detalle (ver `OrderBody`) para que se vea con el comprobante a medio subir. Vencido no se pinta: sale su aviso.
+ */
 @Composable
-private fun CountdownLine(countdown: PrepayCountdown) {
-    val live = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-    when (countdown) {
-        is PrepayCountdown.Remaining -> {
-            val minutes = countdown.minutes.toInt()
-            Text(
-                text = pluralStringResource(R.plurals.prepay_time_left, minutes, minutes),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = live,
-            )
-        }
+internal fun PrepayCountdownPill(countdown: PrepayCountdown) {
+    val remaining = countdown as? PrepayCountdown.Remaining ?: return
+    val minutes = remaining.minutes.toInt()
+    val scheme = MaterialTheme.colorScheme
+    val urgent = countdown.isUrgent
+    Surface(
+        color = if (urgent) scheme.errorContainer else scheme.surfaceContainerHigh,
+        contentColor = if (urgent) scheme.onErrorContainer else scheme.onSurface,
+        shape = CircleShape,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Text(
+            text = pluralStringResource(R.plurals.prepay_time_left, minutes, minutes),
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+}
 
-        PrepayCountdown.Expired -> {
-            Column(modifier = live) {
-                Text(
-                    text = stringResource(R.string.prepay_expired_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                Text(text = stringResource(R.string.prepay_expired_body), style = MaterialTheme.typography.bodyMedium)
-            }
-        }
+@Composable
+private fun ExpiredNotice() {
+    Column(modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+        Text(
+            text = stringResource(R.string.prepay_expired_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        Text(text = stringResource(R.string.prepay_expired_body), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -154,46 +169,30 @@ private fun ProofPicker(
     val pick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
     val sending = state.send is SendState.Sending
     val photo = state.photo
-    if (photo == null) {
-        Button(onClick = pick, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text(text = stringResource(R.string.prepay_upload))
-        }
-        Text(
-            text = stringResource(R.string.prepay_upload_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    } else {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+    NumberedStep(number = 3) {
+        Text(text = stringResource(R.string.prepay_step_upload), style = MaterialTheme.typography.titleMedium)
+        if (photo == null) {
+            TindivoPrimaryButton(text = stringResource(R.string.prepay_upload), onClick = pick)
             Text(
-                text = stringResource(R.string.prepay_preview_title),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.prepay_upload_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedButton(onClick = pick, enabled = !sending, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.prepay_change))
-            }
-        }
-        AsyncImage(
-            model = photo,
-            contentDescription = stringResource(R.string.prepay_preview_description),
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp).clip(RoundedCornerShape(12.dp)),
-        )
-        Button(
-            onClick = actions.send,
-            enabled = state.canSend,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        ) {
-            if (sending) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                Text(
-                    text = stringResource(R.string.prepay_sending),
-                    modifier = Modifier.padding(start = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
-                )
-            } else {
-                Text(text = stringResource(R.string.prepay_send))
-            }
+        } else {
+            AsyncImage(
+                model = photo,
+                contentDescription = stringResource(R.string.prepay_preview_description),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp).clip(RoundedCornerShape(12.dp)),
+            )
+            // «Cambiar» es una salida, no la acción: texto bajo la imagen, sin competir con «Enviar comprobante».
+            TindivoTextButton(text = stringResource(R.string.prepay_change), onClick = pick, enabled = !sending)
+            TindivoPrimaryButton(
+                text = stringResource(if (sending) R.string.prepay_sending else R.string.prepay_send),
+                onClick = actions.send,
+                enabled = state.canSend,
+                loading = sending,
+            )
         }
     }
     (state.send as? SendState.Failed)?.let { SendFailure(problem = it.problem, onRetry = actions.send, onPick = pick) }

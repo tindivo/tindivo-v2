@@ -193,7 +193,7 @@ private fun StoreBadgeChip(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1, widthDp = 180)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA, widthDp = 180)
 @Composable
 private fun StoreProductCardPreview() {
     TindivoTheme {

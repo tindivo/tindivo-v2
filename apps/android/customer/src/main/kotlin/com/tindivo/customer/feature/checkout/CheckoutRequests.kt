@@ -43,12 +43,6 @@ private fun DeliveryChoice.wire() =
         QuoteCheckoutRequest.DeliveryMethod.delivery
     }
 
-private fun PickupWhen.quoteWire() =
-    if (this == PickupWhen.Now) QuoteCheckoutRequest.PickupTiming.now else QuoteCheckoutRequest.PickupTiming.later
-
-private fun PickupWhen.orderWire() =
-    if (this == PickupWhen.Now) CreateOrderRequest.PickupTiming.now else CreateOrderRequest.PickupTiming.later
-
 private fun AddressUi.coordinates(): CreateOrderRequestCoordinates? {
     val latitude = lat
     val longitude = lng
@@ -56,8 +50,9 @@ private fun AddressUi.coordinates(): CreateOrderRequestCoordinates? {
 }
 
 /**
- * La petición de `POST /customer/checkout/quote`. En un recojo no lleva coordenadas y lleva `pickupTiming`; en un
- * delivery, las de la dirección elegida. `null` si la bolsa trae un id que no es un uuid.
+ * La petición de `POST /customer/checkout/quote`. En un recojo no lleva coordenadas y lleva `pickupTiming = later`
+ * (todo recojo es prepago y la app ya no pregunta «¿vas al local ahora?»); en un delivery, las de la dirección elegida.
+ * `null` si la bolsa trae un id que no es un uuid.
  */
 fun buildQuoteRequest(
     state: CheckoutUiState,
@@ -72,7 +67,7 @@ fun buildQuoteRequest(
         deliveryMethod = state.method.wire(),
         items = items.map { (id, quantity, modifiers) -> QuoteCheckoutRequestItemsInner(id, quantity, modifiers) },
         coordinates = if (pickup) null else state.selectedAddress?.coordinates(),
-        pickupTiming = if (pickup) state.pickupWhen?.quoteWire() else null,
+        pickupTiming = if (pickup) QuoteCheckoutRequest.PickupTiming.later else null,
     )
 }
 
@@ -118,7 +113,9 @@ fun buildOrderRequest(
             gpsValidation = gps,
         )
     return if (state.isPickup) {
-        base.copy(pickupTiming = state.pickupWhen?.orderWire())
+        // CreateOrderRequestSchema exige `pickupTiming` en todo recojo (requests.ts): sin él, el servidor lo rechaza con
+        // 422 antes de llegar al valor por defecto de la base. Todo recojo es prepago, así que siempre es `later`.
+        base.copy(pickupTiming = CreateOrderRequest.PickupTiming.later)
     } else {
         deliveryPart(base, state, quote)
     }

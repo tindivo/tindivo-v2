@@ -25,10 +25,11 @@ data class CartLineUi(
     val note: String?,
     val quantity: Int,
     val total: String,
-    /** Con 1 unidad el «−» está deshabilitado: para quitar el plato está «Quitar». */
-    val canDecrease: Boolean,
     val canIncrease: Boolean,
-)
+) {
+    /** Con 1 unidad, «−» pasa a ser un tacho que quita el plato (y «Quitar» sale). */
+    val minusRemoves: Boolean get() = quantity <= 1
+}
 
 sealed interface CartUiState {
     /** Aún no se leyó lo guardado: no se enseña «vacía» por un instante. */
@@ -58,7 +59,6 @@ internal fun Cart?.toUi(): CartUiState {
                     note = line.note,
                     quantity = line.quantity,
                     total = requireAmountText(line.total),
-                    canDecrease = line.quantity > 1,
                     canIncrease = line.quantity < MAX_QUANTITY,
                 )
             },

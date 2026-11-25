@@ -55,12 +55,14 @@ data class BagLineUi(
 data class CheckoutUiState(
     val phase: CheckoutPhase = CheckoutPhase.Loading,
     val businessName: String = "",
+    /** Dirección del local y hora de cierre de hoy, si la carta los trae: para el recojo. */
+    val businessAddress: String? = null,
+    val closesAt: String? = null,
     val etaMin: Int? = null,
     val etaMax: Int? = null,
     val acceptsDelivery: Boolean = true,
     val acceptsPickup: Boolean = false,
     val method: DeliveryChoice = DeliveryChoice.Delivery,
-    val pickupWhen: PickupWhen? = null,
     val addresses: List<AddressUi> = emptyList(),
     val selectedAddressId: String? = null,
     val name: String = "",
@@ -98,7 +100,7 @@ data class CheckoutUiState(
      */
     override fun toString(): String =
         "CheckoutUiState(phase=$phase, businessName=$businessName, etaMin=$etaMin, etaMax=$etaMax, " +
-            "acceptsDelivery=$acceptsDelivery, acceptsPickup=$acceptsPickup, method=$method, pickupWhen=$pickupWhen, " +
+            "acceptsDelivery=$acceptsDelivery, acceptsPickup=$acceptsPickup, method=$method, " +
             "addresses=${addresses.size}, selectedAddressId=$selectedAddressId, name=***, " +
             "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, " +
             "previousPurchase=$previousPurchase, note=***, " +
@@ -123,6 +125,9 @@ sealed interface CheckoutSheet {
     ) : CheckoutSheet
 
     data object VerifyPhone : CheckoutSheet
+
+    /** El nombre con el que se hace el pedido: se corrige aquí, sin tocar el perfil de la cuenta. */
+    data object EditName : CheckoutSheet
 
     /** La cuenta aún no tiene perfil: falta el nombre. */
     data object CompleteProfile : CheckoutSheet
@@ -159,6 +164,10 @@ fun Cta.sheet(selectedAddressId: String?): CheckoutSheet? =
             CheckoutSheet.VerifyPhone
         }
 
+        Cta.NeedName -> {
+            CheckoutSheet.EditName
+        }
+
         else -> {
             null
         }
@@ -176,8 +185,6 @@ sealed interface Cta {
     data object QuoteProblem : Cta
 
     data object NeedName : Cta
-
-    data object NeedPickupAnswer : Cta
 
     data object NeedAddress : Cta
 
@@ -201,6 +208,12 @@ sealed interface Cta {
     val canConfirm: Boolean get() = this is Ready
 }
 
+/**
+ * Lo que falta se resuelve en la sección de pago: el botón baja hasta ella. Ningún método se preselecciona (decisión
+ * de Jesús, 2026-11-23: toca dinero); la persona elige cada vez.
+ */
+val Cta.goesToPayment: Boolean get() = this == Cta.NeedPay || this == Cta.NeedCash
+
 /** Lo que falta para confirmar, en el orden de la web (`useCheckoutValidation`). */
 fun ctaOf(state: CheckoutUiState): Cta {
     val quote = state.quote
@@ -210,8 +223,6 @@ fun ctaOf(state: CheckoutUiState): Cta {
         state.sending -> Cta.Sending
 
         state.name.trim().isEmpty() -> Cta.NeedName
-
-        state.isPickup && state.pickupWhen == null -> Cta.NeedPickupAnswer
 
         !state.isPickup && addressNeed(
             state.selectedAddress,

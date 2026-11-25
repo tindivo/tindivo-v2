@@ -48,12 +48,14 @@ internal fun AddressesDestination(
     onEdit: (id: String) -> Unit,
     changed: Boolean,
     onChangeHandled: () -> Unit,
+    onLibraryChanged: () -> Unit = {},
     viewModel: AddressListViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     // Volvió del formulario tras guardar o borrar: la libreta que se tenía ya no es la del servidor.
     LaunchedEffect(changed) {
         if (changed) {
+            onLibraryChanged()
             viewModel.refresh()
             onChangeHandled()
         }
@@ -67,7 +69,10 @@ internal fun AddressesDestination(
         onAdd = onAdd,
         onOpen = { id -> onEdit(id.toString()) },
         onEdit = { id -> onEdit(id.toString()) },
-        onMakeDefault = viewModel::makeDefault,
+        onMakeDefault = { id ->
+            viewModel.makeDefault(id)
+            onLibraryChanged()
+        },
         onBack = onBack,
     )
 }

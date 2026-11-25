@@ -55,6 +55,18 @@ internal sealed interface PrepayCountdown {
     data object Expired : PrepayCountdown
 }
 
+private const val URGENT_BELOW_MINUTES = 3
+
+/** Se ve «Te quedan 2 min» o menos: la pastilla se pone roja. El tiempo vencido tiene su propio aviso. */
+internal val PrepayCountdown.isUrgent: Boolean
+    get() = this is PrepayCountdown.Remaining && minutes < URGENT_BELOW_MINUTES
+
+/**
+ * El monto tal como se pega en Yape o Plin: solo el número con punto decimal. [amount] llega del servidor ya con
+ * «S/» (y, si pasa de mil, con coma de miles); la app no calcula ni redondea nada.
+ */
+internal fun amountToCopy(amount: String): String = amount.filter { it.isDigit() || it == '.' }
+
 /** Por qué no se pudo enviar el comprobante, y qué se le ofrece a la persona. */
 internal sealed interface SendProblem {
     /** Sin conexión o corte: se conserva la foto y se puede reintentar. */

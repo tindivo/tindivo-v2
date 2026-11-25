@@ -255,6 +255,11 @@ class CheckoutViewModel
             if (takeSheet { it == CheckoutSheet.VerifyPhone }) refreshPhone()
         }
 
+        /** La hoja del nombre guardó el nombre del pedido: se aplica y la hoja se cierra (cerrarla sin guardar no cambia nada). */
+        fun onNameSaved(text: String) {
+            if (takeSheet { it == CheckoutSheet.EditName }) edit { copy(name = text.trim().take(MAX_NAME_LENGTH)) }
+        }
+
         /** La hoja creó el perfil: se carga el checkout, como al volver de «Completa tu perfil». */
         fun onProfileCompleted() {
             if (takeSheet { it == CheckoutSheet.CompleteProfile }) retryLoad()
@@ -374,13 +379,16 @@ class CheckoutViewModel
             val current = mutableState.value
             val allowed = if (method == DeliveryChoice.Pickup) current.acceptsPickup else current.acceptsDelivery
             if (!allowed || current.method == method) return
-            edit { copy(method = method, pay = null, cash = CashChoice.None) }
-            requote(debounced = true)
-        }
-
-        fun setPickupWhen(choice: PickupWhen) {
-            if (locked()) return
-            edit { copy(pickupWhen = choice) }
+            // La cotización del otro método no vale para este: no se enseña como elegible mientras llega la nueva.
+            edit {
+                copy(
+                    method = method,
+                    pay = null,
+                    cash = CashChoice.None,
+                    quote = null,
+                    quoteStatus = QuoteStatus.Loading,
+                )
+            }
             requote(debounced = true)
         }
 

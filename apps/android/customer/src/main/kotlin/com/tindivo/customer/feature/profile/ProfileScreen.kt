@@ -11,13 +11,10 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,13 +25,10 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -42,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.BuildConfig
 import com.tindivo.customer.R
+import com.tindivo.customer.ui.fields.NameField
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -104,7 +99,7 @@ internal fun ProfileContent(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(text = stringResource(R.string.profile_support), style = MaterialTheme.typography.bodyLarge)
-        NameField(state = state, onName = onName, onSave = onSave)
+        ProfileNameField(state = state, onName = onName, onSave = onSave)
         TermsNotice()
         state.saveError?.let { SaveErrorText(it) }
         ContinueButton(state = state, onSave = onSave)
@@ -112,46 +107,29 @@ internal fun ProfileContent(
 }
 
 @Composable
-private fun NameField(
+private fun ProfileNameField(
     state: ProfileUiState,
     onName: (String) -> Unit,
     onSave: () -> Unit,
 ) {
     val focus = LocalFocusManager.current
     val errorText = stringResource(R.string.profile_name_error)
-    OutlinedTextField(
+    NameField(
         value = state.name,
         onValueChange = onName,
-        label = { Text(stringResource(R.string.profile_name_label)) },
-        singleLine = true,
+        label = stringResource(R.string.profile_name_label),
         enabled = !state.saving,
-        isError = state.nameError,
-        supportingText = {
-            if (state.nameError) {
-                // TalkBack lo lee al aparecer, sin que la persona tenga que volver al campo.
-                Text(text = errorText, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            } else {
-                Text(text = stringResource(R.string.profile_name_hint, state.name.length, NAME_MAX))
-            }
+        // Sale al salir del campo; lo que respondió el servidor (422) sale de inmediato.
+        error = errorText.takeIf { state.nameError },
+        immediateError = errorText.takeIf { state.rejected },
+        valid = state.problem == null,
+        maxLength = NAME_MAX,
+        imeAction = ImeAction.Done,
+        onImeAction = {
+            focus.clearFocus()
+            if (state.canSave) onSave()
         },
-        keyboardOptions =
-            KeyboardOptions(
-                capitalization = KeyboardCapitalization.Words,
-                autoCorrectEnabled = false,
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Done,
-            ),
-        keyboardActions =
-            KeyboardActions(
-                onDone = {
-                    focus.clearFocus()
-                    if (state.canSave) onSave()
-                },
-            ),
-        modifier =
-            Modifier.fillMaxWidth().semantics {
-                if (state.nameError) error(errorText)
-            },
+        autoFocus = state.name.isBlank(),
     )
 }
 

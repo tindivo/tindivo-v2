@@ -1,6 +1,8 @@
 package com.tindivo.core.designsystem
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,6 +19,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -25,16 +29,20 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /** Tamaño y trazo del indicador de carga dentro de un botón: cabe en la línea de la etiqueta. */
 private val ButtonSpinnerSize = 20.dp
 private val ButtonSpinnerStroke = 2.dp
 
+/** Lo mínimo a lo que se achica la etiqueta del botón principal antes de cortarse. */
+private val ButtonMinFontSize = 14.sp
+
 /** Borde del botón secundario, el mismo grosor que el de las tarjetas. */
 private val SecondaryBorderWidth = 1.dp
 
 /**
- * El botón principal de una pantalla: píldora naranja de ancho completo, etiqueta blanca en `labelLarge`.
+ * El botón principal de una pantalla: píldora `#C2410C` de ancho completo, etiqueta blanca en `titleLarge` (18/24, el token `cta`).
  *
  * Con [loading] la etiqueta se oculta (sin cambiar el tamaño del botón) y en su lugar gira un indicador; el botón deja
  * de responder, conserva su color y TalkBack sigue leyendo la etiqueta, anuncia que está en curso y que no se puede
@@ -49,6 +57,8 @@ fun TindivoPrimaryButton(
     loading: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val pressed = interaction.collectIsPressedAsState().value
     val colors =
         if (loading) {
             ButtonDefaults.buttonColors(
@@ -56,10 +66,12 @@ fun TindivoPrimaryButton(
                 disabledContentColor = scheme.onPrimary,
             )
         } else {
-            ButtonDefaults.buttonColors()
+            // Presionado: `primaryPressed` (#9A3412). Material no lo da; se deriva del estado de la interacción.
+            ButtonDefaults.buttonColors(containerColor = if (pressed) TindivoColors.primaryPressed else scheme.primary)
         }
     Button(
         onClick = onClick,
+        interactionSource = interaction,
         enabled = enabled && !loading,
         colors = colors,
         modifier =
@@ -69,11 +81,15 @@ fun TindivoPrimaryButton(
                 .semantics { liveRegion = LiveRegionMode.Polite },
     ) {
         Box(contentAlignment = Alignment.Center) {
+            // Con letra grande una etiqueta larga («Completa 1 opción») ya no cabe en una línea: se achica hasta 14 sp
+            // antes de cortarse con «…». Si cabe, sale a su tamaño de siempre.
+            val style = MaterialTheme.typography.titleLarge
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge,
+                style = style,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                autoSize = TextAutoSize.StepBased(minFontSize = ButtonMinFontSize, maxFontSize = style.fontSize),
                 modifier = Modifier.alpha(if (loading) 0f else 1f),
             )
             if (loading) {
@@ -138,7 +154,7 @@ fun TindivoTextButton(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun TindivoButtonsPreview() {
     TindivoTheme {
