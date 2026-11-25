@@ -975,14 +975,186 @@ describe('POST /customer/checkout/quote · payment', () => {
     expect(r.status, JSON.stringify(r.body)).toBe(201)
   })
 
-  it('cliente sin historial: la contraentrega sigue disponible (la creación decide con GPS o mostrador)', async () => {
+  /** POST /customer/orders con la misma bolsa de 48.00 que cotiza `bolsa`. */
+  const crear = async (
+    c: Cliente,
+    paymentIntent: 'prepaid' | 'pending_cash' | 'pending_yape',
+    extra: Record<string, unknown> = {},
+  ) =>
+    pedir(postOrder, {
+      bearer: c.token,
+      method: 'POST',
+      headers: { 'idempotency-key': crypto.randomUUID() },
+      body: {
+        businessId: FIXTURES.BUSINESS_ID,
+        deliveryMethod: 'delivery',
+        paymentIntent,
+        customerName: NOMBRE,
+        customerPhone: c.tel9,
+        deliveryAddress: 'Jr. Prueba 1',
+        deliveryReference: REF,
+        coordinates: PIN,
+        items: [
+          {
+            menuItemId: FIXTURES.ITEM_POLLO_ID,
+            quantity: 1,
+            modifiers: [FIXTURES.MODOPT_QUESO_ID],
+          },
+        ],
+        ...extra,
+      },
+    })
+
+  const intents = (r: {
+    body: { data: { payment: { options: Array<{ intent: string }> } } }
+  }): string[] => r.body.data.payment.options.map((o) => o.intent)
+
+  it('cliente sin historial: la cotización conserva las tres opciones (CAX-001, igual que develop)', async () => {
     const c = await crearCliente()
     const r = await cotizar(c)
     expect(r.body.data.payment.options).toEqual([
       { intent: 'pending_cash', available: true, unavailableReason: null },
       { intent: 'pending_yape', available: true, unavailableReason: null },
+      { intent: 'prepaid', available: true, unavailableReason: null },
     ])
     expect(r.body.data.payment.cash).not.toBeNull()
+  })
+
+  // CAX-001: sin GPS local válido la creación exige prepago; la cotización no puede
+  // quitarle esa salida al cliente sin historial.
+  describe.each([
+    ['GPS ausente', {}],
+    ['GPS fallido', { gpsValidation: { method: 'failed' } }],
+    [
+      'GPS fuera de cobertura',
+      { gpsValidation: { method: 'gps_high_accuracy', lat: -9.0, lng: -78.0, accuracyM: 10 } },
+    ],
+  ])('cliente sin historial · %s', (_nombre, gps) => {
+    it('se ofrece prepaid, la contraentrega al recibir se rechaza y prepaid crea el pedido', async () => {
+      const c = await crearCliente()
+      const cot = await cotizar(c)
+      expect(intents(cot)).toContain('prepaid')
+      const cash = await crear(c, 'pending_cash', gps)
+      expect(cash.status, JSON.stringify(cash.body)).toBeGreaterThanOrEqual(400)
+      expect(JSON.stringify(cash.body)).toContain('Pago adelantado requerido')
+      const prepago = await crear(c, 'prepaid', gps)
+      expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+    })
+  })
+
+  it('cliente sin historial · GPS local: se ofrece prepaid y la contraentrega entra a `validando`', async () => {
+    const c = await crearCliente()
+    const cot = await cotizar(c)
+    expect(intents(cot)).toContain('prepaid')
+    const r = await crear(c, 'pending_cash', {
+      gpsValidation: {
+        method: 'gps_high_accuracy',
+        lat: PIN.lat,
+        lng: PIN.lng,
+        accuracyM: 10,
+      },
+    })
+    expect(r.status, JSON.stringify(r.body)).toBe(201)
+    expect(r.body.data.status).toBe('validando')
+  })
+
+  // CAX-002: la guardia HTTP de la creación y la cotización calculan el MISMO total
+  // (envío gratis, banda cercana o lejana) y coinciden en cada umbral.
+  describe('umbral de prepago: cotización y creación coinciden', () => {
+    const leerBandas = async (): Promise<{ near: number; far: number }> =>
+      (await db.from('app_settings').select('value').eq('key', 'delivery_bands').single()).data
+        ?.value as { near: number; far: number }
+
+    async function conUmbral(umbral: number, fn: () => Promise<void>): Promise<void> {
+      const { data: previo } = await db
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'prepay_threshold')
+        .single()
+      await db.from('app_settings').update({ value: umbral }).eq('key', 'prepay_threshold')
+      try {
+        await fn()
+      } finally {
+        await db
+          .from('app_settings')
+          .update({ value: previo?.value as never })
+          .eq('key', 'prepay_threshold')
+      }
+    }
+
+    /** `cuenta` = total en céntimos de la cotización; igualdad pasa, un céntimo menos de umbral no. */
+    async function verificar(cuenta: number, etiqueta: string): Promise<void> {
+      const c1 = await clienteDeConfianza()
+      await conUmbral(cuenta / 100, async () => {
+        const cot = await cotizar(c1, { coordinates: PIN })
+        expect(cot.body.data.total, etiqueta).toBe((cuenta / 100).toFixed(2))
+        expect(cot.body.data.exceedsPrepayThreshold, etiqueta).toBe(false)
+        const r = await crear(c1, 'pending_cash')
+        expect(r.status, `${etiqueta} igualdad: ${JSON.stringify(r.body)}`).toBe(201)
+      })
+      const c2 = await clienteDeConfianza()
+      await conUmbral((cuenta - 1) / 100, async () => {
+        const cot = await cotizar(c2, { coordinates: PIN })
+        expect(cot.body.data.exceedsPrepayThreshold, etiqueta).toBe(true)
+        expect(intents(cot), etiqueta).toEqual(['pending_cash', 'pending_yape', 'prepaid'])
+        const r = await crear(c2, 'pending_cash')
+        expect(
+          r.status,
+          `${etiqueta} +1 céntimo: ${JSON.stringify(r.body)}`,
+        ).toBeGreaterThanOrEqual(400)
+        expect(JSON.stringify(r.body)).toContain('adelantado')
+        const prepago = await crear(c2, 'prepaid')
+        expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+      })
+    }
+
+    it('plato de 48.00 con envío gratis: total 48.00; umbral 49.00 deja pasar la contraentrega', async () => {
+      await db
+        .from('menu_items')
+        .update({ free_delivery_until: '2099-12-31' })
+        .eq('id', FIXTURES.ITEM_POLLO_ID)
+      try {
+        const c = await clienteDeConfianza()
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: true, reason: 'dish' })
+          expect(cot.body.data.total).toBe('48.00')
+          expect(cot.body.data.exceedsPrepayThreshold).toBe(false)
+          const r = await crear(c, 'pending_cash')
+          expect(r.status, JSON.stringify(r.body)).toBe(201)
+        })
+        await verificar(4800, 'envío gratis')
+      } finally {
+        await db
+          .from('menu_items')
+          .update({ free_delivery_until: null })
+          .eq('id', FIXTURES.ITEM_POLLO_ID)
+      }
+    })
+
+    it('banda cercana sin promoción: igualdad al umbral y un céntimo por encima', async () => {
+      const { near } = await leerBandas()
+      await verificar(4800 + Math.round(near * 100), 'banda cercana')
+    })
+
+    it('banda lejana: igualdad al umbral y un céntimo por encima', async () => {
+      const { far } = await leerBandas()
+      const { error } = await db.from('delivery_zones').insert({
+        name: ZONA,
+        polygon: [
+          { lat: PIN.lat - 0.004, lng: PIN.lng - 0.004 },
+          { lat: PIN.lat - 0.004, lng: PIN.lng + 0.004 },
+          { lat: PIN.lat + 0.004, lng: PIN.lng + 0.004 },
+          { lat: PIN.lat + 0.004, lng: PIN.lng - 0.004 },
+        ],
+      })
+      if (error) throw new Error(error.message)
+      try {
+        await verificar(4800 + Math.round(far * 100), 'banda lejana')
+      } finally {
+        await db.from('delivery_zones').delete().eq('name', ZONA)
+      }
+    })
   })
 
   it('cuenta con contraentrega bloqueada (risk_blocked): prepay_required y cash null', async () => {

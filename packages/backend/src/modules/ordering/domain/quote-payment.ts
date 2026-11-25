@@ -19,6 +19,12 @@ export interface QuotePaymentInput {
   pickupTiming: PickupTiming | null
   /** `false` si `customer_contraentrega_decision` da `risk_blocked` o falla; `no_history` cuenta como `true`. */
   contraentregaAllowed: boolean
+  /**
+   * `true` solo si la decisión es `trusted`. El `no_history` puede necesitar prepago
+   * (sin GPS local, la creación lo exige) y la cotización no lo sabe: a ese cliente no
+   * se le quita `prepaid`.
+   */
+  customerTrusted: boolean
   exceedsPrepayThreshold: boolean
   /**
    * `false` si falló la lectura de `app_settings` o de `effective_max_change`
@@ -42,8 +48,8 @@ export interface QuotePaymentPlan {
 
 /**
  * Qué métodos de pago puede usar el cliente en este pedido (H-7). Pura: la ruta
- * reúne los datos. `prepaid` solo cuando no queda ninguna opción al recibir
- * disponible; la contraentrega solo en delivery, si el
+ * reúne los datos. `prepaid` se oculta solo al cliente `trusted` con alguna opción
+ * al recibir disponible; la contraentrega solo en delivery, si el
  * cliente es de confianza y el total no pasa del umbral. Un recojo solo ofrece
  * `prepaid` (0283). El motivo no distingue riesgo de falta de historial
  * (antifraude).
@@ -65,12 +71,14 @@ export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
           : null
     return { intent, available: unavailableReason === null, unavailableReason }
   })
-  // Un confiable con alguna opción al recibir disponible no ve `prepaid`: la app
-  // instalada pinta el grupo «Antes de recibir» con lo que llegue. `POST
-  // /customer/orders` sigue aceptándolo (API-3). Si falta toda opción al recibir
-  // (riesgo, umbral, ajustes dudosos, recojo), `prepaid` sale como siempre.
+  // Un confiable (`trusted`, no `no_history`) con alguna opción al recibir disponible
+  // no ve `prepaid`: la app instalada pinta el grupo «Antes de recibir» con lo que
+  // llegue. `POST /customer/orders` sigue aceptándolo (API-3). Si falta toda opción
+  // al recibir (riesgo, umbral, ajustes dudosos, recojo) o el cliente no es
+  // `trusted`, `prepaid` sale como siempre.
   const receiveAvailable = all.some((o) => o.intent !== 'prepaid' && o.available)
-  const options = receiveAvailable ? all.filter((o) => o.intent !== 'prepaid') : all
+  const options =
+    input.customerTrusted && receiveAvailable ? all.filter((o) => o.intent !== 'prepaid') : all
   const cashAvailable = options.some((o) => o.intent === 'pending_cash' && o.available)
   return {
     options,

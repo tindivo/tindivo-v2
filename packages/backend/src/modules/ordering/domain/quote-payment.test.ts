@@ -5,6 +5,7 @@ const base: QuotePaymentInput = {
   deliveryMethod: 'delivery',
   pickupTiming: null,
   contraentregaAllowed: true,
+  customerTrusted: true,
   exceedsPrepayThreshold: false,
   settingsReliable: true,
   maxCashBill: '100.00',
@@ -24,6 +25,16 @@ describe('planQuotePayment', () => {
     expect(r.options.every((o) => o.available && o.unavailableReason === null)).toBe(true)
     expect(r.cash).toEqual({ maxBill: '100.00', maxChange: '20.00', step: CASH_STEP_TEXT })
     expect(CASH_STEP_TEXT).toBe('0.50')
+  })
+
+  it('no_history (permitido, no trusted): conserva prepaid junto a las dos de al recibir', () => {
+    const r = planQuotePayment({ ...base, customerTrusted: false })
+    expect(r.options.map((o) => [o.intent, o.available])).toEqual([
+      ['pending_cash', true],
+      ['pending_yape', true],
+      ['prepaid', true],
+    ])
+    expect(r.cash).not.toBeNull()
   })
 
   it('sin opción al recibir disponible, prepaid sigue disponible', () => {

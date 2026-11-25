@@ -1,5 +1,6 @@
 import { CreateOrderRequestSchema, getOpenStatus, parseClientContext } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
+import { cents, quoteDelivery } from '@/lib/customer/delivery-quote'
 import { listCustomerOrders } from '@/lib/customer/history'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
@@ -11,6 +12,7 @@ import { getRequestId } from '@/lib/http/request-id'
 import { sendOrderCreated, sendOrderValidation } from '@/lib/inngest/client'
 import { hasConfirmedOpening } from '@/lib/opening/service-day'
 import { createServiceClient } from '@/lib/supabase/service'
+import { createUserClient } from '@/lib/supabase/user'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,7 +68,7 @@ export async function POST(req: Request): Promise<Response> {
       })
     }
 
-    const { user } = await requireRole(req, 'customer')
+    const { token, user } = await requireRole(req, 'customer')
     const body = CreateOrderRequestSchema.parse(await req.json())
     // El hash va sobre el cuerpo tal como llegó, igual que antes de normalizar: así un
     // reintento de un pedido ya guardado sigue encontrando su respuesta original.
@@ -178,13 +180,21 @@ export async function POST(req: Request): Promise<Response> {
         })
       }
 
-      // 2. Verificar tope usando el prepay_threshold de app_settings
+      // 2. Verificar tope usando el prepay_threshold de app_settings.
+      //
+      // El total es el MISMO que cotiza `checkout/quote` y que compara
+      // `create_customer_order` (0283): subtotal + envío tras la promoción de
+      // lanzamiento o la de plato, en la banda del punto (`quoteDelivery`). Antes se
+      // sumaba siempre la tarifa cercana, y un total que la cotización dejaba bajo el
+      // umbral se rechazaba aquí. Si falla la lectura de una promoción no se corta:
+      // lo decide la RPC dentro de su transacción.
       const { data: thresholdSetting } = await service
         .from('app_settings')
         .select('value')
         .eq('key', 'prepay_threshold')
         .maybeSingle()
-      const threshold = Number(thresholdSetting?.value ?? 80)
+      const thresholdValue = Number(thresholdSetting?.value ?? 80)
+      const threshold = Number.isFinite(thresholdValue) ? thresholdValue : 80
 
       const itemIds = body.items.map((i) => i.menuItemId)
       const modifierIds = body.items.flatMap((i) => i.modifiers || [])
@@ -202,40 +212,44 @@ export async function POST(req: Request): Promise<Response> {
               .in('id', modifierIds)
           : { data: [] }
 
-      let calculatedSubtotal = 0
+      let subtotalCents = 0
       for (const item of body.items) {
         const itemDb = itemsData?.find((db) => db.id === item.menuItemId)
         if (itemDb) {
-          let itemUnitPrice = Number(itemDb.base_price)
+          let unitCents = cents(Number(itemDb.base_price))
           for (const modId of item.modifiers || []) {
             const modDb = modifiersData?.find((db) => db.id === modId)
             if (modDb) {
-              itemUnitPrice += Number(modDb.additional_price)
+              unitCents += cents(Number(modDb.additional_price))
             }
           }
-          calculatedSubtotal += itemUnitPrice * item.quantity
+          subtotalCents += unitCents * item.quantity
         }
       }
 
-      let deliveryFee = 0
-      if (body.deliveryMethod === 'delivery') {
-        const { data: bands } = await service
-          .from('app_settings')
-          .select('value')
-          .eq('key', 'delivery_bands')
-          .maybeSingle()
-        deliveryFee = Number((bands?.value as { near?: number })?.near ?? 2.0)
-      }
+      const { data: bizFee } = await service
+        .from('businesses')
+        .select('delivery_fee')
+        .eq('id', body.businessId)
+        .maybeSingle()
+      const delivery = await quoteDelivery(service, createUserClient(token), {
+        businessId: body.businessId,
+        isDelivery: body.deliveryMethod === 'delivery',
+        coordinates: body.coordinates,
+        itemIds,
+        businessDeliveryFee: bizFee?.delivery_fee ?? null,
+        logScope: 'orders',
+      })
 
-      const calculatedTotal = calculatedSubtotal + deliveryFee
-      if (calculatedTotal > threshold) {
+      const calculatedTotalCents = subtotalCents + delivery.deliveryCents
+      if (delivery.reliable && calculatedTotalCents > cents(threshold)) {
         // El mensaje nombra el ENVÍO porque el umbral se compara contra el total
         // con delivery dentro, aquí y en `create_customer_order` (0194). Decir
         // solo «pedidos mayores a S/80» dejaba fuera esa mitad: una bolsa de
         // S/80 justos con S/2 de envío se rechaza, y el cliente mira su bolsa,
         // ve 80, y el sistema le parece roto.
         return problem('forbidden', {
-          detail: `El total con envío (S/ ${calculatedTotal.toFixed(2)}) pasa de S/ ${threshold}, así que el pago debe ser adelantado.`,
+          detail: `El total con envío (S/ ${(calculatedTotalCents / 100).toFixed(2)}) pasa de S/ ${threshold}, así que el pago debe ser adelantado.`,
           requestId,
           headers: corsHeaders(req),
         })
