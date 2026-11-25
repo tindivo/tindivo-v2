@@ -51,6 +51,11 @@ internal fun prepayInfo(
     proofAttempt = proofAttempt,
     comprobantePrepagoUrl = null,
     awaitingPaymentAt = awaitingPaymentAt,
+    totalText = "43.50",
+    proofOptional = false,
+    canUploadProof = true,
+    paymentProofStatus = null,
+    paymentVerifiedAt = null,
 )
 
 /**
