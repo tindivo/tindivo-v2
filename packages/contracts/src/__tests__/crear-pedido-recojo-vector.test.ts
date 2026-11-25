@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { PAYMENT_INTENTS, PaymentIntentSchema } from '../enums'
 import { CreateOrderRequestSchema } from '../requests'
 
 /**
@@ -33,10 +34,22 @@ describe('cuerpo de recojo con prepago que manda Android contra el esquema de cr
     expect(r.error?.issues.some((i) => i.path.join('.') === 'pickupTiming')).toBe(true)
   })
 
-  it('con efectivo el recojo se rechaza aunque lleve pickupTiming', () => {
-    const r = CreateOrderRequestSchema.safeParse({ ...vector.cuerpo, paymentIntent: 'cash' })
-    expect(r.success).toBe(false)
+  // CAX-003: el valor tiene que ser un intento VÁLIDO del enum (`pending_cash` es el que manda Android en delivery con
+  // efectivo), para que el rechazo sea el de la regla «un recojo se paga por adelantado» y no un error de enum.
+  it('el enum incluye pending_cash, el intento de efectivo que Android manda en delivery', () => {
+    expect(PAYMENT_INTENTS).toContain('pending_cash')
   })
+
+  for (const intento of PAYMENT_INTENTS.filter((i) => i !== 'prepaid')) {
+    it(`con ${intento} el recojo se rechaza por la regla de prepago, no por el enum`, () => {
+      expect(PaymentIntentSchema.safeParse(intento).success).toBe(true)
+      const r = CreateOrderRequestSchema.safeParse({ ...vector.cuerpo, paymentIntent: intento })
+      expect(r.success).toBe(false)
+      const delPago = r.error?.issues.filter((i) => i.path.join('.') === 'paymentIntent') ?? []
+      expect(delPago.map((i) => i.message)).toEqual(['Un recojo se paga por adelantado'])
+      expect(delPago.every((i) => i.code === 'custom')).toBe(true)
+    })
+  }
 
   it('el vector y su copia de Android son idénticos byte a byte', () => {
     expect(readFileSync(copiaAndroid).equals(readFileSync(original))).toBe(true)
