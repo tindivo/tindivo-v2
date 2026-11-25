@@ -962,8 +962,7 @@ describe('POST /customer/checkout/quote · payment', () => {
         customerPhone: c.tel9,
         deliveryAddress: 'Jr. Prueba 1',
         deliveryReference: REF,
-        deliveryLat: PIN.lat,
-        deliveryLng: PIN.lng,
+        coordinates: PIN,
         items: [
           {
             menuItemId: FIXTURES.ITEM_POLLO_ID,
