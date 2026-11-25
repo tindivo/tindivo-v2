@@ -1,6 +1,6 @@
+import { cents, quoteDelivery } from '@tindivo/backend/ordering'
 import { CreateOrderRequestSchema, getOpenStatus, parseClientContext } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
-import { cents, quoteDelivery } from '@/lib/customer/delivery-quote'
 import { listCustomerOrders } from '@/lib/customer/history'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'

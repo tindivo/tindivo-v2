@@ -1,11 +1,10 @@
-import { planQuotePayment } from '@tindivo/backend/ordering'
+import { cents, planQuotePayment, quoteDelivery } from '@tindivo/backend/ordering'
 import {
   CheckoutQuoteRequestSchema,
   checkModifierSelection,
   modifierSelectionMessage,
 } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
-import { cents, quoteDelivery } from '@/lib/customer/delivery-quote'
 import { requireRole } from '@/lib/http/auth'
 import { handleOptions } from '@/lib/http/cors'
 import { privateHeaders } from '@/lib/http/private-response'

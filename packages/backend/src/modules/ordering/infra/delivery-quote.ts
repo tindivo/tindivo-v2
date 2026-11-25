@@ -1,12 +1,8 @@
-import type { DISTANCE_BANDS } from '@tindivo/contracts'
-import type { createServiceClient } from '@/lib/supabase/service'
-import type { createUserClient } from '@/lib/supabase/user'
-
-/** Soles -> céntimos enteros: la suma no arrastra error de coma flotante. */
-export const cents = (soles: number): number => Math.round(soles * 100)
+import type { TypedSupabaseClient } from '@tindivo/supabase'
+import { type DeliveryBand, nominalDeliveryFeeCents } from '../domain/delivery-fee'
 
 export interface DeliveryQuote {
-  deliveryBand: (typeof DISTANCE_BANDS)[number] | null
+  deliveryBand: DeliveryBand | null
   /** Tarifa de la banda, antes de promociones. */
   nominalCents: number
   freeReason: 'launch_promo' | 'dish' | null
@@ -15,24 +11,23 @@ export interface DeliveryQuote {
   /**
    * `false` si falló la lectura de una promoción. El envío queda entonces sin
    * descuento (lado seguro para PINTAR); quien use este valor para RECHAZAR un
-   * pedido no debe hacerlo: la decide `create_customer_order`.
+   * pedido no debe hacerlo: lo decide `create_customer_order`.
    */
   reliable: boolean
 }
 
 /**
  * El envío de un pedido, con el mismo orden que `create_customer_order` (0283):
- * banda del punto (`delivery_band_for_point`) y su tarifa de `delivery_bands`, con
- * respaldo en la tarifa del negocio y luego S/ 2.00; después la promoción de
+ * banda del punto (`delivery_band_for_point`) y su tarifa, después la promoción de
  * lanzamiento y por último el envío gratis por plato.
  *
- * Es la ÚNICA copia en TypeScript: la usan la cotización (`checkout/quote`) y la
- * guardia del umbral de la creación (`orders`), para que no puedan divergir (DES-5).
- * `asUser` es obligatorio: la promoción de lanzamiento responde por `auth.uid()`.
+ * La usan la cotización (`checkout/quote`) y la guardia del umbral de la creación
+ * (`orders`), para que no puedan divergir (DES-5). `asUser` es obligatorio: la
+ * promoción de lanzamiento responde por `auth.uid()`.
  */
 export async function quoteDelivery(
-  service: ReturnType<typeof createServiceClient>,
-  asUser: ReturnType<typeof createUserClient>,
+  service: TypedSupabaseClient,
+  asUser: TypedSupabaseClient,
   input: {
     businessId: string
     isDelivery: boolean
@@ -63,15 +58,11 @@ export async function quoteDelivery(
       .select('value')
       .eq('key', 'delivery_bands')
       .maybeSingle()
-    const bands = (bandsSetting?.value ?? {}) as Record<string, unknown>
-    const fromBands = Number(bands[deliveryBand])
-    // Mismo orden que `create_customer_order`: banda, tarifa del negocio, S/ 2.00.
-    const fee = Number.isFinite(fromBands)
-      ? fromBands
-      : input.businessDeliveryFee != null
-        ? Number(input.businessDeliveryFee)
-        : 2
-    nominalCents = cents(fee)
+    nominalCents = nominalDeliveryFeeCents(
+      deliveryBand,
+      bandsSetting?.value,
+      input.businessDeliveryFee,
+    )
   }
 
   // ── Envío gratis: promo de lanzamiento primero, luego por plato ─────────────
