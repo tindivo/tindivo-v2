@@ -21,6 +21,8 @@
  * SIN AUTH: los 4 dueños son solo filas de `public.users` y `user_roles` (ids estables, correos
  * `@staging.tindivo.local`); `businesses.user_id` exige un `public.users`, no una cuenta de `auth.users`, así que
  * nadie puede iniciar sesión como ellos y esta semilla no toca el servicio de cuentas.
+ * NO son huérfanas por error: `businesses.user_id` es `on delete cascade`, así que borrar esas filas de `users` borra los
+ * negocios y sus cartas. Si alguien crea una cuenta de Auth con esos mismos ids, hereda el negocio (el alta usa `on conflict do nothing`).
  * La «Bodega» queda SIN portada ni fotos, para probar el estado vacío.
  *
  * GUARDIA: `seedStagingCatalog(url, serviceKey)` verifica el destino y la huella de la service role
