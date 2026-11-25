@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,7 +25,7 @@ internal class CustomerNameViewModel
     @Inject
     constructor(
         private val customer: CustomerRepository,
-        sessionStore: SessionStore,
+        private val sessionStore: SessionStore,
     ) : ViewModel() {
         private val mutableName = MutableStateFlow<String?>(null)
         val name: StateFlow<String?> = mutableName.asStateFlow()
@@ -32,7 +33,7 @@ internal class CustomerNameViewModel
         init {
             viewModelScope.launch {
                 var loadedFor: String? = null
-                sessionStore.state.collect { session ->
+                sessionStore.state.collectLatest { session ->
                     val account = (session as? SessionState.SignedIn)?.userId
                     if (account != loadedFor) {
                         loadedFor = account
@@ -43,9 +44,14 @@ internal class CustomerNameViewModel
             }
         }
 
+        /**
+         * Lee el nombre de [account] y lo publica solo si esa sigue siendo la cuenta de la sesión: una respuesta
+         * tardía de una cuenta anterior nunca sale (`collectLatest` cancela además la lectura vieja al cambiar).
+         */
         private suspend fun load(account: String) {
             val result = customer.profile(account)
-            if (result is ApiResult.Success) {
+            val current = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+            if (result is ApiResult.Success && current == account) {
                 mutableName.value =
                     result.data.fullName
                         .trim()
