@@ -9,6 +9,9 @@ catalogs:
     '@biomejs/biome':
       specifier: ^2.4.16
       version: 2.4.16
+    '@fontsource-variable/jetbrains-mono':
+      specifier: 5.2.8
+      version: 5.2.8
     '@supabase/ssr':
       specifier: ^0.10.3
       version: 0.10.3
@@ -116,6 +119,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@fontsource-variable/jetbrains-mono':
+        specifier: 'catalog:'
+        version: 5.2.8
       '@supabase/ssr':
         specifier: 'catalog:'
         version: 0.10.3(@supabase/supabase-js@2.106.2)
@@ -140,6 +146,9 @@ importers:
       '@tindivo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      geist:
+        specifier: 'catalog:'
+        version: 1.9.2(next@16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
       leaflet:
         specifier: 'catalog:'
         version: 1.9.4
@@ -189,6 +198,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(vite@8.0.14(@types/node@24.12.4)(jiti@2.7.0)(yaml@2.9.0))
 
   apps/api:
     dependencies:
@@ -265,6 +277,9 @@ importers:
 
   apps/customer:
     dependencies:
+      '@fontsource-variable/jetbrains-mono':
+        specifier: 'catalog:'
+        version: 5.2.8
       '@supabase/ssr':
         specifier: 'catalog:'
         version: 0.10.3(@supabase/supabase-js@2.106.2)
@@ -295,6 +310,9 @@ importers:
       '@vercel/analytics':
         specifier: 'catalog:'
         version: 2.0.1(next@16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react@19.2.6)
+      geist:
+        specifier: 'catalog:'
+        version: 1.9.2(next@16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
       leaflet:
         specifier: 'catalog:'
         version: 1.9.4
@@ -344,6 +362,9 @@ importers:
 
   apps/motorizados:
     dependencies:
+      '@fontsource-variable/jetbrains-mono':
+        specifier: 'catalog:'
+        version: 5.2.8
       '@supabase/ssr':
         specifier: 'catalog:'
         version: 0.10.3(@supabase/supabase-js@2.106.2)
@@ -368,6 +389,9 @@ importers:
       '@tindivo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      geist:
+        specifier: 'catalog:'
+        version: 1.9.2(next@16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
       leaflet:
         specifier: 'catalog:'
         version: 1.9.4
@@ -414,6 +438,9 @@ importers:
 
   apps/negocios:
     dependencies:
+      '@fontsource-variable/jetbrains-mono':
+        specifier: 'catalog:'
+        version: 5.2.8
       '@supabase/ssr':
         specifier: 'catalog:'
         version: 0.10.3(@supabase/supabase-js@2.106.2)
@@ -438,6 +465,9 @@ importers:
       '@tindivo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      geist:
+        specifier: 'catalog:'
+        version: 1.9.2(next@16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
       next:
         specifier: 'catalog:'
         version: 16.2.6(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -808,6 +838,9 @@ packages:
 
   '@epic-web/invariant@1.0.0':
     resolution: {integrity: sha512-lrTPqgvfFQtR/eY/qkIzp98OGdNJu0m5ji3q/nJI8v3SXkRKEnWiOxMmbvcSoAIzv/cGiuvRy57k4suKQSAdwA==}
+
+  '@fontsource-variable/jetbrains-mono@5.2.8':
+    resolution: {integrity: sha512-WBA9elru6Jdp5df2mES55wuOO0WIrn3kpXnI4+W2ek5u3ZgLS9XS4gmIlcQhiZOWEKl95meYdvK7xI+ETLCq/Q==}
 
   '@grpc/grpc-js@1.14.4':
     resolution: {integrity: sha512-k9Dj3DV/itK9D06Y8f190Qgop7/Ui+D0njFV3LHMPwPT75DpXLQohE9Wmz0QElrJnzsjB7KPWiKJbOl7IPDArQ==}
@@ -3447,6 +3480,8 @@ snapshots:
     optional: true
 
   '@epic-web/invariant@1.0.0': {}
+
+  '@fontsource-variable/jetbrains-mono@5.2.8': {}
 
   '@grpc/grpc-js@1.14.4':
     dependencies:

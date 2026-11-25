@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "catalog:",
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "@tindivo/api-client": "workspace:*",
@@ -20,6 +21,7 @@
     "@tindivo/map": "workspace:*",
     "@tindivo/supabase": "workspace:*",
     "@tindivo/ui": "workspace:*",
+    "geist": "catalog:",
     "leaflet": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
