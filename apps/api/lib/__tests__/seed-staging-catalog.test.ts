@@ -1,14 +1,19 @@
+import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   CATALOG_BUSINESSES,
   CATALOG_OWNERS,
   catalogImagePaths,
+  parseTestYape,
+  seedStagingCatalog,
   stableId,
 } from '../../scripts/seed-staging-catalog.ts'
 import { qrDe } from '../../scripts/seed-world.ts'
+import { createStagingClient } from '../../scripts/staging-client.ts'
+import { STAGING_ORIGIN } from '../../scripts/staging-target.ts'
 
 const IMG_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -20,6 +25,9 @@ const IMG_DIR = join(
 )
 /** Naranja de la marca: reservado (`accent-colors.ts`). */
 const RESERVED_ACCENT = 'f97316'
+/** Número FICTICIO, solo de este test: el real nunca va al repo. */
+const FAKE_YAPE = '900000000'
+const sha = (k: string) => createHash('sha256').update(k, 'utf8').digest('hex')
 const dosDecimales = (n: number) => Math.abs(n * 100 - Math.round(n * 100)) < 1e-9
 
 describe('stableId', () => {
@@ -137,8 +145,96 @@ describe('catalogImagePaths', () => {
 
 describe('qrDe', () => {
   it('es el mismo QR que usa la semilla base', () => {
-    expect(qrDe('900000021')).toBe(
-      'https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=8&data=yape%3A%2F%2Fp2p%3Fn%3D900000021',
+    expect(qrDe('900000000')).toBe(
+      'https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=8&data=yape%3A%2F%2Fp2p%3Fn%3D900000000',
     )
+  })
+})
+
+describe('CAX-002: ningún número real en el catálogo', () => {
+  it('los negocios no llevan teléfono ni ningún número de 9 dígitos en sus datos', () => {
+    for (const b of CATALOG_BUSINESSES) expect(b.phone).toBeNull()
+    expect(JSON.stringify(CATALOG_BUSINESSES)).not.toMatch(/9\d{8}/)
+  })
+
+  it('parseTestYape: vacío es null; valida ^9[0-9]{8}$ sin repetir el valor', () => {
+    expect(parseTestYape(undefined)).toBeNull()
+    expect(parseTestYape('  ')).toBeNull()
+    expect(parseTestYape(FAKE_YAPE)).toBe(FAKE_YAPE)
+    for (const bad of ['12345', '800000000', '9000000001', '90000000a']) {
+      expect(() => parseTestYape(bad)).toThrow(/STAGING_TEST_YAPE_NUMBER/)
+      try {
+        parseTestYape(bad)
+      } catch (e) {
+        expect((e as Error).message).not.toContain(bad)
+      }
+    }
+  })
+})
+
+/** Cliente de staging verificado cuyas operaciones se anotan en vez de salir a la red. */
+function recordingDb() {
+  const db = createStagingClient(STAGING_ORIGIN, 'clave-de-prueba', sha('clave-de-prueba'))
+  const upserts: { table: string; rows: Record<string, unknown>[] }[] = []
+  const deletes: string[] = []
+  const target = db as unknown as Record<string, unknown>
+  target.from = (table: string) => ({
+    upsert: async (rows: Record<string, unknown>[]) => {
+      upserts.push({ table, rows })
+      return { error: null }
+    },
+    delete: () => ({
+      eq: async () => {
+        deletes.push(table)
+        return { error: null }
+      },
+    }),
+  })
+  target.rpc = async () => ({ data: '2026-11-25', error: null })
+  Object.defineProperty(db, 'storage', {
+    value: {
+      from: () => ({
+        upload: async () => ({ error: null }),
+        getPublicUrl: (p: string) => ({ data: { publicUrl: `https://x/${p}` } }),
+      }),
+    },
+  })
+  return { db, upserts, deletes }
+}
+
+describe('seedStagingCatalog: dinero (sin red)', () => {
+  it('sin la variable: no crea «Prueba Yape», avisa, y ningún negocio lleva Yape', async () => {
+    const { db, upserts, deletes } = recordingDb()
+    const ensure = vi.fn().mockResolvedValue(undefined)
+    const summary = await seedStagingCatalog(db, ensure)
+    expect(summary.businesses).toBe(4)
+    expect(summary.warnings.join(' ')).toContain('STAGING_TEST_YAPE_NUMBER')
+    expect(ensure).toHaveBeenCalledTimes(4)
+    expect(upserts.some((u) => u.table === 'business_payment_qrs')).toBe(false)
+    expect(deletes.filter((t) => t === 'business_payment_qrs')).toHaveLength(4)
+    for (const u of upserts.filter((x) => x.table === 'businesses')) {
+      for (const r of u.rows) {
+        expect(r.phone).toBeNull()
+        expect(r.yape_number).toBeNull()
+      }
+    }
+  })
+
+  it('con la variable: crea solo «Prueba Yape» con ese número y su QR', async () => {
+    const { db, upserts, deletes } = recordingDb()
+    const ensure = vi.fn().mockResolvedValue(undefined)
+    const summary = await seedStagingCatalog(db, ensure, { testYape: FAKE_YAPE })
+    expect(summary.businesses).toBe(5)
+    expect(summary.warnings).toEqual([])
+    const qrs = upserts.filter((u) => u.table === 'business_payment_qrs').flatMap((u) => u.rows)
+    expect(qrs).toHaveLength(1)
+    expect(qrs[0]).toMatchObject({ account_number: FAKE_YAPE, qr_url: qrDe(FAKE_YAPE) })
+    const withYape = upserts
+      .filter((u) => u.table === 'businesses')
+      .flatMap((u) => u.rows)
+      .filter((r) => r.yape_number)
+    expect(withYape).toHaveLength(1)
+    expect(withYape[0]).toMatchObject({ name: 'Prueba Yape', phone: null, yape_number: FAKE_YAPE })
+    expect(deletes.filter((t) => t === 'business_payment_qrs')).toHaveLength(4)
   })
 })

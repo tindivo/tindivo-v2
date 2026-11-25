@@ -15,6 +15,9 @@
  * copia, con la convención de Negocios (`itemImagePaths`): `menu-items/<negocio>/items/<itemId>.seed` y su
  * miniatura WebP de 384 px `…<itemId>.seed-t` (`fixtures/staging-catalog/thumb-<foto>.webp`, generadas
  * una vez a partir de los JPEG), de modo que borrar la foto de un plato no deje sin foto a sus hermanos.
+ * DINERO (CAX-002, aprobado por Jesús): los 4 negocios quedan SIN Yape, SIN filas en `business_payment_qrs` y
+ * SIN teléfono de contacto. Un quinto negocio, «Prueba Yape», toma su Yape de `STAGING_TEST_YAPE_NUMBER` (un
+ * número del equipo) y solo se crea si la variable está; el número nunca se escribe en el repo.
  * La «Bodega» queda SIN portada ni fotos, para probar el estado vacío.
  *
  * GUARDIA: `seedStagingCatalog` exige un cliente creado con `createStagingClient` (destino y huella
@@ -61,7 +64,10 @@ interface Biz {
   name: string
   tagline: string
   categoria: string[]
-  phone: string
+  /** Siempre nulo: ningún negocio sembrado lleva un teléfono que pueda ser de una persona. */
+  phone: null
+  /** Solo el negocio «Prueba Yape»: su número sale de `STAGING_TEST_YAPE_NUMBER`, nunca del repo. */
+  testYape?: true
   accent: string
   fee: number
   eta: [number, number]
@@ -80,7 +86,7 @@ export const CATALOG_BUSINESSES: Biz[] = [
     name: 'Pollería El Brasero',
     tagline: 'Pollo a la brasa y parrillas',
     categoria: ['pollos', 'parrillas'],
-    phone: '+51900000021',
+    phone: null,
     accent: 'c2410c',
     fee: 2,
     eta: [25, 35],
@@ -180,7 +186,7 @@ export const CATALOG_BUSINESSES: Biz[] = [
     name: 'Comedor Doña Rosa',
     tagline: 'Menú del día y platos criollos',
     categoria: ['menu', 'criollo'],
-    phone: '+51900000022',
+    phone: null,
     accent: 'be185d',
     fee: 2,
     eta: [20, 30],
@@ -277,7 +283,7 @@ export const CATALOG_BUSINESSES: Biz[] = [
     name: 'Chifa Tía Mei',
     tagline: 'Chifa casero a la sartén',
     categoria: ['chifa'],
-    phone: '+51900000023',
+    phone: null,
     accent: '2e3236',
     fee: 2.5,
     eta: [30, 40],
@@ -371,7 +377,7 @@ export const CATALOG_BUSINESSES: Biz[] = [
     name: 'Bodega Don Lucho',
     tagline: 'Abarrotes y víveres',
     categoria: ['abarrotes'],
-    phone: '+51900000024',
+    phone: null,
     accent: '15803d',
     fee: 2,
     eta: [20, 30],
@@ -438,7 +444,49 @@ export const CATALOG_BUSINESSES: Biz[] = [
       },
     ],
   },
+  {
+    key: 'yape',
+    name: 'Prueba Yape',
+    tagline: 'Negocio de prueba con Yape real del equipo',
+    categoria: ['abarrotes'],
+    phone: null,
+    testYape: true,
+    accent: '0f766e',
+    fee: 2,
+    eta: [20, 30],
+    cover: null,
+    lat: E2E.BUSINESS_LAT,
+    lng: E2E.BUSINESS_LNG + OFFSET * 2,
+    groups: [],
+    categories: [
+      {
+        name: 'Pruebas de pago',
+        image: null,
+        dishes: [
+          ['Producto de prueba S/ 1', 1, null],
+          ['Producto de prueba S/ 5', 5, null],
+          ['Producto de prueba S/ 10', 10, null],
+        ],
+      },
+    ],
+  },
 ]
+
+/** Variable de entorno con el número de Yape de prueba (9 dígitos, bajo control del equipo). */
+export const TEST_YAPE_ENV = 'STAGING_TEST_YAPE_NUMBER'
+
+/**
+ * Número de Yape de prueba: `null` si no se dio; lanza (sin repetir el valor) si se dio y no es
+ * `^9[0-9]{8}$`. El número jamás vive en el repo.
+ */
+export function parseTestYape(raw: string | undefined): string | null {
+  const v = (raw ?? '').trim()
+  if (!v) return null
+  if (!/^9[0-9]{8}$/.test(v)) {
+    throw new Error(`ABORTADO: ${TEST_YAPE_ENV} debe tener 9 dígitos y empezar con 9.`)
+  }
+  return v
+}
 
 /** Dueños de los negocios de prueba (los crea `seed-staging.ts` con contraseña al azar). */
 export const CATALOG_OWNERS = CATALOG_BUSINESSES.map((b) => ({
@@ -461,7 +509,14 @@ export function catalogImagePaths(bizId: string, itemId: string): { full: string
   return { full, thumb: `${full}-t` }
 }
 
+export interface CatalogOptions {
+  /** Número de Yape de prueba ya validado (`parseTestYape`); sin él, «Prueba Yape» no se crea. */
+  testYape?: string | null
+}
+
 export interface CatalogSummary {
+  /** Avisos para quien corre la semilla (p. ej. falta la variable del Yape de prueba). */
+  warnings: string[]
   businesses: number
   categories: number
   items: number
@@ -473,12 +528,18 @@ export interface CatalogSummary {
 export async function seedStagingCatalog(
   db: StagingClient,
   ensureAuthUser: EnsureAuthUser,
+  options: CatalogOptions = {},
 ): Promise<CatalogSummary> {
   // Antes de cualquier petición o activación de cuentas.
   assertVerifiedStagingClient(db)
   // biome-ignore lint/suspicious/noExplicitAny: las filas se escriben por nombre de tabla dinámico, sin tipar
   const raw = db as any
+  const testYape = options.testYape ?? null
+  const owners = CATALOG_OWNERS.filter((o) => !o.business.testYape || testYape)
   const summary: CatalogSummary = {
+    warnings: testYape
+      ? []
+      : [`Falta ${TEST_YAPE_ENV}: no se crea el negocio «Prueba Yape» (los demás no tienen Yape).`],
     businesses: 0,
     categories: 0,
     items: 0,
@@ -515,11 +576,11 @@ export async function seedStagingCatalog(
   }
 
   console.log('\ncatálogo de prueba')
-  for (const o of CATALOG_OWNERS) await ensureAuthUser(o.userId, o.email, o.fullName)
+  for (const o of owners) await ensureAuthUser(o.userId, o.email, o.fullName)
   // El trigger handle_new_user crea la fila de users; el upsert fija el primary_role.
   await upsert(
     'users',
-    CATALOG_OWNERS.map((o) => ({
+    owners.map((o) => ({
       id: o.userId,
       email: o.email,
       full_name: o.fullName,
@@ -529,15 +590,16 @@ export async function seedStagingCatalog(
   )
   await upsert(
     'user_roles',
-    CATALOG_OWNERS.map((o) => ({ user_id: o.userId, role: 'business' })),
+    owners.map((o) => ({ user_id: o.userId, role: 'business' })),
     'user_id,role',
   )
 
   const { data: serviceDate, error: sdErr } = await raw.rpc('current_service_date')
   if (sdErr || !serviceDate) throw new Error(`current_service_date falló: ${sdErr?.message}`)
 
-  for (const o of CATALOG_OWNERS) {
+  for (const o of owners) {
     const b = o.business
+    const yape = b.testYape ? testYape : null
     const bid = o.businessId
     console.log(`\n${b.name}`)
 
@@ -553,8 +615,8 @@ export async function seedStagingCatalog(
           name: b.name,
           tagline: b.tagline,
           categoria: b.categoria,
-          phone: b.phone,
-          yape_number: b.phone.slice(3),
+          phone: null,
+          yape_number: yape,
           accent_color: b.accent,
           banner_url: bannerUrl,
           delivery_fee: b.fee,
@@ -575,20 +637,26 @@ export async function seedStagingCatalog(
     )
     summary.businesses++
 
-    await upsert(
-      'business_payment_qrs',
-      [
-        {
-          business_id: bid,
-          slot: 1,
-          wallet: 'yape',
-          account_number: b.phone.slice(3),
-          account_name: b.name,
-          qr_url: qrDe(b.phone.slice(3)),
-        },
-      ],
-      'business_id,slot',
-    )
+    if (yape) {
+      await upsert(
+        'business_payment_qrs',
+        [
+          {
+            business_id: bid,
+            slot: 1,
+            wallet: 'yape',
+            account_number: yape,
+            account_name: b.name,
+            qr_url: qrDe(yape),
+          },
+        ],
+        'business_id,slot',
+      )
+    } else {
+      // Sin cuenta de cobro: se borran las filas de ESTE negocio sembrado, por si una corrida previa dejó alguna.
+      const { error } = await raw.from('business_payment_qrs').delete().eq('business_id', bid)
+      if (error) throw new Error(`limpiar business_payment_qrs falló: ${error.message}`)
+    }
 
     await upsert(
       'business_schedule',
