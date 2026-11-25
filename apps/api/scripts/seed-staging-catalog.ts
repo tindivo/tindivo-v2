@@ -2,8 +2,8 @@
  * Catálogo de PRUEBA para staging (`tindivo-dev`): 4 negocios abiertos con 4-5 categorías y 4-7 platos
  * por categoría, opciones (modificadores), platos agotados y platos sin foto, más portada y fotos.
  *
- * Lo llama `seed-staging.ts` después de `seedWorld`; allí viven la guardia de staging y las
- * contraseñas. Este módulo NUNCA se importa desde la siembra local ni de producción.
+ * Lo llama `seed-staging.ts` después de `seedWorld`. Este módulo NUNCA se importa desde la siembra local ni de
+ * producción.
  *
  * IDEMPOTENTE: los ids salen de una clave estable (`stableId`), todo es upsert y las imágenes se
  * suben con `upsert: true` a rutas fijas. Los precios son `numeric(10,2)`.
@@ -16,20 +16,24 @@
  * miniatura WebP de 384 px `…<itemId>.seed-t` (`fixtures/staging-catalog/thumb-<foto>.webp`, generadas
  * una vez a partir de los JPEG), de modo que borrar la foto de un plato no deje sin foto a sus hermanos.
  * DINERO (CAX-002, aprobado por Jesús): los 4 negocios quedan SIN Yape, SIN filas en `business_payment_qrs` y
- * SIN teléfono de contacto. Un quinto negocio, «Prueba Yape», toma su Yape de `STAGING_TEST_YAPE_NUMBER` (un
- * número del equipo) y solo se crea si la variable está; el número nunca se escribe en el repo.
+ * SIN teléfono de contacto. El Yape de prueba se configura a mano desde el panel de Negocios (Configuración, «Cobros
+ * por Yape y Plin») con la cuenta Dueño E2E; esta semilla nunca recibe ni escribe un número.
+ * SIN AUTH: los 4 dueños son solo filas de `public.users` y `user_roles` (ids estables, correos
+ * `@staging.tindivo.local`); `businesses.user_id` exige un `public.users`, no una cuenta de `auth.users`, así que
+ * nadie puede iniciar sesión como ellos y esta semilla no toca el servicio de cuentas.
  * La «Bodega» queda SIN portada ni fotos, para probar el estado vacío.
  *
- * GUARDIA: `seedStagingCatalog` exige un cliente creado con `createStagingClient` (destino y huella
- * de la service role verificados); con cualquier otro aborta antes de la primera petición.
+ * GUARDIA: `seedStagingCatalog(url, serviceKey)` verifica el destino y la huella de la service role
+ * (`assertStagingTarget`) y SOLO ENTONCES construye su propio cliente, siempre contra `STAGING_ORIGIN`. No acepta un
+ * cliente ni una huella de fuera: no hay forma de apuntarla a otra base.
  */
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createClient } from '@supabase/supabase-js'
 import { E2E } from './e2e-fixtures.ts'
-import { type EnsureAuthUser, qrDe } from './seed-world.ts'
-import { assertVerifiedStagingClient, type StagingClient } from './staging-client.ts'
+import { assertStagingTarget, STAGING_ORIGIN } from './staging-target.ts'
 
 const IMG_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'staging-catalog')
 
@@ -66,8 +70,6 @@ interface Biz {
   categoria: string[]
   /** Siempre nulo: ningún negocio sembrado lleva un teléfono que pueda ser de una persona. */
   phone: null
-  /** Solo el negocio «Prueba Yape»: su número sale de `STAGING_TEST_YAPE_NUMBER`, nunca del repo. */
-  testYape?: true
   accent: string
   fee: number
   eta: [number, number]
@@ -444,51 +446,9 @@ export const CATALOG_BUSINESSES: Biz[] = [
       },
     ],
   },
-  {
-    key: 'yape',
-    name: 'Prueba Yape',
-    tagline: 'Negocio de prueba con Yape real del equipo',
-    categoria: ['abarrotes'],
-    phone: null,
-    testYape: true,
-    accent: '0f766e',
-    fee: 2,
-    eta: [20, 30],
-    cover: null,
-    lat: E2E.BUSINESS_LAT,
-    lng: E2E.BUSINESS_LNG + OFFSET * 2,
-    groups: [],
-    categories: [
-      {
-        name: 'Pruebas de pago',
-        image: null,
-        dishes: [
-          ['Producto de prueba S/ 1', 1, null],
-          ['Producto de prueba S/ 5', 5, null],
-          ['Producto de prueba S/ 10', 10, null],
-        ],
-      },
-    ],
-  },
 ]
 
-/** Variable de entorno con el número de Yape de prueba (9 dígitos, bajo control del equipo). */
-export const TEST_YAPE_ENV = 'STAGING_TEST_YAPE_NUMBER'
-
-/**
- * Número de Yape de prueba: `null` si no se dio; lanza (sin repetir el valor) si se dio y no es
- * `^9[0-9]{8}$`. El número jamás vive en el repo.
- */
-export function parseTestYape(raw: string | undefined): string | null {
-  const v = (raw ?? '').trim()
-  if (!v) return null
-  if (!/^9[0-9]{8}$/.test(v)) {
-    throw new Error(`ABORTADO: ${TEST_YAPE_ENV} debe tener 9 dígitos y empezar con 9.`)
-  }
-  return v
-}
-
-/** Dueños de los negocios de prueba (los crea `seed-staging.ts` con contraseña al azar). */
+/** Dueños de los negocios de prueba: solo filas de `users`/`user_roles`, sin cuenta de Auth. */
 export const CATALOG_OWNERS = CATALOG_BUSINESSES.map((b) => ({
   businessId: stableId(`biz:${b.key}`),
   userId: stableId(`owner:${b.key}`),
@@ -509,14 +469,7 @@ export function catalogImagePaths(bizId: string, itemId: string): { full: string
   return { full, thumb: `${full}-t` }
 }
 
-export interface CatalogOptions {
-  /** Número de Yape de prueba ya validado (`parseTestYape`); sin él, «Prueba Yape» no se crea. */
-  testYape?: string | null
-}
-
 export interface CatalogSummary {
-  /** Avisos para quien corre la semilla (p. ej. falta la variable del Yape de prueba). */
-  warnings: string[]
   businesses: number
   categories: number
   items: number
@@ -525,21 +478,16 @@ export interface CatalogSummary {
   images: number
 }
 
-export async function seedStagingCatalog(
-  db: StagingClient,
-  ensureAuthUser: EnsureAuthUser,
-  options: CatalogOptions = {},
-): Promise<CatalogSummary> {
-  // Antes de cualquier petición o activación de cuentas.
-  assertVerifiedStagingClient(db)
+export async function seedStagingCatalog(url: string, serviceKey: string): Promise<CatalogSummary> {
+  // Antes de cualquier petición: destino y huella de la clave. El cliente se crea después, con la constante.
+  assertStagingTarget(url, serviceKey)
+  const db = createClient(STAGING_ORIGIN, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
   // biome-ignore lint/suspicious/noExplicitAny: las filas se escriben por nombre de tabla dinámico, sin tipar
   const raw = db as any
-  const testYape = options.testYape ?? null
-  const owners = CATALOG_OWNERS.filter((o) => !o.business.testYape || testYape)
+  const owners = CATALOG_OWNERS
   const summary: CatalogSummary = {
-    warnings: testYape
-      ? []
-      : [`Falta ${TEST_YAPE_ENV}: no se crea el negocio «Prueba Yape» (los demás no tienen Yape).`],
     businesses: 0,
     categories: 0,
     items: 0,
@@ -576,8 +524,7 @@ export async function seedStagingCatalog(
   }
 
   console.log('\ncatálogo de prueba')
-  for (const o of owners) await ensureAuthUser(o.userId, o.email, o.fullName)
-  // El trigger handle_new_user crea la fila de users; el upsert fija el primary_role.
+  // Sin cuentas de Auth: `businesses.user_id` solo exige una fila en `public.users` (0002_tables.sql).
   await upsert(
     'users',
     owners.map((o) => ({
@@ -599,7 +546,6 @@ export async function seedStagingCatalog(
 
   for (const o of owners) {
     const b = o.business
-    const yape = b.testYape ? testYape : null
     const bid = o.businessId
     console.log(`\n${b.name}`)
 
@@ -616,7 +562,7 @@ export async function seedStagingCatalog(
           tagline: b.tagline,
           categoria: b.categoria,
           phone: null,
-          yape_number: yape,
+          yape_number: null,
           accent_color: b.accent,
           banner_url: bannerUrl,
           delivery_fee: b.fee,
@@ -637,23 +583,8 @@ export async function seedStagingCatalog(
     )
     summary.businesses++
 
-    if (yape) {
-      await upsert(
-        'business_payment_qrs',
-        [
-          {
-            business_id: bid,
-            slot: 1,
-            wallet: 'yape',
-            account_number: yape,
-            account_name: b.name,
-            qr_url: qrDe(yape),
-          },
-        ],
-        'business_id,slot',
-      )
-    } else {
-      // Sin cuenta de cobro: se borran las filas de ESTE negocio sembrado, por si una corrida previa dejó alguna.
+    // Sin cuenta de cobro: se borran las filas de ESTE negocio sembrado, por si una corrida previa dejó alguna.
+    {
       const { error } = await raw.from('business_payment_qrs').delete().eq('business_id', bid)
       if (error) throw new Error(`limpiar business_payment_qrs falló: ${error.message}`)
     }

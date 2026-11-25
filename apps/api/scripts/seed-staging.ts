@@ -28,19 +28,17 @@
  *
  * Contraseñas: aleatorias y NUEVAS en cada corrida (también para usuarios que ya existen). Por
  * consola solo salen emails y conteos. Después del mundo siembra el catálogo de prueba
- * (`seed-staging-catalog.ts`: 4 negocios con carta, portadas y fotos de `fixtures/staging-catalog/`, SIN Yape ni
- * teléfono; más «Prueba Yape», solo si se pasa `STAGING_TEST_YAPE_NUMBER` (9 dígitos) en el entorno del comando,
- * p. ej. `STAGING_TEST_YAPE_NUMBER=9XXXXXXXX pnpm db:seed:staging -- --env-file … --out-dir …`; sin ella lo avisa). `push_dispatch` NO se toca (en staging está anulado).
+ * (`seed-staging-catalog.ts`: 4 negocios con carta, portadas y fotos de `fixtures/staging-catalog/`, SIN Yape, SIN
+ * teléfono y SIN cuentas de Auth: solo filas de `users`/`user_roles`). `push_dispatch` NO se toca (en staging está anulado).
  */
 import { randomBytes } from 'node:crypto'
 import { closeSync, existsSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createClient } from '@supabase/supabase-js'
 import { E2E } from './e2e-fixtures.ts'
-import { CATALOG_OWNERS, parseTestYape, seedStagingCatalog, TEST_YAPE_ENV } from './seed-staging-catalog.ts'
+import { seedStagingCatalog } from './seed-staging-catalog.ts'
 import { seedWorld } from './seed-world.ts'
-import { makeEnsureAuthUser } from './staging-auth-user.ts'
-import { createStagingClient } from './staging-client.ts'
 import {
   openPrivateAccountsFile,
   recordThenActivate,
@@ -50,6 +48,7 @@ import {
 import {
   assertOutsideRepo,
   assertStagingTarget,
+  STAGING_ORIGIN,
   stagingSettings,
 } from './staging-target.ts'
 
@@ -84,7 +83,6 @@ const ROLE_BY_ID = new Map<string, string>([
   [E2E.DRIVER_USER_ID, 'driver'],
   [E2E.DRIVER_2_USER_ID, 'driver'],
   ...E2E.CUSTOMERS.map((c) => [c.userId, 'customer'] as [string, string]),
-  ...CATALOG_OWNERS.map((o) => [o.userId, 'business'] as [string, string]),
 ])
 
 /** Secretos de esta corrida: se enmascaran en cualquier mensaje de error. */
@@ -117,10 +115,15 @@ async function main(): Promise<void> {
   }
 }
 
-async function seed(url: string, serviceKey: string, accountsFile: { path: string; fd: number }): Promise<void> {
-  // Valida destino y huella de la clave y crea el cliente en un solo paso (el origen es la constante).
-  const db = createStagingClient(url, serviceKey)
-  // biome-ignore lint/suspicious/noExplicitAny: las filas se escriben por nombre de tabla dinámico, sin tipar
+async function seed(
+  url: string,
+  serviceKey: string,
+  accountsFile: { path: string; fd: number },
+): Promise<void> {
+  const db = createClient(STAGING_ORIGIN, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  // biome-ignore lint/suspicious/noExplicitAny: database.types.ts está desactualizado
   const raw = db as any
 
   console.log('\nSeed staging — mundo (idempotente, IDs fijos, contraseñas nuevas)\n')
@@ -148,29 +151,38 @@ async function seed(url: string, serviceKey: string, accountsFile: { path: strin
   // ── usuarios con contraseña al azar ────────────────────────────────────────
   let count = 0
 
-  const ensureAuthUser = makeEnsureAuthUser({
-    admin: db.auth.admin,
-    record: (entry, activate) => recordThenActivate(accountsFile.fd, entry, activate),
-    roleOf: (id) => ROLE_BY_ID.get(id) ?? 'desconocido',
-    newPassword: () => {
-      const password = randomBytes(18).toString('base64url')
-      secretsInRun.push(password)
-      return password
-    },
-    log: (line) => {
-      count++
-      console.log(line)
-    },
-  })
+  async function ensureAuthUser(id: string, email: string, fullName: string): Promise<void> {
+    const password = randomBytes(18).toString('base64url')
+    secretsInRun.push(password)
+    const role = ROLE_BY_ID.get(id) ?? 'desconocido'
+    const { data } = await db.auth.admin.getUserById(id)
+    await recordThenActivate(accountsFile.fd, { email, role, password }, async () => {
+      if (data?.user) {
+        const { error } = await db.auth.admin.updateUserById(id, { password })
+        if (error) throw new Error(`actualizar contraseña de ${email} falló: ${error.message}`)
+        console.log(`  ✓ auth.users                  ${email} (ya existía, contraseña nueva)`)
+      } else {
+        const { error } = await db.auth.admin.createUser({
+          id,
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: fullName },
+        })
+        if (error) throw new Error(`crear auth user ${email} falló: ${error.message}`)
+        console.log(`  ✓ auth.users                  ${email} (creado)`)
+      }
+    })
+    count++
+  }
 
   console.log('\nusuarios')
   await seedWorld(db, ensureAuthUser, { includeAdmin: false })
-  const cat = await seedStagingCatalog(db, ensureAuthUser, {
-    testYape: parseTestYape(process.env[TEST_YAPE_ENV]),
-  })
-  for (const w of cat.warnings) console.log(`  ! ${w}`)
+  // El catálogo valida el destino por su cuenta y crea su propio cliente: no recibe `db` ni `ensureAuthUser`.
+  const cat = await seedStagingCatalog(url, serviceKey)
   console.log(
-    `\nCatálogo de prueba: ${cat.businesses} negocios, ${cat.categories} categorías, ${cat.items} platos ` +
+    `
+Catálogo de prueba: ${cat.businesses} negocios, ${cat.categories} categorías, ${cat.items} platos ` +
       `(${cat.soldOut} agotados, ${cat.withoutImage} sin foto), ${cat.images} imágenes subidas`,
   )
 

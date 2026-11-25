@@ -14,12 +14,6 @@ import { E2E } from './e2e-fixtures.ts'
 
 export type EnsureAuthUser = (id: string, email: string, fullName: string) => Promise<void>
 
-/** URL del QR de Yape que genera la semilla para un número. */
-export const qrDe = (n: string) =>
-  `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=8&data=${encodeURIComponent(
-    `yape://p2p?n=${n}`,
-  )}`
-
 export async function seedWorld(
   // biome-ignore lint/suspicious/noExplicitAny: el cliente se inyecta sin tipar (database.types.ts está desactualizado)
   db: SupabaseClient<any, any, any>,
@@ -182,6 +176,10 @@ export async function seedWorld(
   // local y en CI: sembradas desde el board, una máquina recién reseteada las
   // tendría solo si a alguien se le ocurrió correr el seeder de demo, y los
   // tests pasarían o fallarían según eso.
+  const qrDe = (n: string) =>
+    `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=8&data=${encodeURIComponent(
+      `yape://p2p?n=${n}`,
+    )}`
   await upsert(
     'business_payment_qrs',
     [

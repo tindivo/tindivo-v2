@@ -2,18 +2,78 @@ import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   CATALOG_BUSINESSES,
   CATALOG_OWNERS,
   catalogImagePaths,
-  parseTestYape,
   seedStagingCatalog,
   stableId,
 } from '../../scripts/seed-staging-catalog.ts'
-import { qrDe } from '../../scripts/seed-world.ts'
-import { createStagingClient } from '../../scripts/staging-client.ts'
-import { STAGING_ORIGIN } from '../../scripts/staging-target.ts'
+import { PROD_REF, STAGING_ORIGIN } from '../../scripts/staging-target.ts'
+
+const KEY = 'clave-de-prueba'
+
+/** Doble de `@supabase/supabase-js`: ningún test sale a la red. `state` se comparte con la fábrica del mock. */
+const state = vi.hoisted(() => ({
+  created: [] as { url: string; key: string }[],
+  upserts: [] as { table: string; rows: Record<string, unknown>[] }[],
+  deletes: [] as { table: string; column: string; value: unknown }[],
+  uploads: [] as string[],
+  authTouched: [] as string[],
+}))
+
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: (url: string, key: string) => {
+    state.created.push({ url, key })
+    return {
+      from: (table: string) => ({
+        upsert: async (rows: Record<string, unknown>[]) => {
+          state.upserts.push({ table, rows })
+          return { error: null }
+        },
+        delete: () => ({
+          eq: async (column: string, value: unknown) => {
+            state.deletes.push({ table, column, value })
+            return { error: null }
+          },
+        }),
+      }),
+      rpc: async () => ({ data: '2026-11-25', error: null }),
+      storage: {
+        from: (bucket: string) => ({
+          upload: async (path: string) => {
+            state.uploads.push(`${bucket}/${path}`)
+            return { error: null }
+          },
+          getPublicUrl: (p: string) => ({ data: { publicUrl: `https://x/${p}` } }),
+        }),
+      },
+      // Cualquier acceso a `auth` (y por tanto a su servicio de administración) deja rastro y falla.
+      get auth() {
+        return new Proxy(
+          {},
+          {
+            get(_t, prop) {
+              state.authTouched.push(String(prop))
+              throw new Error(`la semilla del catálogo tocó auth.${String(prop)}`)
+            },
+          },
+        )
+      },
+    }
+  },
+}))
+
+// Solo se sustituye la huella esperada, y solo aquí: la API operativa no la acepta.
+vi.mock('../../scripts/staging-target.ts', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../../scripts/staging-target.ts')>()
+  const sha = createHash('sha256').update('clave-de-prueba', 'utf8').digest('hex')
+  return {
+    ...real,
+    assertStagingTarget: (url: string, key: string) => real.assertStagingTarget(url, key, sha),
+  }
+})
 
 const IMG_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -25,9 +85,6 @@ const IMG_DIR = join(
 )
 /** Naranja de la marca: reservado (`accent-colors.ts`). */
 const RESERVED_ACCENT = 'f97316'
-/** Número FICTICIO, solo de este test: el real nunca va al repo. */
-const FAKE_YAPE = '900000000'
-const sha = (k: string) => createHash('sha256').update(k, 'utf8').digest('hex')
 const dosDecimales = (n: number) => Math.abs(n * 100 - Math.round(n * 100)) < 1e-9
 
 describe('stableId', () => {
@@ -143,98 +200,101 @@ describe('catalogImagePaths', () => {
   })
 })
 
-describe('qrDe', () => {
-  it('es el mismo QR que usa la semilla base', () => {
-    expect(qrDe('900000000')).toBe(
-      'https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=8&data=yape%3A%2F%2Fp2p%3Fn%3D900000000',
-    )
-  })
-})
-
 describe('CAX-002: ningún número real en el catálogo', () => {
   it('los negocios no llevan teléfono ni ningún número de 9 dígitos en sus datos', () => {
     for (const b of CATALOG_BUSINESSES) expect(b.phone).toBeNull()
     expect(JSON.stringify(CATALOG_BUSINESSES)).not.toMatch(/9\d{8}/)
   })
+})
 
-  it('parseTestYape: vacío es null; valida ^9[0-9]{8}$ sin repetir el valor', () => {
-    expect(parseTestYape(undefined)).toBeNull()
-    expect(parseTestYape('  ')).toBeNull()
-    expect(parseTestYape(FAKE_YAPE)).toBe(FAKE_YAPE)
-    for (const bad of ['12345', '800000000', '9000000001', '90000000a']) {
-      expect(() => parseTestYape(bad)).toThrow(/STAGING_TEST_YAPE_NUMBER/)
-      try {
-        parseTestYape(bad)
-      } catch (e) {
-        expect((e as Error).message).not.toContain(bad)
-      }
+beforeEach(() => {
+  state.created.length = 0
+  state.upserts.length = 0
+  state.deletes.length = 0
+  state.uploads.length = 0
+  state.authTouched.length = 0
+})
+
+describe('seedStagingCatalog: guardia propia (sin red)', () => {
+  it('aborta sin crear cliente ni pedir nada si la URL es de producción, ajena o la clave no es la de staging', async () => {
+    const casos: [string, string, RegExp][] = [
+      [`https://${PROD_REF}.supabase.co`, KEY, /PRODUCCIÓN/],
+      ['https://otra.supabase.co', KEY, /debe ser exactamente/],
+      [STAGING_ORIGIN, 'otra-clave', /huella/],
+    ]
+    for (const [url, key, re] of casos) {
+      await expect(seedStagingCatalog(url, key)).rejects.toThrow(re)
     }
+    expect(state.created).toEqual([])
+    expect(state.upserts).toEqual([])
+    expect(state.uploads).toEqual([])
+  })
+
+  it('la API pública solo recibe (url, serviceKey): no acepta un cliente ni un tercer argumento', async () => {
+    expect(seedStagingCatalog.length).toBe(2)
+    const ajeno = { from: () => ({ upsert: async () => ({ error: null }) }) }
+    // @ts-expect-error el primer argumento es una URL, no un cliente
+    await expect(seedStagingCatalog(ajeno, KEY)).rejects.toThrow()
+    expect(state.created).toEqual([])
+    expect(state.upserts).toEqual([])
+    // @ts-expect-error no hay tercer parámetro (ni cliente, ni huella, ni callback de cuentas)
+    await seedStagingCatalog(STAGING_ORIGIN, KEY, ajeno)
+    expect(state.created).toEqual([{ url: STAGING_ORIGIN, key: KEY }])
+  })
+
+  it('el cliente se crea contra la constante de staging, nunca contra la URL recibida', async () => {
+    await seedStagingCatalog(`${STAGING_ORIGIN}/`, KEY)
+    expect(state.created).toEqual([{ url: STAGING_ORIGIN, key: KEY }])
   })
 })
 
-/** Cliente de staging verificado cuyas operaciones se anotan en vez de salir a la red. */
-function recordingDb() {
-  const db = createStagingClient(STAGING_ORIGIN, 'clave-de-prueba', sha('clave-de-prueba'))
-  const upserts: { table: string; rows: Record<string, unknown>[] }[] = []
-  const deletes: string[] = []
-  const target = db as unknown as Record<string, unknown>
-  target.from = (table: string) => ({
-    upsert: async (rows: Record<string, unknown>[]) => {
-      upserts.push({ table, rows })
-      return { error: null }
-    },
-    delete: () => ({
-      eq: async () => {
-        deletes.push(table)
-        return { error: null }
-      },
-    }),
-  })
-  target.rpc = async () => ({ data: '2026-11-25', error: null })
-  Object.defineProperty(db, 'storage', {
-    value: {
-      from: () => ({
-        upload: async () => ({ error: null }),
-        getPublicUrl: (p: string) => ({ data: { publicUrl: `https://x/${p}` } }),
-      }),
-    },
-  })
-  return { db, upserts, deletes }
-}
-
-describe('seedStagingCatalog: dinero (sin red)', () => {
-  it('sin la variable: no crea «Prueba Yape», avisa, y ningún negocio lleva Yape', async () => {
-    const { db, upserts, deletes } = recordingDb()
-    const ensure = vi.fn().mockResolvedValue(undefined)
-    const summary = await seedStagingCatalog(db, ensure)
+describe('seedStagingCatalog: sin cuentas de Auth ni dinero (sin red)', () => {
+  it('ninguna ruta del catálogo toca auth (un espía falla si se llama)', async () => {
+    const summary = await seedStagingCatalog(STAGING_ORIGIN, KEY)
+    expect(state.authTouched).toEqual([])
     expect(summary.businesses).toBe(4)
-    expect(summary.warnings.join(' ')).toContain('STAGING_TEST_YAPE_NUMBER')
-    expect(ensure).toHaveBeenCalledTimes(4)
-    expect(upserts.some((u) => u.table === 'business_payment_qrs')).toBe(false)
-    expect(deletes.filter((t) => t === 'business_payment_qrs')).toHaveLength(4)
-    for (const u of upserts.filter((x) => x.table === 'businesses')) {
-      for (const r of u.rows) {
-        expect(r.phone).toBeNull()
-        expect(r.yape_number).toBeNull()
-      }
-    }
   })
 
-  it('con la variable: crea solo «Prueba Yape» con ese número y su QR', async () => {
-    const { db, upserts, deletes } = recordingDb()
-    const ensure = vi.fn().mockResolvedValue(undefined)
-    const summary = await seedStagingCatalog(db, ensure, { testYape: FAKE_YAPE })
-    expect(summary.businesses).toBe(5)
-    expect(summary.warnings).toEqual([])
-    const qrs = upserts.filter((u) => u.table === 'business_payment_qrs').flatMap((u) => u.rows)
-    expect(qrs).toHaveLength(1)
-    expect(qrs[0]).toMatchObject({ account_number: FAKE_YAPE, qr_url: qrDe(FAKE_YAPE) })
-    const withYape = upserts
+  it('los 4 dueños son solo filas de users y user_roles, con ids estables y correo de pruebas', async () => {
+    await seedStagingCatalog(STAGING_ORIGIN, KEY)
+    const users = state.upserts.filter((u) => u.table === 'users').flatMap((u) => u.rows)
+    const roles = state.upserts.filter((u) => u.table === 'user_roles').flatMap((u) => u.rows)
+    expect(users.map((u) => u.id)).toEqual(CATALOG_OWNERS.map((o) => o.userId))
+    for (const u of users) {
+      expect(String(u.email)).toMatch(/^catalogo-[a-z]+@staging\.tindivo\.local$/)
+      expect(u.primary_role).toBe('business')
+    }
+    expect(roles).toEqual(CATALOG_OWNERS.map((o) => ({ user_id: o.userId, role: 'business' })))
+    const owners = state.upserts
       .filter((u) => u.table === 'businesses')
       .flatMap((u) => u.rows)
-      .filter((r) => r.yape_number)
-    expect(withYape).toHaveLength(1)
-    expect(withYape[0]).toMatchObject({ name: 'Prueba Yape', phone: null, yape_number: FAKE_YAPE })
-    expect(deletes.filter((t) => t === 'business_payment_qrs')).toHaveLength(4)
+      .map((r) => r.user_id)
+    expect(owners).toEqual(CATALOG_OWNERS.map((o) => o.userId))
+  })
+
+  it('los 4 negocios quedan sin teléfono, sin Yape y sin filas de cobro', async () => {
+    await seedStagingCatalog(STAGING_ORIGIN, KEY)
+    const biz = state.upserts.filter((u) => u.table === 'businesses').flatMap((u) => u.rows)
+    expect(biz).toHaveLength(4)
+    for (const r of biz) {
+      expect(r.phone).toBeNull()
+      expect(r.yape_number).toBeNull()
+    }
+    expect(state.upserts.some((u) => u.table === 'business_payment_qrs')).toBe(false)
+    expect(
+      state.deletes.filter((d) => d.table === 'business_payment_qrs').map((d) => d.value),
+    ).toEqual(CATALOG_OWNERS.map((o) => o.businessId))
+  })
+
+  it('es idempotente: dos corridas escriben lo mismo (mismos ids, filas y rutas de imagen)', async () => {
+    const a = await seedStagingCatalog(STAGING_ORIGIN, KEY)
+    const upsertsA = JSON.stringify(state.upserts)
+    const uploadsA = [...state.uploads]
+    state.upserts.length = 0
+    state.uploads.length = 0
+    const b = await seedStagingCatalog(STAGING_ORIGIN, KEY)
+    expect(b).toEqual(a)
+    expect(JSON.stringify(state.upserts)).toBe(upsertsA)
+    expect(state.uploads).toEqual(uploadsA)
   })
 })
