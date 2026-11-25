@@ -1,7 +1,8 @@
 import { Analytics } from '@vercel/analytics/next'
+import { GeistSans } from 'geist/font/sans'
 import type { Metadata, Viewport } from 'next'
-import { Geist, JetBrains_Mono } from 'next/font/google'
-import type { ReactNode } from 'react'
+import localFont from 'next/font/local'
+import type { CSSProperties, ReactNode } from 'react'
 import { AuthOnboardingHost } from '@/components/auth-onboarding/host'
 import { BottomNav } from '@/components/bottom-nav'
 import { PushManager } from '@/components/push-manager'
@@ -19,15 +20,16 @@ import './globals.css'
 // Tipografía unificada del design system Tindivo (igual que motorizados y negocios):
 // - Geist para display, body y labels.
 // - JetBrains Mono solo para datos técnicos (IDs, precios, tiempos).
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist',
-  display: 'swap',
-})
-
-const jetbrains = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+//
+// Las fuentes se sirven desde el propio build, sin pedirlas a Google: antes
+// el módulo de Google de Next las descargaba al compilar y, si la red fallaba, el build
+// (y las previews) se caían. Geist viene del paquete `geist` (su variable es
+// `--font-geist-sans`; más abajo se enlaza a `--font-geist`, que es la que lee
+// `theme.css`). JetBrains Mono viene de `@fontsource-variable/jetbrains-mono`
+// (licencia OFL), subconjunto latin.
+const jetbrains = localFont({
+  src: '../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2',
+  weight: '400 700',
   variable: '--font-jetbrains',
   display: 'swap',
 })
@@ -141,7 +143,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // El alcance del atributo es UN nivel: tapa los atributos de este `<html>`
     // y nada de lo que hay dentro, así que un desajuste real en la app sigue
     // saliendo.
-    <html lang="es" className={`${geist.variable} ${jetbrains.variable}`} suppressHydrationWarning>
+    <html
+      lang="es"
+      className={`${GeistSans.variable} ${jetbrains.variable}`}
+      style={{ '--font-geist': 'var(--font-geist-sans)' } as CSSProperties}
+      suppressHydrationWarning
+    >
       <head>
         {/* `metadata.appleWebApp` (arriba) NO genera esta etiqueta — genera
             `mobile-web-app-capable` pero no la con prefijo `apple-`, que es la
