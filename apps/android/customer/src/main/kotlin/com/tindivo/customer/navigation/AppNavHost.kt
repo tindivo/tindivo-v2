@@ -41,6 +41,7 @@ import com.tindivo.customer.feature.addresses.AddressFormRoute
 import com.tindivo.customer.feature.addresses.AddressFormViewModel
 import com.tindivo.customer.feature.addresses.AddressesDestination
 import com.tindivo.customer.feature.addresses.AddressesRoute
+import com.tindivo.customer.feature.addresses.signalAddressesChanged
 import com.tindivo.customer.feature.cart.CartDestination
 import com.tindivo.customer.feature.catalog.business.BusinessDestination
 import com.tindivo.customer.feature.catalog.business.BusinessRoute
@@ -252,6 +253,11 @@ private fun NavGraphBuilder.accountGraph(navController: NavHostController) {
                 .getStateFlow(PHONE_CHANGED_KEY, false)
                 .collectAsStateWithLifecycle()
                 .value
+        val addressesChanged =
+            entry.savedStateHandle
+                .getStateFlow(ADDRESSES_CHANGED_KEY, false)
+                .collectAsStateWithLifecycle()
+                .value
         AccountDestination(
             onLeave = { navController.popBackStack() },
             onOpenAddresses = { navController.navigate(AddressesRoute) },
@@ -265,6 +271,10 @@ private fun NavGraphBuilder.accountGraph(navController: NavHostController) {
                     onOpen = { navController.navigate(ProfileRoute) },
                 ),
             onDeleteAccount = { navController.navigate(DeleteAccountRoute) },
+            addressesChanged = addressesChanged,
+            onAddressesChangeHandled = { entry.savedStateHandle[ADDRESSES_CHANGED_KEY] = false },
+            onAddAddress = { navController.navigate(AddressFormRoute()) },
+            onEditAddress = { id -> navController.navigate(AddressFormRoute(id)) },
             // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
             onOpenDiagnostics =
                 if (BuildConfig.DEBUG) {
@@ -308,6 +318,7 @@ private fun NavGraphBuilder.addressesGraph(navController: NavHostController) {
         AddressesDestination(
             changed = changed,
             onChangeHandled = { entry.savedStateHandle[ADDRESSES_CHANGED_KEY] = false },
+            onLibraryChanged = navController::signalAddressesChanged,
             onBack = { navController.popBackStack() },
             onAdd = { navController.navigate(AddressFormRoute()) },
             onEdit = { id -> navController.navigate(AddressFormRoute(id)) },

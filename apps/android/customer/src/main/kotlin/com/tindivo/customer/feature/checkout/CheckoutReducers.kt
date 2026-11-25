@@ -39,9 +39,19 @@ internal fun CheckoutUiState.withQuote(
 ): CheckoutUiState =
     when (outcome) {
         is QuoteOutcome.Ok -> {
-            val pay = reconcilePayMethod(pay, lastIntent, outcome.view.options)
+            // En recojo solo hay prepago (CUS-CHK-006): aunque la cotización traiga otra cosa, no se ofrece.
+            val view =
+                if (isPickup) {
+                    outcome.view.copy(
+                        options = outcome.view.options.filter { it.method == PayMethod.Prepaid },
+                        cash = null,
+                    )
+                } else {
+                    outcome.view
+                }
+            val pay = reconcilePayMethod(pay, lastIntent, view.options)
             copy(
-                quote = outcome.view,
+                quote = view,
                 quoteStatus = QuoteStatus.Ready,
                 pay = pay,
                 cash = if (pay == PayMethod.Cash) cash else CashChoice.None,

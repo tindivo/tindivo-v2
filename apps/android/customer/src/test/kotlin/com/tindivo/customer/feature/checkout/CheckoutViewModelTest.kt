@@ -212,19 +212,35 @@ class CheckoutViewModelTest : CheckoutHarness() {
         }
 
     @Test
-    fun `el recojo manda pickupTiming y nada de la entrega`() =
+    fun `al pasar de delivery a recojo la cotizacion vieja no queda como elegible`() =
+        runTest(dispatcher) {
+            val vm = ready()
+            assertTrue(vm.state.value.quote != null)
+
+            vm.setMethod(DeliveryChoice.Pickup)
+
+            assertNull(vm.state.value.quote)
+            assertNull(vm.state.value.pay)
+            advanceUntilIdle()
+            assertEquals(
+                listOf(PayMethod.Prepaid),
+                vm.state.value.quote
+                    ?.options
+                    ?.map { it.method },
+            )
+        }
+
+    @Test
+    fun `el recojo es prepago, no manda pickupTiming ni nada de la entrega`() =
         runTest(dispatcher) {
             val vm = ready()
             vm.setNote("sin ají")
             vm.setMethod(DeliveryChoice.Pickup)
             advanceUntilIdle()
-            assertEquals(Cta.NeedPickupAnswer, vm.state.value.cta)
-            vm.setPickupWhen(PickupWhen.Later)
-            advanceUntilIdle()
 
             assertEquals(PayMethod.Prepaid, vm.state.value.pay)
             val quote = json(quotes().last())
-            assertEquals("later", quote.getValue("pickupTiming").jsonPrimitive.content)
+            assertTrue(quote.absent("pickupTiming"))
             assertTrue(quote.absent("coordinates"))
 
             vm.confirm()
@@ -233,8 +249,8 @@ class CheckoutViewModelTest : CheckoutHarness() {
             val body = json(orders().single())
             assertEquals("pickup", body.getValue("deliveryMethod").jsonPrimitive.content)
             assertEquals("prepaid", body.getValue("paymentIntent").jsonPrimitive.content)
-            assertEquals("later", body.getValue("pickupTiming").jsonPrimitive.content)
             listOf(
+                "pickupTiming",
                 "cashPayingWith",
                 "deliveryAddress",
                 "deliveryReference",

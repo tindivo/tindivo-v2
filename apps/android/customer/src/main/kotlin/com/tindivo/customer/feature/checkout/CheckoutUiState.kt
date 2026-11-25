@@ -63,7 +63,6 @@ data class CheckoutUiState(
     val acceptsDelivery: Boolean = true,
     val acceptsPickup: Boolean = false,
     val method: DeliveryChoice = DeliveryChoice.Delivery,
-    val pickupWhen: PickupWhen? = null,
     val addresses: List<AddressUi> = emptyList(),
     val selectedAddressId: String? = null,
     val name: String = "",
@@ -101,7 +100,7 @@ data class CheckoutUiState(
      */
     override fun toString(): String =
         "CheckoutUiState(phase=$phase, businessName=$businessName, etaMin=$etaMin, etaMax=$etaMax, " +
-            "acceptsDelivery=$acceptsDelivery, acceptsPickup=$acceptsPickup, method=$method, pickupWhen=$pickupWhen, " +
+            "acceptsDelivery=$acceptsDelivery, acceptsPickup=$acceptsPickup, method=$method, " +
             "addresses=${addresses.size}, selectedAddressId=$selectedAddressId, name=***, " +
             "phone=${if (phone == null) "null" else "***"}, phoneVerified=$phoneVerified, " +
             "previousPurchase=$previousPurchase, note=***, " +
@@ -187,8 +186,6 @@ sealed interface Cta {
 
     data object NeedName : Cta
 
-    data object NeedPickupAnswer : Cta
-
     data object NeedAddress : Cta
 
     data object NeedFixAddress : Cta
@@ -226,8 +223,6 @@ fun ctaOf(state: CheckoutUiState): Cta {
         state.sending -> Cta.Sending
 
         state.name.trim().isEmpty() -> Cta.NeedName
-
-        state.isPickup && state.pickupWhen == null -> Cta.NeedPickupAnswer
 
         !state.isPickup && addressNeed(
             state.selectedAddress,

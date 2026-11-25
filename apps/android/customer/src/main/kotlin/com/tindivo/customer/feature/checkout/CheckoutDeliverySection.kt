@@ -51,7 +51,6 @@ internal fun LazyListScope.deliverySection(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionTitle(stringResource(R.string.checkout_delivery_title))
             if (state.acceptsPickup && state.acceptsDelivery) MethodSwitch(state, form)
-            if (state.isPickup) PickupQuestion(state, form)
             // Tablero «Checkout»: dirección, contacto y nota en una sola tarjeta, cada fila con su icono y separadas
             // por una línea.
             TindivoCard(modifier = Modifier.fillMaxWidth()) {
@@ -151,41 +150,6 @@ private fun RowScope.MethodTile(
                     contentDescription = null,
                     tint = scheme.onPrimary,
                     modifier = Modifier.size(14.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PickupQuestion(
-    state: CheckoutUiState,
-    form: CheckoutFormActions,
-) {
-    TindivoCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = stringResource(R.string.checkout_pickup_question), style = MaterialTheme.typography.titleSmall)
-            ChoiceRow(
-                selected = state.pickupWhen == PickupWhen.Now,
-                enabled = true,
-                title = stringResource(R.string.checkout_pickup_now),
-                hint = stringResource(R.string.checkout_pickup_now_hint),
-                onClick = { form.onPickupWhen(PickupWhen.Now) },
-            )
-            ChoiceRow(
-                selected = state.pickupWhen == PickupWhen.Later,
-                enabled = true,
-                title = stringResource(R.string.checkout_pickup_later),
-                hint = stringResource(R.string.checkout_pickup_later_hint),
-                onClick = { form.onPickupWhen(PickupWhen.Later) },
-            )
-            // La política que se le promete antes de pagar (DECISIONS «0224»): no se acorta con el texto de la opción.
-            if (state.pickupWhen == PickupWhen.Later) {
-                Text(
-                    text = stringResource(R.string.checkout_pickup_later_policy),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
                 )
             }
         }
