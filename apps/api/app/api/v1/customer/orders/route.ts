@@ -186,9 +186,9 @@ export async function POST(req: Request): Promise<Response> {
       // `create_customer_order` (0283): subtotal + envío tras la promoción de
       // lanzamiento o la de plato, en la banda del punto (`quoteDelivery`). Antes se
       // sumaba siempre la tarifa cercana, y un total que la cotización dejaba bajo el
-      // umbral se rechazaba aquí. Si falla la lectura de una promoción no se corta:
-      // lo decide la RPC dentro de su transacción.
-      const { data: thresholdSetting } = await service
+      // umbral se rechazaba aquí. Si falla CUALQUIER lectura del cálculo (umbral, precios,
+      // banda, tarifas o promociones) no se corta: lo decide la RPC en su transacción.
+      const { data: thresholdSetting, error: thresholdErr } = await service
         .from('app_settings')
         .select('value')
         .eq('key', 'prepay_threshold')
@@ -199,18 +199,18 @@ export async function POST(req: Request): Promise<Response> {
       const itemIds = body.items.map((i) => i.menuItemId)
       const modifierIds = body.items.flatMap((i) => i.modifiers || [])
 
-      const { data: itemsData } = await service
+      const { data: itemsData, error: itemsErr } = await service
         .from('menu_items')
         .select('id, base_price')
         .in('id', itemIds)
 
-      const { data: modifiersData } =
+      const { data: modifiersData, error: modifiersErr } =
         modifierIds.length > 0
           ? await service
               .from('menu_modifier_options')
               .select('id, additional_price')
               .in('id', modifierIds)
-          : { data: [] }
+          : { data: [], error: null }
 
       let subtotalCents = 0
       for (const item of body.items) {
@@ -227,22 +227,18 @@ export async function POST(req: Request): Promise<Response> {
         }
       }
 
-      const { data: bizFee } = await service
-        .from('businesses')
-        .select('delivery_fee')
-        .eq('id', body.businessId)
-        .maybeSingle()
       const delivery = await quoteDelivery(service, createUserClient(token), {
         businessId: body.businessId,
         isDelivery: body.deliveryMethod === 'delivery',
         coordinates: body.coordinates,
         itemIds,
-        businessDeliveryFee: bizFee?.delivery_fee ?? null,
+        onBandError: 'unreliable',
         logScope: 'orders',
       })
 
       const calculatedTotalCents = subtotalCents + delivery.deliveryCents
-      if (delivery.reliable && calculatedTotalCents > cents(threshold)) {
+      const readsReliable = delivery.reliable && !thresholdErr && !itemsErr && !modifiersErr
+      if (readsReliable && calculatedTotalCents > cents(threshold)) {
         // El mensaje nombra el ENVÍO porque el umbral se compara contra el total
         // con delivery dentro, aquí y en `create_customer_order` (0194). Decir
         // solo «pedidos mayores a S/80» dejaba fuera esa mitad: una bolsa de

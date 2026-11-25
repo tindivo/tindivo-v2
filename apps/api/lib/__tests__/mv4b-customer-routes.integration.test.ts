@@ -12,7 +12,7 @@
  * si la corrida muere); la zona lejana lleva el prefijo `ZZ Test MV4b`.
  */
 import { createClient } from '@supabase/supabase-js'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
   DELETE as deleteAddress,
   PATCH as patchAddress,
@@ -30,6 +30,85 @@ import {
   COURIER_POINT_B,
   callCreateCourierOrder,
 } from './helpers/local-db-courier'
+
+/**
+ * Fallos de lectura inyectados (CAX-002). Por defecto no hace nada: los clientes de
+ * Supabase que crean las rutas pasan tal cual. Una prueba apunta una lectura
+ * (`reads`: tabla, columnas del `select` y filtros `eq`) o una RPC (`rpcs`) y esa
+ * llamada, y solo esa, devuelve un error.
+ */
+const faults = vi.hoisted(() => {
+  interface ReadFault {
+    table: string
+    select?: string
+    eq?: [string, unknown]
+  }
+  const state = { reads: [] as ReadFault[], rpcs: [] as string[] }
+  const error = { message: 'lectura inyectada', code: 'XX000', details: '', hint: '' }
+  type Fn = (...args: unknown[]) => unknown
+  const builder = (
+    real: object,
+    table: string,
+    seen: { select?: string; eq: Array<[string, unknown]> },
+  ): object =>
+    new Proxy(real, {
+      get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver) as unknown
+        if (typeof value !== 'function') return value
+        return (...args: unknown[]) => {
+          if (prop === 'select') seen.select = String(args[0])
+          if (prop === 'eq') seen.eq.push([String(args[0]), args[1]])
+          if (prop === 'maybeSingle' || prop === 'single' || prop === 'then') {
+            const hit = state.reads.some(
+              (f) =>
+                f.table === table &&
+                (f.select === undefined || f.select === seen.select) &&
+                (f.eq === undefined ||
+                  seen.eq.some(([c, v]) => c === f.eq?.[0] && v === f.eq?.[1])),
+            )
+            if (hit) {
+              const failed = Promise.resolve({ data: null, error })
+              return prop === 'then' ? failed.then(...(args as [Fn, Fn])) : failed
+            }
+          }
+          const next = (value as Fn).apply(target, args)
+          if (prop === 'then') return next
+          return next === target
+            ? receiver
+            : typeof next === 'object' && next !== null && 'then' in next
+              ? builder(next, table, seen)
+              : next
+        }
+      },
+    })
+  const wrap = <T extends object>(client: T): T =>
+    new Proxy(client, {
+      get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver) as unknown
+        if (prop === 'from' && typeof value === 'function') {
+          return (table: string) =>
+            builder((value as Fn).call(target, table) as object, table, { eq: [] })
+        }
+        if (prop === 'rpc' && typeof value === 'function') {
+          return (name: string, ...rest: unknown[]) =>
+            state.rpcs.includes(name)
+              ? Promise.resolve({ data: null, error })
+              : (value as Fn).call(target, name, ...rest)
+        }
+        return value
+      },
+    }) as T
+  return { state, wrap }
+})
+
+vi.mock('@/lib/supabase/service', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/supabase/service')>()
+  return { ...real, createServiceClient: () => faults.wrap(real.createServiceClient()) }
+})
+vi.mock('@/lib/supabase/user', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/supabase/user')>()
+  return { ...real, createUserClient: (token: string) => faults.wrap(real.createUserClient(token)) }
+})
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
 const LOCAL_ANON_KEY =
@@ -1082,6 +1161,16 @@ describe('POST /customer/checkout/quote · payment', () => {
       }
     }
 
+    /** Total que quedó guardado en el pedido (subtotal + envío), en céntimos. */
+    async function totalDelPedido(orderId: string): Promise<number> {
+      const { data } = await db
+        .from('orders')
+        .select('order_amount,delivery_fee')
+        .eq('id', orderId)
+        .single()
+      return Math.round((Number(data?.order_amount) + Number(data?.delivery_fee)) * 100)
+    }
+
     /** `cuenta` = total en céntimos de la cotización; igualdad pasa, un céntimo menos de umbral no. */
     async function verificar(cuenta: number, etiqueta: string): Promise<void> {
       const c1 = await clienteDeConfianza()
@@ -1091,6 +1180,7 @@ describe('POST /customer/checkout/quote · payment', () => {
         expect(cot.body.data.exceedsPrepayThreshold, etiqueta).toBe(false)
         const r = await crear(c1, 'pending_cash')
         expect(r.status, `${etiqueta} igualdad: ${JSON.stringify(r.body)}`).toBe(201)
+        expect(await totalDelPedido(r.body.data.id), etiqueta).toBe(cuenta)
       })
       const c2 = await clienteDeConfianza()
       await conUmbral((cuenta - 1) / 100, async () => {
@@ -1098,11 +1188,9 @@ describe('POST /customer/checkout/quote · payment', () => {
         expect(cot.body.data.exceedsPrepayThreshold, etiqueta).toBe(true)
         expect(intents(cot), etiqueta).toEqual(['pending_cash', 'pending_yape', 'prepaid'])
         const r = await crear(c2, 'pending_cash')
-        expect(
-          r.status,
-          `${etiqueta} +1 céntimo: ${JSON.stringify(r.body)}`,
-        ).toBeGreaterThanOrEqual(400)
-        expect(JSON.stringify(r.body)).toContain('adelantado')
+        // La guardia HTTP (403), no la RPC (422): con todo leído, corta ella.
+        expect(r.status, `${etiqueta} +1 céntimo: ${JSON.stringify(r.body)}`).toBe(403)
+        expect(r.body.detail, etiqueta).toContain(`(S/ ${(cuenta / 100).toFixed(2)}) pasa de`)
         const prepago = await crear(c2, 'prepaid')
         expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
       })
@@ -1154,6 +1242,211 @@ describe('POST /customer/checkout/quote · payment', () => {
       } finally {
         await db.from('delivery_zones').delete().eq('name', ZONA)
       }
+    })
+
+    // CAX-002 (R2): si falla CUALQUIER lectura del cálculo, la guardia HTTP no corta y
+    // decide la RPC (422 si el total pasa del umbral, 201 si no). Sin el fallo, corta
+    // la guardia con 403. Ejemplo de Codex: plato de 48.00, banda cercana 2.00, tarifa
+    // del negocio 3.00 y umbral 50.00 (total real 50.00, que la RPC acepta).
+    describe('lecturas fallidas: la guardia no corta y decide la RPC', () => {
+      interface Fallo {
+        reads?: Array<{ table: string; select?: string; eq?: [string, unknown] }>
+        rpcs?: string[]
+      }
+      const BANDAS = { table: 'app_settings', eq: ['key', 'delivery_bands'] as [string, unknown] }
+      const TARIFA_NEGOCIO = { table: 'businesses', select: 'delivery_fee' }
+      const PROMO = 'current_customer_promo_free_delivery'
+      const PLATO = 'cart_item_free_delivery'
+      let tarifaPrevia: unknown = null
+
+      beforeAll(async () => {
+        const { data } = await db
+          .from('businesses')
+          .select('delivery_fee')
+          .eq('id', FIXTURES.BUSINESS_ID)
+          .single()
+        tarifaPrevia = data?.delivery_fee ?? null
+        await db.from('businesses').update({ delivery_fee: 3 }).eq('id', FIXTURES.BUSINESS_ID)
+      })
+      afterAll(async () => {
+        await db
+          .from('businesses')
+          .update({ delivery_fee: tarifaPrevia as never })
+          .eq('id', FIXTURES.BUSINESS_ID)
+        faults.state.reads = []
+        faults.state.rpcs = []
+      })
+
+      /** Crea con `pending_cash` con el fallo puesto SOLO durante el POST (la cotización va limpia). */
+      async function crearConFallo(umbral: number, fallo: Fallo) {
+        const c = await clienteDeConfianza()
+        let r: Awaited<ReturnType<typeof crear>> | undefined
+        await conUmbral(umbral, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.status).toBe(200)
+          faults.state.reads = fallo.reads ?? []
+          faults.state.rpcs = fallo.rpcs ?? []
+          try {
+            r = await crear(c, 'pending_cash')
+          } finally {
+            faults.state.reads = []
+            faults.state.rpcs = []
+          }
+        })
+        if (!r) throw new Error('sin respuesta')
+        return r
+      }
+
+      const sinDescuento: Array<[string, Fallo]> = [
+        ['tarifas por banda', { reads: [BANDAS] }],
+        ['tarifa del negocio', { reads: [TARIFA_NEGOCIO] }],
+        ['promoción de lanzamiento', { rpcs: [PROMO] }],
+        ['envío gratis por plato', { rpcs: [PLATO] }],
+      ]
+
+      it.each(
+        sinDescuento,
+      )('falla %s, sin descuento real: total real 50.00, umbral 50.00 -> 201 (la guardia no corta)', async (_n, fallo) => {
+        const r = await crearConFallo(50, fallo)
+        expect(r.status, JSON.stringify(r.body)).toBe(201)
+        expect(await totalDelPedido(r.body.data.id)).toBe(5000)
+      })
+
+      it.each(
+        sinDescuento,
+      )('falla %s, sin descuento real: total real 50.00, umbral 49.99 -> 422 de la RPC, no 403', async (_n, fallo) => {
+        const r = await crearConFallo(49.99, fallo)
+        expect(r.status, JSON.stringify(r.body)).toBe(422)
+        expect(r.body.detail).toContain('adelantado')
+      })
+
+      it('control: sin fallo, total 50.00 y umbral 49.99 -> 403 de la guardia', async () => {
+        const r = await crearConFallo(49.99, {})
+        expect(r.status, JSON.stringify(r.body)).toBe(403)
+        expect(r.body.detail).toContain('(S/ 50.00) pasa de')
+      })
+
+      describe('con descuento real por plato (total real 48.00)', () => {
+        const gratis = async (fn: () => Promise<void>) => {
+          await db
+            .from('menu_items')
+            .update({ free_delivery_until: '2099-12-31' })
+            .eq('id', FIXTURES.ITEM_POLLO_ID)
+          try {
+            await fn()
+          } finally {
+            await db
+              .from('menu_items')
+              .update({ free_delivery_until: null })
+              .eq('id', FIXTURES.ITEM_POLLO_ID)
+          }
+        }
+
+        const todos: Array<[string, Fallo]> = [
+          ['promoción de lanzamiento', { rpcs: [PROMO] }],
+          ['envío gratis por plato', { rpcs: [PLATO] }],
+          ['tarifas por banda', { reads: [BANDAS] }],
+          ['tarifa del negocio', { reads: [TARIFA_NEGOCIO] }],
+        ]
+
+        it.each(
+          todos,
+        )('falla %s: umbral 48.00 -> 201 y el pedido queda en 48.00', async (_n, fallo) => {
+          await gratis(async () => {
+            const r = await crearConFallo(48, fallo)
+            expect(r.status, JSON.stringify(r.body)).toBe(201)
+            expect(await totalDelPedido(r.body.data.id)).toBe(4800)
+          })
+        })
+
+        it.each(
+          todos.slice(0, 2),
+        )('falla %s: umbral 47.99 -> 422 de la RPC, no 403', async (_n, fallo) => {
+          await gratis(async () => {
+            const r = await crearConFallo(47.99, fallo)
+            expect(r.status, JSON.stringify(r.body)).toBe(422)
+          })
+        })
+
+        it('control: sin fallo, umbral 47.99 -> 403 de la guardia', async () => {
+          await gratis(async () => {
+            const r = await crearConFallo(47.99, {})
+            expect(r.status, JSON.stringify(r.body)).toBe(403)
+            expect(r.body.detail).toContain('(S/ 48.00) pasa de')
+          })
+        })
+      })
+
+      describe('promoción de lanzamiento real (0187)', () => {
+        const CODIGO = 'mv4b-lanzamiento-test'
+        let previa: unknown = null
+        let habia = false
+
+        beforeAll(async () => {
+          const { data } = await db
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'promo_free_delivery')
+            .maybeSingle()
+          habia = data !== null
+          previa = data?.value ?? null
+          await db.from('app_settings').upsert(
+            {
+              key: 'promo_free_delivery',
+              value: {
+                code: CODIGO,
+                active: true,
+                from: '2000-01-01',
+                to: '2099-12-31',
+                max_redemptions: 100,
+              },
+            },
+            { onConflict: 'key' },
+          )
+        })
+        afterAll(async () => {
+          await db.from('promo_redemptions').delete().eq('promo_code', CODIGO)
+          if (habia) {
+            await db
+              .from('app_settings')
+              .update({ value: previa as never })
+              .eq('key', 'promo_free_delivery')
+          } else {
+            await db.from('app_settings').delete().eq('key', 'promo_free_delivery')
+          }
+        })
+
+        it('la cotización la aplica y la guardia deja pasar el total ya sin envío (umbral 48.00 -> 201)', async () => {
+          const c = await clienteDeConfianza()
+          await conUmbral(48, async () => {
+            const cot = await cotizar(c, { coordinates: PIN })
+            expect(cot.body.data.freeDelivery).toEqual({ applies: true, reason: 'launch_promo' })
+            expect(cot.body.data.total).toBe('48.00')
+            const r = await crear(c, 'pending_cash')
+            expect(r.status, JSON.stringify(r.body)).toBe(201)
+            expect(await totalDelPedido(r.body.data.id)).toBe(4800)
+          })
+        })
+
+        it('sin fallo, umbral 47.99 -> 403 de la guardia; con la promoción caída -> 422 de la RPC', async () => {
+          const c1 = await clienteDeConfianza()
+          await conUmbral(47.99, async () => {
+            const r = await crear(c1, 'pending_cash')
+            expect(r.status, JSON.stringify(r.body)).toBe(403)
+            expect(r.body.detail).toContain('(S/ 48.00) pasa de')
+          })
+          const c2 = await clienteDeConfianza()
+          await conUmbral(47.99, async () => {
+            faults.state.rpcs = [PROMO]
+            try {
+              const r = await crear(c2, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).toBe(422)
+            } finally {
+              faults.state.rpcs = []
+            }
+          })
+        })
+      })
     })
   })
 

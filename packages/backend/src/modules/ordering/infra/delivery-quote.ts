@@ -9,8 +9,9 @@ export interface DeliveryQuote {
   /** Lo que se cobra de envío: 0 si hay promoción. */
   deliveryCents: number
   /**
-   * `false` si falló la lectura de una promoción. El envío queda entonces sin
-   * descuento (lado seguro para PINTAR); quien use este valor para RECHAZAR un
+   * `false` si falló CUALQUIER lectura (la banda, la tarifa de la banda, la tarifa
+   * del negocio o una de las dos promociones). El total queda entonces con respaldos
+   * o sin descuento (lado seguro para PINTAR); quien use este valor para RECHAZAR un
    * pedido no debe hacerlo: lo decide `create_customer_order`.
    */
   reliable: boolean
@@ -33,14 +34,25 @@ export async function quoteDelivery(
     isDelivery: boolean
     coordinates?: { lat: number; lng: number } | undefined
     itemIds: string[]
-    /** `businesses.delivery_fee`: respaldo de la tarifa de la banda. */
-    businessDeliveryFee: number | string | null
+    /**
+     * `businesses.delivery_fee`: respaldo de la tarifa de la banda. Si no se pasa
+     * (`undefined`), la función la lee ella misma y un fallo de lectura la deja
+     * `reliable: false`; la cotización, que ya tiene el negocio, la pasa.
+     */
+    businessDeliveryFee?: number | string | null
+    /**
+     * Qué hacer si falla `delivery_band_for_point`: la cotización lanza (500, como
+     * siempre) y la guardia de la creación sigue con la banda cercana y
+     * `reliable: false`, para que decida la RPC.
+     */
+    onBandError?: 'throw' | 'unreliable'
     /** Prefijo de los registros de error (`checkout/quote`, `orders`). */
     logScope: string
   },
 ): Promise<DeliveryQuote> {
   let deliveryBand: DeliveryQuote['deliveryBand'] = null
   let nominalCents = 0
+  let reliable = true
   if (input.isDelivery) {
     // Sin punto: banda cercana, igual que el checkout web. La creación exige
     // las coordenadas, así que esto es solo para pintar antes de elegirlas.
@@ -50,23 +62,38 @@ export async function quoteDelivery(
         p_lat: input.coordinates.lat,
         p_lng: input.coordinates.lng,
       })
-      if (error) throw new Error(error.message)
-      if (band === 'far') deliveryBand = 'far'
+      if (error) {
+        if ((input.onBandError ?? 'throw') === 'throw') throw new Error(error.message)
+        reliable = false
+        console.error(`[${input.logScope}] banda del punto:`, error.message)
+      } else if (band === 'far') deliveryBand = 'far'
     }
-    const { data: bandsSetting } = await service
+    const { data: bandsSetting, error: bandsErr } = await service
       .from('app_settings')
       .select('value')
       .eq('key', 'delivery_bands')
       .maybeSingle()
-    nominalCents = nominalDeliveryFeeCents(
-      deliveryBand,
-      bandsSetting?.value,
-      input.businessDeliveryFee,
-    )
+    if (bandsErr) {
+      reliable = false
+      console.error(`[${input.logScope}] tarifas por banda:`, bandsErr.message)
+    }
+    let businessFee = input.businessDeliveryFee
+    if (businessFee === undefined) {
+      const { data: biz, error: bizErr } = await service
+        .from('businesses')
+        .select('delivery_fee')
+        .eq('id', input.businessId)
+        .maybeSingle()
+      if (bizErr) {
+        reliable = false
+        console.error(`[${input.logScope}] tarifa del negocio:`, bizErr.message)
+      }
+      businessFee = biz?.delivery_fee ?? null
+    }
+    nominalCents = nominalDeliveryFeeCents(deliveryBand, bandsSetting?.value, businessFee)
   }
 
   // ── Envío gratis: promo de lanzamiento primero, luego por plato ─────────────
-  let reliable = true
   let freeReason: DeliveryQuote['freeReason'] = null
   if (input.isDelivery && nominalCents > 0) {
     const { data: promo, error: promoErr } = await asUser.rpc(

@@ -9397,7 +9397,7 @@
                                 ],
                                 "additionalProperties": false
                               },
-                              "description": "En este orden. El recojo no trae `pending_yape` (no hay motorizado a quien transferirle). Si hay alguna opción al recibir disponible (`pending_cash` o `pending_yape`), `prepaid` no viene en la lista; `POST /customer/orders` lo sigue aceptando"
+                              "description": "En este orden. El recojo no trae `pending_yape` (no hay motorizado a quien transferirle). Si el cliente es de confianza (`trusted`) y hay alguna opción al recibir disponible (`pending_cash` o `pending_yape`), `prepaid` no viene en la lista; el cliente sin historial (`no_history`) la conserva; `POST /customer/orders` lo sigue aceptando"
                             },
                             "cash": {
                               "nullable": true,
