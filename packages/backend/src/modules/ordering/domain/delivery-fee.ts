@@ -17,7 +17,9 @@ export function nominalDeliveryFeeCents(
   businessDeliveryFee: number | string | null,
 ): number {
   const bands = (bandsSetting ?? {}) as Record<string, unknown>
-  const fromBands = Number(bands[band])
+  // `null` o vacío = clave ausente, como en SQL (`(v_bands ->> banda)::numeric` da null).
+  const raw = bands[band]
+  const fromBands = raw === null || raw === '' ? Number.NaN : Number(raw)
   const fee = Number.isFinite(fromBands)
     ? fromBands
     : businessDeliveryFee != null

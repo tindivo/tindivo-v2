@@ -1114,8 +1114,8 @@ describe('POST /customer/checkout/quote · payment', () => {
       const cot = await cotizar(c)
       expect(intents(cot)).toContain('prepaid')
       const cash = await crear(c, 'pending_cash', gps)
-      expect(cash.status, JSON.stringify(cash.body)).toBeGreaterThanOrEqual(400)
-      expect(JSON.stringify(cash.body)).toContain('Pago adelantado requerido')
+      expect(cash.status, JSON.stringify(cash.body)).toBe(422)
+      expect(cash.body.detail).toContain('Pago adelantado requerido')
       const prepago = await crear(c, 'prepaid', gps)
       expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
     })
@@ -1278,16 +1278,20 @@ describe('POST /customer/checkout/quote · payment', () => {
       })
 
       /** Crea con `pending_cash` con el fallo puesto SOLO durante el POST (la cotización va limpia). */
-      async function crearConFallo(umbral: number, fallo: Fallo) {
+      async function crearConFallo(
+        umbral: number,
+        fallo: Fallo,
+        carrito: Record<string, unknown> = {},
+      ) {
         const c = await clienteDeConfianza()
         let r: Awaited<ReturnType<typeof crear>> | undefined
         await conUmbral(umbral, async () => {
-          const cot = await cotizar(c, { coordinates: PIN })
+          const cot = await cotizar(c, { coordinates: PIN, ...carrito })
           expect(cot.status).toBe(200)
           faults.state.reads = fallo.reads ?? []
           faults.state.rpcs = fallo.rpcs ?? []
           try {
-            r = await crear(c, 'pending_cash')
+            r = await crear(c, 'pending_cash', carrito)
           } finally {
             faults.state.reads = []
             faults.state.rpcs = []
@@ -1317,7 +1321,48 @@ describe('POST /customer/checkout/quote · payment', () => {
       )('falla %s, sin descuento real: total real 50.00, umbral 49.99 -> 422 de la RPC, no 403', async (_n, fallo) => {
         const r = await crearConFallo(49.99, fallo)
         expect(r.status, JSON.stringify(r.body)).toBe(422)
-        expect(r.body.detail).toContain('adelantado')
+        // El texto lo pone la RPC con SU total: 50.00 y el umbral 49.99.
+        expect(r.body.detail).toContain('(S/ 50.00) pasa de S/ 49.99')
+      })
+
+      it('falla la lectura del umbral (respaldo 80): umbral real 100, dos platos (98.00) -> 201, no 403', async () => {
+        const dos = {
+          items: [
+            {
+              menuItemId: FIXTURES.ITEM_POLLO_ID,
+              quantity: 2,
+              modifiers: [FIXTURES.MODOPT_QUESO_ID],
+            },
+          ],
+        }
+        const r = await crearConFallo(
+          100,
+          { reads: [{ table: 'app_settings', eq: ['key', 'prepay_threshold'] }] },
+          dos,
+        )
+        expect(r.status, JSON.stringify(r.body)).toBe(201)
+        expect(await totalDelPedido(r.body.data.id)).toBe(9800)
+      })
+
+      it('falla la banda del punto en la creación (zona lejana, umbral 49.99): 422 de la RPC, no 500 ni 403', async () => {
+        const { error } = await db.from('delivery_zones').insert({
+          name: ZONA,
+          polygon: [
+            { lat: PIN.lat - 0.004, lng: PIN.lng - 0.004 },
+            { lat: PIN.lat - 0.004, lng: PIN.lng + 0.004 },
+            { lat: PIN.lat + 0.004, lng: PIN.lng + 0.004 },
+            { lat: PIN.lat + 0.004, lng: PIN.lng - 0.004 },
+          ],
+        })
+        if (error) throw new Error(error.message)
+        try {
+          const r = await crearConFallo(49.99, { rpcs: ['delivery_band_for_point'] })
+          expect(r.status, JSON.stringify(r.body)).toBe(422)
+          // La RPC sí ve la zona lejana: 48.00 + 2.50.
+          expect(r.body.detail).toContain('(S/ 50.50) pasa de S/ 49.99')
+        } finally {
+          await db.from('delivery_zones').delete().eq('name', ZONA)
+        }
       })
 
       it('control: sin fallo, total 50.00 y umbral 49.99 -> 403 de la guardia', async () => {
@@ -1365,6 +1410,7 @@ describe('POST /customer/checkout/quote · payment', () => {
           await gratis(async () => {
             const r = await crearConFallo(47.99, fallo)
             expect(r.status, JSON.stringify(r.body)).toBe(422)
+            expect(r.body.detail).toContain('(S/ 48.00) pasa de S/ 47.99')
           })
         })
 
@@ -1441,6 +1487,7 @@ describe('POST /customer/checkout/quote · payment', () => {
             try {
               const r = await crear(c2, 'pending_cash')
               expect(r.status, JSON.stringify(r.body)).toBe(422)
+              expect(r.body.detail).toContain('(S/ 48.00) pasa de S/ 47.99')
             } finally {
               faults.state.rpcs = []
             }

@@ -27,6 +27,12 @@ describe('nominalDeliveryFeeCents', () => {
     expect(nominalDeliveryFeeCents('far', undefined, null)).toBe(200)
   })
 
+  it('una tarifa de banda en null o vacía cuenta como ausente (como en SQL), no como cero', () => {
+    expect(nominalDeliveryFeeCents('near', { near: null }, 3)).toBe(300)
+    expect(nominalDeliveryFeeCents('near', { near: '' }, 3)).toBe(300)
+    expect(nominalDeliveryFeeCents('near', { near: 0 }, 3)).toBe(0)
+  })
+
   it('una tarifa de banda no numérica se ignora', () => {
     expect(nominalDeliveryFeeCents('near', { near: 'x' }, 4)).toBe(400)
   })
