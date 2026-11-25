@@ -71,6 +71,13 @@ la foto vuela a la pastilla de bolsa. Con «reducir movimiento»: sin parallax n
 
 ## Pendiente
 
+- Al cerrar la página, el foco de TalkBack no vuelve a la fila del plato (haría falta un `FocusRequester` en la fila, el
+  carrusel y los resultados de búsqueda). Hoy la página lleva `paneTitle`.
+- El `clearFocus` y el teclado oculto al abrir la ficha desde la búsqueda no tienen prueba automática: no hay forma de
+  leer el foco de la carta que queda debajo.
+- El botón principal «nunca apagado» y el parallax: la especificación aprobada de Fable pide el botón nunca apagado
+  (`tindivo-auditorias/2026-11-23-auditoria-ux-fable/fable-mapa-y-plato.md`, sección Plato); el parallax 0,5× de
+  «Movimiento» no está implementado.
 - «Compartir» no tiene destino ni requisito (DA-17 de `Docs/trabajo/decisiones-abiertas.md`): el botón no se dibuja hasta que se defina.
 - La etiqueta de la nota («Nota para el negocio» en el canvas; «Nota (opcional)» y un ejemplo con «tocar timbre» en el código):
   el ejemplo habla del motorizado, no del negocio.
