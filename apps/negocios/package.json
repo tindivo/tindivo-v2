@@ -12,14 +12,16 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "catalog:",
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "@tindivo/api-client": "workspace:*",
     "@tindivo/contracts": "workspace:*",
-    "@tindivo/images": "workspace:*",
     "@tindivo/core": "workspace:*",
+    "@tindivo/images": "workspace:*",
     "@tindivo/supabase": "workspace:*",
     "@tindivo/ui": "workspace:*",
+    "geist": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
