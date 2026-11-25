@@ -20,13 +20,14 @@ Lo marcado **[tú]** requiere tus credenciales; el resto ya está preparado en e
 
 ```bash
 supabase db push      # aplica al remoto enlazado lo que falte
-pnpm db:types         # regenera los tipos DESPUÉS del push
+pnpm db:types         # tipos desde la base local migrada (no depende del push)
 pnpm check:deploy     # tiene que salir en verde ANTES de desplegar las apps
 ```
 
 **Este orden no es una preferencia, y equivocarlo no da un error visible.** El código de este
-repo se escribe contra el esquema que va a haber —`database.types.ts` se edita a mano al escribir
-la migración para que el árbol compile antes del push—, así que `pnpm type-check` compila igual
+repo se escribe contra el esquema que va a haber —`database.types.ts` no se edita a mano: se genera
+con `pnpm db:types` desde la base local, que debe estar en la última migración, para que el árbol
+compile antes del push—, así que `pnpm type-check` compila igual
 contra un prod que todavía no tiene las columnas. Cuando las apps salen primero:
 
 - un `select` con una columna que no existe → PostgREST responde **400 por todo el select**, y el
