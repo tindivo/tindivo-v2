@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.checkout
 
 import com.tindivo.core.network.generated.model.ListCustomerAddresses200ResponseDataItemsInner
 import com.tindivo.core.network.generated.model.QuoteCheckout200ResponseData
+import com.tindivo.customer.feature.addresses.preferredAddress
 import java.math.BigDecimal
 
 enum class DeliveryChoice { Delivery, Pickup }
@@ -77,7 +78,7 @@ fun ListCustomerAddresses200ResponseDataItemsInner.toAddressUi(): AddressUi =
     )
 
 /** La dirección por defecto (`is_default`), o la primera si ninguna lo es. */
-fun List<AddressUi>.preferred(): AddressUi? = firstOrNull { it.isDefault } ?: firstOrNull()
+fun List<AddressUi>.preferred(): AddressUi? = preferredAddress { it.isDefault }
 
 /**
  * La cotización ya leída. Todo importe pasó por [parseApiAmount]: si alguno no tiene la forma del contrato no hay

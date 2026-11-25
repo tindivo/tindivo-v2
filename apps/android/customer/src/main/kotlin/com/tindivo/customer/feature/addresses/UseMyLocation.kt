@@ -11,38 +11,14 @@ import android.provider.Settings
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.tindivo.core.designsystem.TindivoColors
-import com.tindivo.core.designsystem.TindivoIcons
-import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.customer.R
 
 /** Los dos permisos de ubicación en tiempo de uso: la persona puede dar solo el aproximado y también sirve. */
@@ -50,21 +26,29 @@ private val LOCATION_PERMISSIONS =
     arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
 
 /**
- * «Usar mi ubicación»: el permiso se pide SOLO al tocarlo (al abrir el formulario no se pide nada, a diferencia de la
- * web). Sin Google Play services no se muestra. Si la persona sale del formulario, la lectura en curso se cancela;
- * girar la pantalla no cuenta como salir. Lo mismo si la app pasa a segundo plano (Inicio, pantalla bloqueada) con el
- * formulario aún compuesto: [onForegroundChanged] cancela la lectura y, al volver, no se pide otra sin un toque nuevo
- * (CAX-001). Es el mismo composable en la pantalla de Mi cuenta y en la hoja del checkout.
+ * Lo que la pantalla necesita para pedir la ubicación: [request] pide el permiso si falta y, con él, lanza UNA lectura;
+ * [canReadSilently] dice si el permiso ya está concedido (entonces se puede leer sin preguntar nada, D-E).
+ */
+internal class LocationRequester(
+    val available: Boolean,
+    val canReadSilently: () -> Boolean,
+    val request: () -> Unit,
+)
+
+/**
+ * «Usar mi ubicación»: el permiso se pide SOLO cuando la persona lo toca (nunca solo al abrir el mapa; con el permiso ya
+ * concedido sí se lee solo, sin diálogo). Sin Google Play services no se ofrece. Si la persona sale del formulario, la
+ * lectura en curso se cancela; girar la pantalla no cuenta como salir. Lo mismo si la app pasa a segundo plano (Inicio,
+ * pantalla bloqueada) con el formulario aún compuesto: [onForegroundChanged] cancela la lectura y, al volver, no se pide
+ * otra sin un toque nuevo (CAX-001). Es el mismo composable en la pantalla de Mi cuenta y en el formulario del checkout.
  */
 @Composable
-internal fun UseMyLocation(
+internal fun rememberLocationRequester(
     state: AddressFormState,
     onPermission: (LocationPermission) -> Unit,
     onLeave: () -> Unit,
     onForegroundChanged: (Boolean) -> Unit,
-) {
-    val locate = state.locate
-    if (!locate.available) return
+): LocationRequester {
     val context = LocalContext.current
     val activity = LocalActivity.current
     val leave = rememberUpdatedState(onLeave)
@@ -86,65 +70,23 @@ internal fun UseMyLocation(
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
             onPermission(permissionAnswer(grants, activity))
         }
-    val onClick = {
-        if (hasLocationPermission(context)) {
-            onPermission(LocationPermission.Granted)
-        } else {
-            launcher.launch(LOCATION_PERMISSIONS)
-        }
-    }
-    val label =
-        stringResource(if (locate.locating) R.string.address_form_locating else R.string.address_form_use_location)
-    val enabled = !locate.locating && !state.busy
-    FloatingLocate(label, enabled, onClick, locate.notice) { openAppSettings(context) }
-}
-
-/** «Usar mi ubicación» flotando sobre el mapa de pantalla completa: 56 dp, y el aviso en una tarjeta encima. */
-@Composable
-private fun FloatingLocate(
-    label: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    notice: LocateNotice?,
-    onOpenSettings: () -> Unit,
-) {
-    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (notice != null) {
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 4.dp,
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = stringResource(notice.messageRes()),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    )
-                    if (notice == LocateNotice.DeniedForever) {
-                        TextButton(onClick = onOpenSettings, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text(text = stringResource(R.string.address_form_locate_settings))
-                        }
-                    }
+    val permission = rememberUpdatedState(onPermission)
+    return remember(state.locate.available, context, launcher) {
+        LocationRequester(
+            available = state.locate.available,
+            canReadSilently = { hasLocationPermission(context) },
+            request = {
+                if (hasLocationPermission(context)) {
+                    permission.value(LocationPermission.Granted)
+                } else {
+                    launcher.launch(LOCATION_PERMISSIONS)
                 }
-            }
-        }
-        ExtendedFloatingActionButton(
-            onClick = { if (enabled) onClick() },
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = TindivoColors.brandText,
-            modifier =
-                Modifier.height(TindivoSpacing.primaryButtonHeight).semantics { if (!enabled) disabled() },
-        ) {
-            Icon(imageVector = TindivoIcons.Place, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = label)
-        }
+            },
+        )
     }
 }
 
-private fun LocateNotice.messageRes(): Int =
+internal fun LocateNotice.messageRes(): Int =
     when (this) {
         LocateNotice.Denied -> R.string.address_form_locate_denied
         LocateNotice.DeniedForever -> R.string.address_form_locate_denied_forever
@@ -153,7 +95,7 @@ private fun LocateNotice.messageRes(): Int =
         LocateNotice.Unavailable -> R.string.address_form_locate_unavailable
     }
 
-private fun hasLocationPermission(context: Context): Boolean =
+internal fun hasLocationPermission(context: Context): Boolean =
     LOCATION_PERMISSIONS.any { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
 
 /**
@@ -179,7 +121,7 @@ private fun permissionAnswer(
         }
     }
 
-private fun openAppSettings(context: Context) {
+internal fun openAppSettings(context: Context) {
     val intent =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

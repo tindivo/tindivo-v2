@@ -98,6 +98,15 @@ internal abstract class AddressHarness {
             "maxChange":null,"prepayTimers":null}}""",
         )
 
+    /** Como [configOk], pero con el umbral de precisión del GPS que dice `app_settings` (`location_validation`). */
+    protected fun configWithAccuracy(maxAccuracyM: Int) =
+        response(
+            200,
+            """{"data":{"coverage":{"centerLat":-9.1547,"centerLng":-78.5042,"radiusKm":3},"coveragePolygon":null,
+            "locationValidation":{"timeoutMs":15000,"maxAccuracyM":$maxAccuracyM,"normalRadiusKm":3,"warningRadiusKm":5},
+            "deliveryBands":null,"prepayThreshold":null,"maxCashBill":null,"maxChange":null,"prepayTimers":null}}""",
+        )
+
     protected fun addressList(vararg items: String) =
         response(200, """{"data":{"items":[${items.joinToString(",")}]}}""")
 
