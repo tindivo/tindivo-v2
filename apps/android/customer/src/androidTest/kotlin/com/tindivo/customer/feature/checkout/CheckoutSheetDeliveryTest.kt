@@ -284,7 +284,9 @@ class CheckoutSheetDeliveryTest {
         val checkoutRepository = CheckoutRepository(TEST_BASE_URL, api.client, io)
         models =
             ManualSheetModels(
-                newAddress = { id -> AddressFormViewModel(id, addresses, catalog, session, config, NoLocation) },
+                newAddress = { id ->
+                    AddressFormViewModel(id, addresses, catalog, session, config, NoLocation, NoStreets)
+                },
                 newPhone = {
                     val phones = PhoneRepository(TEST_BASE_URL, api.client, io)
                     PhoneVerifyViewModel(phones, session, config, Clock.systemUTC())

@@ -1,6 +1,7 @@
 package com.tindivo.customer.feature.addresses
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -20,12 +22,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -129,102 +134,43 @@ private fun AddressSteps(
     header: @Composable () -> Unit,
 ) {
     var onMap by rememberSaveable { mutableStateOf(state.point == null) }
+    // Si el mapa se abrió con «Cambiar», Atrás vuelve a los datos con lo escrito intacto y el punto de antes.
+    var fromChange by rememberSaveable { mutableStateOf(false) }
     // Atrás en los datos vuelve al mapa sin perder lo escrito (vive en el ViewModel); atrás en el mapa cierra como antes.
-    BackHandler(enabled = !onMap) { onMap = true }
+    BackHandler(enabled = !onMap) {
+        fromChange = false
+        onMap = true
+    }
+    // Sin punto (el formulario se rehízo tras morir el proceso) no hay datos a los que volver: Atrás cierra.
+    BackHandler(enabled = onMap && fromChange && state.point != null) {
+        actions.onCancelChange()
+        fromChange = false
+        onMap = false
+    }
     if (onMap) {
-        MapStep(state, actions, modifier, showCloseOnMap, onConfirm = { onMap = false })
-    } else {
-        DetailsStep(state, actions, modifier, header, onChangePoint = { onMap = true })
-    }
-}
-
-@Composable
-private fun MapStep(
-    state: AddressFormState,
-    actions: AddressFormActions,
-    modifier: Modifier,
-    showClose: Boolean,
-    onConfirm: () -> Unit,
-) {
-    val point = state.point
-    val outside = point != null && !state.area.contains(point)
-    val mapDescription = stringResource(R.string.address_form_map_description)
-    Box(modifier = modifier.fillMaxSize()) {
-        AddressMap(
-            area = state.area,
-            point = point,
-            located = state.locate.located,
-            onPointChosen = actions.onPointChosen,
-            modifier = Modifier.fillMaxSize().semantics { contentDescription = mapDescription },
+        MapStep(
+            state = state,
+            actions = actions,
+            modifier = modifier,
+            showClose = showCloseOnMap,
+            onConfirm = {
+                fromChange = false
+                actions.onPointConfirmed()
+                onMap = false
+            },
         )
-        Row(
-            modifier = Modifier.align(Alignment.TopStart).fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (showClose) {
-                Surface(shape = MaterialTheme.shapes.extraLarge, shadowElevation = 4.dp) {
-                    IconButton(onClick = actions.onCancel, modifier = Modifier.size(48.dp)) {
-                        Icon(TindivoIcons.Close, contentDescription = stringResource(R.string.address_form_cancel))
-                    }
-                }
-            }
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 4.dp,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(
-                    text = stringResource(R.string.address_step_map_hint),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).semantics { heading() },
-                )
-            }
-        }
-        Column(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
-            horizontalAlignment = Alignment.End,
-        ) {
-            Box(modifier = Modifier.padding(end = 16.dp, bottom = 12.dp)) {
-                UseMyLocation(
-                    state = state,
-                    onPermission = actions.onLocationPermission,
-                    onLeave = actions.onStopLocating,
-                    onForegroundChanged = actions.onForegroundChanged,
-                )
-            }
-            ConfirmPanel(outside = outside, enabled = point != null && !outside, onConfirm = onConfirm)
-        }
-    }
-}
-
-/** El botón fijo de abajo del mapa. Fuera de la zona de reparto lo dice y no deja confirmar. */
-@Composable
-private fun ConfirmPanel(
-    outside: Boolean,
-    enabled: Boolean,
-    onConfirm: () -> Unit,
-) {
-    Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp, modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.navigationBarsPadding().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (outside) {
-                Text(
-                    text = stringResource(R.string.address_form_outside_zone),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                )
-            }
-            TindivoPrimaryButton(
-                text = stringResource(R.string.address_step_confirm),
-                onClick = onConfirm,
-                enabled = enabled,
-            )
-        }
+    } else {
+        DetailsStep(
+            state = state,
+            actions = actions,
+            modifier = modifier,
+            header = header,
+            onChangePoint = {
+                actions.onBeginChange()
+                fromChange = true
+                onMap = true
+            },
+        )
     }
 }
 
@@ -239,9 +185,18 @@ private fun DetailsStep(
     var submitted by rememberSaveable { mutableStateOf(false) }
     val lineFocus = remember { FocusRequester() }
     val referenceFocus = remember { FocusRequester() }
-    // El foco va solo al primer campo vacío (y solo al llegar: girar la pantalla no vuelve a abrir el teclado).
-    val focusLine = remember { state.line.isBlank() }
-    val focusReference = remember { state.line.isNotBlank() && state.reference.isBlank() }
+    // El foco va solo al primer campo vacío, cuando termina la búsqueda de la calle (y solo al llegar: girar la pantalla
+    // no vuelve a abrir el teclado).
+    var focused by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.suggesting) {
+        if (!state.suggesting && !focused) {
+            focused = true
+            when {
+                state.line.isBlank() -> lineFocus.requestFocus()
+                state.reference.isBlank() -> referenceFocus.requestFocus()
+            }
+        }
+    }
     // «Guardar» siempre se puede tocar: si falta algo, lleva a ese campo y enseña el error.
     val trySave: () -> Unit = {
         submitted = true
@@ -260,20 +215,15 @@ private fun DetailsStep(
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            PointSummary(outside = state.missing == MissingField.OutsideZone, onChange = onChangePoint)
-            AddressLineField(
-                value = state.line,
-                onValueChange = actions.onLine,
-                label = stringResource(R.string.address_form_line),
-                placeholder = stringResource(R.string.address_form_line_placeholder),
-                enabled = !state.busy,
-                error = if (lineOk) null else stringResource(R.string.address_form_line_error),
-                submitted = submitted,
-                valid = lineOk,
-                maxLength = ADDRESS_LINE_MAX,
-                focusRequester = lineFocus,
-                autoFocus = focusLine,
+            PointSummary(
+                point = state.point,
+                outside = state.missing == MissingField.OutsideZone,
+                onChange = onChangePoint,
             )
+            StreetField(state, {
+                focused = true
+                actions.onLine(it)
+            }, lineFocus, submitted, lineOk)
             NoteField(
                 value = state.reference,
                 onValueChange = actions.onReference,
@@ -287,7 +237,6 @@ private fun DetailsStep(
                 imeAction = ImeAction.Done,
                 onImeAction = trySave,
                 focusRequester = referenceFocus,
-                autoFocus = focusReference,
             )
             PlacePicker(selected = state.label, enabled = !state.busy, onSelect = actions.onLabel)
             if (!state.hideDefaultSwitch) DefaultSwitch(state.makeDefault, !state.busy, actions.onMakeDefault)
@@ -308,29 +257,52 @@ private fun DetailsStep(
     }
 }
 
+/**
+ * «Calle y número»: mientras el geocodificador responde, un esqueleto; con su calle, el campo lleno y «Sugerida desde el
+ * mapa · edítala»; si solo llegó la localidad, el campo vacío y la petición de escribir la calle (CUS-ADR-016 a 018).
+ */
 @Composable
-private fun PointSummary(
-    outside: Boolean,
-    onChange: () -> Unit,
+private fun StreetField(
+    state: AddressFormState,
+    onLine: (String) -> Unit,
+    focus: FocusRequester,
+    submitted: Boolean,
+    lineOk: Boolean,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        if (outside) {
-            Text(
-                text = stringResource(R.string.address_form_outside_zone),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.weight(1f),
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        run {
+            AddressLineField(
+                value = state.line,
+                onValueChange = onLine,
+                label = stringResource(R.string.address_form_line),
+                placeholder = stringResource(R.string.address_form_line_placeholder),
+                enabled = !state.busy,
+                error = if (lineOk) null else stringResource(R.string.address_form_line_error),
+                submitted = submitted,
+                valid = lineOk,
+                maxLength = ADDRESS_LINE_MAX,
+                focusRequester = focus,
             )
-        } else {
-            Icon(TindivoIcons.Check, contentDescription = null, tint = TindivoColors.success)
-            Text(
-                text = stringResource(R.string.address_step_point_ok),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f).padding(start = 8.dp),
-            )
-        }
-        TextButton(onClick = onChange, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(text = stringResource(R.string.address_step_change_point))
+            val locality = state.localityOnly
+            if (state.suggesting) {
+                val searching = stringResource(R.string.address_street_searching)
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = searching },
+                )
+            } else if (state.lineSuggested && state.line.isNotBlank()) {
+                Text(
+                    text = stringResource(R.string.address_street_suggested),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (locality != null && state.line.isBlank()) {
+                Text(
+                    text = stringResource(R.string.address_street_locality, locality),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+            }
         }
     }
 }

@@ -159,9 +159,9 @@ private fun ChooseAddressSheet(
 }
 
 /**
- * Alta o corrección de una dirección, con el mapa dentro: abre a altura completa y sin arrastre, para que mover el
- * mapa no mueva la hoja. Se cierra con «Cerrar» o con atrás, salvo mientras guarda o borra: lo que el servidor
- * responda tiene que llegar al checkout.
+ * Alta o corrección de una dirección, con el mapa dentro: se abre a pantalla completa fuera de la hoja ([AddressFullScreen]),
+ * para que mover el mapa no pelee con el arrastre de una hoja. Se cierra con «Cerrar» o con atrás, salvo mientras guarda
+ * o borra: lo que el servidor responda tiene que llegar al checkout.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,35 +182,38 @@ internal fun AddressSheet(
         }
     }
     val title = if (editingId == null) R.string.checkout_sheet_add_title else R.string.checkout_sheet_edit_title
-    SheetFrame(
+    AddressFullScreen(
         title = stringResource(title),
-        onClose = actions.onClose,
         busy = form.busy,
+        onClose = actions.onClose,
         closeIfIdle = { viewModel.closeIfIdle().deliverPending(deliver) },
-        holdsMap = true,
-    ) {
-        Box(modifier = Modifier.weight(1f)) {
-            AddressFormContent(
-                state = form,
-                actions =
-                    AddressFormActions(
-                        onLabel = viewModel::onLabel,
-                        onLine = viewModel::onLine,
-                        onReference = viewModel::onReference,
-                        onMakeDefault = viewModel::onMakeDefault,
-                        onPointChosen = viewModel::onPointChosen,
-                        onLocationPermission = viewModel::onLocationPermission,
-                        onStopLocating = viewModel::stopLocating,
-                        onForegroundChanged = viewModel::onForegroundChanged,
-                        onSave = viewModel::save,
-                        onAskDelete = viewModel::askDelete,
-                        onCancelDelete = viewModel::cancelDelete,
-                        onConfirmDelete = viewModel::confirmDelete,
-                        onRetry = viewModel::load,
-                        onCancel = { if (viewModel.closeIfIdle().deliverPending(deliver)) actions.onClose() },
-                    ),
-            )
-        }
+    ) { header ->
+        AddressFormContent(
+            state = form,
+            actions =
+                AddressFormActions(
+                    onLabel = viewModel::onLabel,
+                    onLine = viewModel::onLine,
+                    onReference = viewModel::onReference,
+                    onMakeDefault = viewModel::onMakeDefault,
+                    onPointChosen = viewModel::onPointChosen,
+                    onLocationPermission = viewModel::onLocationPermission,
+                    onStopLocating = viewModel::stopLocating,
+                    onForegroundChanged = viewModel::onForegroundChanged,
+                    onSave = viewModel::save,
+                    onAskDelete = viewModel::askDelete,
+                    onCancelDelete = viewModel::cancelDelete,
+                    onConfirmDelete = viewModel::confirmDelete,
+                    onRetry = viewModel::load,
+                    onCancel = { if (viewModel.closeIfIdle().deliverPending(deliver)) actions.onClose() },
+                    onBeginChange = viewModel::beginChange,
+                    onCancelChange = viewModel::cancelChange,
+                    onPointConfirmed = viewModel::onPointConfirmed,
+                ),
+            modifier = Modifier.fillMaxSize(),
+            showCloseOnMap = true,
+            header = header,
+        )
     }
 }
 

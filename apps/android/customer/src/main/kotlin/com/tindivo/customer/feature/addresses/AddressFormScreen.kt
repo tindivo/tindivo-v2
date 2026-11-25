@@ -53,6 +53,9 @@ internal fun AddressFormDestination(
                 onConfirmDelete = viewModel::confirmDelete,
                 onRetry = viewModel::load,
                 onCancel = onDone,
+                onBeginChange = viewModel::beginChange,
+                onCancelChange = viewModel::cancelChange,
+                onPointConfirmed = viewModel::onPointConfirmed,
             ),
     )
 }
@@ -75,6 +78,12 @@ internal class AddressFormActions(
     val onConfirmDelete: () -> Unit,
     val onRetry: () -> Unit,
     val onCancel: () -> Unit,
+    /** La persona toca «Cambiar» en los datos: se guarda el punto de ahora por si vuelve con Atrás. */
+    val onBeginChange: () -> Unit = {},
+    /** Atrás en el mapa venido de «Cambiar»: vuelve el punto de antes. */
+    val onCancelChange: () -> Unit = {},
+    /** «Sí, aquí es mi puerta»: se pide la calle sugerida al geocodificador. */
+    val onPointConfirmed: () -> Unit = {},
 )
 
 @Composable

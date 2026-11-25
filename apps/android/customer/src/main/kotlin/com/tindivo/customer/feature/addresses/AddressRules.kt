@@ -59,3 +59,12 @@ internal fun missingField(
 /** Una coordenada para el cuerpo del PATCH/POST: como mucho 7 decimales, como `numeric(10,7)`. */
 internal fun Double.toWireCoordinate(): BigDecimal =
     BigDecimal.valueOf(this).setScale(COORDINATE_SCALE, RoundingMode.HALF_UP)
+
+private const val ACCURACY_SCALE = 1
+private const val ACCURACY_MAX_M = 100_000.0
+
+/** La precisión del GPS para el cuerpo del POST/PATCH (`accuracyM`, mayor que 0 y hasta 100 000 m); si no sirve, se omite. */
+internal fun Float?.toWireAccuracy(): BigDecimal? =
+    this?.toDouble()?.takeIf { it > 0.0 && it <= ACCURACY_MAX_M }?.let {
+        BigDecimal.valueOf(it).setScale(ACCURACY_SCALE, RoundingMode.HALF_UP)
+    }
