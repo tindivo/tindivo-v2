@@ -368,6 +368,7 @@ Para las apps nativas en desarrollo (D-14: nunca hablan con producción). Montad
 | API | Proyecto Vercel **aparte** `tindivo-api-staging` → `https://tindivo-api-staging.vercel.app` |
 | Datos de prueba | `pnpm db:seed:staging -- --env-file <secretos>/staging.env --out-dir <secretos>` (PR #77): el mundo e2e (2 negocios con menú y horario, 2 motorizados, 3 clientes; sin admin) |
 | Secretos | `C:\Users\<usuario>\tindivo-secretos` (`staging.env` y las carpetas `staging-credenciales-<fecha>\cuentas.md`; vale la más reciente) |
+| Catálogo de prueba | La misma semilla siembra 4 negocios con carta, portada y fotos (`seed-staging-catalog.ts`). **La apertura vale solo el día en que se corre** (`business_service_days`, 0154): para probar otro día, vuelve a correr la semilla. |
 
 **Vercel.** La rama de producción del proyecto es **`develop`** (*Settings › Environments › Production › Branch
 Tracking*). Las tres variables (`NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` como *Config*;
