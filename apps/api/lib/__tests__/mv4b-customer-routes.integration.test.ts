@@ -1277,6 +1277,46 @@ describe('POST /customer/checkout/quote · payment', () => {
         faults.state.rpcs = []
       })
 
+      /**
+       * Escribe `app_settings.<key>` con JSON CRUDO (PostgREST, sin pasar por `JSON.stringify`):
+       * es la única forma de dejar un número como `1e309`, que el cliente de JS reescribiría.
+       * Restaura el valor previo al terminar.
+       */
+      async function conSettingCrudo(key: string, crudo: string, fn: () => Promise<void>) {
+        const { data: previo } = await db
+          .from('app_settings')
+          .select('value')
+          .eq('key', key)
+          .single()
+        const servicio = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+        const res = await fetch(`${LOCAL_URL}/rest/v1/app_settings?key=eq.${key}`, {
+          method: 'PATCH',
+          headers: {
+            apikey: servicio,
+            Authorization: `Bearer ${servicio}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: `{"value": ${crudo}}`,
+        })
+        if (!res.ok)
+          throw new Error(`no se pudo escribir ${key}: ${res.status} ${await res.text()}`)
+        try {
+          await fn()
+        } finally {
+          await db
+            .from('app_settings')
+            .update({ value: previo?.value as never })
+            .eq('key', key)
+        }
+      }
+      const conUmbralCrudo = (crudo: string, fn: () => Promise<void>) =>
+        conSettingCrudo('prepay_threshold', crudo, fn)
+      const conBandasCrudo = (near: string, fn: () => Promise<void>) =>
+        conSettingCrudo('delivery_bands', `{"near": ${near}, "far": 2.5}`, fn)
+      const pedidosDe = async (c: Cliente) =>
+        (await db.from('orders').select('id').eq('customer_user_id', c.id)).data?.length ?? 0
+
       /** Crea con `pending_cash` con el fallo puesto SOLO durante el POST (la cotización va limpia). */
       async function crearConFallo(
         umbral: number,
@@ -1325,11 +1365,12 @@ describe('POST /customer/checkout/quote · payment', () => {
         expect(r.body.detail).toContain('(S/ 50.00) pasa de S/ 49.99')
       })
 
-      it.each([
-        ['la cadena "NaN"', 'NaN'],
-        ['un texto no numérico', 'abc'],
-        ['un booleano', true],
-      ])('umbral presente pero no numérico (%s): la guardia no corta con el respaldo 80; decide SQL', async (_n, valor) => {
+      // CIERRE ESTRUCTURAL (CAX-005, ciclo 3): la guardia solo rechaza con 403 si el umbral es
+      // un número JSON finito ordinario (o null/ausente: respaldo 80). Con CUALQUIER otro valor
+      // (cadena, aunque parezca un número; booleano; objeto; desbordado) se abstiene y decide
+      // la RPC. Estado y total esperados = lo que hace SQL con ese mismo valor
+      // (`(value #>> '{}')::numeric`), medido en la base local. Total del carrito: 98.00.
+      describe('umbral presente y no ordinario: la guardia se abstiene y decide SQL', () => {
         const dos = {
           items: [
             {
@@ -1339,83 +1380,106 @@ describe('POST /customer/checkout/quote · payment', () => {
             },
           ],
         }
-        const c = await clienteDeConfianza()
-        const { data: previo } = await db
-          .from('app_settings')
-          .select('value')
-          .eq('key', 'prepay_threshold')
-          .single()
-        await db
-          .from('app_settings')
-          .update({ value: valor as never })
-          .eq('key', 'prepay_threshold')
-        try {
-          const r = await crear(c, 'pending_cash', dos)
-          // Con un umbral no numérico la guardia HTTP no emite el 403 del respaldo 80: la
-          // RPC es la autoridad. (Con "NaN", SQL no rechaza: 98 > NaN es falso.)
-          expect(r.status, JSON.stringify(r.body)).not.toBe(403)
-          if (valor === 'NaN') {
-            expect(r.status, JSON.stringify(r.body)).toBe(201)
-            expect(await totalDelPedido(r.body.data.id)).toBe(9800)
-          }
-        } finally {
-          await db
-            .from('app_settings')
-            .update({ value: previo?.value as never })
-            .eq('key', 'prepay_threshold')
-        }
+        // [etiqueta, JSON crudo del umbral, estado esperado (lo que hace SQL), total guardado]
+        const casos: Array<[string, string, number, number | null]> = [
+          ['cadena "1e309" (finita en SQL, Infinity en JS)', '"1e309"', 201, 9800],
+          ['número JSON 1e309 (Infinity al leerlo en JS)', '1e309', 201, 9800],
+          ['cadena numérica "80"', '"80"', 422, null],
+          ['cadena numérica con espacios " 80 "', '" 80 "', 422, null],
+          ['cadena "1e3" (= 1000)', '"1e3"', 201, 9800],
+          ['hexadecimal "0x10" (SQL: 16)', '"0x10"', 422, null],
+          ['coma decimal "1,5"', '"1,5"', 500, null],
+          ['booleano true', 'true', 500, null],
+          ['objeto {}', '{}', 500, null],
+          ['texto "abc"', '"abc"', 500, null],
+          ['cadena vacía', '""', 500, null],
+          ['cadena "NaN" (SQL: 98 > NaN es falso)', '"NaN"', 201, 9800],
+          ['cadena "Infinity" (SQL: 98 > Infinity es falso)', '"Infinity"', 201, 9800],
+        ]
+        it.each(
+          casos,
+        )('%s [%s] -> exactamente %i (como SQL), sin 403 de la guardia', async (_n, crudo, estado, total) => {
+          const c = await clienteDeConfianza()
+          await conUmbralCrudo(crudo, async () => {
+            const r = await crear(c, 'pending_cash', dos)
+            expect(r.status, JSON.stringify(r.body)).toBe(estado)
+            if (total !== null) expect(await totalDelPedido(r.body.data.id)).toBe(total)
+            else expect(await pedidosDe(c)).toBe(0)
+            if (estado === 422) expect(r.body.detail).toContain('(S/ 98.00) pasa de')
+          })
+        })
+
+        // Controles con números normales (y el respaldo documentado): 403 exacto de la guardia.
+        it.each([
+          ['número 80', '80', 403],
+          ['número 97.99', '97.99', 403],
+          ['número 98 (98 > 98 es falso)', '98', 201],
+          ['número 150', '150', 201],
+        ])('control, umbral %s [%s] -> %i', async (_n, crudo, estado) => {
+          const c = await clienteDeConfianza()
+          await conUmbralCrudo(crudo, async () => {
+            const r = await crear(c, 'pending_cash', dos)
+            expect(r.status, JSON.stringify(r.body)).toBe(estado)
+            if (estado === 403) expect(r.body.detail).toContain('(S/ 98.00) pasa de')
+            else expect(await totalDelPedido(r.body.data.id)).toBe(9800)
+          })
+        })
       })
 
-      // CAX-006: una tarifa de banda PRESENTE pero que no es un número. SQL convierte
-      // `(v_bands ->> banda)::numeric` y falla antes de comparar nada; la guardia no puede
-      // rechazar con el respaldo (tarifa del negocio 3.00 -> 51.00).
-      describe('tarifa de banda presente pero mal formada (CAX-006)', () => {
-        const conBandas = async (valor: Record<string, unknown>, fn: () => Promise<void>) => {
-          const { data: previo } = await db
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'delivery_bands')
-            .single()
-          await db
-            .from('app_settings')
-            .update({ value: valor as never })
-            .eq('key', 'delivery_bands')
-          try {
-            await fn()
-          } finally {
-            await db
-              .from('app_settings')
-              .update({ value: previo?.value as never })
-              .eq('key', 'delivery_bands')
-          }
-        }
-        const pedidosDe = async (c: Cliente) =>
-          (await db.from('orders').select('id').eq('customer_user_id', c.id)).data?.length ?? 0
-
-        it.each([
-          ['texto', 'abc'],
-          ['cadena vacía', ''],
-          ['booleano', true],
-        ])('near = %s, negocio 3.00, 48.00, umbral 50.00: no hay 403 con 51.00; falla SQL y no se guarda pedido', async (_n, valor) => {
+      // CAX-006 y su cierre estructural: una tarifa de banda PRESENTE que no es un número JSON
+      // finito ordinario (cadena, booleano, objeto, desbordado) no habilita el 403 de la
+      // guardia; la RPC decide con SU conversión (`(v_bands ->> banda)::numeric`). Carrito de
+      // 48.00, tarifa del negocio 3.00 (el respaldo, que daría 51.00), umbral 50.00.
+      describe('tarifa de banda presente y no ordinaria: la guardia se abstiene (CAX-006)', () => {
+        // [etiqueta, JSON crudo de near, estado esperado (lo que hace SQL), total guardado | 0 = sin pedido | texto del 422]
+        const casos: Array<[string, string, number, number | string]> = [
+          ['cadena "1e309" (finita en SQL, desborda numeric(10,2))', '"1e309"', 500, 0],
+          ['número JSON 1e309 (Infinity al leerlo en JS)', '1e309', 500, 0],
+          ['cadena numérica "2.50": SQL la acepta, total 50.50', '"2.50"', 422, '(S/ 50.50)'],
+          ['cadena numérica " 2.5 "', '" 2.5 "', 422, '(S/ 50.50)'],
+          ['cadena numérica "1.5": SQL la acepta, total 49.50', '"1.5"', 201, 4950],
+          ['hexadecimal "0x10" (SQL: 16, total 64.00)', '"0x10"', 422, '(S/ 64.00)'],
+          ['coma decimal "1,5"', '"1,5"', 500, 0],
+          ['texto "abc"', '"abc"', 500, 0],
+          ['cadena vacía', '""', 500, 0],
+          ['booleano true', 'true', 500, 0],
+          ['objeto {}', '{}', 500, 0],
+          ['cadena "NaN": SQL la acepta y NaN > 50.00 es verdadero', '"NaN"', 422, '(S/ NaN)'],
+          ['cadena "Infinity": no cabe en numeric(10,2)', '"Infinity"', 500, 0],
+        ]
+        it.each(
+          casos,
+        )('near = %s [%s] -> exactamente %i (como SQL), sin 403 con 51.00', async (_n, crudo, estado, esperado) => {
           const c = await clienteDeConfianza()
-          await conBandas({ near: valor, far: 2.5 }, async () => {
+          await conBandasCrudo(crudo, async () => {
             await conUmbral(50, async () => {
               const r = await crear(c, 'pending_cash')
-              expect(r.status, JSON.stringify(r.body)).not.toBe(403)
+              expect(r.status, JSON.stringify(r.body)).toBe(estado)
               expect(JSON.stringify(r.body)).not.toContain('51.00')
-              // La conversión a numeric falla en la RPC y el error sube como 500.
-              expect(r.status, JSON.stringify(r.body)).toBe(500)
-              expect(await pedidosDe(c)).toBe(0)
+              if (typeof esperado === 'string') expect(r.body.detail).toContain(esperado)
+              else if (esperado === 0) expect(await pedidosDe(c)).toBe(0)
+              else expect(await totalDelPedido(r.body.data.id)).toBe(esperado)
             })
           })
         })
 
         it.each([
-          ['near = null', { near: null, far: 2.5 }],
-          ['sin la clave near', { far: 2.5 }],
-        ])('%s (ausente de verdad): cae a la tarifa del negocio 3.00, total 51.00 y la guardia sí corta con 403', async (_n, bandas) => {
+          ['near = null', '{"near": null, "far": 2.5}'],
+          ['sin la clave near', '{"far": 2.5}'],
+        ])('%s (ausente de verdad): cae a la tarifa del negocio 3.00, total 51.00 y la guardia sí corta con 403', async (_n, objeto) => {
           const c = await clienteDeConfianza()
-          await conBandas(bandas, async () => {
+          await conSettingCrudo('delivery_bands', objeto, async () => {
+            await conUmbral(50, async () => {
+              const r = await crear(c, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).toBe(403)
+              expect(r.body.detail).toContain('(S/ 51.00) pasa de')
+            })
+          })
+        })
+
+        it('control, tarifa numérica normal 3.00: total 51.00, 403 exacto de la guardia', async () => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo('3', async () => {
             await conUmbral(50, async () => {
               const r = await crear(c, 'pending_cash')
               expect(r.status, JSON.stringify(r.body)).toBe(403)

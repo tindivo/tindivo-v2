@@ -6,33 +6,44 @@ export const cents = (soles: number): number => Math.round(soles * 100)
 export type DeliveryBand = (typeof DISTANCE_BANDS)[number]
 
 export interface NominalDeliveryFee {
-  /** La tarifa nominal del envío, en céntimos, antes de promociones. */
+  /** La tarifa nominal del envío, en céntimos, antes de promociones. Siempre finita. */
   cents: number
   /**
-   * `false` si la configuración de las tarifas está PRESENTE pero mal formada (la tarifa de
-   * la banda no es un número, o `delivery_bands` no es un objeto). Entonces `cents` es un
-   * respaldo de PINTADO: quien quiera RECHAZAR con él no debe, porque `create_customer_order`
-   * convierte ese valor a `numeric` y falla antes de comparar nada.
+   * `true` solo si TODO lo que se leyó para calcularla es un número JSON finito ordinario o
+   * está ausente / es `null` (el respaldo documentado). `false` si la configuración está
+   * PRESENTE pero es otra cosa (cadena, aunque parezca un número; booleano; objeto; número
+   * que desborda; `delivery_bands` que no es un objeto): entonces `cents` es un respaldo de
+   * PINTADO y quien quiera RECHAZAR con él no debe; decide `create_customer_order`, que
+   * convierte a su manera (`numeric`) y puede aceptar, rechazar o fallar donde JavaScript
+   * no lo sabe.
    */
   reliable: boolean
 }
 
-const SQL_NUMERIC = /^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/
+/**
+ * ¿Es un número JSON finito ordinario? Es la ÚNICA condición con la que la guardia HTTP del
+ * umbral puede rechazar (403). Las cadenas no cuentan aunque parezcan números (`"80"`,
+ * `"1e309"`): JavaScript y PostgreSQL las convierten distinto. `NaN` e `Infinity` tampoco
+ * (un `1e309` escrito como número JSON llega aquí como `Infinity`).
+ */
+export const isPlainNumber = (v: unknown): v is number =>
+  typeof v === 'number' && Number.isFinite(v)
+
+const NUMERIC_TEXT = /^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/
 
 /**
- * ¿Es un número finito, o una cadena que `::numeric` de SQL convierte a un número finito?
- * (`NaN`, `Infinity`, texto, cadena vacía, hexadecimal y booleanos no lo son: en SQL fallan o
- * no se comportan como un número ordinario.) Lo usan la tarifa de banda y el umbral de prepago.
+ * Solo para PINTAR (nunca para rechazar): el número que una cadena numérica ya daba en la
+ * cotización antes de este cierre, o `NaN` si no es una cadena numérica de valor finito.
  */
-export const isSqlNumeric = (v: unknown): boolean =>
-  (typeof v === 'number' && Number.isFinite(v)) || (typeof v === 'string' && SQL_NUMERIC.test(v))
+const paintable = (v: unknown): number =>
+  typeof v === 'string' && NUMERIC_TEXT.test(v) ? Number(v) : Number.NaN
 
 /**
  * La tarifa nominal del envío. Mismo orden que `create_customer_order` (0283:233): la tarifa
  * de la banda en `app_settings.delivery_bands`, luego la tarifa del negocio y por último
- * S/ 2.00. Solo la clave AUSENTE o `null` cae al respaldo (en SQL, `(v_bands ->> banda)::numeric`
- * da null); un valor presente que no es un número (texto, cadena vacía, booleano) hace fallar
- * la conversión en SQL, así que aquí queda marcado como no fiable. Es la única copia en
+ * S/ 2.00. Solo la clave AUSENTE o `null` cae al respaldo con `reliable: true`. Un valor
+ * presente que no es un número ordinario se pinta como antes (una cadena numérica finita da
+ * su valor; lo demás, el respaldo) pero queda `reliable: false`. Es la única copia en
  * TypeScript: la usan la cotización y la guardia del umbral de la creación (DES-5).
  */
 export function nominalDeliveryFee(
@@ -48,15 +59,23 @@ export function nominalDeliveryFee(
     } else {
       const raw = (bandsSetting as Record<string, unknown>)[band]
       if (raw !== null && raw !== undefined) {
-        if (isSqlNumeric(raw)) fromBands = Number(raw)
-        else reliable = false
+        if (isPlainNumber(raw)) fromBands = raw
+        else {
+          reliable = false
+          fromBands = paintable(raw)
+        }
       }
     }
   }
-  const fee = Number.isFinite(fromBands)
-    ? fromBands
-    : businessDeliveryFee != null
-      ? Number(businessDeliveryFee)
-      : 2
+  let fee = fromBands
+  if (!Number.isFinite(fee)) {
+    if (businessDeliveryFee === null || businessDeliveryFee === undefined) fee = 2
+    else if (isPlainNumber(businessDeliveryFee)) fee = businessDeliveryFee
+    else {
+      reliable = false
+      const text = paintable(businessDeliveryFee)
+      fee = Number.isFinite(text) ? text : 2
+    }
+  }
   return { cents: cents(fee), reliable }
 }

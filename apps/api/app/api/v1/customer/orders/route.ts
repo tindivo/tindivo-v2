@@ -1,4 +1,4 @@
-import { cents, isSqlNumeric, quoteDelivery } from '@tindivo/backend/ordering'
+import { cents, isPlainNumber, quoteDelivery } from '@tindivo/backend/ordering'
 import { CreateOrderRequestSchema, getOpenStatus, parseClientContext } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { listCustomerOrders } from '@/lib/customer/history'
@@ -194,12 +194,12 @@ export async function POST(req: Request): Promise<Response> {
         .eq('key', 'prepay_threshold')
         .maybeSingle()
       const rawThreshold = thresholdSetting?.value
-      const thresholdValue = Number(rawThreshold ?? 80)
-      const threshold = Number.isFinite(thresholdValue) ? thresholdValue : 80
-      // Ausente o null: el respaldo 80 (como `create_customer_order`). PRESENTE pero que no es
-      // un número finito ("NaN", texto, booleano): lo que SQL haga con ese valor no lo sabemos
-      // aquí, así que el respaldo no puede servir para RECHAZAR; decide la RPC.
-      const thresholdMalformed = rawThreshold != null && !isSqlNumeric(rawThreshold)
+      // Solo un número JSON finito ordinario habilita el 403; ausente o null: el respaldo 80
+      // (como `create_customer_order`). CUALQUIER otro valor (cadena, aunque parezca un número
+      // como "80" o "1e309"; booleano; objeto; NaN; Infinity) es una configuración que
+      // JavaScript y PostgreSQL leen distinto: la guardia se abstiene y decide la RPC.
+      const thresholdMalformed = rawThreshold != null && !isPlainNumber(rawThreshold)
+      const threshold = isPlainNumber(rawThreshold) ? rawThreshold : 80
 
       const itemIds = body.items.map((i) => i.menuItemId)
       const modifierIds = body.items.flatMap((i) => i.modifiers || [])
