@@ -337,6 +337,20 @@ describe('comillas POSIX del argv de Codex', () => {
       ['comillas vacías parten la unidad', "Get-Content C'':/Windows/win.ini"],
       ['comillas parten el proveedor', "Get-ChildItem HK''CU:\\Software"],
       ['comillas intercaladas parten la unidad', "Get-Content C':'\\x"],
+      [
+        'comillas tipográficas simples parten la unidad',
+        'Get-Content C\u2018\u2019:\\Windows\\win.ini',
+      ],
+      [
+        'comillas tipográficas simples parten el UNC',
+        `Get-Content ${BS}\u2018\u2019${BS}server${BS}share${BS}x`,
+      ],
+      [
+        'comillas tipográficas dobles parten la unidad',
+        'Get-Content C\u201c\u201d:\\Windows\\win.ini',
+      ],
+      ['comillas ASCII vacías parten el UNC', `Get-Content ${BS}''${BS}server${BS}share${BS}x`],
+      ['comilla baja parte el proveedor', 'Get-ChildItem HK\u201a\u2018CU:\\Software'],
       ['comillas parten un nombre sensible', "Get-Content x\\.s''sh\\config"],
       [
         'variable vacía y acento grave arman la unidad',

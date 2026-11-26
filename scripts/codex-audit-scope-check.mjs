@@ -98,23 +98,33 @@ function decodePosix(text) {
  * `C'':/W` llega como `C:/W` y `HK''CU:` como `HKCU:`. Un tramo que empieza tras un espacio, un
  * delimitador o el inicio conserva sus comillas (es un argumento propio o una cadena).
  */
+const PS_SINGLE = /['‘’‚‛]/
+const PS_DOUBLE = /["“”„]/
+const PS_QUOTE = /['"‘’‚‛“”„]/
 function stripGluedQuotes(text) {
   let out = ''
   let i = 0
   while (i < text.length) {
     const c = text[i]
-    if (c !== "'" && c !== '"') {
+    // PowerShell también trata como comillas las tipográficas (U+2018–U+201F en lo que importa aquí).
+    const kind = PS_SINGLE.test(c) ? PS_SINGLE : PS_DOUBLE.test(c) ? PS_DOUBLE : null
+    if (kind === null) {
       out += c
       i++
       continue
     }
-    const close = text.indexOf(c, i + 1)
+    let close = -1
+    for (let k = i + 1; k < text.length; k++)
+      if (kind.test(text[k])) {
+        close = k
+        break
+      }
     if (close < 0) {
       out += text.slice(i)
       break
     }
     const prev = out.at(-1)
-    const glued = prev !== undefined && !/[\s'"(){};,|&]/.test(prev)
+    const glued = prev !== undefined && !/[\s(){};,|&]/.test(prev) && !PS_QUOTE.test(prev)
     out += glued ? text.slice(i + 1, close) : text.slice(i, close + 1)
     i = close + 1
   }
