@@ -32,13 +32,13 @@
 | Strikes: 2 → solo prepago; 3 → 30 días sin pedir; recojo ya pagado no genera strike | `Docs/negocio/antifraude.md` «Cómo se decide…» y «Strikes» |
 | Los strikes dejan de contar a los 24 meses | `Docs/operacion/retencion-de-datos.md` (fila «Strikes antifraude», migración 0286); Jesús, 2026-11-26 (punto 13): vale cuando la 0286 llegue a prod |
 | Destinatario ausente: el motorizado espera 5 minutos y prioriza otras entregas; si nadie se comunica hasta las 23:00, «cliente no habido» y strike | Jesús, 2026-11-26 (punto 6). **Función por implementar** (`Docs/trabajo/backlog.md`) |
-| Entregas, cliente no habido: el objeto vuelve a quien lo envió sin cobrar la vuelta; sin ubicar a nadie, Tindivo lo guarda 7 días; la comida no se guarda; los S/ 3 de la ida se pagan | Jesús, 2026-11-26 (propuesta 2). **Estados de retorno y custodia por implementar** |
-| Entregas: de A a B algo ya coordinado y pagado; 18:00 a 23:00; mochila 45×45×45; límite de peso `courier.maxWeightKg`; un envío activo por celular | `Docs/negocio/servicios/entregas.md`; ADR 0035; `Docs/producto/entregas/capacidad.md` CUS-ENT-002, 008, 012 (PR #199) |
+| Entregas, cliente no habido: el objeto vuelve a quien lo envió sin cobrar la vuelta; sin ubicar a nadie, Tindivo lo guarda 7 días; la comida no se guarda; el transporte de la ida se paga | Jesús, 2026-11-26 (propuesta 2). **Estados de retorno y custodia por implementar** |
+| Entregas: de A a B algo ya coordinado y pagado; 18:00 a 23:00; mochila del motorizado (sin medida en centímetros); límite de peso `courier.maxWeightKg`; un envío activo por celular | `Docs/negocio/servicios/entregas.md`; ADR 0035; `Docs/producto/entregas/capacidad.md` CUS-ENT-002, 008, 012 (PR #199) |
 | Entregas: lista de prohibidos como la de inDrive, más animales vivos y objetos robados | `Docs/negocio/servicios/entregas.md` «Qué se lleva y qué no» (decisiones 2026-11-17 y 2026-11-19) |
 | Medicamentos: sin mención especial; Tindivo solo lleva lo ya comprado y quien envía responde de que esté permitido | Jesús, 2026-11-26 (punto 5) |
 | La comida sí va por Entregas | `Docs/negocio/servicios/entregas.md` «Reglas al pedir» (decisión 2026-11-11) |
 | Si nadie acepta en el plazo de la app, se cancela sin cobro | `Docs/negocio/servicios/entregas.md` «El motorizado»; CUS-ENT-016, 017 (PR #199) |
-| Entregas, daños y pérdidas: Tindivo responde ante el cliente y lo arregla con el motorizado; tope S/ 200 por envío más los S/ 3; reclamo en 24 h con foto | Jesús, 2026-11-26 (propuesta 3); `Docs/negocio/servicios/entregas.md` (actualizado en este PR). **A la lista del abogado** |
+| Entregas, daños y pérdidas: Tindivo responde ante el cliente y lo arregla con el motorizado; tope S/ 200 por envío más la devolución del transporte; reclamo en 24 h con foto | Jesús, 2026-11-26 (propuesta 3); `Docs/negocio/servicios/entregas.md` (actualizado en este PR). **A la lista del abogado** |
 | Alcohol y tabaco en pedidos de restaurante: el motorizado puede pedir DNI; si eres menor o no lo muestras, eso no se entrega y se devuelve lo pagado por eso | Jesús, 2026-11-26 (propuesta 4). **Marca +18 en `menu_items` por implementar** |
 | La boleta de la comida la da el negocio; de Entregas y Store no se dice nada | Jesús, 2026-11-26 (punto 8) |
 | Store: piezas de segunda mano, vende Jesús, se cierra por WhatsApp, sin cobro en la plataforma | `Docs/negocio/servicios/store.md`; `DECISIONS.md` §32 |
@@ -138,7 +138,7 @@ cada envío confirmas que el contenido **ya está pagado** y que **está permiti
 lunes a domingo, de **18:00 a 23:00** (hora de Lima), si el servicio está encendido. Puedes tener **un envío activo**
 por celular.
 
-**5.2. Qué se lleva.** Lo que cabe en una mochila de **45 × 45 × 45 cm** y no pasa del peso que indica la app. Se
+**5.2. Qué se lleva.** Lo que cabe en la mochila del motorizado y no pasa del peso que indica la app. Se
 permiten documentos y comida.
 
 **5.3. Qué no se lleva.** Lo mismo que no lleva inDrive: alcohol, tabaco y vapeadores; joyas, metales y piedras
@@ -158,10 +158,10 @@ habido»** y quien lo pidió recibe un **strike** (cláusula 7).
 
 - El objeto **vuelve a quien lo envió**, y **no te cobramos la vuelta**.
 - Si no se ubica a nadie, Tindivo **guarda el objeto 7 días**. **La comida no se guarda.**
-- Los **S/ 3 de la ida sí se pagan**. Si los iba a pagar el destinatario, los paga quien envió cuando recupera el objeto.
+- **El transporte de la ida sí se paga**. Si lo iba a pagar el destinatario, lo paga quien envió cuando recupera el objeto.
 
 **5.7. Daños y pérdidas.** Si el objeto se daña o se pierde en el camino, **Tindivo responde ante ti** y después lo
-arregla con el motorizado. Respondemos hasta **S/ 200 por envío**, más la devolución de los **S/ 3** del transporte.
+arregla con el motorizado. Respondemos hasta **S/ 200 por envío**, más la devolución de lo que pagaste por el transporte.
 Reclama dentro de **24 horas**, por el WhatsApp de soporte y con una **foto**. **No envíes cosas que valgan más.**
 
 **5.8. Store.** Store muestra piezas únicas de segunda mano vendidas por Jesús. No hay carrito ni cobro en la app:
@@ -189,7 +189,7 @@ El negocio revisa el pago: subir la imagen no significa que ya se verificó. La 
 de cocinar. Tindivo decide qué formas de pago tienes según cada caso y la app te las muestra antes de confirmar.
 
 **7.2. Strikes.** Si el motorizado llega y no apareces, y espera el tiempo que indica la app, puede reportarlo y recibes
-un **strike**. También si no vienes a un recojo (si el recojo estaba pagado, no hay strike) o si tu envío queda como
+un **strike** (una falta). También si no vienes a un recojo (si el recojo estaba pagado, no hay strike) o si tu envío queda como
 «cliente no habido» (cláusula 5.6). Con **dos strikes** solo puedes pedir con prepago. Con **tres**, no puedes pedir por
 **treinta días**. Los strikes se vinculan a tu teléfono y, en entregas, a la dirección. Dejan de contar a los **24
 meses**. Si crees que un strike es un error, escríbenos. Si eres menor, tu mamá, papá o apoderado puede escribirnos para
@@ -315,6 +315,8 @@ Lo que sigue abierto. Nada de esto se resolvió por iniciativa del redactor.
    edad mínima»; ese cambio de producto no se hizo en este PR.
 6. **Strikes a 24 meses** (7.2): el texto vale cuando la migración 0286 corra en `tindivo-prod`.
 7. **Anexo de Apple**: contrastar con la guía vigente cuando empiece iOS.
+8. **Quién absorbe el transporte devuelto** (5.7, 8.4): Tindivo devuelve una tarifa que cobró el motorizado (DA-26 en `Docs/trabajo/decisiones-abiertas.md`).
+9. **Anexo de Google Play** (B.1, B.2): suavizar «Google no responde» y «rigen las condiciones de Google Play», que Tindivo no puede imponer.
 
 **Por implementar (backlog, `Docs/trabajo/backlog.md`)**
 
@@ -329,4 +331,5 @@ cuenta); marca +18 en `menu_items`; el choque de `drinks_liquor` con la lista de
 - La **venta de Store a menores** por WhatsApp.
 - El **Libro de Reclamaciones**.
 - El **alcohol por delivery**.
+- La cláusula 2.2 («Tindivo se encarga de que el negocio cumpla con tu entrega»): suena a obligación de resultado, aunque no diga «garantiza».
 - Contrastar con el art. 23 del D.S. 016-2024-JUS la frase «no nos des datos de tus papás ni de otras personas».
