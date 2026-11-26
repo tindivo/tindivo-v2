@@ -3,7 +3,7 @@
 // (Auth, Edge Functions, nombres de secretos, API, red). Solo GET a la API de gestión de Supabase.
 //
 //   stdout  un tar con un JSON por consulta (va directo a gpg)
-//   stderr  qué consultas respondieron, sin contenido
+//   stderr  qué consultas respondieron, sin contenido, y ESTADO=COMPLETA o ESTADO=PARCIAL
 //
 // El token personal llega por TINDIVO_MGMT_TOKEN. Los valores secretos se tachan ANTES de empaquetar:
 // el inventario dice que existen, no cuánto valen.
@@ -16,39 +16,55 @@ const API = 'https://api.supabase.com'
 export const TACHADO = '[TACHADO: hay un valor]'
 const CLAVE_SENSIBLE =
   /(secret|password|passwd|pass$|_pass_|token|private|credential|jwt|otp|(^|_)keys?($|_)|api_?key|hash|salt|dsn|connection_?string)/i
-
-export const CONSULTAS = [
-  ['proyecto', ''],
-  ['auth', '/config/auth'],
-  ['edge-functions', '/functions'],
-  ['secretos-nombres', '/secrets'],
-  ['postgrest', '/postgrest'],
-  ['storage', '/config/storage'],
-  ['pooler', '/config/database/pooler'],
-  ['restricciones-de-red', '/network-restrictions'],
-  ['ssl-obligatorio', '/ssl-enforcement'],
-  ['respaldos-de-la-plataforma', '/database/backups'],
-]
-
 // Claves que suenan a secreto pero solo dicen cómo está configurado algo (una URI de hook, un límite, un interruptor).
 const CLAVE_DE_CONFIGURACION = /(_uri|_url|_enabled|_characters|_length|_exp|_id|_algorithm)$/i
 
-/** Tacha todo valor de texto cuya clave suene a secreto. Deja números, booleanos y vacíos (dicen si está configurado). */
-export function tachar(valor, clave = '') {
-  if (Array.isArray(valor)) return valor.map((v) => tachar(v, clave))
-  if (valor && typeof valor === 'object') {
-    return Object.fromEntries(Object.entries(valor).map(([k, v]) => [k, tachar(v, k)]))
-  }
-  if (typeof valor === 'string' && valor !== '' && CLAVE_SENSIBLE.test(clave) && !CLAVE_DE_CONFIGURACION.test(clave)) {
+// [nombre, sufijo, obligatoria]. Una consulta obligatoria que no responde 200 deja el inventario PARCIAL.
+// En una opcional, solo un 404 («este proyecto no tiene eso») cuenta como «no aplica»; cualquier otro fallo, PARCIAL.
+export const CONSULTAS = [
+  ['proyecto', '', true],
+  ['auth', '/config/auth', true],
+  ['edge-functions', '/functions', true],
+  ['secretos-nombres', '/secrets', true],
+  ['postgrest', '/postgrest', true],
+  ['storage', '/config/storage', false],
+  ['pooler', '/config/database/pooler', false],
+  ['restricciones-de-red', '/network-restrictions', false],
+  ['ssl-obligatorio', '/ssl-enforcement', false],
+  ['respaldos-de-la-plataforma', '/database/backups', false],
+]
+
+/** Si el texto es una URL con usuario, contraseña, parámetros o fragmento, deja solo origen y ruta. */
+export function limpiarUrl(texto) {
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(texto)) return texto
+  let url
+  try {
+    url = new URL(texto)
+  } catch {
     return TACHADO
   }
-  return valor
+  if (!url.username && !url.password && !url.search && !url.hash) return texto
+  return `${url.protocol}//${url.host}${url.pathname} [credenciales o parámetros tachados]`
+}
+
+/**
+ * Tacha todo valor de texto cuya clave suene a secreto. La sospecha se hereda hacia abajo: dentro de una clave
+ * sensible se tacha todo texto, se llame como se llame. Deja números, booleanos y vacíos (dicen si está configurado).
+ */
+export function tachar(valor, clave = '', heredado = false) {
+  const sensible = heredado || (CLAVE_SENSIBLE.test(clave) && !CLAVE_DE_CONFIGURACION.test(clave))
+  if (Array.isArray(valor)) return valor.map((v) => tachar(v, '', sensible))
+  if (valor && typeof valor === 'object') {
+    return Object.fromEntries(Object.entries(valor).map(([k, v]) => [k, tachar(v, k, sensible)]))
+  }
+  if (typeof valor !== 'string' || valor === '') return valor
+  return sensible ? TACHADO : limpiarUrl(valor)
 }
 
 /** De la lista de secretos de las funciones solo se conserva el nombre. */
 export function soloNombres(lista) {
-  if (!Array.isArray(lista)) return { aviso: 'respuesta inesperada', tipo: typeof lista }
-  return lista.map((s) => ({ name: s?.name ?? null, updated_at: s?.updated_at ?? null }))
+  if (!Array.isArray(lista)) throw new Error('forma inesperada')
+  return lista.map((s) => ({ name: typeof s?.name === 'string' ? s.name : null, updated_at: s?.updated_at ?? null }))
 }
 
 /**
@@ -60,40 +76,70 @@ export async function inventariar({ ref, token, salida, avisar = () => {}, fetch
   const tar = crearEscritorTar(salida)
   const cabeceras = { authorization: `Bearer ${token}`, accept: 'application/json' }
   const estados = {}
-  for (const [nombre, sufijo] of CONSULTAS) {
+  const pendientes = []
+  for (const [nombre, sufijo, obligatoria] of CONSULTAS) {
     const url = new URL(`${API}/v1/projects/${ref}${sufijo}`)
-    let registro
+    // Los mensajes de error son fijos: nunca se copia el texto de una respuesta ni el de un error de análisis.
+    let registro = { consulta: url.pathname, status: null, datos: null }
+    let estado
     try {
       const { status, cuerpo } = await soloGet(url, cabeceras, { fetchImpl, esperar, timeoutMs: 30_000 })
-      estados[nombre] = status
+      registro.status = status
       if (status === 200) {
-        const json = JSON.parse(cuerpo.toString('utf8'))
-        const datos = nombre === 'secretos-nombres' ? soloNombres(json) : tachar(json)
-        registro = { consulta: url.pathname, status, datos }
+        let json
+        try {
+          json = JSON.parse(cuerpo.toString('utf8'))
+        } catch {
+          json = undefined
+        }
+        if (json === undefined || json === null || typeof json !== 'object') {
+          estado = 'respuesta_no_valida'
+        } else {
+          try {
+            registro.datos = nombre === 'secretos-nombres' ? soloNombres(json) : tachar(json)
+            estado = 'ok'
+          } catch {
+            estado = 'respuesta_no_valida'
+          }
+        }
+      } else if (status === 404 && !obligatoria) {
+        estado = 'no_aplica'
       } else {
-        registro = { consulta: url.pathname, status, datos: null }
+        estado = `http_${status}`
       }
-    } catch (err) {
-      estados[nombre] = 'error'
-      registro = { consulta: url.pathname, status: null, error: err.message, datos: null }
+    } catch {
+      estado = 'error_de_red'
     }
-    avisar(`${nombre}: ${estados[nombre]}`)
+    registro = { ...registro, estado, obligatoria }
+    estados[nombre] = estado
+    if (estado !== 'ok' && estado !== 'no_aplica') pendientes.push(nombre)
+    avisar(`${nombre}: ${estado}`)
     await tar.agregar(`config/${nombre}.json`, Buffer.from(`${JSON.stringify(registro, null, 1)}\n`, 'utf8'))
   }
-  if (estados.proyecto !== 200 || estados.auth !== 200) {
+  if (estados.proyecto !== 'ok' || estados.auth !== 'ok') {
     throw new Error('la API de gestión no devolvió el proyecto o la configuración de Auth (¿token sin permiso o vencido?)')
   }
-  const manifiestoSha256 = await tar.cerrar({ tipo: 'config', ref, tomado_utc: new Date().toISOString(), estados })
-  return { estados, manifiestoSha256 }
+  const completa = pendientes.length === 0
+  const manifiestoSha256 = await tar.cerrar({
+    tipo: 'config',
+    ref,
+    tomado_utc: new Date().toISOString(),
+    completa,
+    pendientes,
+    estados,
+  })
+  return { estados, completa, pendientes, manifiestoSha256 }
 }
 
 async function principal() {
   const avisar = (m) => console.error(`[config] ${m}`)
   try {
     const token = tomarCredencial('TINDIVO_MGMT_TOKEN')
-    const { manifiestoSha256 } = await inventariar({ ref: process.argv[2], token, salida: process.stdout, avisar })
-    await new Promise((r) => process.stdout.end(r))
-    avisar(`MANIFEST_SHA256=${manifiestoSha256}`)
+    const r = await inventariar({ ref: process.argv[2], token, salida: process.stdout, avisar })
+    await new Promise((res) => process.stdout.end(res))
+    if (!r.completa) avisar(`faltan consultas: ${r.pendientes.join(', ')}`)
+    avisar(`ESTADO=${r.completa ? 'COMPLETA' : 'PARCIAL'}`)
+    avisar(`MANIFEST_SHA256=${r.manifiestoSha256}`)
   } catch (err) {
     avisar(`ERROR: ${err.message}`)
     process.exit(1)

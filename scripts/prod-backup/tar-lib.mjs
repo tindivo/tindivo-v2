@@ -65,6 +65,7 @@ export async function verificarTar(entrada) {
   let manifiesto = null
   let actual = null
   let terminado = false
+  let n = 0 // los errores nombran la entrada por su número: el contenido de un tar dañado no se copia a un mensaje
   for await (const trozo of entrada) {
     pendiente = pendiente.length ? Buffer.concat([pendiente, trozo]) : trozo
     while (!terminado) {
@@ -79,7 +80,8 @@ export async function verificarTar(entrada) {
         if (h.toString('ascii', 257, 262) !== 'ustar') throw new Error('no es un tar de esta herramienta')
         const ruta = h.toString('utf8', 0, 100).replace(/\0.*$/, '')
         const bytes = Number.parseInt(h.toString('ascii', 124, 135), 8)
-        if (!Number.isSafeInteger(bytes) || bytes < 0) throw new Error(`tamaño inválido en ${ruta}`)
+        n++
+        if (!Number.isSafeInteger(bytes) || bytes < 0) throw new Error(`tamaño inválido en la entrada ${n}`)
         actual = { ruta, bytes, hash: createHash('sha256'), leidos: 0, trozos: ruta === NOMBRE_MANIFIESTO ? [] : null }
       }
       const falta = actual.bytes - actual.leidos
@@ -98,10 +100,16 @@ export async function verificarTar(entrada) {
       const digest = actual.hash.digest('hex')
       if (actual.ruta === NOMBRE_MANIFIESTO) {
         if (manifiesto) throw new Error('hay más de un manifiesto')
-        manifiesto = { sha256: digest, json: JSON.parse(Buffer.concat(actual.trozos).toString('utf8')) }
+        let json
+        try {
+          json = JSON.parse(Buffer.concat(actual.trozos).toString('utf8'))
+        } catch {
+          throw new Error('el manifiesto no es JSON válido')
+        }
+        manifiesto = { sha256: digest, json }
       } else {
-        if (manifiesto) throw new Error(`entrada después del manifiesto: ${actual.ruta}`)
-        if (vistos.has(actual.ruta)) throw new Error(`entrada repetida: ${actual.ruta}`)
+        if (manifiesto) throw new Error(`hay una entrada después del manifiesto (la ${n})`)
+        if (vistos.has(actual.ruta)) throw new Error(`la entrada ${n} está repetida`)
         vistos.set(actual.ruta, { bytes: actual.bytes, sha256: digest })
       }
       actual = null
@@ -109,13 +117,13 @@ export async function verificarTar(entrada) {
   }
   if (actual !== null || !terminado) throw new Error('el tar está cortado')
   if (!manifiesto) throw new Error('el tar no trae MANIFEST.json')
-  const listadas = manifiesto.json.entradas
-  if (!Array.isArray(listadas)) throw new Error('manifiesto sin lista de entradas')
-  for (const e of listadas) {
-    const v = vistos.get(e.ruta)
-    if (!v) throw new Error(`falta la entrada ${e.ruta}`)
-    if (v.sha256 !== e.sha256 || v.bytes !== e.bytes) throw new Error(`no coincide el sha256 de ${e.ruta}`)
-  }
+  const listadas = manifiesto.json?.entradas
+  if (!manifiesto.json || !Array.isArray(manifiesto.json.entradas)) throw new Error('manifiesto sin lista de entradas')
+  listadas.forEach((e, i) => {
+    const v = vistos.get(e?.ruta)
+    if (!v) throw new Error(`falta la entrada ${i + 1} del manifiesto`)
+    if (v.sha256 !== e.sha256 || v.bytes !== e.bytes) throw new Error(`no coincide el sha256 de la entrada ${i + 1} del manifiesto`)
+  })
   if (listadas.length !== vistos.size) throw new Error('hay entradas que el manifiesto no lista')
   const bytes = listadas.reduce((s, e) => s + e.bytes, 0)
   return { entradas: listadas.length, bytes, manifiestoSha256: manifiesto.sha256, datos: manifiesto.json }

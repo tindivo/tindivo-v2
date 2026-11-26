@@ -2,14 +2,18 @@
 # Copia de producción P0.5: saca una copia CIFRADA de la base, de Storage y del inventario de configuración.
 # Runbook (léelo antes): Docs/operacion/copia-de-produccion.md
 #
-#   bash scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha> [--ca <archivo.crt>] [--salida <carpeta>]
+#   bash scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha> --ca <archivo.crt> [--salida <carpeta>]
 #   bash scripts/prod-backup/copia.sh --destino local                       (ensayo contra la base local)
 #
 # Lo que garantiza, por construcción:
 #   - SOLO LECTURA. Contra la base: pg_dump, pg_dumpall y consultas de lectura, en sesiones que llegan con
 #     default_transaction_read_only=on; conteos, inventario y listado van además en transacciones READ ONLY. Contra Storage y la API de gestión: únicamente GET (solo-get.mjs).
-#   - NADA EN CLARO EN EL DISCO. El dump se arma en la memoria de un contenedor efímero y sale por una tubería
+#   - NINGÚN ARCHIVO EN CLARO. El dump se arma en la memoria de un contenedor efímero y sale por una tubería
 #     directo a gpg. En la carpeta de salida solo quedan archivos .gpg, sus sha256 y registros sin datos personales.
+#     Lo que el guion no controla es que Windows pagine esa memoria al disco: por eso contra prod exige que los
+#     discos del PC estén cifrados (BitLocker), o que quien lo ejecuta acepte ese riesgo con una opción explícita.
+#   - COMPLETA O PARCIAL, NUNCA AMBIGUA. Si falta una parte, un archivo de Storage o una consulta de configuración,
+#     el resultado es «COPIA PARCIAL», con sus motivos, y el guion termina con código 3.
 #   - LAS CREDENCIALES NO SE GUARDAN. Con --destino prod se escriben a mano en esta terminal (no se ven), viven en
 #     la memoria de este proceso y no pasan por argumentos, archivos ni registros.
 set -euo pipefail
@@ -20,8 +24,12 @@ export LC_ALL=C
 # shellcheck source=scripts/prod-backup/comun.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/comun.sh"
 
-DESTINO='' SALIDA='' COMMIT_FIRMADO='' ARCHIVO_CA='' SIN_PGOPTIONS=0
+# Las variables de secretos se crean aquí sin atributo de exportación, aunque el entorno trajera uno con ese nombre.
+set +a
+unset DB_PASS STORAGE_KEY MGMT_TOKEN
+DESTINO='' SALIDA='' COMMIT_FIRMADO='' ARCHIVO_CA='' SIN_PGOPTIONS=0 DISCO_SIN_CIFRAR=0
 DB_PASS='' STORAGE_KEY='' MGMT_TOKEN='' FASE_EN_CURSO=''
+MOTIVOS=()
 
 uso() {
   sed -n '2,6p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
@@ -35,6 +43,7 @@ while [ $# -gt 0 ]; do
     --commit-firmado) COMMIT_FIRMADO="${2:-}"; shift 2 ;;
     --ca) ARCHIVO_CA="${2:-}"; shift 2 ;;
     --sin-pgoptions) SIN_PGOPTIONS=1; shift ;;
+    --acepto-disco-sin-cifrar) DISCO_SIN_CIFRAR=1; shift ;;
     *) uso ;;
   esac
 done
@@ -56,7 +65,7 @@ limpiar() {
   unset PGPASSWORD TINDIVO_STORAGE_KEY TINDIVO_MGMT_TOKEN
   dk rm -f "$NOMBRE_CONT" >/dev/null 2>&1
   cerrar_gpg
-  if [ "$rc" -ne 0 ] && [ -n "$SALIDA" ] && [ -d "$SALIDA" ]; then
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ] && [ -n "$SALIDA" ] && [ -d "$SALIDA" ]; then
     [ -z "$FASE_EN_CURSO" ] || rm -f -- "$SALIDA/$FASE_EN_CURSO"
     printf 'La copia NO terminó (UTC %s, código %s). No subas esta carpeta.\n' "$(date -u +%FT%TZ)" "$rc" >"$SALIDA/INCOMPLETA.txt"
     log "La copia NO terminó. Quedó marcada en $SALIDA/INCOMPLETA.txt"
@@ -84,6 +93,16 @@ if [ "$DESTINO" = prod ]; then
   # La contraseña entra a un contenedor: el motor de Docker tiene que ser el de este PC, no uno remoto.
   MOTOR="$(dk context inspect --format '{{.Endpoints.docker.Host}}')"
   case "$MOTOR" in npipe://* | unix://*) ;; *) fallo "el contexto de Docker apunta a «$MOTOR»: usa el Docker local de este PC" ;; esac
+  # La identidad del servidor se comprueba siempre: sin el certificado de la CA no hay copia.
+  [ -n "$ARCHIVO_CA" ] || fallo 'contra prod hace falta --ca <certificado de la CA de Supabase> (panel: Database → Settings → SSL Configuration)'
+  # La memoria puede acabar en el archivo de paginación de Windows: los discos tienen que estar cifrados.
+  DISCOS="$(discos_bitlocker)"
+  DISCO='cifrado (BitLocker activo en todos los discos fijos)'
+  if [ -z "$DISCOS" ] || [ -n "$(printf '%s\n' $DISCOS | grep -v '^[A-Z]=1$')" ]; then
+    [ "$DISCO_SIN_CIFRAR" = 1 ] || fallo "no se pudo acreditar que los discos estén cifrados con BitLocker (${DISCOS:-sin respuesta}; 1 = activo). Actívalo, o repite con --acepto-disco-sin-cifrar si Jesús acepta que la memoria paginada pueda quedar en claro en el disco"
+    DISCO="NO acreditado (${DISCOS:-sin respuesta}); riesgo aceptado con --acepto-disco-sin-cifrar"
+  fi
+  log "discos:  $DISCO"
   # Nivel B: nunca de 18:00 a 23:00, hora de Lima (plan-diario.md §1). Lima es UTC-5 todo el año.
   HORA_LIMA=$(((10#$(date -u +%H) + 19) % 24))
   if [ "$HORA_LIMA" -ge 18 ] && [ "$HORA_LIMA" -lt 23 ]; then
@@ -127,7 +146,7 @@ else
   pedir_visible 'Puerto [5432]: ' PGPORT 5432
   pedir_visible "Usuario [postgres.$REF_PROD]: " PGUSER "postgres.$REF_PROD"
   # PGREQUIREAUTH: libpq solo acepta SCRAM, así un intermediario no puede pedir la contraseña en claro.
-  export PGHOST PGPORT PGUSER PGSSLMODE=require PGREQUIREAUTH=scram-sha-256
+  export PGHOST PGPORT PGUSER PGSSLMODE=verify-full PGREQUIREAUTH=scram-sha-256
   case "$PGHOST$PGUSER" in *"$REF_ABANDONADO"*) fallo 'ese es el proyecto abandonado: nunca se usa' ;; esac
   if [[ "$PGHOST" =~ ^aws-[0-9]+-[a-z0-9-]+\.pooler\.supabase\.com$ ]]; then
     [ "$PGUSER" = "postgres.$REF_PROD" ] || fallo "por el pooler el usuario debe ser postgres.$REF_PROD"
@@ -137,7 +156,6 @@ else
     fallo "«$PGHOST» no es el pooler de Supabase ni la base de tindivo-prod"
   fi
   [ "$PGPORT" = 5432 ] || fallo 'el puerto debe ser 5432 (modo sesión); el 6543 es modo transacción y no sirve para pg_dump'
-  [ -n "${TINDIVO_CA_PEM:-}" ] || log 'aviso: sin --ca la conexión va cifrada pero no se comprueba el certificado del servidor'
   pedir_oculto 'Contraseña de la base (no se ve al escribir): ' DB_PASS
   [ -n "$DB_PASS" ] || fallo 'la contraseña no puede estar vacía'
   STORAGE_URL="$URL_PROD"
@@ -187,46 +205,62 @@ ESTADO_1="OK · manifiesto $M1"
 log "Parte 1: $ESTADO_1"
 
 # ---------------------------------------------------------------------------------------------------------------
+DB_PASS=''
 paso 'Parte 2 de 3 · Archivos de Storage'
 ESTADO_2='OMITIDA (sin clave service_role): los archivos de Storage NO están en esta copia'
-if [ -n "$STORAGE_KEY" ]; then
+if [ -z "$STORAGE_KEY" ]; then
+  MOTIVOS+=('parte 2 omitida: los archivos de Storage no están en la copia')
+else
   FASE_EN_CURSO='2-storage.tar.gpg'
+  # La lista de objetos es la que la parte 1 tomó en su snapshot: se saca de 1-base.tar.gpg, descifrado hacia una
+  # tubería. La clave service_role viaja en el entorno de node y de nadie más (ni tee, ni tar, ni gpg).
   {
-    printf '%s\n' "$DB_PASS" | contenedor bridge listar-objetos 2>"$SALIDA/2-storage.lista.log" |
-      (
-        export TINDIVO_STORAGE_KEY="$STORAGE_KEY"
-        node "$DIR_GUIONES/storage-tar.mjs" "$DESTINO" "$STORAGE_URL" 2>&1 1>&3 | tee "$SALIDA/2-storage.copia.log" >&2
-      )
+    descifrar <"$SALIDA/1-base.tar.gpg" | tar -xOf - ./storage-objetos.jsonl |
+      TINDIVO_STORAGE_KEY="$STORAGE_KEY" node "$DIR_GUIONES/storage-tar.mjs" "$DESTINO" "$STORAGE_URL" 2>&1 1>&3 |
+      tee "$SALIDA/2-storage.copia.log" >&2
   } 3>&1 | cifrar >"$SALIDA/2-storage.tar.gpg"
   M2="$(manifiesto_de "$SALIDA/2-storage.copia.log")"
   [ -n "$M2" ] || fallo 'la parte 2 no entregó su manifiesto'
   verificar_tar_node "$SALIDA/2-storage.tar.gpg" "$SALIDA/2-storage.verificacion.log"
   [ "$(manifiesto_de "$SALIDA/2-storage.verificacion.log")" = "$M2" ] || fallo 'el manifiesto de Storage descifrado no es el que se cifró'
   FASE_EN_CURSO=''
-  ESTADO_2="OK · $(grep -o 'RESUMEN .*' "$SALIDA/2-storage.copia.log" | tail -n 1) · manifiesto $M2"
+  E2="$(estado_de "$SALIDA/2-storage.copia.log")"
+  [ "$E2" = "$(estado_de "$SALIDA/2-storage.verificacion.log")" ] || fallo 'el estado de Storage descifrado no es el que se anotó'
+  case "$E2" in
+    COMPLETA) ;;
+    PARCIAL) MOTIVOS+=('parte 2 parcial: hay archivos de Storage que no se pudieron bajar o que no miden lo que dice la base') ;;
+    *) fallo 'la parte 2 no dijo si quedó completa' ;;
+  esac
+  ESTADO_2="$E2 · $(grep -o 'RESUMEN .*' "$SALIDA/2-storage.copia.log" | tail -n 1) · manifiesto $M2"
 fi
 log "Parte 2: $ESTADO_2"
 STORAGE_KEY=''
-DB_PASS=''
 
 # ---------------------------------------------------------------------------------------------------------------
 paso 'Parte 3 de 3 · Inventario de configuración externa (Auth, Edge Functions, nombres de secretos)'
 ESTADO_3='OMITIDA (sin token personal): saca el inventario a mano con el runbook'
 [ "$DESTINO" = prod ] || ESTADO_3='NO APLICA en local (la API de gestión solo existe para el proyecto remoto)'
-if [ -n "$MGMT_TOKEN" ]; then
+if [ -z "$MGMT_TOKEN" ]; then
+  [ "$DESTINO" != prod ] || MOTIVOS+=('parte 3 omitida: no hay inventario de la configuración externa')
+else
   FASE_EN_CURSO='3-config.tar.gpg'
   {
-    (
-      export TINDIVO_MGMT_TOKEN="$MGMT_TOKEN"
-      node "$DIR_GUIONES/config-inventario.mjs" "$REF_PROD" 2>&1 1>&3 | tee "$SALIDA/3-config.copia.log" >&2
-    )
+    TINDIVO_MGMT_TOKEN="$MGMT_TOKEN" node "$DIR_GUIONES/config-inventario.mjs" "$REF_PROD" 2>&1 1>&3 |
+      tee "$SALIDA/3-config.copia.log" >&2
   } 3>&1 | cifrar >"$SALIDA/3-config.tar.gpg"
   M3="$(manifiesto_de "$SALIDA/3-config.copia.log")"
   [ -n "$M3" ] || fallo 'la parte 3 no entregó su manifiesto'
   verificar_tar_node "$SALIDA/3-config.tar.gpg" "$SALIDA/3-config.verificacion.log"
   [ "$(manifiesto_de "$SALIDA/3-config.verificacion.log")" = "$M3" ] || fallo 'el manifiesto de configuración descifrado no es el que se cifró'
   FASE_EN_CURSO=''
-  ESTADO_3="OK · manifiesto $M3"
+  E3="$(estado_de "$SALIDA/3-config.copia.log")"
+  [ "$E3" = "$(estado_de "$SALIDA/3-config.verificacion.log")" ] || fallo 'el estado de la configuración descifrado no es el que se anotó'
+  case "$E3" in
+    COMPLETA) ;;
+    PARCIAL) MOTIVOS+=("parte 3 parcial: $(grep -o 'faltan consultas: [a-z, -]*' "$SALIDA/3-config.copia.log" | tail -n 1)") ;;
+    *) fallo 'la parte 3 no dijo si quedó completa' ;;
+  esac
+  ESTADO_3="$E3 · manifiesto $M3"
 fi
 log "Parte 3: $ESTADO_3"
 MGMT_TOKEN=''
@@ -236,14 +270,25 @@ paso 'Cierre: sha256, resumen y comprobación de que no quedó nada en claro'
 CLAVE=''
 cerrar_gpg
 (cd "$SALIDA" && sha256sum -b -- *.tar.gpg >SHA256SUMS)
+RESULTADO='COPIA COMPLETA'
+if [ "${#MOTIVOS[@]}" -gt 0 ]; then
+  RESULTADO='COPIA PARCIAL'
+  {
+    echo "COPIA PARCIAL (UTC $SELLO). Sirve como copia de lo que sí lleva; NO cierra P0.5. Motivos:"
+    printf -- '- %s\n' "${MOTIVOS[@]}"
+  } >"$SALIDA/PARCIAL.txt"
+fi
 {
   echo 'COPIA DE PRODUCCIÓN P0.5 · RESUMEN (sin datos personales ni secretos)'
+  echo "RESULTADO:      $RESULTADO"
+  [ "${#MOTIVOS[@]}" -eq 0 ] || printf -- '                - %s\n' "${MOTIVOS[@]}"
   echo "destino:        $DESTINO ($PGHOST:$PGPORT, usuario $PGUSER)"
   echo "tomada (UTC):   $SELLO · duración $(($(date +%s) - INICIO)) s"
   echo "guiones:        commit $COMMIT${SUCIO:+ (con cambios sin commit)}"
   echo "imagen:         $IMAGEN_PG"
   echo "cifrado:        gpg simétrico, AES-256, S2K iterado con SHA-512 ($(gpg --version | head -n 1))"
   echo "TLS:            $([ -n "${TINDIVO_CA_PEM:-}" ] && echo 'verify-full con la CA indicada' || echo "$PGSSLMODE")"
+  echo "discos:         ${DISCO:-no se comprueba con --destino local}"
   echo "solo lectura:   $([ "$SIN_PGOPTIONS" = 1 ] && echo 'transacciones READ ONLY del snapshot y del listado (sin PGOPTIONS)' || echo 'default_transaction_read_only=on en toda sesión + transacciones READ ONLY')"
   echo "parte 1 base:   $ESTADO_1"
   echo "                $(grep -o 'RESUMEN .*' "$SALIDA/1-base.copia.log" | tail -n 1)"
@@ -255,15 +300,19 @@ cerrar_gpg
 } >"$SALIDA/RESUMEN.txt"
 
 # Solo puede haber archivos cifrados, sus sumas, el resumen y los registros.
-SOBRAN="$(find "$SALIDA" -mindepth 1 ! -name '*.tar.gpg' ! -name '*.log' ! -name SHA256SUMS ! -name RESUMEN.txt)"
+SOBRAN="$(find "$SALIDA" -mindepth 1 ! -name '*.tar.gpg' ! -name '*.log' ! -name SHA256SUMS ! -name RESUMEN.txt ! -name PARCIAL.txt)"
 [ -z "$SOBRAN" ] || fallo "hay archivos inesperados en la salida: $SOBRAN"
 for f in "$SALIDA"/*.tar.gpg; do
   [ "$(head -c 2 "$f" | od -An -tx1 | tr -d ' \n')" = 8c0d ] || fallo "$f no empieza como un archivo cifrado de gpg"
 done
 sin_contenedores_vivos || fallo 'quedó un contenedor de la copia sin borrar: docker ps -a --filter label=tindivo-copia'
-log 'En claro no quedó nada: el dump vivió en la memoria de un contenedor que ya no existe.'
+log 'No quedó ningún archivo en claro: el dump vivió en la memoria de un contenedor que ya no existe.'
 
 cat "$SALIDA/RESUMEN.txt" >&2
-paso 'LISTO'
 log "Carpeta: $SALIDA"
+if [ "$RESULTADO" != 'COPIA COMPLETA' ]; then
+  paso 'COPIA PARCIAL: lo que hay está verificado, pero faltan partes. Lee PARCIAL.txt. No cierra P0.5.'
+  exit 3
+fi
+paso 'LISTO: COPIA COMPLETA'
 log 'Sigue el runbook: sube la carpeta entera a tu Google Drive y comprueba el sha256 después de subirla.'

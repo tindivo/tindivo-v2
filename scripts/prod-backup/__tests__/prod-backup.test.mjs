@@ -139,7 +139,7 @@ test('storage: baja con GET, empaqueta, anota lo que falta y no escribe la clave
   const { salida, buffer } = sumidero()
   const avisos = []
   try {
-    const { resumen, manifiestoSha256 } = await copiarStorage({
+    const { resumen, completa, manifiestoSha256 } = await copiarStorage({
       base,
       clave: SECRETO,
       lineas: Readable.from(lista.map((o) => JSON.stringify(o))),
@@ -147,9 +147,11 @@ test('storage: baja con GET, empaqueta, anota lo que falta y no escribe la clave
       avisar: (m) => avisos.push(m),
     })
     assert.deepEqual(resumen, { listados: 4, ok: 2, no_encontrados: 1, nombre_no_valido: 1, tamano_distinto: 1, bytes: 3007 })
+    assert.equal(completa, false, 'con un objeto que falta, la parte es PARCIAL')
     const v = await verificarTar(comoFlujo(buffer()))
     assert.equal(v.manifiestoSha256, manifiestoSha256)
     assert.equal(v.entradas, 2)
+    assert.equal(v.datos.completa, false)
     assert.deepEqual(
       v.datos.objetos.map((o) => o.estado),
       ['ok', 'ok_tamano_distinto', 'no_encontrado', 'nombre_no_valido'],
@@ -257,13 +259,14 @@ test('config: solo GET a la API de gestión de tindivo-prod; el tar no trae valo
     return respuesta(200, JSON.stringify({ jwt_secret: SECRETO, site_url: 'https://tindivo.com' }))
   }
   const { salida, buffer } = sumidero()
-  const { estados } = await inventariar({ ref: 'zpnipajgwfthxhdtzhly', token: `tok-${SECRETO}`, salida, fetchImpl })
+  const { estados, completa } = await inventariar({ ref: 'zpnipajgwfthxhdtzhly', token: `tok-${SECRETO}`, salida, fetchImpl })
   assert.equal(pedidos.length, CONSULTAS.length)
   for (const p of pedidos) {
     assert.equal(p.init.method, 'GET')
     assert.ok(p.url.startsWith('https://api.supabase.com/v1/projects/zpnipajgwfthxhdtzhly'))
   }
-  assert.equal(estados['restricciones-de-red'], 404)
+  assert.equal(estados['restricciones-de-red'], 'no_aplica')
+  assert.equal(completa, true, 'un 404 en una consulta opcional es «no aplica»')
   assert.ok(!buffer().includes(SECRETO))
   const v = await verificarTar(comoFlujo(buffer()))
   assert.equal(v.entradas, CONSULTAS.length)
@@ -277,6 +280,113 @@ test('config: solo GET a la API de gestión de tindivo-prod; el tar no trae valo
   )
 })
 
+test('config: la sospecha se hereda hacia abajo, las URL pierden credenciales y un JSON roto no se copia', async () => {
+  assert.deepEqual(tachar({ secret: { value: SECRETO, n: 3 }, smtp: { pass: SECRETO, host: 'smtp.x' } }), {
+    secret: { value: TACHADO, n: 3 },
+    smtp: { pass: TACHADO, host: 'smtp.x' },
+  })
+  assert.deepEqual(tachar({ api_keys: [{ name: 'a', valor: SECRETO }] }), { api_keys: [{ name: TACHADO, valor: TACHADO }] })
+  const url = tachar({ webhook_url: `https://usuario:${SECRETO}@ejemplo.com/hook?token=${SECRETO}#${SECRETO}` }).webhook_url
+  assert.ok(!url.includes(SECRETO))
+  assert.match(url, /^https:\/\/ejemplo\.com\/hook \[credenciales o parámetros tachados\]$/)
+  assert.equal(tachar({ site_url: 'https://tindivo.com/app' }).site_url, 'https://tindivo.com/app')
+  assert.equal(tachar({ nota: `https://x.com/?k=${SECRETO}` }).nota.includes(SECRETO), false)
+
+  const rotas = async (url) => {
+    if (String(url).endsWith('/functions')) return respuesta(200, `{"roto": "${SECRETO}`)
+    if (String(url).endsWith('/secrets')) return respuesta(200, JSON.stringify({ inesperado: SECRETO }))
+    return respuesta(200, JSON.stringify({ ok: true }))
+  }
+  const { salida, buffer } = sumidero()
+  const r = await inventariar({ ref: 'zpnipajgwfthxhdtzhly', token: 't', salida, fetchImpl: rotas })
+  assert.equal(r.completa, false)
+  assert.deepEqual(r.pendientes, ['edge-functions', 'secretos-nombres'])
+  assert.equal(r.estados['edge-functions'], 'respuesta_no_valida')
+  assert.ok(!buffer().includes(SECRETO), 'ni el JSON roto ni la respuesta inesperada llegan al tar')
+  const v = await verificarTar(comoFlujo(buffer()))
+  assert.equal(v.datos.completa, false)
+})
+
+test('config: cada consulta que falla deja el inventario PARCIAL (salvo un 404 en una opcional)', async () => {
+  for (const [nombre, sufijo, obligatoria] of CONSULTAS) {
+    if (nombre === 'proyecto' || nombre === 'auth') continue
+    for (const fallo of [401, 403, 500, 404, 'red']) {
+      const fetchImpl = async (url) => {
+        if (new URL(url).pathname === `/v1/projects/zpnipajgwfthxhdtzhly${sufijo}`) {
+          if (fallo === 'red') throw new TypeError('sin red')
+          return respuesta(fallo, 'x')
+        }
+        return respuesta(200, '[]')
+      }
+      const r = await inventariar({
+        ref: 'zpnipajgwfthxhdtzhly',
+        token: 't',
+        salida: sumidero().salida,
+        fetchImpl,
+        esperar: async () => {},
+      })
+      const esperado = fallo === 404 && !obligatoria
+      assert.equal(r.completa, esperado, `${nombre} con ${fallo}`)
+      assert.deepEqual(r.pendientes, esperado ? [] : [nombre], `${nombre} con ${fallo}`)
+    }
+  }
+})
+
+test('tar: un manifiesto roto o un tar dañado no copian su contenido al mensaje de error', async () => {
+  const cabeceraDe = async (ruta, cuerpo) => {
+    const { salida, buffer } = sumidero()
+    const t = crearEscritorTar(salida)
+    await t.agregar(ruta, cuerpo)
+    await t.cerrar()
+    return buffer().subarray(0, 512)
+  }
+  const marca = Buffer.from('{"cliente":"JUAN PEREZ 999888777"')
+  const h = Buffer.from(await cabeceraDe('x', marca))
+  h.fill(0, 0, 100)
+  h.write('MANIFEST.json', 0, 'utf8')
+  const roto = Buffer.concat([h, marca, Buffer.alloc(512 - marca.length), Buffer.alloc(1024)])
+  await assert.rejects(verificarTar(comoFlujo(roto)), (err) => /no es JSON válido/.test(err.message) && !err.message.includes('JUAN'))
+  const r = spawnSync('node', [join(DIR, 'verificar-tar.mjs')], { input: roto, encoding: 'utf8' })
+  assert.notEqual(r.status, 0)
+  assert.ok(!`${r.stdout}${r.stderr}`.includes('JUAN'))
+})
+
+test('filtro del contenedor: un error del servidor con datos no pasa a los registros; los de forma conocida, sí', () => {
+  const lineas = [
+    '[contenedor] sesión en solo lectura: default_transaction_read_only=on',
+    'psql: error: connection to server at "aws-0-us-east-1.pooler.supabase.com" (1.2.3.4), port 5432 failed: FATAL:  password authentication failed for user "postgres.x"',
+    'pg_dump: error: query failed: ERROR:  permission denied for table sso_domains',
+    'pg_dump: detail: Query was: LOCK TABLE auth.sso_domains IN ACCESS SHARE MODE',
+    'psql:/work/.ctl:14: ERROR:  invalid input syntax for type bigint: "JUAN PEREZ 999888777"',
+    'ERROR:  duplicate key value violates unique constraint "x"',
+    'DETAIL:  Key (phone)=(+51999888777) already exists.',
+    'pg_dump: error: Dumping the contents of table "users" failed: PQgetResult() failed.',
+    'CONTEXT:  COPY users, line 3, column phone: "999888777"',
+  ]
+  const r = spawnSync('bash', ['./en-contenedor.sh', 'filtrar'], { cwd: DIR, input: `${lineas.join('\n')}\n`, encoding: 'utf8' })
+  assert.equal(r.status, 0, r.stderr)
+  assert.ok(!r.stdout.includes('999888777') && !r.stdout.includes('JUAN'))
+  for (const l of lineas.slice(0, 4)) assert.ok(r.stdout.includes(l), l)
+  assert.match(r.stdout, /5 linea\(s\) de diagnostico omitidas/)
+})
+
+test('guarda: las credenciales no se exportan a procesos que no las necesitan', () => {
+  const contenedor = sinComentarios(leer('en-contenedor.sh'))
+  assert.ok(!/export[^\n]*PGPASSWORD/.test(contenedor), 'PGPASSWORD no se exporta en el contenedor')
+  assert.match(contenedor, /pg\(\) \{ PGPASSWORD="\$CONTRASENA" "\$@"; \}/)
+  for (const cliente of ['psql', 'pg_dump', 'pg_dumpall']) {
+    const sueltos = contenedor.split('\n').filter((l) => new RegExp(`(^|[;&|(]|then|if|!)\\s*${cliente} `).test(l))
+    assert.deepEqual(sueltos.filter((l) => !l.includes('--version') && !l.includes('if (l ~ /')), [], `${cliente} sin pasar por pg()`)
+  }
+  const copia = sinComentarios(leer('copia.sh'))
+  assert.ok(!/export[^\n]*(TINDIVO_STORAGE_KEY|TINDIVO_MGMT_TOKEN|DB_PASS|CLAVE)\b/.test(copia))
+  assert.match(copia, /TINDIVO_STORAGE_KEY="\$STORAGE_KEY" node /)
+  assert.match(copia, /TINDIVO_MGMT_TOKEN="\$MGMT_TOKEN" node /)
+  assert.match(copia, /contra prod hace falta --ca/)
+  assert.match(copia, /PGSSLMODE=verify-full PGREQUIREAUTH=scram-sha-256/)
+  assert.ok(!/PGSSLMODE=require/.test(copia))
+})
+
 // --- Guardas estáticas: lo que hace que el procedimiento NO PUEDA escribir en producción -----------------------
 
 const leer = (nombre) => readFileSync(join(DIR, nombre), 'utf8')
@@ -287,7 +397,9 @@ const sinComentarios = (texto) =>
     .join('\n')
 
 test('guarda: el guion del contenedor no contiene ninguna sentencia que escriba en la base', () => {
-  const guion = sinComentarios(leer('en-contenedor.sh'))
+  // El filtro de diagnósticos nombra sentencias (LOCK TABLE, «cannot execute…») para reconocerlas: no las ejecuta.
+  const guion = sinComentarios(leer('en-contenedor.sh')).replace(/\nfiltrar\(\) \{\n[\s\S]*?\n\}\n/, '\n')
+  assert.ok(!guion.includes('function pasa'), 'el cuerpo del filtro quedó fuera de la guarda')
   const escribe =
     /\b(insert|update|delete|truncate|drop|alter|create|grant|revoke|reindex|vacuum|refresh|merge|lock|call|comment on|security label|set role)\b|\bdo\s*\$/i
   const lineas = guion.split('\n').filter((l) => escribe.test(l))

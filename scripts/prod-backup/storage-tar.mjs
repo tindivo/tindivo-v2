@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 // Copia de producción P0.5, parte 2: baja los archivos de Storage y los entrega como un tar por stdout.
 //
-//   stdin   una línea JSON por objeto de storage.objects (la escribe en-contenedor.sh, modo listar-objetos)
+//   stdin   una línea JSON por objeto de storage.objects: la lista que la parte 1 tomó en SU snapshot
+//           (storage-objetos.jsonl, que copia.sh saca de 1-base.tar.gpg descifrándolo hacia una tubería)
 //   stdout  el tar (va directo a gpg: nada en claro toca el disco)
-//   stderr  el avance, en cifras: sin nombres de archivo y sin la credencial
+//   stderr  el avance, en cifras: sin nombres de archivo y sin la credencial; y ESTADO=COMPLETA o ESTADO=PARCIAL
+//
+// COMPLETA solo si se bajó cada objeto de la lista y con el tamaño que declara la base. Cualquier objeto que
+// falte, que no se pueda pedir o que mida distinto deja la parte PARCIAL: el tar se entrega, pero no es un respaldo
+// completo de Storage y así queda dicho en el manifiesto, en el registro y en el resumen.
 //
 // La service role llega por la variable TINDIVO_STORAGE_KEY y solo viaja en la cabecera de un GET.
 import { createInterface } from 'node:readline'
@@ -109,14 +114,16 @@ export async function copiarStorage({ base, clave, lineas, salida, avisar = () =
   if (resumen.listados > 0 && resumen.ok === 0) {
     throw new Error(`se listaron ${resumen.listados} objetos y no se pudo bajar ninguno`)
   }
+  const completa = resumen.ok === resumen.listados && resumen.tamano_distinto === 0
   const manifiestoSha256 = await tar.cerrar({
     tipo: 'storage',
     origen: base,
     tomado_utc: new Date().toISOString(),
+    completa,
     resumen,
     objetos,
   })
-  return { resumen, manifiestoSha256 }
+  return { resumen, completa, manifiestoSha256 }
 }
 
 async function principal() {
@@ -126,11 +133,12 @@ async function principal() {
     validarBase(destino, base)
     const clave = tomarCredencial('TINDIVO_STORAGE_KEY')
     const lineas = createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY })
-    const { resumen, manifiestoSha256 } = await copiarStorage({ base, clave, lineas, salida: process.stdout, avisar })
+    const { resumen, completa, manifiestoSha256 } = await copiarStorage({ base, clave, lineas, salida: process.stdout, avisar })
     await new Promise((r) => process.stdout.end(r))
     avisar(
       `RESUMEN listados=${resumen.listados} ok=${resumen.ok} no_encontrados=${resumen.no_encontrados} nombre_no_valido=${resumen.nombre_no_valido} tamano_distinto=${resumen.tamano_distinto} bytes=${resumen.bytes}`,
     )
+    avisar(`ESTADO=${completa ? 'COMPLETA' : 'PARCIAL'}`)
     avisar(`MANIFEST_SHA256=${manifiestoSha256}`)
   } catch (err) {
     avisar(`ERROR: ${err.message}`)

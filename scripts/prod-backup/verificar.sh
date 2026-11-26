@@ -9,6 +9,7 @@
 # Con --conteos imprime además las filas por tabla que quedaron anotadas al sacar la copia.
 set -euo pipefail
 set +x
+set +a
 umask 077
 export LC_ALL=C
 
@@ -56,11 +57,15 @@ comparar() { # parte, registro nuevo
   [ -n "$ahora" ] || fallo "la verificación de $1 no entregó manifiesto"
   if [ -s "$antes" ]; then
     [ "$(manifiesto_de "$antes")" = "$ahora" ] || fallo "$1: el manifiesto no es el que se anotó al sacar la copia"
-    log "$1: OK, mismo manifiesto que al sacar la copia ($ahora)"
+    log "$1: íntegra, mismo manifiesto que al sacar la copia ($ahora)"
   else
-    log "$1: OK (manifiesto $ahora; no hay registro original con qué compararlo)"
+    log "$1: íntegra (manifiesto $ahora; no hay registro original con qué compararlo)"
+  fi
+  if [ "$1" != 1-base ] && [ "$(estado_de "$2")" != COMPLETA ]; then
+    FALTAS+=("$1 está PARCIAL (le faltan archivos o consultas)")
   fi
 }
+FALTAS=()
 
 paso '3. Parte 1 · base'
 verificar_base "$CARPETA/1-base.tar.gpg" "$REG/1.log"
@@ -73,9 +78,15 @@ for parte in 2-storage 3-config; do
     comparar "$parte" "$REG/$parte.log"
   else
     log "$parte: no está en esta copia"
+    { [ "$parte" = 3-config ] && [ "$PERMITIR" = 1 ]; } || FALTAS+=("$parte no está en esta copia")
   fi
 done
 rm -rf -- "$REG"
 
 sin_contenedores_vivos || fallo 'quedó un contenedor sin borrar: docker ps -a --filter label=tindivo-copia'
-paso 'VERIFICADA: los archivos están enteros, se abren con tu clave y el dump se lee completo.'
+if [ "${#FALTAS[@]}" -gt 0 ]; then
+  paso 'VERIFICADA, PERO ES UNA COPIA PARCIAL: lo que hay está entero y se abre con tu clave; falta esto:'
+  printf -- '- %s\n' "${FALTAS[@]}" >&2
+  exit 3
+fi
+paso 'VERIFICADA: COPIA COMPLETA. Los archivos están enteros, se abren con tu clave y el dump se lee completo.'

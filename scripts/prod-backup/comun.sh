@@ -16,6 +16,9 @@ TMPFS_MB="${TINDIVO_COPIA_TMPFS_MB:-2048}"
 CLAVE_MINIMO=20
 DIR_GUIONES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NOMBRE_CONT="tindivo-copia-$$"
+# Las variables que guardan secretos nacen aquí, sin atributo de exportación aunque el entorno trajera uno.
+set +a
+unset GNUPG_TMP CLAVE
 GNUPG_TMP=''
 CLAVE=''
 
@@ -135,6 +138,14 @@ pedir_clave() { # confirmar|una, permitir_variable(0|1)
     [ "$CLAVE" = "$otra" ] && break
     log 'No coinciden. Otra vez.'
   done
+}
+
+estado_de() { grep -o 'ESTADO=[A-Z]*' "$1" | tail -n 1 | cut -d= -f2; }
+
+# Estado de BitLocker de cada disco fijo, como «C=1 D=1» (1 = cifrado y activo). Vacío si no se puede saber.
+discos_bitlocker() {
+  command -v powershell.exe >/dev/null 2>&1 || return 0
+  powershell.exe -NoProfile -NonInteractive -Command "\$s = New-Object -ComObject Shell.Application; [System.IO.DriveInfo]::GetDrives() | Where-Object { \$_.DriveType -eq [System.IO.DriveType]::Fixed } | ForEach-Object { \$l = \$_.Name.Substring(0, 2); \$l.Substring(0, 1) + [char]61 + \$s.NameSpace(\$l).Self.ExtendedProperty('System.Volume.BitLockerProtection') }" 2>/dev/null | tr -d '\r' | tr '\n' ' '
 }
 
 manifiesto_de() { grep -o 'MANIFEST_SHA256=[0-9a-f]\{64\}' "$1" | tail -n 1 | cut -d= -f2; }
