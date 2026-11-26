@@ -1,7 +1,6 @@
 package com.tindivo.customer.feature.cart
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -43,10 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -69,6 +65,7 @@ import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.catalog.business.DishPhoto
 
 /** Une el ViewModel con la pantalla. [onAddMore] vuelve a la carta del negocio de la bolsa. */
 @Composable
@@ -378,21 +375,13 @@ private fun CartLineRow(
         modifier = Modifier.fillMaxWidth().padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.item),
     ) {
-        // La bolsa guardada no trae la foto del plato: va el isotipo sobre crema, como en el tablero.
-        Box(
-            modifier =
-                Modifier
-                    .size(72.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(14.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_isotipo),
-                contentDescription = null,
-                modifier = Modifier.width(40.dp),
-                contentScale = ContentScale.Fit,
-            )
-        }
+        // La foto que se guardó al agregar el plato; sin ella (o mientras carga) va el isotipo sobre crema.
+        DishPhoto(
+            imageUrl = line.imageUrl,
+            shape = RoundedCornerShape(14.dp),
+            markWidth = 40.dp,
+            modifier = Modifier.size(72.dp),
+        )
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -593,6 +582,7 @@ private fun CartPreview() {
             quantity = 2,
             total = "S/ 25.00",
             canIncrease = true,
+            imageUrl = null,
         )
     TindivoTheme {
         CartScreen(

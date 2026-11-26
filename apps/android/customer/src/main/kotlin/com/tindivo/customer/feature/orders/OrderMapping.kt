@@ -55,7 +55,7 @@ private fun ListCustomerOrders200ResponseDataItemsInner.toCardUi(now: Instant): 
         createdAt = relativeDate(created, now),
         total = totalText,
         businessId = businessId,
-        reorderable = cancelReason != PROOF_REJECTED_FINAL,
+        reorderable = orderPhaseOf(status, cancelReason) == OrderPhase.Delivered,
         paymentCase = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPayment = paymentIntent == PREPAID && status == "awaiting_payment",
     )

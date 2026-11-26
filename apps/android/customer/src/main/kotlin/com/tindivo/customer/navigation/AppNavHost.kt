@@ -25,6 +25,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -348,7 +349,7 @@ private fun NavGraphBuilder.ordersGraph(navController: NavHostController) {
             onBack = { navController.popBackStack() },
             onOpenOrder = { id -> navController.navigate(OrderDetailRoute(id)) },
             onExplore = { navController.popBackStack(CatalogHomeRoute, inclusive = false) },
-            onReorder = { businessId -> navController.navigate(BusinessRoute(businessId)) },
+            onOpenCart = { navController.navigate(CartRoute) },
             onReviewMoment = { open -> if (open) review.enableAutoPrompt() else review.disableAutoPrompt() },
         )
         ReviewHost(review)
@@ -377,19 +378,20 @@ private fun NavGraphBuilder.checkoutDestination(navController: NavHostController
             actions =
                 CheckoutActions(
                     onBack = { navController.popBackStack() },
-                    // El pedido existe: el checkout sale de la pila para que «atrás» no vuelva a una bolsa vacía.
-                    onOrderOpened = { id ->
-                        navController.navigate(OrderDetailRoute(id)) {
-                            popUpTo<CheckoutRoute> { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    },
+                    // El pedido existe: el checkout y la bolsa vacía salen de la pila; «atrás» va al Inicio.
+                    onOrderOpened = { id -> navController.navigate(OrderDetailRoute(id)) { orderCreatedStack() } },
                     onOpenOrders = { navController.navigate(OrdersRoute) },
                     onSignIn = { navController.navigate(SignInRoute) },
                     onSeeBusinesses = { navController.popBackStack<CatalogHomeRoute>(inclusive = false) },
                 ),
         )
     }
+}
+
+/** Pedido recién creado: se recorta la pila hasta el Inicio (que se queda) y el detalle va encima (`seguimiento.md`). */
+internal fun NavOptionsBuilder.orderCreatedStack() {
+    popUpTo<CatalogHomeRoute> { inclusive = false }
+    launchSingleTop = true
 }
 
 /** «Completa tu perfil» volvió a esta pantalla con el perfil creado (un booleano; nada sensible). */

@@ -62,10 +62,12 @@ abstract class OrdersHarness {
             auth = BearerAuthInterceptor(server.url("/"), tokens),
         )
 
+    internal fun repository(io: CoroutineDispatcher = dispatcher) = CustomerRepository(baseUrl, client(), io)
+
     internal fun viewModel(
         io: CoroutineDispatcher = dispatcher,
         clock: Clock = this.clock,
-    ) = OrdersViewModel(CustomerRepository(baseUrl, client(), io), store, configService, clock)
+    ) = OrdersViewModel(repository(io), store, configService, clock)
 
     protected fun response(
         code: Int,

@@ -150,6 +150,13 @@ jobs:
         working-directory: apps/android
         run: ./gradlew :core:network:test :customer:testDevDebugUnitTest
 
+      # Capa L3 del workflow de pruebas de UI: las capturas de referencia (customer/src/test/screenshots) se comparan con
+      # lo que dibuja la pantalla ahora; cualquier diferencia falla. Una referencia nunca se regraba para poner la CI en
+      # verde sin declararlo en el PR. Las diferencias salen como artefacto (paso de informes, más abajo).
+      - name: Verificar las capturas de pantalla (Roborazzi)
+        working-directory: apps/android
+        run: ./gradlew :customer:verifyRoborazziDevDebug
+
       - name: Android Lint
         working-directory: apps/android
         run: ./gradlew :customer:lintDevDebug :core:designsystem:lintDebug
@@ -248,6 +255,8 @@ jobs:
             apps/android/**/build/reports/lint-results-*.html
             apps/android/**/build/reports/lint-results-*.xml
             apps/android/**/build/test-results/
+            apps/android/**/build/outputs/roborazzi/*_compare.png
+            apps/android/**/build/outputs/roborazzi/*_actual.png
           if-no-files-found: ignore
           retention-days: 14
 
