@@ -27,7 +27,7 @@ appId: com.tindivo.customer.dev
           text: "Incluido"
           optional: true
 - tapOn: "Agregar.*"
-- tapOn: "Ver mi bolsa"
+- tapOn: "Ver mi bolsa.*"
 - extendedWaitUntil:
     visible: "Subtotal"
     timeout: 10000

@@ -4,7 +4,7 @@
 # Termina con la seccion «¿Cómo pagas?» a la vista. Env: NOMBRE_CLIENTE.
 appId: com.tindivo.customer.dev
 ---
-- tapOn: "Continuar"
+- tapOn: "Continuar.*"
 - runFlow: identificarse-google.yaml
 - extendedWaitUntil:
     visible: "Confirmar pedido"
@@ -17,7 +17,7 @@ appId: com.tindivo.customer.dev
       - tapOn: "Tu nombre"
       - inputText: "${NOMBRE_CLIENTE}"
       - hideKeyboard
-      - tapOn: "Continuar"
+      - tapOn: "Continuar.*"
 # El mapa deja el pin fijo al centro; si hace falta moverlo, «Usar mi ubicación» pide permiso de GPS (emulador:
 # fijar ubicacion en San Jacinto antes). NO VERIFICADO.
 - runFlow:
