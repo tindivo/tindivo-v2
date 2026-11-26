@@ -14,13 +14,15 @@ class CatalogUITestCase: XCTestCase {
     /// en un martes a las 20:00 de Lima: el horario nocturno no depende de cuándo corra.
     func launch(
         fakeCatalog: Bool, seedOtherBag: Bool = false, fastClock: Bool = false, largeType: Bool = false,
-        now: String = "2026-07-07T20:00:00-05:00", nowFile: String? = nil, voiceOver: Bool = false
+        now: String = "2026-07-07T20:00:00-05:00", nowFile: String? = nil, failMenuFile: String? = nil,
+        voiceOver: Bool = false
     ) {
         // El plazo de «Deshacer» se alarga (solo DEBUG) para que el toque no dependa de la velocidad del simulador.
         app.launchArguments = [
             "-tindivo-reset-cart", "-tindivo-now", now, "-tindivo-undo-seconds", "60",
         ]
         if let nowFile { app.launchArguments += ["-tindivo-now-file", nowFile] }
+        if let failMenuFile { app.launchArguments += ["-tindivo-fail-menu-file", failMenuFile] }
         // Solo DEBUG: la bolsa se comporta como con VoiceOver encendido (el aviso «Deshacer» no se cierra solo).
         if voiceOver { app.launchArguments.append("-tindivo-voiceover") }
         if largeType {

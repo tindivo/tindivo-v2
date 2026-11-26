@@ -97,6 +97,53 @@ final class CatalogDetailUITests: CatalogUITestCase {
         attach("ax5-elige-grupo-visible")
     }
 
+    /// CA-CRT-05b: con la carta caída la bolsa avisa «No pudimos revisar la carta. Toca Reintentar.»; un reintento que
+    /// vuelve a fallar (el gancho cuenta un intento más) deja el aviso, y uno que funciona lo quita sin perder la línea.
+    /// Que «Continuar» no avance con la carta sin revisar se prueba solo en el modelo: ese botón aún no existe en iOS.
+    func testBagWithTheMenuDownOffersRetryAndRecovers() throws {
+        let failFile = NSTemporaryDirectory() + "tindivo-fail-menu-\(UUID().uuidString).txt"
+        defer { try? FileManager.default.removeItem(atPath: failFile) }
+        launch(fakeCatalog: true, failMenuFile: failFile)
+        openDonLucho()
+        let dish = dishRow("Chicha morada")
+        XCTAssertTrue(dish.waitForExistence(timeout: 20), "No está «Chicha morada»")
+        dish.tap()
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 5))
+        element("dish.add").tap()
+        let bar = element("business.cartBar")
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "No apareció «Ver bolsa»")
+
+        // La carta cae justo antes de abrir la bolsa.
+        FileManager.default.createFile(atPath: failFile, contents: Data())
+        bar.tap()
+        let notice = element("cart.unchecked")
+        XCTAssertTrue(notice.waitForExistence(timeout: 20), "No apareció el aviso de la carta caída")
+        XCTAssertEqual(notice.label, "No pudimos revisar la carta. Toca Reintentar.")
+        let retry = element("cart.retry")
+        XCTAssertTrue(retry.exists, "Falta «Reintentar»")
+        attach("ca-crt-05b-reintentar")
+
+        // Reintento con la carta aún caída: el gancho suma un byte por cada intento fallido, así que el toque tiene que
+        // subir la cuenta (si no hiciera nada, la prueba falla aquí) y el aviso sigue.
+        let attempts = { (try? FileManager.default.attributesOfItem(atPath: failFile)[.size] as? Int) ?? 0 }
+        let before = attempts()
+        XCTAssertGreaterThan(before, 0, "La bolsa debió pedir la carta al abrirse")
+        retry.tap()
+        expectation(for: NSPredicate { _, _ in attempts() > before }, evaluatedWith: nil)
+        waitForExpectations(timeout: 10)
+        XCTAssertTrue(notice.exists, "El aviso debe seguir tras un reintento fallido")
+        XCTAssertTrue(retry.exists, "«Reintentar» debe seguir tras un reintento fallido")
+
+        // La carta vuelve. La app no vuelve a pedirla sola: el aviso sigue hasta que se toca «Reintentar» (guarda contra
+        // una recarga automática que haría verde este paso sin el botón).
+        try FileManager.default.removeItem(atPath: failFile)
+        XCTAssertTrue(notice.waitForNonExistence(timeout: 2) == false, "El aviso se quitó solo, sin tocar «Reintentar»")
+        retry.tap()
+        expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: notice)
+        waitForExpectations(timeout: 20)
+        XCTAssertTrue(element("cart.line").exists, "La línea de la bolsa debe seguir a la vista")
+    }
+
     /// A8: «+» en la carta con la bolsa de otro restaurante pregunta ahí mismo.
     func testPlusWithAnotherBagAsksFromTheMenu() throws {
         launch(fakeCatalog: true, seedOtherBag: true)

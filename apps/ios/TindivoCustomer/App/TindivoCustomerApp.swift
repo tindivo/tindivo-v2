@@ -55,11 +55,23 @@ struct TindivoCustomerApp: App {
     /// - `-tindivo-seed-other-bag` empieza con una bolsa de otro negocio (`n2`).
     /// - `-tindivo-fake-catalog` usa la carta de las vistas previas en vez de la API: el flujo no depende de staging,
     ///   y tampoco `/config` (una configuración fija que nunca pide actualizar).
+    /// - `-tindivo-fail-menu-file <ruta>` (con `-tindivo-fake-catalog`): mientras ese archivo exista, toda `getBusiness`
+    ///   falla con `AppError.network` y suma un byte al archivo; la prueba lo crea y lo borra para provocar y quitar la
+    ///   «carta caída» de la bolsa, y cuenta los bytes para saber que hubo un intento.
     /// - `-tindivo-force-upgrade` deja la app en «actualización obligatoria», sin red.
     private static func debugEnvironment(_ live: AppEnvironment) -> AppEnvironment {
         let arguments = ProcessInfo.processInfo.arguments
         let fakeCatalog = arguments.contains("-tindivo-fake-catalog")
-        let catalog: any CatalogRepository = fakeCatalog ? PreviewCatalog() : live.catalog
+        let failMenuFile = arguments.firstIndex(of: "-tindivo-fail-menu-file")
+            .flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+        let catalog: any CatalogRepository =
+            if fakeCatalog, let failMenuFile {
+                MenuFailsWhileFileExists(wrapped: PreviewCatalog(), path: failMenuFile)
+            } else if fakeCatalog {
+                PreviewCatalog()
+            } else {
+                live.catalog
+            }
         let configService: any ConfigService =
             if arguments.contains("-tindivo-force-upgrade") {
                 FixedConfigService(.upgradeRequired(minVersion: "9.9.9"))
@@ -108,3 +120,24 @@ struct TindivoCustomerApp: App {
     }
     #endif
 }
+
+#if DEBUG
+/// Solo pruebas de interfaz: mientras exista el archivo de `path`, `getBusiness` falla con `AppError.network` y suma un
+/// byte al archivo, para que la prueba vea cuántas veces se pidió la carta.
+private struct MenuFailsWhileFileExists: CatalogRepository {
+    let wrapped: any CatalogRepository
+    let path: String
+
+    func listBusinesses() async throws(AppError) -> [BusinessSummary] { try await wrapped.listBusinesses() }
+
+    func getBusiness(id: String) async throws(AppError) -> BusinessMenu {
+        if let handle = FileHandle(forWritingAtPath: path) {
+            _ = try? handle.seekToEnd()
+            try? handle.write(contentsOf: Data([0x2E]))
+            try? handle.close()
+            throw .network
+        }
+        return try await wrapped.getBusiness(id: id)
+    }
+}
+#endif
