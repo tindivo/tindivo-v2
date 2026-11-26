@@ -333,6 +333,18 @@ describe('comillas POSIX del argv de Codex', () => {
       test(`${name} → 1`, () => {
         assert.equal(run(withCmd(ps2(script))).status, 1)
       })
+    for (const [name, script] of [
+      ['comillas vacías parten la unidad', "Get-Content C'':/Windows/win.ini"],
+      ['comillas parten el proveedor', "Get-ChildItem HK''CU:\\Software"],
+      ['comillas intercaladas parten la unidad', "Get-Content C'':\\x"],
+      ['comillas parten un nombre sensible', "Get-Content x\\.s''sh\\id_rsa"],
+    ])
+      test(`${name} → 1`, () => {
+        assert.equal(run(withCmd(ps2(script))).status, 1)
+      })
+    test('error de reconexión tras turn.completed sin comandos → 1', () => {
+      assert.equal(run(jl(started, done, reconnecting)).status, 1)
+    })
     test('acento grave inocuo → 0', () => {
       assert.equal(run(withCmd(ps2("Write-Output `n'a'; Get-Content a.txt"))).status, 0)
     })

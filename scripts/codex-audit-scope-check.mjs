@@ -145,7 +145,12 @@ function main() {
   const firstCommand = events.findIndex(
     (e) => ITEM_EVENTS.has(e.type) && e.item?.type === 'command_execution',
   )
-  const beforeCommands = (i) => firstCommand < 0 || i < firstCommand
+  const firstClose = events.findIndex((e) => e.type === 'turn.completed')
+  const limit = Math.min(
+    firstCommand < 0 ? Number.POSITIVE_INFINITY : firstCommand,
+    firstClose < 0 ? Number.POSITIVE_INFINITY : firstClose,
+  )
+  const beforeCommands = (i) => i < limit
   for (const [i, event] of events.entries()) {
     if (event.type !== 'error') continue
     if (beforeCommands(i) && typeof event.message === 'string' && RECONNECT.test(event.message))
@@ -206,7 +211,9 @@ function main() {
     const normalize = (t) => t.replaceAll('/', '\\').replace(rootRe, '<ROOT>')
     const decodedScan = decoded === null ? undefined : normalize(decoded)
     // PowerShell quita el acento grave de escape: \`\server llega al cmdlet como \\server.
-    const psScan = decoded === null ? undefined : normalize(decoded.replace(/`(.)/gs, '$1'))
+    // Y las comillas que quedan dentro del script (`C'':`, `HK''CU:`) las quita al armar el argumento.
+    const psScan =
+      decoded === null ? undefined : normalize(decoded.replace(/`(.)/gs, '$1').replace(/['"]/g, ''))
     const decodedScans = [decodedScan, psScan].filter((t) => t !== undefined)
 
     const both = [
