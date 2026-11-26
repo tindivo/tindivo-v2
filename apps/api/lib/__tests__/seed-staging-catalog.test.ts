@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -204,6 +204,31 @@ describe('CAX-002: ningún número real en el catálogo', () => {
   it('los negocios no llevan teléfono ni ningún número de 9 dígitos en sus datos', () => {
     for (const b of CATALOG_BUSINESSES) expect(b.phone).toBeNull()
     expect(JSON.stringify(CATALOG_BUSINESSES)).not.toMatch(/9\d{8}/)
+  })
+})
+
+describe('logos de los negocios (la tarjeta del catálogo muestra `logo_url`)', () => {
+  it('cada negocio tiene su logo propio, JPEG cuadrado y ligero, en el repo', () => {
+    for (const b of CATALOG_BUSINESSES) {
+      const file = join(IMG_DIR, `${b.logo}.jpg`)
+      expect(existsSync(file), `${b.logo}.jpg`).toBe(true)
+      const bytes = readFileSync(file)
+      expect(bytes.length, b.logo).toBeLessThanOrEqual(100 * 1024)
+      // JPEG: marca SOI en el inicio.
+      expect(bytes.subarray(0, 2).toString('hex')).toBe('ffd8')
+    }
+    expect(new Set(CATALOG_BUSINESSES.map((b) => b.logo)).size).toBe(CATALOG_BUSINESSES.length)
+  })
+
+  it('la semilla sube `business-logos/<negocio>/logo.jpg` y deja `logo_url` en los 4 negocios', async () => {
+    await seedStagingCatalog(STAGING_ORIGIN, KEY)
+    const rows = state.upserts.filter((u) => u.table === 'businesses').flatMap((u) => u.rows)
+    expect(rows).toHaveLength(4)
+    for (const o of CATALOG_OWNERS) {
+      const row = rows.find((r) => r.id === o.businessId)
+      expect(row?.logo_url, o.business.key).toBe(`https://x/${o.businessId}/logo.jpg`)
+      expect(state.uploads).toContain(`business-logos/${o.businessId}/logo.jpg`)
+    }
   })
 })
 

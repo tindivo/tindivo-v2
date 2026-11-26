@@ -11,7 +11,9 @@
  * IMÁGENES: viven en `fixtures/staging-catalog/*.jpg` (JPEG ≤ 200 KB; generadas para pruebas, sin
  * logos de marcas reales). Son pocas y se REUTILIZAN: un plato representativo por familia
  * (pollo, menú, chifa, jugo, postre, parrilla) y una portada por negocio. La portada va a
- * `business-logos/<negocio>/banner.jpg` (`businesses.banner_url`). Cada plato con foto tiene SU PROPIA
+ * `business-logos/<negocio>/banner.jpg` (`businesses.banner_url`). Cada negocio, incluida la Bodega, lleva además un
+ * logo cuadrado propio (`logo-<negocio>.jpg`, 512 px) en `business-logos/<negocio>/logo.jpg` (`businesses.logo_url`):
+ * son recortes de las fotos de prueba y una marca geométrica genérica, sin marcas de terceros. Cada plato con foto tiene SU PROPIA
  * copia, con la convención de Negocios (`itemImagePaths`): `menu-items/<negocio>/items/<itemId>.seed` y su
  * miniatura WebP de 384 px `…<itemId>.seed-t` (`fixtures/staging-catalog/thumb-<foto>.webp`, generadas
  * una vez a partir de los JPEG), de modo que borrar la foto de un plato no deje sin foto a sus hermanos.
@@ -75,6 +77,8 @@ interface Biz {
   accent: string
   fee: number
   eta: [number, number]
+  /** Logo cuadrado propio (`fixtures/staging-catalog/<clave>.jpg`): la tarjeta del catálogo muestra `logo_url`, no la portada. */
+  logo: string
   cover: string | null
   lat: number
   lng: number
@@ -94,6 +98,7 @@ export const CATALOG_BUSINESSES: Biz[] = [
     accent: 'c2410c',
     fee: 2,
     eta: [25, 35],
+    logo: 'logo-brasero',
     cover: 'portada-pollos',
     lat: E2E.BUSINESS_LAT + OFFSET,
     lng: E2E.BUSINESS_LNG + OFFSET,
@@ -194,6 +199,7 @@ export const CATALOG_BUSINESSES: Biz[] = [
     accent: 'be185d',
     fee: 2,
     eta: [20, 30],
+    logo: 'logo-rosa',
     cover: 'portada-menu',
     lat: E2E.BUSINESS_LAT - OFFSET,
     lng: E2E.BUSINESS_LNG + OFFSET,
@@ -291,6 +297,7 @@ export const CATALOG_BUSINESSES: Biz[] = [
     accent: '2e3236',
     fee: 2.5,
     eta: [30, 40],
+    logo: 'logo-chifa',
     cover: 'portada-chifa',
     lat: E2E.BUSINESS_LAT + OFFSET,
     lng: E2E.BUSINESS_LNG - OFFSET,
@@ -385,6 +392,7 @@ export const CATALOG_BUSINESSES: Biz[] = [
     accent: '15803d',
     fee: 2,
     eta: [20, 30],
+    logo: 'logo-bodega',
     cover: null, // sin portada ni fotos: prueba el estado vacío
     lat: E2E.BUSINESS_LAT - OFFSET,
     lng: E2E.BUSINESS_LNG - OFFSET,
@@ -552,6 +560,8 @@ export async function seedStagingCatalog(url: string, serviceKey: string): Promi
     console.log(`\n${b.name}`)
 
     // Portada (banner_url) en el bucket de identidad del negocio.
+    // Logo (logo_url): lo que pinta la tarjeta del catálogo (web y Android; no caen a la portada).
+    const logoUrl = await upload('business-logos', `${bid}/logo.jpg`, `${b.logo}.jpg`)
     const bannerUrl = b.cover ? await upload('business-logos', `${bid}/banner.jpg`, `${b.cover}.jpg`) : null
 
     await upsert(
@@ -566,6 +576,7 @@ export async function seedStagingCatalog(url: string, serviceKey: string): Promi
           phone: null,
           yape_number: null,
           accent_color: b.accent,
+          logo_url: logoUrl,
           banner_url: bannerUrl,
           delivery_fee: b.fee,
           estimated_eta_min: b.eta[0],
