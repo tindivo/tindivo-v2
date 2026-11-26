@@ -289,14 +289,6 @@ describe('CAX-012: el texto crudo decide si un número tiene céntimos completos
     })
   })
 
-  it('el texto de la OTRA banda no afecta: quien manda es el de la banda pedida', () => {
-    // far con precisión de más no importa cuando se cotiza near, cuyo texto es ordinario.
-    expect(nominalDeliveryFee('near', { near: 2, far: 2.5 }, 3, '2')).toEqual({
-      cents: 200,
-      reliable: true,
-    })
-  })
-
   it('un texto ausente (null) con un número presente no es fiable', () => {
     expect(nominalDeliveryFee('near', { near: 2 }, 3, null)).toEqual({
       cents: 200,

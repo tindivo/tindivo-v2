@@ -94,6 +94,21 @@ describe('quoteDelivery', () => {
     expect(r.reliable).toBe(false)
   })
 
+  it('CAX-012: la banda lejana lee el texto de far, no el de near', async () => {
+    const lejos = await quote(
+      { band: 'far', bandsText: { near: '2', far: '2.5000000000000000001' } },
+      { businessDeliveryFee: 3 },
+    )
+    expect(lejos.deliveryBand).toBe('far')
+    expect(lejos.reliable).toBe(false)
+    // Con el punto cercano, el texto impreciso de far no importa.
+    const cerca = await quote(
+      { band: 'near', bandsText: { near: '2', far: '2.5000000000000000001' } },
+      { businessDeliveryFee: 3 },
+    )
+    expect(cerca.reliable).toBe(true)
+  })
+
   it('sin fallos: banda cercana, sin promoción, fiable', async () => {
     expect(await quote({}, { businessDeliveryFee: 3 })).toEqual({
       deliveryBand: 'near',
