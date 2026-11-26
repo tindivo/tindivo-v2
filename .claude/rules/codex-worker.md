@@ -12,6 +12,8 @@ reemplaza; lo que sigue son bloqueos que no se pueden olvidar aunque no lo abras
   (`01-claude.md` sellado antes de lanzar), contrato fijo de entrada y de salida (§5–§6).
 - **Esta máquina:** modo `PROVISIONAL_RIESGO_ACEPTADO` (§13.1 bis, con vigencia): después de cada ronda corre
   `scripts/codex-audit-scope-check.mjs`; solo un 0 valida la ronda.
+- **Comandos sin barras invertidas:** el control marca cualquier `\\` en un comando, aunque sea un escape; todo encargo
+  lleva la viñeta de §5 (rutas con `/`, `rg -F` o `[.]`, sin `-split` con escapes). La lectura sigue libre.
 - **Veto (§7):** una entrega solo queda lista para merge con `firmo` sobre el candidato actual, o con `firmo con cambios`
   cuyas condiciones Codex marcó `CERRADO_VERIFICADO` sobre ese mismo candidato: cero condiciones abiertas. Tus
   correcciones no las cierras tú, y `firmo con cambios` nunca autoriza el merge.
