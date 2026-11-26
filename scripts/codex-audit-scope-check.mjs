@@ -27,7 +27,9 @@
  *   y el acento grave. Una comilla sin cerrar o una `\` fuera de comillas marca «comando no decodificable».
  *   UNC y unidad (`X:`) corren sobre el texto decodificado (el que recibe el intérprete); las demás reglas,
  *   sobre el texto crudo Y sobre el decodificado; UNC, unidad y las demás se repiten además sobre el decodificado
- *   sin los acentos graves de escape de PowerShell (`\`\server` llega al cmdlet como `\\server`).
+ *   sin los acentos graves de escape de PowerShell (`\`\server` llega al cmdlet como `\\server`), sin los
+ *   tramos entre comillas (ASCII o tipográficas) pegados a texto suelto (`C'':/W` llega como `C:/W`) y sin
+ *   variables vacías pegadas (`$x'C':\W`, `Env${x}:`).
  * - PowerShell sin `-NoProfile`.
  * - Tras sustituir por `<ROOT>` las rutas internas a AUDIT_ROOT (con `\` o `/`, con espacios y
  *   comillas; la raíz solo cuenta si la sigue `\` (o `/`) o el fin del texto. Windows admite `'`, `;`,
@@ -102,14 +104,16 @@ const PS_SINGLE = /['‘’‚‛]/
 const PS_DOUBLE = /["“”„]/
 const PS_QUOTE = /['"‘’‚‛“”„]/
 function stripGluedQuotes(text) {
-  let out = ''
+  const parts = []
+  let last // último carácter emitido (no se relee de `out`: aplanaría la cadena en cada vuelta)
   let i = 0
   while (i < text.length) {
     const c = text[i]
-    // PowerShell también trata como comillas las tipográficas (U+2018–U+201F en lo que importa aquí).
+    // PowerShell trata como comillas ' " y las tipográficas U+2018, U+2019, U+201A, U+201B, U+201C, U+201D, U+201E.
     const kind = PS_SINGLE.test(c) ? PS_SINGLE : PS_DOUBLE.test(c) ? PS_DOUBLE : null
     if (kind === null) {
-      out += c
+      parts.push(c)
+      last = c
       i++
       continue
     }
@@ -120,16 +124,21 @@ function stripGluedQuotes(text) {
         break
       }
     if (close < 0) {
-      out += text.slice(i)
+      parts.push(text.slice(i))
       break
     }
-    const prev = out.at(-1)
-    const glued = prev !== undefined && !/[\s(){};,|&]/.test(prev) && !PS_QUOTE.test(prev)
-    out += glued ? text.slice(i + 1, close) : text.slice(i, close + 1)
+    const glued = last !== undefined && !/[\s(){};,|&]/.test(last) && !PS_QUOTE.test(last)
+    const piece = glued ? text.slice(i + 1, close) : text.slice(i, close + 1)
+    parts.push(piece)
+    if (piece) last = piece.at(-1)
     i = close + 1
   }
-  return out
+  return parts.join('')
 }
+
+/** `$x`, `${x}` y `$()` vacíos desaparecen al armar el argumento; `repl` es lo que queda en su lugar. */
+const withoutVariables = (t, repl) =>
+  t.replace(/\$\{[^}]*\}|\$\(\)|\$[A-Za-z_][A-Za-z0-9_]*/g, repl)
 
 function main() {
   const [eventsPath, auditRootArg] = process.argv.slice(2)
@@ -256,7 +265,18 @@ function main() {
     // Se SUMA a las variantes anteriores: el conjunto de hallazgos nunca es menor que el de antes.
     const psScanNoQuotes =
       noBackticks === undefined ? undefined : normalize(stripGluedQuotes(noBackticks))
-    const decodedScans = [decodedScan, psScan, psScanNoQuotes].filter((t) => t !== undefined)
+    // Una variable vacía pegada a una cadena arma la ruta (`$x'C':\W`, `Env${x}:`): se quita la variable
+    // (a nada, y a un carácter neutro que no frena la búsqueda hacia atrás de unidad y proveedor).
+    const varScans =
+      noBackticks === undefined
+        ? []
+        : [
+            normalize(stripGluedQuotes(withoutVariables(noBackticks, ''))),
+            normalize(stripGluedQuotes(withoutVariables(noBackticks, '\u0000'))),
+          ]
+    const decodedScans = [decodedScan, psScan, psScanNoQuotes, ...varScans].filter(
+      (t) => t !== undefined,
+    )
 
     const both = [
       [SENSITIVE, 'nombre sensible'],

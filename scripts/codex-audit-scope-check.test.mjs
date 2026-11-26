@@ -350,6 +350,11 @@ describe('comillas POSIX del argv de Codex', () => {
         'Get-Content C\u201c\u201d:\\Windows\\win.ini',
       ],
       ['comillas ASCII vacías parten el UNC', `Get-Content ${BS}''${BS}server${BS}share${BS}x`],
+      ['variable vacía y comillas ASCII arman la unidad', "Get-Content $x'C':\\W"],
+      ['variable vacía y comillas arman el proveedor', "Get-ChildItem $x'Env':"],
+      ['variable entre llaves arma el proveedor', 'Get-ChildItem Env${x}:'],
+      ['subexpresión vacía arma el registro', 'Get-ChildItem HKCU$():\\S'],
+      ['variable vacía arma el UNC', `Get-Content ${BS}$x${BS}s${BS}x`],
       ['comilla baja parte el proveedor', 'Get-ChildItem HK\u201a\u2018CU:\\Software'],
       ['comillas parten un nombre sensible', "Get-Content x\\.s''sh\\config"],
       [
@@ -378,6 +383,12 @@ describe('comillas POSIX del argv de Codex', () => {
         assert.equal(run(withCmd(ps2(script))).status, 0)
         assert.equal(run(withCmd(ps(script))).status, 0)
       })
+    test('comando enorme con comillas vacías termina rápido (sin tiempo cuadrático)', () => {
+      const inicio = Date.now()
+      const r = run(withCmd(ps2(`Write-Output ${"x''".repeat(300000)}`)))
+      assert.ok(r.status === 0 || r.status === 1, r.out)
+      assert.ok(Date.now() - inicio < 3000, `tardó ${Date.now() - inicio} ms`)
+    })
     test('error de reconexión tras turn.completed sin comandos → 1', () => {
       assert.equal(run(jl(started, done, reconnecting)).status, 1)
     })
