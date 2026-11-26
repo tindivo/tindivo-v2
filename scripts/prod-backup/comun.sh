@@ -4,8 +4,9 @@
 
 # --- Lo primero, antes de cualquier proceso hijo: el entorno se reduce a una lista de variables PERMITIDAS ---------
 # No se enumeran las credenciales que podrían venir exportadas (siempre faltaría alguna): se quita del entorno TODO lo
-# que no haga falta para que arranquen bash, git, docker, gpg, node y powershell. Solo órdenes internas de bash: no
-# hay ni una sustitución de órdenes antes de terminar la limpieza.
+# que no haga falta para que arranquen bash, git, docker, gpg, node y powershell. La lista lleva NOMBRES EXACTOS, sin
+# prefijos ni comodines: una variable BASH_LO_QUE_SEA o MSYSTEM_LO_QUE_SEA exportada también se quita. Solo órdenes
+# internas de bash: ningún programa externo arranca antes de terminar la limpieza.
 set +a
 _permitida() {
   case "$1" in
@@ -14,23 +15,49 @@ _permitida() {
     SYSTEMROOT | SystemRoot | WINDIR | windir | COMSPEC | ComSpec | PATHEXT | OS | SYSTEMDRIVE | SystemDrive | HOMEDRIVE | HOMEPATH) return 0 ;;
     APPDATA | LOCALAPPDATA | PROGRAMDATA | ProgramData | ALLUSERSPROFILE | PUBLIC | PROGRAMFILES | ProgramFiles | ProgramW6432 | PSModulePath) return 0 ;;
     CommonProgramFiles | CommonProgramW6432 | NUMBER_OF_PROCESSORS | PROCESSOR_ARCHITECTURE | PROCESSOR_IDENTIFIER) return 0 ;;
-    MSYSTEM | MSYSTEM_* | MSYS | MSYS2_PATH_TYPE | MINGW_PREFIX | MINGW_CHOST | MINGW_PACKAGE_PREFIX | EXEPATH | ORIGINAL_PATH) return 0 ;;
+    MSYSTEM | MSYSTEM_CARCH | MSYSTEM_CHOST | MSYSTEM_PREFIX | MSYS | MSYS2_PATH_TYPE | MINGW_PREFIX | MINGW_CHOST | MINGW_PACKAGE_PREFIX) return 0 ;;
+    EXEPATH | ORIGINAL_PATH) return 0 ;;
     TINDIVO_COPIA_IMAGEN | TINDIVO_COPIA_TMPFS_MB | TINDIVO_COPIA_LOCAL_CLAVE | TINDIVO_COPIA_LOCAL_SERVICE_KEY) return 0 ;;
     TINDIVO_COPIA_LOCAL_CONTRASENA | TINDIVO_COPIA_LOCAL_PUERTO | TINDIVO_COPIA_LOCAL_SCRAM) return 0 ;;
   esac
   return 1
 }
-for _v in "${!A@}" "${!B@}" "${!C@}" "${!D@}" "${!E@}" "${!F@}" "${!G@}" "${!H@}" "${!I@}" "${!J@}" "${!K@}" "${!L@}" "${!M@}" \
-  "${!N@}" "${!O@}" "${!P@}" "${!Q@}" "${!R@}" "${!S@}" "${!T@}" "${!U@}" "${!V@}" "${!W@}" "${!X@}" "${!Y@}" "${!Z@}" \
-  "${!a@}" "${!b@}" "${!c@}" "${!d@}" "${!e@}" "${!f@}" "${!g@}" "${!h@}" "${!i@}" "${!j@}" "${!k@}" "${!l@}" "${!m@}" \
-  "${!n@}" "${!o@}" "${!p@}" "${!q@}" "${!r@}" "${!s@}" "${!t@}" "${!u@}" "${!v@}" "${!w@}" "${!x@}" "${!y@}" "${!z@}" "${!_@}"; do
-  case "$_v" in '' | _v | BASH* | EUID | UID | PPID | SHELLOPTS) continue ;; esac
-  # Solo interesan las exportadas (las que heredaría un hijo); el atributo se lee sin lanzar nada.
-  [[ "${!_v@a}" == *x* ]] || continue
-  _permitida "$_v" || unset "$_v" 2>/dev/null || export -n "$_v" 2>/dev/null || true
+_exportadas() { # escribe en _X los nombres de todas las variables exportadas que no están en la lista
+  # `local -` devuelve las opciones al salir; sin -u, ${!_n@a} no falla con las declaradas sin valor (BASH_ARGV…).
+  local - _n
+  set +u
+  _X=()
+  for _n in "${!A@}" "${!B@}" "${!C@}" "${!D@}" "${!E@}" "${!F@}" "${!G@}" "${!H@}" "${!I@}" "${!J@}" "${!K@}" "${!L@}" "${!M@}" \
+    "${!N@}" "${!O@}" "${!P@}" "${!Q@}" "${!R@}" "${!S@}" "${!T@}" "${!U@}" "${!V@}" "${!W@}" "${!X@}" "${!Y@}" "${!Z@}" \
+    "${!a@}" "${!b@}" "${!c@}" "${!d@}" "${!e@}" "${!f@}" "${!g@}" "${!h@}" "${!i@}" "${!j@}" "${!k@}" "${!l@}" "${!m@}" \
+    "${!n@}" "${!o@}" "${!p@}" "${!q@}" "${!r@}" "${!s@}" "${!t@}" "${!u@}" "${!v@}" "${!w@}" "${!x@}" "${!y@}" "${!z@}" "${!_@}"; do
+    case "$_n" in '' | _n | _X) continue ;; esac
+    # Solo interesan las exportadas (las que heredaría un hijo); el atributo se lee sin lanzar nada.
+    [[ "${!_n@a}" == *x* ]] || continue
+    _permitida "$_n" || _X+=("$_n")
+  done
+}
+_exportadas
+for _v in "${_X[@]}"; do
+  # Las de solo lectura (BASHOPTS, por ejemplo, si vino del entorno) no se pueden borrar, pero sí dejar de exportar.
+  unset "$_v" 2>/dev/null || export -n "$_v" 2>/dev/null || true
 done
+# Las funciones exportadas viajan a los hijos como variables BASH_FUNC_<nombre>%%: se borran todas. En este punto
+# solo existen las que trajo el entorno y las dos de arriba. La subcapa de <( ) es bash (sin programas externos).
+while read -r _ _ _v; do
+  case "$_v" in _permitida | _exportadas) export -nf "$_v" 2>/dev/null || true ;; *) unset -f "$_v" 2>/dev/null || export -nf "$_v" 2>/dev/null || true ;; esac
+done < <(declare -F -x)
+# Y se comprueba: si queda una sola variable o función exportada fuera de la lista, el guion no sigue.
+_exportadas
+_F=''
+while read -r _ _ _v; do _F="$_F $_v"; done < <(declare -F -x)
+if [ "${#_X[@]}" -gt 0 ] || [ -n "$_F" ]; then
+  printf 'ERROR: no se pudo limpiar el entorno: siguen exportadas %s%s\n' "${_X[*]}" "${_F:+ (funciones:$_F)}" >&2
+  exit 70
+fi
+unset _X _F _v
 # Los nombres que el guion usa para sus secretos nacen sin atributo de exportación.
-unset DB_PASS STORAGE_KEY MGMT_TOKEN CLAVE GNUPG_TMP _v
+unset DB_PASS STORAGE_KEY CLAVE GNUPG_TMP
 # ------------------------------------------------------------------------------------------------------------------
 
 REF_PROD='zpnipajgwfthxhdtzhly'

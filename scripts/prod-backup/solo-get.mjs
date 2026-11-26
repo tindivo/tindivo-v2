@@ -1,4 +1,4 @@
-// Copia de producción P0.5: la ÚNICA función que habla por HTTP con Storage y con la API de gestión.
+// Copia de producción P0.5: la ÚNICA función que habla por HTTP (con Storage).
 // El método es GET y no se puede cambiar desde fuera; no sigue redirecciones (la credencial no viaja a otro host)
 // y sus errores nunca incluyen cabeceras.
 

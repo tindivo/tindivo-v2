@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Copia de producción P0.5: saca una copia CIFRADA de la base, de Storage y del inventario de configuración.
+# Copia de producción P0.5: saca una copia CIFRADA de la base y de los archivos de Storage.
+# La configuración externa (Auth, Edge Functions, secretos de la plataforma) NO entra: va en otra entrega, con capturas
+# del panel. Por eso, contra prod, el resultado es siempre «COPIA PARCIAL» con ese motivo declarado.
 # Runbook (léelo antes): Docs/operacion/copia-de-produccion.md
 #
 #   bash scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha> --ca <archivo.crt> [--salida <carpeta>]
@@ -7,12 +9,12 @@
 #
 # Lo que garantiza, por construcción:
 #   - SOLO LECTURA. Contra la base: pg_dump y consultas de lectura (SELECT y SHOW), en sesiones que llegan con
-#     default_transaction_read_only=on; conteos, inventario y listado van además en transacciones READ ONLY. Contra Storage y la API de gestión: únicamente GET (solo-get.mjs).
+#     default_transaction_read_only=on; conteos, inventario y listado van además en transacciones READ ONLY. Contra Storage: únicamente GET (solo-get.mjs).
 #   - NINGÚN ARCHIVO EN CLARO. El dump se arma en la memoria de un contenedor efímero y sale por una tubería
 #     directo a gpg. En la carpeta de salida solo quedan archivos .gpg, sus sha256 y registros sin datos personales.
 #     Lo que el guion no controla es que Windows pagine esa memoria al disco: por eso contra prod exige que los
 #     discos del PC estén cifrados (BitLocker), o que quien lo ejecuta acepte ese riesgo con una opción explícita.
-#   - COMPLETA O PARCIAL, NUNCA AMBIGUA. Si falta una parte, un archivo de Storage o una consulta de configuración,
+#   - COMPLETA O PARCIAL, NUNCA AMBIGUA. Si falta una parte o un archivo de Storage,
 #     el resultado es «COPIA PARCIAL», con sus motivos, y el guion termina con código 3.
 #   - LAS CREDENCIALES NO SE GUARDAN. Con --destino prod se escriben a mano en esta terminal (no se ven), viven en
 #     la memoria de este proceso y no pasan por argumentos, archivos ni registros.
@@ -30,9 +32,9 @@ source "$_aqui/comun.sh"
 
 # Las variables de secretos se crean aquí sin atributo de exportación, aunque el entorno trajera uno con ese nombre.
 set +a
-unset DB_PASS STORAGE_KEY MGMT_TOKEN
+unset DB_PASS STORAGE_KEY
 DESTINO='' SALIDA='' COMMIT_FIRMADO='' ARCHIVO_CA='' SIN_PGOPTIONS=0 DISCO_SIN_CIFRAR=0
-DB_PASS='' STORAGE_KEY='' MGMT_TOKEN='' FASE_EN_CURSO=''
+DB_PASS='' STORAGE_KEY='' FASE_EN_CURSO=''
 MOTIVOS=()
 CARPETA_CREADA=0
 
@@ -71,8 +73,8 @@ unset TINDIVO_SIN_PGOPTIONS TINDIVO_MOSTRAR_CONTEOS TINDIVO_CA_PEM TINDIVO_GUION
 limpiar() {
   local rc=$?
   set +e
-  DB_PASS='' STORAGE_KEY='' MGMT_TOKEN='' CLAVE=''
-  unset PGPASSWORD TINDIVO_STORAGE_KEY TINDIVO_MGMT_TOKEN
+  DB_PASS='' STORAGE_KEY='' CLAVE=''
+  unset PGPASSWORD TINDIVO_STORAGE_KEY
   dk rm -f "$NOMBRE_CONT" >/dev/null 2>&1
   cerrar_gpg
   # Solo se marca la carpeta que creó ESTA corrida: nunca una que ya existía (podría ser una copia buena).
@@ -121,7 +123,7 @@ if [ "$DESTINO" = prod ]; then
   fi
   # Lo que haya en el entorno no se usa: las credenciales de prod solo entran por el teclado.
   unset PGPASSWORD PGHOST PGPORT PGUSER PGDATABASE PGOPTIONS PGREQUIREAUTH PGSERVICE PGSERVICEFILE PGPASSFILE PGSSLMODE DATABASE_URL
-  unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY TINDIVO_STORAGE_KEY TINDIVO_MGMT_TOKEN
+  unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY TINDIVO_STORAGE_KEY
   unset TINDIVO_COPIA_LOCAL_CLAVE TINDIVO_COPIA_LOCAL_SERVICE_KEY TINDIVO_COPIA_LOCAL_CONTRASENA TINDIVO_COPIA_LOCAL_PUERTO
 fi
 
@@ -173,8 +175,6 @@ else
   STORAGE_URL="$URL_PROD"
   log 'Archivos de Storage: hace falta la clave service_role (panel → Settings → API Keys). Enter para dejarlos para otra pasada.'
   pedir_oculto 'service_role (no se ve; Enter = omitir): ' STORAGE_KEY
-  log 'Inventario de configuración: hace falta un token personal (panel → Account → Access Tokens). Enter para omitir.'
-  pedir_oculto 'Token personal (no se ve; Enter = omitir): ' MGMT_TOKEN
 fi
 if [ "$SIN_PGOPTIONS" = 1 ]; then
   export TINDIVO_SIN_PGOPTIONS=1
@@ -193,7 +193,7 @@ if [ "$DESTINO" = prod ]; then
   paso '3. Confirmación'
   log "Se va a LEER tindivo-prod ($PGHOST:$PGPORT, usuario $PGUSER) y a escribir la copia cifrada en:"
   log "  $SALIDA"
-  log "Partes: base = sí · archivos de Storage = $([ -n "$STORAGE_KEY" ] && echo sí || echo no) · configuración = $([ -n "$MGMT_TOKEN" ] && echo sí || echo no)"
+  log "Partes: base = sí · archivos de Storage = $([ -n "$STORAGE_KEY" ] && echo sí || echo no) · configuración externa = no (otra entrega)"
   CONFIRMA=''
   pedir_visible 'Escribe COPIAR tindivo-prod para seguir: ' CONFIRMA ''
   [ "$CONFIRMA" = 'COPIAR tindivo-prod' ] || fallo 'no se confirmó: no se hizo nada'
@@ -204,7 +204,7 @@ CARPETA_CREADA=1
 INICIO=$(date +%s)
 
 # ---------------------------------------------------------------------------------------------------------------
-paso 'Parte 1 de 3 · Base: roles, esquema, permisos, datos de public/auth/storage, conteos e inventario'
+paso 'Parte 1 de 2 · Base: roles, esquema, permisos, datos de public/auth/storage, conteos e inventario'
 FASE_EN_CURSO='1-base.tar.gpg'
 { printf '%s\n' "$DB_PASS" | contenedor bridge copiar 2>&1 1>&3 | tee "$SALIDA/1-base.copia.log" >&2; } 3>&1 |
   cifrar >"$SALIDA/1-base.tar.gpg"
@@ -219,7 +219,7 @@ log "Parte 1: $ESTADO_1"
 
 # ---------------------------------------------------------------------------------------------------------------
 DB_PASS=''
-paso 'Parte 2 de 3 · Archivos de Storage'
+paso 'Parte 2 de 2 · Archivos de Storage'
 ESTADO_2='OMITIDA (sin clave service_role): los archivos de Storage NO están en esta copia'
 if [ -z "$STORAGE_KEY" ]; then
   MOTIVOS+=('parte 2 omitida: los archivos de Storage no están en la copia')
@@ -250,33 +250,9 @@ log "Parte 2: $ESTADO_2"
 STORAGE_KEY=''
 
 # ---------------------------------------------------------------------------------------------------------------
-paso 'Parte 3 de 3 · Inventario de configuración externa (Auth, Edge Functions, nombres de secretos)'
-ESTADO_3='OMITIDA (sin token personal): saca el inventario a mano con el runbook'
-[ "$DESTINO" = prod ] || ESTADO_3='NO APLICA en local (la API de gestión solo existe para el proyecto remoto)'
-if [ -z "$MGMT_TOKEN" ]; then
-  [ "$DESTINO" != prod ] || MOTIVOS+=('parte 3 omitida: no hay inventario de la configuración externa')
-else
-  FASE_EN_CURSO='3-config.tar.gpg'
-  {
-    TINDIVO_MGMT_TOKEN="$MGMT_TOKEN" node "$DIR_GUIONES/config-inventario.mjs" "$REF_PROD" 2>&1 1>&3 |
-      tee "$SALIDA/3-config.copia.log" >&2
-  } 3>&1 | cifrar >"$SALIDA/3-config.tar.gpg"
-  M3="$(manifiesto_de "$SALIDA/3-config.copia.log")"
-  [ -n "$M3" ] || fallo 'la parte 3 no entregó su manifiesto'
-  verificar_tar_node "$SALIDA/3-config.tar.gpg" "$SALIDA/3-config.verificacion.log"
-  [ "$(manifiesto_de "$SALIDA/3-config.verificacion.log")" = "$M3" ] || fallo 'el manifiesto de configuración descifrado no es el que se cifró'
-  FASE_EN_CURSO=''
-  E3="$(estado_de "$SALIDA/3-config.copia.log")"
-  [ "$E3" = "$(estado_de "$SALIDA/3-config.verificacion.log")" ] || fallo 'el estado de la configuración descifrado no es el que se anotó'
-  case "$E3" in
-    COMPLETA) ;;
-    PARCIAL) MOTIVOS+=("parte 3 parcial: $(grep -o 'faltan consultas: [a-z, -]*' "$SALIDA/3-config.copia.log" | tail -n 1)") ;;
-    *) fallo 'la parte 3 no dijo si quedó completa' ;;
-  esac
-  ESTADO_3="$E3 · manifiesto $M3"
-fi
-log "Parte 3: $ESTADO_3"
-MGMT_TOKEN=''
+# La configuración externa no forma parte de esta copia (decisión de Jesús, 2026-11-26): se declara, no se calla.
+ESTADO_3='NO INCLUIDA: la configuración de Auth y de Edge Functions va en otra entrega, con capturas del panel'
+[ "$DESTINO" != prod ] || MOTIVOS+=('sin configuración externa (Auth, Edge Functions): no entra en esta copia; va en otra entrega')
 
 # ---------------------------------------------------------------------------------------------------------------
 paso 'Cierre: sha256, resumen y comprobación de que no quedó nada en claro'
@@ -306,7 +282,7 @@ fi
   echo "parte 1 base:   $ESTADO_1"
   echo "                $(grep -o 'RESUMEN .*' "$SALIDA/1-base.copia.log" | tail -n 1)"
   echo "parte 2 storage: $ESTADO_2"
-  echo "parte 3 config:  $ESTADO_3"
+  echo "configuración:  $ESTADO_3"
   echo
   echo 'sha256 de los archivos cifrados (también en SHA256SUMS):'
   cat "$SALIDA/SHA256SUMS"

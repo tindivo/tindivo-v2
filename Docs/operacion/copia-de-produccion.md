@@ -8,27 +8,33 @@
 Guiones: `scripts/prod-backup/`. Plan: `Docs/planes/migraciones/plan-diario.md` (P0.5, nivel B + C).
 
 **Decisiones de Jesús (2026-11-26):** la copia va **cifrada** a **su Google Drive**; la clave la guarda **solo él**;
-se saca con él presente.
+se saca con él presente. Y, por la noche: esta entrega **no lleva el inventario de la configuración externa** (Auth,
+Edge Functions, secretos de la plataforma). Ese inventario va en otra entrega, con capturas del panel.
+
+> **La copia de prod sale PARCIAL, y es lo esperado.** Le falta, a propósito, la configuración externa: Auth (URL del
+> sitio, proveedores, plantillas, hooks), Edge Functions (versión y estado) y los nombres de los secretos. Por eso,
+> contra prod, `copia.sh` y `verificar.sh` terminan siempre en **`COPIA PARCIAL` (código 3)** con el motivo
+> `sin configuración externa (Auth, Edge Functions)…`. Si ese es **el único** motivo, la copia de base y Storage salió
+> entera. **P0.5 no se cierra** hasta tener también ese inventario.
 
 ## 1. Qué hace y qué garantiza
 
-`copia.sh` saca tres archivos cifrados. Cada parte se cifra por separado. **La copia solo es COMPLETA si están las tres
-y a ninguna le falta nada**; si se omite una parte, o falta un archivo de Storage o una consulta de configuración, el
-resultado es **COPIA PARCIAL** (queda `PARCIAL.txt` con los motivos y el guion termina con código 3): sirve como copia
-de lo que sí lleva, pero **no cierra P0.5**.
+`copia.sh` saca dos archivos cifrados. Cada parte se cifra por separado. Si se omite una parte o falta un archivo de
+Storage, el resultado es **COPIA PARCIAL** (queda `PARCIAL.txt` con los motivos y el guion termina con código 3): sirve
+como copia de lo que sí lleva, pero **no cierra P0.5**. Contra prod, además, siempre figura el motivo de la
+configuración externa (ver arriba). Contra la base local, con las dos partes enteras, sale `COPIA COMPLETA`.
 
 | Archivo | Qué lleva | Credencial que pide |
 |---|---|---|
 | `1-base.tar.gpg` | Roles y pertenencias (sin contraseñas); **esquema y datos** de `public`, `auth` (usuarios e identidades), `storage` (metadatos de los objetos), el historial de migraciones y cualquier otro esquema propio (hoy, `auth_hooks`); el esquema completo de la base (permisos, RLS, funciones, extensiones); **conteo y suma de verificación por tabla**; inventario en CSV: permisos efectivos, políticas RLS, cron, extensiones, buckets, publicaciones, disparadores y **solo los nombres** de Vault | Contraseña de la base |
 | `2-storage.tar.gpg` | Los **archivos** de todos los buckets, con el sha256 de cada uno. La lista de qué bajar es la de `storage.objects` **en la misma foto que el dump** (viaja dentro de `1-base`); cada objeto que no se pueda bajar o que mida distinto queda anotado y deja la parte PARCIAL | Además, la clave `service_role` |
-| `3-config.tar.gpg` | Inventario de lo que no vive en la base: configuración de Auth, Edge Functions (versión y estado), nombres de los secretos, API, red y los respaldos de la plataforma. **Tachado por defecto:** se guardan la estructura, los nombres de las claves, los números, los interruptores y solo los textos de claves conocidas e inofensivas (de una URL, solo esquema y host). Cada respuesta debe tener la forma mínima esperada; si no, la parte queda PARCIAL | Un token personal de Supabase |
 
 Lo que garantiza, y cómo:
 
 - **Solo lectura.** Contra la base solo corren `pg_dump` y consultas de lectura (`SELECT` y `SHOW`), en sesiones que llegan
   con `default_transaction_read_only=on` (el guion lo comprueba antes de empezar y Postgres rechaza cualquier
   escritura); los conteos, el inventario y el listado van además dentro de una transacción `READ ONLY`. Contra
-  Storage y la API de gestión solo existe una función HTTP y su método es `GET` (`solo-get.mjs`). Hay pruebas que
+  Storage solo existe una función HTTP y su método es `GET` (`solo-get.mjs`). Hay pruebas que
   fallan si alguien añade una sentencia de escritura o una segunda llamada HTTP.
 - **Una sola foto.** Los conteos, el inventario, la lista de objetos de Storage y los dos dumps salen del mismo
   snapshot (`pg_export_snapshot`): lo que dicen los conteos es exactamente lo que hay en el dump. `roles.sql`
@@ -45,16 +51,17 @@ Lo que garantiza, y cómo:
 - **El servidor es el que dice ser.** Contra prod la conexión es `verify-full` con el certificado de la CA de Supabase
   (`--ca`, obligatorio) y libpq solo acepta SCRAM. Si el certificado no valida, no hay copia: no existe modo sin comprobar.
 - **Las credenciales no se guardan.** Se escriben a mano en la terminal (no se ven), viven en la memoria del proceso y
-  no pasan por argumentos, archivos ni registros; cada una llega solo al proceso que la usa (la contraseña, a `psql`,
-  y `pg_dump`; la `service_role` y el token, a Node). Con `--destino prod` el guion se niega a correr sin
-  una terminal. Antes de lanzar ningún programa, el guion reduce el entorno a una lista corta de variables permitidas
-  (`PATH`, `HOME`, las del sistema): cualquier credencial que estuviera exportada en la terminal no llega a nadie. Una terminal no demuestra que haya una persona:
+  no pasan por argumentos, archivos ni registros; cada una llega solo al proceso que la usa (la contraseña, a `psql`
+  y `pg_dump`; la `service_role`, a Node). Con `--destino prod` el guion se niega a correr sin
+  una terminal. Antes de lanzar ningún programa, el guion reduce el entorno a una lista corta de variables permitidas,
+  con nombres exactos (`PATH`, `HOME`, las del sistema), y borra las funciones exportadas; si algo queda, no sigue:
+  cualquier credencial que estuviera exportada en la terminal no llega a nadie. Una terminal no demuestra que haya una persona:
   la garantía de que ningún agente ve las credenciales es que **solo Jesús las conoce y las escribe en su propia ventana**.
 - **Corre lo firmado.** Contra prod exige `--commit-firmado` y se niega si el checkout no está en ese commit o tiene
   cambios sin commit en `scripts/prod-backup/`.
 - **Horario.** De 18:00 a 23:00, hora de Lima, se niega (nivel B).
 
-Lo que **no** lleva, a propósito: contraseñas de roles (la plataforma no las entrega), valores de Vault, valores de los
+Lo que **no** lleva, a propósito: la configuración externa (arriba), contraseñas de roles (la plataforma no las entrega), valores de Vault, valores de los
 secretos de las funciones y de Auth (Twilio, Google OAuth, FCM, APNs: se vuelven a cargar desde su origen), y los
 esquemas que administra la plataforma (`realtime`, `net`, `supabase_functions`…), salvo su definición en el esquema completo.
 
@@ -76,7 +83,7 @@ No hay nada que instalar: `gpg` viene con Git para Windows y la imagen de Postgr
    - *Connect → Session pooler*: el host (termina en `.pooler.supabase.com`), puerto `5432` y usuario `postgres.zpnipajgwfthxhdtzhly`.
    - La **contraseña de la base**. Si no la tienes guardada, **no la restablezcas** por tu cuenta (eso sí cambia producción): avisa y se decide.
    - *Settings → API Keys*: la clave **`service_role`** (para los archivos de Storage).
-   - *Account → Access Tokens*: crea un **token personal** con la caducidad más corta; lo revocas al terminar.
+   - **No hace falta** un token personal de Supabase: esta copia no consulta la API de gestión.
 4. **El certificado de la CA de Supabase (obligatorio):** *Database → Settings → SSL Configuration → Download
    certificate*. Se pasa con `--ca <archivo>` y sirve para comprobar que el servidor es el de Supabase.
 5. **BitLocker activo** en los discos del PC (*Configuración → Privacidad y seguridad → Cifrado de dispositivo*). El
@@ -97,13 +104,12 @@ Lo que vas a ver, en orden:
 | Paso | Qué te pide o muestra | Qué debes ver |
 |---|---|---|
 | 0 | Comprobaciones | `guiones: commit <sha-firmado>` sin «(con cambios sin commit)» y `discos:  cifrado (BitLocker activo…)` |
-| 1 | Host, puerto, usuario, contraseña de la base, `service_role`, token personal | Lo que pegas en los campos ocultos **no se ve**. Enter en `service_role` o en el token omite esa parte |
+| 1 | Host, puerto, usuario, contraseña de la base, `service_role` | Lo que pegas en los campos ocultos **no se ve**. Enter en `service_role` omite la parte 2 (no lo hagas: sin ella faltan los archivos) |
 | 2 | La clave de cifrado, dos veces | Si no coinciden o es corta, la vuelve a pedir |
-| 3 | Resumen y confirmación | Escribe exactamente `COPIAR tindivo-prod` |
+| 3 | Resumen y confirmación (`configuración externa = no (otra entrega)`) | Escribe exactamente `COPIAR tindivo-prod` |
 | Parte 1 | `TLS: se verifica el certificado del servidor (verify-full)`, `sesión en solo lectura: default_transaction_read_only=on`, `snapshot exportado`, `RESUMEN tablas=… filas=…`, y luego la verificación | `Parte 1: OK · manifiesto …` |
 | Parte 2 | `[storage] RESUMEN listados=… ok=… no_encontrados=…` y `ESTADO=…` | `Parte 2: COMPLETA` si `ok` es igual a `listados`: cada archivo se bajó con el tamaño y la huella (ETag) que la base tenía en la foto. Con cualquier `no_encontrados`, `nombre_no_valido`, `tamano_distinto`, `sin_huella` o `huella_distinta` mayor que 0 sale `PARCIAL` (una subida que nunca terminó, un archivo cambiado mientras corría la copia): se decide con Jesús si se acepta, se repite o se investiga |
-| Parte 3 | `[config] auth: ok`, `edge-functions: ok`… y `ESTADO=…` | `Parte 3: COMPLETA`. Solo un `404` en una consulta opcional cuenta como `no_aplica`; cualquier otro fallo deja la parte `PARCIAL` y dice qué consulta faltó |
-| Cierre | `No quedó ningún archivo en claro…`, el `RESUMEN` con `RESULTADO: COPIA COMPLETA` y `== LISTO: COPIA COMPLETA` | La carpeta: `~/tindivo-copias/prod-<fecha>Z`. Si dice `COPIA PARCIAL`, lee `PARCIAL.txt`: P0.5 no se cierra con una parcial |
+| Cierre | `No quedó ningún archivo en claro…`, el `RESUMEN` con `RESULTADO: COPIA PARCIAL` y **un solo** motivo: `sin configuración externa (Auth, Edge Functions)…`; termina con código 3 | La carpeta: `~/tindivo-copias/prod-<fecha>Z`. Si `PARCIAL.txt` trae **otro** motivo además de ese, la base o Storage no salieron enteros: se decide con Jesús si se repite |
 
 La copia de una base como la nuestra tarda uno o dos minutos; Storage depende de cuántos archivos haya.
 
@@ -120,17 +126,19 @@ La copia de una base como la nuestra tarda uno o dos minutos; Storage depende de
    bash scripts/prod-backup/verificar.sh ~/Downloads/prod-<fecha>Z
    ```
 
-   Debe terminar en `== VERIFICADA: COPIA COMPLETA`. Comprueba el sha256 de cada archivo, lo abre con tu clave hacia la memoria y lee
+   Debe terminar en `== VERIFICADA, PERO ES UNA COPIA PARCIAL` con **un solo** motivo, el de la configuración
+   externa (código 3). Comprueba el sha256 de cada archivo, lo abre con tu clave hacia la memoria y lee
    el dump entero. Borra después la carpeta descargada (solo tiene archivos cifrados).
 3. Pega en el expediente el contenido de `RESUMEN.txt` (no tiene secretos ni datos personales).
 
 ## 5. Al terminar
 
-- **Revoca el token personal** (*Account → Access Tokens*). La `service_role` y la contraseña no cambian.
+- La `service_role` y la contraseña no cambian (no se creó ningún token).
 - Cierra la ventana de Git Bash (su historial de pantalla no tiene credenciales, pero sí el resumen).
 - La carpeta local `~/tindivo-copias/prod-<fecha>Z` puede quedarse (está cifrada) hasta que P0.6 la use; «fuera del PC»
   se cumple con la de Drive.
-- Anota en `Docs/planes/migraciones/cola.md` (P0.5): fecha, sha256 de `1-base.tar.gpg` y dónde está.
+- Anota en `Docs/planes/migraciones/cola.md` (P0.5): fecha, sha256 de `1-base.tar.gpg`, dónde está y que le falta
+  la configuración externa (P0.5 sigue abierto por eso).
 
 **Datos personales.** La copia lleva los datos del banco inscrito PN-2026-559 (clientes, teléfonos, direcciones,
 comprobantes). Cifrada y con la clave fuera de Drive, quien entre a la cuenta de Google no puede leerla. Cuánto tiempo
@@ -171,14 +179,15 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
    fila a fila: mismas tablas, mismo conteo, misma suma. Después, pedidos, cargos y saldos (P0.6).
 6. Los archivos de Storage: `2-storage.tar.gpg` trae `MANIFEST.json` con bucket, nombre original y sha256 de cada
    objeto; el archivo va en `objetos/<bucket>/<id>`. Subirlos de vuelta es un guion que todavía no existe.
-7. Lo que hay que volver a cargar a mano porque la copia no lo lleva: contraseñas de roles, valores de Vault y de los
-   secretos de las funciones, secretos de Auth (Twilio, Google OAuth), y desplegar `send-push` desde el repo.
+7. Lo que hay que volver a cargar a mano porque la copia no lo lleva: la configuración de Auth y de las Edge
+   Functions (del inventario de la otra entrega), contraseñas de roles, valores de Vault y de los secretos de las
+   funciones, secretos de Auth (Twilio, Google OAuth), y desplegar `send-push` desde el repo.
 
 ## 8. Si algo falla
 
 | Síntoma | Causa probable | Qué hacer |
 |---|---|---|
-| `no se pudo conectar` nada más empezar la parte 1 | Host, usuario o contraseña mal copiados (la línea `diagnostico: no se pudo conectar: …` de arriba dice cuál); o el pooler no acepta las opciones de arranque | Revisa los tres datos. Si están bien, repite con `--sin-pgoptions`: la sesión deja de llevar `default_transaction_read_only`; quedan las transacciones `READ ONLY` del snapshot y del listado, y que `pg_dump` y `pg_dumpall` solo leen. Queda anotado en `RESUMEN.txt` |
+| `no se pudo conectar` nada más empezar la parte 1 | Host, usuario o contraseña mal copiados (la línea `diagnostico: no se pudo conectar: …` de arriba dice cuál); o el pooler no acepta las opciones de arranque | Revisa los tres datos. Si están bien, repite con `--sin-pgoptions`: la sesión deja de llevar `default_transaction_read_only`; quedan las transacciones `READ ONLY` del snapshot y del listado, y que `pg_dump` solo lee. Queda anotado en `RESUMEN.txt` |
 | `no se pudo exportar el snapshot` | Puerto 6543 (modo transacción) | Usa el 5432 (modo sesión) |
 | `el servidor es Postgres N y este pg_dump es 17` | Producción está en una versión mayor más nueva que la imagen | Para: hace falta fijar otra imagen y volver a firmar |
 | `pg_dump de los datos falló` con `diagnostico: permiso denegado sobre un objeto de la base` | Una tabla de `auth` o `storage` que el rol `postgres` no puede leer en producción | Para. El nombre de la tabla no se muestra a propósito (ningún texto del servidor llega a la pantalla): se busca comparando los permisos de `auth` y `storage` de producción con los de la base local, se ajusta el guion y se vuelve a firmar. No lo fuerces con otro rol |
@@ -187,15 +196,17 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
 | `diagnostico: no se pudo conectar: el certificado del servidor no lo firma la CA indicada` (o `…es de otro nombre`) | El certificado descargado no es el que firma al servidor, o alguien se interpuso | **Para.** No hay modo sin comprobar el certificado. Vuelve a bajarlo del panel; si sigue fallando, se investiga antes de repetir |
 | `no se pudo acreditar que los discos estén cifrados` | BitLocker apagado, suspendido o no consultable | Actívalo y repite. `--acepto-disco-sin-cifrar` es una decisión de Jesús: queda escrita en `RESUMEN.txt` |
 | `N linea(s) de diagnostico omitidas` | Un error de Postgres que el filtro no sabe clasificar (podría citar datos) | Ningún mensaje del servidor se muestra tal cual: los conocidos salen como `diagnostico: …` con un texto fijo y el resto se cuenta. El motivo exacto no se muestra a propósito. Reproduce el fallo contra la base local (§6) para verlo |
-| Termina en `COPIA PARCIAL` (código 3) | Se omitió una parte, faltó un archivo de Storage o una consulta de configuración | Lee `PARCIAL.txt`. Se puede repetir entera, o guardar la parcial sabiendo qué le falta; P0.5 no se cierra |
+| Termina en `COPIA PARCIAL` (código 3) con **más** motivos que el de la configuración externa | Se omitió la parte 2 o faltó un archivo de Storage | Lee `PARCIAL.txt`. Se puede repetir entera, o guardar la parcial sabiendo qué le falta; P0.5 no se cierra |
 | `Storage respondió HTTP 401/403` | `service_role` equivocada | Repite; la parte 1 se vuelve a sacar (es rápida) |
-| `la API de gestión no devolvió el proyecto…` | Token vencido o sin acceso | Crea otro token, o deja la parte 3 para después (Enter) |
+| `no se pudo limpiar el entorno: siguen exportadas …` | Una variable o función exportada en la terminal no se pudo quitar | Abre una ventana nueva de Git Bash, sin exportar nada, y repite |
 | `son las N h en Lima` | Ventana de servicio | Espera a que pase |
 | `gpg: decryption failed` al verificar | Clave distinta de la usada al cifrar | Prueba la clave correcta; si no la hay, esa copia está perdida: saca otra |
 
 ## 9. Lo que este procedimiento no resuelve
 
-- **No sustituye a los respaldos de la plataforma** (los lista `3-config`): es la copia que controla Tindivo.
+- **No sustituye a los respaldos de la plataforma**: es la copia que controla Tindivo.
+- **No lleva la configuración externa** (Auth, Edge Functions, nombres de secretos): va en otra entrega, con
+  capturas del panel. Hasta entonces P0.5 sigue abierto.
 - Docker Desktop corre en una máquina virtual. El contenedor va sin intercambio propio (`--memory-swap` igual a
   `--memory`), pero la memoria de la máquina virtual y la de Node pueden pasar al archivo de paginación de Windows.
   Si el disco del PC no está cifrado (BitLocker), ese es el único sitio donde podrían quedar restos en claro.
@@ -211,6 +222,4 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
   ni etiquetas de roles, permisos sobre parámetros (`pg_parameter_acl`) ni pertenencias de roles `pg_*`; el orden de
   los `GRANT` cubre el caso normal (primero lo que concede un superusuario y lo que da ADMIN), no cadenas largas de
   delegación. Restaurarlo sobre una base vacía es parte de P0.6.
-- La parte 3 solo cuenta como completa si cada respuesta tiene la forma mínima que el guion espera; esa forma se
-  escribió sin ver la API real, así que la primera corrida puede dar una PARCIAL de más (nunca una completa falsa).
 - Una copia sin restauración ensayada no es todavía un respaldo probado: eso lo cierra P0.6.

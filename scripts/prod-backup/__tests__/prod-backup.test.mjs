@@ -8,7 +8,6 @@ import { delimiter, dirname, join } from 'node:path'
 import { PassThrough, Readable } from 'node:stream'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { CONSULTAS, inventariar, reducirUrl, SIN_CLASIFICAR, soloNombres, TACHADO, tachar } from '../config-inventario.mjs'
 import { soloGet, tomarCredencial } from '../solo-get.mjs'
 import { copiarStorage, huella, NombreNoValido, urlDeObjeto, validarBase } from '../storage-tar.mjs'
 import { crearEscritorTar, sha256, verificarTar } from '../tar-lib.mjs'
@@ -196,9 +195,8 @@ test('guarda: las credenciales no se exportan a procesos que no las necesitan', 
     assert.deepEqual(sueltos.filter((l) => !l.includes('--version') && !l.includes('if (l ~ /')), [], `${cliente} sin pasar por pg()`)
   }
   const copia = sinComentarios(leer('copia.sh'))
-  assert.ok(!/export[^\n]*(TINDIVO_STORAGE_KEY|TINDIVO_MGMT_TOKEN|DB_PASS|CLAVE)\b/.test(copia))
+  assert.ok(!/export[^\n]*(TINDIVO_STORAGE_KEY|DB_PASS|CLAVE)\b/.test(copia))
   assert.match(copia, /TINDIVO_STORAGE_KEY="\$STORAGE_KEY" node /)
-  assert.match(copia, /TINDIVO_MGMT_TOKEN="\$MGMT_TOKEN" node /)
   assert.match(copia, /contra prod hace falta --ca/)
   assert.match(copia, /PGSSLMODE=verify-full PGREQUIREAUTH=scram-sha-256/)
   assert.ok(!/PGSSLMODE=require/.test(copia))
@@ -359,208 +357,6 @@ test('storage: solo es COMPLETA si cada objeto se bajó con el tamaño y la huel
   assert.equal(huella({ a: 1 }), '')
 })
 
-// Respuestas con la forma mínima que exige cada consulta (config-inventario.mjs, FORMAS).
-const REF = 'zpnipajgwfthxhdtzhly'
-const AUTH_OK = { site_url: 'https://tindivo.com/app', jwt_exp: 3600, disable_signup: false, a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7 }
-const BUENAS = {
-  '': { id: REF, name: 'tindivo-prod', region: 'us-east-1', status: 'ACTIVE_HEALTHY' },
-  '/config/auth': AUTH_OK,
-  '/functions': [{ slug: 'send-push', name: 'send-push', version: 19, status: 'ACTIVE', verify_jwt: true }],
-  '/secrets': [{ name: 'APNS_KEY', value: SECRETO, updated_at: '2026-10-23T18:00:00Z' }],
-  '/postgrest': { db_schema: 'public, graphql_public', max_rows: 1000, jwt_secret: SECRETO },
-  '/config/storage': { fileSizeLimit: 52428800, features: { imageTransformation: { enabled: false } } },
-  '/config/database/pooler': [{ pool_mode: 'transaction', db_port: 6543, connectionString: `postgres://u:${SECRETO}@h/db` }],
-  '/network-restrictions': { entitlement: 'allowed', config: { dbAllowedCidrs: ['0.0.0.0/0'] } },
-  '/ssl-enforcement': { currentConfig: { database: true }, appliedSuccessfully: true },
-  '/database/backups': { region: 'us-east-1', pitr_enabled: false, backups: [] },
-}
-const sufijoDe = (url) => new URL(url).pathname.replace(`/v1/projects/${REF}`, '')
-const apiCon = (cambios = {}) => async (url) => {
-  const s = sufijoDe(url)
-  if (s in cambios) {
-    const c = cambios[s]
-    if (c === 'red') throw new TypeError('sin red')
-    if (typeof c === 'number') return respuesta(c, 'x')
-    return respuesta(200, typeof c === 'string' ? c : JSON.stringify(c))
-  }
-  return respuesta(200, JSON.stringify(BUENAS[s]))
-}
-const inventario = async (cambios) => {
-  const { salida, buffer } = sumidero()
-  const r = await inventariar({ ref: REF, token: `tok-${SECRETO}`, salida, fetchImpl: apiCon(cambios), esperar: async () => {} })
-  return { ...r, tar: buffer() }
-}
-
-test('config: con respuestas de la forma esperada el inventario es COMPLETO, solo usa GET y no empaqueta secretos', async () => {
-  const pedidos = []
-  const fetchImpl = async (url, init) => {
-    pedidos.push({ url: String(url), init })
-    return apiCon()(url)
-  }
-  const { salida, buffer } = sumidero()
-  const r = await inventariar({ ref: REF, token: `tok-${SECRETO}`, salida, fetchImpl })
-  assert.equal(r.completa, true)
-  assert.deepEqual(r.pendientes, [])
-  assert.equal(pedidos.length, CONSULTAS.length)
-  for (const p of pedidos) {
-    assert.equal(p.init.method, 'GET')
-    assert.ok(p.url.startsWith(`https://api.supabase.com/v1/projects/${REF}`))
-  }
-  assert.ok(!buffer().includes(SECRETO))
-  const v = await verificarTar(comoFlujo(buffer()))
-  assert.equal(v.entradas, CONSULTAS.length)
-  assert.equal(v.datos.completa, true)
-  await assert.rejects(inventariar({ ref: 'psjigdoinfpgrnedxeyf', token: 't', salida: sumidero().salida, fetchImpl }), /solo se saca de tindivo-prod/)
-  await assert.rejects(
-    inventariar({ ref: REF, token: 't', salida: sumidero().salida, fetchImpl: async () => respuesta(401, 'no') }),
-    /token sin permiso/,
-  )
-})
-
-test('config: cada consulta que falla deja el inventario PARCIAL (salvo un 404 en una opcional)', async () => {
-  for (const [nombre, sufijo, obligatoria] of CONSULTAS) {
-    if (nombre === 'proyecto') continue
-    for (const fallo of [401, 403, 500, 404, 'red']) {
-      const r = await inventario({ [sufijo]: fallo })
-      const esperado = fallo === 404 && !obligatoria
-      assert.equal(r.completa, esperado, `${nombre} con ${fallo}`)
-      assert.deepEqual(r.pendientes, esperado ? [] : [nombre], `${nombre} con ${fallo}`)
-    }
-  }
-})
-
-test('config: un 200 con JSON de forma incorrecta NO cuenta como inventario (ni {}, ni [], ni formas cruzadas)', async () => {
-  for (const [nombre, sufijo] of CONSULTAS) {
-    if (nombre === 'proyecto') continue
-    const cruzada = Array.isArray(BUENAS[sufijo]) ? { datos: 'x' } : [{ datos: 'x' }]
-    const malas = [{}, [], cruzada, 'null', '"texto"', '7', `{"roto": "${SECRETO}`]
-    if (nombre === 'secretos-nombres') malas.splice(1, 1) // una lista vacía de secretos sí es válida
-    for (const mala of malas) {
-      const r = await inventario({ [sufijo]: mala })
-      assert.equal(r.completa, false, `${nombre} con ${JSON.stringify(mala)}`)
-      assert.deepEqual(r.pendientes, [nombre], `${nombre} con ${JSON.stringify(mala)}`)
-      assert.ok(!r.tar.includes(SECRETO))
-    }
-  }
-  // Entradas incompletas dentro de una lista.
-  assert.equal((await inventario({ '/secrets': [{}] })).completa, false)
-  assert.equal((await inventario({ '/secrets': [{ name: `no valido ${SECRETO}` }] })).completa, false)
-  assert.equal((await inventario({ '/functions': [{ name: 'sin-slug' }] })).completa, false)
-  assert.equal((await inventario({ '/config/auth': { site_url: 'https://x' } })).completa, false, 'Auth con dos claves no es la configuración')
-  // Formas cruzadas y entradas huecas que una comprobación floja daría por buenas.
-  const huecas = {
-    '/secrets': [[{ name: 'send-push', slug: 'send-push', status: 'ACTIVE' }], [{ name: 'A' }], [null]],
-    '/functions': [[{ slug: 'send-push' }], [{ slug: 'a b', version: 1, status: 'ACTIVE' }]],
-    '/config/database/pooler': [[{}], { pool_mode: '' }],
-    '/network-restrictions': [{ config: null }, { entitlement: '' }],
-    '/ssl-enforcement': [{ currentConfig: {} }, { currentConfig: { database: 'si' } }],
-    '/database/backups': [{ backups: [null] }, { backups: 'ninguno' }],
-    '/config/storage': [{ fileSizeLimit: 0 }, { fileSizeLimit: '50MB' }],
-    '/postgrest': [{ db_schema: '' }, { db_schema: 'public' }],
-    '/config/auth': [{ ...AUTH_OK, site_url: '' }, { ...AUTH_OK, disable_signup: 'no' }],
-  }
-  for (const [sufijo, casos] of Object.entries(huecas)) {
-    for (const caso of casos) {
-      assert.equal((await inventario({ [sufijo]: caso })).completa, false, `${sufijo} con ${JSON.stringify(caso)}`)
-    }
-  }
-  await assert.rejects(inventario({ '': { id: REF } }), /no devolvió el proyecto/, 'un proyecto sin nombre ni región no es el proyecto')
-  // El proyecto equivocado o sin forma: no hay inventario.
-  await assert.rejects(inventario({ '': [] }), /no devolvió el proyecto/)
-  await assert.rejects(inventario({ '': { id: 'psjigdoinfpgrnedxeyf' } }), /no devolvió el proyecto/)
-})
-
-test('config: tachado por defecto. Solo pasan textos de claves conocidas; URL sin ruta; nada con pinta de secreto', () => {
-  const entrada = {
-    site_url: 'https://tindivo.com/app?x=1',
-    uri_allow_list: `https://tindivo.com/**, https://u:${SECRETO}@otro.com/cb, com.tindivo.app://login`,
-    external_google_enabled: true,
-    external_google_client_id: 'id-publico.apps.googleusercontent.com',
-    external_google_secret: SECRETO,
-    smtp_pass: SECRETO,
-    smtp_host: 'smtp.ejemplo.com',
-    smtp_admin_email: 'soporte@tindivo.com',
-    sms_twilio_auth_token: SECRETO,
-    sms_test_otp: '51999999999=123456',
-    jwt_exp: 3600,
-    jwt_secret: SECRETO,
-    hook_send_sms_secrets: SECRETO,
-    hook_custom_access_token_uri: 'pg-functions://postgres/auth_hooks/custom_access_token',
-    hook_send_sms_uri: `https://hooks.ejemplo.com/services/T0/B0/${SECRETO}`,
-    service_role_key: SECRETO,
-    accessKey: SECRETO,
-    mailer_templates_invite_content: `<p>Hola ${SECRETO}</p>`,
-    campo_desconocido: SECRETO,
-    otro_desconocido: 'texto cualquiera',
-    region: 'us-east-1',
-    status: SECRETO.repeat(2),
-    password_min_length: 8,
-    rate_limit_token_refresh: 150,
-    smtp_port_pass: 123456,
-    anidado: [{ api_key: SECRETO, name: 'x' }],
-    secret: { value: SECRETO, n: 3, name: 'interno' },
-    connectionString: `postgres://u:${SECRETO}@h/db`,
-    nota_url: `usa postgres://u:${SECRETO}@h/db`,
-  }
-  const s = tachar(entrada)
-  assert.ok(!JSON.stringify(s).includes(SECRETO), 'ningún secreto sintético sobrevive al tachado')
-  assert.equal(s.site_url, 'https://tindivo.com/[ruta tachada]')
-  assert.equal(s.uri_allow_list, 'https://tindivo.com/[ruta tachada], https://otro.com/[ruta tachada], com.tindivo.app://login')
-  assert.equal(s.external_google_enabled, true)
-  assert.equal(s.external_google_client_id, 'id-publico.apps.googleusercontent.com')
-  assert.equal(s.external_google_secret, TACHADO)
-  assert.equal(s.smtp_host, 'smtp.ejemplo.com')
-  assert.equal(s.smtp_admin_email, 'soporte@tindivo.com')
-  assert.equal(s.sms_test_otp, TACHADO)
-  assert.equal(s.jwt_exp, 3600)
-  assert.equal(s.hook_custom_access_token_uri, 'pg-functions://postgres/auth_hooks/custom_access_token')
-  assert.equal(s.hook_send_sms_uri, 'https://hooks.ejemplo.com/[ruta tachada]')
-  assert.equal(s.accessKey, TACHADO)
-  assert.equal(s.mailer_templates_invite_content, SIN_CLASIFICAR)
-  assert.equal(s.campo_desconocido, SIN_CLASIFICAR)
-  assert.equal(s.otro_desconocido, SIN_CLASIFICAR)
-  assert.equal(s.region, 'us-east-1')
-  assert.equal(s.status, SIN_CLASIFICAR, 'un texto con pinta de secreto no pasa ni bajo una clave conocida')
-  assert.equal(s.password_min_length, 8)
-  assert.equal(s.rate_limit_token_refresh, 150)
-  assert.equal(s.smtp_port_pass, TACHADO)
-  assert.deepEqual(s.anidado, [{ api_key: TACHADO, name: 'x' }])
-  assert.deepEqual(s.secret, { value: TACHADO, n: TACHADO, name: TACHADO })
-  assert.equal(s.nota_url, SIN_CLASIFICAR)
-  assert.equal(reducirUrl('no es una url'), SIN_CLASIFICAR)
-  assert.equal(reducirUrl(`pg-functions://postgres/auth_hooks/fn?token=${SECRETO}`), 'pg-functions://postgres/[ruta tachada]')
-
-  assert.deepEqual(soloNombres([{ name: 'FCM_KEY', value: SECRETO, updated_at: '2026-10-23T18:00:00Z' }]), [
-    { name: 'FCM_KEY', updated_at: '2026-10-23T18:00:00Z' },
-  ])
-  assert.deepEqual(soloNombres([{ name: 'A', value: 'x', updated_at: { oculto: SECRETO } }]), [{ name: 'A', updated_at: null }])
-  assert.deepEqual(soloNombres([{ name: 'A', value: 'x', updated_at: SECRETO }]), [{ name: 'A', updated_at: null }])
-  assert.throws(() => soloNombres([{ name: { oculto: SECRETO }, value: 'x' }]), /forma inesperada/)
-  assert.throws(() => soloNombres([{ name: 'A', value: 'x', extra: SECRETO }]), /forma inesperada/)
-  // Lo que una heurística floja dejaría pasar bajo una clave «segura».
-  const dudosos = tachar({
-    name: `Bearer eyJhbGciOiJIUzI1NiJ9.${SECRETO}`,
-    smtp_sender_name: 'SG.aaaaaaaa.bbbbbbbb',
-    some_id: '5f4dcc3b5aa765d61d8327deb882cf99',
-    email: 'ghp_0123456789abcdefghijABCDEFGHIJ012345',
-    db_extra_search_path: 'password=hunter2',
-    updated_at: 'hunter2 secreto',
-    created_at: '2026-10-23T18:00:00Z',
-    sms_twilio_auth_token_id: 'ACsecreto',
-    organization_id: '0f8fad5b-d9cb-469f-a165-70867728950e',
-  })
-  assert.equal(dudosos.name, SIN_CLASIFICAR)
-  assert.equal(dudosos.smtp_sender_name, SIN_CLASIFICAR)
-  assert.equal(dudosos.some_id, SIN_CLASIFICAR)
-  assert.equal(dudosos.email, SIN_CLASIFICAR)
-  assert.equal(dudosos.db_extra_search_path, SIN_CLASIFICAR)
-  assert.equal(dudosos.updated_at, SIN_CLASIFICAR)
-  assert.equal(dudosos.created_at, '2026-10-23T18:00:00Z')
-  assert.equal(dudosos.sms_twilio_auth_token_id, TACHADO)
-  assert.equal(dudosos.organization_id, '0f8fad5b-d9cb-469f-a165-70867728950e')
-  assert.throws(() => soloNombres({ name: 'A' }), /forma inesperada/)
-})
-
 test('filtro del contenedor: ninguna línea ajena se reenvía; cada forma conocida sale como un texto fijo', () => {
   const M = 'JUAN PEREZ 999888777'
   // Un marcador personal detrás (o dentro) de CADA forma que el filtro reconoce, y varias que no reconoce.
@@ -624,7 +420,8 @@ test('guarda: una credencial heredada del entorno no llega ni al primer proceso 
     const shim = [
       '#!/usr/bin/env bash',
       'd="${BASH_SOURCE[0]%/*}"; n="${BASH_SOURCE[0]##*/}"',
-      'case "$(export -p) $*" in *MARCADOR_HEREDADO*) r=CON_MARCADOR ;; *) r=limpio ;; esac',
+      // export -p no lista funciones: declare -fx muestra las exportadas, que viajan como BASH_FUNC_<nombre>%%.
+      'case "$(export -p; declare -fx) $*" in *MARCADOR_HEREDADO*) r=CON_MARCADOR ;; *) r=limpio ;; esac',
       'printf \'%s %s\\n\' "$n" "$r" >> "$d/registro.txt"',
       'exit 1',
       '',
@@ -640,9 +437,13 @@ test('guarda: una credencial heredada del entorno no llega ni al primer proceso 
       'NODE_OPTIONS', 'DOCKER_HOST', 'HTTPS_PROXY', 'TINDIVO_CA_PEM', 'TINDIVO_GUION',
       // Y variables que NINGUNA lista de «prohibidas» habría previsto: el entorno se reduce a una lista de permitidas.
       'SUPABASE_DB_URL', 'SUPABASE_SERVICE_KEY', 'POSTGRES_URL_NON_POOLING', 'DIRECT_URL', 'JWT_SECRET', 'SERVICE_ROLE_KEY',
-      'VERCEL_TOKEN', 'GH_TOKEN', 'AWS_SECRET_ACCESS_KEY', 'UNA_VARIABLE_CUALQUIERA', 'otra_en_minusculas', '_RARA']
+      'VERCEL_TOKEN', 'GH_TOKEN', 'AWS_SECRET_ACCESS_KEY', 'UNA_VARIABLE_CUALQUIERA', 'otra_en_minusculas', '_RARA',
+      // CAX-001: la lista de permitidas lleva nombres exactos; nada que empiece por BASH o MSYSTEM_ pasa por serlo.
+      'BASH_FOO', 'BASHFOO', 'BASH_ENV', 'BASH_VERSION_FALSA', 'MSYSTEM_FOO', 'MSYSTEM_TOKEN', 'MSYSTEMX']
     const env = { ...process.env, PATH: `${dir}${delimiter}${process.env.PATH}` }
     for (const v of heredadas) env[v] = 'MARCADOR_HEREDADO'
+    // Una función exportada con un secreto dentro: también es una variable de entorno (BASH_FUNC_<nombre>%%).
+    env['BASH_FUNC_secreto_heredado%%'] = '() { echo MARCADOR_HEREDADO; }'
     const correr = (guion, args, extra = {}) =>
       spawnSync('bash', [`./${guion}`, ...args], { cwd: DIR, input: '', encoding: 'utf8', env: { ...env, ...extra } })
 

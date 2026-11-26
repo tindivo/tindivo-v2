@@ -75,16 +75,16 @@ paso '3. Parte 1 · base'
 verificar_base "$CARPETA/1-base.tar.gpg" "$REG/1.log"
 comparar 1-base "$REG/1.log"
 
-for parte in 2-storage 3-config; do
-  if [ -s "$CARPETA/$parte.tar.gpg" ]; then
-    paso "Parte $parte"
-    verificar_tar_node "$CARPETA/$parte.tar.gpg" "$REG/$parte.log"
-    comparar "$parte" "$REG/$parte.log"
-  else
-    log "$parte: no está en esta copia"
-    { [ "$parte" = 3-config ] && [ "$PERMITIR" = 1 ]; } || FALTAS+=("$parte no está en esta copia")
-  fi
-done
+if [ -s "$CARPETA/2-storage.tar.gpg" ]; then
+  paso 'Parte 2 · Storage'
+  verificar_tar_node "$CARPETA/2-storage.tar.gpg" "$REG/2-storage.log"
+  comparar 2-storage "$REG/2-storage.log"
+else
+  log '2-storage: no está en esta copia'
+  FALTAS+=('2-storage no está en esta copia')
+fi
+# La configuración externa nunca entra en esta copia (va en otra entrega): en una copia de prod se declara.
+[ "$PERMITIR" = 1 ] || FALTAS+=('sin configuración externa (Auth, Edge Functions): no entra en esta copia; va en otra entrega')
 rm -rf -- "$REG"
 
 sin_contenedores_vivos || fallo 'quedó un contenedor sin borrar: docker ps -a --filter label=tindivo-copia'
