@@ -24,8 +24,8 @@ codigo:
    nombre y el estado. Volver · nombre · «Abierto · cierra [hora]» · buscar. Sin botón «i» (CUS-CAT-027).
 2. **Portada y cabecera:** foto, nombre, rubro, estado y, debajo, la fila de 48 dp **«Información del negocio ›»**, que abre
    la hoja «Información» (CUS-CAT-027).
-3. **Dos modos de entrega**, solo los que el negocio acepta: «Delivery» («[PLAZO] min · [ENVÍO]») y «Recojo» («En el
-   local»); si solo acepta uno, queda fijo (CUS-CAT-017).
+3. **Modos de entrega**, solo los que el negocio acepta y solo como información, sin selector: «Delivery» («[PLAZO]
+   min · [ENVÍO]») y «Recojo» («En el local»). El método se elige en el checkout (CUS-CAT-017, CUS-CRT-007).
 4. **Selector de secciones**, pegado bajo la barra: «Destacados» y las demás, y un botón de cuadrícula con el total que
    abre «Todas las secciones». Tocar una sección lleva a ella; la visible se resalta sola al hacer scroll.
 5. **Secciones de platos.** Cada una: título, «[N] productos» y sus filas. «Destacados» es una sección reutilizable cuyos

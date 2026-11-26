@@ -81,7 +81,7 @@ Reglas comunes a iOS y Android. Lo propio de cada plataforma está en `swift.md`
 | ID | Regla | Nivel | Verificación |
 |---|---|---|---|
 | CLI-1 | **El cliente HTTP se genera** desde `packages/contracts/openapi/v1.json`, copiado a cada app por `scripts/sync-openapi.sh`; sin DTOs escritos a mano | OBLIGATORIA | CI: `scripts/sync-openapi.sh --check` y compilación (Kotlin en cada PR; Swift a diario, D-48) |
-| CLI-2 | **Lector tolerante**: se ignoran los campos desconocidos; un valor de enum desconocido decodifica a un caso `unknown` y la UI muestra una reserva; un `code` de error desconocido muestra un mensaje genérico. Decodificar nunca tumba la app | OBLIGATORIA | Test con los fixtures de `packages/contracts/fixtures/forward-compat/` (por crear: un campo nuevo y un valor de enum nuevo) |
+| CLI-2 | **Lector tolerante**: se ignoran los campos desconocidos; un valor de enum desconocido decodifica a un caso `unknown` y la UI muestra una reserva; un `code` de error desconocido muestra un mensaje genérico. Decodificar nunca tumba la app | OBLIGATORIA | Test con los fixtures de `packages/contracts/fixtures/forward-compat/` (por crear: un campo nuevo y un valor de enum nuevo). En Swift exige derivar un documento tolerante antes de generar (SW-7) |
 | CLI-3 | Cada petición envía las cabeceras de cliente del contrato (`x-tindivo-platform`, `x-tindivo-app`, `x-tindivo-app-version`, `x-tindivo-build`). La API las registra por ruta: de ese registro sale el tráfico por versión que exigen MIG-3 y CLI-15 | OBLIGATORIA | Consulta de tráfico por ruta y versión |
 | CLI-4 | **Actualización obligatoria y configuración remota según el contrato**: ante `426 client_upgrade_required` (con la cabecera `x-tindivo-min-version`), la app muestra la pantalla de actualización con enlace a la tienda; al abrir y al volver a primer plano lee `GET /api/v1/config` (versiones mínimas por app y plataforma, *flags* y *kill switches* con la forma del contrato) | OBLIGATORIA antes de publicar | Test + ensayo con un `426` forzado en el entorno de pruebas |
 | CLI-5 | **Dinero**: `Decimal` (Swift) o `BigDecimal` (Kotlin), parseado desde la cadena de la API; nunca `Double` ni `Float`; formato de moneda con la configuración regional `es-PE` | OBLIGATORIA | Lint + test |
@@ -92,7 +92,7 @@ Reglas comunes a iOS y Android. Lo propio de cada plataforma está en `swift.md`
 | CLI-10 | **Red**: 10 s para conectar y 30 s por petición; reintentos automáticos solo en `GET` y en `POST` con `Idempotency-Key`, ante error de red, `5xx` o `429`, como mucho 2, con espera exponencial y aleatoria (base 0,5 s) y respetando `Retry-After`; nunca ante otro `4xx`. Sin conexión, la app lo muestra y no pierde el carrito | OBLIGATORIA | Test con transporte simulado |
 | CLI-11 | **Permisos en contexto**, nunca al abrir la app por primera vez: notificaciones, después de confirmar el primer pedido; ubicación, solo al elegir una dirección en el mapa, si se usa. Antes del diálogo del sistema, una pantalla propia explica para qué sirve | OBLIGATORIA | Test de UI + revisión |
 | CLI-12 | Errores y *crashes* se reportan a la herramienta elegida (DA-08) con la versión y el identificador de petición que use el contrato, **sin datos personales** (nombre, teléfono, dirección, coordenadas exactas, tokens) | OBLIGATORIA antes de publicar | Revisión de un evento de prueba en crudo |
-| CLI-13 | Todo texto visible sale del catálogo de cadenas de la plataforma, en español de Perú; tamaño de letra dinámico soportado; objetivos táctiles de al menos 44 pt (iOS) y 48 dp (Android); toda imagen con significado lleva descripción accesible | OBLIGATORIA | Lint de cadenas literales + revisión con letra grande |
+| CLI-13 | Todo texto visible sale del catálogo de cadenas de la plataforma, en español de Perú; tamaño de letra dinámico soportado; objetivos táctiles de al menos 44 pt (iOS) y 48 dp (Android) (mínimos; el sistema de diseño fija 48 en ambas: token `touchTarget`); toda imagen con significado lleva descripción accesible | OBLIGATORIA | Lint de cadenas literales + revisión con letra grande |
 | CLI-14 | Toda publicación a producción pasa antes por pruebas internas (TestFlight o la pista interna de Google Play) y sale con liberación gradual (App Store) o despliegue escalonado (Google Play); se pausa si suben los *crashes* | OBLIGATORIA | Registro en `Docs/operacion/publicar-apps-nativas.md` (por crear) |
 | CLI-15 | El backend soporta toda versión publicada que no reciba `426`. Subir la versión mínima es una decisión registrada en `Docs/trabajo/decisiones-abiertas.md`, con el tráfico por versión de los últimos 30 días (CLI-3) | OBLIGATORIA | Registro + consulta |
 
@@ -115,7 +115,7 @@ Reglas comunes a iOS y Android. Lo propio de cada plataforma está en `swift.md`
 | TST-2 | Donde haya riesgo de carrera o de fallo parcial (dinero, estado, cupos, idempotencia), se prueba con concurrencia y con fallo a mitad; no se exige para cambios triviales | OBLIGATORIA donde aplica |
 | TST-3 | La integración corre en CI y no se cachea por error | OBLIGATORIA |
 | TST-4 | Un *bug* arreglado deja un test que lo reproduce | OBLIGATORIA |
-| TST-5 | **Contrato compartido**: las apps nativas decodifican los fixtures de `packages/contracts/fixtures/` (por crear), incluidos los de compatibilidad futura (CLI-2); la API valida sus respuestas contra los mismos esquemas en sus tests | OBLIGATORIA |
+| TST-5 | **Contrato compartido**: las apps nativas decodifican los fixtures de `packages/contracts/fixtures/` (`vectores/` existe; `forward-compat/`, por crear), incluidos los de compatibilidad futura (CLI-2); la API valida sus respuestas contra los mismos esquemas en sus tests | OBLIGATORIA |
 | TST-6 | El flujo crítico de compra de la app de clientes, como lo defina el plan móvil, tiene una prueba de UI por plataforma contra una API simulada | OBLIGATORIA antes de publicar |
 
 ## 6. Operación
@@ -157,10 +157,10 @@ Cada OBLIGATORIA con su mecanismo. «Pendiente» significa que, hasta montarlo, 
 | `oasdiff breaking` contra la rama base, versión fijada (job `contract` de `.github/workflows/ci.yml`) | DES-6, API-3 | Montado |
 | `spectral lint packages/contracts/openapi/v1.json --ruleset .spectral.yaml` | API-1, API-4, API-5, API-8 | Montado (Spectral 6 fijado, job `contract`); lo heredado que no cumple está en `excepciones.md` |
 | Regenerar el OpenAPI y comparar con el versionado | API-2 | Pendiente |
-| `scripts/sync-openapi.sh --check` (job `contract`) | CLI-1 | Montado; con efecto en `apps/android` desde que existe. El script omite las apps que aún no existen (`apps/ios`, por crear) |
+| `scripts/sync-openapi.sh --check` (job `contract`) | CLI-1 | Montado; con efecto en `apps/android` desde que existe. |
 | Contador de filas de `excepciones.md` que no puede subir, contra la rama base (`scripts/check-excepciones.sh`, job `contract`) | Excepciones | Montado |
 | Lint con información de tipos | TS-2, TS-7, TS-10 | Pendiente |
-| SwiftLint en CI (runner macOS, a diario, D-48) | SW-6, SW-14 | Pendiente |
+| `pnpm ios:test` en CI (`ios.yml`, runner `xcode-27`, a diario, D-48); SwiftLint pendiente | SW-6, SW-14 | Pendiente |
 | ktlint, detekt y Android Lint en CI | KT-6, KT-14 | Pendiente |
 | Consultas de catálogo en CI (con MIG-5) | DB-2, DB-3, DB-7, DB-15 | Pendiente |
 | Integración en CI (job `api-integration`) | DB-6, TST-3 | Montado |
