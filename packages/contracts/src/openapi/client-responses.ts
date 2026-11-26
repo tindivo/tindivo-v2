@@ -327,7 +327,7 @@ export const CheckoutQuoteSchema = z.object({
         )
         .meta({
           description:
-            'En este orden. El recojo no trae `pending_yape` (no hay motorizado a quien transferirle). Si el cliente es de confianza (`trusted`), hay alguna opción al recibir disponible (`pending_cash` o `pending_yape`) y los importes son ciertos (la tarifa del envío y el umbral de prepago se leyeron sin fallos y en un formato que la API y la base leen igual), `prepaid` no viene en la lista. Si los importes no son ciertos, `prepaid` viene aunque haya opciones al recibir disponibles, y la creación vuelve a validar; el cliente sin historial (`no_history`) la conserva; `POST /customer/orders` lo sigue aceptando',
+            'En este orden. El recojo no trae `pending_yape` (no hay motorizado a quien transferirle). Si el cliente es de confianza (`trusted`), hay alguna opción al recibir disponible (`pending_cash` o `pending_yape`) y los importes son ciertos (la tarifa del envío se leyó sin fallos, y esa tarifa y el umbral de prepago, si está configurado, vienen en un formato que la API y la base leen igual; la app no lo calcula: pinta las opciones que lleguen), `prepaid` no viene en la lista. Si los importes no son ciertos, `prepaid` viene aunque haya opciones al recibir disponibles, y la creación vuelve a validar; el cliente sin historial (`no_history`) la conserva; `POST /customer/orders` lo sigue aceptando',
         }),
       cash: z
         .object({
