@@ -366,6 +366,19 @@
     <string name="order_back_to_menu">Volver al menú</string>
     <string name="order_support_cancelled">¿Problema con este pedido?</string>
     <string name="order_reorder">Volver a pedir</string>
+    <string name="reorder_changes_title">Repusimos tu bolsa con cambios</string>
+    <string name="reorder_changes_open">Ver mi bolsa</string>
+    <string name="reorder_change_removed">%1$s ya no está en la carta.</string>
+    <string name="reorder_change_unavailable">%1$s no está disponible ahora.</string>
+    <string name="reorder_change_price">%1$s cambió de precio: antes %2$s, ahora %3$s.</string>
+    <string name="reorder_change_choose_again">%1$s tiene opciones que cambiaron: elígelas de nuevo en la carta.</string>
+    <string name="reorder_change_unknown">%1$s cambió en la carta.</string>
+    <string name="reorder_nothing_title">No podemos repetir este pedido</string>
+    <string name="reorder_nothing_text">Ninguno de sus platos está disponible hoy. Mira la carta del restaurante para elegir otros.</string>
+    <string name="reorder_failed_title">No pudimos volver a pedir</string>
+    <string name="reorder_failed_text">Inténtalo de nuevo en un momento. Tu bolsa no cambió.</string>
+    <string name="reorder_full_text">Con estos platos tu bolsa superaría el máximo permitido (%1$d platos distintos, o más unidades de un plato de las que se pueden pedir). Quita algunos y vuelve a intentarlo. Tu bolsa no cambió.</string>
+    <string name="reorder_ok">Entendido</string>
     <string name="order_payment_case">Ver caso de pago</string>
 
     <string name="order_driver_label">Tu motorizado</string>

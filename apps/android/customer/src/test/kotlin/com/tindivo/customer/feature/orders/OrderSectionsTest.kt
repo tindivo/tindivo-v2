@@ -19,7 +19,7 @@ class OrderSectionsTest {
         createdAt = RelativeDate.Minutes(n.toLong()),
         total = "S/ 10.00",
         businessId = UUID(1L, n.toLong()),
-        reorderable = true,
+        reorderable = phase == OrderPhase.Delivered,
     )
 
     @Test
@@ -33,6 +33,24 @@ class OrderSectionsTest {
 
         assertEquals(listOf(a, c), sections.active)
         assertEquals(listOf(b, d), sections.past)
+    }
+
+    @Test
+    fun `CUS-ORD-009 volver a pedir queda solo en el ultimo entregado`() {
+        val newest = card(1, OrderPhase.Delivered)
+        val older = card(2, OrderPhase.Delivered)
+        val cancelled = card(3, OrderPhase.Cancelled(null))
+
+        val past = orderSections(listOf(cancelled, newest, older)).past
+
+        assertEquals(listOf(false, true, false), past.map { it.reorderable })
+    }
+
+    @Test
+    fun `un pedido en curso no ofrece volver a pedir aunque venga marcado`() {
+        val active = card(1, OrderPhase.Active(TrackingStep.Preparing)).copy(reorderable = true)
+
+        assertEquals(false, orderSections(listOf(active)).active.single().reorderable)
     }
 
     @Test

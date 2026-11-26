@@ -14,6 +14,7 @@ class CartLineUiTest {
             quantity,
             "S/ 10.00",
             canIncrease = true,
+            imageUrl = null,
         )
 
     @Test

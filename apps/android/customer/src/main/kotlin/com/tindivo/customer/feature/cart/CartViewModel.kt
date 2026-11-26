@@ -26,6 +26,8 @@ data class CartLineUi(
     val quantity: Int,
     val total: String,
     val canIncrease: Boolean,
+    /** La foto del plato tal como se guardó al agregarlo; `null` si no tenía. */
+    val imageUrl: String?,
 ) {
     /** Con 1 unidad, «−» pasa a ser un tacho que quita el plato (y «Quitar» sale). */
     val minusRemoves: Boolean get() = quantity <= 1
@@ -60,6 +62,7 @@ internal fun Cart?.toUi(): CartUiState {
                     quantity = line.quantity,
                     total = requireAmountText(line.total),
                     canIncrease = line.quantity < MAX_QUANTITY,
+                    imageUrl = line.imageUrl,
                 )
             },
         subtotal = requireAmountText(subtotal),
