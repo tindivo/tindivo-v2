@@ -37,6 +37,7 @@ DESTINO='' SALIDA='' COMMIT_FIRMADO='' ARCHIVO_CA='' SIN_PGOPTIONS=0 DISCO_SIN_C
 DB_PASS='' STORAGE_KEY='' FASE_EN_CURSO=''
 MOTIVOS=()
 CARPETA_CREADA=0
+TERMINADO=0
 
 uso() {
   printf '%s\n' 'Uso:' \
@@ -78,7 +79,8 @@ limpiar() {
   dk rm -f "$NOMBRE_CONT" >/dev/null 2>&1
   cerrar_gpg
   # Solo se marca la carpeta que creó ESTA corrida: nunca una que ya existía (podría ser una copia buena).
-  if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ] && [ "$CARPETA_CREADA" = 1 ] && [ -d "$SALIDA" ]; then
+  # El código 3 es la salida normal (copia PARCIAL declarada): lo que decide es si se llegó al final, no el código.
+  if [ "$TERMINADO" != 1 ] && [ "$CARPETA_CREADA" = 1 ] && [ -d "$SALIDA" ]; then
     [ -z "$FASE_EN_CURSO" ] || rm -f -- "$SALIDA/$FASE_EN_CURSO"
     printf 'La copia NO terminó (UTC %s, código %s). No subas esta carpeta.\n' "$(date -u +%FT%TZ)" "$rc" >"$SALIDA/INCOMPLETA.txt"
     log "La copia NO terminó. Quedó marcada en $SALIDA/INCOMPLETA.txt"
@@ -303,4 +305,5 @@ if [ "${#MOTIVOS[@]}" -eq 1 ]; then
 else
   paso "COPIA PARCIAL CON FALTAS: además de la configuración externa, faltan $((${#MOTIVOS[@]} - 1)) cosa(s). Lee PARCIAL.txt."
 fi
+TERMINADO=1
 exit 3
