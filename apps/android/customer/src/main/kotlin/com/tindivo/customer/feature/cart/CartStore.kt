@@ -16,6 +16,19 @@ enum class ReserveResult {
     Foreign,
 }
 
+/** Qué pasó al añadir varios platos de una vez ([CartStore.addAll]). */
+sealed interface AddAllResult {
+    data object Added : AddAllResult
+
+    /** La bolsa es de otro negocio: no se tocó nada. */
+    data class OtherBusiness(
+        val currentBusinessName: String,
+    ) : AddAllResult
+
+    /** No caben ([MAX_LINES] platos distintos): no se tocó nada. */
+    data object Full : AddAllResult
+}
+
 /**
  * La bolsa del cliente, guardada en el teléfono (KT-9). Cada operación es un único `updateData`: leer, cambiar y
  * escribir no se intercalan con otra. Lo guardado que no cuadra con las reglas de la bolsa se trata como «sin bolsa»
@@ -51,6 +64,43 @@ class CartStore(
         line: CartLine,
     ) {
         store.updateData { replacedWith(businessId, businessName, line).toSnapshot() }
+    }
+
+    /**
+     * Añade todas las [lines] en UNA escritura: o entran todas o la bolsa queda como estaba (no se ve a medias). Con
+     * [replace] parte de una bolsa vacía (la persona aceptó dejar la del otro negocio). El negocio se comprueba dentro
+     * de la escritura, con el estado real.
+     */
+    suspend fun addAll(
+        businessId: String,
+        businessName: String,
+        lines: List<CartLine>,
+        replace: Boolean,
+    ): AddAllResult {
+        var result: AddAllResult = AddAllResult.Added
+        store.updateData { current ->
+            var cart: Cart? = if (replace) null else current?.toCartOrNull()
+            for (line in lines) {
+                when (val outcome = addToCart(cart, businessId, businessName, line)) {
+                    is AddResult.Added -> {
+                        cart = outcome.cart
+                    }
+
+                    is AddResult.OtherBusiness -> {
+                        result = AddAllResult.OtherBusiness(outcome.currentBusinessName)
+                        return@updateData current
+                    }
+
+                    AddResult.Full -> {
+                        result = AddAllResult.Full
+                        return@updateData current
+                    }
+                }
+            }
+            val snapshot = cart?.toSnapshot()
+            if (replace) snapshot else snapshot?.keepingReservationOf(current)
+        }
+        return result
     }
 
     suspend fun setQuantity(

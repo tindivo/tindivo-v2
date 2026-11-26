@@ -203,6 +203,67 @@ class ReorderViewModelTest : OrdersHarness() {
             assertNull(cart.cart.first())
         }
 
+    @Test
+    fun `si no caben todos los platos la bolsa queda intacta y se dice que esta llena`() =
+        runTest {
+            server.enqueue(response(200, body("$pollo,$gaseosa")))
+            val cart = cartStore()
+            repeat(49) { n ->
+                cart.add(BUSINESS_ID.toString(), "Pollería Rosa", otherBusinessLine().copy(itemId = "p$n"))
+            }
+            val viewModel = reorderViewModel(cart)
+
+            viewModel.reorder(orderId)
+
+            assertEquals(ReorderOutcome.BagFull, viewModel.outcome.value)
+            assertEquals(49, (cart.cart.first() as Cart).lines.size)
+        }
+
+    @Test
+    fun `al vaciar la bolsa del otro negocio entran todos los platos del pedido y solo ellos`() =
+        runTest {
+            server.enqueue(response(200, body("$pollo,$gaseosa")))
+            val cart = cartStore()
+            cart.add("otro", "Cevichería", otherBusinessLine())
+            cart.add("otro", "Cevichería", otherBusinessLine().copy(itemId = "y"))
+            val viewModel = reorderViewModel(cart)
+            viewModel.reorder(orderId)
+
+            viewModel.replaceWithPending()
+
+            val saved = cart.cart.first() as Cart
+            assertEquals(setOf(dish, dish2), saved.lines.map { it.itemId }.toSet())
+            assertEquals(BUSINESS_ID.toString(), saved.businessId)
+        }
+
+    @Test
+    fun `si la sesion se cierra con la pregunta abierta no se escribe nada en la bolsa`() =
+        runTest {
+            server.enqueue(response(200, body(pollo)))
+            val cart = cartStore()
+            cart.add("otro", "Cevichería", otherBusinessLine())
+            val viewModel = reorderViewModel(cart)
+            viewModel.reorder(orderId)
+
+            store.signOutLocally("user-1")
+            viewModel.replaceWithPending()
+
+            assertEquals("otro", cart.cart.first()?.businessId)
+            assertTrue(viewModel.outcome.value is ReorderOutcome.Failed)
+        }
+
+    @Test
+    fun `la foto que se guarda es la miniatura si la hay`() =
+        runTest {
+            val withThumb = pollo.replace("\"thumbnailUrl\":null", "\"thumbnailUrl\":\"https://img.test/t.webp\"")
+            server.enqueue(response(200, body(withThumb)))
+            val cart = cartStore()
+
+            reorderViewModel(cart).reorder(orderId)
+
+            assertEquals("https://img.test/t.webp", (cart.cart.first() as Cart).lines.single().imageUrl)
+        }
+
     private companion object {
         const val NOT_FOUND_BODY =
             """{"type":"about:blank","title":"Not Found","status":404,"detail":"order_not_found","code":"not_found"}"""

@@ -6,7 +6,7 @@ import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.GetCustomerReorder200ResponseData
-import com.tindivo.customer.feature.cart.AddResult
+import com.tindivo.customer.feature.cart.AddAllResult
 import com.tindivo.customer.feature.cart.CartLine
 import com.tindivo.customer.feature.cart.CartModifier
 import com.tindivo.customer.feature.cart.CartStore
@@ -62,6 +62,9 @@ internal sealed interface ReorderOutcome {
         val changes: List<ReorderChangeUi>,
     ) : ReorderOutcome
 
+    /** Los platos del pedido no caben en la bolsa (tope de platos distintos); la bolsa no cambió. */
+    data object BagFull : ReorderOutcome
+
     /** No se pudo leer el pedido o escribir la bolsa; la bolsa no cambió. */
     data class Failed(
         val error: AppError,
@@ -78,7 +81,7 @@ internal class ReorderViewModel
     @Inject
     constructor(
         private val customer: CustomerRepository,
-        sessionStore: SessionStore,
+        private val sessionStore: SessionStore,
         private val cartStore: CartStore,
     ) : ViewModel() {
         private val _outcome = MutableStateFlow<ReorderOutcome?>(null)
@@ -101,9 +104,11 @@ internal class ReorderViewModel
 
         /** La persona aceptó vaciar la bolsa del otro negocio y empezar con la del pedido. */
         fun replaceWithPending() {
+            if (job?.isActive == true) return
             val plan = pending ?: return
             pending = null
-            if (job?.isActive == true) return
+            // El diálogo se cierra al aceptar: mientras se guarda no queda una pregunta ya contestada a la vista.
+            _outcome.value = null
             job = viewModelScope.launch { _outcome.value = save(plan, replace = true) }
         }
 
@@ -125,36 +130,36 @@ internal class ReorderViewModel
         private suspend fun decide(plan: Plan?): ReorderOutcome {
             if (plan == null) return ReorderOutcome.Failed(unreadableOrderError())
             if (plan.lines.isEmpty()) return ReorderOutcome.NothingAvailable(plan.changes)
-            val current = cartStore.cart.first()
-            if (current != null && !current.isEmpty() &&
-                !current.businessId.equals(plan.businessId, ignoreCase = true)
-            ) {
-                pending = plan
-                return ReorderOutcome.OtherBusiness(current.businessName, plan.businessName)
-            }
             return save(plan, replace = false)
         }
 
-        // Si no se puede escribir en el teléfono, lo ya guardado se queda como estaba y se avisa.
+        // Una sola escritura: o entra todo o la bolsa se queda como estaba. Solo si la cuenta sigue siendo la misma.
         private suspend fun save(
             plan: Plan,
             replace: Boolean,
         ): ReorderOutcome {
-            try {
-                var rest = plan.lines
-                if (replace) {
-                    cartStore.replace(plan.businessId, plan.businessName, rest.first())
-                    rest = rest.drop(1)
-                }
-                for (line in rest) {
-                    if (cartStore.add(plan.businessId, plan.businessName, line) == AddResult.Full) {
-                        return ReorderOutcome.Failed(AppError.Unknown(code = null, detail = "cart full"))
+            val account = accountId
+            if (account == null || (sessionStore.state.value as? SessionState.SignedIn)?.userId != account) {
+                return ReorderOutcome.Failed(AppError.Unknown(code = null, detail = "session changed"))
+            }
+            return try {
+                when (val result = cartStore.addAll(plan.businessId, plan.businessName, plan.lines, replace)) {
+                    AddAllResult.Added -> {
+                        ReorderOutcome.Ready(plan.changes)
+                    }
+
+                    AddAllResult.Full -> {
+                        ReorderOutcome.BagFull
+                    }
+
+                    is AddAllResult.OtherBusiness -> {
+                        pending = plan
+                        ReorderOutcome.OtherBusiness(result.currentBusinessName, plan.businessName)
                     }
                 }
             } catch (ignored: IOException) {
-                return ReorderOutcome.Failed(AppError.Unknown(code = null, detail = "cart storage"))
+                ReorderOutcome.Failed(AppError.Unknown(code = null, detail = "cart storage"))
             }
-            return ReorderOutcome.Ready(plan.changes)
         }
 
         private class Plan(
@@ -186,7 +191,9 @@ internal class ReorderViewModel
                                 },
                             note = item.note?.let(::normalizeNote),
                             quantity = item.quantity.coerceIn(1, MAX_QUANTITY),
-                            imageUrl = item.imageUrl,
+                            imageUrl =
+                                item.thumbnailUrl?.takeIf { it.isNotBlank() }
+                                    ?: item.imageUrl?.takeIf { it.isNotBlank() },
                         )
                     }
                 val changes =

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.cart.MAX_LINES
 import com.tindivo.customer.feature.catalog.business.NewBagDialog
 
 /**
@@ -64,6 +65,19 @@ internal fun ReorderHost(
                 changes = outcome.changes,
                 confirm = R.string.reorder_ok,
                 onConfirm = onConsume,
+            )
+        }
+
+        ReorderOutcome.BagFull -> {
+            AlertDialog(
+                onDismissRequest = onConsume,
+                title = { Text(stringResource(R.string.reorder_failed_title)) },
+                text = { Text(stringResource(R.string.reorder_full_text, MAX_LINES)) },
+                confirmButton = {
+                    TextButton(onClick = onConsume, modifier = Modifier.heightIn(min = 48.dp)) {
+                        Text(stringResource(R.string.reorder_ok))
+                    }
+                },
             )
         }
 

@@ -58,7 +58,7 @@ class OrderCancelMappingTest {
     }
 
     @Test
-    fun `CA-ORD-06 solo un pedido entregado puede ofrecer volver a pedir`() {
+    fun `CA-ORD-05 y CA-ORD-06 solo un pedido entregado ofrece volver a pedir, y no el de comprobante rechazado`() {
         fun card(
             status: String,
             reason: String? = null,
