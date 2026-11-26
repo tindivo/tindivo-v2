@@ -26,6 +26,7 @@
 | `403 forbidden · "El restaurante está pausado temporalmente"` en `happy-path-order`, `vecino-conocido-contraentrega` y `viaje-pedido-online` | [accepting_orders_until es pausado hasta](#accepting_orders_until-es-pausado-hasta) |
 | `element is not enabled` sobre el nombre de un plato; banner «Todavía no ha confirmado que atiende hoy» | [La jornada del mundo e2e caduca a las 5](#la-jornada-del-mundo-e2e-caduca-a-las-5) |
 | 404 en todas las rutas con `next dev` «Ready»; `type-check` rojo en `.next/dev/types/routes.d.ts`; overlay con `Next.js 16.2.6 (stale)`; una regla nueva de `globals.css` no aplica | [Next da 404 en todas las rutas](#next-da-404-en-todas-las-rutas) |
+| Una ruta que existe en tu rama da 404 en Playwright, o `playwright test` se niega a arrancar diciendo que los puertos 3000-3004 son de otro árbol | [La suite e2e no habla con servidores de otro worktree](#la-suite-e2e-no-habla-con-servidores-de-otro-worktree) |
 | Una app devuelve 404 minutos después de un `pnpm build` con `pnpm dev` levantado | [pnpm build envenena el dev server vivo](#pnpm-build-envenena-el-dev-server-vivo) |
 | Todos los e2e de un spec caen a la vez: `element is not stable`, «Negocio no encontrado o no disponible», HTML de error 500 en la API | [Un dev server viejo finge bugs de código](#un-dev-server-viejo-finge-bugs-de-código) |
 | En local la tarjeta del motorizado cambia al soltar el gesto pero `orders.status` no | [Los gestos del motorizado sin la API caen a la cola offline](#los-gestos-del-motorizado-sin-la-api-caen-a-la-cola-offline) |
@@ -264,6 +265,14 @@ GET /api/v1/public/businesses/:id  1,87 s  →  0,12 s
 ```
 El primer test que abre una ficha de negocio pagaba las tres: ~11 s contra un `actionTimeout` de 15 s, justo en el filo, o sea intermitente.
 **Qué hacer:** lo cubre el proyecto `precalentar` de `playwright.config.ts` (`e2e/precalentar.setup.ts`), que pide las rutas calientes antes de todo y comprueba que el mundo e2e esté sembrado. **`--no-deps` se lo salta**: con el stack frío, no lo uses. Si vuelve un rojo raro, mira primero si la ruta implicada es nueva y no está en la lista de `RUTAS`. Ver también [La suite visual depende de la DB](#la-suite-visual-depende-de-la-db) y los [seeders de demo](#los-seeders-de-demo-envenenan-los-tests-de-caja).
+
+### La suite e2e no habla con servidores de otro worktree
+**Síntoma:** `pnpm test:e2e` aborta al cargar la configuración con «Puertos de la suite e2e ocupados por procesos que NO son de este árbol», o (antes de la guardia) rutas que sí existen en tu rama devolvían 404 y pantallas viejas.
+**Causa:** las cinco apps escuchan SIEMPRE en 3000 a 3004 y esta máquina tiene decenas de worktrees. `reuseExistingServer: true` reutiliza a quien conteste en la URL, sea de tu árbol o del de otra sesión, y ese servidor sirve OTRO código. Medido el 2026-11-26: un `node` ajeno en :3003 pasa el sondeo de Playwright igual que uno propio.
+**Qué hacer:**
+- `scripts/e2e-puertos.mjs` (la llama `playwright.config.ts` una vez por corrida, solo en modo `dev`) compara la línea de comandos de cada proceso que escucha con la ruta de tu worktree y, si no es tuyo, lo nombra y para. Falla cerrada: si no puede inspeccionar (PowerShell, `lsof` o `ps` ausentes o con error) aborta con el motivo; pruebas en `scripts/e2e-puertos.test.mjs`. No mata nada: páralo por puerto (receta de [Un dev server viejo finge bugs de código](#un-dev-server-viejo-finge-bugs-de-código)) si es tuyo, o espera a su dueño.
+- `E2E_SERVER=start` (por defecto con `CI=true`) sirve las apps con `next start` sobre un build, sin compilación bajo demanda y sin reutilizar nada: `pnpm exec turbo run build --filter=@tindivo/api --filter=@tindivo/customer --filter=@tindivo/admin --filter=@tindivo/negocios --filter=@tindivo/motorizados` y luego `E2E_SERVER=start pnpm db:lock run -- "pnpm test:e2e"`. En modo `dev`, la configuración borra un `apps/<app>/.next` que traiga un build (`BUILD_ID`) antes de arrancar, para no caer en [pnpm build envenena el dev server vivo](#pnpm-build-envenena-el-dev-server-vivo).
+- El admin (:3003) ahora también se precalienta; antes `/store`, `/store/[id]` y `/store/ajustes` compilaban dentro del primer test que las tocaba (1,7 a 2,7 s en frío).
 
 ### seed-e2e-clean rompe happy-path-order
 **Síntoma:** `pnpm test:e2e` completo deja `happy-path-order` en rojo con `Expected: "pending_acceptance" / Received: "validando"`; el mismo test pasa si corres solo `--project=chromium`. Verificado el 2026-09-07 contra `develop` limpio (37 passed / 1 failed, el mismo).
