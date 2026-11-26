@@ -56,7 +56,7 @@ export interface QuotePaymentPlan {
 /**
  * Qué métodos de pago puede usar el cliente en este pedido (H-7). Pura: la ruta
  * reúne los datos. `prepaid` se oculta solo al cliente `trusted` con alguna opción
- * al recibir disponible; la contraentrega solo en delivery, si el
+ * al recibir disponible y los importes ciertos (`amountsCertain`); la contraentrega solo en delivery, si el
  * cliente es de confianza y el total no pasa del umbral. Un recojo solo ofrece
  * `prepaid` (0283). El motivo no distingue riesgo de falta de historial
  * (antifraude).
@@ -81,8 +81,9 @@ export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
   // Un confiable (`trusted`, no `no_history`) con alguna opción al recibir disponible
   // no ve `prepaid`: la app instalada pinta el grupo «Antes de recibir» con lo que
   // llegue. `POST /customer/orders` sigue aceptándolo (API-3). Si falta toda opción
-  // al recibir (riesgo, umbral, ajustes dudosos, recojo) o el cliente no es
-  // `trusted`, `prepaid` sale como siempre.
+  // al recibir (riesgo, umbral, ajustes dudosos, recojo), el cliente no es
+  // `trusted` o los importes no son ciertos (`amountsCertain`, CAX-010), `prepaid`
+  // sale como siempre.
   const receiveAvailable = all.some((o) => o.intent !== 'prepaid' && o.available)
   const options =
     input.customerTrusted && input.amountsCertain && receiveAvailable
