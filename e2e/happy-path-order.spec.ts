@@ -121,6 +121,8 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
   // ETAPA 0 — este test SÍ crea pedidos, así que necesita mundo fresco antes y
   // purga de transaccionales después. El mundo (negocio, menú, driver, cliente)
   // sobrevive a la limpieza; solo se borran los pedidos del cliente de prueba.
+  const PEDIDO_PREVIO_SHORT_ID = 'HAMBRE23'
+
   test.beforeAll(async () => {
     pnpm('db:seed:e2e')
     // Con la semilla limpia el primer pedido del cliente nace `validando` (la
@@ -129,9 +131,11 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
     // `pending_acceptance`; se declara esa condición dando al cliente un pedido
     // previo ya entregado, que es lo que cuenta como historial
     // (`customer_contraentrega_decision`). `afterAll` lo borra con el clean.
+    // Si una corrida anterior murió antes del `afterAll`, el previo sigue ahí.
+    await db.from('orders').delete().eq('short_id', PEDIDO_PREVIO_SHORT_ID)
     const { error } = await db.from('orders').insert({
       business_id: E2E.BUSINESS_ID,
-      short_id: 'HAMBRE23',
+      short_id: PEDIDO_PREVIO_SHORT_ID,
       customer_user_id: E2E.CUSTOMER_USER_ID,
       customer_name: 'Cliente E2E',
       customer_phone: E2E.CUSTOMER_PHONE.replace(/\D/g, '').slice(-9),
@@ -145,10 +149,11 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
       delivered_at: new Date().toISOString(),
     })
     if (error) throw new Error(`no se pudo sembrar el pedido previo: ${error.message}`)
-    const { data: confiable } = await db.rpc('customer_trusted_for_contraentrega', {
+    // La regla que decide el estado inicial es `customer_contraentrega_decision`.
+    const { data: decision } = await db.rpc('customer_contraentrega_decision', {
       p_customer_user_id: E2E.CUSTOMER_USER_ID,
     })
-    expect(confiable, 'el pedido previo debe dar historial al cliente').toBe(true)
+    expect(decision, 'el pedido previo debe dar historial al cliente').toBe('trusted')
   })
   test.afterAll(() => pnpm('db:seed:e2e:clean'))
 
@@ -257,14 +262,20 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
       return data
     }
 
+    // Solo el pedido NUEVO cumple la condición: el previo sembrado (entregado,
+    // del mismo cliente) ya está en la base antes de empezar.
+    const leerPedidoNuevo = async () => {
+      const o = await leerUltimoPedido()
+      return o && o.short_id !== PEDIDO_PREVIO_SHORT_ID ? o : null
+    }
     const order = await expect
-      .poll(leerUltimoPedido, {
+      .poll(leerPedidoNuevo, {
         timeout: 20_000,
         message: () =>
           `el pedido no apareció en la DB. Fallos de API: ${fallosApi.join(' | ') || '(ninguno)'}`,
       })
       .not.toBeNull()
-      .then(leerUltimoPedido)
+      .then(leerPedidoNuevo)
 
     // ASSERT del estado inicial y de los montos.
     expect(order.status).toBe('pending_acceptance')
