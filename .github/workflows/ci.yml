@@ -66,7 +66,7 @@ jobs:
         run: |
           pnpm spec:validar
           node scripts/spec.mjs indice --check
-          node --test scripts/spec.test.mjs scripts/check-docs.test.mjs
+          node --test scripts/spec.test.mjs scripts/check-docs.test.mjs scripts/e2e-puertos.test.mjs
 
       # Fronteras de arquitectura (ADR 0039): ninguna app cliente importa packages/backend, el backend no
       # importa next, domain/ no toca infra ni SDK, y un módulo solo importa el index de otro.
@@ -227,6 +227,118 @@ jobs:
           supabase status || true
           docker ps -a
           docker logs "$(docker ps -aqf name=supabase_db)" --tail 200 || true
+
+  # Playwright (e2e/) contra el stack completo: Supabase local + las cinco apps Next. Decisión técnica D8: hasta
+  # ahora los e2e solo corrían a mano. Aquí las apps se sirven con `next start` sobre un build (E2E_SERVER=start,
+  # lo decide `playwright.config.ts` con CI=true): sin compilación bajo demanda ni observador de archivos, que en
+  # `next dev` daban 404 y rojos intermitentes. La base es la del runner, igual que en `api-integration`: nunca
+  # toca tindivo-prod (no hay token ni secreto en el job; `local-db.ts` aborta si la URL no es local).
+  e2e:
+    name: E2E · Playwright contra Supabase local
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    # Mínimo privilegio explícito: el job ejecuta código del PR (install, build, tests) y no necesita escribir nada.
+    permissions:
+      contents: read
+    env:
+      SUPABASE_CLI_VERSION: 2.109.1
+      TINDIVO_DB_LOCK_BYPASS: ci-isolated-db
+      E2E_SERVER: start
+    steps:
+      # Sin `persist-credentials`: el token no se queda en la configuración de git mientras corre código del PR.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Mismo motivo que en `api-integration`: la línea base se mide en Lima.
+      - name: Zona horaria de Lima (la de la línea base local)
+        run: sudo timedatectl set-timezone America/Lima
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Supabase local (reconstruye desde las migraciones)
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+
+      # Lo que en local vive en los `.env.local` de cada app (gitignoreados). Las NEXT_PUBLIC_* se hornean en el
+      # build, así que tienen que estar antes de él. La clave VAPID pública es un par P-256 recién generado: el
+      # navegador solo comprueba su forma al suscribirse, y no se envía ningún aviso real.
+      - name: Entorno de las apps (todo local)
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          set -a; . "$RUNNER_TEMP/supabase.env"; set +a
+          case "$API_URL" in
+            http://127.0.0.1:*|http://localhost:*) ;;
+            *) echo "::error::API_URL no es local: $API_URL"; exit 1 ;;
+          esac
+          VAPID_PUBLIC="$(node -e "const c=require('node:crypto').createECDH('prime256v1');c.generateKeys();process.stdout.write(c.getPublicKey().toString('base64url'))")"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1"
+            echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
+            echo "NEXT_PUBLIC_VAPID_PUBLIC_KEY=$VAPID_PUBLIC"
+            echo "NEXT_PUBLIC_CARTO_API_KEY=ci-sin-teselas"
+          } >> "$GITHUB_ENV"
+
+      - name: Mundo e2e
+        run: pnpm db:seed:e2e
+
+      - name: Chromium de Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      # La caché de Next acorta el build entre ejecuciones; el build en sí siempre se rehace (turbo --force no hace
+      # falta: la caché de turbo no se restaura en este runner).
+      - name: Caché de compilación de Next
+        uses: actions/cache@v4
+        with:
+          path: apps/*/.next/cache
+          key: next-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: next-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Build de las cinco apps
+        run: >
+          pnpm exec turbo run build
+          --filter=@tindivo/api --filter=@tindivo/customer --filter=@tindivo/admin
+          --filter=@tindivo/negocios --filter=@tindivo/motorizados
+
+      - name: Playwright (suite completa, sin reintentos)
+        run: pnpm test:e2e
+
+      - name: Guardar reporte y trazas
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Diagnóstico de Supabase
+        if: failure()
+        run: |
+          supabase status || true
+          docker ps -a
+          docker logs "$(docker ps -aqf name=supabase_db)" --tail 100 || true
 
   # MV2c: los modelos de Kotlin se generan desde el contrato OpenAPI y se compilan en cada PR. Si un cambio del
   # contrato rompe la app Android, cae aquí y no al construir la app. Los de Swift se compilan a diario en

@@ -35,10 +35,21 @@ export default function StoreSettingsPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // En desarrollo StrictMode monta el efecto dos veces y salen DOS peticiones. Sin esto, la respuesta de la
+    // primera (o la de la segunda, si llega tarde) reemplazaba el borrador con lo del servidor y se comía lo que
+    // la persona ya había tecleado: el e2e de ajustes fallaba así bajo carga (1 de 25).
+    let vigente = true
     storeApi
       .settings()
-      .then((s) => setDraft(toDraft(s)))
-      .catch((e) => setError(errMsg(e)))
+      .then((s) => {
+        if (vigente) setDraft(toDraft(s))
+      })
+      .catch((e) => {
+        if (vigente) setError(errMsg(e))
+      })
+    return () => {
+      vigente = false
+    }
   }, [])
 
   if (!draft) {

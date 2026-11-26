@@ -1,4 +1,52 @@
+import { existsSync, rmSync } from 'node:fs'
 import { defineConfig, devices } from '@playwright/test'
+import { verificarPuertos } from './scripts/e2e-puertos.mjs'
+
+/**
+ * Cómo se sirven las cinco apps.
+ *
+ *   dev   (por defecto en local) `next dev`: arranque sin build, pero compila cada ruta la primera vez.
+ *   start (CI, o `E2E_SERVER=start`) `next start` sobre un build: sin compilación bajo demanda ni
+ *         observador de archivos. Requiere `pnpm build` antes (el job `e2e` de CI lo hace).
+ *
+ * En `start` no se reutiliza nada: si un puerto está ocupado, falla en claro en vez de hablar con
+ * lo que haya detrás.
+ */
+const MODO =
+  process.env.E2E_SERVER === 'start' || (process.env.CI && process.env.E2E_SERVER !== 'dev')
+    ? 'start'
+    : 'dev'
+
+// Una sola vez por corrida (los workers heredan la marca): quien escucha en 3000-3004 tiene que ser de ESTE
+// árbol. `reuseExistingServer` acepta a cualquiera que conteste, y el servidor de otro worktree sirve otro
+// código. Ver `scripts/e2e-puertos.mjs`.
+if (!process.env.E2E_PUERTOS_VERIFICADOS) {
+  if (MODO === 'dev') {
+    // Solo `dev` reutiliza servidores; en `start` Playwright falla solo si el puerto está ocupado.
+    verificarPuertos(__dirname)
+    // `next build` y `next dev` comparten `apps/<app>/.next`: un build de la corrida anterior en modo `start`
+    // deja 404 en todas las rutas del dev server (Docs/operacion/trampas.md, «pnpm build envenena el dev
+    // server vivo»). Los puertos ya están libres o son nuestros: se retira el build antes de arrancar.
+    for (const app of ['api', 'customer', 'admin', 'negocios', 'motorizados']) {
+      const dir = `${__dirname}/apps/${app}/.next`
+      if (existsSync(`${dir}/BUILD_ID`)) rmSync(dir, { recursive: true, force: true })
+    }
+  }
+  if (MODO === 'start') {
+    // Con `next start`, los `fetch(..., { next: { revalidate } })` del servidor (la tienda del cliente pide el
+    // detalle con `revalidate: 15`) se guardan EN DISCO, en `.next/cache/fetch-cache`, y sobreviven a los
+    // reinicios. Tras un `supabase db reset` los códigos de artículo vuelven a numerarse y el mismo slug apunta a
+    // OTRO producto: una respuesta de la corrida anterior serviría datos de una base que ya no existe. Cada
+    // corrida e2e empieza con esa caché vacía (el build y su caché de compilación se conservan).
+    for (const app of ['api', 'customer', 'admin', 'negocios', 'motorizados']) {
+      rmSync(`${__dirname}/apps/${app}/.next/cache/fetch-cache`, { recursive: true, force: true })
+    }
+  }
+  process.env.E2E_PUERTOS_VERIFICADOS = '1'
+}
+
+const servir = (app: string) =>
+  `pnpm --filter @tindivo/${app} ${MODO === 'start' ? 'start' : 'dev'}`
 
 /**
  * Playwright — e2e contra el stack LOCAL.
@@ -21,7 +69,10 @@ export default defineConfig({
   retries: 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
-  reporter: [['list']],
+  // En CI el reporte HTML (con las trazas) se sube como artefacto si algo falla.
+  reporter: process.env.CI
+    ? [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]]
+    : [['list']],
 
   use: {
     baseURL: 'http://localhost:3000',
@@ -165,33 +216,33 @@ export default defineConfig({
   */
   webServer: [
     {
-      command: 'pnpm --filter @tindivo/api dev',
+      command: servir('api'),
       url: 'http://localhost:3001/api/v1/health',
-      reuseExistingServer: true,
+      reuseExistingServer: MODO === 'dev',
       timeout: 240_000,
     },
     {
-      command: 'pnpm --filter @tindivo/customer dev',
+      command: servir('customer'),
       url: 'http://localhost:3000',
-      reuseExistingServer: true,
+      reuseExistingServer: MODO === 'dev',
       timeout: 240_000,
     },
     {
-      command: 'pnpm --filter @tindivo/admin dev',
+      command: servir('admin'),
       url: 'http://localhost:3003',
-      reuseExistingServer: true,
+      reuseExistingServer: MODO === 'dev',
       timeout: 240_000,
     },
     {
-      command: 'pnpm --filter @tindivo/negocios dev',
+      command: servir('negocios'),
       url: 'http://localhost:3002',
-      reuseExistingServer: true,
+      reuseExistingServer: MODO === 'dev',
       timeout: 240_000,
     },
     {
-      command: 'pnpm --filter @tindivo/motorizados dev',
+      command: servir('motorizados'),
       url: 'http://localhost:3004',
-      reuseExistingServer: true,
+      reuseExistingServer: MODO === 'dev',
       timeout: 240_000,
     },
   ],
