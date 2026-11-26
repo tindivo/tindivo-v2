@@ -59,7 +59,7 @@ reglas: [COURIER_ITEM_DESCRIPTION_MAX, COURIER_MAX_WEIGHT_KG, COURIER_DRIVER_HIN
 | CUS-ENT-019 | Si se corta la conexión al crear la entrega, la app debe conservar la clave de idempotencia y avisar que revise «Mis entregas» antes de pedir otra. | Contrato REST v1 (`Idempotency-Key`) · mismo criterio que CUS-CHK-010 | ★ |
 | CUS-ENT-020 | **Abierto** hasta la revisión legal. La app debe indicar que los daños y pérdidas se atienden por el soporte de WhatsApp y que Tindivo responde por la conducta de sus motorizados. | Decisión de Jesús, 2026-11-16. La responsabilidad económica (tope de S/ 200) queda para la revisión legal | |
 | CUS-ENT-021 | Cuando el destinatario no está al llegar el motorizado, el motorizado debe poder registrarlo con una foto y esperar `timers.courierWaitMinutes`; si nadie recibe, se lleva el producto y se reprograma. **Fuera del lanzamiento: por diseñar (M2).** | Decisión de Jesús, 2026-11-16 (T7) | |
-| CUS-ENT-022 | La app debe informar qué no se puede enviar según la lista del canon («Qué se lleva y qué no»: la de inDrive; los documentos sí), sin declaración de efectivo ni joyas, y debe cambiar el texto que la contradice. Los medicamentos de venta libre se permiten (la categoría «Medicinas» se queda); los animales vivos y los objetos robados están prohibidos. | Decisión de Jesús, 2026-11-17 (decisión 19) y 2026-11-19 | ★ |
+| CUS-ENT-022 | La app debe informar qué no se puede enviar según la lista del canon («Qué se lleva y qué no»: la de inDrive; los documentos sí), sin declaración de efectivo ni joyas, y debe cambiar el texto que la contradice. Los medicamentos van sin mención especial: Tindivo solo transporta, no vende ni revisa, y quien envía responde de que esté permitido (Jesús, 2026-11-26; la categoría «Medicinas» se queda); los animales vivos y los objetos robados están prohibidos. | Decisión de Jesús, 2026-11-17 (decisión 19) y 2026-11-19 | ★ |
 
 > **Retirado:** `CUS-ENT-011` (lista de prohibidos con efectivo y joyas declarables) → reemplazado por `CUS-ENT-022`
 > (decisión de Jesús, 2026-11-17). Su ID no se reutiliza.
@@ -108,7 +108,7 @@ Verificado el 2026-11-19 en develop@25a6d537 más el PR #204 (código de Android
 | CUS-ENT-003 | HECHO | Precio y peso del servidor: `CourierText.kt` (`factsText`), `CourierMapping.kt` (`toServiceUi`, `maxWeightKg`), `res/values/strings.xml` (`courier_facts_price`, `courier_facts_weight`); servidor: migración `0291`; pruebas `CourierStatusDecodeTest` y `CourierStringsTest` (CA-ENT-11). Sin el campo no se muestra peso. |
 | CUS-ENT-004 | HECHO | Pin y zona: `CourierRequestSheets.kt`, `CourierRequestViewModel.kt` (`pickPin`); referencia con `isReferenceOk` (largo y texto basura, el mismo criterio del servidor) en `CourierRequestState.kt`; pruebas `CourierReferenceVectorTest` (vector compartido, CA-ENT-02) y `CourierRequestViewModelTest` (pin fuera de zona). |
 | CUS-ENT-005 | DIFIERE | «Soy yo» (`CourierRequestSections.kt`), «Mis direcciones» (`CourierRequestSheets.kt`) y «Sitios anteriores» (`CourierRequestSheets.kt`): HECHO. Faltan buscar un lugar por su nombre y recoger de un negocio del directorio: no hay código de `listCourierDirectory` en `apps/android`. |
-| CUS-ENT-006 | HECHO | Categorías `CourierRequestSections.kt`; `isFragile = false` en `CourierRequestState.kt`. La categoría «Medicinas» depende de la decisión sobre medicamentos. |
+| CUS-ENT-006 | HECHO | Categorías `CourierRequestSections.kt`; `isFragile = false` en `CourierRequestState.kt`. La categoría «Medicinas» se queda: los medicamentos van sin mención especial (Jesús, 2026-11-26). |
 | CUS-ENT-007 | HECHO | `CourierRequestSections.kt`; textos `res/values/strings.xml`; el cuerpo solo lleva `payer` (`CourierRequestState.kt`). |
 | CUS-ENT-008 | HECHO | Dos casillas, `PrepaidCheck` y `AllowedCheck` en `CourierRequestSections.kt`; cada una manda su valor (`CourierRequestState.kt`, `toRequest`); pruebas `CourierRequestViewModelTest` y `CourierRequestStateTest` (CA-ENT-01). |
 | CUS-ENT-009 | HECHO | `CourierRequestScreen.kt`; `CourierRequestState.kt`; prueba `CourierRequestViewModelTest.kt`. |
@@ -123,7 +123,7 @@ Verificado el 2026-11-19 en develop@25a6d537 más el PR #204 (código de Android
 | CUS-ENT-019 | HECHO | `CourierAttempts.kt`, `CourierRequestScreen.kt`; pruebas `CourierAttemptsTest.kt` y `CourierRequestViewModelTest.kt`. |
 | CUS-ENT-020 | FALTA | Ningún texto de soporte de WhatsApp ni de responsabilidad en `res/values/strings.xml`. La redacción espera la revisión legal. |
 | CUS-ENT-021 | DIFIERE | Fuera del lanzamiento (M2, por diseñar). Lo registra el motorizado, no el cliente; no hay código en ninguna app. |
-| CUS-ENT-022 | HECHO | `res/values/strings.xml` (`courier_prohibited_info`) trae la lista del canon, con animales vivos y objetos robados; prueba `CourierStringsTest` (CA-ENT-10). La categoría «Medicinas» se queda (medicamentos de venta libre, sí). |
+| CUS-ENT-022 | HECHO | `res/values/strings.xml` (`courier_prohibited_info`) trae la lista del canon, con animales vivos y objetos robados; prueba `CourierStringsTest` (CA-ENT-10). La categoría «Medicinas» se queda (medicamentos sin mención especial, Jesús, 2026-11-26). |
 
 Cuenta: 21 requisitos vigentes (`CUS-ENT-011` está retirado): **HECHO 17, FALTA 1 (CUS-ENT-020), DIFIERE 3 (CUS-ENT-001, 005 y 021)**.
 

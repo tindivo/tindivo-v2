@@ -12,7 +12,7 @@ preguntado en `Docs/trabajo/backlog.md`.
 
 El cliente le paga al negocio la comida y el envío; el negocio le debe a Tindivo el envío y una comisión por cada
 pedido entregado, y se los paga aparte. El efectivo que cobra el motorizado es del negocio y se le rinde pedido a pedido.
-En Tindivo Entregas, el cliente le paga el transporte al motorizado y el motorizado se lo rinde a Tindivo.
+En Tindivo Entregas, el cliente le paga el transporte al motorizado, que lo cobra y es parte de su pago (Jesús, 2026-11-26).
 
 ## Precios vivos
 
@@ -24,7 +24,7 @@ Mandan los valores de `app_settings`, no este archivo; al 2026-10-10:
 | Envío, banda **lejos** | S/ 2.50 | `delivery_bands.far` | El cliente, al negocio |
 | Comisión, pedido **con entrega** | S/ 1.50 | `commissions.delivery` | El negocio, a Tindivo |
 | Comisión, **recojo** en el local | S/ 1.00 | `commissions.pickup` | El negocio, a Tindivo |
-| Transporte de **Entregas** | S/ 3.00 | `courier.pricing.basePrice` | El cliente, a Tindivo (vía el motorizado) |
+| Transporte de **Entregas** | S/ 3.00 | `courier.pricing.basePrice` | El cliente, al motorizado (es parte de su pago) |
 
 - Un negocio puede tener comisión propia (`businesses.commission_override_delivery` / `_pickup`); hoy ninguno la tiene.
 - **La comisión de S/ 1.50 la confirmó Jesús el 2026-10-10**, y es la que se cobró en todas las semanas desde la
@@ -104,15 +104,26 @@ WhatsApp y ahí mismo se resuelven.
 
 ## Tindivo Entregas
 
-El cliente paga los S/ 3 al motorizado al recoger o al entregar (según quién paga), en efectivo o Yape. El motorizado
-registra el cobro al avanzar la entrega (`driver_courier_step` → `advance_courier_order`, `transport_collected_at`),
-lo rinde a Tindivo (`driver_remit_courier_fee` → `remitted_at`) y Jesús confirma haberlo recibido
-(`admin_confirm_courier_remittance`). El producto llega siempre pagado: el motorizado no lo cobra ni lo paga. Si una
-entrega se cancela después del cobro, el cobro se conserva y se puede rendir; **la devolución la hace Tindivo**
-(ADR 0036), fuera del código.
+> Decisión de Jesús, 2026-11-26: la tarifa de Entregas **la cobra el motorizado y es parte de su pago**. Sustituye a la
+> descripción anterior, en que el motorizado la rendía a Tindivo. **El código todavía no lo refleja** (abajo).
 
-Medido: 3 entregas con S/ 9.00 **declarados como rendidos** por el motorizado y sin confirmación de Jesús, que todavía
-no ha enseñado a los motorizados el flujo de rendición.
+El cliente paga los S/ 3 al motorizado al recoger o al entregar (según quién paga), en efectivo o Yape. El motorizado
+los cobra y se los queda: son parte de su pago. El producto llega siempre pagado: el motorizado no lo cobra ni lo paga.
+Los términos para el cliente no fijan la cifra: dicen que el precio se ve en la app antes de pedir.
+
+- **Cancelación después del cobro:** la devolución al cliente la hace Tindivo (ADR 0036), fuera del código.
+- **Cliente no habido** (nadie recibe hasta las 23:00): los S/ 3 de la ida se pagan igual; si los iba a pagar el
+  destinatario, los paga quien envió al recuperar el objeto. La vuelta del objeto a quien lo envió no se cobra.
+- **Daños y pérdidas:** Tindivo responde ante el cliente, hasta **S/ 200 por envío** más la devolución de los S/ 3, y lo
+  arregla después con el motorizado. El tope es un borrador sin revisión legal.
+
+**Lo que el código aún hace distinto:** el motorizado registra el cobro (`driver_courier_step` →
+`advance_courier_order`, `transport_collected_at`), lo rinde (`driver_remit_courier_fee` → `remitted_at`) y Jesús lo
+confirma (`admin_confirm_courier_remittance`). Alinear ese flujo con la decisión del 2026-11-26 está en el backlog y
+toca dinero: requiere la revisión de Jesús (invariante 9).
+
+Medido (2026-10-10): 3 entregas con S/ 9.00 declarados como rendidos por el motorizado y sin confirmación de Jesús, que
+todavía no ha enseñado a los motorizados el flujo de rendición.
 
 ## El motorizado y el punto de equilibrio
 
