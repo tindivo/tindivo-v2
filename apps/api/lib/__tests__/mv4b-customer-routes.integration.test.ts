@@ -1558,6 +1558,127 @@ describe('POST /customer/checkout/quote · payment', () => {
           })
         })
 
+        // CAX-010 (ciclo 3, R2): `prepaid` solo se retira si TODO lo que decide el umbral es cierto
+        // para JavaScript. Con una tarifa o un umbral que SQL lee distinto, la cotización conserva
+        // `prepaid` (como develop), SQL rechaza las dos contraentregas y el prepago crea el pedido con
+        // los importes que SQL midió (E15, `select (...)::numeric`). Carrito de 48.00, tarifa del
+        // negocio 3.00 (el respaldo que pintaría JavaScript: total 51.00), umbral 60.00.
+        const prepagoPresente = (cot: { body: { data: { payment: { options: unknown[] } } } }) =>
+          expect(cot.body.data.payment.options).toContainEqual({
+            intent: 'prepaid',
+            available: true,
+            unavailableReason: null,
+          })
+        async function importesGuardados(orderId: string) {
+          const { data } = await db
+            .from('orders')
+            .select('order_amount,delivery_fee')
+            .eq('id', orderId)
+            .single()
+          return { subtotal: Number(data?.order_amount), envio: Number(data?.delivery_fee) }
+        }
+        // [etiqueta, JSON crudo de near, estado de las contraentregas (SQL), detalle del 422, envío guardado, total guardado en céntimos]
+        const tarifasInciertas: Array<[string, string, number, string | null, number, number]> = [
+          ['"+0x10" (SQL: 16)', '"+0x10"', 422, '(S/ 64.00) pasa de', 16, 6400],
+          ['"-0x10" (SQL: -16)', '"-0x10"', 201, null, -16, 3200],
+          ['"1_000" (SQL: 1000)', '"1_000"', 422, '(S/ 1048.00) pasa de', 1000, 104800],
+          [
+            '"99999999.994999999999" (SQL: se guarda 99999999.99)',
+            '"99999999.994999999999"',
+            422,
+            ' pasa de',
+            99999999.99,
+            10000004799,
+          ],
+        ]
+        it.each(
+          tarifasInciertas,
+        )('CAX-010 · tarifa %s, umbral 60: la cotización conserva prepaid, SQL decide y el prepago crea el pedido', async (_n, crudo, estado, detalle, envio, total) => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo(crudo, async () => {
+            await conUmbral(60, async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              prepagoPresente(cot)
+              for (const intent of ['pending_cash', 'pending_yape'] as const) {
+                const r = await crear(c, intent)
+                expect(r.status, `${intent}: ${JSON.stringify(r.body)}`).toBe(estado)
+                if (detalle) expect(r.body.detail).toContain(detalle)
+                if (estado !== 201) expect(await pedidosDe(c)).toBe(0)
+                else break
+              }
+              if (estado === 201) return
+              const prepago = await crear(c, 'prepaid')
+              expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+              expect(await importesGuardados(prepago.body.data.id)).toEqual({ subtotal: 48, envio })
+              expect(await totalDelPedido(prepago.body.data.id)).toBe(total)
+            })
+          })
+        })
+
+        // Umbral que JavaScript lee distinto: `"+0x10"` (JavaScript: 80; SQL: 16) y 49.995
+        // (JavaScript redondea a 5000 céntimos; SQL compara 50.00 > 49.995). Total real 50.00.
+        it.each([
+          ['"+0x10" (SQL: 16)', '"+0x10"', '(S/ 50.00) pasa de'],
+          ['49.995 (SQL compara exacto)', '49.995', '(S/ 50.00) pasa de'],
+        ])('CAX-010 · umbral %s: la cotización conserva prepaid; SQL rechaza la contraentrega y el prepago crea el pedido', async (_n, crudo, detalle) => {
+          const c = await clienteDeConfianza()
+          await conUmbralCrudo(crudo, async () => {
+            const cot = await cotizar(c, { coordinates: PIN })
+            expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+            prepagoPresente(cot)
+            for (const intent of ['pending_cash', 'pending_yape'] as const) {
+              const r = await crear(c, intent)
+              expect(r.status, `${intent}: ${JSON.stringify(r.body)}`).toBe(422)
+              expect(r.body.detail).toContain(detalle)
+            }
+            expect(await pedidosDe(c)).toBe(0)
+            const prepago = await crear(c, 'prepaid')
+            expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+            expect(await importesGuardados(prepago.body.data.id)).toEqual({
+              subtotal: 48,
+              envio: 2,
+            })
+            expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
+          })
+        })
+
+        // Control: con todo cierto (tarifa y umbral ordinarios) el confiable NO ve `prepaid`.
+        it('CAX-010 · control: tarifa y umbral ordinarios, el confiable no ve prepaid', async () => {
+          const c = await clienteDeConfianza()
+          await conUmbral(60, async () => {
+            const cot = await cotizar(c, { coordinates: PIN })
+            expect(intents(cot)).toEqual(['pending_cash', 'pending_yape'])
+          })
+        })
+
+        // CAX-011: el umbral se compara SIN acotar. Subtotal 48.00 + tarifa 99999999.99 = 100000047.99,
+        // bajo el umbral 100000048: contraentrega disponible y SQL la acepta. El texto del umbral no se acota.
+        it('CAX-011 · umbral 100000048 con total 100000047.99: contraentrega disponible y pending_yape se crea', async () => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo('99999999.99', async () => {
+            await conUmbralCrudo('100000048', async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              expect(cot.body.data.total).toBe('100000047.99')
+              expect(cot.body.data.exceedsPrepayThreshold).toBe(false)
+              expect(cot.body.data.prepayThreshold).toBe('100000048.00')
+              expect(
+                cot.body.data.payment.options.find(
+                  (o: { intent: string }) => o.intent === 'pending_yape',
+                ),
+              ).toEqual({ intent: 'pending_yape', available: true, unavailableReason: null })
+              const r = await crear(c, 'pending_yape')
+              expect(r.status, JSON.stringify(r.body)).toBe(201)
+              expect(await importesGuardados(r.body.data.id)).toEqual({
+                subtotal: 48,
+                envio: 99999999.99,
+              })
+              expect(await totalDelPedido(r.body.data.id)).toBe(10000004799)
+            })
+          })
+        })
+
         // CAX-008: una cadena finita cuyo producto por 100 desborda ("1e308") no puede dar
         // `Infinity` en ningún importe de la cotización: respaldo (3.00 del negocio), con el
         // formato decimal del contrato. Lo mismo con el umbral "1e308" (se acota al tope).

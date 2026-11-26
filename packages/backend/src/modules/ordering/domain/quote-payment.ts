@@ -25,6 +25,13 @@ export interface QuotePaymentInput {
    * se le quita `prepaid`.
    */
   customerTrusted: boolean
+  /**
+   * `true` solo si TODO lo que decide el umbral es cierto para JavaScript: la tarifa del envío (sin
+   * lecturas fallidas ni valores que SQL lee distinto) y el umbral (ausente, `null` o un número con
+   * céntimos completos). Si es `false`, `prepaid` NO se retira aunque haya opciones al recibir:
+   * SQL puede exigir el prepago donde JavaScript cree que basta la contraentrega (CAX-010).
+   */
+  amountsCertain: boolean
   exceedsPrepayThreshold: boolean
   /**
    * `false` si falló la lectura de `app_settings` o de `effective_max_change`
@@ -78,7 +85,9 @@ export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
   // `trusted`, `prepaid` sale como siempre.
   const receiveAvailable = all.some((o) => o.intent !== 'prepaid' && o.available)
   const options =
-    input.customerTrusted && receiveAvailable ? all.filter((o) => o.intent !== 'prepaid') : all
+    input.customerTrusted && input.amountsCertain && receiveAvailable
+      ? all.filter((o) => o.intent !== 'prepaid')
+      : all
   const cashAvailable = options.some((o) => o.intent === 'pending_cash' && o.available)
   return {
     options,

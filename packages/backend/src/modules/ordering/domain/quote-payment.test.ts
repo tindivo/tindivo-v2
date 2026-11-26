@@ -6,6 +6,7 @@ const base: QuotePaymentInput = {
   pickupTiming: null,
   contraentregaAllowed: true,
   customerTrusted: true,
+  amountsCertain: true,
   exceedsPrepayThreshold: false,
   settingsReliable: true,
   maxCashBill: '100.00',
@@ -19,6 +20,25 @@ const opt = (input: QuotePaymentInput, intent: string) => {
 }
 
 describe('planQuotePayment', () => {
+  // CAX-010: develop siempre conservaba `prepaid`. Solo se retira si TODO lo que decide el umbral
+  // (tarifa y umbral) es cierto para JavaScript; con una tarifa o un umbral que SQL puede leer
+  // distinto, la cotización no puede quitar la única forma que SQL aceptaría.
+  it('amountsCertain false: un confiable con opciones al recibir conserva prepaid (como develop)', () => {
+    const r = planQuotePayment({ ...base, amountsCertain: false })
+    expect(r.options.map((o) => [o.intent, o.available])).toEqual([
+      ['pending_cash', true],
+      ['pending_yape', true],
+      ['prepaid', true],
+    ])
+    expect(r.cash).not.toBeNull()
+  })
+
+  it('amountsCertain true: sigue retirando prepaid al confiable (diseño aprobado)', () => {
+    expect(
+      planQuotePayment({ ...base, amountsCertain: true }).options.map((o) => o.intent),
+    ).toEqual(['pending_cash', 'pending_yape'])
+  })
+
   it('delivery con cliente de confianza: solo las dos de al recibir, sin prepaid, y el efectivo declara billete', () => {
     const r = planQuotePayment(base)
     expect(r.options.map((o) => o.intent)).toEqual(['pending_cash', 'pending_yape'])

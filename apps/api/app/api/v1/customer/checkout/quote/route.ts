@@ -1,4 +1,10 @@
-import { cents, MAX_MONEY, planQuotePayment, quoteDelivery } from '@tindivo/backend/ordering'
+import {
+  cents,
+  isMoneyNumber,
+  MAX_MONEY,
+  planQuotePayment,
+  quoteDelivery,
+} from '@tindivo/backend/ordering'
 import {
   CheckoutQuoteRequestSchema,
   checkModifierSelection,
@@ -165,18 +171,20 @@ export async function POST(req: Request): Promise<Response> {
     // ── Envío ────────────────────────────────────────────────────────────────
     // La misma función que usa la guardia del umbral de `POST /customer/orders`.
     const isDelivery = body.deliveryMethod === 'delivery'
-    const { deliveryBand, nominalCents, freeReason, deliveryCents } = await quoteDelivery(
-      service,
-      asUser,
-      {
-        businessId: body.businessId,
-        isDelivery,
-        coordinates: body.coordinates,
-        itemIds: body.items.map((i) => i.menuItemId),
-        businessDeliveryFee: biz.delivery_fee,
-        logScope: 'checkout/quote',
-      },
-    )
+    const {
+      deliveryBand,
+      nominalCents,
+      freeReason,
+      deliveryCents,
+      reliable: deliveryReliable,
+    } = await quoteDelivery(service, asUser, {
+      businessId: body.businessId,
+      isDelivery,
+      coordinates: body.coordinates,
+      itemIds: body.items.map((i) => i.menuItemId),
+      businessDeliveryFee: biz.delivery_fee,
+      logScope: 'checkout/quote',
+    })
     const totalCents = subtotalCents + deliveryCents
 
     // ── Vuelto máximo y umbral de prepago ────────────────────────────────────
@@ -188,14 +196,23 @@ export async function POST(req: Request): Promise<Response> {
     // podrían ofrecer más que los ajustes reales, así que `payment` va al lado seguro.
     if (settingsErr) console.error('[checkout/quote] ajustes:', settingsErr.message)
     const setting = (key: string): unknown => settings?.find((s) => s.key === key)?.value
-    const threshold = Number(setting('prepay_threshold') ?? 80)
-    // Un umbral finito pero enorme (`"1e308"`) daría `Infinity` céntimos: se acota al tope de
-    // `numeric(10,2)` (CAX-008). Para el total del pedido, que cabe ahí, la comparación no cambia.
+    const rawThreshold = setting('prepay_threshold')
+    const threshold = Number(rawThreshold ?? 80)
+    // La decisión usa los céntimos SIN acotar, igual que develop (CAX-011): subtotal y envío caben cada
+    // uno en numeric(10,2) pero su suma puede pasar de MAX_MONEY, y acotar el umbral cambiaría el resultado.
+    const thresholdCents = cents(Number.isFinite(threshold) ? threshold : 80)
+    // Solo el TEXTO se acota, y solo si los céntimos no son un entero seguro (`"1e308"` daría
+    // `Infinity`, CAX-008).
     const maxCents = cents(MAX_MONEY)
-    const thresholdCents = Math.max(
-      -maxCents,
-      Math.min(maxCents, cents(Number.isFinite(threshold) ? threshold : 80)),
-    )
+    const thresholdText = Number.isSafeInteger(thresholdCents)
+      ? text(thresholdCents)
+      : text(thresholdCents < 0 ? -maxCents : maxCents)
+    // CAX-010: `prepaid` solo se retira si todo lo que decide el umbral es cierto para JavaScript: la
+    // tarifa del envío y un umbral ausente, null o con céntimos completos. Un umbral como `"+0x10"`
+    // (JavaScript usa 80, SQL 16) o `49.995` (JavaScript redondea) deja la decisión a SQL.
+    const amountsCertain =
+      deliveryReliable &&
+      (rawThreshold === undefined || rawThreshold === null || isMoneyNumber(rawThreshold))
 
     const { data: change, error: changeErr } = await asUser.rpc('effective_max_change', {
       p_business_id: body.businessId,
@@ -221,6 +238,7 @@ export async function POST(req: Request): Promise<Response> {
       pickupTiming: body.pickupTiming ?? null,
       contraentregaAllowed: decisionErr === null && decision !== 'risk_blocked',
       customerTrusted: decisionErr === null && decision === 'trusted',
+      amountsCertain,
       settingsReliable: settingsErr === null && changeErr === null,
       exceedsPrepayThreshold: totalCents > thresholdCents,
       // Mismo respaldo que `create_customer_order`: S/ 100 si el ajuste falta.
@@ -240,7 +258,7 @@ export async function POST(req: Request): Promise<Response> {
         freeDelivery: { applies: freeReason !== null, reason: freeReason },
         total: text(totalCents),
         maxChange: maxChangeText,
-        prepayThreshold: text(thresholdCents),
+        prepayThreshold: thresholdText,
         exceedsPrepayThreshold: totalCents > thresholdCents,
         payment,
       },
