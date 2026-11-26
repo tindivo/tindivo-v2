@@ -1,4 +1,4 @@
-import { cents, quoteDelivery } from '@tindivo/backend/ordering'
+import { cents, isSqlNumeric, quoteDelivery } from '@tindivo/backend/ordering'
 import { CreateOrderRequestSchema, getOpenStatus, parseClientContext } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { listCustomerOrders } from '@/lib/customer/history'
@@ -199,14 +199,7 @@ export async function POST(req: Request): Promise<Response> {
       // Ausente o null: el respaldo 80 (como `create_customer_order`). PRESENTE pero que no es
       // un número finito ("NaN", texto, booleano): lo que SQL haga con ese valor no lo sabemos
       // aquí, así que el respaldo no puede servir para RECHAZAR; decide la RPC.
-      const thresholdMalformed =
-        rawThreshold != null &&
-        !(
-          (typeof rawThreshold === 'number' && Number.isFinite(rawThreshold)) ||
-          (typeof rawThreshold === 'string' &&
-            rawThreshold.trim() !== '' &&
-            Number.isFinite(Number(rawThreshold)))
-        )
+      const thresholdMalformed = rawThreshold != null && !isSqlNumeric(rawThreshold)
 
       const itemIds = body.items.map((i) => i.menuItemId)
       const modifierIds = body.items.flatMap((i) => i.modifiers || [])

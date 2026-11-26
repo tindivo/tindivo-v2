@@ -1366,6 +1366,74 @@ describe('POST /customer/checkout/quote · payment', () => {
         }
       })
 
+      // CAX-006: una tarifa de banda PRESENTE pero que no es un número. SQL convierte
+      // `(v_bands ->> banda)::numeric` y falla antes de comparar nada; la guardia no puede
+      // rechazar con el respaldo (tarifa del negocio 3.00 -> 51.00).
+      describe('tarifa de banda presente pero mal formada (CAX-006)', () => {
+        const conBandas = async (valor: Record<string, unknown>, fn: () => Promise<void>) => {
+          const { data: previo } = await db
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'delivery_bands')
+            .single()
+          await db
+            .from('app_settings')
+            .update({ value: valor as never })
+            .eq('key', 'delivery_bands')
+          try {
+            await fn()
+          } finally {
+            await db
+              .from('app_settings')
+              .update({ value: previo?.value as never })
+              .eq('key', 'delivery_bands')
+          }
+        }
+        const pedidosDe = async (c: Cliente) =>
+          (await db.from('orders').select('id').eq('customer_user_id', c.id)).data?.length ?? 0
+
+        it.each([
+          ['texto', 'abc'],
+          ['cadena vacía', ''],
+          ['booleano', true],
+        ])('near = %s, negocio 3.00, 48.00, umbral 50.00: no hay 403 con 51.00; falla SQL y no se guarda pedido', async (_n, valor) => {
+          const c = await clienteDeConfianza()
+          await conBandas({ near: valor, far: 2.5 }, async () => {
+            await conUmbral(50, async () => {
+              const r = await crear(c, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).not.toBe(403)
+              expect(JSON.stringify(r.body)).not.toContain('51.00')
+              // La conversión a numeric falla en la RPC y el error sube como 500.
+              expect(r.status, JSON.stringify(r.body)).toBe(500)
+              expect(await pedidosDe(c)).toBe(0)
+            })
+          })
+        })
+
+        it.each([
+          ['near = null', { near: null, far: 2.5 }],
+          ['sin la clave near', { far: 2.5 }],
+        ])('%s (ausente de verdad): cae a la tarifa del negocio 3.00, total 51.00 y la guardia sí corta con 403', async (_n, bandas) => {
+          const c = await clienteDeConfianza()
+          await conBandas(bandas, async () => {
+            await conUmbral(50, async () => {
+              const r = await crear(c, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).toBe(403)
+              expect(r.body.detail).toContain('(S/ 51.00) pasa de')
+            })
+          })
+        })
+
+        it('control, bandas válidas (cercana 2.00): total 50.00 con umbral 50.00 -> 201', async () => {
+          const c = await clienteDeConfianza()
+          await conUmbral(50, async () => {
+            const r = await crear(c, 'pending_cash')
+            expect(r.status, JSON.stringify(r.body)).toBe(201)
+            expect(await totalDelPedido(r.body.data.id)).toBe(5000)
+          })
+        })
+      })
+
       it('falla la lectura del umbral (respaldo 80): umbral real 100, dos platos (98.00) -> 201, no 403', async () => {
         const dos = {
           items: [

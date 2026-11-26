@@ -1,5 +1,5 @@
 import type { TypedSupabaseClient } from '@tindivo/supabase'
-import { type DeliveryBand, nominalDeliveryFeeCents } from '../domain/delivery-fee'
+import { type DeliveryBand, nominalDeliveryFee } from '../domain/delivery-fee'
 
 export interface DeliveryQuote {
   deliveryBand: DeliveryBand | null
@@ -90,7 +90,14 @@ export async function quoteDelivery(
       }
       businessFee = biz?.delivery_fee ?? null
     }
-    nominalCents = nominalDeliveryFeeCents(deliveryBand, bandsSetting?.value, businessFee)
+    const fee = nominalDeliveryFee(deliveryBand, bandsSetting?.value, businessFee)
+    // Una tarifa de banda PRESENTE pero que no es un número: SQL falla al convertirla; el respaldo
+    // sirve para pintar, no para rechazar (CAX-006).
+    if (!fee.reliable) {
+      reliable = false
+      console.error(`[${input.logScope}] tarifa de banda mal formada en delivery_bands`)
+    }
+    nominalCents = fee.cents
   }
 
   // ── Envío gratis: promo de lanzamiento primero, luego por plato ─────────────
