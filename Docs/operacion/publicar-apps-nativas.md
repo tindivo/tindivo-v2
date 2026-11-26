@@ -36,7 +36,6 @@ El ID de cliente **web** de Google (`googleWebClientIdProd` en `apps/android/cus
 - [ ] **Cliente Android de Google** (mismo proyecto de Cloud, tipo Android): paquete `com.tindivo.customer` con el **SHA-1 del certificado de release** (clave de subida) **y** el **SHA-1 de App Signing de Play** (Play Console › Integridad de la aplicación). Sin el segundo, el inicio de sesión falla solo en las builds instaladas desde Play.
 - [ ] Prueba en un teléfono real con la build de pruebas internas de Play: «Continuar con Google» abre el selector de cuentas y entra.
 
-
 ## Si algo sale mal
 
 - Apagar la función con su *kill switch*: Admin → Apps, interruptor de la función (`app_settings.client_features`, que sale en `GET /api/v1/config`; las apps muestran su `message`). Una función nueva y arriesgada se declara con una migración que añade su clave a `client_features.features` (el admin no crea claves); una clave que la app no encuentra = usa su valor por defecto compilado.
