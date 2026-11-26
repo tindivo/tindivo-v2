@@ -188,10 +188,25 @@ test('el silencio TRANSFIERE el pedido: aviso, sale de Míos y cambia driver_id'
   await expect(page.getByText('Transferencia automática…')).toBeVisible({ timeout: 25_000 })
   console.log('[T8-exp] aviso "Transferencia automática" visible')
 
-  const { data: expirados, error: expErr } = await db.rpc('expire_order_transfers')
-  if (expErr) throw new Error(`FALLÓ expire_order_transfers: ${expErr.message}`)
+  // El aviso sale con el reloj del NAVEGADOR (`expiresAt <= now`) y `expire_order_transfers`
+  // decide con el de la BASE (`expires_at <= now()`): dos relojes de la misma máquina que en
+  // Docker sobre Windows pueden diferir por décimas. Con las apps servidas por `next start` el
+  // aviso se pinta casi al instante y la primera llamada llegaba antes del vencimiento de la
+  // base: devolvía 0 (medido). El barrido es idempotente: se repite hasta que procese la
+  // solicitud, y sigue exigiendo que procese al menos una.
+  let expirados = 0
+  await expect
+    .poll(
+      async () => {
+        const { data, error: expErr } = await db.rpc('expire_order_transfers')
+        if (expErr) throw new Error(`FALLÓ expire_order_transfers: ${expErr.message}`)
+        expirados = Number(data)
+        return expirados
+      },
+      { timeout: 10_000, intervals: [250] },
+    )
+    .toBeGreaterThan(0)
   console.log(`[T8-exp] expire_order_transfers() procesó: ${expirados}`)
-  expect(Number(expirados)).toBeGreaterThan(0)
 
   // Sale de Míos sin recargar.
   await expect(page.getByText('Cliente Expira')).toHaveCount(0, { timeout: 25_000 })
