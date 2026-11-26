@@ -55,16 +55,6 @@ export const isMoneyNumber = (v: unknown): v is number =>
 export const isExactCentsText = (t: unknown): boolean =>
   typeof t === 'string' && /^-?\d+(\.\d{1,2})?$/.test(t)
 
-/** El texto crudo del valor de una banda dentro del texto jsonb de `delivery_bands`. */
-export const rawBandText = (
-  rawBands: string | null | undefined,
-  band: DeliveryBand,
-): string | null => {
-  const m =
-    typeof rawBands === 'string' ? new RegExp(`"${band}":\\s*(-?[0-9.eE+-]+)`).exec(rawBands) : null
-  return m?.[1] ?? null
-}
-
 /**
  * Solo para PINTAR (nunca para rechazar): el número que un valor presente daba en la cotización
  * antes de este cierre (`Number(valor)`; un número JSON con fracción de céntimo, como `16.005`, también se pinta tal cual: también `"0x10"`, que SQL convierte igual a 16, CAX-007),
@@ -92,8 +82,11 @@ export function nominalDeliveryFee(
   band: DeliveryBand,
   bandsSetting: unknown,
   businessDeliveryFee: number | string | null,
-  /** `delivery_bands::text`. Si se pasa, un número con más precisión que céntimos no es fiable (CAX-012). */
-  rawBandsText?: string | null,
+  /**
+   * El texto crudo de la tarifa de ESTA banda (`value->>banda` de PostgreSQL, sin pasar por `JSON.parse`).
+   * Si se pasa, un número con más dígitos que céntimos no es fiable (CAX-012). `undefined`: no se comprueba.
+   */
+  rawBandValueText?: string | null,
 ): NominalDeliveryFee {
   let reliable = true
   let fromBands = Number.NaN
@@ -105,7 +98,7 @@ export function nominalDeliveryFee(
       if (raw !== null && raw !== undefined) {
         if (isMoneyNumber(raw)) {
           fromBands = raw
-          if (rawBandsText !== undefined && !isExactCentsText(rawBandText(rawBandsText, band)))
+          if (rawBandValueText !== undefined && !isExactCentsText(rawBandValueText))
             reliable = false
         } else {
           reliable = false

@@ -1650,9 +1650,15 @@ describe('POST /customer/checkout/quote · payment', () => {
 
         // CAX-012: una tarifa con más dígitos de los que caben en un double (JavaScript la lee como 2;
         // SQL conserva 2.0000000000000000001 y 50.0000000000000000001 > 50) no es cierta: prepaid se conserva.
-        it('CAX-012 · tarifa 2.0000000000000000001, umbral 50: la cotización conserva prepaid; SQL rechaza la contraentrega', async () => {
+        it.each([
+          ['plano', '{"near": 2.0000000000000000001, "far": 2.5}'],
+          [
+            'con un objeto anidado antes (jsonb ordena las claves por longitud)',
+            '{"a": {"near": 1}, "far": 2.5, "near": 2.0000000000000000001}',
+          ],
+        ])('CAX-012 · tarifa 2.0000000000000000001 (%s), umbral 50: la cotización conserva prepaid; SQL rechaza la contraentrega', async (_n, crudoBandas) => {
           const c = await clienteDeConfianza()
-          await conBandasCrudo('2.0000000000000000001', async () => {
+          await conSettingCrudo('delivery_bands', crudoBandas, async () => {
             await conUmbral(50, async () => {
               const cot = await cotizar(c, { coordinates: PIN })
               expect(cot.status, JSON.stringify(cot.body)).toBe(200)

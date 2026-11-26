@@ -6,6 +6,8 @@ interface Script {
   band?: 'near' | 'far'
   bandError?: boolean
   bands?: Record<string, number> | null
+  /** `value->>near` y `value->>far` de PostgreSQL; por omisión, el texto ordinario de `bands`. */
+  bandsText?: { near: string | null; far: string | null }
   bandsError?: boolean
   bizFee?: number | null
   bizError?: boolean
@@ -29,8 +31,12 @@ function fake(script: Script): { service: TypedSupabaseClient; asUser: TypedSupa
                 ? null
                 : (() => {
                     const value = script.bands ?? { near: 2, far: 2.5 }
-                    // `raw` es `value::text` de PostgreSQL; JSON.stringify da las mismas cifras ordinarias.
-                    return { value, raw: JSON.stringify(value) }
+                    // `near` y `far` son `value->>near` y `value->>far` de PostgreSQL (el texto con todos sus dígitos).
+                    return {
+                      value,
+                      near: script.bandsText ? script.bandsText.near : String(value.near ?? ''),
+                      far: script.bandsText ? script.bandsText.far : String(value.far ?? ''),
+                    }
                   })(),
             error: null,
           }
@@ -79,6 +85,15 @@ async function quote(script: Script, extra: Record<string, unknown> = {}) {
 }
 
 describe('quoteDelivery', () => {
+  it('CAX-012: una tarifa con más dígitos que un double (texto crudo) no es fiable aunque se pinte igual', async () => {
+    const r = await quote(
+      { bandsText: { near: '2.0000000000000000001', far: '2.5' } },
+      { businessDeliveryFee: 3 },
+    )
+    expect(r.nominalCents).toBe(200)
+    expect(r.reliable).toBe(false)
+  })
+
   it('sin fallos: banda cercana, sin promoción, fiable', async () => {
     expect(await quote({}, { businessDeliveryFee: 3 })).toEqual({
       deliveryBand: 'near',

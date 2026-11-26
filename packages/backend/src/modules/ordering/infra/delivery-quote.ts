@@ -70,7 +70,8 @@ export async function quoteDelivery(
     }
     const { data: bandsSetting, error: bandsErr } = await service
       .from('app_settings')
-      .select('value, raw:value::text')
+      // `near` y `far` en texto: `->>` conserva todos los dígitos que `JSON.parse` redondea (CAX-012).
+      .select('value, near:value->>near, far:value->>far')
       .eq('key', 'delivery_bands')
       .maybeSingle()
     if (bandsErr) {
@@ -94,7 +95,7 @@ export async function quoteDelivery(
       deliveryBand,
       bandsSetting?.value,
       businessFee,
-      bandsErr ? undefined : (bandsSetting?.raw ?? null),
+      bandsErr ? undefined : (bandsSetting?.[deliveryBand] ?? null),
     )
     // Una tarifa de banda PRESENTE pero que no es un número: SQL falla al convertirla; el respaldo
     // sirve para pintar, no para rechazar (CAX-006).
