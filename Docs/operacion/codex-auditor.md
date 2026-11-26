@@ -683,7 +683,9 @@ registro o resumen puede llamarlo «aislado» ni «sandbox seguro».
    reintenta solo: eventos `error` con `Reconnecting... N/N` e item `error` con `Falling back from WebSockets`, y
    únicamente antes del primer comando; después de uno, con otro texto, o con `turn.failed`, `error` final o sin
    `turn.completed`, se marca. La versión del control que valida una ronda es la de la rama destino en el SHA base,
-   fijada por hash; nunca la del candidato.
+   fijada por hash; nunca la del candidato. Quedan fuera del control, y por eso pendientes, las rutas enraizadas
+   sin unidad (`\Users\…`) y los comodines; la decodificación quita además la red casual que daba el `\\` del
+   texto crudo.
 3. El expediente conserva `NN-codex.events.jsonl`, `NN-codex.stderr.log`, `NN-codex.exit` y `NN-alcance.txt` (la
    salida del control) **fuera del candidato**, y el sobre de atestación registra el SHA-256 del JSONL y de
    `NN-alcance.txt` junto al candidato y al thread.
