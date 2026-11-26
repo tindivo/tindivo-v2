@@ -26,7 +26,7 @@ codigo:
    («Confirmar recojo» / «Confirmar entrega»; «Dentro de la zona de reparto» o «Esta ubicación está fuera de la zona de
    reparto de San Jacinto»).
 2. **«¿Qué llevamos?»** con descripción («Ej.: Un sobre con documentos») y categoría (Documentos, Comida, Medicinas, Ropa).
-   Las categorías no pueden contradecir la lista del canon (CUS-ENT-022; los medicamentos de venta libre sí van).
+   Las categorías no pueden contradecir la lista del canon (CUS-ENT-022; los medicamentos van sin mención especial: Tindivo solo transporta lo ya comprado).
 3. **«¿Quién paga?»**: «Quien entrega · Al recoger» o «Quien recibe · Al entregar»; «Al motorizado: efectivo exacto o
    Yape. Transporte desde [tarifa].»
 4. «Indicaciones para el motorizado (opcional)».
