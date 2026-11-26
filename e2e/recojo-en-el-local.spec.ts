@@ -321,7 +321,11 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
      * Con la 0283 la caja ya no se apaga con motivo: directamente no está.
      */
     await expect(caja).toHaveCount(0)
-    await expect(page.getByText(/Como pasas más tarde, el pago va adelantado/)).toBeVisible()
+    // Con la caja fuera, el grupo «Al recibir» ni se pinta: la pantalla muestra
+    // solo la cabecera «Antes de recibir» con su única fila (el motivo
+    // «Como pasas más tarde…» solo sale bajo un grupo apagado, y ya no hay).
+    await expect(page.getByText('Antes de recibir', { exact: true })).toBeVisible()
+    await expect(page.getByText('Al recibir', { exact: true })).toHaveCount(0)
 
     /*
      * Y la elección se mueve sola al único camino que queda, sin dejarla en una
