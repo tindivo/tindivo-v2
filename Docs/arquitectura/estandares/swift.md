@@ -1,8 +1,8 @@
 # Estándares · Swift (app de clientes para iOS)
 
-> Verificado: 2026-10-12 · entorno: `develop@591ec569` · Parte de `Docs/arquitectura/estandares/` (niveles y excepciones: `README.md`)
+> Verificado: 2026-11-18 (ruta de iOS y SW-16) y 2026-10-12 (el resto) · entorno: `develop@591ec569` · Parte de `Docs/arquitectura/estandares/` (niveles y excepciones: `README.md`)
 
-Aplica a `apps/customer-ios/`. Las reglas comunes a iOS y Android (CLI) y las transversales están en `README.md`. Plan del producto: `Docs/planes/movil/`.
+Aplica a `apps/ios/` (por crear: iOS aún no tiene carpeta). Las reglas comunes a iOS y Android (CLI) y las transversales están en `README.md`. Plan del producto: `Docs/planes/movil/`.
 
 ## Reglas
 
@@ -23,12 +23,12 @@ Aplica a `apps/customer-ios/`. Las reglas comunes a iOS y Android (CLI) y las tr
 | SW-13 | **Pruebas**: Swift Testing (`@Test`, `#expect`) para modelos de pantalla, repositorios y decodificación con los fixtures de `packages/contracts/fixtures/` (por crear); XCUITest para el flujo crítico (TST-6) | OBLIGATORIA | CI de Swift, a diario (D-48) |
 | SW-14 | **Estilo**: SwiftLint con `force_unwrapping`, `force_try` y `force_cast` como error; `file_length` 300, `function_body_length` 80 y `cyclomatic_complexity` 15 como alerta (alineado con TS-3); formato con `swift-format`. Los nombres de reglas se verifican contra la versión instalada | OBLIGATORIA | CI de Swift, a diario (D-48) |
 | SW-15 | **Configuración**: entornos `Dev` y `Prod` con archivos `.xcconfig` (URL base de la API, identificadores); ningún secreto en el binario: la clave publicable de Supabase no es secreta y la de servicio nunca sale del servidor. `MARKETING_VERSION` semántica; `CURRENT_PROJECT_VERSION` creciente, la pone la CI | OBLIGATORIA | Revisión |
-| SW-16 | **Dependencias**: solo SwiftPM. Cada librería de terceros se pide en `Docs/trabajo/decisiones-abiertas.md` y Jesús la aprueba antes de añadirla. Lista inicial: `swift-openapi-generator`, `swift-openapi-runtime`, `swift-openapi-urlsession`, Firebase Messaging, la herramienta de *crashes* (DA-08) y el SDK de Supabase para Swift (solo Auth, si DA-01 lo confirma) | OBLIGATORIA | Revisión de `Package.resolved` |
+| SW-16 | **Dependencias**: solo SwiftPM. Cada librería de terceros se pide en `Docs/trabajo/decisiones-abiertas.md` y Jesús la aprueba antes de añadirla. Lista inicial: `swift-openapi-generator`, `swift-openapi-runtime`, `swift-openapi-urlsession`, Firebase Messaging, la herramienta de *crashes* (DA-08) y **GoogleSignIn** (SDK oficial; decisión de Jesús, 2026-11-18, conversación con Claude Code: `D-65` de `Docs/planes/movil/decisiones.md`). **Sin SDK de Supabase**: la sesión habla con Auth por REST. Apple usa AuthenticationServices, del sistema | OBLIGATORIA | Revisión de `Package.resolved` |
 
 ## Estructura
 
 ```
-apps/customer-ios/
+apps/ios/   (por crear)
 ├── AGENTS.md
 ├── TindivoCustomer.xcodeproj
 ├── TindivoCustomer/

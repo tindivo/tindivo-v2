@@ -220,6 +220,11 @@ async function borrarPedidosDelCliente(): Promise<void> {
 }
 
 beforeAll(async () => {
+  // El traslado del celular viene apagado (migración 0293): esta prueba lo enciende y lo restaura.
+  await db
+    .from('app_settings')
+    .upsert({ key: 'phone_transfer_enabled', value: true })
+    .throwOnError()
   const email = `conformidad-${RUN}@integration.local`
   const password = 'test-password-12345'
   const { data, error } = await db.auth.admin.createUser({
@@ -255,6 +260,10 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await db
+    .from('app_settings')
+    .upsert({ key: 'phone_transfer_enabled', value: false })
+    .throwOnError()
   if (courierSettings) {
     await db
       .from('app_settings')
@@ -342,6 +351,54 @@ describe('rutas públicas', () => {
       expect(sin?.thumbnail_url ?? null).toBeNull()
     } finally {
       await sdb.from('menu_items').update({ thumbnail_url: null }).eq('id', conMiniatura)
+    }
+  })
+
+  it('CA-CAT-02 «Destacados»: el restaurante marca platos y pone el nombre, y la carta trae la sección ya armada', async () => {
+    const THUMB = `${LOCAL_URL}/storage/v1/object/public/menu-items/${E2E.BUSINESS_ID}/items/zz-f?v=1`
+    type Detail = { featured?: { title: string; item_ids: string[] } | null; business: object }
+    const read = async () =>
+      (await conforms('getBusiness', 200, getBusiness, {
+        params: { id: E2E.BUSINESS_ID },
+      })) as unknown as Detail
+    const ids = (
+      (await read()) as unknown as { categories: { items: { id: string }[] }[] }
+    ).categories
+      .flatMap((c) => c.items)
+      .map((i) => i.id)
+    expect(ids.length).toBeGreaterThanOrEqual(2)
+    const [a, b] = ids as [string, string]
+    try {
+      // Nada marcado: no hay sección.
+      expect((await read()).featured ?? null).toBeNull()
+
+      // Un plato marcado pero sin foto no entra; con foto sí, y el nombre es el del restaurante.
+      await sdb.from('menu_items').update({ is_featured: true }).in('id', [a, b])
+      expect((await read()).featured ?? null).toBeNull()
+      await sdb.from('menu_items').update({ thumbnail_url: THUMB }).eq('id', a)
+      await sdb
+        .from('businesses')
+        .update({ featured_title: 'Los más pedidos' })
+        .eq('id', E2E.BUSINESS_ID)
+      const featured = (await read()).featured
+      expect(featured?.title).toBe('Los más pedidos')
+      expect(featured?.item_ids).toEqual([a])
+
+      // Sin nombre usa «Destacados»; y `featured_title` no se cuela en el objeto del negocio.
+      await sdb.from('businesses').update({ featured_title: null }).eq('id', E2E.BUSINESS_ID)
+      const detail = await read()
+      expect(detail.featured?.title).toBe('Destacados')
+      expect(Object.keys(detail.business)).not.toContain('featured_title')
+
+      // Un plato agotado sale de la sección.
+      await sdb.from('menu_items').update({ is_available: false }).eq('id', a)
+      expect((await read()).featured ?? null).toBeNull()
+    } finally {
+      await sdb
+        .from('menu_items')
+        .update({ is_featured: false, thumbnail_url: null, is_available: true })
+        .in('id', [a, b])
+      await sdb.from('businesses').update({ featured_title: null }).eq('id', E2E.BUSINESS_ID)
     }
   })
 
@@ -781,6 +838,24 @@ describe('traslado del número y avisos de seguridad', () => {
         bearer: a,
         body: { phone: number, code: DEV_OTP_CODE },
       })
+      // Con el traslado apagado (el valor del lanzamiento) el 409 no lleva `transfer` y sigue conforme al contrato.
+      await db
+        .from('app_settings')
+        .upsert({ key: 'phone_transfer_enabled', value: false })
+        .throwOnError()
+      const refused = await call(verifyPhoneCode, {
+        method: 'POST',
+        bearer: b,
+        body: { phone: number, code: DEV_OTP_CODE },
+      })
+      expect(refused.status).toBe(409)
+      // El OpenAPI solo documenta los éxitos: el error se valida con el esquema de problemas del contrato.
+      ProblemDetailsSchema.parse(refused.body)
+      expect(refused.body).not.toHaveProperty('transfer')
+      await db
+        .from('app_settings')
+        .upsert({ key: 'phone_transfer_enabled', value: true })
+        .throwOnError()
       const pending = await call(verifyPhoneCode, {
         method: 'POST',
         bearer: b,

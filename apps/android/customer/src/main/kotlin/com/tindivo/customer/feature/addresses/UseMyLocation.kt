@@ -11,20 +11,11 @@ import android.provider.Settings
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -35,21 +26,29 @@ private val LOCATION_PERMISSIONS =
     arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
 
 /**
- * «Usar mi ubicación»: el permiso se pide SOLO al tocarlo (al abrir el formulario no se pide nada, a diferencia de la
- * web). Sin Google Play services no se muestra. Si la persona sale del formulario, la lectura en curso se cancela;
- * girar la pantalla no cuenta como salir. Lo mismo si la app pasa a segundo plano (Inicio, pantalla bloqueada) con el
- * formulario aún compuesto: [onForegroundChanged] cancela la lectura y, al volver, no se pide otra sin un toque nuevo
- * (CAX-001). Es el mismo composable en la pantalla de Mi cuenta y en la hoja del checkout.
+ * Lo que la pantalla necesita para pedir la ubicación: [request] pide el permiso si falta y, con él, lanza UNA lectura;
+ * [canReadSilently] dice si el permiso ya está concedido (entonces se puede leer sin preguntar nada, D-E).
+ */
+internal class LocationRequester(
+    val available: Boolean,
+    val canReadSilently: () -> Boolean,
+    val request: () -> Unit,
+)
+
+/**
+ * «Usar mi ubicación»: el permiso se pide SOLO cuando la persona lo toca (nunca solo al abrir el mapa; con el permiso ya
+ * concedido sí se lee solo, sin diálogo). Sin Google Play services no se ofrece. Si la persona sale del formulario, la
+ * lectura en curso se cancela; girar la pantalla no cuenta como salir. Lo mismo si la app pasa a segundo plano (Inicio,
+ * pantalla bloqueada) con el formulario aún compuesto: [onForegroundChanged] cancela la lectura y, al volver, no se pide
+ * otra sin un toque nuevo (CAX-001). Es el mismo composable en la pantalla de Mi cuenta y en el formulario del checkout.
  */
 @Composable
-internal fun UseMyLocation(
+internal fun rememberLocationRequester(
     state: AddressFormState,
     onPermission: (LocationPermission) -> Unit,
     onLeave: () -> Unit,
     onForegroundChanged: (Boolean) -> Unit,
-) {
-    val locate = state.locate
-    if (!locate.available) return
+): LocationRequester {
     val context = LocalContext.current
     val activity = LocalActivity.current
     val leave = rememberUpdatedState(onLeave)
@@ -71,41 +70,23 @@ internal fun UseMyLocation(
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
             onPermission(permissionAnswer(grants, activity))
         }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedButton(
-            onClick = {
+    val permission = rememberUpdatedState(onPermission)
+    return remember(state.locate.available, context, launcher) {
+        LocationRequester(
+            available = state.locate.available,
+            canReadSilently = { hasLocationPermission(context) },
+            request = {
                 if (hasLocationPermission(context)) {
-                    onPermission(LocationPermission.Granted)
+                    permission.value(LocationPermission.Granted)
                 } else {
                     launcher.launch(LOCATION_PERMISSIONS)
                 }
             },
-            enabled = !locate.locating && !state.busy,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(
-                text =
-                    stringResource(
-                        if (locate.locating) R.string.address_form_locating else R.string.address_form_use_location,
-                    ),
-            )
-        }
-        locate.notice?.let { notice ->
-            Text(
-                text = stringResource(notice.messageRes()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-            if (notice == LocateNotice.DeniedForever) {
-                TextButton(onClick = { openAppSettings(context) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(R.string.address_form_locate_settings))
-                }
-            }
-        }
+        )
     }
 }
 
-private fun LocateNotice.messageRes(): Int =
+internal fun LocateNotice.messageRes(): Int =
     when (this) {
         LocateNotice.Denied -> R.string.address_form_locate_denied
         LocateNotice.DeniedForever -> R.string.address_form_locate_denied_forever
@@ -114,7 +95,7 @@ private fun LocateNotice.messageRes(): Int =
         LocateNotice.Unavailable -> R.string.address_form_locate_unavailable
     }
 
-private fun hasLocationPermission(context: Context): Boolean =
+internal fun hasLocationPermission(context: Context): Boolean =
     LOCATION_PERMISSIONS.any { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
 
 /**
@@ -140,7 +121,7 @@ private fun permissionAnswer(
         }
     }
 
-private fun openAppSettings(context: Context) {
+internal fun openAppSettings(context: Context) {
     val intent =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

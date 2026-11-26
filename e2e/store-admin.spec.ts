@@ -372,16 +372,23 @@ test.describe('formulario', () => {
     await page.getByRole('switch', { name: 'Acepta ofertas' }).click()
 
     await expect(page.getByText('Guardado')).toBeVisible({ timeout: 10_000 })
-    const draft = await getItem(request, id)
-    expect(draft).toMatchObject({
-      price: 45,
-      originalPrice: 90,
-      condition: 'used',
-      conditionScore: 8,
-      description: 'Poco uso, sin detalles.',
-      negotiable: true,
-      status: 'draft',
-    })
+    // «Guardado» NO prueba que lo último ya esté en el servidor: el aviso lo pone la
+    // respuesta del guardado anterior y puede aparecer mientras el último campo (el
+    // interruptor de ofertas) sigue en la cola del autoguardado. Medido: con el
+    // servidor rápido (`next start`) el `getItem` inmediato devolvía descripción
+    // nula, sin precio original y sin ofertas. Lo que dice «ya está» es la fila:
+    // se espera a que el servidor la tenga completa.
+    await expect
+      .poll(() => getItem(request, id), { timeout: 10_000 })
+      .toMatchObject({
+        price: 45,
+        originalPrice: 90,
+        condition: 'used',
+        conditionScore: 8,
+        description: 'Poco uso, sin detalles.',
+        negotiable: true,
+        status: 'draft',
+      })
 
     await publish.click()
     await expect(page).toHaveURL(/\/store$/, { timeout: 30_000 })
@@ -410,7 +417,9 @@ test.describe('formulario', () => {
     created.push(id)
 
     await page.goto('/store')
-    await expect(page.getByText(/Tienes \d+ borradores? pendientes?/)).toBeVisible()
+    // Con UN borrador el aviso dice «borrador pendiente»: la expresión anterior (`borradores?`) solo
+    // casaba con el plural y pasaba porque otros tests dejaban más borradores en la lista.
+    await expect(page.getByText(/Tienes \d+ borrador(?:es)? pendientes?/)).toBeVisible()
     await page.getByRole('link', { name: /Continuar/ }).click()
     await expect(page).toHaveURL(/\/store\/[0-9a-f-]{36}$/)
     await expect(page.locator('.as-shot img')).toHaveCount(1)
@@ -523,8 +532,23 @@ test.describe('ajustes', () => {
   test('un mínimo mayor que el máximo no deja guardar', async ({ page }) => {
     await login(page)
     await page.goto('/store/ajustes')
-    await page.getByLabel('Delivery mínimo').fill('9')
-    await expect(page.getByRole('button', { name: 'Guardar ajustes' })).toBeDisabled()
-    await expect(page.getByText('El mínimo no puede superar al máximo')).toBeVisible()
+    // La página pide los ajustes dos veces en desarrollo (StrictMode) y la
+    // segunda respuesta reemplaza el borrador: un `fill` que cae entre las dos
+    // se pierde, y también se pierde lo que ya se había comprobado. Medido: el
+    // botón salía deshabilitado, el bloque pasaba, y la respuesta tardía
+    // borraba el 9 ANTES de la última aserción (10 s sin el aviso). Por eso las
+    // tres comprobaciones viven dentro del mismo reintento: solo vale una
+    // pasada en la que el valor escrito sigue ahí, el botón sigue apagado Y el
+    // aviso se ve.
+    await expect(async () => {
+      await page.getByLabel('Delivery mínimo').fill('9')
+      await expect(page.getByLabel('Delivery mínimo')).toHaveValue('9', { timeout: 1_000 })
+      await expect(page.getByRole('button', { name: 'Guardar ajustes' })).toBeDisabled({
+        timeout: 1_000,
+      })
+      await expect(page.getByText('El mínimo no puede superar al máximo')).toBeVisible({
+        timeout: 1_000,
+      })
+    }).toPass({ timeout: 15_000 })
   })
 })

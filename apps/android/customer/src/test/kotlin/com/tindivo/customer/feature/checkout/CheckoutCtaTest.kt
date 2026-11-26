@@ -1,6 +1,7 @@
 package com.tindivo.customer.feature.checkout
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -57,6 +58,7 @@ class CheckoutCtaTest {
     @Test
     fun `cada cosa que falta tiene su texto, en el orden de la web`() {
         assertEquals(Cta.Sending, ready().copy(sending = true).cta)
+        assertEquals(Cta.Locating, ready().copy(sending = true, locating = true).cta)
         assertEquals(Cta.NeedName, ready().copy(name = "  ").cta)
         assertEquals(Cta.NeedAddress, ready().copy(selectedAddressId = null).cta)
         assertEquals(Cta.NeedFixAddress, ready().copy(addresses = listOf(home.copy(line = "Jr"))).cta)
@@ -69,10 +71,18 @@ class CheckoutCtaTest {
     }
 
     @Test
-    fun `un recojo no pide direccion pero si saber si va ahora`() {
+    fun `una direccion guardada con el minimo anterior sigue sirviendo para pedir`() {
+        // La API v1 acepta desde ADDRESS_REFERENCE_API_MIN (5); solo el formulario pide 15 (D-31, API-3).
+        val catorce = ready().copy(addresses = listOf(home.copy(reference = "Frente al pozo")))
+        val cuatro = ready().copy(addresses = listOf(home.copy(reference = "cerc")))
+        assertEquals(Cta.Ready(BigDecimal("30.00")), catorce.cta)
+        assertEquals(Cta.NeedReference, cuatro.cta)
+    }
+
+    @Test
+    fun `un recojo no pide direccion ni pregunta nada mas`() {
         val pickup = ready().copy(method = DeliveryChoice.Pickup, selectedAddressId = null, pay = PayMethod.Prepaid)
-        assertEquals(Cta.NeedPickupAnswer, pickup.cta)
-        assertTrue(pickup.copy(pickupWhen = PickupWhen.Later).cta.canConfirm)
+        assertTrue(pickup.cta.canConfirm)
     }
 
     @Test
@@ -107,13 +117,32 @@ class CheckoutCtaTest {
     }
 
     @Test
+    fun `sin nombre el boton abre la hoja del nombre`() {
+        assertEquals(CheckoutSheet.EditName, Cta.NeedName.sheet("a"))
+        assertEquals(CheckoutPhase.Form, CheckoutSheet.EditName.phase)
+    }
+
+    @Test
+    fun `sin metodo de pago el boton dice Elige como pagas y lleva a la seccion de pago sin elegir nada`() {
+        val sinPago = ready().copy(pay = null)
+        assertEquals(Cta.NeedPay, sinPago.cta)
+        assertFalse(sinPago.cta.canConfirm)
+        assertTrue(sinPago.cta.goesToPayment)
+        assertNull(sinPago.pay)
+        // Con efectivo elegido pero sin monto valido tambien se baja a donde se resuelve.
+        assertTrue(Cta.NeedCash.goesToPayment)
+        listOf(Cta.NeedName, Cta.NeedAddress, Cta.NeedPhone, Cta.Ready(BigDecimal("30.00"))).forEach {
+            assertFalse(it.toString(), it.goesToPayment)
+        }
+    }
+
+    @Test
     fun `lo que se resuelve en el formulario o el boton que hace otra cosa no abre hoja`() {
         listOf(
-            Cta.NeedName,
-            Cta.NeedPickupAnswer,
             Cta.NeedPay,
             Cta.NeedCash,
             Cta.Sending,
+            Cta.Locating,
             Cta.Calculating,
             Cta.QuoteProblem,
             Cta.Ready(BigDecimal("30.00")),
@@ -133,5 +162,22 @@ class CheckoutCtaTest {
         assertEquals(CheckoutSheet.EditAddress("a"), incomplete.cta.sheet(incomplete.selectedAddressId))
         val none = ready().copy(selectedAddressId = null)
         assertEquals(CheckoutSheet.AddAddress, none.cta.sheet(none.selectedAddressId))
+    }
+
+    @Test
+    fun `en recojo una cotizacion que trae efectivo solo ofrece prepago`() {
+        val view =
+            quote().copy(
+                options =
+                    listOf(
+                        PayOption(PayMethod.Cash, true, null),
+                        PayOption(PayMethod.Yape, true, null),
+                        PayOption(PayMethod.Prepaid, true, null),
+                    ),
+            )
+        val state = CheckoutUiState(method = DeliveryChoice.Pickup).withQuote(QuoteOutcome.Ok(view), null)
+        assertEquals(listOf(PayMethod.Prepaid), state.quote?.options?.map { it.method })
+        assertEquals(PayMethod.Prepaid, state.pay)
+        assertNull(state.quote?.cash)
     }
 }

@@ -1,9 +1,10 @@
 import { z } from 'zod'
+import { CART_MAX_LINES, CART_MAX_MODIFIERS, CART_MAX_NOTE_LENGTH, CART_MAX_QUANTITY } from './cart'
 import { DeliveryMethodSchema, PaymentIntentSchema, PickupTimingSchema } from './enums'
 import { isCustomerPaymentAllowed } from './payment-rules'
 import {
   ADDRESS_LINE_MIN,
-  ADDRESS_REFERENCE_MIN,
+  ADDRESS_REFERENCE_API_MIN,
   AddressLineSchema,
   AddressReferenceSchema,
   CoordinatesSchema,
@@ -14,10 +15,10 @@ import {
 /** Línea del carrito al crear un pedido. */
 export const CreateOrderItemSchema = z.object({
   menuItemId: UuidSchema,
-  quantity: z.number().int().min(1).max(50),
-  note: z.string().max(140).optional(),
+  quantity: z.number().int().min(1).max(CART_MAX_QUANTITY),
+  note: z.string().max(CART_MAX_NOTE_LENGTH).optional(),
   /** Ids de opciones de modificadores elegidas (el servidor revalida y precia). */
-  modifiers: z.array(UuidSchema).max(20).optional(),
+  modifiers: z.array(UuidSchema).max(CART_MAX_MODIFIERS).optional(),
 })
 export type CreateOrderItem = z.infer<typeof CreateOrderItemSchema>
 
@@ -113,7 +114,7 @@ export const CreateOrderRequestSchema = z
      *               en este camino ya no se fía ninguna.
      */
     pickupTiming: PickupTimingSchema.optional(),
-    items: z.array(CreateOrderItemSchema).min(1).max(50),
+    items: z.array(CreateOrderItemSchema).min(1).max(CART_MAX_LINES),
   })
   .refine((d) => d.deliveryMethod === 'pickup' || d.pickupTiming === undefined, {
     message: 'pickupTiming solo aplica a pedidos de recojo',
@@ -164,9 +165,9 @@ export const CreateOrderRequestSchema = z
   .refine(
     (d) =>
       d.deliveryMethod === 'pickup' ||
-      (d.deliveryReference?.trim().length ?? 0) >= ADDRESS_REFERENCE_MIN,
+      (d.deliveryReference?.trim().length ?? 0) >= ADDRESS_REFERENCE_API_MIN,
     {
-      message: `La referencia es obligatoria para delivery (mínimo ${ADDRESS_REFERENCE_MIN} caracteres)`,
+      message: `La referencia es obligatoria para delivery (mínimo ${ADDRESS_REFERENCE_API_MIN} caracteres)`,
       path: ['deliveryReference'],
     },
   )

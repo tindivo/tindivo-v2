@@ -37,4 +37,4 @@ La dirección es un **monolito modular**: los módulos nacen donde hay trabajo r
 
 Ninguna automática todavía: las reglas verificables entrarán con los estándares, si se aprueban.
 
-Discusión: `Docs/trabajo/arquitectura/`
+Discusión: `archive/arquitectura:Docs/trabajo/arquitectura/`

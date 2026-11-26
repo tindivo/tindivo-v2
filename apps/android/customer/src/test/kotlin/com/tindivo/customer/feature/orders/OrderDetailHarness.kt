@@ -1,12 +1,15 @@
 package com.tindivo.customer.feature.orders
 
 import androidx.lifecycle.SavedStateHandle
+import com.tindivo.core.network.BearerAuthInterceptor
 import com.tindivo.core.network.ClientInfo
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.RetryInterceptor
 import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.checkout.SessionTokens
+import com.tindivo.customer.feature.checkout.sessionJwt
 import com.tindivo.customer.session.FakeSessionStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +32,9 @@ abstract class OrderDetailHarness {
     protected lateinit var customer: CustomerRepository
     protected lateinit var configService: ConfigService
 
+    /** El token que lleva cada consulta: el de la cuenta de la sesión (`user-1`) hasta que la prueba lo cambie. */
+    internal val tokens = SessionTokens(token = sessionJwt("user-1"))
+
     /** Cada espera entre consultas queda anotada y no sigue hasta que la prueba la suelte. */
     protected val waits = mutableListOf<Long>()
     protected val release = Channel<Unit>(Channel.UNLIMITED)
@@ -44,7 +50,11 @@ abstract class OrderDetailHarness {
         server.start()
         val baseUrl = server.url("/api/v1").toString().trimEnd('/')
         val client =
-            createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = RetryInterceptor(sleeper = { _, _ -> }))
+            createOkHttpClient(
+                ClientInfo("customer", "0.1.0", "1"),
+                retry = RetryInterceptor(sleeper = { _, _ -> }),
+                auth = BearerAuthInterceptor(server.url("/"), tokens),
+            )
         customer = CustomerRepository(baseUrl, client, dispatcher)
         configService =
             ConfigService(SystemRepository(baseUrl, client, dispatcher), "0.1.0", CoroutineScope(dispatcher))

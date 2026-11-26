@@ -9,7 +9,8 @@ internal fun headlineOf(
 ): OrderHeadline =
     when (phase) {
         is OrderPhase.Cancelled -> {
-            OrderHeadline.Cancelled(cancelCopyOf(phase.reason, isPickup), alreadyPaid = payment.alreadyPaid)
+            val copy = cancelCopyOf(phase.reason, isPickup, payment)
+            OrderHeadline.Cancelled(copy, alreadyPaid = payment.alreadyPaid, prepaid = payment.prepaid)
         }
 
         OrderPhase.Delivered -> {
@@ -44,6 +45,7 @@ private fun receivedHeroOf(
     payment: PaymentFacts,
 ): OrderHero =
     when {
+        !payment.prepaid && status == "validando" -> OrderHero.CallToConfirm
         !payment.prepaid -> OrderHero.Received
         status == "pending_acceptance" -> OrderHero.AwaitingAvailability
         status == "validando" && !payment.proofSent -> OrderHero.AwaitingAvailability
@@ -71,17 +73,59 @@ internal fun cancelOfferOf(
         else -> CancelOffer.None
     }
 
+/**
+ * Con `prepay_timeout` el texto depende del comprobante (`paymentProofStatus`): rechazado, «No pudimos validar tu pago»;
+ * enviado y sin revisar, «No se pudo revisar tu pago a tiempo». Sin estado (`null` o un valor desconocido) se decide por
+ * `proofAttempt`, como antes: con comprobante, el aviso de sin revisar; sin él, «no llegó el pago».
+ */
 private fun cancelCopyOf(
     reason: String?,
     isPickup: Boolean,
+    payment: PaymentFacts,
 ): CancelCopy =
     when (reason) {
         "customer_cancelled" -> CancelCopy.CustomerCancelled
-        "prepay_timeout" -> CancelCopy.PrepayTimeout
-        "validation_timeout", "pending_acceptance_timeout" -> CancelCopy.CouldNotConfirm
+        "prepay_timeout" -> prepayTimeoutCopyOf(payment)
+        "pending_acceptance_timeout" -> CancelCopy.BusinessNoResponse
+        "validation_timeout" -> CancelCopy.CouldNotConfirm
         "business_cancelled" -> CancelCopy.BusinessCancelled
         "admin_cancelled" -> CancelCopy.AdminCancelled
         "proof_rejected_final" -> CancelCopy.ProofRejected
         "no_show" -> if (isPickup) CancelCopy.PickupNoShow else CancelCopy.DeliveryNoShow
         else -> CancelCopy.Generic
     }
+
+private fun prepayTimeoutCopyOf(payment: PaymentFacts): CancelCopy =
+    when {
+        payment.proofStatus == ProofStatus.Rejected -> CancelCopy.PrepayProofRejected
+        payment.proofStatus != null || payment.proofSent -> CancelCopy.PrepayProofNotReviewed
+        else -> CancelCopy.PrepayTimeout
+    }
+
+/**
+ * El nombre de pila para el titular «Luis llegó»: la primera palabra del nombre completo del motorizado, o `null` si no
+ * hay nombre (entonces el titular es «Tu pedido llegó»).
+ */
+internal fun driverFirstName(fullName: String?): String? =
+    fullName
+        ?.trim()
+        ?.split(Regex("""\s+"""))
+        ?.firstOrNull()
+        ?.takeIf { it.isNotEmpty() }
+
+/**
+ * «No se te cobró nada» solo es cierto cuando no pudo salir dinero: el pedido es de pago al recibir ([prepaid] en falso)
+ * y el motivo es uno de los cuatro en que la web dice «sin costo». En un prepago nunca: el Yape va directo al negocio y
+ * Tindivo no sabe si ya se pagó, aunque no haya comprobante.
+ */
+internal fun CancelCopy.nothingCharged(prepaid: Boolean): Boolean =
+    !prepaid &&
+        when (this) {
+            CancelCopy.CustomerCancelled,
+            CancelCopy.CouldNotConfirm,
+            CancelCopy.BusinessCancelled,
+            CancelCopy.BusinessNoResponse,
+            -> true
+
+            else -> false
+        }

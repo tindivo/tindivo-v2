@@ -5,22 +5,22 @@
 > este documento difieran, **gana este documento**. Se mantiene vivo: cada
 > decisión nueva o cambio se registra aquí, no en specs paralelos.
 >
-> Última actualización: 2026-10-10 (índice de compatibilidad; §34 en adelante, en `Docs/decisiones/`).
+> Última actualización: 2026-11-17 (§6 y §13 corregidos; decisiones de producto de la app cliente; §34 en adelante, en `Docs/decisiones/`).
 
 ---
 
 ## Índice de compatibilidad (2026-10-10)
 
 El código cita este archivo como `DECISIONS §N`. Desde el estándar de documentación, las decisiones nuevas van en
-`Docs/decisiones/` y el canon vive en `Docs/negocio/`, `Docs/trabajo/arquitectura/` y `Docs/glosario.md`. Esta tabla dice
+`Docs/decisiones/` y el canon vive en `Docs/negocio/`, `Docs/arquitectura/` y `Docs/glosario.md`. Esta tabla dice
 dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sigue mandando desde este archivo.
 
 | § | Tema | Dónde está hoy |
 |---|---|---|
 | §0 | Regla de precedencia de documentos | Sustituida por el estándar (`Docs/README.md` §4) |
-| §1 | Stack y versiones (fijadas, verificadas en vivo el 2026-05-29) | Versiones vivas en `pnpm-workspace.yaml`; resumen en `AGENTS.md` y `Docs/trabajo/arquitectura/README.md` |
+| §1 | Stack y versiones (fijadas, verificadas en vivo el 2026-05-29) | Versiones vivas en `pnpm-workspace.yaml`; resumen en `AGENTS.md` y `Docs/arquitectura/README.md` («Las piezas») |
 | §2 | Proyecto Supabase | Corregida: `supabase/AGENTS.md` (producción es `tindivo-prod`; migraciones solo por CLI) |
-| §3 | Estructura del monorepo | `Docs/trabajo/arquitectura/README.md` |
+| §3 | Estructura del monorepo | `Docs/arquitectura/README.md` («Las piezas») |
 | §4 | Modelo de dinero (Documento Maestro — corrige specs 09/11/12) | `Docs/negocio/dinero.md` (comisión corregida a S/ 1.50) |
 | §5 | Máquina de estados del pedido | Estados en `packages/contracts` (`ORDER_TRANSITIONS`); reglas en `Docs/negocio/servicios/pedidos-restaurante.md` |
 | §6 | `short_id` y número de pedido | `AGENTS.md`, invariantes 1 y 2 |
@@ -28,8 +28,8 @@ dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sig
 | §8 | Antifraude: strikes y validación humana | `Docs/negocio/antifraude.md` (confirmada por Jesús el 2026-10-10) |
 | §9 | Fondo de contingencia | Obsoleta desde la `0123`; sustituida por el ADR 0036 |
 | §10 | Reglas de tiempo | Plazos en `app_settings.timers`: `Docs/negocio/servicios/pedidos-restaurante.md` |
-| §11 | Outbox, push y scheduling | `Docs/trabajo/arquitectura/README.md` (cómo viajan los avisos) |
-| §12 | Seguridad / RLS | `AGENTS.md`, invariante 3, y `Docs/trabajo/arquitectura/README.md` |
+| §11 | Outbox, push y scheduling | `Docs/arquitectura/README.md` (cómo viajan los avisos) |
+| §12 | Seguridad / RLS | `AGENTS.md`, invariante 3, y `Docs/arquitectura/README.md` («La base») |
 | §13 | Resolución de las 24 contradicciones detectadas | Historia (resolvió contradicciones de los specs de mayo, ya borrados) |
 | §14 | Alcance Fase 1 — qué se activa vs qué se modela pero no | Historia (alcance de la Fase 1) |
 | §15 | Comportamiento del cliente (verdad visual = demo + spec v2) | `Docs/negocio/apps.md` (las fuentes que citaba se borraron) |
@@ -89,9 +89,9 @@ dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sig
 | Monorepo | Turborepo + pnpm workspaces (catalog) | **2.9 / pnpm 9.15** |
 | Runtime | Node | **24** (LTS; `engines >=20.9`) |
 
-- **Sin Server Actions ni BFFs**: las 4 apps frontend consumen un REST único (`apps/api`, `/api/v1`) → portabilidad a Capacitor (móvil nativo) futura.
+- **Sin Server Actions ni BFFs**: las 4 apps frontend consumen un REST único (`apps/api`, `/api/v1`) → las apps nativas (Swift y Kotlin, D-00 de `Docs/planes/movil/decisiones.md`) consumen la misma API; Capacitor está descartado.
 - **Sin Prisma/Drizzle**: conectan como superuser y *bypassan RLS*. Usamos `supabase-js` + tipos generados.
-- **Postgres 17** en el proyecto Supabase "Web v2" (más nuevo que el PG 15 que mencionaban los docs).
+- **Postgres 17** en el proyecto Supabase `tindivo-prod` (más nuevo que el PG 15 que mencionaban los docs).
 - **Light mode siempre** (sin dark mode). Timezone `America/Lima`. Moneda `PEN`. Español peruano.
 
 ---
@@ -291,16 +291,18 @@ Codificado en `@tindivo/contracts` (`order-status.ts`: `ORDER_TRANSITIONS`, `STA
 
 ## 6. `short_id` y número de pedido
 
-- **`short_id`**: 8 chars del alfabeto de 32 símbolos `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (sin I/O/0/1). Usado en URLs de tracking y en la referencia humana `#TND-XXXXXXXX`. Definido en `contracts/primitives.ts`.
+- **`short_id`**: 8 chars del alfabeto de 32 símbolos `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (sin I/O/0/1). Usado en URLs de tracking y en la referencia humana `#TDV-XXXXXXXX` (prefijo corregido el 2026-11-17, decisión de Jesús: es el que usan la web y Android). Definido en `contracts/primitives.ts`.
 - **`numero_pedido`**: secuencia atómica generada en el backend (sequence/contador), **NUNCA `Date.now()`** (otro bug del v1).
 
 ---
 
 ## 7. Pagos del cliente
 
-- **Default contra entrega** para pedidos **< S/100** (efectivo o Yape/Plin al recibir).
-- **Prepago obligatorio** para pedidos **≥ S/100** (solo Yape/Plin prepago). El checkout fuerza prepago y oculta contra entrega.
-- **Prepago opcional** para cualquier cliente bajo S/100.
+> **Corregido el 2026-11-17 (decisión de Jesús):** el umbral es **más de S/ 80**: el prepago es obligatorio cuando el pedido más el envío supera `prepay_threshold` (`app_settings`). Así lo hace hoy `create_customer_order` en su última versión (`0283`, línea 460: `v_order_amount + v_delivery_fee > v_threshold`). El valor 80 está en `app_settings` desde la `0044`; la forma de comparar cambió entre versiones (la `0044` usaba `>=` y solo el monto del pedido), así que para la regla vigente se cita la `0283`, no la `0044`. El S/ 100 con «≥» que decía esta sección estaba viejo.
+
+- **Default contra entrega** para pedidos de **S/ 80 o menos** (efectivo o Yape/Plin al recibir).
+- **Prepago obligatorio** para pedidos de **más de S/ 80** (solo Yape/Plin prepago). El checkout fuerza prepago y oculta contra entrega.
+- **Prepago opcional** para cualquier cliente de S/ 80 o menos.
 - **Comprobante de prepago**: el cliente **SÍ sube** captura; el **negocio valida con su propio número** (timer **10 min**, separado de los 5 de aceptación). Aprovisionar bucket de Storage. *(Resuelve contradicción spec 07 "sin captura" vs FASE-1 "sube comprobante" → manda FASE-1.)*
 - **Yape y Plin son equivalentes** (misma lógica, cambia número/QR). No es pasarela: Tindivo **no retiene fondos**.
 - **Límite de vuelto**: parametrizado en `app_settings` (no hardcode como el `total+50/+150` inconsistente del demo).
@@ -576,7 +578,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 ## 11. Outbox, push y scheduling
 
 - **Outbox real y transaccional**: el `INSERT` en `domain_events` ocurre en la **MISMA transacción** que el cambio del agregado (vía RPC/repositorio transaccional, **no** dos `await` separados como en el ejemplo del spec).
-- **Relay push**: trigger `AFTER INSERT` (pg_net) lee secrets de Vault → Edge Function `send-push` (Deno + web-push). **Tag = `${event_type}-${shortId}`** (el v1 usaba solo `shortId` y colapsaba `OrderAssigned` con `OrderOverdue`). Objetivo P99 < 5s.
+- **Relay push**: trigger `AFTER INSERT` (pg_net) lee secrets de Vault → Edge Function `send-push` (Deno + web-push). **Tag = el tipo de evento seguido de lo que distingue el aviso (`${eventType}-…`: el `sid`, la `action`, el id de la solicitud…); nunca es solo `shortId`. La forma exacta de cada aviso la fija `send-push`** (el v1 usaba solo `shortId` y colapsaba `OrderAssigned` con `OrderOverdue`). Objetivo P99 < 5s.
 - **Lista de `event_types` con push** debe coincidir con el mapa de UX (fuente única en `contracts`); test que lo verifique. (El spec tenía 20 en trigger vs 26 en UX.)
 - **`published_at`/retry**: la Edge Function marca `published_at`; un cron de reconciliación reprocesa no publicados con `retry_count` incremental.
 - **Scheduling**: Inngest `step.sleepUntil()` para deadlines individuales (auto-cancel-pending, checkOrderOverdue, processTransferTimeout, closeDriversAtShiftEnd). **Crons failsafe pg_cron** como red de seguridad, **idempotentes** (verifican estado antes de mutar).
@@ -612,7 +614,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 | 9 | Gate del carrito sin auth | Onboarding diferido: ver carrito sin login; login al checkout. §15. |
 | 10 | Límite de vuelto / pago en pickup | Vuelto en `app_settings`; pickup inactivo. §7/§14. |
 | 11 | Cobertura: radio vs polígono | **Polígono** (`app_settings.coverage_polygon`), editable por el admin con Leaflet-draw; el cliente bloquea elegir fuera (point-in-polygon). El radio 3km (`coverage`) queda como **fallback**. *(cambiado de "radio 3km" el 2026-06-22)* |
-| 12 | Referencia de dirección mínima | **Mín 15 / máx 140** (`ADDRESS_REFERENCE_MIN`/`ADDRESS_REFERENCE_MAX` en `contracts`); contador en vivo en todos los formularios. *(bajado de 20 el 2026-06-22)* |
+| 12 | Referencia de dirección mínima | **Mín 15 / máx 140 en los formularios de las apps** (`ADDRESS_REFERENCE_MIN`/`ADDRESS_REFERENCE_MAX` en `contracts`); contador en vivo en todos los formularios. Vale para las direcciones del cliente y para los dos extremos de Tindivo Entregas. **La API v1 acepta desde 5** (`ADDRESS_REFERENCE_API_MIN`): subirlo rompe el contrato (API-3), y una dirección guardada con el mínimo anterior sigue sirviendo para pedir. *(bajado de 20 el 2026-06-22; bajado de 15 a 5 el 2026-11-17 y devuelto a 15 en las apps el 2026-11-18, decisión de Jesús: `Docs/planes/movil/decisiones.md` D-31)* |
 | 13 | Alerta urgente (5 vs 8 min) | No se activa en Fase 1; modelo conservado (>5 urgente, >8 alerta). §10. |
 | 14 | Helpers RLS sin `search_path` | `SET search_path = ''` en todos. §12. |
 | 15 | RLS incompleta | Todas las policies antes de exponer; bloqueante. §12. |
@@ -637,7 +639,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 **Activo en Fase 1:**
 - 1 restaurante (La Florencia, `catalog_full`), de noche (~18:00–23:00), 1 motorizado.
 - Motorizado: **panel plano** sin asignación automática.
-- Contra entrega + prepago con umbral S/100; validación humana por llamada; strikes; fondo de contingencia.
+- Contra entrega + prepago con umbral de más de S/ 80 (corregido el 2026-11-17; decía S/100); validación humana por llamada; strikes; fondo de contingencia.
 - Liquidación de efectivo diaria; liquidación semanal de comisiones **MANUAL** (la UI del admin SÍ se construye; la generación automática queda fuera).
 - `order_event_log` + registro de adelantos + auditoría inmutable desde el día 1.
 
@@ -662,8 +664,8 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 ## 16. Diseño (fuente: `packages/ui/src/theme.css` + `apps/motorizados`)
 
 - **Filosofía**: cercano, no corporativo. Mobile-first 1:1 (base 402×874). **Sin dark mode**. Bordes muy redondeados. Naranja protagonista.
-- **Color**: Brand `#F97316` · Brand Dark `#C2410C` · Brand Light `#FED7AA` · Ink `#1A1614` · Surface `#FAF6F1` · Card `#FFFFFF` · Border `#EAE7E2` · Success `#16A34A` · Warning `#F59E0B` · Danger `#DC2626` · Info `#0EA5E9`.
-- **Tipografía**: **Geist** para display, body y labels; **JetBrains Mono** solo para datos técnicos (IDs, precios, horas), con `tabular-nums` en contextos numéricos. Máx 3 tamaños por vista. La jerarquía se logra con peso (600-800 displays · 400-600 body · 500-700 microlabels), no con familias distintas.
+- **Color** (solo la web del cliente, que se apaga; las apps usan `primary` #EE6417, ver `Docs/negocio/sistema-de-diseno.md`): Brand `#F97316` · Brand Dark `#C2410C` · Brand Light `#FED7AA` · Ink `#1A1614` · Surface `#FAF6F1` · Card `#FFFFFF` · Border `#EAE7E2` · Success `#16A34A` · Warning `#F59E0B` · Danger `#DC2626` · Info `#0EA5E9`.
+- **Tipografía** (solo la web del cliente, que se apaga; las apps: Geist 400–700, ver `Docs/negocio/sistema-de-diseno.md`): **Geist** para display, body y labels; **JetBrains Mono** solo para datos técnicos (IDs, precios, horas), con `tabular-nums` en contextos numéricos. Máx 3 tamaños por vista. La jerarquía se logra con peso (600-800 displays · 400-600 body · 500-700 microlabels), no con familias distintas.
   > Esta línea decía «Manrope única en toda la plataforma» y contradecía al código
   > desde la migración del design system (ver `Docs/context/design-system-migration-plan.md` (borrado; en git: `8f26aed`),
   > que eligió Geist por ser más cercana al look moderno manteniendo legibilidad en
@@ -673,7 +675,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 > eliminó porque llevaba tiempo desviado del código y ya indujo a error a más de una
 > sesión. La fuente de verdad son los **tokens en `packages/ui/src/theme.css`** y el
 > **uso real en `apps/motorizados`**, que es la app más pulida. Si necesitas el
-> contenido histórico: `git show HEAD~1:Docs/06-ui-design-system.md`.
+> contenido histórico: `git show 5a966a4c^:Docs/06-ui-design-system.md`.
 - **Iconos**: Material Symbols Rounded (único set). Nunca emojis como iconos UI.
 - **Radius**: sm8/md12/lg16/xl24/2xl32/3xl48. **Glassmorphism solo en topbars**.
 - **Color de papelito por negocio**: franja/dot vertical único por negocio en todas las cards de pedido.
@@ -744,11 +746,11 @@ Supera el "search bar no funcional v1.0" de `Docs/07-flujo-cliente.md` (borrado;
 
 El alta de un negocio fallaba con `conflict` cuando el color elegido ya pertenecía a un negocio activo (índice único parcial `businesses_accent_color_active_idx` de `0002`; el default del form de alta era además `e11d48`, ya ocupado por La Florencia). Con una paleta documentada de 12 colores la unicidad no escala más allá de 12 negocios activos.
 
-- **Paleta canónica en código**: `BUSINESS_ACCENT_PALETTE` (12 colores de `Docs/06 §2`, hex minúsculas sin `#`) + `AccentColorSchema` + `DEFAULT_ACCENT_COLOR` + `isPaletteAccentColor` en `packages/contracts/src/accent-colors.ts`. El spec 06 referencia esta constante como fuente.
+- **Paleta canónica en código**: `BUSINESS_ACCENT_PALETTE` (12 colores de `Docs/06-ui-design-system.md` §2 (borrado; en git: `5a966a4c^`), hex minúsculas sin `#`) + `AccentColorSchema` + `DEFAULT_ACCENT_COLOR` + `isPaletteAccentColor` en `packages/contracts/src/accent-colors.ts`. El spec 06 referencia esta constante como fuente.
 - **Unicidad eliminada** (migración `0053`): dos negocios activos PUEDEN compartir color. Sin índice de reemplazo (ninguna query filtra/joinea por `accent_color`). El CHECK `accent_color_format` (minúsculas sin `#`) sigue vigente.
 - **Colisiones visuales aceptadas por diseño**: el papelito sigue siendo identificador *referencial*, no clave. Mitigación: el picker del admin marca "en uso" (dot advisory, no bloquea) los colores de negocios activos — el panel del negocio NO lo muestra (RLS no le deja ver otros negocios y no es su decisión).
 - **El color lo gestiona SOLO el admin** (confirmado por el usuario, 2026-07-02): `accentColor` se acepta únicamente en `POST /admin/businesses` (alta) y `PATCH /admin/businesses/:id`. `PATCH /business/profile` ya NO lo acepta (mismo enforcement server-side que las capacidades, §18). El panel del negocio lo muestra **solo lectura** (swatch + candado "Lo gestiona Tindivo") en Configuración → Datos.
-- **`AccentColorSchema` normaliza** (`trim`, quita `#`, `toLowerCase`) antes de validar — cualquier cliente (curl/Capacitor) queda cubierto por el server.
+- **`AccentColorSchema` normaliza** (`trim`, quita `#`, `toLowerCase`) antes de validar — cualquier cliente (curl, apps nativas) queda cubierto por el server.
 - **Selector visual** (grid de 12 swatches + "Color personalizado" colapsable, auto-expandido si el valor no es de paleta — negocios legacy): en el alta del admin (`negocios/nuevo`). Hex libre sigue permitido.
 - **Defaults**: el form de alta preselecciona el primer color de la paleta (Rosado `f472b6`); el default de la columna en DB sigue `f97316` (naranja = brand, con la reserva del spec: solo asignarlo si Tindivo no opera ese pueblo).
 
@@ -1340,3 +1342,17 @@ Desde el 2026-10-10 las decisiones nuevas no se escriben aquí (estándar: `Docs
 - **0038** · Estándares de código v2 → `Docs/decisiones/0038-estandares-de-codigo-v2.md`
 - **0039** · El backend es un paquete y la API su interfaz REST →
   `Docs/decisiones/0039-el-backend-es-un-paquete-y-la-api-su-interfaz.md`
+
+---
+
+## Decisiones de producto de la app cliente (2026-11-17)
+
+Decisión de Jesús, 2026-11-17 (conversación con Claude Code). Registradas aquí por petición expresa de Jesús; el
+detalle, los flujos y los criterios están en `Docs/trabajo/app-cliente/` (llega con el PR #186, que sustituyó al #182) y no
+se duplican.
+
+- **«Yape o Plin»**, en vez de una billetera agnóstica, en lo que ve el cliente.
+- **Todo recojo es prepagado**: llega a cocina pagado.
+- **iOS y Android se lanzan juntos**, en la misma fecha (`Docs/planes/movil/decisiones.md`, D-12).
+- **Tindivo Store va después del lanzamiento.**
+- **Tindivo Entregas usa la lista de prohibidos de inDrive** (`Docs/negocio/servicios/entregas.md`).

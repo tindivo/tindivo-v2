@@ -1,6 +1,5 @@
 package com.tindivo.core.designsystem
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -10,22 +9,38 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-/** Grosor del borde fino de una tarjeta, el `1px` de la web. */
-private val CardBorderWidth = 1.dp
-
 @Composable
-private fun cardColors(): CardColors =
+private fun cardColors(container: Color = Color.Unspecified): CardColors =
     CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        containerColor =
+            if (container == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerLowest else container,
         contentColor = MaterialTheme.colorScheme.onSurface,
     )
 
-private val cardBorder = BorderStroke(CardBorderWidth, TindivoColors.border)
+/**
+ * La sombra de la tarjeta (`elevation1`: `0 1px 2px` y `0 4px 12px`, ambas `rgba(46,50,54,.06)`), en dos capas de
+ * `shadow`. Android pinta las sombras más tenues que la web, por eso el alfa es mayor que el .06 del CSS: valores a
+ * confirmar con Jesús sobre un dispositivo real.
+ */
+@Composable
+private fun Modifier.cardShadow(): Modifier {
+    val shape = MaterialTheme.shapes.large
+    val ambient = TindivoColors.shadow.copy(alpha = SHADOW_AMBIENT_ALPHA)
+    val spot = TindivoColors.shadow.copy(alpha = SHADOW_SPOT_ALPHA)
+    return this
+        .shadow(elevation = 6.dp, shape = shape, ambientColor = ambient, spotColor = spot)
+        .shadow(elevation = 1.dp, shape = shape, ambientColor = ambient, spotColor = spot)
+}
 
-/** Sin sombra en ningún estado: la tarjeta se separa del fondo por el color y el borde, no por la elevación. */
+private const val SHADOW_AMBIENT_ALPHA = 0.10f
+private const val SHADOW_SPOT_ALPHA = 0.16f
+
+/** La elevación va en [cardShadow]; la propia del `Card` queda en cero en todo estado. */
 @Composable
 private fun flat() =
     CardDefaults.cardElevation(
@@ -38,9 +53,8 @@ private fun flat() =
     )
 
 /**
- * La tarjeta de Tindivo: blanca sobre la superficie crema, con borde fino, esquinas de 20 dp ([MaterialTheme.shapes]
- * `large`) y sin sombra, como la de la web. No añade relleno: el contenido pone el suyo (normalmente
- * [TindivoSpacing.screen]).
+ * La tarjeta de Tindivo: blanca sobre el fondo de página, con sombra suave y SIN borde, esquinas de 20 dp
+ * ([MaterialTheme.shapes] `large`). No añade relleno: el contenido pone el suyo (normalmente [TindivoSpacing.screen]).
  */
 @Composable
 fun TindivoCard(
@@ -48,39 +62,38 @@ fun TindivoCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.cardShadow(),
         shape = MaterialTheme.shapes.large,
         colors = cardColors(),
         elevation = flat(),
-        border = cardBorder,
         content = content,
     )
 }
 
 /**
  * La misma tarjeta, pero toda ella se toca: lleva a otra pantalla o abre un detalle. TalkBack la lee como un solo
- * botón con todo su texto.
+ * botón con todo su texto. [containerColor] cambia el fondo (p. ej. la tarjeta de un negocio cerrado).
  */
 @Composable
 fun TindivoCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    containerColor: Color = Color.Unspecified,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.cardShadow(),
         enabled = enabled,
         shape = MaterialTheme.shapes.large,
-        colors = cardColors(),
+        colors = cardColors(containerColor),
         elevation = flat(),
-        border = cardBorder,
         content = content,
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun TindivoCardPreview() {
     TindivoTheme {
@@ -94,7 +107,7 @@ private fun TindivoCardPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun TindivoCardClickablePreview() {
     TindivoTheme {

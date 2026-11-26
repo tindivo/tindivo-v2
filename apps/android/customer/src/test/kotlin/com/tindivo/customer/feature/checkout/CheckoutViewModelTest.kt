@@ -14,6 +14,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import mockwebserver3.RecordedRequest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -166,7 +167,7 @@ class CheckoutViewModelTest : CheckoutHarness() {
             assertEquals("Jr. Lima 123", body.getValue("deliveryAddress").jsonPrimitive.content)
             assertEquals("Toca el timbre", body.getValue("customerNotes").jsonPrimitive.content)
             assertEquals("50.00", body.getValue("cashPayingWith").jsonPrimitive.content)
-            assertTrue(body.absent("gpsValidation"))
+            assertFalse(body.absent("gpsValidation"))
             assertTrue(body.absent("pickupTiming"))
             val item =
                 body
@@ -211,14 +212,30 @@ class CheckoutViewModelTest : CheckoutHarness() {
         }
 
     @Test
-    fun `el recojo manda pickupTiming y nada de la entrega`() =
+    fun `al pasar de delivery a recojo la cotizacion vieja no queda como elegible`() =
+        runTest(dispatcher) {
+            val vm = ready()
+            assertTrue(vm.state.value.quote != null)
+
+            vm.setMethod(DeliveryChoice.Pickup)
+
+            assertNull(vm.state.value.quote)
+            assertNull(vm.state.value.pay)
+            advanceUntilIdle()
+            assertEquals(
+                listOf(PayMethod.Prepaid),
+                vm.state.value.quote
+                    ?.options
+                    ?.map { it.method },
+            )
+        }
+
+    @Test
+    fun `el recojo es prepago, manda pickupTiming later sin preguntarlo y nada de la entrega`() =
         runTest(dispatcher) {
             val vm = ready()
             vm.setNote("sin ají")
             vm.setMethod(DeliveryChoice.Pickup)
-            advanceUntilIdle()
-            assertEquals(Cta.NeedPickupAnswer, vm.state.value.cta)
-            vm.setPickupWhen(PickupWhen.Later)
             advanceUntilIdle()
 
             assertEquals(PayMethod.Prepaid, vm.state.value.pay)
@@ -241,6 +258,25 @@ class CheckoutViewModelTest : CheckoutHarness() {
                 "coordinates",
                 "gpsValidation",
             ).forEach { assertTrue(it, body.absent(it)) }
+        }
+
+    @Test
+    fun `el cuerpo del recojo es el del vector que el esquema real del contrato acepta`() =
+        runTest(dispatcher) {
+            val vm = ready()
+            vm.setMethod(DeliveryChoice.Pickup)
+            advanceUntilIdle()
+            vm.confirm()
+            advanceUntilIdle()
+
+            val vector =
+                Json
+                    .parseToJsonElement(
+                        requireNotNull(javaClass.getResourceAsStream("/fixtures/vectores/crear-pedido-recojo.json")) {
+                            "falta el recurso fixtures/vectores/crear-pedido-recojo.json"
+                        }.bufferedReader().readText(),
+                    ).jsonObject
+            assertEquals(vector.getValue("cuerpo").jsonObject, json(orders().single()))
         }
 
     @Test

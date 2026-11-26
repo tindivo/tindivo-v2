@@ -1,7 +1,7 @@
 package com.tindivo.customer.feature.cart
 
-import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import com.tindivo.customer.support.testDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -28,7 +28,7 @@ class CartStoreTest {
 
     private fun TestScope.store(file: File = file()) =
         CartStore(
-            DataStoreFactory.create(
+            testDataStore(
                 serializer = CartSerializer,
                 corruptionHandler = ReplaceFileCorruptionHandler<CartSnapshot?>(produceNewData = { null }),
                 scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler)),

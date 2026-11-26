@@ -669,7 +669,7 @@ export default function PrivacidadPage() {
               row(
                 'resenas',
                 'Calificación y comentario de reseñas',
-                'Se conservan después del borrado, sin el vínculo de autor con la cuenta. El comentario no se borra ni se limpia automáticamente de los datos personales que hayas escrito dentro. Se conservan mientras sean necesarios para conocer la opinión sobre el servicio. Hoy no tienen un plazo final de eliminación: puedes pedir su supresión como se explica en «Tus derechos sobre tus datos».',
+                'Al borrar la cuenta se conservan la nota y las etiquetas, sin tu nombre; el comentario se borra. Se conservan mientras sean necesarios para conocer la opinión sobre el servicio. Hoy no tienen un plazo final de eliminación: puedes pedir su supresión como se explica en «Tus derechos sobre tus datos».',
               ),
               row(
                 'directorio',
@@ -717,8 +717,8 @@ export default function PrivacidadPage() {
             Retirar los datos de contacto de los pedidos{' '}
             <B>no equivale a eliminar toda posibilidad de relacionarlos con una persona</B>. Se
             conservan identificadores internos y algunos reportes que pueden relacionar un pedido
-            con un teléfono. Tampoco desaparecen automáticamente los datos que puedas haber escrito
-            dentro de una reseña o que permanezcan en los registros expresamente conservados.
+            con un teléfono. Tampoco desaparecen automáticamente los datos que permanezcan en los
+            registros expresamente conservados.
           </p>
         </Section>
 

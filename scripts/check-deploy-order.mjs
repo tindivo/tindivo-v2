@@ -214,7 +214,8 @@ if (pendientes.length) {
       'lo hacen EN SILENCIO: PostgREST devuelve 400 por un select con una columna\n' +
       'que no existe, o 404 por una RPC con un parámetro que no existe, y quien\n' +
       'llama los descarta sin pintar nada.\n' +
-      '\nEl orden es: `supabase db push` -> `pnpm db:types` -> desplegar las apps.\n',
+      '\nLos tipos salen de las migraciones del repo (`pnpm db:types` contra la base local,\n' +
+      'en la última migración); el orden de despliegue es: `supabase db push` -> desplegar las apps.\n',
   )
   if (alguienUsaEdge) {
     console.error(

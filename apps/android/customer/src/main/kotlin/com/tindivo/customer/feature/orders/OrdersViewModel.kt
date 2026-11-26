@@ -2,11 +2,13 @@ package com.tindivo.customer.feature.orders
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tindivo.core.network.AccountMismatchException
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.isStale
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SessionWatch
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 
 internal sealed interface OrdersUiState {
@@ -36,6 +39,8 @@ internal sealed interface OrdersUiState {
         val canLoadMore: Boolean,
         val loadingMore: Boolean = false,
         val loadMoreFailed: Boolean = false,
+        /** Se está pidiendo la primera página otra vez: la lista de antes sigue a la vista. */
+        val refreshing: Boolean = false,
     ) : OrdersUiState
 
     data class Failed(
@@ -45,6 +50,13 @@ internal sealed interface OrdersUiState {
     /** La sesión se cerró (la persona salió, o el servidor ya no la reconoce): la pantalla vuelve al inicio. */
     data object LoggedOut : OrdersUiState
 }
+
+/**
+ * CUS-REV-001: la pregunta de la reseña puede salir en el historial solo cuando ya cargó y ningún pedido sigue activo
+ * (nunca junto al banner de un pedido en curso).
+ */
+internal fun OrdersUiState.allowsReviewPrompt(): Boolean =
+    this is OrdersUiState.Loaded && items.none { it.phase is OrderPhase.Active }
 
 /** El historial de pedidos del cliente, de 20 en 20 con el cursor que manda la API. */
 @HiltViewModel
@@ -61,9 +73,17 @@ internal class OrdersViewModel
 
         private var loadJob: Job? = null
         private var nextCursor: String? = null
+        private var lastLoadedAt: Instant? = null
 
-        /** La cuenta de la sesión vigente: se captura al lanzar cada petición, para cerrar solo esa ante su 401. */
-        private val signedInAccount get() = (sessionStore.state.value as? SessionState.SignedIn)?.userId
+        /** Ya se pidió una página más: la recarga en silencio solo trae la primera y borraría las demás. */
+        private var paged = false
+
+        /**
+         * La cuenta con la que se abrió la pantalla, leída al construirla y no dentro de la corrutina de cada carga: cada
+         * petición va atada a ella y, sin cuenta, no se pide nada. Si la sesión cambia antes de que una carga arranque,
+         * la petición no sale con el token de la cuenta nueva (vuelve [AccountMismatchException]).
+         */
+        private val accountId: String? = (sessionStore.state.value as? SessionState.SignedIn)?.userId
 
         init {
             val watch = SessionWatch()
@@ -82,9 +102,29 @@ internal class OrdersViewModel
         /** Vuelve a pedir la primera página. Si ya hay una carga en curso o la sesión se cerró, no lanza otra. */
         fun refresh() {
             if (loadJob?.isActive == true || _state.value is OrdersUiState.LoggedOut) return
-            _state.value = OrdersUiState.Loading
-            val account = signedInAccount
-            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null), account) }
+            val account = accountId
+            if (account == null) {
+                _state.value = OrdersUiState.LoggedOut
+                return
+            }
+            // Con algo ya a la vista (lista o «sin pedidos») se recarga en silencio: nada de pantalla de carga.
+            val previous = _state.value.takeIf { it is OrdersUiState.Loaded || it is OrdersUiState.Empty }
+            _state.value =
+                when (previous) {
+                    is OrdersUiState.Loaded -> previous.copy(refreshing = true, loadMoreFailed = false)
+                    null -> OrdersUiState.Loading
+                    else -> previous
+                }
+            loadJob = viewModelScope.launch { onFirstPage(customer.orders(null, account), account, previous) }
+        }
+
+        /**
+         * Al volver a la pestaña: recarga en silencio si lo cargado es viejo (o nunca cargó bien), salvo que la persona ya
+         * haya paginado (se le conservan sus páginas; se refresca con reintento manual o al reabrir). Si ya hay una carga en
+         * curso (la primera entrada) no lanza otra.
+         */
+        fun refreshIfStale() {
+            if (!paged && isStale(lastLoadedAt, clock.instant())) refresh()
         }
 
         /**
@@ -93,16 +133,18 @@ internal class OrdersViewModel
          */
         fun loadMore() {
             val current = _state.value as? OrdersUiState.Loaded ?: return
-            if (!current.canLoadMore || current.loadingMore) return
+            val account = accountId ?: return
+            // Con una recarga en curso no se pide más: pisaría `loadJob` y el cursor.
+            if (!current.canLoadMore || current.loadingMore || current.refreshing) return
             _state.value = current.copy(loadingMore = true, loadMoreFailed = false)
             val cursor = nextCursor
-            val account = signedInAccount
-            loadJob = viewModelScope.launch { onNextPage(current, customer.orders(cursor), account) }
+            loadJob = viewModelScope.launch { onNextPage(current, customer.orders(cursor, account), account) }
         }
 
         private suspend fun onFirstPage(
             result: ApiResult<ListCustomerOrders200ResponseData>,
-            account: String?,
+            account: String,
+            previous: OrdersUiState? = null,
         ) {
             when (result) {
                 is ApiResult.Success -> {
@@ -111,6 +153,8 @@ internal class OrdersViewModel
                         settle(OrdersUiState.Failed(unreadableOrderError()))
                     } else {
                         nextCursor = page.nextCursor
+                        lastLoadedAt = clock.instant()
+                        paged = false
                         settle(
                             if (page.items.isEmpty() && page.nextCursor == null) {
                                 OrdersUiState.Empty
@@ -122,7 +166,16 @@ internal class OrdersViewModel
                 }
 
                 is ApiResult.Failure -> {
-                    onFailure(result.error, account)?.let { settle(OrdersUiState.Failed(it)) }
+                    onFailure(result.error, account)?.let { error ->
+                        // Una recarga que falla no tira lo que ya se veía.
+                        settle(
+                            when (previous) {
+                                is OrdersUiState.Loaded -> previous.copy(refreshing = false)
+                                null -> OrdersUiState.Failed(error)
+                                else -> previous
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -130,7 +183,7 @@ internal class OrdersViewModel
         private suspend fun onNextPage(
             before: OrdersUiState.Loaded,
             result: ApiResult<ListCustomerOrders200ResponseData>,
-            account: String?,
+            account: String,
         ) {
             when (result) {
                 is ApiResult.Success -> {
@@ -139,6 +192,7 @@ internal class OrdersViewModel
                         settle(OrdersUiState.Failed(unreadableOrderError()))
                     } else {
                         nextCursor = page.nextCursor
+                        paged = true
                         settle(OrdersUiState.Loaded(before.items + page.items, canLoadMore = page.nextCursor != null))
                     }
                 }
@@ -161,18 +215,23 @@ internal class OrdersViewModel
 
         /**
          * Avisa de un 426 y, ante un 401, cierra la sesión de [account], la cuenta que hizo la petición; devuelve el error
-         * si la pantalla debe mostrarlo. Sin cuenta al lanzar la petición no hay sesión que cerrar.
+         * si la pantalla debe mostrarlo.
          */
         private suspend fun onFailure(
             error: AppError,
-            account: String?,
+            account: String,
         ): AppError? {
             if (error is AppError.UpgradeRequired) configService.reportUpgradeRequired(error.minVersion)
+            if (error is AppError.Network && error.cause is AccountMismatchException) {
+                // La sesión ya es de otra cuenta: no salió nada. Se cierra sin cerrar la sesión nueva ni dejar lo cargado.
+                _state.value = OrdersUiState.LoggedOut
+                return null
+            }
             if (!error.isUnauthorized()) return error
             // Pasó por el refresco y el servidor sigue sin reconocer la sesión: se cierra aquí también. El cierre cancela
             // esta misma carga: que no corte a medias el borrado de la sesión. Es `signOutIf`: espera el candado del
             // almacén y, si mientras tanto entró otra cuenta, no la cierra.
-            if (account != null) withContext(NonCancellable) { sessionStore.signOutIf(account) }
+            withContext(NonCancellable) { sessionStore.signOutIf(account) }
             _state.value = OrdersUiState.LoggedOut
             return null
         }

@@ -1,3 +1,4 @@
+import { featuredSection } from '@tindivo/contracts'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
 import { handleError, ok, problem } from '@/lib/http/problem'
 import { getRequestId } from '@/lib/http/request-id'
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic'
 // Columnas seguras (sin yape_number/balance — el Yape se entrega al confirmar
 // prepago). whatsapp_number es el contacto público opt-in del modo catálogo.
 const BUSINESS_COLUMNS =
-  'id,slug,name,accent_color,logo_url,banner_url,tagline,categoria,primary_capability,estimated_eta_min,estimated_eta_max,coordinates_lat,coordinates_lng,address,accepts_web_pickup,accepts_web_delivery,whatsapp_number'
+  'id,slug,name,accent_color,logo_url,banner_url,tagline,categoria,primary_capability,estimated_eta_min,estimated_eta_max,coordinates_lat,coordinates_lng,address,accepts_web_pickup,accepts_web_delivery,whatsapp_number,featured_title'
 
 /**
  * El segmento `[id]` acepta las DOS formas: el uuid y el slug público
@@ -54,9 +55,9 @@ export async function GET(
     if (businessResult.status === 'rejected') {
       throw new Error(String(businessResult.reason))
     }
-    const { data: business, error: bizError } = businessResult.value
+    const { data: businessRow, error: bizError } = businessResult.value
     if (bizError) throw new Error(bizError.message)
-    if (!business) {
+    if (!businessRow) {
       return problem('not_found', {
         detail: 'Negocio no encontrado o no disponible',
         requestId,
@@ -68,6 +69,8 @@ export async function GET(
     // `id` puede ser un slug, y `business_id` es una columna uuid. Compararla
     // contra 'pizza-priamo' no devuelve vacío, revienta la consulta entera
     // (22P02) y la página del negocio responde 500.
+    // `featured_title` es del armado de la carta (0290), no del objeto `business` que sale.
+    const { featured_title: featuredTitle, ...business } = businessRow
     const businessId = business.id
 
     const serviceDate =
@@ -99,7 +102,7 @@ export async function GET(
           // cliente la resuelve contra su propio reloj. Si aquí se mandara ya
           // calculado, esta página —que es ISR con `revalidate: 15`— ofrecería
           // ceviche a las 15:30 a quien la abrió a las 14:55 y no ha recargado.
-          'id,category_id,name,description,base_price,image_url,thumbnail_url,image_hue,is_available,is_compact,badges,display_order,available_days,available_from,available_to',
+          'id,category_id,name,description,base_price,image_url,thumbnail_url,image_hue,is_available,is_compact,is_featured,badges,display_order,available_days,available_from,available_to',
         )
         .eq('business_id', businessId)
         .is('deleted_at', null)
@@ -181,8 +184,18 @@ export async function GET(
       'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=45',
       Vary: 'Accept-Encoding',
     }
+    const featured = featuredSection(
+      menu.map((category) => category.items),
+      featuredTitle,
+    )
     return ok(
-      { business, categories: menu, schedule: schedule ?? [], opening_confirmed: openingConfirmed },
+      {
+        business,
+        categories: menu,
+        featured,
+        schedule: schedule ?? [],
+        opening_confirmed: openingConfirmed,
+      },
       { headers: { ...corsHeaders(req), ...cacheHeaders } },
     )
   } catch (err) {

@@ -1,10 +1,11 @@
 # Conclusión común · Backend REST para las apps nativas y squash de migraciones
 
+> Verificado: 2026-11-19 (solo la fila «Sesión» del §1, contra `D-54` y `D-65`)
 > Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code: «oka») · Alcance: el
-> contrato entre las apps nativas y la API, y el orden del paso 0. Debate: `Docs/trabajo/movil/debate-rest/`
+> contrato entre las apps nativas y la API, y el orden del paso 0. Debate: `archive/movil:Docs/trabajo/movil/debate-rest/`
 > Debate Claude + Codex, 2026-10-07/08, sobre `develop` en `0306918` y `tindivo-prod` en la migración 0247. Tres
 > rondas, y una consulta de solo lectura a la base viva para cerrar lo que el código no mostraba. **Esta conclusión
-> manda sobre [`../06-contrato-rest-movil.md`](../../trabajo/movil/06-contrato-rest-movil.md)** donde discrepen.
+> manda sobre `archive/movil:Docs/trabajo/movil/06-contrato-rest-movil.md`** donde discrepen.
 
 ## En cinco líneas
 
@@ -24,7 +25,7 @@
 | Pieza | Frontera |
 |---|---|
 | **Datos y acciones del negocio** (catálogo, cotización, pedidos, Entregas, Store, perfil, direcciones, reseñas) | **Solo REST.** Las apps no leen ni escriben tablas ni RPC de Supabase |
-| **Sesión** | SDK de Supabase Auth (Google, Apple, renovación). El token viaja como `Authorization: Bearer` |
+| **Sesión** | Auth por REST (`token?grant_type=id_token` para Google y Apple; renovación con el refresh token), sin SDK de Supabase, detrás de `SessionStore`/`AuthBackend` con refresco único (CLI-7); `D-54` (Android) y `D-65` (iOS) en `decisiones.md`. El token viaja como `Authorization: Bearer` |
 | **Tiempo real** | Push nativo como canal principal; Realtime solo como aviso de «algo cambió», y la app vuelve a pedir por REST. Recuperación al reconectar y al volver al primer plano |
 | **Archivos** (comprobante) | Carga autorizada por el servidor; el servidor comprueba propiedad, tipo, tamaño y asociación al pedido, y el archivo **no puede cambiar** una vez registrado |
 | **Autorización** | La de verdad se comprueba **dentro de la operación** (rol vigente y propiedad o asignación del recurso). Un *claim* del token orienta, no autoriza. **Las lecturas privadas también verifican permisos efectivos.** Recibir `p_actor_user_id` no prueba autorización: cada RPC debe validarla |
@@ -122,12 +123,12 @@ aplican por MCP y `CLAUDE.md` exige la CLI (manda la CLI).
 
 | Archivo | Qué es |
 |---|---|
-| [`01-claude.md`](../../trabajo/movil/debate-rest/01-claude.md) · [`../06-contrato-rest-movil.md`](../../trabajo/movil/06-contrato-rest-movil.md) | Apertura de Claude, escrita sin leer a Codex |
-| [`00-codex-apertura-sin-acceso.md`](../../trabajo/movil/debate-rest/00-codex-apertura-sin-acceso.md) | Primera apertura de Codex, sin acceso al repo: su sandbox de Windows rechazaba todos los comandos |
-| [`01-codex.md`](../../trabajo/movil/debate-rest/01-codex.md) | Apertura de Codex con un paquete de evidencia cruda (código y salidas de comandos, sin la postura de Claude). Encontró H-1, H-3 y H-4 |
-| [`02-claude.md`](../../trabajo/movil/debate-rest/02-claude.md) · [`02-codex.md`](../../trabajo/movil/debate-rest/02-codex.md) | Réplicas. Codex corrige «atascada para siempre» y detecta H-2 |
-| [`03-claude.md`](../../trabajo/movil/debate-rest/03-claude.md) · [`03-codex.md`](../../trabajo/movil/debate-rest/03-codex.md) | Ronda con la base viva (solo lectura). Codex firma con cambios; sin desacuerdos de fondo |
-| [`04-codex-auditoria.md`](../../trabajo/movil/debate-rest/04-codex-auditoria.md) | Auditoría de esta conclusión por Codex |
+| `archive/movil:Docs/trabajo/movil/debate-rest/01-claude.md` · `archive/movil:Docs/trabajo/movil/06-contrato-rest-movil.md` | Apertura de Claude, escrita sin leer a Codex |
+| `archive/movil:Docs/trabajo/movil/debate-rest/00-codex-apertura-sin-acceso.md` | Primera apertura de Codex, sin acceso al repo: su sandbox de Windows rechazaba todos los comandos |
+| `archive/movil:Docs/trabajo/movil/debate-rest/01-codex.md` | Apertura de Codex con un paquete de evidencia cruda (código y salidas de comandos, sin la postura de Claude). Encontró H-1, H-3 y H-4 |
+| `archive/movil:Docs/trabajo/movil/debate-rest/02-claude.md` · `archive/movil:Docs/trabajo/movil/debate-rest/02-codex.md` | Réplicas. Codex corrige «atascada para siempre» y detecta H-2 |
+| `archive/movil:Docs/trabajo/movil/debate-rest/03-claude.md` · `archive/movil:Docs/trabajo/movil/debate-rest/03-codex.md` | Ronda con la base viva (solo lectura). Codex firma con cambios; sin desacuerdos de fondo |
+| `archive/movil:Docs/trabajo/movil/debate-rest/04-codex-auditoria.md` | Auditoría de esta conclusión por Codex |
 
 ## 8. Ampliaciones aditivas del contrato v1
 
@@ -142,6 +143,7 @@ y dónde se decidió.
 | **`GET /customer/orders/attempts/{key}`** | Si se pierde la respuesta de crear pedido (red, 5xx, proceso muerto), saber si esa `Idempotency-Key` ya creó el pedido **antes** de reenviar | `created` → el pedido existe (`order` puede llegar `null` si no se pudo leer su código: **sigue existiendo**). `not_found` → no hay rastro **hoy**; una petición en vuelo aún puede crearlo, y pasada la retención se pierde el rastro (7 días: `creation_idempotency.expires_at`, `0250`; **plazo aprobado por Jesús el 2026-10-31**, `Docs/planes/migraciones/cola.md` C4a-d). `unknown` → no se sabe; se vuelve a consultar más tarde, **nunca** se trata como `not_found`. La clave de otro cliente es indistinguible de una inexistente | PR #123 (y #120 en Android) |
 | **`POST /customer/orders/{id}/prepay-proof/upload-url`** | Subir el comprobante sin tocar Storage directamente (frontera de §1) | Devuelve `path`, `uploadUrl` (PUT de un solo uso que no sobrescribe), `token` y `expiresAt` (UTC). La foto se sube a `uploadUrl` y después se confirma con `POST /customer/orders/{id}/prepay-proof` enviando ese `path`. Formatos y tope de D-40 | PR #122 (`0282`) |
 | **`supportWhatsapp` en `GET /public/config`** | La app abre el soporte por WhatsApp (`https://wa.me/<número>?text=…`) sin leer `app_settings` directamente (frontera de §1). Las apelaciones van solo por WhatsApp: la app no usa `POST /customer/orders/{id}/appeal` (Jesús, 2026-11-10) | Llega solo con dígitos, con el código de país (`^\d{9,15}$`), o `null` si `app_settings.support_whatsapp` falta o no es un número; con `null` o si la lectura falla, la app usa su número de respaldo (`TINDIVO_SUPPORT_WHATSAPP`, `packages/core/src/constants.ts`) | Rama `feat/android-pedido-acciones` |
+| **`paymentProofStatus` en `GET /customer/orders/{id}`** | La app distingue un comprobante de pago rechazado de uno aún sin revisar (en un pedido `prepay_timeout` el estado del pedido no lo dice) | `pending`, `verified`, `rejected` o `null` (sin comprobante o no aplica). Solo en el detalle: la lista no lo trae. Es un enum abierto: un valor nuevo se trata como desconocido. Solo expone el estado: ni la imagen del comprobante (`proof_url`), ni quién lo revisó, ni el motivo del rechazo | Esta entrega · `supabase/migrations/0031_business_dashboard_fields.sql` (`orders_payment_proof_status_chk`) |
 
 **Lo que aún falta en REST para la app nativa:** que el cliente vuelva a ver el comprobante que subió. Es menor: no
 bloquea pedir ni pagar. La web del cliente (`apps/customer`) está congelada y no adopta estas ampliaciones.

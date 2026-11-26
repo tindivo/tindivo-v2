@@ -229,7 +229,7 @@ describe('send-code · tope por número de destino', () => {
       Object.assign(new Error('número inválido'), { code: 21211, status: 400 }),
     )
     expect((await pedir(v, t)).status).toBe(500)
-    expect(await intentos(v)).toBe(0)
+    expect(await intentos(v)).toBe(0) // el cupo reservado antes de Twilio se devuelve: el SMS no salió
     expect((await pedir(v, t)).status).toBe(200)
     expect((await pedir(v, t)).status).toBe(200)
     expect((await pedir(v, t)).status).toBe(429) // cupo del número (2) lleno con los 2 aceptados

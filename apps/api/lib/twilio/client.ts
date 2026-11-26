@@ -105,5 +105,5 @@ export const OTP_DEV_SIMULATION: boolean =
   twilioClient === null && process.env.NODE_ENV !== 'production'
 
 if (OTP_DEV_SIMULATION) {
-  console.warn(`[twilio] SIMULACRO LOCAL de OTP activo — el código válido es ${DEV_OTP_CODE}`)
+  console.warn('[twilio] SIMULACRO LOCAL de OTP activo')
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { ADDRESS_REFERENCE_MAX, AddressReferenceSchema } from '@tindivo/contracts'
+import { ADDRESS_REFERENCE_MAX, AddressReferenceFormSchema } from '@tindivo/contracts'
 import { Button, Icon, Segmented, Spinner, useDialogFocus } from '@tindivo/ui'
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { MapMode } from '@/components/map-picker-inner'
@@ -190,7 +190,7 @@ export function PinDropOverlay({
       onConfirm(undefined)
       return
     }
-    const parsed = AddressReferenceSchema.safeParse(reference)
+    const parsed = AddressReferenceFormSchema.safeParse(reference)
     if (!parsed.success) {
       setRefError(parsed.error.issues[0]?.message ?? 'Escribe una referencia')
       input.current?.focus()

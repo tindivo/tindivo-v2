@@ -94,8 +94,10 @@ class ReviewViewModelTest {
             auth = BearerAuthInterceptor(server.url("/"), tokens),
         )
 
-    private fun viewModel(io: CoroutineDispatcher = dispatcher) =
-        ReviewViewModel(ReviewRepository(baseUrl, client(), io), store, configService)
+    private fun viewModel(
+        io: CoroutineDispatcher = dispatcher,
+        memory: ReviewPromptMemory = ReviewPromptMemory(),
+    ) = ReviewViewModel(ReviewRepository(baseUrl, client(), io), store, configService, memory)
 
     private fun ok(
         body: String,
@@ -172,6 +174,37 @@ class ReviewViewModelTest {
             viewModel.dismiss()
             viewModel.enableAutoPrompt()
             assertEquals(ReviewStep.Hidden, viewModel.state.value.step)
+        }
+
+    @Test
+    fun `una pregunta ya hecha en otra pantalla de la sesion no se repite`() =
+        runTest {
+            val memory = ReviewPromptMemory()
+            server.enqueue(ok(PENDING))
+            val home = viewModel(memory = memory)
+            home.state.first { it.pending != null }
+            home.enableAutoPrompt()
+            assertEquals(ReviewStep.Prompt, home.state.value.step)
+
+            server.enqueue(ok(PENDING))
+            val history = viewModel(memory = memory)
+            history.state.first { it.pending != null }
+            history.enableAutoPrompt()
+
+            assertEquals(ReviewStep.Hidden, history.state.value.step)
+        }
+
+    @Test
+    fun `si el historial recarga con un pedido activo la pregunta se retira y puede volver a salir`() =
+        runTest {
+            val viewModel = pendingViewModel()
+            viewModel.enableAutoPrompt()
+            assertEquals(ReviewStep.Prompt, viewModel.state.value.step)
+
+            viewModel.disableAutoPrompt()
+            assertEquals(ReviewStep.Hidden, viewModel.state.value.step)
+            viewModel.enableAutoPrompt()
+            assertEquals(ReviewStep.Prompt, viewModel.state.value.step)
         }
 
     @Test
@@ -731,7 +764,7 @@ class ReviewViewModelTest {
 
     private suspend fun switchToAccountB() {
         store.signInUserId = "user-2"
-        store.signInWithGoogle("token", "nonce")
+        store.signInWithGoogle("token", "nonce", termsPending = false)
     }
 
     private companion object {

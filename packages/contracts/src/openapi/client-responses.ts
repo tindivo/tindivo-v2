@@ -9,6 +9,7 @@ import {
   DISTANCE_BANDS,
   ORDER_STATUSES,
   PAYMENT_INTENTS,
+  PAYMENT_PROOF_STATUSES,
   PAYMENT_WALLETS,
   PICKUP_TIMINGS,
   REORDER_CHANGE_KINDS,
@@ -420,14 +421,30 @@ export const CustomerOrderDetailSchema = z.object({
   arrivedAtCustomerAt: timestampOut.nullable(),
   proofAttempt: z.number().int(),
   paymentVerifiedAt: timestampOut.nullable(),
+  paymentProofStatus: openEnum(
+    PAYMENT_PROOF_STATUSES,
+    'Estado del comprobante de pago del pedido; null si no hay comprobante o no aplica',
+  ).nullable(),
   driver: z
     .object({
       name: z.string(),
       phone: z.string().nullable().meta({
-        description: 'Solo cuando el motorizado ya llegó a la puerta del cliente',
+        description:
+          'Siempre null: el cliente no recibe el teléfono del motorizado. El campo se conserva por las apps ya instaladas',
       }),
     })
     .nullable(),
+  pendingAcceptanceAt: timestampOut.nullable().optional().meta({
+    description: 'Cuándo el pedido pasó a esperar al negocio; de ahí corre el plazo de aceptación',
+  }),
+  validatingAt: timestampOut.nullable().optional().meta({
+    description: 'Cuándo el pedido pasó a validación; de ahí corre el plazo de verificación',
+  }),
+  travelMinutes: z
+    .object({ min: z.number().int(), max: z.number().int() })
+    .nullable()
+    .optional()
+    .meta({ description: 'Rango de minutos del trayecto, de app_settings.timers' }),
 })
 
 /**

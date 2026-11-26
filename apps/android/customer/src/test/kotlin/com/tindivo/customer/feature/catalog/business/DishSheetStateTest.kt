@@ -68,7 +68,7 @@ class DishSheetStateTest {
     }
 
     @Test
-    fun `single obligatorio reemplaza la opcion y tocar la elegida no la quita`() {
+    fun `CA-CAT-06 single obligatorio reemplaza la opcion y tocar la elegida no la quita`() {
         var state = DishSheetState(dish).tap(size, "small")
         assertEquals(listOf("small"), state.selectedIds)
 
@@ -80,7 +80,7 @@ class DishSheetStateTest {
     }
 
     @Test
-    fun `single opcional reemplaza y tocar la elegida la quita`() {
+    fun `CA-CAT-06 single opcional reemplaza y tocar la elegida la quita`() {
         var state = DishSheetState(dish).tap(sauce, "ajo").tap(sauce, "rocoto")
         assertEquals(listOf("rocoto"), state.selectedIds)
 
@@ -112,7 +112,7 @@ class DishSheetStateTest {
     }
 
     @Test
-    fun `el boton pide completar los grupos obligatorios y despues agrega`() {
+    fun `CA-CAT-06 el boton pide completar los grupos obligatorios y despues agrega`() {
         val required2 =
             item(size, group("cook", "single", true, options = listOf(option("medio"), option("bien"))))
         var state = DishSheetState(required2)
@@ -157,7 +157,7 @@ class DishSheetStateTest {
     }
 
     @Test
-    fun `el precio total suma opciones y multiplica por la cantidad sin redondear`() {
+    fun `CA-CAT-07 el precio total suma opciones y multiplica por la cantidad sin redondear`() {
         val state =
             DishSheetState(dish)
                 .tap(size, "large")
@@ -185,7 +185,7 @@ class DishSheetStateTest {
     }
 
     @Test
-    fun `el precio de la opcion es incluido, un delta o el total del plato`() {
+    fun `CA-CAT-07 el precio de la opcion es incluido, un delta o el total del plato`() {
         val state = DishSheetState(dish)
         assertEquals(OptionPrice.Included, state.optionPrice(size, size.options[0]))
         assertEquals(OptionPrice.Delta("S/ 4.00"), state.optionPrice(size, size.options[1]))
@@ -280,5 +280,44 @@ class DishSheetStateTest {
         assertEquals(listOf("x"), state.selectedIds)
         assertFalse(state.isValid)
         assertTrue(state.cta is DishCta.Complete)
+    }
+
+    @Test
+    fun `el boton lleva al primer grupo obligatorio sin elegir y luego al siguiente`() {
+        val cook = group("Guarnición", "single", true, options = listOf(option("medio"), option("bien")))
+        val state = DishSheetState(item(size, cook))
+        assertEquals("size", state.firstMissingGroup()?.id)
+
+        val afterSize = state.tap(size, "small")
+        assertEquals("Guarnición", afterSize.firstMissingGroup()?.id)
+        assertEquals("guarnición", afterSize.firstMissingGroup()?.chooseName())
+
+        assertNull(afterSize.toggle(cook, cook.options[0]).firstMissingGroup())
+    }
+
+    @Test
+    fun `sin grupos obligatorios no hay nada que resaltar`() {
+        assertNull(DishSheetState(item(sauce, extras)).firstMissingGroup())
+    }
+
+    @Test
+    fun `una seleccion invalida sin grupo faltante lleva al grupo pasado y no al agregar`() {
+        val pair = group("pair", "multi", false, max = 1, options = listOf(option("a"), option("b")))
+        val state = DishSheetState(item(pair), selectedIds = listOf("a", "b"))
+        assertFalse(state.isValid)
+        assertNull(state.firstMissingGroup())
+        assertEquals("pair", state.firstProblemGroup()?.id)
+    }
+
+    @Test
+    fun `con una seleccion valida no hay grupo con problema`() {
+        assertNull(DishSheetState(item(sauce, extras)).firstProblemGroup())
+    }
+
+    @Test
+    fun `el texto del boton usa tu solo con un grupo de una opcion`() {
+        assertTrue(size.choosesOne())
+        assertFalse(extras.choosesOne())
+        assertEquals("tamaño", group("Tamaño", "single", true, options = emptyList()).chooseName())
     }
 }

@@ -7,6 +7,7 @@ import com.tindivo.core.network.generated.model.AcceptTermsRequest
 import com.tindivo.core.network.generated.model.CancelOrder200ResponseData
 import com.tindivo.core.network.generated.model.GetCustomerOrder200ResponseData
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
+import com.tindivo.core.network.generated.model.GetCustomerReorder200ResponseData
 import com.tindivo.core.network.generated.model.ListCustomerOrders200ResponseData
 import com.tindivo.core.network.generated.model.UpdateCustomerProfileRequest
 import kotlinx.coroutines.CoroutineDispatcher
@@ -130,6 +131,30 @@ class CustomerRepository(
     suspend fun order(id: UUID): ApiResult<GetCustomerOrder200ResponseData> =
         apiCall(client, ioDispatcher, { OrdersApi(baseUrl, it) }) {
             it.getCustomerOrderWithHttpInfo(id, null, null, null, null)
+        }.map { it.data }
+
+    /**
+     * `GET /customer/orders/{id}` solo con el token de [accountId] ([boundTo]): si la sesión cambió de cuenta, no se
+     * envía nada y vuelve un [AppError.Network] con [AccountMismatchException].
+     */
+    suspend fun order(
+        id: UUID,
+        accountId: String,
+    ): ApiResult<GetCustomerOrder200ResponseData> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { OrdersApi(baseUrl, it) }) {
+            it.getCustomerOrderWithHttpInfo(id, null, null, null, null)
+        }.map { it.data }
+
+    /**
+     * `GET /customer/orders/{id}/reorder` solo con el token de [accountId] ([boundTo]): la bolsa de un pedido propio con
+     * la carta de hoy y lo que cambió (D-51). Es de solo lectura; uno ajeno o inexistente llega como 404.
+     */
+    suspend fun reorder(
+        id: UUID,
+        accountId: String,
+    ): ApiResult<GetCustomerReorder200ResponseData> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { OrdersApi(baseUrl, it) }) {
+            it.getCustomerReorderWithHttpInfo(id, null, null, null, null)
         }.map { it.data }
 
     /**

@@ -35,9 +35,14 @@ data class MenuItemUi(
     val modifierGroups: List<ModifierGroupUi>,
     val imageUrl: String?,
     val available: Boolean,
-    /** Franja horaria: fuera de ella el plato no se muestra (ver [visibleAt]). */
+    /** Franja horaria: fuera de ella el plato se apaga y dice cuándo vuelve (ver [atInstant]). */
     val window: DishWindow,
-)
+    /** «Solo sáb y dom, de 11:00 a 15:00» mientras el plato esté fuera de su franja; `null` si se sirve ahora. */
+    val outsideWindow: String? = null,
+) {
+    /** Se puede pedir: no se acabó y es su turno. */
+    val orderable: Boolean get() = available && outsideWindow == null
+}
 
 /** Un grupo de opciones del plato. [selectionType] y [priceDisplay] llegan como los sirve la carta. */
 data class ModifierGroupUi(
@@ -79,7 +84,21 @@ data class BusinessDetailUi(
     /** ARGB listo para `Color(...)`; `null` si el color del servidor no se pudo leer. */
     val accent: Long?,
     val categories: List<MenuCategoryUi>,
-)
+    /** La sección «Destacados» que armó el restaurante (CUS-CAT-028); sus platos también están en [categories]. */
+    val featured: MenuCategoryUi? = null,
+    val schedule: List<ScheduleDayUi> = emptyList(),
+    /** `false` = nadie confirmó que hoy atiende; `null` = no se pudo consultar. */
+    val openingConfirmed: Boolean? = null,
+    /** Modo catálogo (`catalog_only`): se pide por WhatsApp, no por la bolsa (CUS-CAT-015). */
+    val catalogOnly: Boolean = false,
+    val whatsappNumber: String? = null,
+    /** Tiempo estimado en minutos que manda el servidor (rango); `null` si no llegó. */
+    val etaMin: Int? = null,
+    val etaMax: Int? = null,
+) {
+    /** Lo que se pinta, de arriba abajo: «Destacados» primero y luego las secciones de la carta. */
+    val sections: List<MenuCategoryUi> get() = listOfNotNull(featured) + categories
+}
 
 sealed interface BusinessUiState {
     data object Loading : BusinessUiState
@@ -114,7 +133,7 @@ class BusinessViewModel
         val state: StateFlow<BusinessUiState> = _state.asStateFlow()
 
         /**
-         * El instante, cada minuto, para filtrar con [visibleAt]: a las 15:00 desaparece el plato de mediodía sin
+         * El instante, cada minuto, para resolver con [atInstant]: a las 15:00 se apaga el plato de mediodía sin
          * recargar. Solo corre mientras alguien mira; al volver puede llegar primero el último minuto visto, que solo
          * decide qué platos se ven, nunca qué carta ni qué precio.
          */

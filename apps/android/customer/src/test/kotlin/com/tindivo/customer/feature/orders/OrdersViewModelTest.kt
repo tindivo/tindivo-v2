@@ -2,84 +2,21 @@ package com.tindivo.customer.feature.orders
 
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.AppError
-import com.tindivo.core.network.ClientInfo
-import com.tindivo.core.network.CustomerRepository
-import com.tindivo.core.network.RetryInterceptor
-import com.tindivo.core.network.SystemRepository
-import com.tindivo.core.network.createOkHttpClient
-import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.config.ConfigState
-import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.SessionState
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
 import mockwebserver3.MockResponse
-import mockwebserver3.MockWebServer
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class OrdersViewModelTest {
-    private val server = MockWebServer()
-    private val dispatcher = UnconfinedTestDispatcher()
-    private val store = FakeSessionStore()
-    private val clock = Clock.fixed(Instant.parse("2026-10-26T15:30:00Z"), ZoneOffset.UTC)
-    private lateinit var baseUrl: String
-    private lateinit var configService: ConfigService
-
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(dispatcher)
-        server.start()
-        baseUrl = server.url("/api/v1").toString().trimEnd('/')
-        configService =
-            ConfigService(SystemRepository(baseUrl, client(), dispatcher), "0.1.0", CoroutineScope(dispatcher))
-    }
-
-    @After
-    fun tearDown() {
-        server.close()
-        Dispatchers.resetMain()
-    }
-
-    private fun client() =
-        createOkHttpClient(ClientInfo("customer", "0.1.0", "1"), retry = RetryInterceptor(sleeper = { _, _ -> }))
-
-    private fun viewModel(io: CoroutineDispatcher = dispatcher) =
-        OrdersViewModel(CustomerRepository(baseUrl, client(), io), store, configService, clock)
-
-    private fun response(
-        code: Int,
-        body: String,
-        delayMillis: Long = 0,
-    ) = MockResponse
-        .Builder()
-        .code(code)
-        .addHeader("Content-Type", if (code == 200) "application/json" else "application/problem+json")
-        .apply { if (delayMillis > 0) bodyDelay(delayMillis, TimeUnit.MILLISECONDS) }
-        .body(body)
-        .build()
-
-    private suspend fun OrdersViewModel.settled(): OrdersUiState = state.first { it !is OrdersUiState.Loading }
-
-    private fun ids(vararg n: Int) = n.map { "5b2a737a-018f-4c2d-9a11-6f0d3c1e8a0$it" }
-
+class OrdersViewModelTest : OrdersHarness() {
     @Test
     fun `la primera pagina se muestra con la tarjeta ya lista y sin mas paginas`() =
         runTest {
@@ -102,7 +39,7 @@ class OrdersViewModelTest {
         }
 
     @Test
-    fun `cargar mas manda el cursor, agrega la pagina y al llegar null ya no hay boton`() =
+    fun `CA-ORD-02 cargar mas manda el cursor, agrega la pagina y al llegar null ya no hay boton`() =
         runTest {
             server.enqueue(response(200, pageJson(ids(1, 2), next = "c2")))
             server.enqueue(response(200, pageJson(ids(3), next = null)))
@@ -161,7 +98,7 @@ class OrdersViewModelTest {
         }
 
     @Test
-    fun `un importe ilegible en la pagina deja la pantalla entera en error`() =
+    fun `CA-ORD-03 un importe ilegible en la pagina deja la pantalla entera en error`() =
         runTest {
             server.enqueue(response(200, pageJson(ids(1), next = null, total = "48.5")))
 
@@ -185,7 +122,7 @@ class OrdersViewModelTest {
         }
 
     @Test
-    fun `un 401 cierra la sesion y pide volver al inicio`() =
+    fun `CA-ORD-09 un 401 cierra la sesion y pide volver al inicio`() =
         runTest {
             server.enqueue(response(401, UNAUTHORIZED))
 
@@ -277,17 +214,10 @@ class OrdersViewModelTest {
             viewModel.settled()
 
             store.signInUserId = "user-2"
-            store.signInWithGoogle("token", "nonce")
+            store.signInWithGoogle("token", "nonce", termsPending = false)
             viewModel.refresh()
 
             assertEquals(OrdersUiState.LoggedOut, viewModel.state.value)
             assertEquals(1, server.requestCount)
         }
-
-    private companion object {
-        const val UNAUTHORIZED =
-            "{\"type\":\"about:blank\",\"title\":\"No autorizado\",\"status\":401,\"code\":\"unauthorized\"}"
-        const val FORBIDDEN =
-            "{\"type\":\"about:blank\",\"title\":\"Prohibido\",\"status\":403,\"code\":\"forbidden\"}"
-    }
 }

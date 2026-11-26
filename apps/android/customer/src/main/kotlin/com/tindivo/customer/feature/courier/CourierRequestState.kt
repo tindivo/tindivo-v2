@@ -3,17 +3,17 @@ package com.tindivo.customer.feature.courier
 import com.tindivo.core.network.generated.model.CreateCourierOrderRequest
 import com.tindivo.core.network.generated.model.CreateCourierOrderRequestOrigin
 import com.tindivo.core.network.generated.model.CreateOrderRequestCoordinates
+import com.tindivo.customer.feature.addresses.isReferenceOk
 import com.tindivo.customer.feature.checkout.AddressUi
+import com.tindivo.customer.ui.fields.isValidPePhone
+import com.tindivo.customer.ui.fields.localPePhone
 import java.math.BigDecimal
 
 /** Los límites del contrato (`packages/contracts/src/courier.ts` y `primitives.ts`). El servidor los vuelve a validar. */
 internal const val COURIER_ITEM_MAX = 120
 internal const val COURIER_NOTE_MAX = 140
 internal const val COURIER_NAME_MAX = 120
-internal const val COURIER_REFERENCE_MIN = 5
 internal const val COURIER_REFERENCE_MAX = 140
-private const val PE_PHONE_DIGITS = 9
-private val PE_PHONE = Regex("""^9\d{8}$""")
 
 /** Lo que el sistema escribe cuando nadie puso un nombre (igual que la web): el contrato y la tabla lo exigen. */
 internal const val ORIGIN_FALLBACK_NAME = "Quien entrega"
@@ -37,7 +37,9 @@ internal data class CourierPointDraft(
     val name: String = "",
 ) {
     val located: Boolean get() = lat != null && lng != null
-    val referenceOk: Boolean get() = reference.trim().length in COURIER_REFERENCE_MIN..COURIER_REFERENCE_MAX
+
+    /** Largo y texto basura como el servidor y las direcciones (`isReferenceOk`, el vector compartido). */
+    val referenceOk: Boolean get() = isReferenceOk(reference)
     val phoneOk: Boolean get() = isValidPePhone(phone)
 
     override fun toString(): String = "CourierPointDraft(located=$located)"
@@ -52,7 +54,8 @@ internal enum class CourierMissing {
     Item,
     OriginPhone,
     DestinationPhone,
-    ReadyAndPaid,
+    Prepaid,
+    Allowed,
     RequesterPhone,
 }
 
@@ -63,7 +66,10 @@ internal data class CourierDraft(
     val item: String = "",
     val payer: CourierPayer = CourierPayer.Destination,
     val note: String = "",
-    val readyAndPaid: Boolean = false,
+    /** «Ya está listo y pagado» (`prepaidConfirmed`). */
+    val prepaidConfirmed: Boolean = false,
+    /** «Lo que envío está permitido» (`weightConfirmed`). */
+    val weightConfirmed: Boolean = false,
 ) {
     fun point(end: CourierEnd) = if (end == CourierEnd.Origin) origin else destination
 
@@ -85,7 +91,8 @@ internal fun CourierDraft.firstMissing(phoneVerified: Boolean): CourierMissing? 
         item.isBlank() -> CourierMissing.Item
         !origin.phoneOk -> CourierMissing.OriginPhone
         !destination.phoneOk -> CourierMissing.DestinationPhone
-        !readyAndPaid -> CourierMissing.ReadyAndPaid
+        !prepaidConfirmed -> CourierMissing.Prepaid
+        !weightConfirmed -> CourierMissing.Allowed
         !phoneVerified -> CourierMissing.RequesterPhone
         else -> null
     }
@@ -116,8 +123,8 @@ internal fun CourierDraft.toRequest(requester: CourierRequester): CreateCourierO
             } else {
                 CreateCourierOrderRequest.Payer.destination
             },
-        weightConfirmed = true,
-        prepaidConfirmed = true,
+        weightConfirmed = weightConfirmed,
+        prepaidConfirmed = prepaidConfirmed,
         driverNote = note.trim().take(COURIER_NOTE_MAX).ifEmpty { null },
     )
 }
@@ -149,14 +156,3 @@ internal fun CourierContactUi.toPoint(): CourierPointDraft =
         phone = phone?.let(::localPePhone).orEmpty(),
         name = name,
     )
-
-/** Solo los 9 dígitos locales, sin `+51`/`51` (el campo ya pinta su `+51`). */
-internal fun localPePhone(phone: String): String {
-    val digits = phone.filter(Char::isDigit)
-    return if (digits.length > PE_PHONE_DIGITS && digits.startsWith("51")) digits.drop(2) else digits
-}
-
-internal fun isValidPePhone(phone: String): Boolean = PE_PHONE.matches(localPePhone(phone))
-
-/** Lo que queda en el campo «Celular» tras cada tecla: solo dígitos y nunca más de 9 (como `normalizePePhoneInput`). */
-internal fun normalizePePhoneInput(value: String): String = localPePhone(value).take(PE_PHONE_DIGITS)

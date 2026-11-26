@@ -1,24 +1,18 @@
 package com.tindivo.customer.feature.orders
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -27,15 +21,17 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.tindivo.core.designsystem.TindivoColors
+import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.support.CustomerNameViewModel
+import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
+import com.tindivo.customer.support.SupportViewModel
 import java.util.UUID
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
@@ -44,27 +40,38 @@ internal fun OrdersDestination(
     onBack: () -> Unit,
     onOpenOrder: (id: String) -> Unit,
     onExplore: () -> Unit,
-    onReorder: (businessId: String) -> Unit = {},
+    onOpenCart: () -> Unit = {},
+    onReviewMoment: (open: Boolean) -> Unit = {},
     viewModel: OrdersViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
+    nameViewModel: CustomerNameViewModel = hiltViewModel(),
+    reorderViewModel: ReorderViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
+    val customerName = nameViewModel.name.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshIfStale()
+        onPauseOrDispose {}
+    }
     LaunchedEffect(state) {
         if (state is OrdersUiState.LoggedOut) onBack()
     }
+    // CUS-REV-001: en el historial la pregunta de la reseña sale si no hay un pedido activo a la vista.
+    val reviewMoment = state.allowsReviewPrompt()
+    LaunchedEffect(reviewMoment) { onReviewMoment(reviewMoment) }
     OrdersScreen(
         state = state,
         onRetry = viewModel::refresh,
         onLoadMore = viewModel::loadMore,
         onOpenOrder = onOpenOrder,
         onExplore = onExplore,
-        onBack = onBack,
         cardActions =
             OrderCardActions(
                 supportNumber = supportNumber,
-                onReorder = onReorder,
+                customerName = customerName,
+                onReorder = reorderViewModel::reorder,
                 onOpenLink = { link ->
                     try {
                         uriHandler.openUri(link)
@@ -74,15 +81,29 @@ internal fun OrdersDestination(
                 },
             ),
     )
+    ReorderHost(
+        outcome = reorderViewModel.outcome.collectAsStateWithLifecycle().value,
+        onOpenCart = onOpenCart,
+        onConsume = reorderViewModel::consumeOutcome,
+        onReplace = reorderViewModel::replaceWithPending,
+    )
 }
 
 /** Lo que una tarjeta del historial puede hacer además de abrir el pedido. */
 internal data class OrderCardActions(
-    val supportNumber: String? = null,
-    val onReorder: (businessId: String) -> Unit = {},
+    val supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
+    /** El nombre para firmar el mensaje de ayuda; `null` si no se pudo leer. */
+    val customerName: String? = null,
+    val onReorder: (orderId: UUID) -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
 )
 
+/**
+ * «Mis pedidos» es una pestaña raíz (tablero «8»): título de 26 sp, sin «Volver» (la barra inferior y el atrás del
+ * sistema ya llevan a Inicio). Lo en curso va arriba, en su tarjeta; lo anterior, en una lista dentro de una tarjeta.
+ * Los chips «Todos / Restaurantes / Entregas» del tablero no están: este historial solo trae pedidos de restaurante y
+ * las entregas viven en otra lista (unirlas es un cambio de datos).
+ */
 @Composable
 internal fun OrdersScreen(
     state: OrdersUiState,
@@ -90,157 +111,85 @@ internal fun OrdersScreen(
     onLoadMore: () -> Unit,
     onOpenOrder: (id: String) -> Unit,
     onExplore: () -> Unit,
-    onBack: () -> Unit,
     cardActions: OrderCardActions = OrderCardActions(),
 ) {
     Scaffold { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.orders_back))
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                Text(
+                    text = stringResource(R.string.orders_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 4.dp).semantics { heading() },
+                )
             }
-            Text(
-                text = stringResource(R.string.orders_title),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 8.dp).semantics { heading() },
-            )
             when (state) {
                 OrdersUiState.Loading, OrdersUiState.LoggedOut -> {
-                    OrdersLoading()
+                    item { Box(modifier = Modifier.fillParentMaxHeight(0.6f)) { OrdersLoading() } }
                 }
 
                 OrdersUiState.Empty -> {
-                    EmptyOrders(onExplore = onExplore)
+                    item { EmptyOrders(onExplore = onExplore) }
                 }
 
                 is OrdersUiState.Failed -> {
-                    OrdersFailure(error = state.error, onRetry = onRetry)
+                    item { OrdersFailure(error = state.error, onRetry = onRetry) }
                 }
 
                 is OrdersUiState.Loaded -> {
-                    OrdersList(
-                        state = state,
-                        onLoadMore = onLoadMore,
-                        onOpenOrder = onOpenOrder,
-                        cardActions = cardActions,
-                    )
+                    ordersList(state = state, onLoadMore = onLoadMore, onOpenOrder = onOpenOrder, actions = cardActions)
                 }
             }
         }
     }
 }
 
-@Composable
-private fun OrdersList(
+private fun LazyListScope.ordersList(
     state: OrdersUiState.Loaded,
     onLoadMore: () -> Unit,
     onOpenOrder: (id: String) -> Unit,
-    cardActions: OrderCardActions,
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        items(state.items, key = { it.id.toString() }) { order ->
-            OrderCard(order = order, onClick = { onOpenOrder(order.id.toString()) }, actions = cardActions)
-        }
-        if (state.canLoadMore) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (state.loadMoreFailed) {
-                        Text(text = stringResource(R.string.error_generic), color = MaterialTheme.colorScheme.error)
-                    }
-                    if (state.loadingMore) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                    } else {
-                        OutlinedButton(
-                            onClick = onLoadMore,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        ) {
-                            Text(text = stringResource(R.string.orders_load_more))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun OrderCard(
-    order: OrderCardUi,
-    onClick: () -> Unit,
     actions: OrderCardActions,
 ) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = order.businessName ?: stringResource(R.string.order_business_fallback),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = stringResource(order.phase.labelRes(order.isPickup)),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = TindivoColors.brandText,
-                )
-            }
-            Text(text = order.itemsSummary, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
-            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text =
-                        stringResource(R.string.order_short_id, order.shortId) +
-                            " · " +
-                            relativeDateText(order.createdAt),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(text = order.total, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            }
-            // Como la web: volver a pedir abre la carta del negocio; la bolsa no se toca.
-            if (order.reorderable) {
-                OutlinedButton(
-                    onClick = { actions.onReorder(order.businessId.toString()) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.order_reorder))
+    val sections = orderSections(state.items)
+    if (sections.active.isNotEmpty()) {
+        item { SectionTitle(R.string.orders_in_progress) }
+        items(sections.active, key = { it.id.toString() }) { order ->
+            val step = (order.phase as? OrderPhase.Active)?.step ?: TrackingStep.Received
+            ActiveOrderCard(order = order, step = step, onOpen = { onOpenOrder(order.id.toString()) })
+        }
+    }
+    if (sections.past.isNotEmpty()) {
+        item { SectionTitle(R.string.orders_previous) }
+        item(key = "past") {
+            PastOrdersCard(orders = sections.past, onOpenOrder = { onOpenOrder(it.id.toString()) }, actions = actions)
+        }
+    }
+    if (state.canLoadMore) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (state.loadMoreFailed) {
+                    Text(text = stringResource(R.string.error_generic), color = MaterialTheme.colorScheme.error)
                 }
-            }
-            if (order.phase is OrderPhase.Cancelled) {
-                SupportLink(
-                    link = cancelledOrderSupportLink(actions.supportNumber, order.shortId),
-                    onOpenLink = actions.onOpenLink,
-                    label = R.string.order_support_cancelled,
-                )
+                if (state.loadingMore) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else {
+                    TindivoSecondaryButton(text = stringResource(R.string.orders_load_more), onClick = onLoadMore)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun EmptyOrders(onExplore: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.orders_empty_title),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.semantics { heading() },
-        )
-        Text(text = stringResource(R.string.orders_empty_body), style = MaterialTheme.typography.bodyLarge)
-        Button(
-            onClick = onExplore,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.orders_empty_action))
-        }
-    }
+private fun SectionTitle(text: Int) {
+    Text(
+        text = stringResource(text),
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(start = 4.dp, top = 12.dp).semantics { heading() },
+    )
 }
 
 @Preview(showBackground = true)
@@ -266,7 +215,6 @@ private fun OrdersPreview() {
             onLoadMore = {},
             onOpenOrder = {},
             onExplore = {},
-            onBack = {},
         )
     }
 }

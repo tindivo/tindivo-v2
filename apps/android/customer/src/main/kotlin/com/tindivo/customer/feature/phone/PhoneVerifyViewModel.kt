@@ -15,6 +15,7 @@ import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import com.tindivo.customer.ui.fields.normalizePePhoneInput
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -53,6 +54,9 @@ internal sealed interface PhoneError {
 
     /** El permiso de traslado ya venció según el reloj del teléfono: hay que pedir un código nuevo. */
     data object ChallengeExpired : PhoneError
+
+    /** El celular es de otra cuenta y no hay traslado: se manda a soporte por WhatsApp (CUS-AUT-028). */
+    data object OtherAccount : PhoneError
 
     data object Network : PhoneError
 
@@ -131,12 +135,20 @@ internal class PhoneVerifyViewModel
 
         fun onPhoneChanged(text: String) {
             if (closed || _state.value.step != PhoneStep.Number) return
-            _state.update { if (it.loggedOut) it else it.copy(phone = text.digitsOnly(PHONE_LENGTH), error = null) }
+            _state.update { if (it.loggedOut) it else it.copy(phone = normalizePePhoneInput(text), error = null) }
         }
 
         fun onCodeChanged(text: String) {
             if (closed || _state.value.step != PhoneStep.Code) return
             _state.update { if (it.loggedOut) it else it.copy(code = text.digitsOnly(CODE_LENGTH), error = null) }
+        }
+
+        /** Escribir el sexto dígito verifica solo (CUS-AUT-024); con menos no sale nada. */
+        fun onCodeTyped(text: String) {
+            val before = _state.value.code
+            onCodeChanged(text)
+            val now = _state.value
+            if (now.code.length == CODE_LENGTH && now.code != before && !now.sending) verify()
         }
 
         /** «Enviar código» (primer envío). */
@@ -382,6 +394,9 @@ internal class PhoneVerifyViewModel
 private val PERU_MOBILE = Regex("^9[0-9]{8}$")
 private const val PREFIX = "+51"
 
+/** El `detail` con el que el servidor dice que el número ya es de otra cuenta (`phoneClaimProblem`). */
+internal const val OTHER_ACCOUNT_DETAIL = "Este número ya está asociado a otra cuenta."
+
 private fun String.digitsOnly(max: Int): String = filter { it in '0'..'9' }.take(max)
 
 private fun AppError.isUnauthorized(): Boolean =
@@ -397,6 +412,7 @@ private fun AppError.toPhoneError(): PhoneError =
         }
 
         is AppError.Known -> {
+            if (code == ApiErrorCode.Conflict && detail == OTHER_ACCOUNT_DETAIL) return PhoneError.OtherAccount
             val text =
                 when (code) {
                     ApiErrorCode.Conflict, ApiErrorCode.RateLimited -> detail

@@ -234,13 +234,16 @@ private fun RequestFrame(
 @Composable
 internal fun CourierTopBar(
     title: String,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
 ) {
     TopAppBar(
         title = { Text(text = title, modifier = Modifier.semantics { heading() }) },
         navigationIcon = {
-            IconButton(onClick = onBack, modifier = Modifier.size(TindivoSpacing.touchTarget)) {
-                Icon(TindivoIcons.ArrowBack, contentDescription = stringResource(R.string.courier_back))
+            // Sin flecha cuando la pantalla es la raíz de una pestaña: no hay a dónde volver.
+            if (onBack != null) {
+                IconButton(onClick = onBack, modifier = Modifier.size(TindivoSpacing.touchTarget)) {
+                    Icon(TindivoIcons.ArrowBack, contentDescription = stringResource(R.string.courier_back))
+                }
             }
         },
     )

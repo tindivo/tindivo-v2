@@ -1,6 +1,5 @@
 package com.tindivo.customer.feature.deleteaccount
 
-import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.tindivo.core.network.ApiErrorCode
 import com.tindivo.core.network.ApiResult
@@ -23,6 +22,7 @@ import com.tindivo.customer.feature.checkout.OrderAttemptLedger
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import com.tindivo.customer.support.testDataStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,7 +76,7 @@ internal abstract class DeleteAccountHarness {
         Dispatchers.setMain(dispatcher)
         cartData =
             FlakyDataStore(
-                DataStoreFactory.create(
+                testDataStore(
                     serializer = CartSerializer,
                     corruptionHandler = ReplaceFileCorruptionHandler<CartSnapshot?>(produceNewData = { null }),
                     scope = CoroutineScope(dispatcher),

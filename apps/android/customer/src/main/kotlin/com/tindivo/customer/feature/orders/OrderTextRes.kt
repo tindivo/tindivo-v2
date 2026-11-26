@@ -7,6 +7,7 @@ import com.tindivo.customer.R
 internal fun OrderHero.titleRes(): Int =
     when (this) {
         OrderHero.Received,
+        OrderHero.CallToConfirm,
         OrderHero.AwaitingAvailability,
         OrderHero.PayNow,
         OrderHero.VerifyingProof,
@@ -28,6 +29,7 @@ internal fun OrderHero.titleRes(): Int =
 internal fun OrderHero.subtitleRes(): Int? =
     when (this) {
         OrderHero.Received -> R.string.order_hero_received_sub
+        OrderHero.CallToConfirm -> R.string.order_hero_call_to_confirm_sub
         OrderHero.AwaitingAvailability -> R.string.order_hero_awaiting_availability_sub
         OrderHero.PayNow -> R.string.order_hero_pay_now_sub
         OrderHero.VerifyingProof -> R.string.order_hero_verifying_proof_sub
@@ -43,6 +45,9 @@ internal fun CancelCopy.titleRes(): Int =
     when (this) {
         CancelCopy.CustomerCancelled -> R.string.order_cancel_customer_title
         CancelCopy.PrepayTimeout -> R.string.order_cancel_prepay_title
+        CancelCopy.PrepayProofNotReviewed -> R.string.order_cancel_prepay_unreviewed_title
+        CancelCopy.PrepayProofRejected -> R.string.order_cancel_prepay_rejected_title
+        CancelCopy.BusinessNoResponse -> R.string.order_cancel_no_response_title
         CancelCopy.CouldNotConfirm -> R.string.order_cancel_unconfirmed_title
         CancelCopy.BusinessCancelled -> R.string.order_cancel_business_title
         CancelCopy.AdminCancelled -> R.string.order_cancel_admin_title
@@ -76,6 +81,18 @@ internal fun CancelCopy.bodyRes(alreadyPaid: Boolean): Int =
 
         CancelCopy.PrepayTimeout -> {
             R.string.order_cancel_prepay_body
+        }
+
+        CancelCopy.PrepayProofNotReviewed -> {
+            R.string.order_cancel_prepay_unreviewed_body
+        }
+
+        CancelCopy.PrepayProofRejected -> {
+            R.string.order_cancel_prepay_rejected_body
+        }
+
+        CancelCopy.BusinessNoResponse -> {
+            if (alreadyPaid) R.string.order_cancel_no_response_paid_body else R.string.order_cancel_no_response_body
         }
 
         CancelCopy.ProofRejected -> {

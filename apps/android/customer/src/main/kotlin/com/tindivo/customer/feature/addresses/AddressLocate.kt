@@ -36,6 +36,7 @@ internal fun AddressFormState.withReading(reading: LocationReading): AddressForm
                 val seq = (locate.located?.seq ?: 0) + 1
                 copy(
                     point = reading.point,
+                    accuracyM = reading.accuracyM,
                     saveError = null,
                     locate = done.copy(notice = null, located = Located(reading.point, seq)),
                 )

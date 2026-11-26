@@ -7,10 +7,12 @@ import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.addresses.GeoPoint
+import com.tindivo.customer.feature.addresses.isReferenceOk
 import com.tindivo.customer.feature.addresses.toWireCoordinate
 import com.tindivo.customer.feature.orders.isUnauthorized
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import com.tindivo.customer.ui.fields.normalizePePhoneInput
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -174,7 +176,9 @@ internal class CourierRequestViewModel
 
         fun setNote(text: String) = edit { copy(note = text.take(COURIER_NOTE_MAX)) }
 
-        fun setReadyAndPaid(checked: Boolean) = edit { copy(readyAndPaid = checked) }
+        fun setPrepaidConfirmed(checked: Boolean) = edit { copy(prepaidConfirmed = checked) }
+
+        fun setWeightConfirmed(checked: Boolean) = edit { copy(weightConfirmed = checked) }
 
         fun setPhone(
             end: CourierEnd,
@@ -262,11 +266,7 @@ internal class CourierRequestViewModel
             reference: String,
         ) {
             val area = mutableState.value.area
-            if (!area.contains(point) ||
-                reference.trim().length !in COURIER_REFERENCE_MIN..COURIER_REFERENCE_MAX
-            ) {
-                return
-            }
+            if (!area.contains(point) || !isReferenceOk(reference)) return
             if (takeSheet { it == CourierSheet.PinOnMap(end) } == null) return
             editPoint(end) {
                 copy(

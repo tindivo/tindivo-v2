@@ -1,27 +1,35 @@
 package com.tindivo.customer.feature.checkout
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -30,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
+import kotlinx.coroutines.launch
 
 @Composable
 fun CheckoutDestination(
@@ -105,18 +114,34 @@ internal fun CheckoutTopBar(
     onBack: () -> Unit,
 ) {
     TopAppBar(
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
         title = {
             Column {
                 Text(
                     text = stringResource(R.string.checkout_title),
+                    style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.semantics { heading() },
                 )
-                subtitle?.let { Text(text = it, style = MaterialTheme.typography.bodySmall) }
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         },
         navigationIcon = {
-            IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-                Icon(TindivoIcons.ArrowBack, contentDescription = stringResource(R.string.business_back))
+            Surface(
+                onClick = onBack,
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                shadowElevation = 2.dp,
+                modifier = Modifier.padding(start = 8.dp).size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(TindivoIcons.ArrowBack, contentDescription = stringResource(R.string.business_back))
+                }
             }
         },
     )
@@ -138,11 +163,28 @@ private fun CheckoutForm(
             null
         }
     val subtitle = listOfNotNull(state.businessName.takeIf { it.isNotBlank() }, eta).joinToString(" · ")
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val paymentFocus = remember { FocusRequester() }
     Scaffold(
         topBar = { CheckoutTopBar(subtitle = subtitle.takeIf { it.isNotEmpty() }, onBack = actions.onBack) },
-        bottomBar = { CheckoutBottomBar(state = state, form = form, openSheet = openSheet) },
+        bottomBar = {
+            CheckoutBottomBar(
+                state = state,
+                form = form,
+                openSheet = openSheet,
+                goToPayment = {
+                    scope.launch {
+                        checkoutItemIndex(PAYMENT_ITEM_KEY)?.let { listState.animateScrollToItem(it) }
+                        // TalkBack sigue el foco: sin esto se quedaba en el botón de la barra de abajo.
+                        runCatching { paymentFocus.requestFocus() }
+                    }
+                },
+            )
+        },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding =
                 PaddingValues(
@@ -151,11 +193,11 @@ private fun CheckoutForm(
                     top = padding.calculateTopPadding() + 8.dp,
                     bottom = padding.calculateBottomPadding() + 16.dp,
                 ),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             bagSection(state, actions.onBack)
             deliverySection(state, form, openSheet)
-            paymentSection(state, form)
+            paymentSection(state, form, paymentFocus)
             totalsSection(state)
         }
     }

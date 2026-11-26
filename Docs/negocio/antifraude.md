@@ -1,7 +1,8 @@
 # Antifraude: a quién se le fía la comida
 
 > Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: `app_settings`, funciones de riesgo, conteos) +
-> `develop@7d00aa4` · Fuente de las reglas: `DECISIONS.md §8` · Pedidos: `Docs/negocio/servicios/pedidos-restaurante.md`
+> `develop@7d00aa4` · enmienda 2026-11-17: «En el mostrador no se fía», contra `0283` y `payment-rules.ts` · Fuente de las reglas: `DECISIONS.md §8` · Pedidos: `Docs/negocio/servicios/pedidos-restaurante.md` ·
+> Enmienda 2026-11-21 (Jesús): reglas 4 y 6 (sin GPS; sin compra previa, solo prepago)
 
 ## Qué se protege
 
@@ -22,14 +23,24 @@ strikes. En este orden; el riesgo manda sobre cualquier historial:
 2. **Con strikes** (`customer_requires_prepayment`; strikes anclados al teléfono **y** a la dirección, de modo que
    cambiar uno no limpia el otro): con **2**, solo prepago; con **3**, bloqueo de **30 días**, tampoco prepago.
 3. **Monto grande**: por encima de **S/ 80** (`prepay_threshold`), prepago aunque sea conocido.
-4. **Compra previa** (`customer_trusted_for_contraentrega`), resuelta por el teléfono verificado por SMS: basta una
-   entrega de esta cuenta, una entrega a este teléfono (también las manuales de la cajera) o cualquier fila de este
-   teléfono en el directorio de direcciones. Con eso, contraentrega **sin llamada**. La tercera vía se puede conseguir
-   llamando al restaurante y cancelando: se acepta a propósito, porque los strikes se evalúan antes.
+4. **Compra previa** (`customer_contraentrega_decision`, en su versión de la `0286`), resuelta por el teléfono
+   verificado por SMS: basta una entrega de esta cuenta, una entrega a este teléfono (también las manuales de la cajera)
+   o una fila de este teléfono en el directorio de direcciones usada dentro de la ventana de
+   `app_settings.data_retention.addressDirectoryMonths` (24 meses; cuenta lo más reciente entre `last_used_at`,
+   `updated_at` y `created_at`). Si el número tiene otro dueño, o lo tuvo con una asignación terminada dentro de la
+   ventana de `phoneAssignmentsMonths` (24 meses), solo vale una entrega de esta cuenta a ese número hecha durante su
+   asignación actual (`0277`). Con eso, contraentrega **sin llamada**. La tercera vía se puede conseguir
+   llamando al restaurante y cancelando: se acepta a propósito, porque los strikes se evalúan antes. **Sin GPS** (permiso
+   negado o sin señal), la compra previa sigue pudiendo pagar al recibir: negarlo nunca impide pedir. El GPS no condiciona la
+   **elegibilidad** por compra previa, pero si se envía, una distancia de más de 400 m al punto de entrega pasa el pedido a la
+   llamada (`validando`, `gps_warning_zone`). Sin GPS (`failed`) ese disparador no se evalúa; siguen el bloqueo, los
+   strikes, el tope de S/ 80, la zona de entrega y las reglas generales de validación (`app_settings.validation`).
+   Consecuencia aceptada (Jesús, 2026-11-21): a quien tiene compra previa, negar el GPS le evita esa llamada por distancia
+   y las hojas «lejos» y «señal mala» de la app.
 5. **Sin historial pero con GPS en vivo dentro de San Jacinto**: puede pagar al recibir, **con llamada** (`validando`).
    **Por qué no sin llamada:** el GPS del navegador se falsifica fácil; tratarlo como compra previa regalaría
    contraentrega libre a un primer pedido falso.
-6. **Cliente nuevo sin nada de lo anterior**: prepago, o llamada.
+6. **Cliente nuevo sin nada de lo anterior**: solo prepago (el servidor ya lo hace así; decisión de Jesús, 2026-11-21).
 
 Los pedidos manuales de la cajera no pasan por estas reglas: ella tiene al cliente al teléfono.
 
@@ -44,15 +55,23 @@ en media cuadra en una hora es una noche buena, no fraude»).
 
 ## En el mostrador no se fía
 
+Pedidos que el cliente hace desde la app:
+
 | | Entrega | Recojo «ahora» | Recojo «más tarde» |
 |---|---|---|---|
-| Efectivo en caja | ✅ | ✅ | ⛔ prepago |
+| Efectivo en caja | ✅ | ⛔ prepago | ⛔ prepago |
 | Yape al recibir | ✅ | no existe | no existe |
 | Prepago con captura | ✅ | ✅ | ✅ |
 
-**Por qué:** un recojo «más tarde» es el único caso en que se cocina sin el cliente delante **y** sin nadie que cobre
-al final. Un recojo «ahora» se cobra al aceptar, antes de cocinar (`0224`). La regla vive en `customerPaymentIntents`
-(`packages/contracts`) y en el CHECK `orders_pickup_payment_chk`; solo aplica al canal de la app.
+**Todo recojo pedido desde la app va prepagado** y llega a cocina pagado (decisión de Jesús del 2026-10-29, ratificada
+el 2026-11-17; `DECISIONS.md`, «Decisiones de producto de la app cliente»). **Por qué:** en un recojo no hay motorizado
+que cobre al final, y el cliente puede no venir. Hasta la `0283`, el recojo «ahora» admitía pagar en caja; desde ella,
+`create_customer_order` rechaza todo recojo que no sea prepago (`pickup_requires_prepaid`). La regla vive en
+`customerPaymentIntents` (`packages/contracts/src/payment-rules.ts`) y en esa función; el CHECK
+`orders_pickup_payment_chk` (`0223`) queda de suelo y sigue admitiendo las filas históricas de recojo «ahora» en caja.
+
+**Solo aplica al canal de la app.** Los pedidos que la cajera teclea desde el panel del negocio
+(`create_business_manual_order`) no cambian: el cliente está en el mostrador o al teléfono y el negocio decide.
 
 ## Strikes: de dónde salen
 

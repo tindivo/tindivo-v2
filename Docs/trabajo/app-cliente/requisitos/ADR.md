@@ -1,0 +1,42 @@
+# CUS-ADR · Direcciones y mapa
+
+> Estado: **propuesto**, pendiente de aprobación de Jesús · Parte de `Docs/planes/app-cliente/README.md` · Android `feature/` `addresses` · Formato: `Docs/trabajo/movil/03-requisitos/00-formato-y-convenciones.md` con la columna `Est.` partida en **Android** e **iOS** (✅ hecho · 🟡 parcial · ⚠️ defecto · ⬜ por hacer · 📝 sin verificar en código · — no aplica). Rutas Android relativas a `apps/android/customer/src/main/kotlin/com/tindivo/customer/` (las de `core/` están en `apps/android/core/`; `res/` y `AndroidManifest.xml`, en `apps/android/customer/src/main/`). ⚙ = parámetro de `app_settings` (se lee de `GET /config`, nunca va escrito en la app). ★ = crítico de paridad.
+
+## Requisitos
+
+| ID | Requisito | Reglas y validaciones clave | Fuente | Android | iOS | Móvil |
+|---|---|---|---|---|---|---|
+| CUS-ADR-001 | **La referencia mínima es de 15 caracteres** (Decisión de Jesús, 2026-11-18: vuelve a `DECISIONS.md §13`; el código se sube de 5 a 15). La app debe permitir guardar varias direcciones con etiqueta, línea, referencia, pin y precisión. | Etiqueta **Casa/Trabajo/Otro**; línea **5-200**; referencia **15-140**; se guarda `location_accuracy_m` y `location_confirmed_at`. | `lib/address-validation.ts`; `contracts/primitives.ts:68-71` · Android: `feature/addresses/AddressRules.kt:7-10` (línea 5-200, referencia 5-140) | ✅ | ⬜ | IGUAL · M1 |
+| CUS-ADR-002 | La app debe rechazar textos basura en línea y referencia. | Solo dígitos, **≥ 4 caracteres repetidos** o **patrón repetido** (`asdfasdf`, `lala lala`) → error específico. Mismo criterio en servidor. | `address-validation.ts:25-64`; `contracts/primitives.ts:79-88` · Android: `feature/addresses/AddressRules.kt:24` (`isGarbageText`) | ✅ | ⬜ | IGUAL · M1 |
+| CUS-ADR-003 ★ | La app no debe permitir guardar una dirección sin pin, o con pin **fuera del polígono de reparto**. | Orden de faltas: ubicación → zona → dirección → referencia. Polígono ⚙ `coverage_polygon` (ray-casting, lng=x, lat=y). Un caserío fuera del polígono no puede guardar dirección (solo recojo). | `address-validation.ts:82-92`; `lib/coverage.ts:148-160` · Android: `feature/addresses/Coverage.kt:22` (`isInsideCoverage`; `address_form_outside_zone`) | ✅ | ⬜ | IGUAL · M1 |
+| CUS-ADR-004 | El centro del pueblo nunca debe usarse como ubicación por defecto. | Sin lectura del sensor ni gesto del usuario, la ubicación queda **vacía**. Cerró un defecto que guardaba la plaza como «casa». | `components/map-picker.tsx:99-107` · Android: `feature/addresses/AddressMap.kt:98` (el pin queda atenuado y sin punto hasta que se elige) | ✅ | ⬜ | IGUAL · M1 |
+| CUS-ADR-005 | Cuando el cliente toca «Usar mi ubicación», la app debe leer el GPS **una vez y con alta precisión**. | Sin caché (`maximumAge: 0`); espera ⚙ 15 s; errores `denied/timeout/unavailable/position_unavailable` con mensaje en español; con permiso denegado **no se reintenta** (no hay diálogo). El GPS es un atajo, nunca un requisito: siempre se puede mover el pin. | `lib/geolocation.ts` · Android: `feature/addresses/FusedLocationSource.kt:60` (alta precisión, una lectura, con tiempo límite) | ✅ | ⬜ | ADAPTAR · M1 |
+| CUS-ADR-006 | La app debe avisar cuando la precisión de la lectura no sirve para encontrar una puerta. | Umbral **30 m** (el motorizado usa 20: el cliente está bajo techo). | `map-picker.tsx:31-39` | ⬜ | ⬜ | ADAPTAR · M1 |
+| CUS-ADR-007 | La app debe permitir precisión **aproximada** y pedir la precisa cuando haga falta. | iOS 14+ y Android 12+ permiten conceder solo ubicación aproximada; hay que detectarlo y solicitar precisión temporal. | — · Android: `customer/src/main/AndroidManifest.xml` (pide fina y aproximada; no se encontró la solicitud de precisión temporal) | 🟡 | ⬜ | NUEVO · M1 |
+| CUS-ADR-008 | La app debe mostrar un mapa con vista previa inerte y pantalla completa para ajustar el pin. | Modos calle y satélite; el mapa no puede alejarse más del polígono + 25 %; puntos de interés (`map_landmarks`, 43). Hoy: Leaflet con teselas CARTO/Esri. En nativo: MapKit / Google Maps. | `map-picker.tsx`; `location-sheet.tsx`; `lib/landmarks.ts` · Android: `feature/addresses/AddressMap.kt` (Google Maps Compose; límites del polígono y puntos de interés no verificados) | 🟡 | ⬜ | ADAPTAR · M1 |
+| CUS-ADR-009 | La app debe mantener **una sola dirección predeterminada**. | Al borrar la predeterminada se promueve la primera restante; una dirección única lo es. | `lib/address-record.ts`; `use-account-page.ts:260-292`; `DECISIONS.md §15` · Android: `feature/addresses/AddressListViewModel.kt:101` (`makeDefault`) | ✅ | ⬜ | IGUAL · M1 |
+| CUS-ADR-010 | La app debe permitir añadir, editar, eliminar y predeterminar direcciones. | Editar no debe perder la medida del sensor. | `features/account/components/addresses-list.tsx`; `components/address-sheet.tsx` · Android: `feature/addresses/AddressFormScreen.kt` (añadir, editar y eliminar) | ✅ | ⬜ | IGUAL · M1 |
+| CUS-ADR-011 ★ | La app debe enviar con el pedido la **calidad del punto de entrega**. | `deliveryPointAccuracyM` (int > 0) y `deliveryPointConfirmedAt` (ISO con zona). Sin `confirmedAt` = nadie eligió el punto (guiarse por la referencia); con `confirmedAt` sin precisión = puesto a mano. Una precisión absurda **nunca** bloquea el pedido. | `contracts/requests.ts:69-89`; `lib/address-record.ts` · Android: `feature/checkout/CheckoutRequests.kt` (precisión y confirmación del punto) | ✅ | ⬜ | IGUAL · M1 |
+| CUS-ADR-012 ★ | La app debe mostrar la tarifa de envío según el punto **antes** de confirmar. | Bandas `near`/`far` ⚙ (`delivery_bands`, 2,00/2,50); `far` si el punto cae en una zona lejana activa (`delivery_zones`). **Solo para mostrar**: decide `delivery_band_for_point` en la RPC. Ante fallo, cobra `near`. | `lib/delivery-fee.ts` · Android: `feature/checkout/CheckoutTotalsSection.kt:44-50` (tarifa que devuelve la cotización) | ✅ | ⬜ | ADAPTAR · M1 |
+| CUS-ADR-013 | El servidor debe devolver la tarifa de envío para un punto. | Evita duplicar el ray-casting en cliente y SQL. | — | — | — | NUEVO · M1 |
+| CUS-ADR-014 | En un recojo la app no debe pedir ni enviar dirección. | Sin dirección, referencia, notas, billete ni coordenadas de entrega. | `use-checkout-actions.ts:255-320`; `order-gates.ts:55-56` · Android: `feature/checkout/CheckoutRequests.kt:74` (en recojo no manda coordenadas) | ✅ | ⬜ | IGUAL · M1 |
+| CUS-ADR-015 | Cuando el cliente pide con una dirección nueva, la app debe guardarla como «Casa» (si no tiene otra) sin bloquear el pedido. | *Best-effort*; no le quita la predeterminada. | `use-checkout-actions.ts:237-253`; `persistence.ts:198-236` | 📝 | ⬜ | IGUAL · M1 |
+
+## Requisitos nuevos (decisiones de Jesús, noviembre de 2026)
+
+Fuente de cada fila: la decisión que la origina. Android: verificado contra `apps/android/` el 2026-11-17; iOS aún no empieza.
+
+| ID | Requisito | Reglas y validaciones clave | Fuente | Android | iOS | Móvil |
+|---|---|---|---|---|---|---|
+| CUS-ADR-016 | Cuando el cliente coloca el pin, la app debe sugerir la dirección con el geocodificador del sistema, sin coste. | Android: `Geocoder`; iOS: `CLGeocoder`. Sin proveedor de pago ni servicio propio. La sugerencia es una ayuda, no un requisito: el cliente siempre puede escribir la dirección. | Decisión de Jesús, 2026-11-16 (encargo; pantalla `Direccion-mapa` del rediseño v3) · Android: no hay `Geocoder` en el código | ⬜ | ⬜ | ADAPTAR · M1 |
+| CUS-ADR-017 | La app debe permitir editar la dirección sugerida antes de guardarla. | Sigue valiendo CUS-ADR-001 (línea 5-200) y CUS-ADR-002 (textos basura). | Decisión de Jesús, 2026-11-16 (encargo) | ⬜ | ⬜ | IGUAL · M1 |
+| CUS-ADR-018 | Si el geocodificador devuelve solo la localidad, la app debe pedir al cliente que escriba la calle. | Sin calle, el motorizado no encuentra la puerta (en el checkout ya existe «Falta la calle»). Pantalla `Direccion-mapa-sin-calle` del rediseño v3. | Decisión de Jesús, 2026-11-16 (encargo) · Android: (existe el aviso de checkout `checkout_address_no_street`, no el de la sugerencia) | ⬜ | ⬜ | IGUAL · M1 |
+
+## Defectos conocidos
+
+Encontrados al especificar la web (2026-09/10); se corrigen en nativo, no se copian.
+
+| # | Requisito | Hallazgo | Dónde |
+|---|---|---|---|
+| 4 | CUS-ADR-003 (cobertura) | Los *fallback* de cobertura del cliente (`-9.1547, -78.5042`) no coinciden con los vivos (`-9.1465, -78.2779`). | `lib/coverage.ts:22-30` |
+| 5 | CUS-ADR-001 | El código dice 5; lo sube a 15 el PR de la referencia (decisión del 2026-11-18). | `contracts/primitives.ts:68` |

@@ -1,6 +1,6 @@
 'use client'
 
-import { ADDRESS_LINE_MIN, ADDRESS_REFERENCE_MIN } from '@tindivo/contracts'
+import { ADDRESS_LINE_MIN, ADDRESS_REFERENCE_API_MIN } from '@tindivo/contracts'
 import { useCallback, useMemo, useState } from 'react'
 import { getLineError, isLineOk } from '@/components/address-fields'
 import type { CheckoutViewModel } from '@/features/checkout/hooks/use-checkout'
@@ -110,10 +110,10 @@ export function useCheckoutValidation(checkout: CheckoutViewModel): UseCheckoutV
           cta: 'Corrige tu dirección',
         }
       }
-      if (reference.trim().length < ADDRESS_REFERENCE_MIN) {
+      if (reference.trim().length < ADDRESS_REFERENCE_API_MIN) {
         return {
           field: 'address',
-          message: `Agrega una referencia de al menos ${ADDRESS_REFERENCE_MIN} caracteres para que el motorizado te encuentre`,
+          message: `Agrega una referencia de al menos ${ADDRESS_REFERENCE_API_MIN} caracteres para que el motorizado te encuentre`,
           cta: 'Agrega una referencia',
         }
       }
