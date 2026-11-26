@@ -48,6 +48,24 @@ export const isMoneyNumber = (v: unknown): v is number =>
   isPlainNumber(v) && Math.abs(v) <= MAX_MONEY && Math.round(v * 100) / 100 === v
 
 /**
+ * ¿El TEXTO de un número JSON (`value::text` de PostgreSQL, que conserva todos sus dígitos) tiene
+ * céntimos completos? JavaScript lee `79.99999999999999999` como 80, pero PostgreSQL lo compara
+ * exacto: con el `double` ya redondeado no se puede saber (CAX-012), hace falta el texto crudo.
+ */
+export const isExactCentsText = (t: unknown): boolean =>
+  typeof t === 'string' && /^-?\d+(\.\d{1,2})?$/.test(t)
+
+/** El texto crudo del valor de una banda dentro del texto jsonb de `delivery_bands`. */
+export const rawBandText = (
+  rawBands: string | null | undefined,
+  band: DeliveryBand,
+): string | null => {
+  const m =
+    typeof rawBands === 'string' ? new RegExp(`"${band}":\\s*(-?[0-9.eE+-]+)`).exec(rawBands) : null
+  return m?.[1] ?? null
+}
+
+/**
  * Solo para PINTAR (nunca para rechazar): el número que un valor presente daba en la cotización
  * antes de este cierre (`Number(valor)`; un número JSON con fracción de céntimo, como `16.005`, también se pinta tal cual: también `"0x10"`, que SQL convierte igual a 16, CAX-007),
  * o `NaN` si la cadena está en blanco, no es un número finito o su valor no cabe en
@@ -74,6 +92,8 @@ export function nominalDeliveryFee(
   band: DeliveryBand,
   bandsSetting: unknown,
   businessDeliveryFee: number | string | null,
+  /** `delivery_bands::text`. Si se pasa, un número con más precisión que céntimos no es fiable (CAX-012). */
+  rawBandsText?: string | null,
 ): NominalDeliveryFee {
   let reliable = true
   let fromBands = Number.NaN
@@ -83,8 +103,11 @@ export function nominalDeliveryFee(
     } else {
       const raw = (bandsSetting as Record<string, unknown>)[band]
       if (raw !== null && raw !== undefined) {
-        if (isMoneyNumber(raw)) fromBands = raw
-        else {
+        if (isMoneyNumber(raw)) {
+          fromBands = raw
+          if (rawBandsText !== undefined && !isExactCentsText(rawBandText(rawBandsText, band)))
+            reliable = false
+        } else {
           reliable = false
           fromBands = paintable(raw)
         }

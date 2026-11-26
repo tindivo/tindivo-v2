@@ -70,7 +70,7 @@ export async function quoteDelivery(
     }
     const { data: bandsSetting, error: bandsErr } = await service
       .from('app_settings')
-      .select('value')
+      .select('value, raw:value::text')
       .eq('key', 'delivery_bands')
       .maybeSingle()
     if (bandsErr) {
@@ -90,7 +90,12 @@ export async function quoteDelivery(
       }
       businessFee = biz?.delivery_fee ?? null
     }
-    const fee = nominalDeliveryFee(deliveryBand, bandsSetting?.value, businessFee)
+    const fee = nominalDeliveryFee(
+      deliveryBand,
+      bandsSetting?.value,
+      businessFee,
+      bandsErr ? undefined : (bandsSetting?.raw ?? null),
+    )
     // Una tarifa de banda PRESENTE pero que no es un número: SQL falla al convertirla; el respaldo
     // sirve para pintar, no para rechazar (CAX-006).
     if (!fee.reliable) {

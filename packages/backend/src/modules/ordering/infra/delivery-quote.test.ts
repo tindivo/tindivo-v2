@@ -24,7 +24,14 @@ function fake(script: Script): { service: TypedSupabaseClient; asUser: TypedSupa
       return script.bandsError
         ? { data: null, error: fail }
         : {
-            data: script.bands === null ? null : { value: script.bands ?? { near: 2, far: 2.5 } },
+            data:
+              script.bands === null
+                ? null
+                : (() => {
+                    const value = script.bands ?? { near: 2, far: 2.5 }
+                    // `raw` es `value::text` de PostgreSQL; JSON.stringify da las mismas cifras ordinarias.
+                    return { value, raw: JSON.stringify(value) }
+                  })(),
             error: null,
           }
     }

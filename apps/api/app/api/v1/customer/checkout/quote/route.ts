@@ -1,5 +1,6 @@
 import {
   cents,
+  isExactCentsText,
   isMoneyNumber,
   MAX_MONEY,
   planQuotePayment,
@@ -190,13 +191,15 @@ export async function POST(req: Request): Promise<Response> {
     // ── Vuelto máximo y umbral de prepago ────────────────────────────────────
     const { data: settings, error: settingsErr } = await service
       .from('app_settings')
-      .select('key,value')
+      .select('key,value,raw:value::text')
       .in('key', ['prepay_threshold', 'max_change', 'max_cash_bill'])
     // Lectura fallida ≠ clave ausente: con la lectura rota los respaldos (80 / 100)
     // podrían ofrecer más que los ajustes reales, así que `payment` va al lado seguro.
     if (settingsErr) console.error('[checkout/quote] ajustes:', settingsErr.message)
     const setting = (key: string): unknown => settings?.find((s) => s.key === key)?.value
     const rawThreshold = setting('prepay_threshold')
+    // El texto crudo (`value::text`) conserva todos los dígitos que `JSON.parse` redondea (CAX-012).
+    const rawThresholdText = settings?.find((s) => s.key === 'prepay_threshold')?.raw
     const threshold = Number(rawThreshold ?? 80)
     // La decisión usa los céntimos SIN acotar, igual que develop (CAX-011): subtotal y envío caben cada
     // uno en numeric(10,2) pero su suma puede pasar de MAX_MONEY, y acotar el umbral cambiaría el resultado.
@@ -212,7 +215,9 @@ export async function POST(req: Request): Promise<Response> {
     // (JavaScript usa 80, SQL 16) o `49.995` (JavaScript redondea) deja la decisión a SQL.
     const amountsCertain =
       deliveryReliable &&
-      (rawThreshold === undefined || rawThreshold === null || isMoneyNumber(rawThreshold))
+      (rawThreshold === undefined ||
+        rawThreshold === null ||
+        (isMoneyNumber(rawThreshold) && isExactCentsText(rawThresholdText)))
 
     const { data: change, error: changeErr } = await asUser.rpc('effective_max_change', {
       p_business_id: body.businessId,

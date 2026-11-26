@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { cents, isMoneyNumber, isPlainNumber, nominalDeliveryFee } from './delivery-fee'
+import {
+  cents,
+  isExactCentsText,
+  isMoneyNumber,
+  isPlainNumber,
+  nominalDeliveryFee,
+  rawBandText,
+} from './delivery-fee'
 
 describe('cents', () => {
   it('pasa soles a céntimos enteros sin error de coma flotante', () => {
@@ -246,5 +253,59 @@ describe('CAX-009: isMoneyNumber solo admite céntimos completos del valor recib
   })
   it('la tarifa del negocio numérica con fracción de céntimo también se pinta, reliable false', () => {
     expect(nominalDeliveryFee('near', {}, 16.005)).toEqual({ cents: 1601, reliable: false })
+  })
+})
+
+describe('CAX-012: el texto crudo decide si un número tiene céntimos completos', () => {
+  it.each([
+    ['2', true],
+    ['2.5', true],
+    ['2.50', true],
+    ['-16', true],
+    ['2.0000000000000000001', false],
+    ['79.99999999999999999', false],
+    ['2.005', false],
+    ['1e1', false],
+    [null, false],
+    [undefined, false],
+  ])('isExactCentsText(%s) = %s', (t, esperado) => {
+    expect(isExactCentsText(t)).toBe(esperado)
+  })
+
+  it('rawBandText saca el número de la banda del texto jsonb', () => {
+    const t = '{"far": 2.5, "near": 2.0000000000000000001}'
+    expect(rawBandText(t, 'near')).toBe('2.0000000000000000001')
+    expect(rawBandText(t, 'far')).toBe('2.5')
+    expect(rawBandText('{"far": 2.5}', 'near')).toBeNull()
+    expect(rawBandText(null, 'near')).toBeNull()
+  })
+
+  it('una tarifa con más precisión que un double: se pinta igual y no es fiable', () => {
+    const crudo = '{"far": 2.5, "near": 2.0000000000000000001}'
+    expect(nominalDeliveryFee('near', { near: 2, far: 2.5 }, 3, crudo)).toEqual({
+      cents: 200,
+      reliable: false,
+    })
+  })
+
+  it('con el texto crudo en céntimos completos sigue siendo fiable; sin texto, no se comprueba', () => {
+    expect(nominalDeliveryFee('near', { near: 2, far: 2.5 }, 3, '{"far": 2.5, "near": 2}')).toEqual(
+      {
+        cents: 200,
+        reliable: true,
+      },
+    )
+    expect(nominalDeliveryFee('near', { near: 2, far: 2.5 }, 3)).toEqual({
+      cents: 200,
+      reliable: true,
+    })
+  })
+
+  it('la otra banda no afecta: far con precisión de más, near ordinaria', () => {
+    const crudo = '{"far": 2.5000000000000000001, "near": 2}'
+    expect(nominalDeliveryFee('near', { near: 2, far: 2.5 }, 3, crudo)).toEqual({
+      cents: 200,
+      reliable: true,
+    })
   })
 })

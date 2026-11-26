@@ -1621,6 +1621,11 @@ describe('POST /customer/checkout/quote · payment', () => {
         it.each([
           ['"+0x10" (SQL: 16)', '"+0x10"', '(S/ 50.00) pasa de'],
           ['49.995 (SQL compara exacto)', '49.995', '(S/ 50.00) pasa de'],
+          [
+            '49.99999999999999999 (JavaScript lo lee como 50; SQL compara exacto, CAX-012)',
+            '49.99999999999999999',
+            '(S/ 50.00) pasa de',
+          ],
         ])('CAX-010 · umbral %s: la cotización conserva prepaid; SQL rechaza la contraentrega y el prepago crea el pedido', async (_n, crudo, detalle) => {
           const c = await clienteDeConfianza()
           await conUmbralCrudo(crudo, async () => {
@@ -1640,6 +1645,32 @@ describe('POST /customer/checkout/quote · payment', () => {
               envio: 2,
             })
             expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
+          })
+        })
+
+        // CAX-012: una tarifa con más dígitos de los que caben en un double (JavaScript la lee como 2;
+        // SQL conserva 2.0000000000000000001 y 50.0000000000000000001 > 50) no es cierta: prepaid se conserva.
+        it('CAX-012 · tarifa 2.0000000000000000001, umbral 50: la cotización conserva prepaid; SQL rechaza la contraentrega', async () => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo('2.0000000000000000001', async () => {
+            await conUmbral(50, async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              prepagoPresente(cot)
+              for (const intent of ['pending_cash', 'pending_yape'] as const) {
+                const r = await crear(c, intent)
+                expect(r.status, `${intent}: ${JSON.stringify(r.body)}`).toBe(422)
+                expect(r.body.detail).toContain('(S/ 50.00) pasa de')
+              }
+              expect(await pedidosDe(c)).toBe(0)
+              const prepago = await crear(c, 'prepaid')
+              expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+              expect(await importesGuardados(prepago.body.data.id)).toEqual({
+                subtotal: 48,
+                envio: 2,
+              })
+              expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
+            })
           })
         })
 
