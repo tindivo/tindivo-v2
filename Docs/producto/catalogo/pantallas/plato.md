@@ -66,7 +66,7 @@ codigo:
 
 Al hacer scroll la foto sube y se achica (parallax 0,5×); al llegar al nombre aparece la barra compacta. Elegir una opción:
 el radio se rellena con rebote de 150 ms y «Obligatorio» cambia a «Listo» con un check que se dibuja. Al completar lo
-obligatorio el botón pasa de gris a naranja con un pulso de escala 1,03 y el total cuenta hacia el nuevo monto. Agregar:
+obligatorio el botón pasa de «Elige tu [grupo]» a «Agregar · S/ [TOTAL]» con un pulso de escala 1,03 (nunca se apaga) y el total cuenta hacia el nuevo monto. Agregar:
 la foto vuela a la pastilla de bolsa. Con «reducir movimiento»: sin parallax ni vuelo, solo cambios de color.
 
 ## Pendiente

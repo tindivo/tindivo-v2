@@ -69,7 +69,7 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
 | CA-CRT-07 | Dado un negocio cerrado, cuando se abre su bolsa, entonces «Continuar» no avanza y dice «El restaurante está cerrado ahora». | CUS-CRT-009 |
 | CA-CRT-08 | Dado una bolsa con el método recojo, entonces la etiqueta dice «Recojo» y no aparece la fila del envío. | CUS-CRT-010 |
 | CA-CRT-09 | Dado el vector compartido de topes, entonces la bolsa no deja pasar de `CART_MAX_LINES` líneas, `CART_MAX_QUANTITY` unidades ni `CART_MAX_MODIFIERS` opciones, y el servidor rechaza con 422 el mismo exceso. | CUS-CRT-011 |
-| CA-CRT-10 | Dado tres líneas, cuando se quita la segunda y se toca «Deshacer» antes de 5 s, entonces vuelve en la segunda posición con su cantidad y el subtotal regresa; pasados 5 s ya no se puede. | CUS-CRT-013 |
+| CA-CRT-10 | Dado tres líneas, cuando se quita la segunda y se toca «Deshacer» antes de 5 s, entonces vuelve en la segunda posición con su cantidad y el subtotal regresa; pasados 5 s ya no se puede. Con lector de pantalla activo no hay plazo: el aviso se va al tocar «Deshacer», al hacer otro cambio en la bolsa o al salir de ella. | CUS-CRT-013 |
 | CA-CRT-11 | Dado una línea de un plato con opciones, cuando se edita y se guardan otras opciones, entonces la línea cambia en su sitio; si queda idéntica a otra, se fusionan. | CUS-CRT-014, CUS-CRT-002 |
 | CA-CRT-12 | Dado cualquier cambio de cantidad, quitar o deshacer, entonces el monto de «Continuar» es igual al subtotal. | CUS-CRT-015 |
 | CA-CRT-13 | Dado una bolsa con líneas, cuando se toca «Vaciar» y se confirma, entonces queda vacía; si se cancela, no cambia. | CUS-CRT-016 |
