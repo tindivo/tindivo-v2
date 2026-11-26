@@ -76,7 +76,7 @@ codigo:
 - **Textos de los avisos de línea:** se usan los de la frontmatter (`bolsa.linea.*`), que son los de Android en la
   rama de la bolsa. iOS los adopta; los textos de iOS de hoy quedan retirados.
 - **Carta que no responde:** «Continuar» se bloquea con «Reintentar». No se deja pasar.
-- **Importe no mostrable:** se muestra «—», «Agregar» se bloquea y la bolsa avisa. Android deja de cerrar la app.
+- **Importe no mostrable:** se muestra «—», «Agregar» se bloquea y la bolsa avisa.
 - **Textos aprobados** (2026-11-26, con propuesta de criterio del asesor de producto): carta caída
   (`bolsa.carta.no_responde`), importe no mostrable en la línea y en la bolsa (`bolsa.linea.importe_no_mostrable`,
   `bolsa.importe_no_mostrable`) y el botón de edición «Guardar · %s» (`bolsa.editar.guardar`, el texto de Android; iOS lo adopta).
