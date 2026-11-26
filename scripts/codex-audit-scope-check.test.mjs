@@ -336,11 +336,33 @@ describe('comillas POSIX del argv de Codex', () => {
     for (const [name, script] of [
       ['comillas vacías parten la unidad', "Get-Content C'':/Windows/win.ini"],
       ['comillas parten el proveedor', "Get-ChildItem HK''CU:\\Software"],
-      ['comillas intercaladas parten la unidad', "Get-Content C'':\\x"],
-      ['comillas parten un nombre sensible', "Get-Content x\\.s''sh\\id_rsa"],
+      ['comillas intercaladas parten la unidad', "Get-Content C':'\\x"],
+      ['comillas parten un nombre sensible', "Get-Content x\\.s''sh\\config"],
+      [
+        'variable vacía y acento grave arman la unidad',
+        `Get-Content $x"C${BT}:${BS}Windows${BS}win.ini"`,
+      ],
+      ['variable vacía y acento grave arman el proveedor', `Get-ChildItem $x"Env${BT}:"`],
+      [
+        'variable vacía y acento grave arman el registro',
+        `Get-ChildItem $x"HK${BT}CU:${BS}Software"`,
+      ],
     ])
       test(`${name} → 1`, () => {
         assert.equal(run(withCmd(ps2(script))).status, 1)
+        assert.equal(run(withCmd(ps(script))).status, 1) // con la serialización real de Codex
+      })
+    for (const [name, script] of [
+      ['rg con "clave": entre comillas', `rg -n '"env":' turbo.json`],
+      ['Select-String con "function":', `Get-Content package.json | Select-String '"function":'`],
+      ['argumento JSON de una letra', `node evidencia/arnes.mjs '{"x":1,"y":2}'`],
+      ['rg con "x": 1', `rg -n '"x": 1' evidencia`],
+      ['rg con case de una letra', `rg -n "case 'a':" src`],
+      ['rg con ternario', `rg -n "?'a':'b'" src`],
+    ])
+      test(`${name} → 0`, () => {
+        assert.equal(run(withCmd(ps2(script))).status, 0)
+        assert.equal(run(withCmd(ps(script))).status, 0)
       })
     test('error de reconexión tras turn.completed sin comandos → 1', () => {
       assert.equal(run(jl(started, done, reconnecting)).status, 1)

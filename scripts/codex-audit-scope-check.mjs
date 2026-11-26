@@ -93,6 +93,34 @@ function decodePosix(text) {
   return quote === null ? out : null
 }
 
+/**
+ * Quita los tramos entre comillas pegados a texto suelto, como hace PowerShell al armar un argumento:
+ * `C'':/W` llega como `C:/W` y `HK''CU:` como `HKCU:`. Un tramo que empieza tras un espacio, un
+ * delimitador o el inicio conserva sus comillas (es un argumento propio o una cadena).
+ */
+function stripGluedQuotes(text) {
+  let out = ''
+  let i = 0
+  while (i < text.length) {
+    const c = text[i]
+    if (c !== "'" && c !== '"') {
+      out += c
+      i++
+      continue
+    }
+    const close = text.indexOf(c, i + 1)
+    if (close < 0) {
+      out += text.slice(i)
+      break
+    }
+    const prev = out.at(-1)
+    const glued = prev !== undefined && !/[\s'"(){};,|&]/.test(prev)
+    out += glued ? text.slice(i + 1, close) : text.slice(i, close + 1)
+    i = close + 1
+  }
+  return out
+}
+
 function main() {
   const [eventsPath, auditRootArg] = process.argv.slice(2)
   if (!eventsPath || !auditRootArg) {
@@ -211,10 +239,14 @@ function main() {
     const normalize = (t) => t.replaceAll('/', '\\').replace(rootRe, '<ROOT>')
     const decodedScan = decoded === null ? undefined : normalize(decoded)
     // PowerShell quita el acento grave de escape: \`\server llega al cmdlet como \\server.
-    // Y las comillas que quedan dentro del script (`C'':`, `HK''CU:`) las quita al armar el argumento.
-    const psScan =
-      decoded === null ? undefined : normalize(decoded.replace(/`(.)/gs, '$1').replace(/['"]/g, ''))
-    const decodedScans = [decodedScan, psScan].filter((t) => t !== undefined)
+    const noBackticks = decoded?.replace(/`(.)/gs, '$1')
+    const psScan = noBackticks === undefined ? undefined : normalize(noBackticks)
+    // Un argumento que empieza con texto suelto absorbe los tramos entre comillas pegados a él
+    // (`C'':/W` llega como `C:/W`); uno que empieza con comilla termina en ella (`'C':\\W` son dos).
+    // Se SUMA a las variantes anteriores: el conjunto de hallazgos nunca es menor que el de antes.
+    const psScanNoQuotes =
+      noBackticks === undefined ? undefined : normalize(stripGluedQuotes(noBackticks))
+    const decodedScans = [decodedScan, psScan, psScanNoQuotes].filter((t) => t !== undefined)
 
     const both = [
       [SENSITIVE, 'nombre sensible'],
