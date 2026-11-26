@@ -6,7 +6,7 @@
 # No se enumeran las credenciales que podrían venir exportadas (siempre faltaría alguna): se quita del entorno TODO lo
 # que no haga falta para que arranquen bash, git, docker, gpg, node y powershell. La lista lleva NOMBRES EXACTOS, sin
 # prefijos ni comodines: una variable BASH_LO_QUE_SEA o MSYSTEM_LO_QUE_SEA exportada también se quita. Solo órdenes
-# internas de bash: ningún programa externo arranca antes de terminar la limpieza.
+# internas de bash y /usr/bin/env (capa 1): ningún otro programa arranca antes de terminar la limpieza.
 set +a
 _permitida() {
   case "$1" in
@@ -22,16 +22,44 @@ _permitida() {
   esac
   return 1
 }
+_nombres() { # escribe en _N los nombres de todas las variables (bash solo ve las de nombre válido)
+  _N=("${!A@}" "${!B@}" "${!C@}" "${!D@}" "${!E@}" "${!F@}" "${!G@}" "${!H@}" "${!I@}" "${!J@}" "${!K@}" "${!L@}" "${!M@}"
+    "${!N@}" "${!O@}" "${!P@}" "${!Q@}" "${!R@}" "${!S@}" "${!T@}" "${!U@}" "${!V@}" "${!W@}" "${!X@}" "${!Y@}" "${!Z@}"
+    "${!a@}" "${!b@}" "${!c@}" "${!d@}" "${!e@}" "${!f@}" "${!g@}" "${!h@}" "${!i@}" "${!j@}" "${!k@}" "${!l@}" "${!m@}"
+    "${!n@}" "${!o@}" "${!p@}" "${!q@}" "${!r@}" "${!s@}" "${!t@}" "${!u@}" "${!v@}" "${!w@}" "${!x@}" "${!y@}" "${!z@}" "${!_@}")
+}
+# Capa 1: el guion se relanza a sí mismo con `env -i` y SOLO las variables permitidas. Es la única forma de quitar las
+# entradas del entorno cuyo nombre no es válido para bash (`MI-TOKEN`, `npm_config_//registro/:_authToken`…): bash
+# no las ve ni las puede borrar, pero las pasaría tal cual a cada hijo. Antes del relanzamiento no arranca ningún
+# programa salvo /usr/bin/env, que no reenvía nada fuera de lo que recibe en sus argumentos. `exec` conserva el PID:
+# la marca vale el PID, así que una marca heredada del entorno no sirve para saltarse este paso.
+_relanzar_limpio() {
+  local - _n _a=()
+  set +u
+  _nombres
+  for _n in "${_N[@]}"; do
+    case "$_n" in '' | _n | _a | _N | _GUION | _TINDIVO_LIMPIO) continue ;; esac
+    if [[ "${!_n@a}" == *x* ]] && _permitida "$_n"; then _a+=("$_n=${!_n}"); fi
+  done
+  exec /usr/bin/env -i "${_a[@]}" _TINDIVO_LIMPIO="$$" "$BASH" "$_GUION" "$@"
+}
+# El guion que cargó este archivo es el que se relanza. Si no lo cargó un archivo (bash -c, terminal), no se sigue.
+_GUION="${BASH_SOURCE[1]:-}"
+if [ -z "$_GUION" ] || [ ! -f "$_GUION" ]; then
+  echo 'comun.sh solo se carga desde un guion (copia.sh, verificar.sh)' >&2
+  exit 64
+fi
+[ "${_TINDIVO_LIMPIO:-}" = "$$" ] || _relanzar_limpio "$@"
+unset _TINDIVO_LIMPIO _N _GUION
+# Capa 2: lo que el propio bash haya creado o importado al arrancar se vuelve a filtrar, y se comprueba.
 _exportadas() { # escribe en _X los nombres de todas las variables exportadas que no están en la lista
   # `local -` devuelve las opciones al salir; sin -u, ${!_n@a} no falla con las declaradas sin valor (BASH_ARGV…).
   local - _n
   set +u
   _X=()
-  for _n in "${!A@}" "${!B@}" "${!C@}" "${!D@}" "${!E@}" "${!F@}" "${!G@}" "${!H@}" "${!I@}" "${!J@}" "${!K@}" "${!L@}" "${!M@}" \
-    "${!N@}" "${!O@}" "${!P@}" "${!Q@}" "${!R@}" "${!S@}" "${!T@}" "${!U@}" "${!V@}" "${!W@}" "${!X@}" "${!Y@}" "${!Z@}" \
-    "${!a@}" "${!b@}" "${!c@}" "${!d@}" "${!e@}" "${!f@}" "${!g@}" "${!h@}" "${!i@}" "${!j@}" "${!k@}" "${!l@}" "${!m@}" \
-    "${!n@}" "${!o@}" "${!p@}" "${!q@}" "${!r@}" "${!s@}" "${!t@}" "${!u@}" "${!v@}" "${!w@}" "${!x@}" "${!y@}" "${!z@}" "${!_@}"; do
-    case "$_n" in '' | _n | _X) continue ;; esac
+  _nombres
+  for _n in "${_N[@]}"; do
+    case "$_n" in '' | _n | _X | _N) continue ;; esac
     # Solo interesan las exportadas (las que heredaría un hijo); el atributo se lee sin lanzar nada.
     [[ "${!_n@a}" == *x* ]] || continue
     _permitida "$_n" || _X+=("$_n")
@@ -43,7 +71,7 @@ for _v in "${_X[@]}"; do
   unset "$_v" 2>/dev/null || export -n "$_v" 2>/dev/null || true
 done
 # Las funciones exportadas viajan a los hijos como variables BASH_FUNC_<nombre>%%: se borran todas. En este punto
-# solo existen las que trajo el entorno y las dos de arriba. La subcapa de <( ) es bash (sin programas externos).
+# no debería quedar ninguna (env -i no las pasa); esto es la segunda capa. La subcapa de <( ) es bash, sin programas.
 while read -r _ _ _v; do
   case "$_v" in _permitida | _exportadas) export -nf "$_v" 2>/dev/null || true ;; *) unset -f "$_v" 2>/dev/null || export -nf "$_v" 2>/dev/null || true ;; esac
 done < <(declare -F -x)

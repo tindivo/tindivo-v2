@@ -259,12 +259,20 @@ test('guarda: contra prod no corre sin terminal, ni con argumentos raros', () =>
 })
 
 test('guarda: reglas de la clave de cifrado', () => {
-  const probar = (clave) =>
-    spawnSync('bash', ['-c', 'source ./comun.sh; validar_clave "$1"', '_', clave], { cwd: DIR, encoding: 'utf8' }).status
-  assert.equal(probar('una clave larga de verdad 2026'), 0)
-  assert.notEqual(probar('corta'), 0)
-  assert.notEqual(probar('clave con eñe y tilde larguísima'), 0)
-  assert.notEqual(probar(' empieza con espacio y es larga'), 0)
+  // comun.sh solo se carga desde un archivo (se relanza a sí mismo con env -i): se usa un guion temporal.
+  const dir = mkdtempSync(join(tmpdir(), 'copia-clave-'))
+  try {
+    writeFileSync(join(dir, 'probar.sh'), `source "${join(DIR, 'comun.sh').replaceAll('\\', '/')}"\nvalidar_clave "$1"\n`)
+    const probar = (clave) => spawnSync('bash', [join(dir, 'probar.sh'), clave], { encoding: 'utf8' }).status
+    assert.equal(probar('una clave larga de verdad 2026'), 0)
+    assert.notEqual(probar('corta'), 0)
+    assert.notEqual(probar('clave con eñe y tilde larguísima'), 0)
+    assert.notEqual(probar(' empieza con espacio y es larga'), 0)
+    // Cargado desde bash -c (sin archivo) no sigue: no habría a quién relanzar con el entorno limpio.
+    assert.equal(spawnSync('bash', ['-c', 'source ./comun.sh; echo siguio'], { cwd: DIR, encoding: 'utf8' }).status, 64)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 // --- Ronda 3 -----------------------------------------------------------------------------------------------------
@@ -420,8 +428,9 @@ test('guarda: una credencial heredada del entorno no llega ni al primer proceso 
     const shim = [
       '#!/usr/bin/env bash',
       'd="${BASH_SOURCE[0]%/*}"; n="${BASH_SOURCE[0]##*/}"',
-      // export -p no lista funciones: declare -fx muestra las exportadas, que viajan como BASH_FUNC_<nombre>%%.
-      'case "$(export -p; declare -fx) $*" in *MARCADOR_HEREDADO*) r=CON_MARCADOR ;; *) r=limpio ;; esac',
+      // El entorno REAL que recibió el proceso (/usr/bin/env): export -p no muestra los nombres que bash no admite
+      // (MI-TOKEN, A.B…) ni las funciones exportadas, que viajan como BASH_FUNC_<nombre>%%.
+      'case "$(/usr/bin/env) $*" in *MARCADOR_HEREDADO*) r=CON_MARCADOR ;; *) r=limpio ;; esac',
       'printf \'%s %s\\n\' "$n" "$r" >> "$d/registro.txt"',
       'exit 1',
       '',
@@ -439,11 +448,15 @@ test('guarda: una credencial heredada del entorno no llega ni al primer proceso 
       'SUPABASE_DB_URL', 'SUPABASE_SERVICE_KEY', 'POSTGRES_URL_NON_POOLING', 'DIRECT_URL', 'JWT_SECRET', 'SERVICE_ROLE_KEY',
       'VERCEL_TOKEN', 'GH_TOKEN', 'AWS_SECRET_ACCESS_KEY', 'UNA_VARIABLE_CUALQUIERA', 'otra_en_minusculas', '_RARA',
       // CAX-001: la lista de permitidas lleva nombres exactos; nada que empiece por BASH o MSYSTEM_ pasa por serlo.
-      'BASH_FOO', 'BASHFOO', 'BASH_ENV', 'BASH_VERSION_FALSA', 'MSYSTEM_FOO', 'MSYSTEM_TOKEN', 'MSYSTEMX']
+      'BASH_FOO', 'BASHFOO', 'BASH_ENV', 'BASH_VERSION_FALSA', 'MSYSTEM_FOO', 'MSYSTEM_TOKEN', 'MSYSTEMX',
+      // Nombres que bash no admite como variable: no los ve ni los puede borrar; solo el relanzamiento con env -i los quita.
+      'UN-TOKEN', 'A.B', 'npm_config_//registro.invalid/:_authToken']
     const env = { ...process.env, PATH: `${dir}${delimiter}${process.env.PATH}` }
     for (const v of heredadas) env[v] = 'MARCADOR_HEREDADO'
     // Una función exportada con un secreto dentro: también es una variable de entorno (BASH_FUNC_<nombre>%%).
     env['BASH_FUNC_secreto_heredado%%'] = '() { echo MARCADOR_HEREDADO; }'
+    // Una marca de «ya relanzado» que venga del entorno no evita el relanzamiento (vale el PID, no un 1).
+    env._TINDIVO_LIMPIO = '1'
     const correr = (guion, args, extra = {}) =>
       spawnSync('bash', [`./${guion}`, ...args], { cwd: DIR, input: '', encoding: 'utf8', env: { ...env, ...extra } })
 

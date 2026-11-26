@@ -66,7 +66,7 @@ comparar() { # parte, registro nuevo
     log "$1: íntegra (manifiesto $ahora; no hay registro original con qué compararlo)"
   fi
   if [ "$1" != 1-base ] && [ "$(estado_de "$2")" != COMPLETA ]; then
-    FALTAS+=("$1 está PARCIAL (le faltan archivos o consultas)")
+    FALTAS+=("$1 está PARCIAL (le faltan archivos)")
   fi
 }
 FALTAS=()
@@ -83,14 +83,17 @@ else
   log '2-storage: no está en esta copia'
   FALTAS+=('2-storage no está en esta copia')
 fi
-# La configuración externa nunca entra en esta copia (va en otra entrega): en una copia de prod se declara.
-[ "$PERMITIR" = 1 ] || FALTAS+=('sin configuración externa (Auth, Edge Functions): no entra en esta copia; va en otra entrega')
+# La configuración externa nunca entra en esta copia (va en otra entrega): se declara siempre, sin leer RESUMEN.txt
+# (está en claro y fuera de SHA256SUMS: no puede decidir si una copia está completa).
+FALTAS+=('sin configuración externa (Auth, Edge Functions): no entra en esta copia; va en otra entrega')
 rm -rf -- "$REG"
 
 sin_contenedores_vivos || fallo 'quedó un contenedor sin borrar: docker ps -a --filter label=tindivo-copia'
-if [ "${#FALTAS[@]}" -gt 0 ]; then
-  paso 'VERIFICADA, PERO ES UNA COPIA PARCIAL: lo que hay está entero y se abre con tu clave; falta esto:'
-  printf -- '- %s\n' "${FALTAS[@]}" >&2
-  exit 3
+paso 'VERIFICADA, PERO ES UNA COPIA PARCIAL: lo que hay está entero y se abre con tu clave; falta esto:'
+printf -- '- %s\n' "${FALTAS[@]}" >&2
+if [ "${#FALTAS[@]}" -eq 1 ]; then
+  paso 'PARCIAL ESPERADA: base y Storage enteros; solo falta la configuración externa (otra entrega).'
+else
+  paso "PARCIAL CON FALTAS: además de la configuración externa, faltan $((${#FALTAS[@]} - 1)) cosa(s)."
 fi
-paso 'VERIFICADA: COPIA COMPLETA. Los archivos están enteros, se abren con tu clave y el dump se lee completo.'
+exit 3

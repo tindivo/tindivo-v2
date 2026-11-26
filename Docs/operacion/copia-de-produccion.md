@@ -11,9 +11,9 @@ Guiones: `scripts/prod-backup/`. Plan: `Docs/planes/migraciones/plan-diario.md` 
 se saca con él presente. Y, por la noche: esta entrega **no lleva el inventario de la configuración externa** (Auth,
 Edge Functions, secretos de la plataforma). Ese inventario va en otra entrega, con capturas del panel.
 
-> **La copia de prod sale PARCIAL, y es lo esperado.** Le falta, a propósito, la configuración externa: Auth (URL del
-> sitio, proveedores, plantillas, hooks), Edge Functions (versión y estado) y los nombres de los secretos. Por eso,
-> contra prod, `copia.sh` y `verificar.sh` terminan siempre en **`COPIA PARCIAL` (código 3)** con el motivo
+> **La copia sale PARCIAL, y es lo esperado.** Le falta, a propósito, la configuración externa: Auth (URL del
+> sitio, proveedores, plantillas, hooks), Edge Functions (versión y estado) y los nombres de los secretos. Por eso
+> `copia.sh` y `verificar.sh` terminan siempre en **`COPIA PARCIAL` (código 3)** con el motivo
 > `sin configuración externa (Auth, Edge Functions)…`. Si ese es **el único** motivo, la copia de base y Storage salió
 > entera. **P0.5 no se cierra** hasta tener también ese inventario.
 
@@ -21,8 +21,8 @@ Edge Functions, secretos de la plataforma). Ese inventario va en otra entrega, c
 
 `copia.sh` saca dos archivos cifrados. Cada parte se cifra por separado. Si se omite una parte o falta un archivo de
 Storage, el resultado es **COPIA PARCIAL** (queda `PARCIAL.txt` con los motivos y el guion termina con código 3): sirve
-como copia de lo que sí lleva, pero **no cierra P0.5**. Contra prod, además, siempre figura el motivo de la
-configuración externa (ver arriba). Contra la base local, con las dos partes enteras, sale `COPIA COMPLETA`.
+como copia de lo que sí lleva, pero **no cierra P0.5**. Además, siempre figura el motivo de la configuración
+externa (ver arriba), también en los ensayos contra la base local.
 
 | Archivo | Qué lleva | Credencial que pide |
 |---|---|---|
@@ -53,9 +53,9 @@ Lo que garantiza, y cómo:
 - **Las credenciales no se guardan.** Se escriben a mano en la terminal (no se ven), viven en la memoria del proceso y
   no pasan por argumentos, archivos ni registros; cada una llega solo al proceso que la usa (la contraseña, a `psql`
   y `pg_dump`; la `service_role`, a Node). Con `--destino prod` el guion se niega a correr sin
-  una terminal. Antes de lanzar ningún programa, el guion reduce el entorno a una lista corta de variables permitidas,
-  con nombres exactos (`PATH`, `HOME`, las del sistema), y borra las funciones exportadas; si algo queda, no sigue:
-  cualquier credencial que estuviera exportada en la terminal no llega a nadie. Una terminal no demuestra que haya una persona:
+  una terminal. Antes de lanzar ningún programa, el guion se relanza a sí mismo con `env -i` y solo una lista corta
+  de variables permitidas, con nombres exactos (`PATH`, `HOME`, las del sistema); después vuelve a filtrar y, si
+  algo queda exportado, no sigue: cualquier credencial que estuviera exportada en la terminal no llega a nadie. Una terminal no demuestra que haya una persona:
   la garantía de que ningún agente ve las credenciales es que **solo Jesús las conoce y las escribe en su propia ventana**.
 - **Corre lo firmado.** Contra prod exige `--commit-firmado` y se niega si el checkout no está en ese commit o tiene
   cambios sin commit en `scripts/prod-backup/`.
@@ -109,7 +109,7 @@ Lo que vas a ver, en orden:
 | 3 | Resumen y confirmación (`configuración externa = no (otra entrega)`) | Escribe exactamente `COPIAR tindivo-prod` |
 | Parte 1 | `TLS: se verifica el certificado del servidor (verify-full)`, `sesión en solo lectura: default_transaction_read_only=on`, `snapshot exportado`, `RESUMEN tablas=… filas=…`, y luego la verificación | `Parte 1: OK · manifiesto …` |
 | Parte 2 | `[storage] RESUMEN listados=… ok=… no_encontrados=…` y `ESTADO=…` | `Parte 2: COMPLETA` si `ok` es igual a `listados`: cada archivo se bajó con el tamaño y la huella (ETag) que la base tenía en la foto. Con cualquier `no_encontrados`, `nombre_no_valido`, `tamano_distinto`, `sin_huella` o `huella_distinta` mayor que 0 sale `PARCIAL` (una subida que nunca terminó, un archivo cambiado mientras corría la copia): se decide con Jesús si se acepta, se repite o se investiga |
-| Cierre | `No quedó ningún archivo en claro…`, el `RESUMEN` con `RESULTADO: COPIA PARCIAL` y **un solo** motivo: `sin configuración externa (Auth, Edge Functions)…`; termina con código 3 | La carpeta: `~/tindivo-copias/prod-<fecha>Z`. Si `PARCIAL.txt` trae **otro** motivo además de ese, la base o Storage no salieron enteros: se decide con Jesús si se repite |
+| Cierre | `No quedó ningún archivo en claro…`, el `RESUMEN` con `RESULTADO: COPIA PARCIAL` y **un solo** motivo: `sin configuración externa (Auth, Edge Functions)…`; termina con `== LISTO: COPIA PARCIAL ESPERADA…` y código 3 | La carpeta: `~/tindivo-copias/prod-<fecha>Z`. Si `PARCIAL.txt` trae **otro** motivo además de ese, la base o Storage no salieron enteros: se decide con Jesús si se repite |
 
 La copia de una base como la nuestra tarda uno o dos minutos; Storage depende de cuántos archivos haya.
 
@@ -126,8 +126,8 @@ La copia de una base como la nuestra tarda uno o dos minutos; Storage depende de
    bash scripts/prod-backup/verificar.sh ~/Downloads/prod-<fecha>Z
    ```
 
-   Debe terminar en `== VERIFICADA, PERO ES UNA COPIA PARCIAL` con **un solo** motivo, el de la configuración
-   externa (código 3). Comprueba el sha256 de cada archivo, lo abre con tu clave hacia la memoria y lee
+   Debe terminar en `== PARCIAL ESPERADA` (antes lista **un solo** motivo, el de la configuración
+   externa; código 3). Comprueba el sha256 de cada archivo, lo abre con tu clave hacia la memoria y lee
    el dump entero. Borra después la carpeta descargada (solo tiene archivos cifrados).
 3. Pega en el expediente el contenido de `RESUMEN.txt` (no tiene secretos ni datos personales).
 
@@ -222,4 +222,6 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
   ni etiquetas de roles, permisos sobre parámetros (`pg_parameter_acl`) ni pertenencias de roles `pg_*`; el orden de
   los `GRANT` cubre el caso normal (primero lo que concede un superusuario y lo que da ADMIN), no cadenas largas de
   delegación. Restaurarlo sobre una base vacía es parte de P0.6.
+- `BASH_ENV`: si la terminal lo trae exportado, bash lee ese archivo al arrancar el guion, antes de cualquier
+  limpieza (es como bash arranca). Por eso la copia se saca en una ventana nueva de Git Bash, sin exportar nada.
 - Una copia sin restauración ensayada no es todavía un respaldo probado: eso lo cierra P0.6.

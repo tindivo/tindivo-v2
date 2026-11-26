@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copia de producción P0.5: saca una copia CIFRADA de la base y de los archivos de Storage.
 # La configuración externa (Auth, Edge Functions, secretos de la plataforma) NO entra: va en otra entrega, con capturas
-# del panel. Por eso, contra prod, el resultado es siempre «COPIA PARCIAL» con ese motivo declarado.
+# del panel. Por eso el resultado es siempre «COPIA PARCIAL» con ese motivo declarado (código 3).
 # Runbook (léelo antes): Docs/operacion/copia-de-produccion.md
 #
 #   bash scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha> --ca <archivo.crt> [--salida <carpeta>]
@@ -14,8 +14,8 @@
 #     directo a gpg. En la carpeta de salida solo quedan archivos .gpg, sus sha256 y registros sin datos personales.
 #     Lo que el guion no controla es que Windows pagine esa memoria al disco: por eso contra prod exige que los
 #     discos del PC estén cifrados (BitLocker), o que quien lo ejecuta acepte ese riesgo con una opción explícita.
-#   - COMPLETA O PARCIAL, NUNCA AMBIGUA. Si falta una parte o un archivo de Storage,
-#     el resultado es «COPIA PARCIAL», con sus motivos, y el guion termina con código 3.
+#   - LO QUE FALTA, DICHO. Cada falta (la configuración externa siempre; además, una parte omitida o un archivo de
+#     Storage) es un motivo en PARCIAL.txt y en RESUMEN.txt. Con un solo motivo, base y Storage salieron enteros.
 #   - LAS CREDENCIALES NO SE GUARDAN. Con --destino prod se escriben a mano en esta terminal (no se ven), viven en
 #     la memoria de este proceso y no pasan por argumentos, archivos ni registros.
 set -euo pipefail
@@ -252,25 +252,23 @@ STORAGE_KEY=''
 # ---------------------------------------------------------------------------------------------------------------
 # La configuración externa no forma parte de esta copia (decisión de Jesús, 2026-11-26): se declara, no se calla.
 ESTADO_3='NO INCLUIDA: la configuración de Auth y de Edge Functions va en otra entrega, con capturas del panel'
-[ "$DESTINO" != prod ] || MOTIVOS+=('sin configuración externa (Auth, Edge Functions): no entra en esta copia; va en otra entrega')
+MOTIVOS+=('sin configuración externa (Auth, Edge Functions): no entra en esta copia; va en otra entrega')
 
 # ---------------------------------------------------------------------------------------------------------------
 paso 'Cierre: sha256, resumen y comprobación de que no quedó nada en claro'
 CLAVE=''
 cerrar_gpg
 (cd "$SALIDA" && sha256sum -b -- *.tar.gpg >SHA256SUMS)
-RESULTADO='COPIA COMPLETA'
-if [ "${#MOTIVOS[@]}" -gt 0 ]; then
-  RESULTADO='COPIA PARCIAL'
-  {
-    echo "COPIA PARCIAL (UTC $SELLO). Sirve como copia de lo que sí lleva; NO cierra P0.5. Motivos:"
-    printf -- '- %s\n' "${MOTIVOS[@]}"
-  } >"$SALIDA/PARCIAL.txt"
-fi
+# Siempre hay al menos un motivo (la configuración externa): la copia es PARCIAL por diseño.
+RESULTADO='COPIA PARCIAL'
+{
+  echo "COPIA PARCIAL (UTC $SELLO). Sirve como copia de lo que sí lleva; NO cierra P0.5. Motivos:"
+  printf -- '- %s\n' "${MOTIVOS[@]}"
+} >"$SALIDA/PARCIAL.txt"
 {
   echo 'COPIA DE PRODUCCIÓN P0.5 · RESUMEN (sin datos personales ni secretos)'
   echo "RESULTADO:      $RESULTADO"
-  [ "${#MOTIVOS[@]}" -eq 0 ] || printf -- '                - %s\n' "${MOTIVOS[@]}"
+  printf -- '                - %s\n' "${MOTIVOS[@]}"
   echo "destino:        $DESTINO ($PGHOST:$PGPORT, usuario $PGUSER)"
   echo "tomada (UTC):   $SELLO · duración $(($(date +%s) - INICIO)) s"
   echo "guiones:        commit $COMMIT${SUCIO:+ (con cambios sin commit)}"
@@ -299,9 +297,10 @@ log 'No quedó ningún archivo en claro: el dump vivió en la memoria de un cont
 
 cat "$SALIDA/RESUMEN.txt" >&2
 log "Carpeta: $SALIDA"
-if [ "$RESULTADO" != 'COPIA COMPLETA' ]; then
-  paso 'COPIA PARCIAL: lo que hay está verificado, pero faltan partes. Lee PARCIAL.txt. No cierra P0.5.'
-  exit 3
+if [ "${#MOTIVOS[@]}" -eq 1 ]; then
+  paso 'LISTO: COPIA PARCIAL ESPERADA. Base y Storage enteros y verificados; solo falta la configuración externa (otra entrega).'
+  log 'Sigue el runbook: sube la carpeta entera a tu Google Drive y comprueba el sha256 después de subirla.'
+else
+  paso "COPIA PARCIAL CON FALTAS: además de la configuración externa, faltan $((${#MOTIVOS[@]} - 1)) cosa(s). Lee PARCIAL.txt."
 fi
-paso 'LISTO: COPIA COMPLETA'
-log 'Sigue el runbook: sube la carpeta entera a tu Google Drive y comprueba el sha256 después de subirla.'
+exit 3
