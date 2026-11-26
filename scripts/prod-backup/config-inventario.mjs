@@ -24,13 +24,17 @@ const CLAVE_SENSIBLE =
   /(secret|password|passwd|pass$|_pass_|token|private|credential|jwt|otp|(^|_)keys?($|_)|api_?key|hash|salt|dsn|connection_?string)/i
 // Claves que suenan a secreto pero solo dicen cómo está configurado algo (una URI de hook, un límite, un interruptor).
 const CLAVE_DE_CONFIGURACION =
-  /(_uri|_url|_enabled|_characters|_length|_exp|_id|_algorithm|_interval|_period|_limit|_count|_size|_seconds)$|^rate_limit_/i
+  /(_uri|_url|_enabled|_characters|_length|_exp|_algorithm|_interval|_period|_limit|_count|_size|_seconds)$|^rate_limit_/i
 // Claves cuyo TEXTO se puede guardar (identificadores, estados, fechas, hosts, listas de esquemas, URL reducidas).
 const CLAVE_DE_TEXTO_SEGURO =
   /(^|_)(id|ref|name|slug|status|region|version|provider|type|mode|kind|role|schema|schemas|path|at|host|domain|email|characters|algorithm|method|plan|timezone|aud|issuer|url|uri|list|identifier|cidrs|sha256)$/i
 const TEXTO_CON_CREDENCIAL =
   /\/\/[^/\s@]+:[^/\s@]*@|[^\s@/:]+:[^\s@/:]+@[^\s@]+|[?&;](password|passwd|pass|pwd|token|secret|key|apikey|api_key|access_key)=/i
-const PINTA_DE_SECRETO = /^(eyJ|sb_|sbp_|sk_|pk_|whsec_|AKIA)|^[A-Za-z0-9_+/=-]{48,}$/
+// Pinta de secreto: prefijos conocidos en cualquier parte, «algo = valor» con nombre de secreto, o una ristra larga
+// sin espacios (salvo que sea un UUID, que es un identificador).
+const PINTA_DE_SECRETO =
+  /eyJ[A-Za-z0-9_-]{8,}|sb_|sbp_|sk_|pk_|ghp_|gho_|whsec_|AKIA|SG\.|Bearer |Basic |(password|passwd|secret|token|apikey|api_key)\s*[=:]|[A-Za-z0-9_+/=-]{32,}/i
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const FECHA_ISO = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/
 const NOMBRE_DE_SECRETO = /^[A-Za-z_][A-Za-z0-9_.-]{0,127}$/
 const enSnake = (clave) => clave.replace(/([a-z0-9])([A-Z])/g, '$1_$2')
@@ -56,6 +60,7 @@ function textoSeguro(valor) {
   const partes = valor.split(',').map((p) => p.trim())
   const salida = partes.map((p) => {
     if (/^[a-z][a-z0-9+.-]*:\/\//i.test(p)) return reducirUrl(p)
+    if (UUID.test(p)) return p
     if (TEXTO_CON_CREDENCIAL.test(p) || p.includes('://') || PINTA_DE_SECRETO.test(p)) return SIN_CLASIFICAR
     return p
   })
@@ -74,14 +79,22 @@ export function tachar(valor, clave = '', heredado = false) {
   if (typeof valor === 'number') return sensible ? TACHADO : valor
   if (typeof valor !== 'string' || valor === '') return valor
   if (sensible) return TACHADO
-  return CLAVE_DE_TEXTO_SEGURO.test(k) ? textoSeguro(valor) : SIN_CLASIFICAR
+  if (!CLAVE_DE_TEXTO_SEGURO.test(k)) return SIN_CLASIFICAR
+  // Una clave de fecha solo guarda una fecha.
+  if (/(^|_)at$/i.test(k)) return FECHA_ISO.test(valor) ? valor : SIN_CLASIFICAR
+  return textoSeguro(valor)
 }
 
 /** De la lista de secretos de las funciones solo se conserva el nombre (validado) y la fecha (validada). */
 export function soloNombres(lista) {
   if (!Array.isArray(lista)) throw new Error('forma inesperada')
   return lista.map((s) => {
-    if (!esObjeto(s) || typeof s.name !== 'string' || !NOMBRE_DE_SECRETO.test(s.name)) throw new Error('forma inesperada')
+    // Un secreto es { name, value[, updated_at] }: con cualquier otra clave (p. ej. una función: slug, status) no lo es.
+    const claves = esObjeto(s) ? Object.keys(s) : []
+    const esSecreto = claves.length > 0 && claves.every((c) => c === 'name' || c === 'value' || c === 'updated_at')
+    if (!esSecreto || typeof s.value !== 'string' || typeof s.name !== 'string' || !NOMBRE_DE_SECRETO.test(s.name)) {
+      throw new Error('forma inesperada')
+    }
     return { name: s.name, updated_at: typeof s.updated_at === 'string' && FECHA_ISO.test(s.updated_at) ? s.updated_at : null }
   })
 }
@@ -89,17 +102,25 @@ export function soloNombres(lista) {
 // Forma mínima que debe tener cada respuesta 200 para contar como inventario. Sale de la referencia pública de la
 // API de gestión de Supabase tal como se conocía al escribir esto; NO se ha contrastado con la API real (no hay token
 // de producción antes de la firma). Si la API real no cuadra, el resultado es PARCIAL, nunca una falsa COMPLETA.
+const texto = (v) => typeof v === 'string' && v.trim() !== ''
 const FORMAS = {
-  proyecto: (j, ref) => esObjeto(j) && (j.id === ref || j.ref === ref),
-  auth: (j) => esObjeto(j) && typeof j.site_url === 'string' && Object.keys(j).length >= 10,
-  'edge-functions': (j) => Array.isArray(j) && j.every((f) => esObjeto(f) && typeof f.slug === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(f.slug)),
+  proyecto: (j, ref) => esObjeto(j) && (j.id === ref || j.ref === ref) && texto(j.name) && texto(j.region),
+  auth: (j) => esObjeto(j) && texto(j.site_url) && typeof j.disable_signup === 'boolean' && typeof j.jwt_exp === 'number' && Object.keys(j).length >= 10,
+  // tindivo-prod tiene desplegada al menos `send-push`: una lista vacía no es el inventario de sus funciones.
+  'edge-functions': (j) =>
+    Array.isArray(j) &&
+    j.length > 0 &&
+    j.every((f) => esObjeto(f) && texto(f.slug) && /^[A-Za-z0-9_-]{1,128}$/.test(f.slug) && typeof f.version === 'number' && texto(f.status)),
   'secretos-nombres': (j) => Array.isArray(j),
-  postgrest: (j) => esObjeto(j) && typeof j.db_schema === 'string',
-  storage: (j) => esObjeto(j) && typeof j.fileSizeLimit === 'number',
-  pooler: (j) => (Array.isArray(j) && j.length > 0 && j.every(esObjeto)) || (esObjeto(j) && 'pool_mode' in j),
-  'restricciones-de-red': (j) => esObjeto(j) && ('config' in j || 'entitlement' in j),
-  'ssl-obligatorio': (j) => esObjeto(j) && esObjeto(j.currentConfig),
-  'respaldos-de-la-plataforma': (j) => esObjeto(j) && Array.isArray(j.backups),
+  postgrest: (j) => esObjeto(j) && texto(j.db_schema) && typeof j.max_rows === 'number',
+  storage: (j) => esObjeto(j) && typeof j.fileSizeLimit === 'number' && j.fileSizeLimit > 0,
+  pooler: (j) => {
+    const lista = Array.isArray(j) ? j : [j]
+    return lista.length > 0 && lista.every((x) => esObjeto(x) && texto(x.pool_mode))
+  },
+  'restricciones-de-red': (j) => esObjeto(j) && (esObjeto(j.config) || texto(j.entitlement)),
+  'ssl-obligatorio': (j) => esObjeto(j) && esObjeto(j.currentConfig) && typeof j.currentConfig.database === 'boolean',
+  'respaldos-de-la-plataforma': (j) => esObjeto(j) && Array.isArray(j.backups) && j.backups.every(esObjeto),
 }
 
 // [nombre, sufijo, obligatoria]. Una consulta obligatoria que no responde 200 con la forma esperada deja el

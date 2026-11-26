@@ -47,7 +47,8 @@ Lo que garantiza, y cómo:
 - **Las credenciales no se guardan.** Se escriben a mano en la terminal (no se ven), viven en la memoria del proceso y
   no pasan por argumentos, archivos ni registros; cada una llega solo al proceso que la usa (la contraseña, a `psql`,
   y `pg_dump`; la `service_role` y el token, a Node). Con `--destino prod` el guion se niega a correr sin
-  una terminal e ignora cualquier credencial que venga del entorno. Una terminal no demuestra que haya una persona:
+  una terminal. Antes de lanzar ningún programa, el guion reduce el entorno a una lista corta de variables permitidas
+  (`PATH`, `HOME`, las del sistema): cualquier credencial que estuviera exportada en la terminal no llega a nadie. Una terminal no demuestra que haya una persona:
   la garantía de que ningún agente ve las credenciales es que **solo Jesús las conoce y las escribe en su propia ventana**.
 - **Corre lo firmado.** Contra prod exige `--commit-firmado` y se niega si el checkout no está en ese commit o tiene
   cambios sin commit en `scripts/prod-backup/`.
@@ -180,7 +181,7 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
 | `no se pudo conectar` nada más empezar la parte 1 | Host, usuario o contraseña mal copiados (la línea `diagnostico: no se pudo conectar: …` de arriba dice cuál); o el pooler no acepta las opciones de arranque | Revisa los tres datos. Si están bien, repite con `--sin-pgoptions`: la sesión deja de llevar `default_transaction_read_only`; quedan las transacciones `READ ONLY` del snapshot y del listado, y que `pg_dump` y `pg_dumpall` solo leen. Queda anotado en `RESUMEN.txt` |
 | `no se pudo exportar el snapshot` | Puerto 6543 (modo transacción) | Usa el 5432 (modo sesión) |
 | `el servidor es Postgres N y este pg_dump es 17` | Producción está en una versión mayor más nueva que la imagen | Para: hace falta fijar otra imagen y volver a firmar |
-| `pg_dump de los datos falló` con `diagnostico: permiso denegado sobre table …` | Una tabla de `auth` o `storage` que el rol `postgres` no puede leer en producción | Para y copia el mensaje: se ajusta el guion y se vuelve a firmar. No lo fuerces con otro rol |
+| `pg_dump de los datos falló` con `diagnostico: permiso denegado sobre un objeto de la base` | Una tabla de `auth` o `storage` que el rol `postgres` no puede leer en producción | Para. El nombre de la tabla no se muestra a propósito (ningún texto del servidor llega a la pantalla): se busca comparando los permisos de `auth` y `storage` de producción con los de la base local, se ajusta el guion y se vuelve a firmar. No lo fuerces con otro rol |
 | `diagnostico: sin espacio en la memoria de trabajo` | El dump no cabe en la memoria reservada (2 GB) | Repite con `TINDIVO_COPIA_TMPFS_MB=6000` delante del comando; Docker Desktop necesita tener esa memoria asignada |
 | `diagnostico: no se pudo conectar: el servidor no ofrecio SCRAM` | El servidor pidió la contraseña de una forma menos segura | Para y avisa: no se le entrega la contraseña. Se revisa antes de repetir |
 | `diagnostico: no se pudo conectar: el certificado del servidor no lo firma la CA indicada` (o `…es de otro nombre`) | El certificado descargado no es el que firma al servidor, o alguien se interpuso | **Para.** No hay modo sin comprobar el certificado. Vuelve a bajarlo del panel; si sigue fallando, se investiga antes de repetir |
@@ -206,4 +207,10 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
   contenido byte a byte contra una copia anterior. `MANIFEST.json` dice qué se bajó.
 - Los errores de Postgres que el filtro no reconoce no se muestran: se gana que ningún dato llegue a un registro en
   claro y se pierde detalle para depurar en vivo.
+- `roles.sql` lleva roles, atributos, ajustes por rol y pertenencias de la foto, sin contraseñas. No lleva comentarios
+  ni etiquetas de roles, permisos sobre parámetros (`pg_parameter_acl`) ni pertenencias de roles `pg_*`; el orden de
+  los `GRANT` cubre el caso normal (primero lo que concede un superusuario y lo que da ADMIN), no cadenas largas de
+  delegación. Restaurarlo sobre una base vacía es parte de P0.6.
+- La parte 3 solo cuenta como completa si cada respuesta tiene la forma mínima que el guion espera; esa forma se
+  escribió sin ver la API real, así que la primera corrida puede dar una PARCIAL de más (nunca una completa falsa).
 - Una copia sin restauración ensayada no es todavía un respaldo probado: eso lo cierra P0.6.

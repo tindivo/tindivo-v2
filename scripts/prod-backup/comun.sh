@@ -2,19 +2,35 @@
 # Copia de producción P0.5: funciones que comparten copia.sh y verificar.sh. Se carga con `source`.
 # Runbook: Docs/operacion/copia-de-produccion.md
 
-# --- Lo primero, antes de cualquier proceso hijo: nada de lo que traiga el entorno llega a un hijo -----------------
-# Credenciales que alguien pudo dejar exportadas en la terminal; variables que cambian a dónde hablan docker, node o
-# libpq o qué código cargan; y los nombres que este guion usa para guardar secretos (pierden el atributo de exportación).
+# --- Lo primero, antes de cualquier proceso hijo: el entorno se reduce a una lista de variables PERMITIDAS ---------
+# No se enumeran las credenciales que podrían venir exportadas (siempre faltaría alguna): se quita del entorno TODO lo
+# que no haga falta para que arranquen bash, git, docker, gpg, node y powershell. Solo órdenes internas de bash: no
+# hay ni una sustitución de órdenes antes de terminar la limpieza.
 set +a
-unset PGPASSWORD PGHOST PGPORT PGUSER PGDATABASE PGOPTIONS PGREQUIREAUTH PGSERVICE PGSERVICEFILE PGPASSFILE PGSSLMODE \
-  PGSSLROOTCERT PGSSLCERT PGSSLKEY PGHOSTADDR DATABASE_URL POSTGRES_PASSWORD POSTGRES_URL
-unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY SUPABASE_SECRET_KEY SUPABASE_KEY \
-  SUPABASE_ANON_KEY SUPABASE_JWT_SECRET TINDIVO_STORAGE_KEY TINDIVO_MGMT_TOKEN
-unset DOCKER_HOST DOCKER_CONTEXT DOCKER_TLS_VERIFY DOCKER_CERT_PATH
-unset NODE_OPTIONS NODE_DEBUG NODE_DEBUG_NATIVE NODE_USE_ENV_PROXY NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED NODE_PATH
-unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
-unset TINDIVO_SIN_PGOPTIONS TINDIVO_MOSTRAR_CONTEOS TINDIVO_CA_PEM TINDIVO_GUION TINDIVO_MARCA_PRUEBA
-unset DB_PASS STORAGE_KEY MGMT_TOKEN CLAVE GNUPG_TMP
+_permitida() {
+  case "$1" in
+    PATH | HOME | USER | USERNAME | LOGNAME | USERPROFILE | USERDOMAIN | COMPUTERNAME | HOSTNAME | SHELL | PWD | OLDPWD | SHLVL | _) return 0 ;;
+    TEMP | TMP | TMPDIR | LANG | LANGUAGE | LC_ALL | LC_CTYPE | TERM | TZ | CI) return 0 ;;
+    SYSTEMROOT | SystemRoot | WINDIR | windir | COMSPEC | ComSpec | PATHEXT | OS | SYSTEMDRIVE | SystemDrive | HOMEDRIVE | HOMEPATH) return 0 ;;
+    APPDATA | LOCALAPPDATA | PROGRAMDATA | ProgramData | ALLUSERSPROFILE | PUBLIC | PROGRAMFILES | ProgramFiles | ProgramW6432 | PSModulePath) return 0 ;;
+    CommonProgramFiles | CommonProgramW6432 | NUMBER_OF_PROCESSORS | PROCESSOR_ARCHITECTURE | PROCESSOR_IDENTIFIER) return 0 ;;
+    MSYSTEM | MSYSTEM_* | MSYS | MSYS2_PATH_TYPE | MINGW_PREFIX | MINGW_CHOST | MINGW_PACKAGE_PREFIX | EXEPATH | ORIGINAL_PATH) return 0 ;;
+    TINDIVO_COPIA_IMAGEN | TINDIVO_COPIA_TMPFS_MB | TINDIVO_COPIA_LOCAL_CLAVE | TINDIVO_COPIA_LOCAL_SERVICE_KEY) return 0 ;;
+    TINDIVO_COPIA_LOCAL_CONTRASENA | TINDIVO_COPIA_LOCAL_PUERTO | TINDIVO_COPIA_LOCAL_SCRAM) return 0 ;;
+  esac
+  return 1
+}
+for _v in "${!A@}" "${!B@}" "${!C@}" "${!D@}" "${!E@}" "${!F@}" "${!G@}" "${!H@}" "${!I@}" "${!J@}" "${!K@}" "${!L@}" "${!M@}" \
+  "${!N@}" "${!O@}" "${!P@}" "${!Q@}" "${!R@}" "${!S@}" "${!T@}" "${!U@}" "${!V@}" "${!W@}" "${!X@}" "${!Y@}" "${!Z@}" \
+  "${!a@}" "${!b@}" "${!c@}" "${!d@}" "${!e@}" "${!f@}" "${!g@}" "${!h@}" "${!i@}" "${!j@}" "${!k@}" "${!l@}" "${!m@}" \
+  "${!n@}" "${!o@}" "${!p@}" "${!q@}" "${!r@}" "${!s@}" "${!t@}" "${!u@}" "${!v@}" "${!w@}" "${!x@}" "${!y@}" "${!z@}" "${!_@}"; do
+  case "$_v" in '' | _v | BASH* | EUID | UID | PPID | SHELLOPTS) continue ;; esac
+  # Solo interesan las exportadas (las que heredaría un hijo); el atributo se lee sin lanzar nada.
+  [[ "${!_v@a}" == *x* ]] || continue
+  _permitida "$_v" || unset "$_v" 2>/dev/null || export -n "$_v" 2>/dev/null || true
+done
+# Los nombres que el guion usa para sus secretos nacen sin atributo de exportación.
+unset DB_PASS STORAGE_KEY MGMT_TOKEN CLAVE GNUPG_TMP _v
 # ------------------------------------------------------------------------------------------------------------------
 
 REF_PROD='zpnipajgwfthxhdtzhly'

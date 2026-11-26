@@ -34,7 +34,10 @@ CONTRASENA=''
 # roles.sql se genera con estas consultas DENTRO de la transacción del snapshot (no con pg_dumpall, que no admite
 # snapshot): así roles, atributos, ajustes y pertenencias son, por construcción, los de la misma foto que el
 # inventario y el dump. Solo SELECT sobre pg_roles (que nunca muestra contraseñas); el texto CREATE/ALTER/GRANT es
-# lo que ESCRIBEN en roles.sql para quien restaure, no algo que se ejecute aquí.
+# lo que ESCRIBEN en roles.sql para quien restaure, no algo que se ejecute aquí. Las pertenencias salen primero las
+# que concede un superusuario y las que dan ADMIN, para que un otorgante ya tenga ADMIN cuando le toque conceder.
+# No lleva: contraseñas, comentarios ni etiquetas de roles, permisos sobre parámetros (pg_parameter_acl) ni
+# pertenencias cuyo miembro es un rol pg_*; eso queda en esquema-completo.sql o fuera de la copia (runbook §9).
 SQL_ROLES="select format('CREATE ROLE %I;', rolname) from pg_roles where rolname !~ '^pg_' order by rolname;
 select format('ALTER ROLE %I WITH %s %s %s %s %s %s %s CONNECTION LIMIT %s%s;', rolname,
   case when rolsuper then 'SUPERUSER' else 'NOSUPERUSER' end,
@@ -50,7 +53,8 @@ from pg_roles where rolname !~ '^pg_' order by rolname;
 select format('ALTER ROLE %I%s SET %s TO %s;', x.rolname,
   case when x.datname is null then '' else format(' IN DATABASE %I', x.datname) end, x.nombre,
   case when x.nombre in ('search_path', 'session_preload_libraries', 'shared_preload_libraries',
-      'local_preload_libraries', 'temp_tablespaces') then x.valor else quote_literal(x.valor) end)
+      'local_preload_libraries', 'temp_tablespaces') and x.valor not in ('', '\"\"') then x.valor
+    when x.valor = '\"\"' then quote_literal('') else quote_literal(x.valor) end)
 from (select ro.rolname, d.datname, split_part(c, '=', 1) as nombre, substr(c, strpos(c, '=') + 1) as valor
       from pg_db_role_setting st join pg_roles ro on ro.oid = st.setrole
         left join pg_database d on d.oid = st.setdatabase, unnest(st.setconfig) as c
@@ -62,7 +66,8 @@ select format('GRANT %I TO %I WITH ADMIN %s, INHERIT %s, SET %s GRANTED BY %I;',
   case when a.set_option then 'TRUE' else 'FALSE' end, gr.rolname)
 from pg_auth_members a join pg_roles g on g.oid = a.roleid join pg_roles m on m.oid = a.member
   join pg_roles gr on gr.oid = a.grantor
-where m.rolname !~ '^pg_' order by g.rolname, m.rolname, gr.rolname;"
+where m.rolname !~ '^pg_'
+order by gr.rolsuper desc, a.admin_option desc, g.rolname, m.rolname, gr.rolname;"
 
 # Los mensajes propios salen con una marca al azar de esta corrida; el filtro solo reconoce como propios los que la
 # llevan y la cambia por «[contenedor]». Así un texto del servidor que empiece por «[contenedor]» no pasa por propio.
@@ -75,8 +80,8 @@ fallo() {
 }
 
 # Ninguna línea ajena se reenvía tal cual. Los mensajes propios (con la marca de la corrida) pasan; cada diagnóstico
-# de Postgres, tar o sha256sum se CLASIFICA y se sustituye por un texto fijo de esta lista, con campos variables solo
-# si son un identificador o un número validado; lo que no se reconoce se cuenta y se omite. Así el texto que viene
+# de Postgres, tar o sha256sum se CLASIFICA y se sustituye por un texto fijo de esta lista. Lo único variable que se
+# emite son dos números de versión (dígitos y puntos); ni nombres de objetos. Lo que no se reconoce se cuenta y se omite. Así el texto que viene
 # del servidor (que podría citar el valor de una fila) nunca llega a la pantalla ni a un registro.
 filtrar() {
   awk -v m="$MARCA" '
@@ -95,27 +100,16 @@ filtrar() {
       if (index(l, "certificate") || index(l, "SSL")) return "fallo de TLS"
       return "causa no reconocida"
     }
-    function clasifica(l,    x, a, b) {
+    function clasifica(l,    a, b) {
       if (l ~ /^(psql|pg_dump): error: connection to server (at|on socket) "/) return d("no se pudo conectar: " causa(l))
       if (l ~ /^(psql|pg_dump): error: could not translate host name "/) return d("no se pudo resolver el nombre del servidor")
       if (l ~ /^(psql|pg_dump): error: (authentication method requirement|SSL error|server certificate|root certificate|certificate verify failed|private key|timeout expired)/) return d("no se pudo conectar: " causa(l))
-      if (l ~ /ERROR:  permission denied for /) {
-        x = l
-        sub(/^.*ERROR:  permission denied for /, "", x)
-        if (x ~ /^(table|schema|sequence|view|materialized view|function|database|foreign table) [A-Za-z_][A-Za-z0-9_.]*$/) return d("permiso denegado sobre " x)
-        return d("permiso denegado sobre un objeto (nombre omitido)")
-      }
-      if (l ~ /^pg_dump: detail: Query was: LOCK TABLE /) {
-        x = l
-        sub(/^pg_dump: detail: Query was: LOCK TABLE /, "", x)
-        sub(/ IN ACCESS SHARE MODE$/, "", x)
-        if (x ~ /^[A-Za-z_][A-Za-z0-9_., ]*$/) return d("pg_dump no pudo bloquear en lectura: " x)
-        return d("pg_dump no pudo bloquear en lectura una tabla (nombre omitido)")
-      }
-      if (l ~ /ERROR:  cannot execute [A-Z ]+ in a read-only transaction$/) return d("el servidor rechazo una sentencia: la sesion es de solo lectura")
-      if (l ~ /ERROR:  canceling statement due to /) return d("el servidor cancelo una consulta (tiempo agotado o a peticion)")
+      if (l ~ /^(psql:[^ ]*: |pg_dump: error: query failed: )?ERROR:  permission denied for (table|schema|sequence|view|materialized view|function|database|foreign table) /) return d("permiso denegado sobre un objeto de la base (el nombre no se muestra: reproduce el fallo contra la base local)")
+      if (l ~ /^pg_dump: detail: Query was: LOCK TABLE /) return d("pg_dump no pudo bloquear en lectura una tabla (el nombre no se muestra)")
+      if (l ~ /^(psql:[^ ]*: |pg_dump: error: query failed: )?ERROR:  cannot execute [A-Z ]+ in a read-only transaction$/) return d("el servidor rechazo una sentencia: la sesion es de solo lectura")
+      if (l ~ /^(psql:[^ ]*: |pg_dump: error: query failed: )?ERROR:  canceling statement due to /) return d("el servidor cancelo una consulta (tiempo agotado o a peticion)")
       if (l ~ /^pg_dump: error: aborting because of server version mismatch$/) return d("la version de pg_dump no sirve para este servidor")
-      if (l ~ /^pg_dump: detail: server version: [0-9.]+; pg_dump version: [0-9.]+$/) {
+      if (l ~ /^pg_dump: detail: server version: [0-9][0-9.]*; pg_dump version: [0-9][0-9.]*$/ && length(l) < 90) {
         a = l; sub(/^pg_dump: detail: server version: /, "", a); sub(/;.*$/, "", a)
         b = l; sub(/^.*pg_dump version: /, "", b)
         return d("version del servidor " a ", de pg_dump " b)

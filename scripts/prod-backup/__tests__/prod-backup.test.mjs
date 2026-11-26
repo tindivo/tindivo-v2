@@ -361,7 +361,7 @@ test('storage: solo es COMPLETA si cada objeto se bajó con el tamaño y la huel
 
 // Respuestas con la forma mínima que exige cada consulta (config-inventario.mjs, FORMAS).
 const REF = 'zpnipajgwfthxhdtzhly'
-const AUTH_OK = { site_url: 'https://tindivo.com/app', jwt_exp: 3600, a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 }
+const AUTH_OK = { site_url: 'https://tindivo.com/app', jwt_exp: 3600, disable_signup: false, a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7 }
 const BUENAS = {
   '': { id: REF, name: 'tindivo-prod', region: 'us-east-1', status: 'ACTIVE_HEALTHY' },
   '/config/auth': AUTH_OK,
@@ -435,7 +435,6 @@ test('config: un 200 con JSON de forma incorrecta NO cuenta como inventario (ni 
     const cruzada = Array.isArray(BUENAS[sufijo]) ? { datos: 'x' } : [{ datos: 'x' }]
     const malas = [{}, [], cruzada, 'null', '"texto"', '7', `{"roto": "${SECRETO}`]
     if (nombre === 'secretos-nombres') malas.splice(1, 1) // una lista vacía de secretos sí es válida
-    if (nombre === 'edge-functions') malas.splice(1, 1) // y una lista vacía de funciones también
     for (const mala of malas) {
       const r = await inventario({ [sufijo]: mala })
       assert.equal(r.completa, false, `${nombre} con ${JSON.stringify(mala)}`)
@@ -448,6 +447,24 @@ test('config: un 200 con JSON de forma incorrecta NO cuenta como inventario (ni 
   assert.equal((await inventario({ '/secrets': [{ name: `no valido ${SECRETO}` }] })).completa, false)
   assert.equal((await inventario({ '/functions': [{ name: 'sin-slug' }] })).completa, false)
   assert.equal((await inventario({ '/config/auth': { site_url: 'https://x' } })).completa, false, 'Auth con dos claves no es la configuración')
+  // Formas cruzadas y entradas huecas que una comprobación floja daría por buenas.
+  const huecas = {
+    '/secrets': [[{ name: 'send-push', slug: 'send-push', status: 'ACTIVE' }], [{ name: 'A' }], [null]],
+    '/functions': [[{ slug: 'send-push' }], [{ slug: 'a b', version: 1, status: 'ACTIVE' }]],
+    '/config/database/pooler': [[{}], { pool_mode: '' }],
+    '/network-restrictions': [{ config: null }, { entitlement: '' }],
+    '/ssl-enforcement': [{ currentConfig: {} }, { currentConfig: { database: 'si' } }],
+    '/database/backups': [{ backups: [null] }, { backups: 'ninguno' }],
+    '/config/storage': [{ fileSizeLimit: 0 }, { fileSizeLimit: '50MB' }],
+    '/postgrest': [{ db_schema: '' }, { db_schema: 'public' }],
+    '/config/auth': [{ ...AUTH_OK, site_url: '' }, { ...AUTH_OK, disable_signup: 'no' }],
+  }
+  for (const [sufijo, casos] of Object.entries(huecas)) {
+    for (const caso of casos) {
+      assert.equal((await inventario({ [sufijo]: caso })).completa, false, `${sufijo} con ${JSON.stringify(caso)}`)
+    }
+  }
+  await assert.rejects(inventario({ '': { id: REF } }), /no devolvió el proyecto/, 'un proyecto sin nombre ni región no es el proyecto')
   // El proyecto equivocado o sin forma: no hay inventario.
   await assert.rejects(inventario({ '': [] }), /no devolvió el proyecto/)
   await assert.rejects(inventario({ '': { id: 'psjigdoinfpgrnedxeyf' } }), /no devolvió el proyecto/)
@@ -516,9 +533,31 @@ test('config: tachado por defecto. Solo pasan textos de claves conocidas; URL si
   assert.deepEqual(soloNombres([{ name: 'FCM_KEY', value: SECRETO, updated_at: '2026-10-23T18:00:00Z' }]), [
     { name: 'FCM_KEY', updated_at: '2026-10-23T18:00:00Z' },
   ])
-  assert.deepEqual(soloNombres([{ name: 'A', updated_at: { oculto: SECRETO } }]), [{ name: 'A', updated_at: null }])
-  assert.deepEqual(soloNombres([{ name: 'A', updated_at: SECRETO }]), [{ name: 'A', updated_at: null }])
-  assert.throws(() => soloNombres([{ name: { oculto: SECRETO } }]), /forma inesperada/)
+  assert.deepEqual(soloNombres([{ name: 'A', value: 'x', updated_at: { oculto: SECRETO } }]), [{ name: 'A', updated_at: null }])
+  assert.deepEqual(soloNombres([{ name: 'A', value: 'x', updated_at: SECRETO }]), [{ name: 'A', updated_at: null }])
+  assert.throws(() => soloNombres([{ name: { oculto: SECRETO }, value: 'x' }]), /forma inesperada/)
+  assert.throws(() => soloNombres([{ name: 'A', value: 'x', extra: SECRETO }]), /forma inesperada/)
+  // Lo que una heurística floja dejaría pasar bajo una clave «segura».
+  const dudosos = tachar({
+    name: `Bearer eyJhbGciOiJIUzI1NiJ9.${SECRETO}`,
+    smtp_sender_name: 'SG.aaaaaaaa.bbbbbbbb',
+    some_id: '5f4dcc3b5aa765d61d8327deb882cf99',
+    email: 'ghp_0123456789abcdefghijABCDEFGHIJ012345',
+    db_extra_search_path: 'password=hunter2',
+    updated_at: 'hunter2 secreto',
+    created_at: '2026-10-23T18:00:00Z',
+    sms_twilio_auth_token_id: 'ACsecreto',
+    organization_id: '0f8fad5b-d9cb-469f-a165-70867728950e',
+  })
+  assert.equal(dudosos.name, SIN_CLASIFICAR)
+  assert.equal(dudosos.smtp_sender_name, SIN_CLASIFICAR)
+  assert.equal(dudosos.some_id, SIN_CLASIFICAR)
+  assert.equal(dudosos.email, SIN_CLASIFICAR)
+  assert.equal(dudosos.db_extra_search_path, SIN_CLASIFICAR)
+  assert.equal(dudosos.updated_at, SIN_CLASIFICAR)
+  assert.equal(dudosos.created_at, '2026-10-23T18:00:00Z')
+  assert.equal(dudosos.sms_twilio_auth_token_id, TACHADO)
+  assert.equal(dudosos.organization_id, '0f8fad5b-d9cb-469f-a165-70867728950e')
   assert.throws(() => soloNombres({ name: 'A' }), /forma inesperada/)
 })
 
@@ -548,6 +587,9 @@ test('filtro del contenedor: ninguna línea ajena se reenvía; cada forma conoci
     `[contenedor] DNI 45678912 ${M}`,
     `[contenedor] diagnostico: ${M}`,
     `pg_dump: detail: server version: 17.4; pg_dump version: 17.6 ${M}`,
+    'pg_dump: detail: Query was: LOCK TABLE Juan Perez, telefono 999888777, Jr. Lima 123',
+    'CONTEXT: x ERROR:  permission denied for table sk_live_JUAN999888777',
+    'pg_dump: error: query failed: ERROR:  permission denied for table JUAN_PEREZ_999888777',
   ]
   const limpias = [
     'marca1234 mensaje propio',
@@ -567,8 +609,9 @@ test('filtro del contenedor: ninguna línea ajena se reenvía; cada forma conoci
   // Ninguna línea de entrada sale tal cual (salvo que el filtro la haya reescrito): todo empieza por «[contenedor] ».
   for (const linea of r.stdout.trim().split('\n')) assert.match(linea, /^\[contenedor\] /)
   assert.ok(r.stdout.includes('[contenedor] mensaje propio'))
-  assert.ok(r.stdout.includes('[contenedor] diagnostico: permiso denegado sobre table sso_domains'))
-  assert.ok(r.stdout.includes('[contenedor] diagnostico: pg_dump no pudo bloquear en lectura: auth.sso_domains'))
+  assert.ok(r.stdout.includes('[contenedor] diagnostico: permiso denegado sobre un objeto de la base'))
+  assert.ok(r.stdout.includes('[contenedor] diagnostico: pg_dump no pudo bloquear en lectura una tabla'))
+  assert.ok(!r.stdout.includes('sso_domains'), 'ni siquiera el nombre de una tabla se reenvía')
   assert.ok(r.stdout.includes('[contenedor] diagnostico: version del servidor 17.4, de pg_dump 17.6'))
   assert.ok(r.stdout.includes('[contenedor] diagnostico: no se pudo conectar: el certificado del servidor no lo firma la CA indicada'))
   assert.ok(r.stdout.includes('[contenedor] diagnostico: no se pudo conectar: usuario o contrasena rechazados'))
@@ -594,7 +637,10 @@ test('guarda: una credencial heredada del entorno no llega ni al primer proceso 
     }
     const heredadas = ['PGPASSWORD', 'PGPASSFILE', 'PGSERVICE', 'DATABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ACCESS_TOKEN',
       'SUPABASE_DB_PASSWORD', 'TINDIVO_STORAGE_KEY', 'TINDIVO_MGMT_TOKEN', 'DB_PASS', 'STORAGE_KEY', 'MGMT_TOKEN', 'CLAVE',
-      'NODE_OPTIONS', 'DOCKER_HOST', 'HTTPS_PROXY', 'TINDIVO_CA_PEM', 'TINDIVO_GUION']
+      'NODE_OPTIONS', 'DOCKER_HOST', 'HTTPS_PROXY', 'TINDIVO_CA_PEM', 'TINDIVO_GUION',
+      // Y variables que NINGUNA lista de «prohibidas» habría previsto: el entorno se reduce a una lista de permitidas.
+      'SUPABASE_DB_URL', 'SUPABASE_SERVICE_KEY', 'POSTGRES_URL_NON_POOLING', 'DIRECT_URL', 'JWT_SECRET', 'SERVICE_ROLE_KEY',
+      'VERCEL_TOKEN', 'GH_TOKEN', 'AWS_SECRET_ACCESS_KEY', 'UNA_VARIABLE_CUALQUIERA', 'otra_en_minusculas', '_RARA']
     const env = { ...process.env, PATH: `${dir}${delimiter}${process.env.PATH}` }
     for (const v of heredadas) env[v] = 'MARCADOR_HEREDADO'
     const correr = (guion, args, extra = {}) =>
