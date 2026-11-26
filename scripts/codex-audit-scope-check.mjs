@@ -26,7 +26,8 @@
  *   escanear se decodifica UN nivel de comillas: '…' es literal; dentro de "…", `\` solo escapa `\`, `"`, `$`
  *   y el acento grave. Una comilla sin cerrar o una `\` fuera de comillas marca «comando no decodificable».
  *   UNC y unidad (`X:`) corren sobre el texto decodificado (el que recibe el intérprete); las demás reglas,
- *   sobre el texto crudo Y sobre el decodificado.
+ *   sobre el texto crudo Y sobre el decodificado; UNC, unidad y las demás se repiten además sobre el decodificado
+ *   sin los acentos graves de escape de PowerShell (`\`\server` llega al cmdlet como `\\server`).
  * - PowerShell sin `-NoProfile`.
  * - Tras sustituir por `<ROOT>` las rutas internas a AUDIT_ROOT (con `\` o `/`, con espacios y
  *   comillas; la raíz solo cuenta si la sigue `\` (o `/`) o el fin del texto. Windows admite `'`, `;`,
@@ -37,6 +38,8 @@
  *   cambios de directorio (`cd`, `Set-Location`…) y nombres sensibles (auth.json, .env, .ssh…).
  *
  * QUÉ NO DETECTA (es DETECCIÓN, no prevención)
+ * - Rutas enraizadas sin unidad (`\Users\…`) y comodines: pendiente, fuera de este control. Antes de decodificar,
+ *   el `\\` del texto crudo los marcaba de rebote cuando el script llevaba comillas internas; ya no.
  * - Rutas armadas por partes en tiempo de ejecución (concatenaciones, `-join`, `[char]`…).
  * - Rutas leídas del contenido de una variable, de otro archivo o de la salida de otro comando.
  * - Comandos codificados (base64 con `-EncodedCommand`, `Invoke-Expression` sobre texto armado).
@@ -56,10 +59,10 @@ const SENSITIVE =
 const DRIVE = /(?<![A-Za-z0-9_])[A-Za-z]:/
 const UNC = /\\\\/
 /** Reconexión del transporte que Codex reintenta solo; solo se tolera antes del primer comando. */
-const RECONNECT = /^Reconnecting\.\.\. \d\/\d/
-const FALLBACK = /^Falling back from WebSockets/
-const PARENT = /(?<![A-Za-z0-9_.-])\.\.(?=[\\\s'";|&)]|$)/
-const HOME_TILDE = /(?<![A-Za-z0-9_.-])~(?=[\\\s'";|&)]|$)/
+const RECONNECT = /^Reconnecting\.\.\. \d+\/\d+(?: \([^)]*\))?$/
+const FALLBACK = /^Falling back from WebSockets to HTTPS transport\.(?: .*)?$/
+const PARENT = /(?<![A-Za-z0-9_.-])\.\.(?![A-Za-z0-9_.-])/
+const HOME_TILDE = /(?<![A-Za-z0-9_.-])~(?![A-Za-z0-9_.-])/
 const ENV_VARS = /\$env:|\$\{env:|%[A-Za-z_][A-Za-z0-9_]*%|\$home\b/i
 const PS_PROVIDERS =
   /(?<![A-Za-z0-9])(?:HKCU|HKLM|HKCR|HKU|Env|Cert|Variable|Function):|Registry::/i
@@ -145,7 +148,8 @@ function main() {
   const beforeCommands = (i) => firstCommand < 0 || i < firstCommand
   for (const [i, event] of events.entries()) {
     if (event.type !== 'error') continue
-    if (beforeCommands(i) && RECONNECT.test(String(event.message ?? ''))) continue
+    if (beforeCommands(i) && typeof event.message === 'string' && RECONNECT.test(event.message))
+      continue
     add('registro incompleto: hay un evento error')
   }
 
@@ -159,7 +163,13 @@ function main() {
       continue
     }
     const id = item.id ?? '(sin id)'
-    if (item.type === 'error' && beforeCommands(i) && FALLBACK.test(String(item.message ?? '')))
+    if (
+      item.type === 'error' &&
+      event.type === 'item.completed' &&
+      beforeCommands(i) &&
+      typeof item.message === 'string' &&
+      FALLBACK.test(item.message)
+    )
       continue
     if (!ALLOWED_ITEMS.has(item.type)) {
       add(
@@ -193,7 +203,11 @@ function main() {
       add(
         `${id}: comando no decodificable (comilla sin cerrar o \\ fuera de comillas) → ${command}`,
       )
-    const decodedScan = decoded?.replaceAll('/', '\\').replace(rootRe, '<ROOT>')
+    const normalize = (t) => t.replaceAll('/', '\\').replace(rootRe, '<ROOT>')
+    const decodedScan = decoded === null ? undefined : normalize(decoded)
+    // PowerShell quita el acento grave de escape: \`\server llega al cmdlet como \\server.
+    const psScan = decoded === null ? undefined : normalize(decoded.replace(/`(.)/gs, '$1'))
+    const decodedScans = [decodedScan, psScan].filter((t) => t !== undefined)
 
     const both = [
       [SENSITIVE, 'nombre sensible'],
@@ -204,13 +218,12 @@ function main() {
       [CHDIR, 'cambio de directorio'],
     ]
     for (const [re, why] of both)
-      if (re.test(rawScan) || (decodedScan !== undefined && re.test(decodedScan)))
+      if (re.test(rawScan) || decodedScans.some((t) => re.test(t)))
         add(`${id}: ${why} → ${command}`)
     // Unidad y UNC solo tienen sentido sobre lo decodificado: en el crudo cada `\` viene duplicada.
-    if (decodedScan !== undefined) {
-      if (DRIVE.test(decodedScan)) add(`${id}: ruta con unidad fuera de AUDIT_ROOT → ${command}`)
-      if (UNC.test(decodedScan)) add(`${id}: ruta UNC → ${command}`)
-    }
+    if (decodedScans.some((t) => DRIVE.test(t)))
+      add(`${id}: ruta con unidad fuera de AUDIT_ROOT → ${command}`)
+    if (decodedScans.some((t) => UNC.test(t))) add(`${id}: ruta UNC → ${command}`)
   }
 
   for (const id of opened)

@@ -292,5 +292,49 @@ describe('comillas POSIX del argv de Codex', () => {
     test('error final tras reconectar → 1', () => {
       assert.equal(run(jl(started, reconnecting, ...body, done, unknown)).status, 1)
     })
+    const withMessage = (event, message) => ({
+      ...event,
+      ...(event.item ? { item: { ...event.item, message } } : { message }),
+    })
+    for (const [name, event, message] of [
+      ['Reconnecting con cola ajena', reconnecting, 'Reconnecting... 1/5 then I read auth.json'],
+      ['Reconnecting con message array', reconnecting, ['Reconnecting... 1/5']],
+      ['Falling back con cola de comando', fallback, 'Falling back from WebSockets; ran C:/x'],
+      [
+        'Falling back con message array',
+        fallback,
+        ['Falling back from WebSockets to HTTPS transport.'],
+      ],
+    ])
+      test(`${name} → 1`, () => {
+        assert.equal(run(jl(started, withMessage(event, message), ...body, done)).status, 1)
+      })
+    test('Reconnecting 10/10 → 0', () => {
+      const e = withMessage(reconnecting, 'Reconnecting... 10/10 (request timed out)')
+      assert.equal(run(jl(started, e, ...body, done)).status, 0)
+    })
+    test('Falling back solo vale como item.completed → 1', () => {
+      const e = { ...fallback, type: 'item.started' }
+      assert.equal(run(jl(started, e, ...body, done)).status, 1)
+    })
+  })
+
+  describe('escapes de PowerShell y separadores (revisión ajena)', () => {
+    const BS = String.fromCharCode(92)
+    const BT = String.fromCharCode(96)
+    const ps2 = (script) => `${PS}"${script.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`
+    for (const [name, script] of [
+      ['acento grave arma UNC', `Get-Content ${BS}${BT}${BS}server${BS}share${BS}x; 'a'`],
+      ['acento grave arma unidad', `Get-Content C${BT}:${BS}Windows${BS}win.ini; 'a'`],
+      ['.. seguido de coma', "Get-ChildItem ..,'x\\y'"],
+      ['.. seguido de llave', "& {Get-ChildItem ..}; 'x\\y'"],
+      ['~ seguido de coma', "Get-ChildItem ~,'x'"],
+    ])
+      test(`${name} → 1`, () => {
+        assert.equal(run(withCmd(ps2(script))).status, 1)
+      })
+    test('acento grave inocuo → 0', () => {
+      assert.equal(run(withCmd(ps2("Write-Output `n'a'; Get-Content a.txt"))).status, 0)
+    })
   })
 })
