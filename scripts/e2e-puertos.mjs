@@ -14,7 +14,8 @@
  *
  * Falla CERRADA: si no puede inspeccionar (PowerShell, `lsof` o `ps` ausentes o
  * con error), aborta con el motivo. Solo cuenta como «puerto libre» el resultado
- * que la herramienta da para ese caso (`lsof`: código 1 sin salida ni error).
+ * que la herramienta da para ese caso (`lsof`: código 1 sin salida ni error). Una salida con código 0 pero con
+ * algo en el error estándar (`lsof` o `ps`) tampoco vale: se trata como inspección incompleta.
  *
  * Solo se usa en modo `dev` (el único que reutiliza servidores). En modo `start`
  * Playwright no reutiliza nada y falla solo si el puerto está ocupado.
@@ -84,11 +85,19 @@ export function escuchadores(
     const l = run('lsof', ['-t', `-iTCP:${puerto}`, '-sTCP:LISTEN'], { encoding: 'utf8' })
     if (l.error) throw falla('lsof', l)
     // `lsof` sale con 1 cuando no encuentra a nadie: es el único caso que vale como «libre».
-    if (l.status === 1 && !String(l.stdout).trim() && !String(l.stderr).trim()) continue
-    if (l.status !== 0) throw falla('lsof', l)
-    for (const pid of String(l.stdout).split('\n').filter(Boolean)) {
+    // Con cualquier código, un error estándar no vacío es una inspección incompleta: se aborta, no se acepta la salida.
+    const errLsof = String(l.stderr ?? '').trim()
+    if (l.status === 1 && !String(l.stdout).trim() && !errLsof) continue
+    if (l.status !== 0 || errLsof) throw falla('lsof', l)
+    // Código 0 sin ningún pid, o una línea que no es un número, no es el «libre» reconocido: es una salida rara.
+    const pids = String(l.stdout ?? '')
+      .split('\n')
+      .map((x) => x.trim())
+      .filter(Boolean)
+    if (pids.length === 0 || pids.some((x) => !/^\d+$/.test(x))) throw falla('lsof', l)
+    for (const pid of pids) {
       const p = run('ps', ['-o', 'command=', '-p', pid], { encoding: 'utf8' })
-      if (p.error || p.status !== 0) throw falla('ps', p)
+      if (p.error || p.status !== 0 || String(p.stderr ?? '').trim()) throw falla('ps', p)
       res.push({ puerto, pid: Number(pid), linea: String(p.stdout).trim() })
     }
   }

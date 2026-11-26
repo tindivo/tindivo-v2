@@ -60,6 +60,39 @@ test('lsof sale con 1 pero con mensaje de error: aborta (no es el «nadie escuch
   assert.throws(() => verificarPuertos(RAIZ, [3000], opc(run)), /No se pudo comprobar/)
 })
 
+test('lsof sale con 0 y salida vacía pero con error estándar: aborta (CAX-003)', () => {
+  const run = linux({ lsof: { status: 0, stdout: '', stderr: 'lsof: WARNING: no se pudo leer parte de la tabla' } })
+  assert.throws(() => verificarPuertos(RAIZ, [3000], opc(run)), /No se pudo comprobar.*lsof/)
+})
+
+test('lsof sale con 0, con un pid y con error estándar (salida parcial): aborta (CAX-003)', () => {
+  const run = linux({
+    lsof: { status: 0, stdout: '33\n', stderr: 'lsof: WARNING: can not stat() /mnt/x' },
+    ps: ok(`${MIO}\n`),
+  })
+  assert.throws(() => verificarPuertos(RAIZ, [3000], opc(run)), /No se pudo comprobar.*lsof/)
+})
+
+test('lsof sale con 0, sin pids y sin error: aborta (no es el «libre» reconocido)', () => {
+  for (const stdout of ['', '\n']) {
+    const run = linux({ lsof: { status: 0, stdout, stderr: '' } })
+    assert.throws(() => verificarPuertos(RAIZ, [3000], opc(run)), /No se pudo comprobar.*lsof/)
+  }
+})
+
+test('lsof sale con 0 y una línea que no es un pid: aborta', () => {
+  const run = linux({ lsof: { status: 0, stdout: 'basura\n', stderr: '' }, ps: ok(`${MIO}\n`) })
+  assert.throws(() => verificarPuertos(RAIZ, [3000], opc(run)), /No se pudo comprobar.*lsof/)
+})
+
+test('ps sale con 0 y con error estándar: aborta (CAX-003)', () => {
+  const run = linux({
+    dueno: { 3000: { pid: 33, linea: MIO } },
+    ps: { status: 0, stdout: `${MIO}\n`, stderr: 'ps: aviso' },
+  })
+  assert.throws(() => verificarPuertos(RAIZ, [3000], opc(run)), /No se pudo comprobar.*ps/)
+})
+
 test('ps falla al leer al dueño: aborta', () => {
   const run = linux({
     dueno: { 3000: { pid: 33, linea: MIO } },
