@@ -110,6 +110,15 @@ const ROTULO_SEPARACION = 14
 /** Radio de la chapa, para que ningún rótulo se pose encima de un icono. */
 const CHAPA_RADIO = 11
 
+/**
+ * Aire mínimo entre un rótulo y lo que ya está ocupado. Leaflet coloca cada
+ * marcador en píxeles enteros mientras que `latLngToContainerPoint` da
+ * decimales, y la caja real de dos líneas mide 25,3 y no 26: con cero de
+ * holgura, un rótulo que «roza» una chapa la pisa o no según el redondeo de la
+ * corrida (lo midió `mapa-reparto-de-rotulos.spec.ts` a 360 y 390 px).
+ */
+const ROTULO_AIRE = 2
+
 type Caja = { x1: number; y1: number; x2: number; y2: number }
 
 function chocan(a: Caja, b: Caja): boolean {
@@ -257,7 +266,7 @@ function cajasDePines(map: L.Map, pines: readonly RoutePin[]): Caja[] {
  * de los que perderán el suyo: un rótulo tapando el icono de otro es el mismo
  * defecto, solo que más difícil de ver.
  */
-function repartirRotulos(
+export function repartirRotulos(
   map: L.Map,
   landmarks: readonly Landmark[],
   detallado: boolean,
@@ -364,7 +373,14 @@ function repartirRotulos(
       c.x2 <= lienzo.x - 4 &&
       c.y1 >= 4 &&
       c.y2 <= lienzo.y - 4 &&
-      !ocupado.some((o) => chocan(c, o))
+      !ocupado.some((o) =>
+        chocan(c, {
+          x1: o.x1 - ROTULO_AIRE,
+          y1: o.y1 - ROTULO_AIRE,
+          x2: o.x2 + ROTULO_AIRE,
+          y2: o.y2 + ROTULO_AIRE,
+        }),
+      )
 
     let elegida: Caja | null = null
     let aLaIzquierda = false
