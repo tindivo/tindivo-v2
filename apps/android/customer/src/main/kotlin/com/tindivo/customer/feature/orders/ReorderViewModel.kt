@@ -143,16 +143,36 @@ internal class ReorderViewModel
                 return ReorderOutcome.Failed(AppError.Unknown(code = null, detail = "session changed"))
             }
             return try {
-                when (val result = cartStore.addAll(plan.businessId, plan.businessName, plan.lines, replace)) {
+                val valid = { (sessionStore.state.value as? SessionState.SignedIn)?.userId == account }
+                when (
+                    val result =
+                        cartStore.addAll(
+                            plan.businessId,
+                            plan.businessName,
+                            plan.lines,
+                            replace,
+                            account,
+                            valid,
+                        )
+                ) {
                     AddAllResult.Added -> {
                         ReorderOutcome.Ready(plan.changes)
                     }
 
-                    AddAllResult.Full -> {
+                    AddAllResult.Full, AddAllResult.Capped -> {
                         ReorderOutcome.BagFull
                     }
 
+                    AddAllResult.Stale -> {
+                        ReorderOutcome.Failed(AppError.Unknown(code = null, detail = "session changed"))
+                    }
+
                     is AddAllResult.OtherBusiness -> {
+                        pending = plan
+                        ReorderOutcome.OtherBusiness(result.currentBusinessName, plan.businessName)
+                    }
+
+                    is AddAllResult.Foreign -> {
                         pending = plan
                         ReorderOutcome.OtherBusiness(result.currentBusinessName, plan.businessName)
                     }

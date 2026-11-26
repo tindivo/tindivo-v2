@@ -377,7 +377,7 @@
     <string name="reorder_nothing_text">Ninguno de sus platos está disponible hoy. Mira la carta del restaurante para elegir otros.</string>
     <string name="reorder_failed_title">No pudimos volver a pedir</string>
     <string name="reorder_failed_text">Inténtalo de nuevo en un momento. Tu bolsa no cambió.</string>
-    <string name="reorder_full_text">Con estos platos tu bolsa pasaría de %1$d platos distintos. Quita algunos y vuelve a intentarlo. Tu bolsa no cambió.</string>
+    <string name="reorder_full_text">Con estos platos tu bolsa superaría el máximo permitido (%1$d platos distintos, o más unidades de un plato de las que se pueden pedir). Quita algunos y vuelve a intentarlo. Tu bolsa no cambió.</string>
     <string name="reorder_ok">Entendido</string>
     <string name="order_payment_case">Ver caso de pago</string>
 

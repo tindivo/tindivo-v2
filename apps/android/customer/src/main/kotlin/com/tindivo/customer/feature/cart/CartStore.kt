@@ -27,6 +27,17 @@ sealed interface AddAllResult {
 
     /** No caben ([MAX_LINES] platos distintos): no se tocó nada. */
     data object Full : AddAllResult
+
+    /** Alguna cantidad pasaría de [MAX_QUANTITY]: no se recorta en silencio, no se tocó nada. */
+    data object Capped : AddAllResult
+
+    /** La cuenta que pidió ya no es la vigente: no se tocó nada. */
+    data object Stale : AddAllResult
+
+    /** La bolsa está reservada por otra cuenta: no se mezcla sin que la persona acepte; no se tocó nada. */
+    data class Foreign(
+        val currentBusinessName: String,
+    ) : AddAllResult
 }
 
 /**
@@ -68,22 +79,45 @@ class CartStore(
 
     /**
      * Añade todas las [lines] en UNA escritura: o entran todas o la bolsa queda como estaba (no se ve a medias). Con
-     * [replace] parte de una bolsa vacía (la persona aceptó dejar la del otro negocio). El negocio se comprueba dentro
-     * de la escritura, con el estado real.
+     * [replace] parte de una bolsa vacía (la persona aceptó dejar la bolsa vigente). Dentro de la escritura, con el
+     * estado real, se comprueba que [stillValid] siga cumpliéndose (la cuenta no cambió), que la bolsa no esté
+     * reservada por otra cuenta (sin [replace]), que sea del mismo negocio y que ninguna cantidad se tope en
+     * [MAX_QUANTITY] (no se recorta en silencio).
      */
     suspend fun addAll(
         businessId: String,
         businessName: String,
         lines: List<CartLine>,
         replace: Boolean,
+        accountId: String,
+        stillValid: () -> Boolean,
     ): AddAllResult {
         var result: AddAllResult = AddAllResult.Added
         store.updateData { current ->
-            var cart: Cart? = if (replace) null else current?.toCartOrNull()
+            val reservation = current?.reservation
+            val cart: Cart? = current?.toCartOrNull()
+            val foreign =
+                !replace && cart != null && reservation != null && reservation.accountId != accountId &&
+                    reservation.fingerprint == cart.fingerprint()
+            val refused: AddAllResult? =
+                when {
+                    !stillValid() -> AddAllResult.Stale
+                    foreign -> AddAllResult.Foreign(cart?.businessName.orEmpty())
+                    else -> null
+                }
+            if (refused != null) {
+                result = refused
+                return@updateData current
+            }
+            var next: Cart? = if (replace) null else cart
             for (line in lines) {
-                when (val outcome = addToCart(cart, businessId, businessName, line)) {
+                when (val outcome = addToCart(next, businessId, businessName, line)) {
                     is AddResult.Added -> {
-                        cart = outcome.cart
+                        if (outcome.capped) {
+                            result = AddAllResult.Capped
+                            return@updateData current
+                        }
+                        next = outcome.cart
                     }
 
                     is AddResult.OtherBusiness -> {
@@ -97,7 +131,7 @@ class CartStore(
                     }
                 }
             }
-            val snapshot = cart?.toSnapshot()
+            val snapshot = next?.toSnapshot()
             if (replace) snapshot else snapshot?.keepingReservationOf(current)
         }
         return result
