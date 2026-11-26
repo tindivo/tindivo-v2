@@ -27,7 +27,9 @@
  * nunca con el valor del env-file.
  *
  * Contraseñas: aleatorias y NUEVAS en cada corrida (también para usuarios que ya existen). Por
- * consola solo salen emails y conteos. `push_dispatch` NO se toca (en staging está anulado).
+ * consola solo salen emails y conteos. Después del mundo siembra el catálogo de prueba
+ * (`seed-staging-catalog.ts`: 4 negocios con carta, portadas y fotos de `fixtures/staging-catalog/`, SIN Yape, SIN
+ * teléfono y SIN cuentas de Auth: solo filas de `users`/`user_roles`). `push_dispatch` NO se toca (en staging está anulado).
  */
 import { randomBytes } from 'node:crypto'
 import { closeSync, existsSync, readFileSync, realpathSync } from 'node:fs'
@@ -35,6 +37,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { E2E } from './e2e-fixtures.ts'
+import { seedStagingCatalog } from './seed-staging-catalog.ts'
 import { seedWorld } from './seed-world.ts'
 import {
   openPrivateAccountsFile,
@@ -106,13 +109,17 @@ async function main(): Promise<void> {
   // Sin archivo privado no hay siembra: aborta antes de la primera petición.
   const accountsFile = openPrivateAccountsFile(outDir, new Date().toISOString(), securePrivateDir)
   try {
-    await seed(serviceKey, accountsFile)
+    await seed(url, serviceKey, accountsFile)
   } finally {
     closeSync(accountsFile.fd)
   }
 }
 
-async function seed(serviceKey: string, accountsFile: { path: string; fd: number }): Promise<void> {
+async function seed(
+  url: string,
+  serviceKey: string,
+  accountsFile: { path: string; fd: number },
+): Promise<void> {
   const db = createClient(STAGING_ORIGIN, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
@@ -171,6 +178,13 @@ async function seed(serviceKey: string, accountsFile: { path: string; fd: number
 
   console.log('\nusuarios')
   await seedWorld(db, ensureAuthUser, { includeAdmin: false })
+  // El catálogo valida el destino por su cuenta y crea su propio cliente: no recibe `db` ni `ensureAuthUser`.
+  const cat = await seedStagingCatalog(url, serviceKey)
+  console.log(
+    `
+Catálogo de prueba: ${cat.businesses} negocios, ${cat.categories} categorías, ${cat.items} platos ` +
+      `(${cat.soldOut} agotados, ${cat.withoutImage} sin foto), ${cat.images} imágenes subidas`,
+  )
 
   console.log(`\nMundo de staging listo: ${count} usuarios. Contraseñas en ${accountsFile.path}\n`)
 }
