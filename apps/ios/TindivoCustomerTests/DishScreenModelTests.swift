@@ -107,6 +107,8 @@ struct DishScreenModelTests {
 
         let group = model.item.dish.groups[0]
         model.toggle(group.options[1], in: group)
+        // `bolsa.editar.guardar`: «Guardar · %s», el texto de Android (decisión de Jesús, 2026-11-26).
+        #expect(model.ctaTitle.hasPrefix("Guardar · S/"), "al editar el botón dice «Guardar · …»: \(model.ctaTitle)")
         await model.add()
         #expect(model.outcome == .added(capped: false))
         let cart = try #require(await store.current())
@@ -341,7 +343,7 @@ struct DishScreenModelTests {
         model.showNotice(for: .failed)
         #expect(model.notices.message == "No se pudo guardar tu bolsa. Inténtalo de nuevo.")
         model.notices.clear()
-        // «Añadido» lo enseña la carta, no la ficha.
+        // «Agregado» lo enseña la carta, no la ficha.
         model.showNotice(for: .added(capped: false))
         #expect(model.notices.message == nil)
     }

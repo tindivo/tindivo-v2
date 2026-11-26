@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension View {
-    /// Un aviso breve sobre el borde de abajo («Añadido a tu bolsa»). Quien lo usa decide cuándo aparece y cuándo se
+    /// Un aviso breve sobre el borde de abajo («Agregado a tu bolsa»). Quien lo usa decide cuándo aparece y cuándo se
     /// va; VoiceOver lo anuncia al aparecer, porque no recibe el foco.
     public func tindivoToast(_ message: String?) -> some View {
         modifier(ToastModifier(message: message))
@@ -41,6 +41,6 @@ private struct ToastModifier: ViewModifier {
 
 #Preview("Aviso") {
     Color.tindivo.background
-        .tindivoToast("Añadido a tu bolsa")
+        .tindivoToast("Agregado a tu bolsa")
         .onAppear { TindivoFonts.register() }
 }

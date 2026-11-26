@@ -155,7 +155,9 @@ struct FinalRoundTests {
         #expect(rows.lines[0].total.plain == "S/ 12.50")
         #expect(rows.lines[1].total == "—")
         #expect(rows.subtotal == "—")
-        #expect(!rows.lines[1].issues.isEmpty)
+        // CA-CRT-05c: la línea y la bolsa avisan con los textos aprobados el 2026-11-26.
+        #expect(rows.lines[1].issues == ["No podemos mostrar el precio por ahora"])
+        #expect(rows.amountNotice == "No podemos mostrar un precio. Intenta de nuevo en un rato.")
         #expect(!rows.amountsAreValid)
         #expect(!rows.allowsContinue)
     }
@@ -219,7 +221,7 @@ struct FinalRoundTests {
         return model
     }
 
-    @Test("7 «Vaciar y empezar» desde la carta dice «Añadido a tu bolsa» y un segundo toque no lo repite")
+    @Test("7 «Vaciar y empezar» desde la carta dice «Agregado a tu bolsa» y un segundo toque no lo repite")
     func replacementFromTheMenuSaysAdded() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "otro", businessName: "Chifa", line: line("x"))
@@ -232,7 +234,7 @@ struct FinalRoundTests {
         async let first: Void = model.confirmReplacement()
         async let second: Void = model.confirmReplacement()
         _ = await (first, second)
-        #expect(model.notices.message == "Añadido a tu bolsa")
+        #expect(model.notices.message == "Agregado a tu bolsa")
         let cart = await store.current()
         #expect(cart?.lines.map(\.itemId) == ["simple"])
         #expect(cart?.lines.first?.quantity == 1)

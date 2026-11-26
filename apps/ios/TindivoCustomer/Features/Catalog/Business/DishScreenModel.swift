@@ -113,21 +113,30 @@ final class DishScreenModel {
         return String(localized: "\(done) de \(required.count) listas")
     }
 
-    /// El botón de abajo: «Agregar · S/ 49.00», o «Elige [grupo]» con el grupo obligatorio que falta (CUS-CAT-033).
+    /// El botón de abajo: «Agregar · S/ 49.00» («Guardar · …» al editar), o lo que falta con el grupo obligatorio sin
+    /// elegir (CUS-CAT-033): «Elige tu guarnición 2» si es de una opción, «Elige salsas» si es de varias (el plural no
+    /// lleva «tu»), con el nombre en minúscula, como Android (`dish_choose_cta`, `dish_choose_many_cta`).
     var ctaTitle: String {
         switch selection.cta {
         case let .add(total):
-            isEditing ? String(localized: "Guardar cambios · \(total)") : String(localized: "Agregar · \(total)")
+            isEditing ? String(localized: "Guardar · \(total)") : String(localized: "Agregar · \(total)")
         case .complete:
-            if let group = firstMissingGroup {
-                String(localized: "Elige: \(group.name)")
+            if let group = firstMissingGroup, group.isSingle {
+                String(localized: "Elige tu \(Self.chooseName(group))")
+            } else if let group = firstMissingGroup {
+                String(localized: "Elige \(Self.chooseName(group))")
             } else {
                 String(localized: "Revisa tus opciones")
             }
         }
     }
 
-    /// Falta algo por elegir: el botón se ve apagado pero se puede tocar, para llevar al grupo que falta.
+    /// El nombre de un grupo para decir «Elige tu <nombre>»: en minúscula y sin espacios sobrantes.
+    private static func chooseName(_ group: DishGroup) -> String {
+        group.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: Locale(identifier: "es_PE"))
+    }
+
+    /// Falta algo por elegir: el botón no se apaga (decisión de Jesús, 2026-11-23); tocarlo lleva al grupo que falta.
     var ctaBlocked: Bool { !canAdd }
 
     /// «Obligatorio · elige 1», «Listo» u «Opcional · hasta 2».
@@ -179,7 +188,7 @@ final class DishScreenModel {
         if case let .otherBusiness(current, new) = outcome { Replacement(current: current, new: new) } else { nil }
     }
 
-    /// Consume el resultado de «Agregar» una sola vez: el aviso que se queda en la ficha se enciende, y «Añadido» lo
+    /// Consume el resultado de «Agregar» una sola vez: el aviso que se queda en la ficha se enciende, y «Agregado» lo
     /// devuelve para que la carta cierre la ficha. `otherBusiness` no se consume: espera la decisión.
     func resolveOutcome() -> Resolution {
         guard let outcome else { return .stay }
@@ -262,7 +271,7 @@ final class DishScreenModel {
         outcome = nil
     }
 
-    /// Los avisos de «Agregar» que no cierran la ficha se enseñan en ella; «Añadido» lo enseña la carta.
+    /// Los avisos de «Agregar» que no cierran la ficha se enseñan en ella; «Agregado» lo enseña la carta.
     func showNotice(for outcome: Outcome) {
         switch outcome {
         case .full: notices.show(Self.fullMessage)
@@ -280,6 +289,6 @@ final class DishScreenModel {
     static func addedMessage(capped: Bool) -> String {
         capped
             ? String(localized: "Ya tienes \(CartLimits.maxQuantity) de este plato: es el máximo por pedido")
-            : String(localized: "Añadido a tu bolsa")
+            : String(localized: "Agregado a tu bolsa")
     }
 }

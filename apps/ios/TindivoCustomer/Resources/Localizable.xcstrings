@@ -150,7 +150,7 @@
     "Agregar %@" : {},
     "Agregar · %@" : {},
     "Algo salió mal. Inténtalo de nuevo." : {},
-    "Añadido a tu bolsa" : {},
+    "Agregado a tu bolsa" : {},
     "API" : {},
     "Aún no hay restaurantes disponibles." : {},
     "Bolsa" : {},
@@ -213,10 +213,12 @@
     "Editar selección de %@" : {},
     "Efectivo" : {},
     "Ej. sin cebolla, bien cocido, tocar timbre 2 veces…" : {},
-    "El importe de este producto no es válido" : {},
+    "No podemos mostrar el precio por ahora" : {},
+    "No podemos mostrar un precio. Intenta de nuevo en un rato." : {},
     "Elegir" : {},
     "Elegir %@" : {},
-    "Elige: %@" : {},
+    "Elige tu %@" : {},
+    "Elige %@" : {},
     "En el local" : {},
     "En tu bolsa: %lld" : {},
     "Entregar en" : {},
@@ -227,8 +229,8 @@
     "Horarios" : {},
     "hoy" : {},
     "Hoy este restaurante no ha confirmado que atiende" : {},
-    "Importe no disponible" : {
-      "comment" : "Lo que VoiceOver lee en lugar de «—» (aprobado por Jesús, 2026-11-22)"
+    "Precio no disponible" : {
+      "comment" : "Lo que VoiceOver lee en lugar de «—» (CA-CRT-05c, decisión de Jesús del 2026-11-26)"
     },
     "Incluido" : {},
     "Información" : {},
@@ -269,7 +271,7 @@
     "Pedir por WhatsApp" : {},
     "Pide directo por WhatsApp mientras preparamos su integración completa a la plataforma." : {},
     "Plin" : {},
-    "Precio por unidad actualizado: antes %@, ahora %@" : {},
+    "El precio cambió. Quítalo y vuelve a agregarlo." : {},
     "Probar de nuevo" : {},
     "Próximamente pedidos por la plataforma" : {},
     "Prueba con otro nombre, o con un ingrediente: también buscamos dentro de la descripción de cada plato." : {},
@@ -374,14 +376,14 @@
     "El negocio cambió las opciones de este plato. Vuelve a elegirlas." : {},
     "Este plato ya no está en tu bolsa" : {},
     "Este producto ya no está disponible" : {},
-    "Fuera de su horario" : {},
-    "Guardar cambios · %@" : {},
-    "La opción \"%@\" cambió de precio" : {},
+    "Hoy no se sirve a esta hora" : {},
+    "Este producto ya no está en la carta" : {},
+    "Guardar · %@" : {},
     "No pudimos calcular el subtotal de tu bolsa. Revisa las cantidades." : {
       "comment" : "Aviso a nivel de bolsa cuando el subtotal no se puede mostrar (aprobado por Jesús, 2026-11-22)"
     },
     "No pudimos revisar tu bolsa con la carta. Lo confirmaremos al hacer el pedido." : {},
-    "Producto agotado por ahora" : {},
+    "Agotado por ahora" : {},
     "Quitar una unidad de %@. Llevas %@" : {
       "localizations" : {
         "es" : {
@@ -395,7 +397,7 @@
     "Quitaste \"%@\"" : {},
     "Recojo" : {},
     "Tu bolsa" : {},
-    "Una opción ya no está disponible" : {},
+    "Una opción que elegiste ya no está disponible" : {},
     "Yape" : {}
   },
   "version" : "1.0"

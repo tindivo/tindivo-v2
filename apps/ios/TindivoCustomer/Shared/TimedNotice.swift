@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Un aviso breve que se apaga solo («Añadido a tu bolsa»). Mostrar otro reemplaza al anterior y reinicia el plazo.
+/// Un aviso breve que se apaga solo («Agregado a tu bolsa»). Mostrar otro reemplaza al anterior y reinicia el plazo.
 @MainActor
 @Observable
 final class TimedNotice {

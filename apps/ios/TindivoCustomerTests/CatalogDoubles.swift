@@ -69,7 +69,7 @@ struct StubCatalog: CatalogRepository {
 ///
 /// Cuenta las veces que se durmió, por duración: `waitForSleep(number:of:)` deja a la prueba esperar, sin tiempo real,
 /// a que el bucle que se está probando llegue (otra vez) a dormir, que es cuando ya terminó de reaccionar al último
-/// despertar. El aviso «Añadido» (3 s) y el minuto de la carta no se mezclan.
+/// despertar. El aviso «Agregado» (3 s) y el minuto de la carta no se mezclan.
 final class ManualClock: Sendable {
     private struct Sleeper {
         let deadline: Date

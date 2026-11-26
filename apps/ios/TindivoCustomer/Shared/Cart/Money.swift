@@ -38,9 +38,9 @@ func formatAmount(_ amount: Decimal) -> String? {
 let invalidAmountText = "—"
 
 /// Lo que VoiceOver lee en lugar de «—»: una raya sola no dice nada.
-var invalidAmountSpokenText: String { String(localized: "Importe no disponible") }
+var invalidAmountSpokenText: String { String(localized: "Precio no disponible") }
 
-/// `text` tal como se lee en voz alta: cada «—» pasa a «Importe no disponible». Solo para la accesibilidad.
+/// `text` tal como se lee en voz alta: cada «—» pasa a «Precio no disponible» (CA-CRT-05c). Solo para la accesibilidad.
 func spokenAmountText(_ text: String) -> String {
     text.contains(invalidAmountText)
         ? text.replacingOccurrences(of: invalidAmountText, with: invalidAmountSpokenText) : text

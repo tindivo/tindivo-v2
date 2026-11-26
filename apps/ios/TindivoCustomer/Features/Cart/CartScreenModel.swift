@@ -468,7 +468,7 @@ final class CartScreenModel {
                             localized: "Agregar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
                         issues: (issues.indices.contains(index) ? issues[index].map(\.message) : [])
                             + (formatAmount(line.total) == nil
-                                ? [String(localized: "El importe de este producto no es válido")] : []),
+                                ? [String(localized: "No podemos mostrar el precio por ahora")] : []),
                         canEdit: dishHasOptions(line, in: menu) ?? !line.modifiers.isEmpty
                     )
                 },

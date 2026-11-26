@@ -1,7 +1,7 @@
 import XCTest
 
 /// Las pantallas del catálogo con su detalle: la barra de Inicio, la hoja de información, los modos de entrega, las
-/// tarjetas cerradas, «Elige: [grupo]», el «+» de la carta y «Editar» con VoiceOver. El flujo crítico está en
+/// tarjetas cerradas, «Elige tu [grupo]», el «+» de la carta y «Editar» con VoiceOver. El flujo crítico está en
 /// `CatalogFlowUITests`.
 @MainActor
 final class CatalogDetailUITests: CatalogUITestCase {
@@ -79,7 +79,7 @@ final class CatalogDetailUITests: CatalogUITestCase {
         attach("ca-cat-p2-tarjeta-cerrada")
     }
 
-    /// CA-CAT-P7, «Elige: [grupo]»: con letra grande el grupo que falta queda fuera de pantalla; al tocar el
+    /// CA-CAT-P7, «Elige tu [grupo]»: con letra grande el grupo que falta queda fuera de pantalla; al tocar el
     /// botón la vista lo trae y queda a la vista.
     func testTappingChooseBringsTheMissingGroupIntoView() throws {
         launch(fakeCatalog: true, largeType: true)

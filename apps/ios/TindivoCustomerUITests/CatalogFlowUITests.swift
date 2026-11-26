@@ -24,8 +24,8 @@ final class CatalogFlowUITests: CatalogUITestCase {
         dish.tap()
         let add = element("dish.add")
         XCTAssertTrue(add.waitForExistence(timeout: 5))
-        // CA-CAT-P7: el botón dice «Elige: [grupo]» y, tocado, no agrega: lleva al grupo que falta.
-        XCTAssertEqual(add.label, "Elige: Presa", "El botón debe nombrar el grupo obligatorio que falta")
+        // CA-CAT-P7: el botón dice «Elige tu [grupo]» y, tocado, no agrega: lleva al grupo que falta.
+        XCTAssertEqual(add.label, "Elige tu presa", "El botón debe nombrar el grupo obligatorio que falta")
         add.tap()
         XCTAssertTrue(element("dish.add").exists, "Tocar el botón con algo sin elegir no debe cerrar la ficha")
         XCTAssertEqual(element("dish.progress").label, "0 de 1 lista")

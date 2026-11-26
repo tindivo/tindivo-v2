@@ -32,7 +32,7 @@ final class BusinessScreenModel {
     private(set) var replacement: DishScreenModel.Replacement?
     private var pendingLine: CartLine?
     private var isReplacing = false
-    /// El aviso «Añadido a tu bolsa», que se apaga solo.
+    /// El aviso «Agregado a tu bolsa», que se apaga solo.
     let notices: TimedNotice
     private(set) var cart: Cart?
     /// La sección marcada en los chips: sigue a la carta al hacer scroll y salta al tocar un chip.
@@ -233,7 +233,7 @@ final class BusinessScreenModel {
         notices.show(String(localized: "Este plato ya no está en tu bolsa"))
     }
 
-    /// Lo que pasó después de «Agregar» (o de «Guardar cambios»): la ficha se cierra; «Añadido» solo se enseña al
+    /// Lo que pasó después de «Agregar» (o de «Guardar»): la ficha se cierra; «Agregado» solo se enseña al
     /// agregar, no al editar.
     func dishAdded(capped: Bool) {
         let wasEditing = dishModel?.isEditing ?? false
@@ -388,7 +388,7 @@ final class BusinessScreenModel {
     }
 
     /// «Vaciar y empezar» de la pregunta que sale de la carta. Un segundo toque mientras se guarda el primero no hace
-    /// nada; al terminar dice «Añadido a tu bolsa», igual que la ficha.
+    /// nada; al terminar dice «Agregado a tu bolsa», igual que la ficha.
     func confirmReplacement() async {
         guard !isReplacing, let detail = visible, let line = pendingLine else { return }
         isReplacing = true

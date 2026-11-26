@@ -220,7 +220,7 @@ struct BusinessScreenModelTests {
         _ = await clockTask.value
     }
 
-    @Test("agregado: la ficha se cierra y la carta enseña «Añadido a tu bolsa», que se apaga solo")
+    @Test("agregado: la ficha se cierra y la carta enseña «Agregado a tu bolsa», que se apaga solo")
     func addedNotice() async throws {
         let gate = Gate()
         let model = makeBusinessModel(simple, clock: .fixed(Fixture.tuesdayEvening, sleepsUntil: gate))
@@ -229,7 +229,7 @@ struct BusinessScreenModelTests {
         model.open(item)
         model.dishAdded(capped: false)
         #expect(model.openDish == nil)
-        #expect(model.notices.message == "Añadido a tu bolsa")
+        #expect(model.notices.message == "Agregado a tu bolsa")
         gate.open()
         await eventually { model.notices.message == nil }
     }

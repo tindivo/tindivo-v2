@@ -371,7 +371,7 @@ extension CartScreenModelTests {
         )
         let rows = try #require(filled(model)).lines
         #expect(rows[0].issues.isEmpty)
-        #expect(rows[1].issues == ["Producto agotado por ahora"])
+        #expect(rows[1].issues == ["Agotado por ahora"])
         #expect(model.canContinue == false)
 
         await model.remove(signature: rows[1].signature)
@@ -390,7 +390,7 @@ extension CartScreenModelTests {
         )
         #expect(
             filled(model)?.lines.first?.issues.map(\.plain) == [
-                "Precio por unidad actualizado: antes S/ 10.00, ahora S/ 12.00"
+                "El precio cambió. Quítalo y vuelve a agregarlo."
             ])
         #expect(model.canContinue == false)
         #expect(await store.current()?.lines.first?.basePrice == dec("10"))
@@ -411,9 +411,9 @@ extension CartScreenModelTests {
             ])
         )
         let rows = try #require(filled(model)).lines
-        #expect(rows[0].issues == ["Este producto ya no está disponible"])
-        #expect(rows[1].issues == ["Solo de 11:00 a 15:00"])
-        #expect(rows[2].issues == ["Una opción ya no está disponible"])
+        #expect(rows[0].issues == ["Este producto ya no está en la carta"])
+        #expect(rows[1].issues == ["Hoy no se sirve a esta hora"])
+        #expect(rows[2].issues == ["Una opción que elegiste ya no está disponible"])
         #expect(model.canContinue == false)
         task.cancel()
     }

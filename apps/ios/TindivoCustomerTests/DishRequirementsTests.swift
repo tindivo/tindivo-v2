@@ -48,13 +48,29 @@ struct DishRequirementsTests {
         }
     }
 
-    @Test("CA-CAT-P7 con «Guarnición 2» sin elegir el botón dice «Elige: Guarnición 2» y está apagado")
+    @Test("CA-CAT-P7 con «Guarnición 2» sin elegir el botón dice «Elige tu guarnición 2» y no se apaga")
     func ctaNamesTheMissingGroup() throws {
         let model = try model()
         try choose("papas", in: model)
-        #expect(model.ctaTitle == "Elige: Guarnición 2")
+        #expect(model.ctaTitle == "Elige tu guarnición 2")
         #expect(model.ctaBlocked)
+        #expect(!model.ctaDisabled, "el primario no se deshabilita: lleva al grupo que falta")
         #expect(model.firstMissingGroup?.id == "g2")
+    }
+
+    @Test("CUS-CAT-033 un grupo obligatorio de varias opciones dice «Elige [grupo]», sin «tu», en minúscula")
+    func ctaForAMultipleGroupHasNoPossessive() throws {
+        let raw = BusinessMenu.Item(
+            id: "alitas", name: "Alitas", basePrice: dec("20"), displayOrder: 1,
+            modifierGroups: [
+                BusinessMenu.ModifierGroup(
+                    id: "s", name: "  Salsas ", selectionType: "multiple", isRequired: true, minSelections: 2,
+                    maxSelections: 3, priceDisplay: "delta",
+                    options: ["a", "b", "c"].map { BusinessMenu.ModifierOption(id: $0, name: $0, additionalPrice: 0) })
+            ]
+        )
+        let model = try model(raw)
+        #expect(model.ctaTitle == "Elige salsas")
     }
 
     @Test("CA-CAT-P7 VoiceOver anuncia «Falta elegir: [grupo]» al llevar la vista al grupo")
@@ -68,7 +84,7 @@ struct DishRequirementsTests {
     @Test("CUS-CAT-033 sin nada elegido el botón nombra el primer grupo obligatorio, no el opcional")
     func ctaNamesTheFirstRequired() throws {
         let model = try model()
-        #expect(model.ctaTitle == "Elige: Guarnición 1")
+        #expect(model.ctaTitle == "Elige tu guarnición 1")
     }
 
     @Test("CA-CAT-P7 tocar el botón con algo sin elegir no agrega: lleva al grupo que falta, y cada toque cuenta")
@@ -151,7 +167,7 @@ struct DishRequirementsTests {
 
     // MARK: Resultado de «Agregar» (A10)
 
-    @Test("A10 «Añadido» devuelve el cierre de la ficha una sola vez")
+    @Test("A10 «Agregado» devuelve el cierre de la ficha una sola vez")
     func resolveAdded() async throws {
         let model = try model(Fixture.item("i1"))
         await model.add()

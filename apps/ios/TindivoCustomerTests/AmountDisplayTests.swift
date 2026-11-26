@@ -8,12 +8,12 @@ import TindivoAPI
 @MainActor
 @Suite("Importes que no se pueden mostrar")
 struct AmountDisplayTests {
-    @Test("VoiceOver lee «Importe no disponible» donde se ve «—», y deja lo demás como está")
+    @Test("CA-CRT-05c VoiceOver lee «Precio no disponible» donde se ve «—», y deja lo demás como está")
     func spokenText() {
-        #expect(spokenAmountText(invalidAmountText) == "Importe no disponible")
-        #expect(spokenAmountText("3 productos · —") == "3 productos · Importe no disponible")
+        #expect(spokenAmountText(invalidAmountText) == "Precio no disponible")
+        #expect(spokenAmountText("3 productos · —") == "3 productos · Precio no disponible")
         #expect(spokenAmountText("S/ 12.50") == "S/ 12.50")
-        #expect(spokenAmountText("Agregar · —") == "Agregar · Importe no disponible")
+        #expect(spokenAmountText("Agregar · —") == "Agregar · Precio no disponible")
     }
 
     /// La carta ya descarta los precios rotos: para probar el dato roto se arma el plato a mano.
@@ -54,16 +54,20 @@ struct AmountDisplayTests {
             method: .delivery, validation: .checked, countLabel: "")
     }
 
-    @Test("subtotal en «—» con todas las líneas válidas: aviso a nivel de bolsa; con una línea rota, avisa la línea")
+    @Test(
+        "subtotal en «—» con todas las líneas válidas: aviso de subtotal; CA-CRT-05c con una línea rota, aviso de precio"
+    )
     func bagLevelNotice() {
         #expect(
-            filled(subtotal: invalidAmountText, lines: [lineRow("a")]).subtotalNotice
+            filled(subtotal: invalidAmountText, lines: [lineRow("a")]).amountNotice
                 == "No pudimos calcular el subtotal de tu bolsa. Revisa las cantidades.")
-        #expect(filled(subtotal: "S/ 10.00", lines: [lineRow("a")]).subtotalNotice == nil)
+        #expect(filled(subtotal: "S/ 10.00", lines: [lineRow("a")]).amountNotice == nil)
         let broken = CartLineRow(
             signature: "b", name: "b", options: [], note: nil, quantity: 1, total: invalidAmountText,
             decreaseRemoves: true, canIncrease: true, decreaseLabel: "", increaseLabel: "", issues: ["x"],
             canEdit: false)
-        #expect(filled(subtotal: invalidAmountText, lines: [lineRow("a"), broken]).subtotalNotice == nil)
+        #expect(
+            filled(subtotal: invalidAmountText, lines: [lineRow("a"), broken]).amountNotice
+                == "No podemos mostrar un precio. Intenta de nuevo en un rato.")
     }
 }

@@ -177,9 +177,10 @@ struct DishView: View {
 
     private var addBar: some View {
         TindivoBottomBar {
-            // Apagado pero tocable: con algo obligatorio sin elegir, tocarlo lleva al grupo que falta (CA-CAT-P7).
+            // Nunca en gris (decisión de Jesús, 2026-11-23): con algo obligatorio sin elegir dice qué falta y, tocado, lleva
+            // al grupo (CA-CAT-P7).
             TindivoPrimaryButton(
-                verbatim: model.ctaTitle, loading: model.isAdding, muted: model.ctaBlocked,
+                verbatim: model.ctaTitle, loading: model.isAdding,
                 hint: model.ctaBlocked ? "Te lleva al grupo que falta" : nil
             ) {
                 Task { await model.tapAdd() }

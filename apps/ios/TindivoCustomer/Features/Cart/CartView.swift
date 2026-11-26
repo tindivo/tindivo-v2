@@ -146,7 +146,7 @@ struct CartView: View {
                 }
                 .foregroundStyle(Color.tindivo.ink)
                 .accessibilityElement(children: .combine)
-                if let notice = filled.subtotalNotice {
+                if let notice = filled.amountNotice {
                     Text(notice)
                         .tindivoText(TindivoTokens.Typography.bodySecondary)
                         .foregroundStyle(Color.tindivo.error)

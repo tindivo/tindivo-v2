@@ -57,13 +57,26 @@ struct CartValidationTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato fuera de su franja dice cuándo vuelve"
+        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato fuera de su franja se avisa"
     )
     func outOfWindowDish() throws {
         let result = try issues(of: [line("i1")], in: [Fixture.item("i1", from: "11:00", to: "15:00")])
-        let returns = DishWindow(days: nil, from: "11:00", to: "15:00").describe()
-        #expect(returns != nil)
-        #expect(result == [[.outOfWindow(returns: returns)]])
+        #expect(result == [[.outOfWindow]])
+    }
+
+    @Test(
+        "CUS-CRT-005: los avisos de línea son los textos `bolsa.linea.*` del canon, los mismos de Android (2026-11-26)")
+    func lineNoticesMatchCanon() {
+        #expect(CartLineIssue.removed.message.plain == "Este producto ya no está en la carta")
+        #expect(CartLineIssue.unavailable.message.plain == "Agotado por ahora")
+        #expect(CartLineIssue.outOfWindow.message.plain == "Hoy no se sirve a esta hora")
+        #expect(
+            CartLineIssue.priceChanged(old: dec("10"), new: dec("12")).message.plain
+                == "El precio cambió. Quítalo y vuelve a agregarlo.")
+        #expect(
+            CartLineIssue.optionPriceChanged(optionName: "Papas").message.plain
+                == "El precio cambió. Quítalo y vuelve a agregarlo.")
+        #expect(CartLineIssue.optionRemoved.message.plain == "Una opción que elegiste ya no está disponible")
     }
 
     @Test(
@@ -79,13 +92,6 @@ struct CartValidationTests {
     func basePriceChanged() throws {
         let result = try issues(of: [line("i1", price: "10")], in: [Fixture.item("i1", price: "12")])
         #expect(result == [[.priceChanged(old: dec("10"), new: dec("12"))]])
-        #expect(
-            CartLineIssue.priceChanged(old: dec("10"), new: dec("12")).message.plain
-                == "Precio por unidad actualizado: antes S/ 10.00, ahora S/ 12.00")
-        // Si baja, se lee igual de claro: sin signos que interpretar.
-        #expect(
-            CartLineIssue.priceChanged(old: dec("12"), new: dec("11.5")).message.plain
-                == "Precio por unidad actualizado: antes S/ 12.00, ahora S/ 11.50")
     }
 
     @Test(

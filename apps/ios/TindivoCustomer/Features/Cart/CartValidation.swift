@@ -7,8 +7,8 @@ enum CartLineIssue: Sendable, Equatable {
     case removed
     /// El negocio lo marcó agotado.
     case unavailable
-    /// Hoy no es su franja; trae cuándo vuelve («Solo sáb y dom, de 11:00 a 15:00») si se puede decir.
-    case outOfWindow(returns: String?)
+    /// Hoy no es su franja.
+    case outOfWindow
     /// El precio de una unidad (plato más opciones) ya no es el de la bolsa: `old` es el de la bolsa y `new`, el de la carta.
     case priceChanged(old: Decimal, new: Decimal)
     /// Una opción elegida cambió de precio.
@@ -18,17 +18,15 @@ enum CartLineIssue: Sendable, Equatable {
     /// Lo elegido ya no cumple las reglas del plato (un grupo obligatorio nuevo, otro tope).
     case invalidSelection
 
-    /// El aviso que se enseña en la línea.
+    /// El aviso que se enseña en la línea: los textos `bolsa.linea.*` de `Docs/producto/bolsa/pantallas/bolsa.md`, los
+    /// mismos de Android (decisión de Jesús, 2026-11-26).
     var message: String {
         switch self {
-        case .removed: String(localized: "Este producto ya no está disponible")
-        case .unavailable: String(localized: "Producto agotado por ahora")
-        case let .outOfWindow(returns): returns ?? String(localized: "Fuera de su horario")
-        // Antes y ahora, no la diferencia: así no hay que hacer la cuenta y se lee igual si el precio baja.
-        case let .priceChanged(old, new):
-            String(localized: "Precio por unidad actualizado: antes \(formatSoles(old)), ahora \(formatSoles(new))")
-        case let .optionPriceChanged(name): String(localized: "La opción \"\(name)\" cambió de precio")
-        case .optionRemoved: String(localized: "Una opción ya no está disponible")
+        case .removed: String(localized: "Este producto ya no está en la carta")
+        case .unavailable: String(localized: "Agotado por ahora")
+        case .outOfWindow: String(localized: "Hoy no se sirve a esta hora")
+        case .priceChanged, .optionPriceChanged: String(localized: "El precio cambió. Quítalo y vuelve a agregarlo.")
+        case .optionRemoved: String(localized: "Una opción que elegiste ya no está disponible")
         case .invalidSelection: String(localized: "El negocio cambió las opciones de este plato. Vuelve a elegirlas.")
         }
     }
@@ -49,7 +47,7 @@ enum CartValidation {
         var issues: [CartLineIssue] = []
         if !item.isAvailable { issues.append(.unavailable) }
         // Fuera de su franja (0226): existe, no se agotó y su precio no cambió, pero hoy no se cocina.
-        if !item.window.isOpen(at: now) { issues.append(.outOfWindow(returns: item.window.describe())) }
+        if !item.window.isOpen(at: now) { issues.append(.outOfWindow) }
 
         let options = Dictionary(
             item.dish.groups.flatMap(\.options).map { ($0.id.lowercased(), $0) },
