@@ -21,8 +21,9 @@ const MODO =
 // árbol. `reuseExistingServer` acepta a cualquiera que conteste, y el servidor de otro worktree sirve otro
 // código. Ver `scripts/e2e-puertos.mjs`.
 if (!process.env.E2E_PUERTOS_VERIFICADOS) {
-  verificarPuertos(__dirname)
   if (MODO === 'dev') {
+    // Solo `dev` reutiliza servidores; en `start` Playwright falla solo si el puerto está ocupado.
+    verificarPuertos(__dirname)
     // `next build` y `next dev` comparten `apps/<app>/.next`: un build de la corrida anterior en modo `start`
     // deja 404 en todas las rutas del dev server (Docs/operacion/trampas.md, «pnpm build envenena el dev
     // server vivo»). Los puertos ya están libres o son nuestros: se retira el build antes de arrancar.

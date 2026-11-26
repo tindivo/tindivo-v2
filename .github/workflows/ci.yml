@@ -66,7 +66,7 @@ jobs:
         run: |
           pnpm spec:validar
           node scripts/spec.mjs indice --check
-          node --test scripts/spec.test.mjs scripts/check-docs.test.mjs
+          node --test scripts/spec.test.mjs scripts/check-docs.test.mjs scripts/e2e-puertos.test.mjs
 
       # Fronteras de arquitectura (ADR 0039): ninguna app cliente importa packages/backend, el backend no
       # importa next, domain/ no toca infra ni SDK, y un módulo solo importa el index de otro.
@@ -237,12 +237,18 @@ jobs:
     name: E2E · Playwright contra Supabase local
     runs-on: ubuntu-24.04
     timeout-minutes: 50
+    # Mínimo privilegio explícito: el job ejecuta código del PR (install, build, tests) y no necesita escribir nada.
+    permissions:
+      contents: read
     env:
       SUPABASE_CLI_VERSION: 2.109.1
       TINDIVO_DB_LOCK_BYPASS: ci-isolated-db
       E2E_SERVER: start
     steps:
+      # Sin `persist-credentials`: el token no se queda en la configuración de git mientras corre código del PR.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Mismo motivo que en `api-integration`: la línea base se mide en Lima.
       - name: Zona horaria de Lima (la de la línea base local)

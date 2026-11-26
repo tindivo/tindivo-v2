@@ -11,17 +11,34 @@
  * proceso lanzado desde ESTE árbol (su línea de comandos lleva la ruta del
  * `node_modules` del worktree). Un puerto libre, o uno de este mismo árbol, pasa.
  * No mata nada: nombra al dueño y deja la decisión a quien la lanzó.
+ *
+ * Falla CERRADA: si no puede inspeccionar (PowerShell, `lsof` o `ps` ausentes o
+ * con error), aborta con el motivo. Solo cuenta como «puerto libre» el resultado
+ * que la herramienta da para ese caso (`lsof`: código 1 sin salida ni error).
+ *
+ * Solo se usa en modo `dev` (el único que reutiliza servidores). En modo `start`
+ * Playwright no reutiliza nada y falla solo si el puerto está ocupado.
  */
-import { execFileSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { resolve } from 'node:path'
 
 export const PUERTOS_E2E = [3000, 3001, 3002, 3003, 3004]
 
 const norm = (s) => s.replaceAll('\\', '/').toLowerCase()
 
-/** Dueños de los puertos: [{ puerto, pid, linea }]. Vacío si todos están libres. */
-function escuchadores(puertos) {
-  if (process.platform === 'win32') {
+function falla(que, r) {
+  const detalle = r.error
+    ? r.error.message
+    : `código ${r.status}${r.stderr ? `: ${String(r.stderr).trim().slice(0, 200)}` : ''}`
+  return new Error(`No se pudo comprobar quién escucha en los puertos e2e (${que}): ${detalle}`)
+}
+
+/**
+ * Dueños de los puertos: [{ puerto, pid, linea }]. Vacío si todos están libres.
+ * `run` y `plataforma` se inyectan solo en las pruebas (`e2e-puertos.test.mjs`).
+ */
+export function escuchadores(puertos, { run = spawnSync, plataforma = process.platform } = {}) {
+  if (plataforma === 'win32') {
     const ps = [
       "$ProgressPreference = 'SilentlyContinue'",
       `$ps = @(${puertos.join(',')})`,
@@ -36,12 +53,11 @@ function escuchadores(puertos) {
     ].join('\n')
     // `-EncodedCommand` (UTF-16LE en base64): sin él, las comillas del guion se pierden al pasar por la línea de comandos.
     const codificado = Buffer.from(ps, 'utf16le').toString('base64')
-    const out = execFileSync(
-      'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-EncodedCommand', codificado],
-      { encoding: 'utf8' },
-    )
-    return out
+    const r = run('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', codificado], {
+      encoding: 'utf8',
+    })
+    if (r.error || r.status !== 0) throw falla('PowerShell', r)
+    return String(r.stdout)
       .split(/\r?\n/)
       .filter(Boolean)
       .map((l) => {
@@ -52,27 +68,27 @@ function escuchadores(puertos) {
   // Linux y macOS: `lsof` da el pid; la línea de comandos sale de `ps`.
   const res = []
   for (const puerto of puertos) {
-    let pids = ''
-    try {
-      pids = execFileSync('lsof', ['-t', `-iTCP:${puerto}`, '-sTCP:LISTEN'], { encoding: 'utf8' })
-    } catch {
-      continue // lsof sale con 1 si no hay nadie
-    }
-    for (const pid of pids.split('\n').filter(Boolean)) {
-      const linea = execFileSync('ps', ['-o', 'command=', '-p', pid], { encoding: 'utf8' }).trim()
-      res.push({ puerto, pid: Number(pid), linea })
+    const l = run('lsof', ['-t', `-iTCP:${puerto}`, '-sTCP:LISTEN'], { encoding: 'utf8' })
+    if (l.error) throw falla('lsof', l)
+    // `lsof` sale con 1 cuando no encuentra a nadie: es el único caso que vale como «libre».
+    if (l.status === 1 && !String(l.stdout).trim() && !String(l.stderr).trim()) continue
+    if (l.status !== 0) throw falla('lsof', l)
+    for (const pid of String(l.stdout).split('\n').filter(Boolean)) {
+      const p = run('ps', ['-o', 'command=', '-p', pid], { encoding: 'utf8' })
+      if (p.error || p.status !== 0) throw falla('ps', p)
+      res.push({ puerto, pid: Number(pid), linea: String(p.stdout).trim() })
     }
   }
   return res
 }
 
 /**
- * Lanza un Error si algún puerto lo tiene un proceso que no es de `raiz`.
+ * Lanza un Error si algún puerto lo tiene un proceso que no es de `raiz`, o si no puede comprobarlo.
  * @param {string} raiz Raíz del worktree (donde vive este `playwright.config.ts`).
  */
-export function verificarPuertos(raiz, puertos = PUERTOS_E2E) {
+export function verificarPuertos(raiz, puertos = PUERTOS_E2E, opciones = {}) {
   const mia = `${norm(resolve(raiz))}/` // con la barra: «tindivo-v2» no debe casar con «tindivo-v2-otro»
-  const ajenos = escuchadores(puertos).filter((e) => !norm(e.linea).includes(mia))
+  const ajenos = escuchadores(puertos, opciones).filter((e) => !norm(e.linea).includes(mia))
   if (ajenos.length === 0) return
   const detalle = ajenos
     .map((e) => `  :${e.puerto}  pid ${e.pid}  ${e.linea.slice(0, 160) || '(sin línea de comandos)'}`)
