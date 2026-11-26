@@ -1,10 +1,5 @@
 package com.tindivo.customer.feature.catalog.business
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.Modifier
 import com.tindivo.customer.support.CapturaV31
 import com.tindivo.customer.support.LETRA_GRANDE
 import com.tindivo.customer.support.PerfilCaptura
@@ -67,7 +62,7 @@ abstract class NegocioCapturasBase(
     private val guarnicion =
         ModifierGroupUi(
             id = "g1",
-            name = "Elige tu guarnición",
+            name = "Guarnición",
             selectionType = "single",
             isRequired = true,
             minSelections = 1,
@@ -113,10 +108,8 @@ abstract class NegocioCapturasBase(
         nombre: String,
         item: MenuItemUi,
         escalaDeFuente: Float = 1f,
-    ) = captura(nombre, escalaDeFuente = escalaDeFuente, conVentanas = true) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-            DishSheet(item = item, onDismiss = {}, onAdd = {})
-        }
+    ) = captura(nombre, escalaDeFuente = escalaDeFuente) {
+        DishPage(item = item, onClose = {}, onAdd = {})
     }
 
     @Test

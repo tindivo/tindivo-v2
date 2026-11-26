@@ -88,7 +88,6 @@ abstract class CheckoutCapturasBase(
     private val recojo =
         delivery.copy(
             method = DeliveryChoice.Pickup,
-            pickupWhen = PickupWhen.Now,
             pay = PayMethod.Prepaid,
             quote =
                 cotizacion(
@@ -109,7 +108,6 @@ abstract class CheckoutCapturasBase(
     private val sinFormulario =
         CheckoutFormActions(
             onSetMethod = {},
-            onPickupWhen = {},
             onSelectAddress = {},
             onName = {},
             onNote = {},
@@ -120,7 +118,7 @@ abstract class CheckoutCapturasBase(
             onConfirm = {},
             onOrdersOpened = {},
             onAcknowledge = {},
-            sheets = CheckoutSheetActions({}, {}, {}, {}, {}, {}, {}),
+            sheets = CheckoutSheetActions({}, {}, {}, {}, {}, {}, onProfileCompleted = {}),
         )
 
     private val alPago: ComposeContentTestRule.() -> Unit = {
