@@ -177,6 +177,12 @@ export default defineConfig({
       timeout: 240_000,
     },
     {
+      command: 'pnpm --filter @tindivo/admin dev',
+      url: 'http://localhost:3003',
+      reuseExistingServer: true,
+      timeout: 240_000,
+    },
+    {
       command: 'pnpm --filter @tindivo/negocios dev',
       url: 'http://localhost:3002',
       reuseExistingServer: true,

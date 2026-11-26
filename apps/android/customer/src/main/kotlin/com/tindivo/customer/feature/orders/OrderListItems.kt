@@ -205,12 +205,12 @@ private fun PastOrderItem(
             PhaseLabel(order)
         }
         val linkModifier = Modifier.padding(start = THUMB + 12.dp)
-        // Como la web: volver a pedir abre la carta del negocio; la bolsa no se toca.
+        // CUS-ORD-009: solo el último entregado; repone la bolsa (CUS-CRT-012).
         if (order.reorderable) {
             InlineAction(
                 text = stringResource(R.string.order_reorder),
                 icon = TindivoIcons.Replay,
-                onClick = { actions.onReorder(order.businessId.toString()) },
+                onClick = { actions.onReorder(order.id) },
                 modifier = linkModifier,
             )
         }

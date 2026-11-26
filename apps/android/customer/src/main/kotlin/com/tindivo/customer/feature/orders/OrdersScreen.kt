@@ -40,11 +40,12 @@ internal fun OrdersDestination(
     onBack: () -> Unit,
     onOpenOrder: (id: String) -> Unit,
     onExplore: () -> Unit,
-    onReorder: (businessId: String) -> Unit = {},
+    onOpenCart: () -> Unit = {},
     onReviewMoment: (open: Boolean) -> Unit = {},
     viewModel: OrdersViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
     nameViewModel: CustomerNameViewModel = hiltViewModel(),
+    reorderViewModel: ReorderViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
@@ -70,7 +71,7 @@ internal fun OrdersDestination(
             OrderCardActions(
                 supportNumber = supportNumber,
                 customerName = customerName,
-                onReorder = onReorder,
+                onReorder = reorderViewModel::reorder,
                 onOpenLink = { link ->
                     try {
                         uriHandler.openUri(link)
@@ -80,6 +81,12 @@ internal fun OrdersDestination(
                 },
             ),
     )
+    ReorderHost(
+        outcome = reorderViewModel.outcome.collectAsStateWithLifecycle().value,
+        onOpenCart = onOpenCart,
+        onConsume = reorderViewModel::consumeOutcome,
+        onReplace = reorderViewModel::replaceWithPending,
+    )
 }
 
 /** Lo que una tarjeta del historial puede hacer además de abrir el pedido. */
@@ -87,7 +94,7 @@ internal data class OrderCardActions(
     val supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
     /** El nombre para firmar el mensaje de ayuda; `null` si no se pudo leer. */
     val customerName: String? = null,
-    val onReorder: (businessId: String) -> Unit = {},
+    val onReorder: (orderId: UUID) -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
 )
 

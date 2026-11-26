@@ -100,9 +100,9 @@ internal data class OrderCardUi(
     val itemsSummary: String,
     val createdAt: RelativeDate,
     val total: String,
-    /** El negocio del pedido: «Volver a pedir» abre su carta, como la web. */
+    /** El negocio del pedido. */
     val businessId: UUID,
-    /** «Volver a pedir» se ofrece siempre, salvo con el comprobante rechazado del todo (`proof_rejected_final`). */
+    /** Candidato a «Volver a pedir»: solo un pedido entregado. [orderSections] deja uno: el último entregado. */
     val reorderable: Boolean,
     /** Prepago esperando el pago: en la portada es «Falta tu pago», no «Pedido en curso». */
     val awaitingPayment: Boolean = false,
