@@ -1,0 +1,127 @@
+#!/usr/bin/env node
+// Copia de producción P0.5, parte 2: baja los archivos de Storage y los entrega como un tar por stdout.
+//
+//   stdin   una línea JSON por objeto de storage.objects (la escribe en-contenedor.sh, modo listar-objetos)
+//   stdout  el tar (va directo a gpg: nada en claro toca el disco)
+//   stderr  el avance, en cifras: sin nombres de archivo y sin la credencial
+//
+// La service role llega por la variable TINDIVO_STORAGE_KEY y solo viaja en la cabecera de un GET.
+import { createInterface } from 'node:readline'
+import { pathToFileURL } from 'node:url'
+import { soloGet, tomarCredencial } from './solo-get.mjs'
+import { crearEscritorTar } from './tar-lib.mjs'
+
+const REF_PROD = 'zpnipajgwfthxhdtzhly'
+const URLS = {
+  prod: [`https://${REF_PROD}.supabase.co`],
+  local: ['http://127.0.0.1:54321', 'http://localhost:54321'],
+}
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export class NombreNoValido extends Error {
+  constructor() {
+    super('nombre de objeto no válido')
+  }
+}
+
+export function validarBase(destino, url) {
+  const permitidas = URLS[destino]
+  if (!permitidas) throw new Error(`destino desconocido: ${destino}`)
+  if (!permitidas.includes(url)) throw new Error(`la URL de Storage no corresponde al destino «${destino}»`)
+  return url
+}
+
+export function urlDeObjeto(base, bucket, nombre) {
+  // Un tramo «.» o «..» cambiaría la ruta al normalizarse la URL: ese nombre no se pide.
+  if ([bucket, ...nombre.split('/')].some((t) => t === '' || t === '.' || t === '..')) throw new NombreNoValido()
+  const ruta = nombre.split('/').map(encodeURIComponent).join('/')
+  const url = new URL(`${base}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${ruta}`)
+  if (url.origin !== new URL(base).origin) throw new Error('la URL del objeto sale del host de Storage')
+  return url
+}
+
+function rutaEnTar(obj, n) {
+  const bucket =
+    String(obj.bucket)
+      .replace(/[^A-Za-z0-9._-]/g, '_')
+      .slice(0, 48) || '_'
+  return UUID.test(obj.id) ? `objetos/${bucket}/${obj.id.toLowerCase()}` : `objetos/${bucket}/n${n}`
+}
+
+/**
+ * @param {{ base: string, clave: string, lineas: AsyncIterable<string>, salida: import('node:stream').Writable,
+ *   avisar?: (m: string) => void, fetchImpl?: typeof fetch, esperar?: (ms: number) => Promise<void> }} p
+ */
+export async function copiarStorage({ base, clave, lineas, salida, avisar = () => {}, fetchImpl, esperar }) {
+  const tar = crearEscritorTar(salida)
+  const cabeceras = { authorization: `Bearer ${clave}`, apikey: clave }
+  const objetos = []
+  const resumen = { listados: 0, ok: 0, no_encontrados: 0, nombre_no_valido: 0, tamano_distinto: 0, bytes: 0 }
+  for await (const linea of lineas) {
+    if (!linea.trim()) continue
+    const obj = JSON.parse(linea)
+    resumen.listados++
+    const registro = {
+      bucket: obj.bucket,
+      id: obj.id,
+      nombre: obj.name,
+      mimetype: obj.mimetype ?? null,
+      bytes_declarados: obj.size ?? null,
+      actualizado: obj.updated_at ?? null,
+    }
+    let url
+    try {
+      url = urlDeObjeto(base, String(obj.bucket), String(obj.name))
+    } catch (err) {
+      if (!(err instanceof NombreNoValido)) throw err
+      resumen.nombre_no_valido++
+      objetos.push({ ...registro, estado: 'nombre_no_valido' })
+      continue
+    }
+    const { status, cuerpo } = await soloGet(url, cabeceras, { fetchImpl, esperar })
+    if (status === 200) {
+      const ruta = rutaEnTar(obj, resumen.listados)
+      await tar.agregar(ruta, cuerpo)
+      const distinto = obj.size != null && Number(obj.size) !== cuerpo.length
+      if (distinto) resumen.tamano_distinto++
+      resumen.ok++
+      resumen.bytes += cuerpo.length
+      objetos.push({ ...registro, estado: distinto ? 'ok_tamano_distinto' : 'ok', ruta, bytes: cuerpo.length })
+    } else if (status === 404 || (status === 400 && /not.?found/i.test(cuerpo.toString('utf8', 0, 300)))) {
+      resumen.no_encontrados++
+      objetos.push({ ...registro, estado: 'no_encontrado' })
+    } else {
+      throw new Error(`Storage respondió HTTP ${status} en el objeto ${resumen.listados} (id ${obj.id})`)
+    }
+    if (resumen.listados % 50 === 0) avisar(`${resumen.listados} objetos vistos, ${resumen.bytes} bytes`)
+  }
+  const manifiestoSha256 = await tar.cerrar({
+    tipo: 'storage',
+    origen: base,
+    tomado_utc: new Date().toISOString(),
+    resumen,
+    objetos,
+  })
+  return { resumen, manifiestoSha256 }
+}
+
+async function principal() {
+  const [destino, base] = process.argv.slice(2)
+  const avisar = (m) => console.error(`[storage] ${m}`)
+  try {
+    validarBase(destino, base)
+    const clave = tomarCredencial('TINDIVO_STORAGE_KEY')
+    const lineas = createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY })
+    const { resumen, manifiestoSha256 } = await copiarStorage({ base, clave, lineas, salida: process.stdout, avisar })
+    await new Promise((r) => process.stdout.end(r))
+    avisar(
+      `RESUMEN listados=${resumen.listados} ok=${resumen.ok} no_encontrados=${resumen.no_encontrados} nombre_no_valido=${resumen.nombre_no_valido} tamano_distinto=${resumen.tamano_distinto} bytes=${resumen.bytes}`,
+    )
+    avisar(`MANIFEST_SHA256=${manifiestoSha256}`)
+  } catch (err) {
+    avisar(`ERROR: ${err.message}`)
+    process.exit(1)
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await principal()

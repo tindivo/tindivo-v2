@@ -66,7 +66,7 @@ jobs:
         run: |
           pnpm spec:validar
           node scripts/spec.mjs indice --check
-          node --test scripts/spec.test.mjs scripts/check-docs.test.mjs
+          node --test scripts/spec.test.mjs scripts/check-docs.test.mjs scripts/prod-backup/__tests__/prod-backup.test.mjs
 
       # Fronteras de arquitectura (ADR 0039): ninguna app cliente importa packages/backend, el backend no
       # importa next, domain/ no toca infra ni SDK, y un módulo solo importa el index de otro.
