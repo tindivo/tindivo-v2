@@ -915,12 +915,18 @@ export default function PrivacidadPage() {
 
         <Section entry={TOC.menores}>
           <p>
-            Tindivo está dirigido a personas de <B>18 años o más</B>.
+            Tindivo está dirigido a personas de <B>14 años o más</B>. Si tienes entre 14 y 17 años,
+            puedes usar la app. No nos des datos de tus papás ni de otras personas, salvo la
+            dirección y el celular que hagan falta para entregar un pedido.
           </p>
           <p>
-            Si detectas que una persona menor de esa edad ha proporcionado datos mediante una
-            cuenta, comunícalo al contacto de privacidad para revisar el caso y atender la solicitud
-            que corresponda.
+            Si eres menor de edad, tu mamá, papá o apoderado puede escribirnos al contacto de
+            privacidad para revisar tus datos y atender la solicitud que corresponda. No enviamos
+            promociones a menores sin permiso de sus padres.
+          </p>
+          <p>
+            Si detectas que una persona menor de 14 años ha proporcionado datos mediante una cuenta,
+            comunícalo al contacto de privacidad para revisar el caso.
           </p>
         </Section>
 

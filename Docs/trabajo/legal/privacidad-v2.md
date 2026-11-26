@@ -12,7 +12,7 @@
 | Responsable, DNI, domicilio, correo, WhatsApp; Ley 29733 y DS 016-2024-JUS; banco «Usuarios de la aplicación móvil», PN-2026-559 | `apps/customer/app/privacidad/page.tsx` §1 (commit b8068f7f de esta rama) |
 | Entrada solo con Google (Apple en iOS); celular por SMS con Twilio Verify | `Docs/producto/acceso/capacidad.md` CUS-AUT-019, 007 (PR #201); `package.json` de `apps/api` (`twilio`) |
 | Un número, una cuenta; aviso de traslado y restricciones del número | CUS-AUT-008, 028 (PR #201); página vigente §2 |
-| Edad mínima 18 | `Docs/planes/movil/decisiones.md` D-46 |
+| Edad mínima 14; menores: sin datos de terceros, sin promociones sin permiso de los padres, los padres pueden pedir revisión | `Docs/planes/movil/decisiones.md` D-46 (14 años, Jesús, 2026-11-26); `decisiones-jesus.md` (propuesta 5) |
 | Datos de dirección y ubicación; permiso de ubicación opcional y solo en primer plano | página vigente §2 y §9; `Docs/producto/direcciones/capacidad.md` |
 | Mapas: Google Maps en Android; Leaflet con CARTO/OpenStreetMap/Esri en la web | `apps/android/gradle/libs.versions.toml` (`play-services-maps`, `maps-compose`); `leaflet` en `apps/customer`; `arcgisonline.com` en `apps/customer` |
 | Pedidos, Entregas, notas, incidencias, apelaciones | página vigente §2; `Docs/negocio/servicios/entregas.md`; `Docs/producto/entregas/capacidad.md` (PR #199) |
@@ -188,8 +188,12 @@ aceptar publicidad.
 
 ## 11. Menores de edad
 
-Tindivo es para personas de **18 años o más**. Si ves que una persona menor entregó datos, avisa al correo de privacidad
-para revisar el caso.
+Tindivo es para personas de **14 años o más**. Si tienes entre 14 y 17 años, puedes usar la app. No nos des datos de tus
+papás ni de otras personas, salvo la dirección y el celular que hagan falta para entregar un pedido.
+
+Si eres menor de edad, tu mamá, papá o apoderado puede escribirnos al correo de privacidad para revisar tus datos. No
+enviamos promociones a menores sin permiso de sus padres. Si ves que una persona menor de 14 años entregó datos, avisa
+al correo de privacidad para revisar el caso.
 
 ## 12. Seguridad
 
@@ -220,7 +224,7 @@ pedido (ver los Términos). **Fecha de esta versión:** `[POR DECIDIR]`.
 4. **Dónde se publican los textos cuando se apague la web.** La política, los términos y el borrado hoy son rutas de
    `tindivo.com`. Play exige un enlace público de borrado y de privacidad (decisión 7 del PR #201; D-27). Hasta decidirlo,
    la sección 7 queda sin dirección.
-5. **Cómo se comprueba la edad.** El texto dice 18 años (D-46), pero ninguna ficha define el control: ¿basta la casilla?
+5. **Cómo se comprueba la edad.** Resuelto el 2026-11-26: basta la casilla «Declaro tener la edad mínima» (14 años, D-46).
 6. **Firebase en Android.** La política original lista Firebase Cloud Messaging en Android. El cliente Android no trae
    Firebase en su Gradle hoy (el servidor sí sabe enviar por FCM, y `cuenta` dice «sin FCM no hay qué apagar»). Si los
    avisos no salen en el primer lanzamiento, esa fila y la de Google FCM sobran. Verificar contra el build final.
