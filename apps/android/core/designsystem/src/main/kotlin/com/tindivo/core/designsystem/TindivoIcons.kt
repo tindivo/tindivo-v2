@@ -213,6 +213,11 @@ object TindivoIcons {
     /** Menos: quitar una unidad. */
     val Remove: ImageVector by lazy { icon("Remove", "M19,13H5v-2h14v2z") }
 
+    /** Tacho: quitar el último producto de una línea. */
+    val Delete: ImageVector by lazy {
+        icon("Delete", "M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z")
+    }
+
     /** Chevron hacia abajo: la píldora «Entregar en». */
     val ExpandMore: ImageVector by lazy {
         icon("ExpandMore", "M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6 1.41,-1.41z")
@@ -235,6 +240,16 @@ object TindivoIcons {
                 "c-2.83,-1.35 -5.48,-3.9 -6.89,-6.83l1.95,-1.66c0.27,-0.28 0.35,-0.67 0.24,-1.02" +
                 " -0.37,-1.11 -0.56,-2.3 -0.56,-3.53 0,-0.54 -0.45,-0.99 -0.99,-0.99H4.19C3.65,3 3,3.24 3,3.99" +
                 " 3,13.28 10.73,21 20.01,21c0.71,0 0.99,-0.63 0.99,-1.18v-3.45c0,-0.54 -0.45,-0.99 -0.99,-0.99z",
+        )
+    }
+
+    /** Maletín: la dirección «Trabajo». */
+    val Work: ImageVector by lazy {
+        icon(
+            "Work",
+            "M20,6h-4V4c0,-1.11 -0.89,-2 -2,-2h-4c-1.11,0 -2,0.89 -2,2v2H4c-1.11,0 -1.99,0.89 -1.99,2L2,19" +
+                "c0,1.11 0.89,2 2,2h16" +
+                "c1.11,0 2,-0.89 2,-2V8c0,-1.11 -0.89,-2 -2,-2zM10,4h4v2h-4V4z",
         )
     }
 

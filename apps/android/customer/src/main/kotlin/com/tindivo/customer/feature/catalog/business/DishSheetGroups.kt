@@ -25,8 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,13 +45,36 @@ internal fun ModifierGroupSection(
     group: ModifierGroupUi,
     state: DishSheetState,
     onToggle: (ModifierOptionUi) -> Unit,
+    modifier: Modifier = Modifier,
+    highlighted: Boolean = false,
 ) {
-    TindivoCard(modifier = Modifier.fillMaxWidth()) {
+    val scheme = MaterialTheme.colorScheme
+    // Resaltado: borde de error de 2 dp alrededor de la tarjeta, para que se vea qué falta elegir.
+    val outline = if (highlighted) Modifier.border(2.dp, scheme.error, MaterialTheme.shapes.large) else Modifier
+    TindivoCard(modifier = modifier.fillMaxWidth().then(outline)) {
         Column(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             GroupHeader(group = group, progress = state.progress(group))
+            if (highlighted) {
+                // No solo color: el aviso va en texto y el lector de pantalla lo anuncia como error.
+                val message =
+                    stringResource(
+                        if (state.isMissing(group)) R.string.dish_group_missing else R.string.dish_group_over,
+                    )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = scheme.error,
+                    modifier =
+                        Modifier.padding(horizontal = 4.dp).semantics {
+                            error(message)
+                            liveRegion = LiveRegionMode.Polite
+                        },
+                )
+            }
             group.options.forEach { option ->
                 OptionRow(
                     group = group,
@@ -77,12 +103,14 @@ private fun GroupHeader(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() },
             )
-            val hint = listOfNotNull(hintText(progress), counterText(progress)).joinToString(" · ")
-            Text(
-                text = hint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // Sin contadores «0/1»: la píldora de la derecha dice «Obligatorio» o «Listo», y aquí solo cuánto se puede elegir.
+            hintText(progress)?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         GroupStatusPill(progress)
     }
@@ -125,11 +153,6 @@ private fun GroupStatusPill(progress: GroupProgress) {
         }
     }
 }
-
-@Composable
-private fun counterText(progress: GroupProgress): String =
-    progress.max?.let { stringResource(R.string.dish_group_counter, progress.count, it) }
-        ?: stringResource(R.string.dish_group_counter_unlimited, progress.count)
 
 @Composable
 private fun hintText(progress: GroupProgress): String? =

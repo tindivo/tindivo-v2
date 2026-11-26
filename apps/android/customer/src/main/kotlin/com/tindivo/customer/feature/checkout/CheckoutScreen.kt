@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,10 +23,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -34,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
+import kotlinx.coroutines.launch
 
 @Composable
 fun CheckoutDestination(
@@ -120,7 +125,7 @@ internal fun CheckoutTopBar(
                 subtitle?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -158,11 +163,28 @@ private fun CheckoutForm(
             null
         }
     val subtitle = listOfNotNull(state.businessName.takeIf { it.isNotBlank() }, eta).joinToString(" · ")
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val paymentFocus = remember { FocusRequester() }
     Scaffold(
         topBar = { CheckoutTopBar(subtitle = subtitle.takeIf { it.isNotEmpty() }, onBack = actions.onBack) },
-        bottomBar = { CheckoutBottomBar(state = state, form = form, openSheet = openSheet) },
+        bottomBar = {
+            CheckoutBottomBar(
+                state = state,
+                form = form,
+                openSheet = openSheet,
+                goToPayment = {
+                    scope.launch {
+                        checkoutItemIndex(PAYMENT_ITEM_KEY)?.let { listState.animateScrollToItem(it) }
+                        // TalkBack sigue el foco: sin esto se quedaba en el botón de la barra de abajo.
+                        runCatching { paymentFocus.requestFocus() }
+                    }
+                },
+            )
+        },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding =
                 PaddingValues(
@@ -175,7 +197,7 @@ private fun CheckoutForm(
         ) {
             bagSection(state, actions.onBack)
             deliverySection(state, form, openSheet)
-            paymentSection(state, form)
+            paymentSection(state, form, paymentFocus)
             totalsSection(state)
         }
     }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -88,8 +89,16 @@ class CartViewModelTest {
         // (10.10 + 2.50) × 3 = 37.80; más 12.50 = 50.30.
         assertEquals("S/ 37.80", ui.lines[0].total.plain())
         assertEquals("S/ 50.30", ui.subtotal.plain())
-        assertTrue(ui.lines[0].canDecrease)
-        assertFalse(ui.lines[1].canDecrease)
+        assertFalse(ui.lines[0].minusRemoves)
+        assertTrue(ui.lines[1].minusRemoves)
+    }
+
+    @Test
+    fun `cada linea lleva la foto de su plato, o null si no tiene`() {
+        val withPhoto = line("a").copy(imageUrl = "https://img.test/a.webp")
+        val ui = Cart("n", "Negocio", listOf(withPhoto, line("b"))).toUi() as CartUiState.Filled
+        assertEquals("https://img.test/a.webp", ui.lines[0].imageUrl)
+        assertNull(ui.lines[1].imageUrl)
     }
 
     @Test

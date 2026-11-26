@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -40,8 +41,10 @@ internal fun CheckoutBottomBar(
     state: CheckoutUiState,
     form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
+    goToPayment: () -> Unit,
 ) {
     val cta = state.cta
+    val confirm = rememberConfirmWithLocation(state, form.onConfirm)
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
@@ -63,21 +66,30 @@ internal fun CheckoutBottomBar(
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
-            val onClick = { onCta(cta, state.selectedAddressId, form, openSheet) }
+            // Todo recojo es prepago y no se devuelve si no pasa (DECISIONS §0224): se ve junto al botón, no se confirma sin verlo.
+            if (state.isPickup) {
+                Text(
+                    text = stringResource(R.string.checkout_pickup_policy),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(PICKUP_POLICY_BAR_TAG),
+                )
+            }
+            val onClick = { onCta(cta, state.selectedAddressId, confirm, form, openSheet, goToPayment) }
             if (cta is Cta.Ready) {
                 ConfirmPill(label = cta.label(), total = cta.total.soles(), onClick = onClick)
             } else {
                 TindivoPrimaryButton(
                     text = cta.label(),
                     onClick = onClick,
-                    enabled = cta != Cta.Sending,
+                    enabled = cta != Cta.Sending && cta != Cta.Locating,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
             supportLine(state)?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -89,12 +101,15 @@ internal fun CheckoutBottomBar(
 private fun onCta(
     cta: Cta,
     selectedAddressId: String?,
+    confirm: () -> Unit,
     form: CheckoutFormActions,
     openSheet: (CheckoutSheet) -> Unit,
+    goToPayment: () -> Unit,
 ) {
     val sheet = cta.sheet(selectedAddressId)
     when {
-        cta.canConfirm -> form.onConfirm()
+        cta.canConfirm -> confirm()
+        cta.goesToPayment -> goToPayment()
         sheet != null -> openSheet(sheet)
         cta == Cta.QuoteProblem -> form.onRetryQuote()
     }
@@ -149,3 +164,5 @@ private fun ConfirmPill(
         }
     }
 }
+
+internal const val PICKUP_POLICY_BAR_TAG = "pickup-policy-bar"

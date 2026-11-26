@@ -24,10 +24,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.support.CustomerNameViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
 import java.util.UUID
@@ -38,14 +40,21 @@ internal fun OrdersDestination(
     onBack: () -> Unit,
     onOpenOrder: (id: String) -> Unit,
     onExplore: () -> Unit,
-    onReorder: (businessId: String) -> Unit = {},
+    onOpenCart: () -> Unit = {},
     onReviewMoment: (open: Boolean) -> Unit = {},
     viewModel: OrdersViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
+    nameViewModel: CustomerNameViewModel = hiltViewModel(),
+    reorderViewModel: ReorderViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
+    val customerName = nameViewModel.name.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshIfStale()
+        onPauseOrDispose {}
+    }
     LaunchedEffect(state) {
         if (state is OrdersUiState.LoggedOut) onBack()
     }
@@ -61,7 +70,8 @@ internal fun OrdersDestination(
         cardActions =
             OrderCardActions(
                 supportNumber = supportNumber,
-                onReorder = onReorder,
+                customerName = customerName,
+                onReorder = reorderViewModel::reorder,
                 onOpenLink = { link ->
                     try {
                         uriHandler.openUri(link)
@@ -71,12 +81,20 @@ internal fun OrdersDestination(
                 },
             ),
     )
+    ReorderHost(
+        outcome = reorderViewModel.outcome.collectAsStateWithLifecycle().value,
+        onOpenCart = onOpenCart,
+        onConsume = reorderViewModel::consumeOutcome,
+        onReplace = reorderViewModel::replaceWithPending,
+    )
 }
 
 /** Lo que una tarjeta del historial puede hacer además de abrir el pedido. */
 internal data class OrderCardActions(
     val supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
-    val onReorder: (businessId: String) -> Unit = {},
+    /** El nombre para firmar el mensaje de ayuda; `null` si no se pudo leer. */
+    val customerName: String? = null,
+    val onReorder: (orderId: UUID) -> Unit = {},
     val onOpenLink: (String) -> Unit = {},
 )
 

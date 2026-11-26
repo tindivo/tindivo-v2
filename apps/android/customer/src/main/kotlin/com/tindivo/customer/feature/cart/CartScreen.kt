@@ -1,7 +1,6 @@
 package com.tindivo.customer.feature.cart
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -43,10 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -69,6 +65,7 @@ import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.catalog.business.DishPhoto
 
 /** Une el ViewModel con la pantalla. [onAddMore] vuelve a la carta del negocio de la bolsa. */
 @Composable
@@ -122,7 +119,6 @@ fun CartScreen(
             CartTopBar(
                 units = (state as? CartUiState.Filled)?.lines?.sumOf { it.quantity },
                 onBack = actions.onBack,
-                onClear = { confirmingClear = true },
             )
         },
         bottomBar = {
@@ -133,9 +129,17 @@ fun CartScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when (state) {
-                CartUiState.Loading -> Unit
-                CartUiState.Empty -> EmptyBag(onSeeBusinesses = actions.onSeeBusinesses)
-                is CartUiState.Filled -> FilledBag(state = state, actions = actions)
+                CartUiState.Loading -> {
+                    Unit
+                }
+
+                CartUiState.Empty -> {
+                    EmptyBag(onSeeBusinesses = actions.onSeeBusinesses)
+                }
+
+                is CartUiState.Filled -> {
+                    FilledBag(state = state, actions = actions, onClear = { confirmingClear = true })
+                }
             }
         }
     }
@@ -150,12 +154,11 @@ fun CartScreen(
     }
 }
 
-/** [units] es `null` con la bolsa vacía: entonces no hay contador ni «Vaciar». */
+/** [units] es `null` con la bolsa vacía: entonces no hay contador. «Vaciar» no va aquí: está al final de la lista. */
 @Composable
 private fun CartTopBar(
     units: Int?,
     onBack: () -> Unit,
-    onClear: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shadowElevation = 4.dp) {
         Row(
@@ -191,15 +194,6 @@ private fun CartTopBar(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
                         )
                     }
-                }
-            }
-            if (units != null) {
-                TextButton(
-                    onClick = onClear,
-                    modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget),
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                ) {
-                    Text(text = stringResource(R.string.cart_clear), fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
         }
@@ -297,6 +291,7 @@ private fun EmptyBag(onSeeBusinesses: () -> Unit) {
 private fun FilledBag(
     state: CartUiState.Filled,
     actions: CartActions,
+    onClear: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -323,6 +318,16 @@ private fun FilledBag(
         }
         item { AddMorePill(businessName = state.businessName, onClick = { actions.onAddMore(state.businessId) }) }
         item { TotalsCard(subtotal = state.subtotal) }
+        // Destructivo y poco frecuente: al final, como texto, y con confirmación antes de vaciar.
+        item {
+            TextButton(
+                onClick = onClear,
+                modifier = Modifier.fillMaxWidth().heightIn(min = TindivoSpacing.touchTarget),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) {
+                Text(text = stringResource(R.string.cart_clear), fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -370,21 +375,13 @@ private fun CartLineRow(
         modifier = Modifier.fillMaxWidth().padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.item),
     ) {
-        // La bolsa guardada no trae la foto del plato: va el isotipo sobre crema, como en el tablero.
-        Box(
-            modifier =
-                Modifier
-                    .size(72.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(14.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                bitmap = ImageBitmap.imageResource(R.drawable.ic_tindivo_isotipo),
-                contentDescription = null,
-                modifier = Modifier.width(40.dp),
-                contentScale = ContentScale.Fit,
-            )
-        }
+        // La foto que se guardó al agregar el plato; sin ella (o mientras carga) va el isotipo sobre crema.
+        DishPhoto(
+            imageUrl = line.imageUrl,
+            shape = RoundedCornerShape(14.dp),
+            markWidth = 40.dp,
+            modifier = Modifier.size(72.dp),
+        )
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -449,12 +446,25 @@ private fun QuantityControls(
                     .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                onClick = { actions.onChangeQuantity(line.signature, -1) },
-                enabled = line.canDecrease,
-                modifier = Modifier.size(TindivoSpacing.touchTarget),
-            ) {
-                Icon(TindivoIcons.Remove, contentDescription = stringResource(R.string.cart_line_less, line.name))
+            if (line.minusRemoves) {
+                // Con una sola unidad el «−» es un tacho: quita el plato, y por eso «Quitar» ya no hace falta.
+                IconButton(
+                    onClick = { actions.onRemove(line.signature) },
+                    modifier = Modifier.size(TindivoSpacing.touchTarget),
+                ) {
+                    Icon(
+                        TindivoIcons.Delete,
+                        contentDescription = stringResource(R.string.cart_line_remove, line.name),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            } else {
+                IconButton(
+                    onClick = { actions.onChangeQuantity(line.signature, -1) },
+                    modifier = Modifier.size(TindivoSpacing.touchTarget),
+                ) {
+                    Icon(TindivoIcons.Remove, contentDescription = stringResource(R.string.cart_line_less, line.name))
+                }
             }
             Text(text = line.quantity.toString(), style = MaterialTheme.typography.titleMedium)
             IconButton(
@@ -466,10 +476,13 @@ private fun QuantityControls(
             }
         }
         Spacer(modifier = Modifier.weight(1f))
-        TextButton(onClick = {
-            actions.onRemove(line.signature)
-        }, modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget)) {
-            Text(text = stringResource(R.string.cart_remove), fontWeight = FontWeight.SemiBold)
+        if (!line.minusRemoves) {
+            TextButton(
+                onClick = { actions.onRemove(line.signature) },
+                modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget),
+            ) {
+                Text(text = stringResource(R.string.cart_remove), fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
@@ -568,8 +581,8 @@ private fun CartPreview() {
             note = "sin ají",
             quantity = 2,
             total = "S/ 25.00",
-            canDecrease = true,
             canIncrease = true,
+            imageUrl = null,
         )
     TindivoTheme {
         CartScreen(

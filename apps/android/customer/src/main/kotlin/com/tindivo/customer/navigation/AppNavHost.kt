@@ -1,5 +1,10 @@
 package com.tindivo.customer.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -20,6 +25,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -36,6 +42,7 @@ import com.tindivo.customer.feature.addresses.AddressFormRoute
 import com.tindivo.customer.feature.addresses.AddressFormViewModel
 import com.tindivo.customer.feature.addresses.AddressesDestination
 import com.tindivo.customer.feature.addresses.AddressesRoute
+import com.tindivo.customer.feature.addresses.signalAddressesChanged
 import com.tindivo.customer.feature.cart.CartDestination
 import com.tindivo.customer.feature.catalog.business.BusinessDestination
 import com.tindivo.customer.feature.catalog.business.BusinessRoute
@@ -66,6 +73,8 @@ import com.tindivo.customer.feature.terms.TermsGate
 import com.tindivo.customer.feature.terms.TermsGateViewModel
 import com.tindivo.customer.feature.update.UpdateScreen
 import kotlinx.serialization.Serializable
+
+private const val NAV_FADE_MS = 120
 
 @Serializable
 data object CatalogHomeRoute
@@ -125,6 +134,35 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             NavHost(
                 navController = navController,
                 startDestination = CatalogHomeRoute,
+                // Entre pestañas no se anima; en el resto, un fundido corto en vez de los 700 ms por defecto.
+                enterTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        EnterTransition.None
+                    } else {
+                        fadeIn(tween(NAV_FADE_MS))
+                    }
+                },
+                exitTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        ExitTransition.None
+                    } else {
+                        fadeOut(tween(NAV_FADE_MS))
+                    }
+                },
+                popEnterTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        EnterTransition.None
+                    } else {
+                        fadeIn(tween(NAV_FADE_MS))
+                    }
+                },
+                popExitTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        ExitTransition.None
+                    } else {
+                        fadeOut(tween(NAV_FADE_MS))
+                    }
+                },
                 modifier =
                     (
                         if (tab !=
@@ -166,6 +204,8 @@ private fun NavGraphBuilder.catalogGraph(navController: NavHostController) {
             onOpenCart = { navController.navigate(CartRoute) },
             onOpenCourier = { navController.navigate(CourierHomeRoute()) { launchSingleTop = true } },
             onOpenStore = { navController.navigate(StoreListRoute()) { launchSingleTop = true } },
+            onOpenAddresses = { navController.navigate(AddressesRoute) },
+            onSignIn = { navController.navigate(SignInRoute) },
         )
         // «¿Cómo estuvo tu pedido?»: sale sola si hay una reseña pendiente. Sin sesión no consulta nada.
         ReviewHost(rememberReviewController(autoPrompt = true))
@@ -214,6 +254,11 @@ private fun NavGraphBuilder.accountGraph(navController: NavHostController) {
                 .getStateFlow(PHONE_CHANGED_KEY, false)
                 .collectAsStateWithLifecycle()
                 .value
+        val addressesChanged =
+            entry.savedStateHandle
+                .getStateFlow(ADDRESSES_CHANGED_KEY, false)
+                .collectAsStateWithLifecycle()
+                .value
         AccountDestination(
             onLeave = { navController.popBackStack() },
             onOpenAddresses = { navController.navigate(AddressesRoute) },
@@ -227,6 +272,10 @@ private fun NavGraphBuilder.accountGraph(navController: NavHostController) {
                     onOpen = { navController.navigate(ProfileRoute) },
                 ),
             onDeleteAccount = { navController.navigate(DeleteAccountRoute) },
+            addressesChanged = addressesChanged,
+            onAddressesChangeHandled = { entry.savedStateHandle[ADDRESSES_CHANGED_KEY] = false },
+            onAddAddress = { navController.navigate(AddressFormRoute()) },
+            onEditAddress = { id -> navController.navigate(AddressFormRoute(id)) },
             // Diagnóstico es una herramienta de desarrollo: en release no hay forma de llegar a ella.
             onOpenDiagnostics =
                 if (BuildConfig.DEBUG) {
@@ -270,6 +319,7 @@ private fun NavGraphBuilder.addressesGraph(navController: NavHostController) {
         AddressesDestination(
             changed = changed,
             onChangeHandled = { entry.savedStateHandle[ADDRESSES_CHANGED_KEY] = false },
+            onLibraryChanged = navController::signalAddressesChanged,
             onBack = { navController.popBackStack() },
             onAdd = { navController.navigate(AddressFormRoute()) },
             onEdit = { id -> navController.navigate(AddressFormRoute(id)) },
@@ -299,7 +349,7 @@ private fun NavGraphBuilder.ordersGraph(navController: NavHostController) {
             onBack = { navController.popBackStack() },
             onOpenOrder = { id -> navController.navigate(OrderDetailRoute(id)) },
             onExplore = { navController.popBackStack(CatalogHomeRoute, inclusive = false) },
-            onReorder = { businessId -> navController.navigate(BusinessRoute(businessId)) },
+            onOpenCart = { navController.navigate(CartRoute) },
             onReviewMoment = { open -> if (open) review.enableAutoPrompt() else review.disableAutoPrompt() },
         )
         ReviewHost(review)
@@ -328,19 +378,20 @@ private fun NavGraphBuilder.checkoutDestination(navController: NavHostController
             actions =
                 CheckoutActions(
                     onBack = { navController.popBackStack() },
-                    // El pedido existe: el checkout sale de la pila para que «atrás» no vuelva a una bolsa vacía.
-                    onOrderOpened = { id ->
-                        navController.navigate(OrderDetailRoute(id)) {
-                            popUpTo<CheckoutRoute> { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    },
+                    // El pedido existe: el checkout y la bolsa vacía salen de la pila; «atrás» va al Inicio.
+                    onOrderOpened = { id -> navController.navigate(OrderDetailRoute(id)) { orderCreatedStack() } },
                     onOpenOrders = { navController.navigate(OrdersRoute) },
                     onSignIn = { navController.navigate(SignInRoute) },
                     onSeeBusinesses = { navController.popBackStack<CatalogHomeRoute>(inclusive = false) },
                 ),
         )
     }
+}
+
+/** Pedido recién creado: se recorta la pila hasta el Inicio (que se queda) y el detalle va encima (`seguimiento.md`). */
+internal fun NavOptionsBuilder.orderCreatedStack() {
+    popUpTo<CatalogHomeRoute> { inclusive = false }
+    launchSingleTop = true
 }
 
 /** «Completa tu perfil» volvió a esta pantalla con el perfil creado (un booleano; nada sensible). */
@@ -369,10 +420,11 @@ private fun OrderDetailWithReview(
 }
 
 /**
- * Cambia de pestaña: siempre se vuelve a la raíz de esa pestaña, con la pila de Inicio por debajo (atrás sale de la
- * app desde cualquier pestaña) y sin duplicar destinos. Sin sesión, «Pedidos» y «Cuenta» abren la entrada.
+ * Cambia de pestaña con la pila de Inicio por debajo (atrás sale de la app desde cualquier pestaña) y sin duplicar
+ * destinos. Entregas y Pedidos recuperan la subpila en la que se dejaron (por ejemplo, el detalle de un pedido);
+ * Inicio y Cuenta siempre abren su raíz. Sin sesión, «Pedidos» y «Cuenta» abren la entrada.
  */
-private fun NavHostController.openTab(
+internal fun NavHostController.openTab(
     tab: RootTab,
     signedIn: Boolean,
 ) {
@@ -388,6 +440,8 @@ private fun NavHostController.openTab(
     navigate(destination) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
-        restoreState = tab != RootTab.Account && !needsSignIn
+        // Inicio nunca restaura: el `popUpTo` hacia él guarda lo que quitó (Entregas, si se llegó por su tarjeta) y
+        // `restoreState` lo devolvía enseguida, así que la pestaña Inicio no volvía al Inicio.
+        restoreState = tab != RootTab.Account && tab != RootTab.Home && !needsSignIn
     }
 }

@@ -193,6 +193,18 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
+      # Los tipos versionados deben reflejar las migraciones del repo: se comparan con los que genera el CLI fijado
+      # sobre la base que acaba de reconstruirse. Corre en todo PR y push, sin token ni secreto (no toca prod).
+      - name: Drift de tipos (database.types.ts vs migraciones)
+        run: |
+          supabase gen types typescript --local --schema public > "$RUNNER_TEMP/database.types.ts"
+          if ! diff -u packages/supabase/src/database.types.ts "$RUNNER_TEMP/database.types.ts" > "$RUNNER_TEMP/types.diff"; then
+            echo "::error::database.types.ts no refleja las migraciones. Con la base local en la última migración, corre 'pnpm db:types' y commitea."
+            cat "$RUNNER_TEMP/types.diff"
+            exit 1
+          fi
+          echo "Sin drift: los tipos coinciden con las migraciones."
+
       - name: Mundo e2e
         run: pnpm db:seed:e2e
 
@@ -215,42 +227,6 @@ jobs:
           supabase status || true
           docker ps -a
           docker logs "$(docker ps -aqf name=supabase_db)" --tail 200 || true
-
-  db-types-drift:
-    name: DB types drift (database.types.ts vs Supabase)
-    runs-on: ubuntu-24.04
-    # `secrets` NO es un contexto válido en `if` de job (rechaza el workflow entero).
-    # Se mapea a env y un step-guard condiciona los pasos siguientes.
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_ID: zpnipajgwfthxhdtzhly
-    steps:
-      - uses: actions/checkout@v7
-      - name: Guard — ¿hay token de Supabase configurado?
-        id: guard
-        run: |
-          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "Sin SUPABASE_ACCESS_TOKEN; se omite el chequeo de drift."
-          fi
-      - uses: supabase/setup-cli@v3
-        if: steps.guard.outputs.run == 'true'
-        with:
-          version: latest
-      - name: Generar tipos desde la DB
-        if: steps.guard.outputs.run == 'true'
-        run: supabase gen types typescript --project-id "$SUPABASE_PROJECT_ID" --schema public > /tmp/database.types.ts
-      - name: Verificar que no hay drift
-        if: steps.guard.outputs.run == 'true'
-        run: |
-          if ! diff -q packages/supabase/src/database.types.ts /tmp/database.types.ts > /dev/null; then
-            echo "::error::database.types.ts está desactualizado. Corre 'pnpm db:types' y commitea."
-            diff packages/supabase/src/database.types.ts /tmp/database.types.ts || true
-            exit 1
-          fi
-          echo "Sin drift: los tipos están sincronizados con la DB."
 
   # MV2c: los modelos de Kotlin se generan desde el contrato OpenAPI y se compilan en cada PR. Si un cambio del
   # contrato rompe la app Android, cae aquí y no al construir la app. Los de Swift se compilan a diario en
@@ -278,6 +254,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: 9.8.1
+
+      # El jar del generador va en caché; el script lo verifica por sha256 antes de usarlo, así que una caché
+      # corrupta o ajena se descarta sola. Con la caché puesta, un 429 de Maven Central ya no tumba el job.
+      - name: Caché del generador (openapi-generator-cli)
+        uses: actions/cache@v4
+        with:
+          path: build/mobile-models/.tools
+          key: openapi-generator-${{ hashFiles('scripts/generate-mobile-models.mjs') }}
+          restore-keys: openapi-generator-
 
       - name: Generar y compilar los modelos de Kotlin
         run: node scripts/generate-mobile-models.mjs kotlin --compile

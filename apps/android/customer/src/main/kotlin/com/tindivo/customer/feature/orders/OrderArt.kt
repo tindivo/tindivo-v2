@@ -48,7 +48,7 @@ private fun artOf(
     driverAtDoor: Boolean,
 ): OrderArt? =
     when (hero) {
-        OrderHero.Received, OrderHero.AwaitingAvailability -> OrderArt.Waiting
+        OrderHero.Received, OrderHero.CallToConfirm, OrderHero.AwaitingAvailability -> OrderArt.Waiting
         OrderHero.PayNow, OrderHero.VerifyingProof, OrderHero.PaymentVerified, OrderHero.Preparing -> OrderArt.Preparing
         OrderHero.OnTheWay -> if (driverAtDoor) OrderArt.AtDoor else OrderArt.OnTheWay
         OrderHero.ReadyForPickup -> OrderArt.Pickup

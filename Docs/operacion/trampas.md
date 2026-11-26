@@ -36,7 +36,7 @@
 | En Chrome de automatización el DOM se queda en el esqueleto de `loading.tsx` y `Page.captureScreenshot` expira | [La pestaña oculta de Chrome no hidrata](#la-pestaña-oculta-de-chrome-no-hidrata) |
 | `isVisible()` devuelve `false` sobre algo de la bolsa que se ve en pantalla | [La bolsa se renderiza dos veces](#la-bolsa-se-renderiza-dos-veces) |
 | `pnpm test` verde en ~200 ms con `Cached: 9 cached, 9 total` y `>>> FULL TURBO` | [Turbo cachea los tests de integración](#turbo-cachea-los-tests-de-integración) |
-| El job `db-types-drift` rojo, o `database.types.ts` con +4/−28 líneas sin cambio de esquema | [db-types-drift es de versión del CLI](#db-types-drift-es-de-versión-del-cli) |
+| El paso «Drift de tipos» del job de integración rojo, o `database.types.ts` con +4/−28 líneas sin cambio de esquema | [El drift de tipos depende de la versión del CLI](#el-drift-de-tipos-depende-de-la-versión-del-cli) |
 | Rutas del v2 dan 404 en `api.tindivo.com` | [El dominio real de la API v2](#el-dominio-real-de-la-api-v2) |
 | Vercel no deja fijar una rama como de producción: «Cannot set Git branch "develop" as Production Branch, because it's used for Preview Environment Variables» | [Una variable de Preview con rama bloquea esa rama en producción](#una-variable-de-preview-con-rama-bloquea-esa-rama-en-producción) |
 | La API de staging da 500/422 o rompe tras un push a `develop` | [Deploy, §10: cada push a develop redespliega staging](deploy.md#10-staging-tindivo-dev-tú) |
@@ -361,10 +361,10 @@ npx turbo run test --force --output-logs=new-only   # sin caché
 ```
 Leer siempre el pie: solo vale si dice `Cached: 0 cached`. Para sacar los resúmenes de los demás paquetes sin volver a pagar la corrida, un `npx turbo run test --filter='!@tindivo/api'` normal ya los sirve de caché. Relacionado: [La suite visual depende de la DB](#la-suite-visual-depende-de-la-db) y los [seeders de demo](#los-seeders-de-demo-envenenan-los-tests-de-caja) son las dos formas de que la base mueva el resultado; esta es la de que el resultado ni se calcule.
 
-### db-types-drift es de versión del CLI
-**Síntoma:** tras un `db push`, regenerar `database.types.ts` da un diff enorme que parece que la migración tumbó algo; o el job `db-types-drift` del CI sigue rojo después de commitear la regeneración. Medido el 2026-08-27 (CLI local 2.109.1, tras aplicar 0190–0194 en prod): **+4 / −28 líneas** sin que el esquema `public` cambiara. Todo el diff era de formato: sale el bloque `graphql_public` entero (schema, `Functions.graphql`, y su entrada en `Constants`), entra `__InternalSupabase: { PostgrestVersion: "14.17" }`, y desaparece el salto de línea final.
-**Causa:** `pnpm db:types` genera contra el **remoto** (`zpnipajgwfthxhdtzhly`), y el job `db-types-drift` del CI hace lo mismo con `supabase/setup-cli@v1 version: latest` y exige `diff -q` idéntico. El fichero commiteado depende de la versión del CLI que lo generó, no solo del esquema.
-**Qué hacer:** mira el diff, no el `--stat`. Si no toca `public.Tables` / `Functions` / `Enums`, es la versión del CLI. Si el CI sigue rojo, la causa probable es que CI corre `latest` (2.116+) y se generó con uno más viejo: actualiza el CLI y regenera, no edites el fichero a mano. Relacionado: [Colisión de número de migración](#colisión-de-número-de-migración).
+### El drift de tipos depende de la versión del CLI
+**Síntoma:** tras un `db push`, regenerar `database.types.ts` da un diff enorme que parece que la migración tumbó algo; o el paso «Drift de tipos» del job de integración del CI sigue rojo después de commitear la regeneración. Medido el 2026-08-27 (CLI local 2.109.1, tras aplicar 0190–0194 en prod): **+4 / −28 líneas** sin que el esquema `public` cambiara. Todo el diff era de formato: sale el bloque `graphql_public` entero (schema, `Functions.graphql`, y su entrada en `Constants`), entra `__InternalSupabase: { PostgrestVersion: "14.17" }`, y desaparece el salto de línea final.
+**Causa:** `pnpm db:types` genera contra la base **local**, y el paso «Drift de tipos» del job de integración del CI hace lo mismo con el CLI fijado (`SUPABASE_CLI_VERSION` = 2.109.1, no `latest`) y exige un `diff` idéntico. El fichero commiteado depende de la versión del CLI que lo generó, no solo del esquema.
+**Qué hacer:** mira el diff, no el `--stat`. Si no toca `public.Tables` / `Functions` / `Enums`, es la versión del CLI. Si el CI sigue rojo, la causa probable es que tu CLI local no es el 2.109.1 que fija el CI (un CLI distinto da un diff falso): instala esa misma versión, **lleva antes la base local a la última migración** (`pnpm db:cycle` o el reset) y regenera con `pnpm db:types`; no edites el fichero a mano. Relacionado: [Colisión de número de migración](#colisión-de-número-de-migración).
 
 ## Producción
 

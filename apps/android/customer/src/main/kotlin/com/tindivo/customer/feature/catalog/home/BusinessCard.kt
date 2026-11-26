@@ -108,15 +108,14 @@ internal fun BusinessCard(
                     }
                 }
             }
-            if (!business.closed) {
-                // Decorativo: la tarjeta entera ya es el botón que abre el negocio.
-                Icon(
-                    imageVector = TindivoIcons.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            // También cerrado: la carta se puede ver (la cabecera dice cuándo abre), así que la tarjeta sigue siendo tocable.
+            // Decorativo: la tarjeta entera ya es el botón que abre el negocio.
+            Icon(
+                imageVector = TindivoIcons.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }

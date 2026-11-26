@@ -523,8 +523,17 @@ test.describe('ajustes', () => {
   test('un mínimo mayor que el máximo no deja guardar', async ({ page }) => {
     await login(page)
     await page.goto('/store/ajustes')
-    await page.getByLabel('Delivery mínimo').fill('9')
-    await expect(page.getByRole('button', { name: 'Guardar ajustes' })).toBeDisabled()
+    // La página pide los ajustes dos veces en desarrollo (StrictMode) y la
+    // segunda respuesta reemplaza el borrador: un `fill` que cae entre las dos
+    // se pierde. Se reintenta el bloque entero hasta que el valor escrito
+    // sobreviva y la aserción se evalúe sobre él.
+    await expect(async () => {
+      await page.getByLabel('Delivery mínimo').fill('9')
+      await expect(page.getByLabel('Delivery mínimo')).toHaveValue('9', { timeout: 1_000 })
+      await expect(page.getByRole('button', { name: 'Guardar ajustes' })).toBeDisabled({
+        timeout: 1_000,
+      })
+    }).toPass({ timeout: 15_000 })
     await expect(page.getByText('El mínimo no puede superar al máximo')).toBeVisible()
   })
 })

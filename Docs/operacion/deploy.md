@@ -20,13 +20,14 @@ Lo marcado **[tú]** requiere tus credenciales; el resto ya está preparado en e
 
 ```bash
 supabase db push      # aplica al remoto enlazado lo que falte
-pnpm db:types         # regenera los tipos DESPUÉS del push
+pnpm db:types         # tipos desde la base local migrada (no depende del push)
 pnpm check:deploy     # tiene que salir en verde ANTES de desplegar las apps
 ```
 
 **Este orden no es una preferencia, y equivocarlo no da un error visible.** El código de este
-repo se escribe contra el esquema que va a haber —`database.types.ts` se edita a mano al escribir
-la migración para que el árbol compile antes del push—, así que `pnpm type-check` compila igual
+repo se escribe contra el esquema que va a haber —`database.types.ts` no se edita a mano: se genera
+con `pnpm db:types` desde la base local, que debe estar en la última migración, para que el árbol
+compile antes del push—, así que `pnpm type-check` compila igual
 contra un prod que todavía no tiene las columnas. Cuando las apps salen primero:
 
 - un `select` con una columna que no existe → PostgREST responde **400 por todo el select**, y el
@@ -367,6 +368,8 @@ Para las apps nativas en desarrollo (D-14: nunca hablan con producción). Montad
 | API | Proyecto Vercel **aparte** `tindivo-api-staging` → `https://tindivo-api-staging.vercel.app` |
 | Datos de prueba | `pnpm db:seed:staging -- --env-file <secretos>/staging.env --out-dir <secretos>` (PR #77): el mundo e2e (2 negocios con menú y horario, 2 motorizados, 3 clientes; sin admin) |
 | Secretos | `C:\Users\<usuario>\tindivo-secretos` (`staging.env` y las carpetas `staging-credenciales-<fecha>\cuentas.md`; vale la más reciente) |
+| Catálogo de prueba | La misma semilla siembra 4 negocios con carta, portada y fotos (`seed-staging-catalog.ts`). **La apertura vale solo el día en que se corre** (`business_service_days`, 0154): para probar otro día, vuelve a correr la semilla. |
+| Yape de prueba | Los 4 negocios del catálogo no tienen Yape, QR ni teléfono, y sus dueños no tienen cuenta de Auth (son solo filas de `users`/`user_roles`): esta semilla no recibe ni escribe ningún número. **No borres esas filas de `users` como «huérfanas»**: `businesses.user_id` es `on delete cascade` y arrastraría los negocios y sus cartas. Si quieres probar un cobro con un Yape tuyo, configúralo a mano desde el panel de Negocios (Configuración › «Cobros por Yape y Plin») con la cuenta Dueño E2E, **después** de sembrar: la semilla del mundo base (`seed-world.ts`, preexistente) vuelve a escribir sus números de ejemplo en ese negocio cada vez que se corre. |
 
 **Vercel.** La rama de producción del proyecto es **`develop`** (*Settings › Environments › Production › Branch
 Tracking*). Las tres variables (`NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` como *Config*;

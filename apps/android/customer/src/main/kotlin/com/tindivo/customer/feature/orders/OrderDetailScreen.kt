@@ -1,6 +1,7 @@
 package com.tindivo.customer.feature.orders
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -38,6 +40,7 @@ import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.support.CustomerNameViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
 import com.tindivo.customer.support.orderHelpLink
@@ -57,12 +60,14 @@ internal fun OrderDetailDestination(
     cancelViewModel: CancelOrderViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
     timersViewModel: OrderTimersViewModel = hiltViewModel(),
+    nameViewModel: CustomerNameViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val acceptanceMinutes = timersViewModel.acceptanceMinutes.collectAsStateWithLifecycle().value
     val prepay = prepayViewModel.state.collectAsStateWithLifecycle().value
     val cancel = cancelViewModel.state.collectAsStateWithLifecycle().value
     val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
+    val customerName = nameViewModel.name.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
     // «Entrar con otra cuenta»: al cerrarse la sesión se va a entrar; en cualquier otro cierre, se vuelve atrás.
     var switching by rememberSaveable { mutableStateOf(false) }
@@ -112,6 +117,7 @@ internal fun OrderDetailDestination(
                     ),
             ),
         supportNumber = supportNumber,
+        customerName = customerName,
         onBackToMenu = onBackToMenu,
         acceptanceMinutes = acceptanceMinutes,
         onOpenOrders = onOpenOrders,
@@ -134,6 +140,7 @@ internal fun OrderDetailScreen(
     prepayActions: PrepayActions = PrepayActions(),
     cancel: CancelSection = CancelSection(),
     supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
+    customerName: String? = null,
     onBackToMenu: () -> Unit = {},
     acceptanceMinutes: Int? = null,
     onOpenOrders: () -> Unit = {},
@@ -160,7 +167,7 @@ internal fun OrderDetailScreen(
 
                 is OrderDetailUiState.Loaded -> {
                     val order = state.order
-                    val supportLink = orderHelpLink(supportNumber, order.shortId, order.businessName)
+                    val supportLink = orderHelpLink(supportNumber, order.shortId, order.businessName, customerName)
                     if (order.phase is OrderPhase.Cancelled) {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             OrderTitle(order = order)
@@ -202,8 +209,40 @@ private fun OrderBody(
     LaunchedEffect(order.awaitingPrepayment) {
         if (order.awaitingPrepayment) prepay.actions.load()
     }
+    val countdown = prepay.state.countdown.takeIf { order.awaitingPrepayment && prepay.state.send !is SendState.Sent }
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Fija arriba, fuera del desplazamiento: el plazo para pagar se ve mientras se copia, se paga y se sube.
+        if (countdown is PrepayCountdown.Remaining) {
+            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), contentAlignment = Alignment.Center) {
+                PrepayCountdownPill(countdown = countdown)
+            }
+        }
+        OrderScrollBody(
+            order = order,
+            onOpenLink = onOpenLink,
+            onRate = onRate,
+            prepay = prepay,
+            cancel = cancel,
+            supportLink = supportLink,
+            acceptanceMinutes = acceptanceMinutes,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun OrderScrollBody(
+    order: OrderDetailUi,
+    onOpenLink: (String) -> Unit,
+    onRate: (() -> Unit)?,
+    prepay: PrepayParts,
+    cancel: CancelSection,
+    supportLink: String?,
+    acceptanceMinutes: Int?,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
+        modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         OrderTitle(order = order)
@@ -215,7 +254,7 @@ private fun OrderBody(
                 if (order.waitingForBusiness) {
                     AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
                 } else {
-                    OrderHeadlineBlock(headline = order.headline)
+                    OrderHeadlineBlock(headline = order.headline, driver = order.driver)
                 }
                 if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
                     OrderSteps(phase = order.phase, isPickup = order.isPickup)

@@ -60,7 +60,7 @@ internal fun ChoiceRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = MaterialTheme.typography.titleMedium, color = color)
             hint?.let {
-                Text(text = it, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                Text(text = it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
             }
         }
         if (selected) {

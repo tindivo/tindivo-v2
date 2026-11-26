@@ -6,6 +6,9 @@ import java.util.UUID
 /** Lo que dice el título grande de un pedido en curso o entregado (textos literales de la web). */
 internal enum class OrderHero {
     Received,
+
+    /** Paga al recibir y la cajera tiene que llamar antes (`validando`): «Te llamaremos» (CUS-CHK-027). */
+    CallToConfirm,
     AwaitingAvailability,
     PayNow,
     VerifyingProof,
@@ -82,6 +85,8 @@ internal sealed interface OrderHeadline {
     data class Cancelled(
         val copy: CancelCopy,
         val alreadyPaid: Boolean = false,
+        /** El pedido era prepago: Tindivo no ve el dinero que pudo salir por fuera, así que nunca se dice «no se cobró». */
+        val prepaid: Boolean = false,
     ) : OrderHeadline
 }
 
@@ -95,9 +100,9 @@ internal data class OrderCardUi(
     val itemsSummary: String,
     val createdAt: RelativeDate,
     val total: String,
-    /** El negocio del pedido: «Volver a pedir» abre su carta, como la web. */
+    /** El negocio del pedido. */
     val businessId: UUID,
-    /** «Volver a pedir» se ofrece siempre, salvo con el comprobante rechazado del todo (`proof_rejected_final`). */
+    /** Candidato a «Volver a pedir»: solo un pedido entregado. [orderSections] deja uno: el último entregado. */
     val reorderable: Boolean,
     /** Prepago esperando el pago: en la portada es «Falta tu pago», no «Pedido en curso». */
     val awaitingPayment: Boolean = false,

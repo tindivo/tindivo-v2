@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
@@ -46,11 +47,20 @@ fun CatalogHomeDestination(
     onOpenCart: () -> Unit,
     onOpenCourier: () -> Unit,
     onOpenStore: () -> Unit,
+    onOpenAddresses: () -> Unit,
+    onSignIn: () -> Unit,
     viewModel: CatalogHomeViewModel = hiltViewModel(),
     bag: HomeBagViewModel = hiltViewModel(),
+    addressViewModel: HomeAddressViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val bagCount = bag.count.collectAsStateWithLifecycle().value
+    val address = addressViewModel.state.collectAsStateWithLifecycle().value
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshIfStale()
+        addressViewModel.refresh()
+        onPauseOrDispose {}
+    }
     CatalogHomeScreen(
         state = state,
         onRefresh = viewModel::refresh,
@@ -59,6 +69,9 @@ fun CatalogHomeDestination(
         onOpenCart = onOpenCart,
         onOpenCourier = onOpenCourier,
         onOpenStore = onOpenStore,
+        chip = address.chip(),
+        // La libreta pide sesión: sin ella, el chip lleva a la entrada, como el resto de la app.
+        onOpenAddress = if (address.signedIn) onOpenAddresses else onSignIn,
     )
 }
 
@@ -72,8 +85,14 @@ fun CatalogHomeScreen(
     onOpenCart: () -> Unit = {},
     onOpenCourier: () -> Unit = {},
     onOpenStore: () -> Unit = {},
+    chip: HomeChip? = HomeChip.Pick,
+    onOpenAddress: () -> Unit = {},
 ) {
-    Scaffold(topBar = { HomeTopBar(bagCount = bagCount, onOpenBag = onOpenCart) }) { innerPadding ->
+    Scaffold(
+        topBar = {
+            HomeTopBar(bagCount = bagCount, onOpenBag = onOpenCart, chip = chip, onOpenAddress = onOpenAddress)
+        },
+    ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when (state) {
                 CatalogHomeUiState.Loading -> {

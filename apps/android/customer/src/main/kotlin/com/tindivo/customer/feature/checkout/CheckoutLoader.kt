@@ -4,21 +4,30 @@ import com.tindivo.core.network.AddressRepository
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CatalogRepository
+import com.tindivo.core.network.CheckoutRepository
 import com.tindivo.core.network.CustomerRepository
 import com.tindivo.core.network.generated.model.GetBusiness200ResponseDataBusiness
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
 import com.tindivo.core.network.isProfileMissing
+import com.tindivo.customer.feature.catalog.business.ScheduleDayUi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
+
+private const val TRUSTED = "trusted"
 
 /** Lo que el checkout necesita saber antes de pintar: el perfil, las direcciones y, si se pudo, el negocio y el último pago. */
 data class CheckoutData(
     val profile: GetCustomerProfile200ResponseData,
     val addresses: List<AddressUi>,
     val business: GetBusiness200ResponseDataBusiness?,
+    /** Horario de la carta (para decir a qué hora cierra el local en un recojo). */
+    val schedule: List<ScheduleDayUi> = emptyList(),
+    val openingConfirmed: Boolean? = null,
     /** `paymentIntent` del pedido más reciente (D-50), o `null` si no hay o no se pudo leer. */
     val lastIntent: String?,
+    /** `GET /customer/payment-options` dijo `trusted`; `false` si no hay compra previa o no se pudo leer. */
+    val previousPurchase: Boolean = false,
 )
 
 sealed interface LoadOutcome {
@@ -46,6 +55,7 @@ class CheckoutLoader
         private val customer: CustomerRepository,
         private val addresses: AddressRepository,
         private val catalog: CatalogRepository,
+        private val checkout: CheckoutRepository,
     ) {
         /**
          * Solo las direcciones, después de crear, corregir o borrar una desde la hoja; `null` si no se pudo leer. Sale
@@ -67,8 +77,10 @@ class CheckoutLoader
                 val saved = async { addresses.list(accountId) }
                 val business = async { catalog.business(businessId) }
                 val orders = async { customer.orders(null, accountId) }
+                val options = async { checkout.paymentOptions(accountId) }
                 val profileResult = profile.await()
                 val savedResult = saved.await()
+                val businessData = (business.await() as? ApiResult.Success)?.data
                 when {
                     profileResult is ApiResult.Failure && profileResult.error.isProfileMissing() -> {
                         LoadOutcome.ProfileMissing
@@ -87,13 +99,27 @@ class CheckoutLoader
                             CheckoutData(
                                 profile = (profileResult as ApiResult.Success).data,
                                 addresses = (savedResult as ApiResult.Success).data.items.map { it.toAddressUi() },
-                                business = (business.await() as? ApiResult.Success)?.data?.business,
+                                business = businessData?.business,
+                                schedule =
+                                    businessData?.schedule.orEmpty().map {
+                                        ScheduleDayUi(
+                                            it.dayOfWeek,
+                                            it.isOpen,
+                                            it.shift1Start,
+                                            it.shift1End,
+                                            it.shift2Start,
+                                            it.shift2End,
+                                        )
+                                    },
+                                openingConfirmed = businessData?.openingConfirmed,
                                 lastIntent =
                                     (orders.await() as? ApiResult.Success)
                                         ?.data
                                         ?.items
                                         ?.firstOrNull()
                                         ?.paymentIntent,
+                                previousPurchase =
+                                    (options.await() as? ApiResult.Success)?.data?.reason == TRUSTED,
                             ),
                         )
                     }

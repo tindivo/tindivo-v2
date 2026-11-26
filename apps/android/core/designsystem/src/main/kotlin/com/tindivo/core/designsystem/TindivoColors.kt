@@ -100,6 +100,9 @@ object TindivoColors {
     /** Naranja para TEXTO y enlaces sobre fondo claro. Nunca `colorScheme.primary` como color de letra. */
     val brandText: Color = Palette.BrandDark
 
+    /** Verde de lo que salió bien (el check de un campo válido): 5,0:1 sobre blanco. */
+    val success: Color = Palette.Success
+
     /** Aviso que no es error (pago pendiente, espera): fondo y letra. */
     val warningContainer: Color = Palette.WarningSoft
     val onWarningContainer: Color = Palette.WarningDeep
