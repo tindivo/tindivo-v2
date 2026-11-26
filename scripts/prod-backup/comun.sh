@@ -2,6 +2,21 @@
 # Copia de producción P0.5: funciones que comparten copia.sh y verificar.sh. Se carga con `source`.
 # Runbook: Docs/operacion/copia-de-produccion.md
 
+# --- Lo primero, antes de cualquier proceso hijo: nada de lo que traiga el entorno llega a un hijo -----------------
+# Credenciales que alguien pudo dejar exportadas en la terminal; variables que cambian a dónde hablan docker, node o
+# libpq o qué código cargan; y los nombres que este guion usa para guardar secretos (pierden el atributo de exportación).
+set +a
+unset PGPASSWORD PGHOST PGPORT PGUSER PGDATABASE PGOPTIONS PGREQUIREAUTH PGSERVICE PGSERVICEFILE PGPASSFILE PGSSLMODE \
+  PGSSLROOTCERT PGSSLCERT PGSSLKEY PGHOSTADDR DATABASE_URL POSTGRES_PASSWORD POSTGRES_URL
+unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY SUPABASE_SECRET_KEY SUPABASE_KEY \
+  SUPABASE_ANON_KEY SUPABASE_JWT_SECRET TINDIVO_STORAGE_KEY TINDIVO_MGMT_TOKEN
+unset DOCKER_HOST DOCKER_CONTEXT DOCKER_TLS_VERIFY DOCKER_CERT_PATH
+unset NODE_OPTIONS NODE_DEBUG NODE_DEBUG_NATIVE NODE_USE_ENV_PROXY NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED NODE_PATH
+unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+unset TINDIVO_SIN_PGOPTIONS TINDIVO_MOSTRAR_CONTEOS TINDIVO_CA_PEM TINDIVO_GUION TINDIVO_MARCA_PRUEBA
+unset DB_PASS STORAGE_KEY MGMT_TOKEN CLAVE GNUPG_TMP
+# ------------------------------------------------------------------------------------------------------------------
+
 REF_PROD='zpnipajgwfthxhdtzhly'
 REF_ABANDONADO='psjigdoinfpgrnedxeyf'
 URL_PROD="https://${REF_PROD}.supabase.co"
@@ -14,7 +29,7 @@ TMPFS_MB="${TINDIVO_COPIA_TMPFS_MB:-2048}"
   exit 64
 }
 CLAVE_MINIMO=20
-DIR_GUIONES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DIR_GUIONES="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
 NOMBRE_CONT="tindivo-copia-$$"
 # Las variables que guardan secretos nacen aquí, sin atributo de exportación aunque el entorno trajera uno.
 set +a

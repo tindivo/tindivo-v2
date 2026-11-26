@@ -8,7 +8,7 @@ const ESPERA_MS = [500, 2000, 5000]
  * @param {URL} url
  * @param {Record<string, string>} cabeceras
  * @param {{ intentos?: number, timeoutMs?: number, fetchImpl?: typeof fetch, esperar?: (ms: number) => Promise<void> }} [opciones]
- * @returns {Promise<{ status: number, cuerpo: Buffer }>}
+ * @returns {Promise<{ status: number, cuerpo: Buffer, etag: string | null }>}
  */
 export async function soloGet(url, cabeceras, opciones = {}) {
   const { intentos = 3, timeoutMs = 120_000 } = opciones
@@ -30,7 +30,7 @@ export async function soloGet(url, cabeceras, opciones = {}) {
         ultimo = `HTTP ${res.status}`
         continue
       }
-      return { status: res.status, cuerpo }
+      return { status: res.status, cuerpo, etag: res.headers?.get?.('etag') ?? null }
     } catch (err) {
       ultimo = `fallo de red (${err?.name ?? 'Error'})`
     }

@@ -8,7 +8,7 @@
 #   verificar   lee el tar en stdin; comprueba el manifiesto y que el dump se lee entero
 #   filtrar     (pruebas) aplica a stdin el filtro de diagnósticos y lo escribe en stdout
 #
-# La contraseña NO se exporta: solo la reciben psql, pg_dump y pg_dumpall, uno por uno (función `pg`).
+# La contraseña NO se exporta: solo la reciben psql y pg_dump, uno por uno (función `pg`).
 # Todo lo que sale por stderr pasa por `filtrar`: los mensajes del servidor que no tengan una forma conocida
 # e inofensiva se sustituyen por un aviso, para que un valor de una fila no pueda acabar en un registro en claro.
 #
@@ -31,18 +31,38 @@ ESQUEMAS_PLATAFORMA=(vault pgsodium pgsodium_masks net supabase_functions realti
 unset TINDIVO_GUION
 CONTRASENA=''
 
-# Huella de roles, pertenencias y ajustes por rol: se toma dentro del snapshot y otra vez después de pg_dumpall
-# (que no admite snapshot). Si difieren, alguien cambió un rol mientras tanto y la copia se rechaza.
-SQL_HUELLA_ROLES="select md5(
-  coalesce((select string_agg(concat_ws(':', rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, rolcanlogin,
-      rolreplication, rolbypassrls, rolconnlimit, rolvaliduntil, rolconfig), '|' order by rolname) from pg_roles), '')
-  || '#' ||
-  coalesce((select string_agg(concat_ws(':', g.rolname, m.rolname, a.admin_option, a.inherit_option, a.set_option, a.grantor), '|'
-      order by g.rolname, m.rolname, a.grantor)
-    from pg_auth_members a join pg_roles g on g.oid = a.roleid join pg_roles m on m.oid = a.member), '')
-  || '#' ||
-  coalesce((select string_agg(concat_ws(':', s.setdatabase, s.setrole, s.setconfig), '|'
-      order by s.setdatabase, s.setrole) from pg_db_role_setting s), ''))"
+# roles.sql se genera con estas consultas DENTRO de la transacción del snapshot (no con pg_dumpall, que no admite
+# snapshot): así roles, atributos, ajustes y pertenencias son, por construcción, los de la misma foto que el
+# inventario y el dump. Solo SELECT sobre pg_roles (que nunca muestra contraseñas); el texto CREATE/ALTER/GRANT es
+# lo que ESCRIBEN en roles.sql para quien restaure, no algo que se ejecute aquí.
+SQL_ROLES="select format('CREATE ROLE %I;', rolname) from pg_roles where rolname !~ '^pg_' order by rolname;
+select format('ALTER ROLE %I WITH %s %s %s %s %s %s %s CONNECTION LIMIT %s%s;', rolname,
+  case when rolsuper then 'SUPERUSER' else 'NOSUPERUSER' end,
+  case when rolinherit then 'INHERIT' else 'NOINHERIT' end,
+  case when rolcreaterole then 'CREATEROLE' else 'NOCREATEROLE' end,
+  case when rolcreatedb then 'CREATEDB' else 'NOCREATEDB' end,
+  case when rolcanlogin then 'LOGIN' else 'NOLOGIN' end,
+  case when rolreplication then 'REPLICATION' else 'NOREPLICATION' end,
+  case when rolbypassrls then 'BYPASSRLS' else 'NOBYPASSRLS' end,
+  rolconnlimit,
+  case when rolvaliduntil is null then '' else format(' VALID UNTIL %L', rolvaliduntil) end)
+from pg_roles where rolname !~ '^pg_' order by rolname;
+select format('ALTER ROLE %I%s SET %s TO %s;', x.rolname,
+  case when x.datname is null then '' else format(' IN DATABASE %I', x.datname) end, x.nombre,
+  case when x.nombre in ('search_path', 'session_preload_libraries', 'shared_preload_libraries',
+      'local_preload_libraries', 'temp_tablespaces') then x.valor else quote_literal(x.valor) end)
+from (select ro.rolname, d.datname, split_part(c, '=', 1) as nombre, substr(c, strpos(c, '=') + 1) as valor
+      from pg_db_role_setting st join pg_roles ro on ro.oid = st.setrole
+        left join pg_database d on d.oid = st.setdatabase, unnest(st.setconfig) as c
+      where ro.rolname !~ '^pg_') x
+where x.nombre ~ '^[A-Za-z_][A-Za-z0-9_.]*\$'
+order by x.rolname, x.datname nulls first, x.nombre;
+select format('GRANT %I TO %I WITH ADMIN %s, INHERIT %s, SET %s GRANTED BY %I;', g.rolname, m.rolname,
+  case when a.admin_option then 'TRUE' else 'FALSE' end, case when a.inherit_option then 'TRUE' else 'FALSE' end,
+  case when a.set_option then 'TRUE' else 'FALSE' end, gr.rolname)
+from pg_auth_members a join pg_roles g on g.oid = a.roleid join pg_roles m on m.oid = a.member
+  join pg_roles gr on gr.oid = a.grantor
+where m.rolname !~ '^pg_' order by g.rolname, m.rolname, gr.rolname;"
 
 # Los mensajes propios salen con una marca al azar de esta corrida; el filtro solo reconoce como propios los que la
 # llevan y la cambia por «[contenedor]». Así un texto del servidor que empiece por «[contenedor]» no pasa por propio.
@@ -54,32 +74,61 @@ fallo() {
   exit 1
 }
 
-# Deja pasar solo diagnósticos de forma conocida; el resto se cuenta y se omite.
+# Ninguna línea ajena se reenvía tal cual. Los mensajes propios (con la marca de la corrida) pasan; cada diagnóstico
+# de Postgres, tar o sha256sum se CLASIFICA y se sustituye por un texto fijo de esta lista, con campos variables solo
+# si son un identificador o un número validado; lo que no se reconoce se cuenta y se omite. Así el texto que viene
+# del servidor (que podría citar el valor de una fila) nunca llega a la pantalla ni a un registro.
 filtrar() {
   awk -v m="$MARCA" '
-    function pasa(l,    cola) {
-      if (length(l) > 400) return 0
-      if (l ~ /^(psql|pg_dump|pg_dumpall): error: connection to server (at|on socket) "[^"]*"( \([0-9a-fA-F.:]+\))?, port [0-9]+ failed: /) {
-        cola = l
-        sub(/^.* failed: /, "", cola)
-        return (cola !~ /ERROR:|DETAIL:|CONTEXT:|[=()]/)
+    function d(t) { print "[contenedor] diagnostico: " t; return 1 }
+    function causa(l) {
+      if (index(l, "password authentication failed")) return "usuario o contrasena rechazados"
+      if (index(l, "Tenant or user not found")) return "el pooler no conoce ese proyecto o usuario"
+      if (index(l, "server does not support SSL")) return "el servidor no ofrece TLS"
+      if (index(l, "certificate verify failed")) return "el certificado del servidor no lo firma la CA indicada"
+      if (index(l, "does not match host name")) return "el certificado del servidor es de otro nombre"
+      if (index(l, "authentication method requirement")) return "el servidor no ofrecio SCRAM"
+      if (index(l, "unsupported startup parameter")) return "el servidor rechazo las opciones de arranque"
+      if (index(l, "timeout expired")) return "se agoto el tiempo de espera"
+      if (index(l, "Connection refused")) return "conexion rechazada"
+      if (index(l, "too many connections") || index(l, "remaining connection slots")) return "el servidor no admite mas conexiones"
+      if (index(l, "certificate") || index(l, "SSL")) return "fallo de TLS"
+      return "causa no reconocida"
+    }
+    function clasifica(l,    x, a, b) {
+      if (l ~ /^(psql|pg_dump): error: connection to server (at|on socket) "/) return d("no se pudo conectar: " causa(l))
+      if (l ~ /^(psql|pg_dump): error: could not translate host name "/) return d("no se pudo resolver el nombre del servidor")
+      if (l ~ /^(psql|pg_dump): error: (authentication method requirement|SSL error|server certificate|root certificate|certificate verify failed|private key|timeout expired)/) return d("no se pudo conectar: " causa(l))
+      if (l ~ /ERROR:  permission denied for /) {
+        x = l
+        sub(/^.*ERROR:  permission denied for /, "", x)
+        if (x ~ /^(table|schema|sequence|view|materialized view|function|database|foreign table) [A-Za-z_][A-Za-z0-9_.]*$/) return d("permiso denegado sobre " x)
+        return d("permiso denegado sobre un objeto (nombre omitido)")
       }
-      if (l ~ /^(psql|pg_dump|pg_dumpall): error: could not translate host name "[^"]*" to address: /) return 1
-      if (l ~ /^(psql|pg_dump|pg_dumpall): error: (authentication method requirement|SSL error|server certificate|root certificate|certificate verify failed|private key|timeout expired)/) return 1
-      if (l ~ /^(psql:[^ ]*: |pg_dump: error: query failed: |pg_dumpall: error: query failed: )?ERROR:  permission denied for [a-z ]+ [A-Za-z0-9_."]+$/) return 1
-      if (l ~ /^(psql:[^ ]*: )?ERROR:  cannot execute [A-Z ]+ in a read-only transaction$/) return 1
-      if (l ~ /^(psql:[^ ]*: |pg_dump: error: query failed: )?ERROR:  canceling statement due to (statement timeout|lock timeout|user request)$/) return 1
-      if (l ~ /^pg_dump: detail: Query was: LOCK TABLE [A-Za-z0-9_.", ]+ IN ACCESS SHARE MODE$/) return 1
-      if (l ~ /^pg_dump: error: (aborting because of server version mismatch|no matching schemas were found)$/) return 1
-      if (l ~ /^pg_dump: detail: server version: [0-9.]+; pg_dump version: [0-9.]+$/) return 1
-      if (l ~ /^(pg_dump|pg_dumpall|pg_restore|tar|sha256sum): ([a-z ]+: )?([a-z ]+: )?([a-z ]+: )?No space left on device$/) return 1
-      if (l ~ /^(psql|pg_dump|pg_dumpall): error: (server closed the connection unexpectedly|connection to server was lost)$/) return 1
-      if (l ~ /^tar: (short read|invalid tar magic|unexpected end of file)$/) return 1
-      if (l ~ /^sha256sum: WARNING: [0-9]+ (of [0-9]+ )?computed checksums? did NOT match$/) return 1
+      if (l ~ /^pg_dump: detail: Query was: LOCK TABLE /) {
+        x = l
+        sub(/^pg_dump: detail: Query was: LOCK TABLE /, "", x)
+        sub(/ IN ACCESS SHARE MODE$/, "", x)
+        if (x ~ /^[A-Za-z_][A-Za-z0-9_., ]*$/) return d("pg_dump no pudo bloquear en lectura: " x)
+        return d("pg_dump no pudo bloquear en lectura una tabla (nombre omitido)")
+      }
+      if (l ~ /ERROR:  cannot execute [A-Z ]+ in a read-only transaction$/) return d("el servidor rechazo una sentencia: la sesion es de solo lectura")
+      if (l ~ /ERROR:  canceling statement due to /) return d("el servidor cancelo una consulta (tiempo agotado o a peticion)")
+      if (l ~ /^pg_dump: error: aborting because of server version mismatch$/) return d("la version de pg_dump no sirve para este servidor")
+      if (l ~ /^pg_dump: detail: server version: [0-9.]+; pg_dump version: [0-9.]+$/) {
+        a = l; sub(/^pg_dump: detail: server version: /, "", a); sub(/;.*$/, "", a)
+        b = l; sub(/^.*pg_dump version: /, "", b)
+        return d("version del servidor " a ", de pg_dump " b)
+      }
+      if (l ~ /^pg_dump: error: no matching schemas were found$/) return d("pg_dump no encontro los esquemas pedidos")
+      if (l ~ /^(pg_dump|pg_restore|tar|sha256sum): / && l ~ /No space left on device$/) return d("sin espacio en la memoria de trabajo (sube TINDIVO_COPIA_TMPFS_MB)")
+      if (l ~ /^(psql|pg_dump): error: (server closed the connection unexpectedly|connection to server was lost)$/) return d("el servidor cerro la conexion")
+      if (l ~ /^tar: /) return d("tar no pudo leer o escribir el archivo")
+      if (l ~ /^sha256sum: WARNING: /) return d("alguna suma sha256 no coincide")
       return 0
     }
     index($0, m " ") == 1 { print "[contenedor] " substr($0, length(m) + 2); next }
-    { if (pasa($0)) print; else n++ }
+    { if (!clasifica($0)) n++ }
     END { if (n) printf "[contenedor] %d linea(s) de diagnostico omitidas: no tienen una forma conocida y podrian llevar datos\n", n }
   '
 }
@@ -107,7 +156,7 @@ comprobar_conexion_y_solo_lectura() {
     fallo 'no se pudo conectar (revisa host, puerto, usuario y contraseña; si el pooler rechaza las opciones de arranque, lee el runbook: --sin-pgoptions)'
   fi
   if [ "${TINDIVO_SIN_PGOPTIONS:-0}" = 1 ]; then
-    log "aviso: sin PGOPTIONS; la sesión dice default_transaction_read_only=$([ "$ro" = on ] && echo on || echo off). El snapshot y el listado van en transacciones READ ONLY; el resto son SHOW, SELECT, pg_dump y pg_dumpall, que solo leen."
+    log "aviso: sin PGOPTIONS; la sesión dice default_transaction_read_only=$([ "$ro" = on ] && echo on || echo off). El snapshot va en una transacción READ ONLY y pg_dump abre la suya, también READ ONLY; el resto son SHOW y SELECT."
   elif [ "$ro" != on ]; then
     fallo 'la sesión no quedó en solo lectura (default_transaction_read_only no es on)'
   else
@@ -210,7 +259,7 @@ from storage.objects group by 1 order by 1;
 \\o $W/storage-objetos.jsonl
 select json_build_object('bucket', bucket_id, 'id', id, 'name', name,
   'size', case when metadata->>'size' ~ '^[0-9]{1,18}\$' then (metadata->>'size')::bigint end,
-  'mimetype', metadata->>'mimetype', 'updated_at', updated_at)::text
+  'mimetype', metadata->>'mimetype', 'etag', metadata->>'eTag', 'version', version, 'updated_at', updated_at)::text
 from storage.objects order by bucket_id, name;
 \\o
 \\pset format csv
@@ -237,8 +286,9 @@ select id, name, description, created_at, updated_at from vault.secrets order by
 \\endif
 \\pset format unaligned
 \\pset tuples_only on
-\\o $W/roles-huella.txt
-$SQL_HUELLA_ROLES;
+\\o $W/roles.sql
+\\qecho -- Roles, atributos, ajustes por rol y pertenencias, tomados en el snapshot de la copia. Sin contrasenas.
+$SQL_ROLES
 \\o
 \\echo INVENTARIO_OK
 SQL
@@ -346,14 +396,8 @@ copiar() {
     fallo 'la sesión del snapshot escribió errores'
   fi
 
-  # 6. Roles y pertenencias, sin contraseñas (la plataforma no deja leerlas y no hacen falta).
-  pg pg_dumpall --no-password --roles-only --no-role-passwords --file="$W/roles.sql" </dev/null || fallo 'pg_dumpall de roles falló'
-  local huella_despues
-  huella_despues="$(q -c "$SQL_HUELLA_ROLES")" || fallo 'no se pudo volver a leer la huella de roles'
-  [ -s "$W/roles-huella.txt" ] || fallo 'falta la huella de roles del snapshot'
-  [ "$huella_despues" = "$(cat "$W/roles-huella.txt")" ] ||
-    fallo 'los roles o sus pertenencias cambiaron mientras se sacaba la copia: roles.sql no cuadraría con el inventario. Repite la copia'
-  log 'roles.sql coincide con el inventario del snapshot (misma huella antes y después)'
+  # 6. Roles: roles.sql ya salió del snapshot (paso 2). Se comprueba que no esté vacío.
+  grep -q ' ROLE [^ ]*;$' "$W/roles.sql" || fallo 'roles.sql no trae ningún rol'
   [ -e "$W/storage-objetos.jsonl" ] || : >"$W/storage-objetos.jsonl"
 
   # 7. Comprobaciones antes de empaquetar.
@@ -381,7 +425,7 @@ verificar() {
   [ -s MANIFEST.sha256 ] || fallo 'falta MANIFEST.sha256'
   sha256sum -c MANIFEST.sha256 >/dev/null || fallo 'algún archivo no coincide con el manifiesto'
   local f
-  for f in datos.dump roles.sql esquema-completo.sql conteos.tsv datos.toc.txt partes.txt storage-objetos.jsonl roles-huella.txt; do
+  for f in datos.dump roles.sql esquema-completo.sql conteos.tsv datos.toc.txt partes.txt storage-objetos.jsonl; do
     grep -q " \./$f\$" MANIFEST.sha256 || fallo "el manifiesto no incluye $f"
   done
   local fuera

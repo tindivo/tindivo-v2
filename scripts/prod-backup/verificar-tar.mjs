@@ -12,7 +12,7 @@ try {
   if (d.tipo === 'storage') {
     const s = d.resumen ?? {}
     console.error(
-      `[verificar] storage: ${entero(s.ok)} de ${entero(s.listados)} objetos, ${entero(s.bytes)} bytes; no encontrados: ${entero(s.no_encontrados)}; nombre no válido: ${entero(s.nombre_no_valido)}; tamaño distinto: ${entero(s.tamano_distinto)}`,
+      `[verificar] storage: ${entero(s.ok)} de ${entero(s.listados)} objetos, ${entero(s.bytes)} bytes; no encontrados: ${entero(s.no_encontrados)}; nombre no válido: ${entero(s.nombre_no_valido)}; tamaño distinto: ${entero(s.tamano_distinto)}; sin huella: ${entero(s.sin_huella)}; huella distinta: ${entero(s.huella_distinta)}`,
     )
   } else if (d.tipo === 'config') {
     const pendientes = Array.isArray(d.pendientes) ? d.pendientes.length : '?'

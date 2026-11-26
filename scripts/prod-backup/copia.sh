@@ -6,7 +6,7 @@
 #   bash scripts/prod-backup/copia.sh --destino local                       (ensayo contra la base local)
 #
 # Lo que garantiza, por construcción:
-#   - SOLO LECTURA. Contra la base: pg_dump, pg_dumpall y consultas de lectura, en sesiones que llegan con
+#   - SOLO LECTURA. Contra la base: pg_dump y consultas de lectura (SELECT y SHOW), en sesiones que llegan con
 #     default_transaction_read_only=on; conteos, inventario y listado van además en transacciones READ ONLY. Contra Storage y la API de gestión: únicamente GET (solo-get.mjs).
 #   - NINGÚN ARCHIVO EN CLARO. El dump se arma en la memoria de un contenedor efímero y sale por una tubería
 #     directo a gpg. En la carpeta de salida solo quedan archivos .gpg, sus sha256 y registros sin datos personales.
@@ -21,8 +21,12 @@ set +x
 umask 077
 export LC_ALL=C
 
+# comun.sh se localiza solo con órdenes internas de bash y lo PRIMERO que hace es borrar del entorno toda credencial
+# heredada: ningún proceso hijo (ni siquiera `dirname` o `sed`) arranca antes de esa limpieza.
+_aqui="${BASH_SOURCE[0]//\\//}" # en Windows la ruta puede llegar con barras invertidas
+case "$_aqui" in */*) _aqui="${_aqui%/*}" ;; *) _aqui=. ;; esac
 # shellcheck source=scripts/prod-backup/comun.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/comun.sh"
+source "$_aqui/comun.sh"
 
 # Las variables de secretos se crean aquí sin atributo de exportación, aunque el entorno trajera uno con ese nombre.
 set +a
@@ -33,7 +37,10 @@ MOTIVOS=()
 CARPETA_CREADA=0
 
 uso() {
-  sed -n '2,6p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  printf '%s\n' 'Uso:' \
+    '  bash scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha> --ca <archivo.crt> [--salida <carpeta>]' \
+    '  bash scripts/prod-backup/copia.sh --destino local                       (ensayo contra la base local)' \
+    'Runbook: Docs/operacion/copia-de-produccion.md' >&2
   exit 64
 }
 
@@ -49,6 +56,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$DESTINO" in local | prod) ;; *) uso ;; esac
+# Las credenciales de ENSAYO solo valen con --destino local: contra prod se borran antes de lanzar nada.
+[ "$DESTINO" != prod ] || unset TINDIVO_COPIA_LOCAL_CLAVE TINDIVO_COPIA_LOCAL_SERVICE_KEY TINDIVO_COPIA_LOCAL_CONTRASENA TINDIVO_COPIA_LOCAL_PUERTO
 if [ "$DESTINO" = prod ] && { [ ! -t 0 ] || [ ! -t 2 ]; }; then
   fallo 'con --destino prod hace falta una terminal: ábrelo en tu propia ventana de Git Bash'
 fi
@@ -141,6 +150,7 @@ if [ "$DESTINO" = local ]; then
   DB_PASS="${TINDIVO_COPIA_LOCAL_CONTRASENA:-postgres}"
   STORAGE_URL='http://127.0.0.1:54321'
   STORAGE_KEY="${TINDIVO_COPIA_LOCAL_SERVICE_KEY:-}"
+  [ "${TINDIVO_COPIA_LOCAL_SCRAM:-0}" != 1 ] || export PGREQUIREAUTH=scram-sha-256
   log "base local: $PGHOST:$PGPORT"
 else
   log 'En el panel de Supabase de tindivo-prod: Connect → «Session pooler». Copia host y usuario tal cual.'
@@ -169,7 +179,7 @@ fi
 if [ "$SIN_PGOPTIONS" = 1 ]; then
   export TINDIVO_SIN_PGOPTIONS=1
   unset PGOPTIONS
-  log 'aviso: --sin-pgoptions. La sesión no lleva default_transaction_read_only; quedan las transacciones READ ONLY del snapshot y del listado, y que pg_dump y pg_dumpall solo leen.'
+  log 'aviso: --sin-pgoptions. La sesión no lleva default_transaction_read_only; quedan las transacciones READ ONLY del snapshot (psql) y de pg_dump; las consultas sueltas son SELECT y SHOW.'
 else
   export PGOPTIONS='-c default_transaction_read_only=on'
 fi

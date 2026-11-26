@@ -15,12 +15,16 @@ export LC_ALL=C
 
 unset NODE_OPTIONS NODE_DEBUG NODE_DEBUG_NATIVE NODE_PATH DOCKER_HOST DOCKER_CONTEXT TINDIVO_GUION TINDIVO_SIN_PGOPTIONS
 
+# comun.sh se localiza solo con órdenes internas de bash y lo PRIMERO que hace es borrar del entorno toda credencial
+# heredada: ningún proceso hijo (ni siquiera `dirname` o `sed`) arranca antes de esa limpieza.
+_aqui="${BASH_SOURCE[0]//\\//}" # en Windows la ruta puede llegar con barras invertidas
+case "$_aqui" in */*) _aqui="${_aqui%/*}" ;; *) _aqui=. ;; esac
 # shellcheck source=scripts/prod-backup/comun.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/comun.sh"
+source "$_aqui/comun.sh"
 
 CARPETA="${1:-}"
 [ -n "$CARPETA" ] && [ -d "$CARPETA" ] || {
-  sed -n '2,5p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  printf '%s\n' 'Uso: bash scripts/prod-backup/verificar.sh <carpeta-de-la-copia> [--conteos]' >&2
   exit 64
 }
 [ "${2:-}" != --conteos ] || export TINDIVO_MOSTRAR_CONTEOS=1
