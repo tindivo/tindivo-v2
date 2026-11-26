@@ -129,7 +129,7 @@ struct DecisionsTests {
             store, clock: .fixed(Fixture.tuesdayEvening), catalog: StubCatalog(), voiceOver: false
         )
         await model.validate()
-        await eventually { filled(model)?.validation == .unchecked }
+        await eventually { filled(model)?.validation == .checkFailed }
         #expect(filled(model)?.lines.map(\.canEdit) == [true, false])
         task.cancel()
     }

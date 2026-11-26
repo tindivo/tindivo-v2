@@ -40,7 +40,7 @@ struct DishView: View {
                     .padding(.bottom, TindivoTokens.Spacing.spaceScreen)
                 }
                 .scrollDismissesKeyboard(.interactively)
-                // «Elige [grupo]»: lleva la vista al primer grupo que falta (la sacudida la pone el propio grupo).
+                // «Elige [grupo]»: lleva la vista al primer grupo que falta (el resaltado lo pone el propio grupo).
                 .onChange(of: model.attention) { _, attention in
                     guard let attention else { return }
                     focusedGroup = attention.groupID

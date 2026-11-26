@@ -148,7 +148,7 @@ struct FinalRoundTests {
     func brokenAmountBlocksContinue() throws {
         // La bolsa guardada no deja escribir un precio así: el dato roto se prueba sobre la pantalla misma.
         let cart = Cart(businessId: "negocio-1", businessName: "N", lines: [line("ok"), hugeLine])
-        guard case let .filled(rows) = CartScreenModel.state(for: cart, validation: .unchecked) else {
+        guard case let .filled(rows) = CartScreenModel.state(for: cart, validation: .checkFailed) else {
             Issue.record("debía haber platos")
             return
         }
@@ -162,15 +162,15 @@ struct FinalRoundTests {
         #expect(!rows.allowsContinue)
     }
 
-    @Test("6 con importes válidos y la carta sin leer sigue pudiéndose continuar")
-    func validAmountsStillContinue() throws {
+    @Test("CA-CRT-05b 6 con importes válidos y la carta caída no se puede continuar")
+    func validAmountsWithTheMenuDownDoNotContinue() throws {
         let cart = Cart(businessId: "negocio-1", businessName: "N", lines: [line("ok")])
-        guard case let .filled(rows) = CartScreenModel.state(for: cart, validation: .unchecked) else {
+        guard case let .filled(rows) = CartScreenModel.state(for: cart, validation: .checkFailed) else {
             Issue.record("debía haber platos")
             return
         }
         #expect(rows.amountsAreValid)
-        #expect(rows.allowsContinue)
+        #expect(!rows.allowsContinue)
     }
 
     // MARK: 9. Caché de cartas

@@ -33,6 +33,7 @@ struct AmountDisplayTests {
         #expect(broken.selection.isValid)
         #expect(broken.ctaTitle.hasSuffix("—"), "el total no se pudo mostrar: \(broken.ctaTitle)")
         #expect(broken.ctaDisabled)
+        #expect(!broken.ctaBlocked, "no falta ningún grupo: VoiceOver no dice «Te lleva al grupo que falta»")
         #expect(!broken.canAdd)
         await broken.add()
         #expect(broken.outcome == nil, "no se agregó")

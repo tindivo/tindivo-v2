@@ -36,7 +36,7 @@ final class DishScreenModel {
         let new: String
     }
 
-    /// Un toque en «Elige [grupo]»: la pantalla lleva la vista al grupo y lo sacude. `serial` distingue dos toques
+    /// Un toque en «Elige [grupo]»: la pantalla lleva la vista al grupo y lo resalta. `serial` distingue dos toques
     /// seguidos sobre el mismo grupo.
     struct Attention: Equatable {
         let groupID: String
@@ -113,9 +113,8 @@ final class DishScreenModel {
         return String(localized: "\(done) de \(required.count) listas")
     }
 
-    /// El botón de abajo: «Agregar · S/ 49.00» («Guardar · …» al editar), o lo que falta con el grupo obligatorio sin
-    /// elegir (CUS-CAT-033): «Elige tu guarnición 2» si es de una opción, «Elige salsas» si es de varias (el plural no
-    /// lleva «tu»), con el nombre en minúscula, como Android (`dish_choose_cta`, `dish_choose_many_cta`).
+    /// «Agregar · S/ 49.00» («Guardar · …» al editar) o lo que falta (CUS-CAT-033): «Elige tu guarnición 2» (de una
+    /// opción) o «Elige salsas» (de varias, sin «tu»), en minúscula, como `dish_choose_cta` de Android.
     var ctaTitle: String {
         switch selection.cta {
         case let .add(total):
@@ -136,8 +135,8 @@ final class DishScreenModel {
         group.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: Locale(identifier: "es_PE"))
     }
 
-    /// Falta algo por elegir: el botón no se apaga (decisión de Jesús, 2026-11-23); tocarlo lleva al grupo que falta.
-    var ctaBlocked: Bool { !canAdd }
+    /// Falta un grupo obligatorio: el botón no se apaga (Jesús, 2026-11-23) y tocarlo lleva a ese grupo.
+    var ctaBlocked: Bool { firstMissingGroup != nil }
 
     /// «Obligatorio · elige 1», «Listo» u «Opcional · hasta 2».
     func statusText(for group: DishGroup) -> String {
@@ -171,6 +170,13 @@ final class DishScreenModel {
     var attentionAnnouncement: String? {
         attention.flatMap { attention in item.dish.groups.first { $0.id == attention.groupID } }
             .map { String(localized: "Falta elegir: \($0.name)") }
+    }
+
+    /// Borde de error y «Falta elegir aquí» (CA-CAT-P7): el grupo que recibió la atención, mientras siga sin resolver.
+    func isHighlighted(_ group: DishGroup) -> Bool {
+        guard attention?.groupID == group.id else { return false }
+        let progress = selection.progress(of: group)
+        return progress.required && !progress.done
     }
 
     /// Un toque en el botón de abajo: con algo obligatorio sin elegir lleva al grupo que falta; si no, agrega.

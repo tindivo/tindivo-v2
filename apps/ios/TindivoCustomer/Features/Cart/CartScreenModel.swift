@@ -59,10 +59,10 @@ final class CartScreenModel {
             }
         }
 
-        /// ¿Se puede avanzar con esta bolsa? Con la carta ya revisada (o sin poder leerla), sin líneas con problema y con
-        /// todos los importes mostrables.
+        /// ¿Se puede avanzar con esta bolsa? Solo con la carta ya revisada, sin líneas con problema y con todos los
+        /// importes mostrables. Con la carta caída no (CA-CRT-05b): se reintenta.
         var allowsContinue: Bool {
-            validation != .validating && amountsAreValid && lines.allSatisfy { $0.issues.isEmpty }
+            validation == .checked && amountsAreValid && lines.allSatisfy { $0.issues.isEmpty }
         }
 
         /// La fila del envío solo existe en delivery (CA-CRT-08).
@@ -75,8 +75,8 @@ final class CartScreenModel {
         case validating
         /// La carta respondió: las líneas con problema llevan su aviso.
         case checked
-        /// La carta no se pudo leer: no se bloquea nada; el servidor lo vuelve a comprobar al pedir.
-        case unchecked
+        /// La carta no se pudo leer: la bolsa no se puede continuar hasta «Reintentar» (CA-CRT-05b).
+        case checkFailed
     }
 
     enum State: Equatable {
@@ -150,6 +150,11 @@ final class CartScreenModel {
     private var cart: Cart?
     private var hasCart = false
     private var menu: Menu = .pending
+    /// Cuántas veces la carta ha fallado en esta pantalla: sube con cada fallo, y la vista anuncia el aviso otra vez.
+    private(set) var checkFailures = 0
+    /// Hay un «Reintentar» en curso: el aviso de carta caída sigue a la vista (sin que VoiceOver pierda el foco) y dos
+    /// toques seguidos no lanzan dos peticiones.
+    private(set) var isRetryingCheck = false
 
     init(
         store: any CartStore, catalog: any CatalogRepository, clock: AppClock,
@@ -174,24 +179,44 @@ final class CartScreenModel {
     }
 
     /// Revisa la bolsa contra la carta vigente del negocio (CUS-CRT-005). Se lanza con `.task` al abrir la pantalla.
-    /// Si la carta no carga, no se bloquea nada (`unchecked`). Quitar o editar líneas después se revisa de nuevo con la
-    /// misma carta, sin pedirla otra vez.
+    /// Si la carta no carga, la bolsa queda en `checkFailed` y no se puede continuar (CA-CRT-05b). Quitar o editar
+    /// líneas después se revisa de nuevo con la misma carta, sin pedirla otra vez.
     func validate() async {
-        guard let cart = await store.current(), !cart.isEmpty else { return }
+        // Un «Reintentar» ya está pidiendo la carta: no se pide dos veces. Se mira otra vez después de leer la bolsa,
+        // porque «Reintentar» pudo empezar durante esa espera.
+        guard !isRetryingCheck, let cart = await store.current(), !cart.isEmpty, !isRetryingCheck else { return }
         // Ya cargada la carta de este negocio (por ejemplo tras cerrar «Editar»): no se vuelve a pedir.
         if case let .loaded(known) = menu, known.id.caseInsensitiveCompare(cart.businessId) == .orderedSame { return }
+        await fetchMenu(for: cart)
+    }
+
+    /// «Reintentar» (CA-CRT-05b): vuelve a pedir la carta del negocio de la bolsa aunque `validate()` ya la pidiera.
+    /// Mientras llega la bolsa está «validando»; termina en `checked` o, si falla otra vez, en `checkFailed` con
+    /// `checkFailures` más alto. Dos toques seguidos no lanzan dos peticiones.
+    func retryCheck() async {
+        guard !isRetryingCheck, case .failed = menu else { return }
+        isRetryingCheck = true
+        defer { isRetryingCheck = false }
+        // Si mientras se leía la bolsa `validate()` ya pidió la carta, no se pide otra vez.
+        guard let cart = await store.current(), !cart.isEmpty, case .failed = menu else { return }
+        await fetchMenu(for: cart)
+    }
+
+    /// Pide la carta del negocio de la bolsa (pasa por «validando») y termina en `checked` o en `checkFailed`.
+    private func fetchMenu(for cart: Cart) async {
         menu = .pending
         rebuild()
         do throws(AppError) {
             menu = .loaded(try await loadMenu(of: cart.businessId))
         } catch {
-            // Un `.cancelled` que no viene de cerrar la pantalla es un fallo de la red: «sin validar», no bloquea.
+            // Un `.cancelled` que no viene de cerrar la pantalla es un fallo de la red: carta caída.
             if case .cancelled = error, Task.isCancelled { return }
-            // Si mientras tanto «Editar» ya cargó la carta de este negocio, no se baja a «sin validar».
+            // Si mientras tanto «Editar» ya cargó la carta de este negocio, no se baja a fallo.
             if case let .loaded(known) = menu, known.id.caseInsensitiveCompare(cart.businessId) == .orderedSame {
                 return rebuild()
             }
             menu = .failed
+            checkFailures += 1
         }
         rebuild()
     }
@@ -206,7 +231,7 @@ final class CartScreenModel {
     }
 
     /// «Continuar» (todavía no existe en iOS: llega con el checkout) solo podrá avanzar con la bolsa ya revisada y
-    /// sin líneas con problema. Con la carta sin leer (`unchecked`) no bloquea.
+    /// sin líneas con problema. Con la carta caída (`checkFailed`) tampoco (CA-CRT-05b).
     var canContinue: Bool {
         guard case let .filled(filled) = state else { return false }
         return filled.allowsContinue
@@ -226,7 +251,7 @@ final class CartScreenModel {
                 menu: detail
             )
         case .failed:
-            state = Self.state(for: cart, validation: .unchecked)
+            state = Self.state(for: cart, validation: .checkFailed)
         case .pending, .loaded:
             state = Self.state(for: cart, validation: .validating)
         }
@@ -434,7 +459,11 @@ final class CartScreenModel {
             showSaveFailed()
         }
     }
+}
 
+// MARK: Filas de la pantalla
+
+extension CartScreenModel {
     /// `issues` va en el orden de las líneas; sin ella, ninguna línea tiene avisos.
     /// `menu`: la carta ya cargada del negocio. «Editar» sale si el PLATO tiene opciones en esa carta, aunque la línea no
     /// tenga ninguna elegida (extras opcionales sin elegir); si no hay carta o el plato no está, cae al criterio de la
@@ -466,7 +495,7 @@ final class CartScreenModel {
                                 localized: "Quitar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
                         increaseLabel: String(
                             localized: "Agregar una unidad de \(line.name). Llevas \(Self.unitsText(line.quantity))"),
-                        issues: (issues.indices.contains(index) ? issues[index].map(\.message) : [])
+                        issues: (issues.indices.contains(index) ? Self.messages(issues[index]) : [])
                             + (formatAmount(line.total) == nil
                                 ? [String(localized: "No podemos mostrar el precio por ahora")] : []),
                         canEdit: dishHasOptions(line, in: menu) ?? !line.modifiers.isEmpty
@@ -479,6 +508,12 @@ final class CartScreenModel {
                 validation: validation,
                 countLabel: String(localized: "\(cart.count) productos")
             ))
+    }
+
+    /// Los avisos de una línea, sin repetir: dos opciones que cambian de precio dicen una sola vez «El precio cambió…».
+    nonisolated static func messages(_ issues: [CartLineIssue]) -> [String] {
+        var seen = Set<String>()
+        return issues.map(\.message).filter { seen.insert($0).inserted }
     }
 
     /// ¿El plato de la línea tiene grupos de opciones en la carta vigente? `nil` si no hay carta o el plato no está.

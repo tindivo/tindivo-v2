@@ -106,6 +106,26 @@ struct CartView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: Carta caída (CA-CRT-05b)
+
+    /// «No pudimos revisar la carta. Toca Reintentar.» y su botón. VoiceOver lo anuncia al aparecer y otra vez si el
+    /// reintento vuelve a fallar: `checkFailures` sube con cada fallo y reinicia la tarea.
+    private var checkFailedNotice: some View {
+        VStack(alignment: .leading, spacing: TindivoTokens.Spacing.spaceInner) {
+            Text("No pudimos revisar la carta. Toca Reintentar.")
+                .tindivoText(TindivoTokens.Typography.bodySecondary)
+                .foregroundStyle(Color.tindivo.inkSecondary)
+                .accessibilityIdentifier("cart.unchecked")
+            TindivoSecondaryButton("Reintentar") { Task { await model.retryCheck() } }
+                .disabled(model.isRetryingCheck)
+                .accessibilityIdentifier("cart.retry")
+        }
+        .task(id: model.checkFailures) {
+            AccessibilityNotification.Announcement(String(localized: "No pudimos revisar la carta. Toca Reintentar."))
+                .post()
+        }
+    }
+
     // MARK: Con platos
 
     private func bag(_ filled: CartScreenModel.Filled) -> some View {
@@ -119,11 +139,10 @@ struct CartView: View {
                     .tindivoText(TindivoTokens.Typography.bodySecondary)
                     .foregroundStyle(Color.tindivo.inkSecondary)
                     .accessibilityIdentifier("cart.method")
-                if filled.validation == .unchecked {
-                    Text("No pudimos revisar tu bolsa con la carta. Lo confirmaremos al hacer el pedido.")
-                        .tindivoText(TindivoTokens.Typography.bodySecondary)
-                        .foregroundStyle(Color.tindivo.inkSecondary)
-                        .accessibilityIdentifier("cart.unchecked")
+                // Durante «Reintentar» la bolsa vuelve a «validando», pero el aviso se queda: si no, el botón tocado
+                // desaparece y VoiceOver pierde el foco.
+                if filled.validation == .checkFailed || model.isRetryingCheck {
+                    checkFailedNotice
                 }
                 ForEach(filled.lines, id: \.signatureKey) { line in
                     CartLineView(

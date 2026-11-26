@@ -10,7 +10,6 @@ import SwiftUI
 public struct TindivoPrimaryButton: View {
     private let title: Text
     private let loading: Bool
-    private let muted: Bool
     private let hint: LocalizedStringKey?
     private let action: () -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -18,21 +17,18 @@ public struct TindivoPrimaryButton: View {
     public init(_ title: LocalizedStringKey, loading: Bool = false, action: @escaping () -> Void) {
         self.title = Text(title)
         self.loading = loading
-        self.muted = false
         self.hint = nil
         self.action = action
     }
 
-    /// Para un texto que ya viene armado y traducido («Agregar · S/ 12.50»): se enseña tal cual. `muted` lo pinta como
-    /// apagado pero lo deja tocable, para un botón que, apagado, aún tiene algo que hacer («Elige la guarnición 2»
-    /// lleva al grupo que falta); `hint` es lo que VoiceOver dice de ese toque.
+    /// Para un texto que ya viene armado y traducido («Agregar · S/ 12.50»): se enseña tal cual. `hint` es lo que
+    /// VoiceOver dice del toque («Te lleva al grupo que falta»). El botón principal no se pinta apagado.
     public init(
-        verbatim title: String, loading: Bool = false, muted: Bool = false, hint: LocalizedStringKey? = nil,
+        verbatim title: String, loading: Bool = false, hint: LocalizedStringKey? = nil,
         action: @escaping () -> Void
     ) {
         self.title = Text(verbatim: title)
         self.loading = loading
-        self.muted = muted
         self.hint = hint
         self.action = action
     }
@@ -56,7 +52,7 @@ public struct TindivoPrimaryButton: View {
         }
         .buttonStyle(
             TindivoCTAButtonStyle(
-                cornerRadius: typeSize.isAccessibilitySize ? TindivoTokens.Radius.radiusField : nil, muted: muted
+                cornerRadius: typeSize.isAccessibilitySize ? TindivoTokens.Radius.radiusField : nil
             )
         )
         .accessibilityHint(hint.map { Text($0) } ?? Text(verbatim: ""))
@@ -69,16 +65,14 @@ public struct TindivoPrimaryButton: View {
 public struct TindivoCTAButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     private let cornerRadius: CGFloat?
-    private let muted: Bool
 
     /// `cornerRadius` en `nil` da la cápsula; con contenido de varias líneas (letra grande) se pasa un radio fijo,
-    /// porque una cápsula alta se come el texto de los lados. `muted` pinta el botón como apagado sin desactivarlo.
-    public init(cornerRadius: CGFloat? = nil, muted: Bool = false) {
+    /// porque una cápsula alta se come el texto de los lados.
+    public init(cornerRadius: CGFloat? = nil) {
         self.cornerRadius = cornerRadius
-        self.muted = muted
     }
 
-    private var enabled: Bool { isEnabled && !muted }
+    private var enabled: Bool { isEnabled }
 
     private var shape: AnyShape {
         cornerRadius.map { AnyShape(RoundedRectangle(cornerRadius: $0)) } ?? AnyShape(Capsule())

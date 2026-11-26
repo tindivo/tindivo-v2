@@ -224,6 +224,7 @@
     "Entregar en" : {},
     "Error" : {},
     "Estado" : {},
+    "Falta elegir aquí" : {},
     "Falta elegir: %@" : {},
     "Hay que actualizar la app (mínimo %@)" : {},
     "Horarios" : {},
@@ -382,7 +383,7 @@
     "No pudimos calcular el subtotal de tu bolsa. Revisa las cantidades." : {
       "comment" : "Aviso a nivel de bolsa cuando el subtotal no se puede mostrar (aprobado por Jesús, 2026-11-22)"
     },
-    "No pudimos revisar tu bolsa con la carta. Lo confirmaremos al hacer el pedido." : {},
+    "No pudimos revisar la carta. Toca Reintentar." : {},
     "Agotado por ahora" : {},
     "Quitar una unidad de %@. Llevas %@" : {
       "localizations" : {

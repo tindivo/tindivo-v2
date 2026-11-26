@@ -429,30 +429,121 @@ extension CartScreenModelTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): si la carta no se puede leer no se bloquea: queda «sin validar» y sin avisos"
+        "CA-CRT-05b: si la carta no se puede leer la bolsa queda en «carta caída», sin avisos de línea, y no se puede continuar"
     )
-    func uncheckedWhenTheMenuFails() async throws {
+    func checkFailedWhenTheMenuFails() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
         let (model, task) = await started(store, catalog: StubCatalog(menus: Script(failing: .network)))
         await model.validate()
-        #expect(filled(model)?.validation == .unchecked)
+        #expect(filled(model)?.validation == .checkFailed)
         #expect(filled(model)?.lines.first?.issues.isEmpty == true)
+        #expect(model.canContinue == false)
+        #expect(model.checkFailures == 1)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05b falla la carta y «Reintentar» tiene éxito: pasa a «revisada» y se puede continuar")
+    func retrySucceeds() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let menus = Script<BusinessMenu>([.failure(.network), .success(validationMenu([Fixture.item("a")]))])
+        let (model, task) = await started(store, catalog: StubCatalog(menus: menus))
+        await model.validate()
+        #expect(filled(model)?.validation == .checkFailed)
+        #expect(model.canContinue == false)
+        await model.retryCheck()
+        #expect(filled(model)?.validation == .checked)
         #expect(model.canContinue == true)
+        #expect(menus.calls == 2)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05b «Reintentar» con éxito y una línea con problema: revisada, pero no se puede continuar")
+    func retrySucceedsWithAnIssue() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let menus = Script<BusinessMenu>([
+            .failure(.network), .success(validationMenu([Fixture.item("a", available: false)])),
+        ])
+        let (model, task) = await started(store, catalog: StubCatalog(menus: menus))
+        await model.validate()
+        await model.retryCheck()
+        #expect(filled(model)?.validation == .checked)
+        #expect(filled(model)?.lines.first?.issues == ["Agotado por ahora"])
+        #expect(model.canContinue == false)
         task.cancel()
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una carta que no se puede mostrar tal cual (precio con tres decimales) también queda «sin validar»"
+        "CA-CRT-05b «Reintentar» que vuelve a fallar: sigue «carta caída» y la serie de fallos sube (se anuncia otra vez)"
     )
-    func uncheckedWhenTheMenuIsInvalid() async throws {
+    func retryFailsAgain() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let menus = Script<BusinessMenu>(failing: .network)
+        let (model, task) = await started(store, catalog: StubCatalog(menus: menus))
+        await model.validate()
+        #expect(model.checkFailures == 1)
+        await model.retryCheck()
+        #expect(filled(model)?.validation == .checkFailed)
+        #expect(model.canContinue == false)
+        #expect(model.checkFailures == 2)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05b dos toques seguidos en «Reintentar» lanzan una sola petición")
+    func retryTwiceAtOnce() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let menu = validationMenu([Fixture.item("a")])
+        let menus = Script<BusinessMenu>([.failure(.network), .success(menu), .success(menu)])
+        let (model, task) = await started(store, catalog: StubCatalog(menus: menus))
+        await model.validate()
+        #expect(filled(model)?.validation == .checkFailed)
+        // El segundo toque entra mientras el primero aún lee la bolsa (la carta sigue «caída»): lo frenan el candado
+        // de «Reintentar» y, después de esa espera, el estado de la carta. Lo que importa: una sola petición más.
+        async let first: Void = model.retryCheck()
+        async let second: Void = model.retryCheck()
+        _ = await (first, second)
+        #expect(menus.calls == 2)
+        #expect(filled(model)?.validation == .checked)
+        task.cancel()
+    }
+
+    @Test("CA-CRT-05b mientras «Reintentar» espera la carta, el aviso y su botón siguen a la vista")
+    func retryKeepsTheNoticeWhileLoading() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
+        let gate = Gate()
+        let menus = Script<BusinessMenu>([.failure(.network), .success(validationMenu([Fixture.item("a")]))])
+        let (model, task) = await started(store, catalog: StubCatalog(menus: menus, gate: gate))
+        let validating = Task { await model.validate() }
+        gate.open()
+        await validating.value
+        let retry = Task { await model.retryCheck() }
+        await eventually { filled(model)?.validation == .validating }
+        #expect(model.isRetryingCheck, "la vista enseña el aviso mientras dura el reintento")
+        await model.validate()
+        #expect(menus.calls == 2, "abrir la pantalla durante un reintento no pide la carta otra vez")
+        gate.open()
+        await retry.value
+        #expect(!model.isRetryingCheck)
+        #expect(filled(model)?.validation == .checked)
+        task.cancel()
+    }
+
+    @Test(
+        "CA-CRT-05b: una carta que no se puede mostrar tal cual (precio con tres decimales) también queda «carta caída» y no se puede continuar"
+    )
+    func checkFailedWhenTheMenuIsInvalid() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
         let broken = validationMenu([Fixture.item("a", price: "10.123")])
         let (model, task) = await started(store, catalog: StubCatalog(menus: Script(just: broken)))
         await model.validate()
-        #expect(filled(model)?.validation == .unchecked)
-        #expect(model.canContinue == true)
+        #expect(filled(model)?.validation == .checkFailed)
+        #expect(model.canContinue == false)
         task.cancel()
     }
 
@@ -606,14 +697,14 @@ extension CartScreenModelTests {
 extension CartScreenModelTests {
     // MARK: Validación: casos límite
 
-    @Test("un .cancelled que no viene de cerrar la pantalla es un fallo: «sin validar», sin bloquear")
+    @Test("un .cancelled que no viene de cerrar la pantalla es un fallo: «carta caída», y bloquea (CA-CRT-05b)")
     func strayCancelledIsAFailure() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
         let (model, task) = await started(store, catalog: StubCatalog(menus: Script(failing: .cancelled)))
         await model.validate()
-        #expect(filled(model)?.validation == .unchecked)
-        #expect(model.canContinue == true)
+        #expect(filled(model)?.validation == .checkFailed)
+        #expect(model.canContinue == false)
         task.cancel()
     }
 

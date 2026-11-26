@@ -12,16 +12,33 @@ struct DishGroupSection: View {
 
     var body: some View {
         let progress = model.selection.progress(of: group)
+        let highlighted = model.isHighlighted(group)
         VStack(alignment: .leading, spacing: 0) {
             header(progress)
+            if highlighted {
+                // CA-CAT-P7: mientras el grupo siga sin resolver, borde de error y «Falta elegir aquí».
+                Text("Falta elegir aquí")
+                    .tindivoText(TindivoTokens.Typography.bodySecondary)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.tindivo.error)
+                    .padding(.bottom, 4)
+                    .accessibilityIdentifier("dish.group.missing")
+            }
             ForEach(group.options, id: \.id) { option in
                 optionRow(option)
             }
         }
+        .overlay {
+            if highlighted {
+                // Un poco hacia fuera del contenido, para que el borde no pegue al texto.
+                RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField)
+                    .stroke(Color.tindivo.error, lineWidth: 2)
+                    .padding(-6)
+                    .allowsHitTesting(false)
+            }
+        }
         .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
         .padding(.top, TindivoTokens.Spacing.spaceGroup)
-        // «Elige [grupo]» lo sacude (sin movimiento si la persona pidió «Reducir movimiento»).
-        .tindivoShake(trigger: model.attention?.groupID == group.id ? model.attention?.serial ?? 0 : 0)
         .id(group.id)
     }
 

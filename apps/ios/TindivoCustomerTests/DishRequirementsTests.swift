@@ -100,6 +100,32 @@ struct DishRequirementsTests {
         #expect(model.outcome == nil)
     }
 
+    @Test("CA-CAT-P7 tocar con «Guarnición 2» sin elegir la resalta; al elegir una opción deja de estar resaltada")
+    func missingGroupIsHighlightedUntilResolved() async throws {
+        let model = try model()
+        try choose("papas", in: model)
+        let groups = model.item.dish.groups
+        let second = try #require(groups.first { $0.id == "g2" })
+        #expect(!model.isHighlighted(second), "sin tocar el botón nadie lleva el resaltado")
+        await model.tapAdd()
+        #expect(model.isHighlighted(second))
+        try choose("arroz", in: model)
+        #expect(!model.isHighlighted(second), "al resolverlo desaparece solo")
+    }
+
+    @Test("CA-CAT-P7 un grupo que nunca recibió la atención no se resalta, aunque también falte")
+    func otherGroupsAreNotHighlighted() async throws {
+        let model = try model()
+        await model.tapAdd()
+        let groups = model.item.dish.groups
+        let first = try #require(groups.first { $0.id == "g1" })
+        let second = try #require(groups.first { $0.id == "g2" })
+        #expect(model.isHighlighted(first))
+        #expect(!model.isHighlighted(second))
+        let optional = try #require(groups.first { !model.selection.progress(of: $0).required })
+        #expect(!model.isHighlighted(optional))
+    }
+
     @Test("CA-CAT-P8 el avance pasa de «1 de 2 listas» a «2 de 2 listas» y el botón a «Agregar · S/ 49.00»")
     func progressAndCta() throws {
         let model = try model()

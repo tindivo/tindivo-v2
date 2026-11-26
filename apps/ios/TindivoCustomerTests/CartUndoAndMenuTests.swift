@@ -84,7 +84,7 @@ struct CartUndoAndMenuTests {
         task.cancel()
     }
 
-    @Test("D1 sin otra carta cargada, un fallo de red sigue dejando la bolsa «sin validar»")
+    @Test("D1 sin otra carta cargada, un fallo de red deja la bolsa en «carta caída»")
     func networkFailureStillUnchecked() async throws {
         let store = try await twoLines()
         let catalog = FirstMenuFails(menu: Fixture.menu([]))
@@ -94,7 +94,7 @@ struct CartUndoAndMenuTests {
         await eventually { catalog.menuCalls == 1 }
         catalog.gate.open()
         await validating.value
-        #expect(filled(model)?.validation == .unchecked)
+        #expect(filled(model)?.validation == .checkFailed)
         task.cancel()
     }
 

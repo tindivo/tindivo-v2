@@ -64,6 +64,14 @@ struct CartValidationTests {
         #expect(result == [[.outOfWindow]])
     }
 
+    @Test("CUS-CRT-005: dos opciones que cambian de precio dicen una sola vez «El precio cambió…»")
+    func repeatedNoticesAreShownOnce() {
+        let messages = CartScreenModel.messages([
+            .optionPriceChanged(optionName: "Papas"), .optionPriceChanged(optionName: "Crema"), .unavailable,
+        ])
+        #expect(messages.map(\.plain) == ["El precio cambió. Quítalo y vuelve a agregarlo.", "Agotado por ahora"])
+    }
+
     @Test(
         "CUS-CRT-005: los avisos de línea son los textos `bolsa.linea.*` del canon, los mismos de Android (2026-11-26)")
     func lineNoticesMatchCanon() {
