@@ -144,7 +144,6 @@ describe('una tarifa finita que SQL no puede guardar no es fiable', () => {
   it.each([
     ['1e8 (no cabe en numeric(10,2))', 1e8],
     ['1e308 (cents daría Infinity)', 1e308],
-    ['fracción de céntimo', 0.005],
   ])('banda %s: respaldo para pintar, reliable false, céntimos finitos', (_n, valor) => {
     const r = nominalDeliveryFee('near', { near: valor }, 3)
     expect(r).toEqual({ cents: 300, reliable: false })
@@ -216,10 +215,17 @@ describe('CAX-009: isMoneyNumber solo admite céntimos completos del valor recib
   ])('%s es un valor con céntimos completos', (v) => {
     expect(isMoneyNumber(v)).toBe(true)
   })
-  it('una tarifa de banda 49.990000001 usa el respaldo y no es fiable', () => {
-    expect(nominalDeliveryFee('near', { near: 49.990000001 }, 3)).toEqual({
-      cents: 300,
+  it.each([
+    [49.990000001, 4999],
+    [16.005, 1601],
+    [0.005, 1],
+  ])('CAX-007: una tarifa de banda numérica %s (fracción de céntimo) se PINTA como en develop y no es fiable', (valor, esperado) => {
+    expect(nominalDeliveryFee('near', { near: valor }, 3)).toEqual({
+      cents: esperado,
       reliable: false,
     })
+  })
+  it('la tarifa del negocio numérica con fracción de céntimo también se pinta, reliable false', () => {
+    expect(nominalDeliveryFee('near', {}, 16.005)).toEqual({ cents: 1601, reliable: false })
   })
 })

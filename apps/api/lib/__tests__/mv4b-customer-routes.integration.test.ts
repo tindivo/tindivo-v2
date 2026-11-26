@@ -1535,6 +1535,29 @@ describe('POST /customer/checkout/quote · payment', () => {
           })
         })
 
+        // CAX-007 (revisión limpia): una tarifa JSON NUMÉRICA con fracción de céntimo (16.005) se pinta
+        // con su valor, como en develop, y no con el respaldo: con umbral 60 SQL (64.005 > 60) solo
+        // acepta el prepago, y la cotización no puede retirarlo.
+        it('CAX-007 · banda numérica 16.005, umbral 60: la cotización conserva el prepago y la contraentrega da 422', async () => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo('16.005', async () => {
+            await conUmbral(60, async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              expect(cot.body.data.exceedsPrepayThreshold).toBe(true)
+              expect(
+                cot.body.data.payment.options
+                  .filter((o: { available: boolean }) => o.available)
+                  .map((o: { intent: string }) => o.intent),
+              ).toEqual(['prepaid'])
+              const r = await crear(c, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).toBe(422)
+              const prepago = await crear(c, 'prepaid')
+              expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+            })
+          })
+        })
+
         // CAX-008: una cadena finita cuyo producto por 100 desborda ("1e308") no puede dar
         // `Infinity` en ningún importe de la cotización: respaldo (3.00 del negocio), con el
         // formato decimal del contrato. Lo mismo con el umbral "1e308" (se acota al tope).

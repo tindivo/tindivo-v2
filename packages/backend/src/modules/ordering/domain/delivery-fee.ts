@@ -45,13 +45,14 @@ export const isMoneyNumber = (v: unknown): v is number =>
   isPlainNumber(v) && Math.abs(v) <= MAX_MONEY && Math.round(v * 100) / 100 === v
 
 /**
- * Solo para PINTAR (nunca para rechazar): el número que una cadena daba en la cotización
- * antes de este cierre (`Number(cadena)`: también `"0x10"`, que SQL convierte igual a 16, CAX-007),
+ * Solo para PINTAR (nunca para rechazar): el número que un valor presente daba en la cotización
+ * antes de este cierre (`Number(valor)`; un número JSON con fracción de céntimo, como `16.005`, también se pinta tal cual: también `"0x10"`, que SQL convierte igual a 16, CAX-007),
  * o `NaN` si la cadena está en blanco, no es un número finito o su valor no cabe en
  * `numeric(10,2)`: con `"1e308"` los céntimos serían `Infinity` y el importe no tendría el formato
  * decimal del contrato (CAX-008). `NaN` manda al respaldo.
  */
 const paintable = (v: unknown): number => {
+  if (typeof v === 'number') return Number.isFinite(v) && Math.abs(v) <= MAX_MONEY ? v : Number.NaN
   if (typeof v !== 'string' || v.trim() === '') return Number.NaN
   const n = Number(v)
   return Number.isFinite(n) && Math.abs(n) <= MAX_MONEY ? n : Number.NaN
