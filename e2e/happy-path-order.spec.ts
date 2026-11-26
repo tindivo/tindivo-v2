@@ -121,7 +121,50 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
   // ETAPA 0 — este test SÍ crea pedidos, así que necesita mundo fresco antes y
   // purga de transaccionales después. El mundo (negocio, menú, driver, cliente)
   // sobrevive a la limpieza; solo se borran los pedidos del cliente de prueba.
-  test.beforeAll(() => pnpm('db:seed:e2e'))
+  const PEDIDO_PREVIO_SHORT_ID = 'HAMBRE23'
+
+  test.beforeAll(async () => {
+    pnpm('db:seed:e2e')
+    // Con la semilla limpia el primer pedido del cliente nace `validando` (la
+    // regla antifraude por teléfono: sin historial, la cajera llama). Este
+    // escenario prueba el flujo de un vecino conocido, que nace
+    // `pending_acceptance`; se declara esa condición dando al cliente un pedido
+    // previo ya entregado, que es lo que cuenta como historial
+    // (`customer_contraentrega_decision`). `afterAll` lo borra con el clean.
+    // Si una corrida anterior murió antes del `afterAll`, el previo sigue ahí.
+    // Acotado al cliente Y al negocio E2E: un pedido ajeno con el mismo
+    // `short_id` no se toca, y entonces el insert de abajo falla a la vista.
+    const { error: errorBorrado } = await db
+      .from('orders')
+      .delete()
+      .eq('short_id', PEDIDO_PREVIO_SHORT_ID)
+      .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
+      .eq('business_id', E2E.BUSINESS_ID)
+    if (errorBorrado) {
+      throw new Error(`no se pudo limpiar el pedido previo: ${errorBorrado.message}`)
+    }
+    const { error } = await db.from('orders').insert({
+      business_id: E2E.BUSINESS_ID,
+      short_id: PEDIDO_PREVIO_SHORT_ID,
+      customer_user_id: E2E.CUSTOMER_USER_ID,
+      customer_name: 'Cliente E2E',
+      customer_phone: E2E.CUSTOMER_PHONE.replace(/\D/g, '').slice(-9),
+      delivery_method: 'delivery',
+      delivery_reference: 'Jr. Historial 1',
+      order_amount: 20,
+      delivery_fee: 2,
+      payment_intent: 'pending_cash',
+      status: 'delivered',
+      driver_id: E2E.DRIVER_ID,
+      delivered_at: new Date().toISOString(),
+    })
+    if (error) throw new Error(`no se pudo sembrar el pedido previo: ${error.message}`)
+    // La regla que decide el estado inicial es `customer_contraentrega_decision`.
+    const { data: decision } = await db.rpc('customer_contraentrega_decision', {
+      p_customer_user_id: E2E.CUSTOMER_USER_ID,
+    })
+    expect(decision, 'el pedido previo debe dar historial al cliente').toBe('trusted')
+  })
   test.afterAll(() => pnpm('db:seed:e2e:clean'))
 
   test('arma un pedido con modificador y llega a checkout', async ({ page }) => {
@@ -229,14 +272,20 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
       return data
     }
 
+    // Solo el pedido NUEVO cumple la condición: el previo sembrado (entregado,
+    // del mismo cliente) ya está en la base antes de empezar.
+    const leerPedidoNuevo = async () => {
+      const o = await leerUltimoPedido()
+      return o && o.short_id !== PEDIDO_PREVIO_SHORT_ID ? o : null
+    }
     const order = await expect
-      .poll(leerUltimoPedido, {
+      .poll(leerPedidoNuevo, {
         timeout: 20_000,
         message: () =>
           `el pedido no apareció en la DB. Fallos de API: ${fallosApi.join(' | ') || '(ninguno)'}`,
       })
       .not.toBeNull()
-      .then(leerUltimoPedido)
+      .then(leerPedidoNuevo)
 
     // ASSERT del estado inicial y de los montos.
     expect(order.status).toBe('pending_acceptance')
