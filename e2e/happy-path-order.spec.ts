@@ -121,7 +121,35 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
   // ETAPA 0 — este test SÍ crea pedidos, así que necesita mundo fresco antes y
   // purga de transaccionales después. El mundo (negocio, menú, driver, cliente)
   // sobrevive a la limpieza; solo se borran los pedidos del cliente de prueba.
-  test.beforeAll(() => pnpm('db:seed:e2e'))
+  test.beforeAll(async () => {
+    pnpm('db:seed:e2e')
+    // Con la semilla limpia el primer pedido del cliente nace `validando` (la
+    // regla antifraude por teléfono: sin historial, la cajera llama). Este
+    // escenario prueba el flujo de un vecino conocido, que nace
+    // `pending_acceptance`; se declara esa condición dando al cliente un pedido
+    // previo ya entregado, que es lo que cuenta como historial
+    // (`customer_contraentrega_decision`). `afterAll` lo borra con el clean.
+    const { error } = await db.from('orders').insert({
+      business_id: E2E.BUSINESS_ID,
+      short_id: 'HAMBRE23',
+      customer_user_id: E2E.CUSTOMER_USER_ID,
+      customer_name: 'Cliente E2E',
+      customer_phone: E2E.CUSTOMER_PHONE.replace(/\D/g, '').slice(-9),
+      delivery_method: 'delivery',
+      delivery_reference: 'Jr. Historial 1',
+      order_amount: 20,
+      delivery_fee: 2,
+      payment_intent: 'pending_cash',
+      status: 'delivered',
+      driver_id: E2E.DRIVER_ID,
+      delivered_at: new Date().toISOString(),
+    })
+    if (error) throw new Error(`no se pudo sembrar el pedido previo: ${error.message}`)
+    const { data: confiable } = await db.rpc('customer_trusted_for_contraentrega', {
+      p_customer_user_id: E2E.CUSTOMER_USER_ID,
+    })
+    expect(confiable, 'el pedido previo debe dar historial al cliente').toBe(true)
+  })
   test.afterAll(() => pnpm('db:seed:e2e:clean'))
 
   test('arma un pedido con modificador y llega a checkout', async ({ page }) => {
