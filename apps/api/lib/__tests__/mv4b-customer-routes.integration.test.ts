@@ -1527,6 +1527,17 @@ describe('POST /customer/checkout/quote · payment', () => {
         }
       })
 
+      /** La RPC tal como la llama la cotización: con el JWT del cliente (responde por `auth.uid()`). */
+      const rpcPromo = async (c: Cliente) => {
+        const comoCliente = createClient(LOCAL_URL, LOCAL_ANON_KEY, {
+          auth: { persistSession: false },
+          global: { headers: { Authorization: `Bearer ${c.token}` } },
+        })
+        const { data, error } = await comoCliente.rpc('current_customer_promo_free_delivery')
+        if (error) throw new Error(error.message)
+        return data
+      }
+
       const configurar = async (value: Record<string, unknown>) => {
         const { error } = await db
           .from('app_settings')
@@ -1544,6 +1555,8 @@ describe('POST /customer/checkout/quote · payment', () => {
       ])('%s: no se anuncia envío gratis y cotización y creación coinciden (48.00 + 2.00)', async (_n, ventana) => {
         await configurar({ ...base, ...ventana })
         const c = await clienteDeConfianza()
+        // La RPC misma: sin ventana completa no es elegible (0295), con el motivo y sin código.
+        expect(await rpcPromo(c)).toEqual({ eligible: false, reason: 'inactive', code: null })
         await conUmbral(49, async () => {
           const cot = await cotizar(c, { coordinates: PIN })
           expect(cot.body.data.freeDelivery).toEqual({ applies: false, reason: null })
@@ -1560,7 +1573,30 @@ describe('POST /customer/checkout/quote · payment', () => {
           const cash = await crear(c, 'pending_cash')
           expect(cash.status, JSON.stringify(cash.body)).toBe(403)
           expect(cash.body.detail).toContain('(S/ 50.00) pasa de')
+          const yape = await crear(c, 'pending_yape')
+          expect(yape.status, JSON.stringify(yape.body)).toBe(403)
+          expect(yape.body.detail).toContain('(S/ 50.00) pasa de')
           // ...y el prepago, la única opción ofrecida, crea el pedido por 50.00.
+          const prepago = await crear(c, 'prepaid')
+          expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+          expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
+        })
+      })
+
+      it('from mayor que to (ventana completa pero imposible): outside_window, sin descuento y el prepago crea por 50.00', async () => {
+        await configurar({ ...base, from: '2099-01-01', to: '2000-01-01' })
+        const c = await clienteDeConfianza()
+        expect(await rpcPromo(c)).toEqual({
+          eligible: false,
+          reason: 'outside_window',
+          code: CODIGO,
+        })
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: false, reason: null })
+          expect(cot.body.data.total).toBe('50.00')
+          const cash = await crear(c, 'pending_cash')
+          expect(cash.status, JSON.stringify(cash.body)).toBe(403)
           const prepago = await crear(c, 'prepaid')
           expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
           expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
@@ -1570,6 +1606,7 @@ describe('POST /customer/checkout/quote · payment', () => {
       it('control, ventana completa y vigente: se anuncia el envío gratis y la contraentrega pasa (48.00)', async () => {
         await configurar({ ...base, from: '2000-01-01', to: '2099-12-31' })
         const c = await clienteDeConfianza()
+        expect(await rpcPromo(c)).toEqual({ eligible: true, reason: 'active', code: CODIGO })
         await conUmbral(49, async () => {
           const cot = await cotizar(c, { coordinates: PIN })
           expect(cot.body.data.freeDelivery).toEqual({ applies: true, reason: 'launch_promo' })
@@ -1581,9 +1618,14 @@ describe('POST /customer/checkout/quote · payment', () => {
         })
       })
 
-      it('control, ventana completa pero vencida: no se anuncia (outside_window) y el total es 50.00', async () => {
+      it('control, ventana completa pero vencida: la RPC dice outside_window, no se anuncia y el total es 50.00', async () => {
         await configurar({ ...base, from: '2000-01-01', to: '2001-01-01' })
         const c = await clienteDeConfianza()
+        expect(await rpcPromo(c)).toEqual({
+          eligible: false,
+          reason: 'outside_window',
+          code: CODIGO,
+        })
         await conUmbral(49, async () => {
           const cot = await cotizar(c, { coordinates: PIN })
           expect(cot.body.data.freeDelivery).toEqual({ applies: false, reason: null })

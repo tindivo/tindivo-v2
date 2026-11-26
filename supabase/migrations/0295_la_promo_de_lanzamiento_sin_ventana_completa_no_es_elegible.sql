@@ -21,7 +21,7 @@
 -- esta promoción: es la del plato.
 --
 -- Idempotente (`CREATE OR REPLACE` conserva el ACL; se vuelven a declarar los permisos de 0187/0188).
--- Cuerpo = 0187:838-910 con el único cambio marcado «0295».
+-- Cuerpo = 0187:838-911 (la función) con el único cambio marcado «0295»; comentario y permisos: 0187:913-917 y 0188:67-68.
 create or replace function public.current_customer_promo_free_delivery()
 returns jsonb
 language plpgsql
