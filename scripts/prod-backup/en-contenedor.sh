@@ -37,14 +37,18 @@ SQL_HUELLA_ROLES="select md5(
   coalesce((select string_agg(concat_ws(':', rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, rolcanlogin,
       rolreplication, rolbypassrls, rolconnlimit, rolvaliduntil, rolconfig), '|' order by rolname) from pg_roles), '')
   || '#' ||
-  coalesce((select string_agg(concat_ws(':', g.rolname, m.rolname, a.admin_option, a.inherit_option, a.set_option), '|'
+  coalesce((select string_agg(concat_ws(':', g.rolname, m.rolname, a.admin_option, a.inherit_option, a.set_option, a.grantor), '|'
       order by g.rolname, m.rolname, a.grantor)
     from pg_auth_members a join pg_roles g on g.oid = a.roleid join pg_roles m on m.oid = a.member), '')
   || '#' ||
   coalesce((select string_agg(concat_ws(':', s.setdatabase, s.setrole, s.setconfig), '|'
       order by s.setdatabase, s.setrole) from pg_db_role_setting s), ''))"
 
-log() { printf '[contenedor] %s\n' "$*" >&2; }
+# Los mensajes propios salen con una marca al azar de esta corrida; el filtro solo reconoce como propios los que la
+# llevan y la cambia por «[contenedor]». Así un texto del servidor que empiece por «[contenedor]» no pasa por propio.
+MARCA="${TINDIVO_MARCA_PRUEBA:-m$RANDOM$RANDOM$RANDOM$RANDOM}"
+[[ "$MARCA" =~ ^[A-Za-z0-9]{4,40}$ ]] || exit 64
+log() { printf '%s %s\n' "$MARCA" "$*" >&2; }
 fallo() {
   log "ERROR: $*"
   exit 1
@@ -52,11 +56,14 @@ fallo() {
 
 # Deja pasar solo diagnósticos de forma conocida; el resto se cuenta y se omite.
 filtrar() {
-  awk '
-    function pasa(l) {
+  awk -v m="$MARCA" '
+    function pasa(l,    cola) {
       if (length(l) > 400) return 0
-      if (l ~ /^\[contenedor\] /) return 1
-      if (l ~ /^(psql|pg_dump|pg_dumpall): error: connection to server (at|on socket) "[^"]*"( \([0-9a-fA-F.:]+\))?, port [0-9]+ failed: /) return 1
+      if (l ~ /^(psql|pg_dump|pg_dumpall): error: connection to server (at|on socket) "[^"]*"( \([0-9a-fA-F.:]+\))?, port [0-9]+ failed: /) {
+        cola = l
+        sub(/^.* failed: /, "", cola)
+        return (cola !~ /ERROR:|DETAIL:|CONTEXT:|[=()]/)
+      }
       if (l ~ /^(psql|pg_dump|pg_dumpall): error: could not translate host name "[^"]*" to address: /) return 1
       if (l ~ /^(psql|pg_dump|pg_dumpall): error: (authentication method requirement|SSL error|server certificate|root certificate|certificate verify failed|private key|timeout expired)/) return 1
       if (l ~ /^(psql:[^ ]*: |pg_dump: error: query failed: |pg_dumpall: error: query failed: )?ERROR:  permission denied for [a-z ]+ [A-Za-z0-9_."]+$/) return 1
@@ -65,12 +72,13 @@ filtrar() {
       if (l ~ /^pg_dump: detail: Query was: LOCK TABLE [A-Za-z0-9_.", ]+ IN ACCESS SHARE MODE$/) return 1
       if (l ~ /^pg_dump: error: (aborting because of server version mismatch|no matching schemas were found)$/) return 1
       if (l ~ /^pg_dump: detail: server version: [0-9.]+; pg_dump version: [0-9.]+$/) return 1
-      if (l ~ /No space left on device$/ && l ~ /^(pg_dump|pg_dumpall|pg_restore|tar|sha256sum): /) return 1
+      if (l ~ /^(pg_dump|pg_dumpall|pg_restore|tar|sha256sum): ([a-z ]+: )?([a-z ]+: )?([a-z ]+: )?No space left on device$/) return 1
       if (l ~ /^(psql|pg_dump|pg_dumpall): error: (server closed the connection unexpectedly|connection to server was lost)$/) return 1
       if (l ~ /^tar: (short read|invalid tar magic|unexpected end of file)$/) return 1
       if (l ~ /^sha256sum: WARNING: [0-9]+ (of [0-9]+ )?computed checksums? did NOT match$/) return 1
       return 0
     }
+    index($0, m " ") == 1 { print "[contenedor] " substr($0, length(m) + 2); next }
     { if (pasa($0)) print; else n++ }
     END { if (n) printf "[contenedor] %d linea(s) de diagnostico omitidas: no tienen una forma conocida y podrian llevar datos\n", n }
   '
@@ -280,7 +288,7 @@ copiar() {
   mkfifo "$W/.ctl"
   pg psql -X -q -v ON_ERROR_STOP=1 --no-password -f "$W/.ctl" >"$W/.sesion.out" 2>"$W/.sesion.err" &
   local sesion=$!
-  exec 9>"$W/.ctl"
+  exec 9<>"$W/.ctl" # lectura y escritura: abrir no se queda esperando si psql murió antes de abrir su lado
   # Los tres SET LOCAL solo quitan límites de tiempo a ESTA transacción (pg_dump hace lo mismo con la suya).
   printf '%s\n' 'begin transaction isolation level repeatable read read only;' \
     'set local statement_timeout = 0;' 'set local lock_timeout = 0;' \
@@ -390,7 +398,7 @@ verificar() {
   log "RESUMEN tablas=$tablas filas=$filas entradas_de_datos=$con_datos"
   if [ "${TINDIVO_MOSTRAR_CONTEOS:-0}" = 1 ]; then
     log 'conteos por tabla (esquema, tabla, filas, suma):'
-    awk -F'\t' '$1 ~ /^[a-z_][a-z0-9_]*$/ && $2 ~ /^[A-Za-z_][A-Za-z0-9_]*$/ && $3 ~ /^[0-9]+$/ && $4 ~ /^[0-9]+$/ { print "[contenedor]   " $1 "." $2 " " $3 " " $4 }' conteos.tsv >&2
+    awk -F'\t' '$1 ~ /^[a-z_][a-z0-9_]*$/ && $2 ~ /^[A-Za-z_][A-Za-z0-9_]*$/ && $3 ~ /^[0-9]+$/ && $4 ~ /^[0-9]+$/ { print m "   " $1 "." $2 " " $3 " " $4 }' m="$MARCA" conteos.tsv >&2
   fi
   log "MANIFEST_SHA256=$(sha256sum <MANIFEST.sha256 | cut -c1-64)"
   log 'verificación del contenedor: OK'
@@ -404,7 +412,7 @@ case "$MODO" in
     "$MODO" 3>&4 2>&1 4>&- | filtrar >&2 4>&-
     ;;
   *)
-    printf '[contenedor] ERROR: modo desconocido\n' >&2
+    printf 'en-contenedor.sh: modo desconocido\n' >&2
     exit 1
     ;;
 esac

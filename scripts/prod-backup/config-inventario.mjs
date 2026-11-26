@@ -17,7 +17,11 @@ export const TACHADO = '[TACHADO: hay un valor]'
 const CLAVE_SENSIBLE =
   /(secret|password|passwd|pass$|_pass_|token|private|credential|jwt|otp|(^|_)keys?($|_)|api_?key|hash|salt|dsn|connection_?string)/i
 // Claves que suenan a secreto pero solo dicen cómo está configurado algo (una URI de hook, un límite, un interruptor).
-const CLAVE_DE_CONFIGURACION = /(_uri|_url|_enabled|_characters|_length|_exp|_id|_algorithm)$/i
+const CLAVE_DE_CONFIGURACION =
+  /(_uri|_url|_enabled|_characters|_length|_exp|_id|_algorithm|_interval|_period|_limit|_count|_size|_seconds)$|^rate_limit_/i
+// Texto que lleva una credencial aunque su clave no lo sugiera: usuario:contraseña@ o un parámetro con nombre de secreto.
+const TEXTO_CON_CREDENCIAL = /\/\/[^/\s@]+:[^/\s@]*@|[^\s@/:]+:[^\s@/:]+@[^\s@]+|[?&;](password|passwd|pass|pwd|token|secret|key|apikey|api_key|access_key)=/i
+const enSnake = (clave) => clave.replace(/([a-z0-9])([A-Z])/g, '$1_$2')
 
 // [nombre, sufijo, obligatoria]. Una consulta obligatoria que no responde 200 deja el inventario PARCIAL.
 // En una opcional, solo un 404 («este proyecto no tiene eso») cuenta como «no aplica»; cualquier otro fallo, PARCIAL.
@@ -36,6 +40,7 @@ export const CONSULTAS = [
 
 /** Si el texto es una URL con usuario, contraseña, parámetros o fragmento, deja solo origen y ruta. */
 export function limpiarUrl(texto) {
+  if (TEXTO_CON_CREDENCIAL.test(texto) && !/^[a-z][a-z0-9+.-]*:\/\//i.test(texto)) return TACHADO
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(texto)) return texto
   let url
   try {
@@ -52,11 +57,14 @@ export function limpiarUrl(texto) {
  * sensible se tacha todo texto, se llame como se llame. Deja números, booleanos y vacíos (dicen si está configurado).
  */
 export function tachar(valor, clave = '', heredado = false) {
-  const sensible = heredado || (CLAVE_SENSIBLE.test(clave) && !CLAVE_DE_CONFIGURACION.test(clave))
+  const k = enSnake(clave)
+  const sensible = heredado || (CLAVE_SENSIBLE.test(k) && !CLAVE_DE_CONFIGURACION.test(k))
   if (Array.isArray(valor)) return valor.map((v) => tachar(v, '', sensible))
   if (valor && typeof valor === 'object') {
     return Object.fromEntries(Object.entries(valor).map(([k, v]) => [k, tachar(v, k, sensible)]))
   }
+  // Bajo una clave sensible también se tacha un número (una contraseña numérica); los booleanos y vacíos se dejan.
+  if (typeof valor === 'number') return sensible ? TACHADO : valor
   if (typeof valor !== 'string' || valor === '') return valor
   return sensible ? TACHADO : limpiarUrl(valor)
 }

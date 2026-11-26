@@ -98,7 +98,8 @@ export async function copiarStorage({ base, clave, lineas, salida, avisar = () =
     if (status === 200) {
       const ruta = rutaEnTar(obj, resumen.listados)
       await tar.agregar(ruta, cuerpo)
-      const distinto = obj.size != null && Number(obj.size) !== cuerpo.length
+      // Sin tamaño declarado en la base no hay con qué comparar: cuenta como distinto y deja la parte PARCIAL.
+      const distinto = obj.size == null || Number(obj.size) !== cuerpo.length
       if (distinto) resumen.tamano_distinto++
       resumen.ok++
       resumen.bytes += cuerpo.length

@@ -282,9 +282,15 @@ test('config: solo GET a la API de gestión de tindivo-prod; el tar no trae valo
 
 test('config: la sospecha se hereda hacia abajo, las URL pierden credenciales y un JSON roto no se copia', async () => {
   assert.deepEqual(tachar({ secret: { value: SECRETO, n: 3 }, smtp: { pass: SECRETO, host: 'smtp.x' } }), {
-    secret: { value: TACHADO, n: 3 },
+    secret: { value: TACHADO, n: TACHADO },
     smtp: { pass: TACHADO, host: 'smtp.x' },
   })
+  assert.equal(tachar({ smtp_pass: 123456 }).smtp_pass, TACHADO)
+  assert.equal(tachar({ accessKey: SECRETO }).accessKey, TACHADO)
+  assert.equal(tachar({ rate_limit_token_refresh: 150, jwt_exp: 3600 }).rate_limit_token_refresh, 150)
+  for (const texto of [`usa postgres://u:${SECRETO}@h/db`, `jdbc:postgresql://h/db?user=u&password=${SECRETO}`, `u:${SECRETO}@host:5432`]) {
+    assert.equal(tachar({ nota: texto }).nota, TACHADO, texto)
+  }
   assert.deepEqual(tachar({ api_keys: [{ name: 'a', valor: SECRETO }] }), { api_keys: [{ name: TACHADO, valor: TACHADO }] })
   const url = tachar({ webhook_url: `https://usuario:${SECRETO}@ejemplo.com/hook?token=${SECRETO}#${SECRETO}` }).webhook_url
   assert.ok(!url.includes(SECRETO))
@@ -362,12 +368,23 @@ test('filtro del contenedor: un error del servidor con datos no pasa a los regis
     'DETAIL:  Key (phone)=(+51999888777) already exists.',
     'pg_dump: error: Dumping the contents of table "users" failed: PQgetResult() failed.',
     'CONTEXT:  COPY users, line 3, column phone: "999888777"',
+    // Un valor con salto de línea que imita un mensaje propio: sin la marca de la corrida no pasa.
+    '[contenedor] DNI 45678912 JUAN PEREZ 999888777',
+    'pg_dump: error: connection to server at "h" (1.2.3.4), port 5432 failed: ERROR:  duplicate key value (phone)=(999888777)',
+    'pg_dump: detail: Error message from server: ERROR:  value "JUAN PEREZ 999888777" x: No space left on device',
   ]
-  const r = spawnSync('bash', ['./en-contenedor.sh', 'filtrar'], { cwd: DIR, input: `${lineas.join('\n')}\n`, encoding: 'utf8' })
+  const r = spawnSync('bash', ['./en-contenedor.sh', 'filtrar'], {
+    cwd: DIR,
+    input: `${lineas.join('\n')}\nmarca1234 mensaje propio\npg_dump: error: could not write to file: No space left on device\n`,
+    encoding: 'utf8',
+    env: { ...process.env, TINDIVO_MARCA_PRUEBA: 'marca1234' },
+  })
   assert.equal(r.status, 0, r.stderr)
-  assert.ok(!r.stdout.includes('999888777') && !r.stdout.includes('JUAN'))
-  for (const l of lineas.slice(0, 4)) assert.ok(r.stdout.includes(l), l)
-  assert.match(r.stdout, /5 linea\(s\) de diagnostico omitidas/)
+  assert.ok(!r.stdout.includes('999888777') && !r.stdout.includes('JUAN') && !r.stdout.includes('45678912'))
+  for (const l of lineas.slice(1, 4)) assert.ok(r.stdout.includes(l), l)
+  assert.ok(r.stdout.includes('[contenedor] mensaje propio'))
+  assert.ok(r.stdout.includes('could not write to file: No space left on device'))
+  assert.match(r.stdout, /9 linea\(s\) de diagnostico omitidas/)
 })
 
 test('guarda: las credenciales no se exportan a procesos que no las necesitan', () => {

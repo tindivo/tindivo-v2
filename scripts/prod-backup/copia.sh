@@ -30,6 +30,7 @@ unset DB_PASS STORAGE_KEY MGMT_TOKEN
 DESTINO='' SALIDA='' COMMIT_FIRMADO='' ARCHIVO_CA='' SIN_PGOPTIONS=0 DISCO_SIN_CIFRAR=0
 DB_PASS='' STORAGE_KEY='' MGMT_TOKEN='' FASE_EN_CURSO=''
 MOTIVOS=()
+CARPETA_CREADA=0
 
 uso() {
   sed -n '2,6p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
@@ -65,7 +66,8 @@ limpiar() {
   unset PGPASSWORD TINDIVO_STORAGE_KEY TINDIVO_MGMT_TOKEN
   dk rm -f "$NOMBRE_CONT" >/dev/null 2>&1
   cerrar_gpg
-  if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ] && [ -n "$SALIDA" ] && [ -d "$SALIDA" ]; then
+  # Solo se marca la carpeta que creó ESTA corrida: nunca una que ya existía (podría ser una copia buena).
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ] && [ "$CARPETA_CREADA" = 1 ] && [ -d "$SALIDA" ]; then
     [ -z "$FASE_EN_CURSO" ] || rm -f -- "$SALIDA/$FASE_EN_CURSO"
     printf 'La copia NO terminó (UTC %s, código %s). No subas esta carpeta.\n' "$(date -u +%FT%TZ)" "$rc" >"$SALIDA/INCOMPLETA.txt"
     log "La copia NO terminó. Quedó marcada en $SALIDA/INCOMPLETA.txt"
@@ -111,7 +113,7 @@ if [ "$DESTINO" = prod ]; then
   # Lo que haya en el entorno no se usa: las credenciales de prod solo entran por el teclado.
   unset PGPASSWORD PGHOST PGPORT PGUSER PGDATABASE PGOPTIONS PGREQUIREAUTH PGSERVICE PGSERVICEFILE PGPASSFILE PGSSLMODE DATABASE_URL
   unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY TINDIVO_STORAGE_KEY TINDIVO_MGMT_TOKEN
-  unset TINDIVO_COPIA_LOCAL_CLAVE TINDIVO_COPIA_LOCAL_SERVICE_KEY
+  unset TINDIVO_COPIA_LOCAL_CLAVE TINDIVO_COPIA_LOCAL_SERVICE_KEY TINDIVO_COPIA_LOCAL_CONTRASENA TINDIVO_COPIA_LOCAL_PUERTO
 fi
 
 if [ -n "$ARCHIVO_CA" ]; then
@@ -188,6 +190,7 @@ if [ "$DESTINO" = prod ]; then
 fi
 
 mkdir "$SALIDA"
+CARPETA_CREADA=1
 INICIO=$(date +%s)
 
 # ---------------------------------------------------------------------------------------------------------------
