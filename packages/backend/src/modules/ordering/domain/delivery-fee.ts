@@ -29,6 +29,15 @@ export interface NominalDeliveryFee {
 export const isPlainNumber = (v: unknown): v is number =>
   typeof v === 'number' && Number.isFinite(v)
 
+/**
+ * Un número ordinario que además SQL y JavaScript comparan igual: cabe en `numeric(10,2)`
+ * (la columna donde se guarda la tarifa; más grande, el insert falla y la RPC responde 500) y
+ * no trae fracción de céntimo (JavaScript compara en céntimos redondeados; SQL, el valor exacto).
+ * Es lo que exige la guardia HTTP para rechazar con el umbral o con una tarifa.
+ */
+export const isMoneyNumber = (v: unknown): v is number =>
+  isPlainNumber(v) && Math.abs(v) <= 99999999.99 && Math.abs(v * 100 - Math.round(v * 100)) < 1e-6
+
 const NUMERIC_TEXT = /^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/
 
 /**
@@ -59,7 +68,7 @@ export function nominalDeliveryFee(
     } else {
       const raw = (bandsSetting as Record<string, unknown>)[band]
       if (raw !== null && raw !== undefined) {
-        if (isPlainNumber(raw)) fromBands = raw
+        if (isMoneyNumber(raw)) fromBands = raw
         else {
           reliable = false
           fromBands = paintable(raw)
@@ -70,7 +79,7 @@ export function nominalDeliveryFee(
   let fee = fromBands
   if (!Number.isFinite(fee)) {
     if (businessDeliveryFee === null || businessDeliveryFee === undefined) fee = 2
-    else if (isPlainNumber(businessDeliveryFee)) fee = businessDeliveryFee
+    else if (isMoneyNumber(businessDeliveryFee)) fee = businessDeliveryFee
     else {
       reliable = false
       const text = paintable(businessDeliveryFee)

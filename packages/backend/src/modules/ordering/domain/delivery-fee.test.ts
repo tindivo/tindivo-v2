@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cents, isPlainNumber, nominalDeliveryFee } from './delivery-fee'
+import { cents, isMoneyNumber, isPlainNumber, nominalDeliveryFee } from './delivery-fee'
 
 describe('cents', () => {
   it('pasa soles a céntimos enteros sin error de coma flotante', () => {
@@ -120,5 +120,34 @@ describe('nominalDeliveryFee', () => {
       expect(r).toEqual({ cents: esperado, reliable: false })
       expect(Number.isFinite(r.cents)).toBe(true)
     })
+  })
+})
+
+describe('isMoneyNumber (cabe en numeric(10,2) y sin fracción de céntimo)', () => {
+  it.each([[0], [2], [2.5], [64.08], [80], [99999999.99]])('%s sí', (v) => {
+    expect(isMoneyNumber(v)).toBe(true)
+  })
+  it.each([
+    [0.005],
+    [64.085],
+    [1e8],
+    [1e308],
+    [-1e8],
+    [Number.NaN],
+    ['2.5'],
+    [null],
+  ])('%s no', (v) => {
+    expect(isMoneyNumber(v)).toBe(false)
+  })
+})
+
+describe('una tarifa finita que SQL no puede guardar no es fiable', () => {
+  it.each([
+    ['1e8 (no cabe en numeric(10,2))', 1e8],
+    ['1e308 (cents daría Infinity)', 1e308],
+    ['fracción de céntimo', 0.005],
+  ])('banda %s: respaldo para pintar, reliable false, céntimos finitos', (_n, valor) => {
+    const r = nominalDeliveryFee('near', { near: valor }, 3)
+    expect(r).toEqual({ cents: 300, reliable: false })
   })
 })

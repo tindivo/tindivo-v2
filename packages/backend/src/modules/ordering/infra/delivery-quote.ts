@@ -95,7 +95,7 @@ export async function quoteDelivery(
     // sirve para pintar, no para rechazar (CAX-006).
     if (!fee.reliable) {
       reliable = false
-      console.error(`[${input.logScope}] tarifa de banda mal formada en delivery_bands`)
+      console.error(`[${input.logScope}] tarifa de banda o del negocio no ordinaria`)
     }
     nominalCents = fee.cents
   }

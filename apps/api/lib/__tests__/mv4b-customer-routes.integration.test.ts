@@ -1435,6 +1435,12 @@ describe('POST /customer/checkout/quote · payment', () => {
         const casos: Array<[string, string, number, number | string]> = [
           ['cadena "1e309" (finita en SQL, desborda numeric(10,2))', '"1e309"', 500, 0],
           ['número JSON 1e309 (Infinity al leerlo en JS)', '1e309', 500, 0],
+          [
+            'número finito 1e8: no cabe en numeric(10,2), antes daba 403 con "S/ 100000051"',
+            '1e8',
+            500,
+            0,
+          ],
           ['cadena numérica "2.50": SQL la acepta, total 50.50', '"2.50"', 422, '(S/ 50.50)'],
           ['cadena numérica " 2.5 "', '" 2.5 "', 422, '(S/ 50.50)'],
           ['cadena numérica "1.5": SQL la acepta, total 49.50', '"1.5"', 201, 4950],
