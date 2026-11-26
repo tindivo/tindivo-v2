@@ -117,6 +117,8 @@ const CHAPA_RADIO = 11
  * holgura, un rótulo que «roza» una chapa la pisa o no según el redondeo de la
  * corrida (lo midió `mapa-reparto-de-rotulos.spec.ts` a 360 y 390 px).
  */
+// Techo: la chapa propia también cuenta como ocupada y dista 3 px de su rótulo
+// (ROTULO_SEPARACION - CHAPA_RADIO); con 3 o más, ningún nombre se escribiría.
 const ROTULO_AIRE = 2
 
 type Caja = { x1: number; y1: number; x2: number; y2: number }

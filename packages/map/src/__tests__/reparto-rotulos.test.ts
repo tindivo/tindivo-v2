@@ -57,4 +57,23 @@ describe.each([360, 390])('repartirRotulos a %i px', (ancho) => {
 
     expect(c?.conNombre, 'a 0 px de la chapa de la Posta no hay sitio para el nombre').toBe(false)
   })
+
+  it('con la chapa vecina a 10 px más de distancia, el nombre se conserva a la izquierda', async () => {
+    const { repartirRotulos } = await import('../landmark-layer')
+    const dx = ancho - 360
+    const mapa = mapaFalso(ancho, {
+      '1': { x: 255 + dx, y: 312 },
+      '2': { x: 194.5 + dx, y: 278 },
+    })
+
+    const reparto = repartirRotulos(
+      mapa,
+      [lm('1', 'Comisaría PNP San Jacinto'), lm('2', 'Posta Médica')],
+      true,
+    )
+    const c = reparto.find((r) => r.landmark.id === '1')
+
+    expect(c?.conNombre).toBe(true)
+    expect(c?.aLaIzquierda).toBe(true)
+  })
 })
