@@ -132,7 +132,17 @@ test.describe('camino feliz — cliente hasta el punto de pago', () => {
     // previo ya entregado, que es lo que cuenta como historial
     // (`customer_contraentrega_decision`). `afterAll` lo borra con el clean.
     // Si una corrida anterior murió antes del `afterAll`, el previo sigue ahí.
-    await db.from('orders').delete().eq('short_id', PEDIDO_PREVIO_SHORT_ID)
+    // Acotado al cliente Y al negocio E2E: un pedido ajeno con el mismo
+    // `short_id` no se toca, y entonces el insert de abajo falla a la vista.
+    const { error: errorBorrado } = await db
+      .from('orders')
+      .delete()
+      .eq('short_id', PEDIDO_PREVIO_SHORT_ID)
+      .eq('customer_user_id', E2E.CUSTOMER_USER_ID)
+      .eq('business_id', E2E.BUSINESS_ID)
+    if (errorBorrado) {
+      throw new Error(`no se pudo limpiar el pedido previo: ${errorBorrado.message}`)
+    }
     const { error } = await db.from('orders').insert({
       business_id: E2E.BUSINESS_ID,
       short_id: PEDIDO_PREVIO_SHORT_ID,
