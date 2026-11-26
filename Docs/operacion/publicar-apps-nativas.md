@@ -33,7 +33,7 @@ El ID de cliente **web** de Google (`googleWebClientIdProd` en `apps/android/cus
 
 - [ ] **Supabase prod** (`zpnipajgwfthxhdtzhly`): Authentication › Sign In / Providers › Google en **ON**, con el mismo Client ID y su Secret (`Docs/operacion/deploy.md` §2.1).
 - [ ] **Cliente web de Google** (Google Cloud Console › Credentials): entre los *Authorized redirect URIs* está `https://zpnipajgwfthxhdtzhly.supabase.co/auth/v1/callback`, además del de staging.
-- [ ] **Cliente Android de Google** (mismo proyecto de Cloud, tipo Android): paquete `com.tindivo.customer` con el **SHA-1 del certificado de release** (clave de subida) **y** el **SHA-1 de App Signing de Play** (Play Console › Integridad de la aplicación). Sin el segundo, el inicio de sesión falla solo en las builds instaladas desde Play.
+- [ ] **Clientes Android de Google** (mismo proyecto de Cloud, tipo Android): un cliente identifica **una** combinación de paquete y certificado, así que se registran **dos clientes separados**, ambos con el paquete `com.tindivo.customer`: uno con el **SHA-1 del certificado de release** (clave de subida) y otro con el **SHA-1 de App Signing de Play** (Play Console › Integridad de la aplicación). No se pone una huella en lugar de la otra ni las dos en un mismo cliente. Sin el cliente de App Signing, el inicio de sesión falla solo en las builds instaladas desde Play. El ID web que lleva la app (`serverClientId`) sigue siendo el del cliente **web**, no el de ninguno de estos.
 - [ ] Prueba en un teléfono real con la build de pruebas internas de Play: «Continuar con Google» abre el selector de cuentas y entra.
 
 ## Si algo sale mal
