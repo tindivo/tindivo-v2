@@ -366,7 +366,11 @@ test.describe('0219/0220 · el recojo en el local, desde la pantalla del cliente
     await expect(yapeAlMotorizado).toHaveCount(0)
     // Y la caja tampoco (0283): solo queda el prepago.
     await expect(radioDe(page, 'Pagas en el local')).toHaveCount(0)
-    await expect(radioDe(page, 'Pagas apenas el local confirme')).toHaveCount(1)
+    // La única fila que queda es la del prepago («Yape o Plin», bajo «Antes de
+    // recibir»). Se busca por su título y no por el subtítulo «Pagas apenas el
+    // local confirme»: al marcarse, la fila lo sustituye por «No pagas nada
+    // ahora», así que el subtítulo no identifica la fila en los dos estados.
+    await expect(radioDe(page, 'Yape o Plin')).toHaveCount(1)
   })
 
   /**
