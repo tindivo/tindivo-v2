@@ -11,7 +11,9 @@ reemplaza; lo que sigue son bloqueos que no se pueden olvidar aunque no lo abras
 - **Cómo:** expediente fuera del repo (`tindivo-auditorias/<tema>/`), copia saneada con `git archive`, debate ciego
   (`01-claude.md` sellado antes de lanzar), contrato fijo de entrada y de salida (§5–§6).
 - **Esta máquina:** modo `PROVISIONAL_RIESGO_ACEPTADO` (§13.1 bis, con vigencia): después de cada ronda corre
-  `scripts/codex-audit-scope-check.mjs`; solo un 0 valida la ronda.
+  `scripts/codex-audit-scope-check.mjs`; solo un 0 valida la ronda. Vale la versión del control de la rama destino
+  en el SHA base, fijada por hash, nunca la del candidato; solo tolera la reconexión del transporte antes del primer
+  comando.
 - **Veto (§7):** una entrega solo queda lista para merge con `firmo` sobre el candidato actual, o con `firmo con cambios`
   cuyas condiciones Codex marcó `CERRADO_VERIFICADO` sobre ese mismo candidato: cero condiciones abiertas. Tus
   correcciones no las cierras tú, y `firmo con cambios` nunca autoriza el merge.

@@ -62,7 +62,7 @@ Las regex siguientes son normativas; el backtick delimita la expresión y no per
 
 - **P02 — Entorno y edge**. Ruta: `(^|/)(environments?/prod(uction)?|deploy/prod(uction)?|supabase/functions|edge[-_]?functions)(/|$)`. Contenido: `\b(DATABASE_URL|SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|PRODUCTION|PROD_ENV|NODE_ENV\s*[=:]\s*["\x27]?production)\b`.
 
-- **G01 — Integridad del control**. Ruta: `(^|/)(AGENTS(\.override)?\.md|CODEX_AUDITOR_PROTOCOL\.md|Docs/operacion/codex-auditor\.md|\.codex/.*|\.agents/.*|CODEOWNERS|.*audit.*gate.*|.*merge.*gate.*)$`. Contenido: `\b(PENDIENTE_AUDITORIA_CODEX_POST_CUOTA|dangerously-bypass-approvals-and-sandbox|danger-full-access|skip[_-]?audit|bypass[_-]?audit)\b`.
+- **G01 — Integridad del control**. Ruta: `(^|/)(AGENTS(\.override)?\.md|CODEX_AUDITOR_PROTOCOL\.md|Docs/operacion/codex-auditor\.md|scripts/codex-audit-scope-check[^/]*|\.codex/.*|\.agents/.*|CODEOWNERS|.*audit.*gate.*|.*merge.*gate.*)$`. Contenido: `\b(PENDIENTE_AUDITORIA_CODEX_POST_CUOTA|dangerously-bypass-approvals-and-sandbox|danger-full-access|skip[_-]?audit|bypass[_-]?audit)\b`.
 
 Una modificación de workflows, dependencias o lockfiles también activa Codex si cambia permisos, secretos, un paquete de auth/pagos/criptografía, el artefacto productivo o la capacidad de saltar controles. Los nombres locales de módulos críticos DEBEN añadirse como rutas explícitas antes de la primera entrega. La lista es el mínimo obligatorio, no una lista cerrada de tecnologías.
 
@@ -678,7 +678,12 @@ registro o resumen puede llamarlo «aislado» ni «sandbox seguro».
    rota esa credencial. Un hallazgo puede ser un falso positivo (por ejemplo, rutas inventadas dentro de un script
    de prueba del auditor): se documenta en el expediente con el comando completo, pero la ronda sigue sin valer.
    Es detección, no prevención: la cabecera del script enumera lo que no ve (rutas armadas por partes, leídas de
-   variables o archivos, comandos codificados, accesos de programas lanzados).
+   variables o archivos, comandos codificados, accesos de programas lanzados). El control decodifica un nivel de
+   comillas POSIX antes de buscar rutas UNC o unidades, y solo tolera la reconexión del transporte que Codex
+   reintenta solo: eventos `error` con `Reconnecting... N/N` e item `error` con `Falling back from WebSockets`, y
+   únicamente antes del primer comando; después de uno, con otro texto, o con `turn.failed`, `error` final o sin
+   `turn.completed`, se marca. La versión del control que valida una ronda es la de la rama destino en el SHA base,
+   fijada por hash; nunca la del candidato.
 3. El expediente conserva `NN-codex.events.jsonl`, `NN-codex.stderr.log`, `NN-codex.exit` y `NN-alcance.txt` (la
    salida del control) **fuera del candidato**, y el sobre de atestación registra el SHA-256 del JSONL y de
    `NN-alcance.txt` junto al candidato y al thread.
