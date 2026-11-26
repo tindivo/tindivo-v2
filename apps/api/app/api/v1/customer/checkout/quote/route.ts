@@ -1,4 +1,4 @@
-import { cents, planQuotePayment, quoteDelivery } from '@tindivo/backend/ordering'
+import { cents, MAX_MONEY, planQuotePayment, quoteDelivery } from '@tindivo/backend/ordering'
 import {
   CheckoutQuoteRequestSchema,
   checkModifierSelection,
@@ -189,7 +189,13 @@ export async function POST(req: Request): Promise<Response> {
     if (settingsErr) console.error('[checkout/quote] ajustes:', settingsErr.message)
     const setting = (key: string): unknown => settings?.find((s) => s.key === key)?.value
     const threshold = Number(setting('prepay_threshold') ?? 80)
-    const thresholdCents = cents(Number.isFinite(threshold) ? threshold : 80)
+    // Un umbral finito pero enorme (`"1e308"`) daría `Infinity` céntimos: se acota al tope de
+    // `numeric(10,2)` (CAX-008). Para el total del pedido, que cabe ahí, la comparación no cambia.
+    const maxCents = cents(MAX_MONEY)
+    const thresholdCents = Math.max(
+      -maxCents,
+      Math.min(maxCents, cents(Number.isFinite(threshold) ? threshold : 80)),
+    )
 
     const { data: change, error: changeErr } = await asUser.rpc('effective_max_change', {
       p_business_id: body.businessId,

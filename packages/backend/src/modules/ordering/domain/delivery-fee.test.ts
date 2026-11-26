@@ -84,7 +84,6 @@ describe('nominalDeliveryFee', () => {
       ['cadena que desborda JavaScript pero no SQL', '1e309'],
       ['número JSON que desborda JavaScript (Infinity)', Number.POSITIVE_INFINITY],
       ['NaN', Number.NaN],
-      ['hexadecimal', '0x10'],
       ['coma decimal', '1,5'],
       ['objeto', {}],
     ])('%s: usa el respaldo para pintar y queda reliable false', (_n, valor) => {
@@ -149,5 +148,78 @@ describe('una tarifa finita que SQL no puede guardar no es fiable', () => {
   ])('banda %s: respaldo para pintar, reliable false, céntimos finitos', (_n, valor) => {
     const r = nominalDeliveryFee('near', { near: valor }, 3)
     expect(r).toEqual({ cents: 300, reliable: false })
+  })
+})
+
+describe('CAX-007: una cadena que JavaScript convierte y SQL también se PINTA como en develop', () => {
+  // `Number('0x10')` = 16 y `'0x10'::numeric` = 16 (PostgreSQL 17): la cotización no puede
+  // pintar el respaldo (51.00) y retirar el prepago, que es lo único que SQL aceptaría.
+  it.each([
+    ['hexadecimal', '0x10', 1600],
+    ['binario', '0b11', 300],
+    ['octal', '0o7', 700],
+    ['exponente', '1e1', 1000],
+  ])('banda %s: se pinta con su valor, reliable false', (_n, valor, esperado) => {
+    expect(nominalDeliveryFee('near', { near: valor }, 3)).toEqual({
+      cents: esperado,
+      reliable: false,
+    })
+  })
+  it('la tarifa del negocio como cadena hexadecimal también se pinta, reliable false', () => {
+    expect(nominalDeliveryFee('near', {}, '0x10')).toEqual({ cents: 1600, reliable: false })
+  })
+})
+
+describe('CAX-008: los céntimos que se pintan son siempre finitos y con formato monetario', () => {
+  it.each([
+    ['banda "1e308"', { near: '1e308' }, 3],
+    ['banda "1e21"', { near: '1e21' }, 3],
+    ['banda "100000000" (no cabe en numeric(10,2))', { near: '100000000' }, 3],
+    ['banda "-1e308"', { near: '-1e308' }, 3],
+  ])('%s: respaldo finito y reliable false', (_n, bandas, negocio) => {
+    const r = nominalDeliveryFee('near', bandas, negocio)
+    expect(r).toEqual({ cents: 300, reliable: false })
+    expect(Number.isSafeInteger(r.cents)).toBe(true)
+  })
+  it('tarifa del negocio como cadena "1e308": respaldo S/ 2.00 finito y reliable false', () => {
+    const r = nominalDeliveryFee('near', {}, '1e308')
+    expect(r).toEqual({ cents: 200, reliable: false })
+  })
+  it('el tope se pinta tal cual: "99999999.99" cabe', () => {
+    expect(nominalDeliveryFee('near', { near: '99999999.99' }, 3)).toEqual({
+      cents: 9999999999,
+      reliable: false,
+    })
+  })
+})
+
+describe('CAX-009: isMoneyNumber solo admite céntimos completos del valor recibido', () => {
+  it.each([
+    [49.990000001],
+    [49.999999999],
+    [64.080000001],
+    [0.0100000001],
+    [1e-7],
+    [2.675],
+  ])('%s no es un valor ordinario (SQL lo compara exacto): la guardia se abstiene', (v) => {
+    expect(isMoneyNumber(v)).toBe(false)
+  })
+  it.each([
+    [49.99],
+    [50],
+    [64.08],
+    [0.01],
+    [0.1],
+    [1.15],
+    [-3.2],
+    [99999999.99],
+  ])('%s es un valor con céntimos completos', (v) => {
+    expect(isMoneyNumber(v)).toBe(true)
+  })
+  it('una tarifa de banda 49.990000001 usa el respaldo y no es fiable', () => {
+    expect(nominalDeliveryFee('near', { near: 49.990000001 }, 3)).toEqual({
+      cents: 300,
+      reliable: false,
+    })
   })
 })

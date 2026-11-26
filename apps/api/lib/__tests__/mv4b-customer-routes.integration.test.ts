@@ -1502,6 +1502,82 @@ describe('POST /customer/checkout/quote · payment', () => {
             expect(await totalDelPedido(r.body.data.id)).toBe(5000)
           })
         })
+
+        // CAX-007 (ciclo 3, R1): `"0x10"` vale 16 para SQL y para `Number()`. La cotización debe
+        // PINTAR lo mismo que SQL cobra (64.00) y NO retirar el prepago, que es lo único que SQL
+        // acepta con el umbral en 60.00. Antes pintaba el respaldo (51.00) y ofrecía solo las dos
+        // contraentregas, que SQL rechaza.
+        it('CAX-007 · banda "0x10", umbral 60: cotiza 64.00 con prepago, las dos contraentregas dan 422 y el prepago 201 por 64.00', async () => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo('"0x10"', async () => {
+            await conUmbral(60, async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              expect(cot.body.data.nominalDeliveryFee).toBe('16.00')
+              expect(cot.body.data.total).toBe('64.00')
+              expect(cot.body.data.exceedsPrepayThreshold).toBe(true)
+              // Las dos de al recibir salen no disponibles (umbral) y `prepaid` queda disponible.
+              expect(
+                cot.body.data.payment.options
+                  .filter((o: { available: boolean }) => o.available)
+                  .map((o: { intent: string }) => o.intent),
+              ).toEqual(['prepaid'])
+              for (const intent of ['pending_cash', 'pending_yape'] as const) {
+                const r = await crear(c, intent)
+                expect(r.status, `${intent}: ${JSON.stringify(r.body)}`).toBe(422)
+                expect(r.body.detail).toContain('(S/ 64.00) pasa de')
+              }
+              expect(await pedidosDe(c)).toBe(0)
+              const prepago = await crear(c, 'prepaid')
+              expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+              expect(await totalDelPedido(prepago.body.data.id)).toBe(6400)
+            })
+          })
+        })
+
+        // CAX-008: una cadena finita cuyo producto por 100 desborda ("1e308") no puede dar
+        // `Infinity` en ningún importe de la cotización: respaldo (3.00 del negocio), con el
+        // formato decimal del contrato. Lo mismo con el umbral "1e308" (se acota al tope).
+        it.each([
+          ['tarifa de banda "1e308"', 'bandas', '"1e308"'],
+          ['umbral "1e308"', 'umbral', '"1e308"'],
+        ])('CAX-008 · %s: todos los importes de la cotización son decimales finitos', async (_n, donde, crudo) => {
+          const c = await clienteDeConfianza()
+          const decimal = /^-?\d+\.\d{2}$/
+          const fn = async () => {
+            const cot = await cotizar(c, { coordinates: PIN })
+            expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+            const d = cot.body.data
+            for (const campo of [
+              'subtotal',
+              'nominalDeliveryFee',
+              'deliveryFee',
+              'total',
+              'maxChange',
+              'prepayThreshold',
+            ]) {
+              expect(String(d[campo]), `${campo}: ${JSON.stringify(d)}`).toMatch(decimal)
+            }
+          }
+          if (donde === 'bandas') await conBandasCrudo(crudo, fn)
+          else await conUmbralCrudo(crudo, fn)
+        })
+
+        // CAX-009: un umbral con fracción de céntimo ya no es un valor ordinario: la guardia se
+        // abstiene (antes, con la tolerancia 1e-6, `49.990000001` daba 403 con total 50.00) y
+        // decide SQL, que compara el valor exacto: 50.00 > 49.990000001 y 50.00 > 49.999999999.
+        it.each([
+          ['49.990000001'],
+          ['49.999999999'],
+        ])('CAX-009 · umbral %s con total 50.00: 422 de la RPC, no 403 de la guardia', async (crudo) => {
+          const c = await clienteDeConfianza()
+          await conUmbralCrudo(crudo, async () => {
+            const r = await crear(c, 'pending_cash')
+            expect(r.status, JSON.stringify(r.body)).toBe(422)
+            expect(r.body.detail).toContain('(S/ 50.00) pasa de')
+            expect(await pedidosDe(c)).toBe(0)
+          })
+        })
       })
 
       it('falla la lectura del umbral (respaldo 80): umbral real 100, dos platos (98.00) -> 201, no 403', async () => {

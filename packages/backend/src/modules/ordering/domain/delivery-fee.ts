@@ -29,23 +29,33 @@ export interface NominalDeliveryFee {
 export const isPlainNumber = (v: unknown): v is number =>
   typeof v === 'number' && Number.isFinite(v)
 
+/** El mayor importe que cabe en `numeric(10,2)` y que el contrato escribe con dos decimales. */
+export const MAX_MONEY = 99999999.99
+
 /**
  * Un número ordinario que además SQL y JavaScript comparan igual: cabe en `numeric(10,2)`
  * (la columna donde se guarda la tarifa; más grande, el insert falla y la RPC responde 500) y
- * no trae fracción de céntimo (JavaScript compara en céntimos redondeados; SQL, el valor exacto).
+ * son céntimos COMPLETOS (JavaScript compara en céntimos redondeados; SQL, el valor exacto).
+ * Sin tolerancia: `Math.round(v * 100) / 100 === v` solo se cumple si `v` es el `double` más
+ * cercano a un valor de dos decimales (la división correctamente redondeada devuelve ese mismo
+ * `double`), así que `49.990000001` o `49.999999999` quedan fuera (CAX-009).
  * Es lo que exige la guardia HTTP para rechazar con el umbral o con una tarifa.
  */
 export const isMoneyNumber = (v: unknown): v is number =>
-  isPlainNumber(v) && Math.abs(v) <= 99999999.99 && Math.abs(v * 100 - Math.round(v * 100)) < 1e-6
-
-const NUMERIC_TEXT = /^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/
+  isPlainNumber(v) && Math.abs(v) <= MAX_MONEY && Math.round(v * 100) / 100 === v
 
 /**
- * Solo para PINTAR (nunca para rechazar): el número que una cadena numérica ya daba en la
- * cotización antes de este cierre, o `NaN` si no es una cadena numérica de valor finito.
+ * Solo para PINTAR (nunca para rechazar): el número que una cadena daba en la cotización
+ * antes de este cierre (`Number(cadena)`: también `"0x10"`, que SQL convierte igual a 16, CAX-007),
+ * o `NaN` si la cadena está en blanco, no es un número finito o su valor no cabe en
+ * `numeric(10,2)`: con `"1e308"` los céntimos serían `Infinity` y el importe no tendría el formato
+ * decimal del contrato (CAX-008). `NaN` manda al respaldo.
  */
-const paintable = (v: unknown): number =>
-  typeof v === 'string' && NUMERIC_TEXT.test(v) ? Number(v) : Number.NaN
+const paintable = (v: unknown): number => {
+  if (typeof v !== 'string' || v.trim() === '') return Number.NaN
+  const n = Number(v)
+  return Number.isFinite(n) && Math.abs(n) <= MAX_MONEY ? n : Number.NaN
+}
 
 /**
  * La tarifa nominal del envío. Mismo orden que `create_customer_order` (0283:233): la tarifa
