@@ -20,7 +20,7 @@ se apoyan en los textos de `apps/android/customer/src/main/res/values/strings.xm
 | Maestro CLI | <https://maestro.mobile.dev> (`maestro --version`). Necesita Java 17+. |
 | Dispositivo | Emulador `tindivo_phone` (Android 15, Google Play) o un dispositivo por USB con depuración activada (`adb devices`). |
 | APK de staging | `cd apps/android && ./gradlew :customer:assembleDevDebug`. Paquete: `com.tindivo.customer.dev` (apunta a `tindivo-dev`). |
-| Datos en staging | Negocio abierto hoy «La Florencia E2E» con el plato «Medio pollo». |
+| Datos en staging | Negocio abierto hoy «La Florencia E2E» con el plato «Medio pollo» (salen de `apps/api/scripts/e2e-fixtures.ts` y `seed-world.ts`). Si el negocio está cerrado, el flujo falla en la portada: abre su horario o espera a su turno. |
 
 Nunca contra producción: la variante `prod` (`com.tindivo.customer`) no se prueba con Maestro.
 
@@ -33,7 +33,8 @@ export MSYS_NO_PATHCONV=1
 SDK="$(cygpath -u "$LOCALAPPDATA")/Android/Sdk"
 export ANDROID_HOME="$SDK" ANDROID_SDK_ROOT="$SDK"
 export JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"
-export PATH="$HOME/tools/maestro-dl/maestro/bin:$SDK/emulator:$SDK/platform-tools:$PATH"
+# Ajusta la ruta de Maestro a donde lo instalaste (comprueba con `command -v maestro`; el instalador oficial usa ~/.maestro/bin)
+export PATH="$HOME/.maestro/bin:$SDK/emulator:$SDK/platform-tools:$PATH"
 
 # 1. Emulador (el primer arranque tarda minutos; añade -no-window para ir sin ventana)
 emulator -avd tindivo_phone -no-snapshot -no-audio -gpu swiftshader_indirect &
@@ -46,7 +47,7 @@ adb -s emulator-5554 install -r apps/android/customer/build/outputs/apk/dev/debu
 
 # 3. Flujo (tarda más de 2 minutos: sin tope de tiempo)
 cd apps/android/maestro
-maestro --device emulator-5554 test --test-output-dir ../../../scratch/maestro-<fecha> flows/invitado-hasta-identificacion.yaml
+maestro --device emulator-5554 test --test-output-dir "../../../scratch/maestro-$(date +%F)" flows/invitado-hasta-identificacion.yaml
 
 # Apagar
 adb -s emulator-5554 emu kill
@@ -72,5 +73,5 @@ El flujo empieza con `clearState`: borra los datos de la app dev en el emulador 
 
 ## Trampas conocidas
 
-- `adb devices` vacío = nada que probar; Maestro no arranca emuladores solo.
+- Con `--device emulator-5554` Maestro no arranca el emulador: arráncalo antes (paso 1). `adb devices` vacío = nada que probar.
 - Si el emulador muestra «X isn't responding» en el primer arranque, ciérralo (va lento al inicio).
