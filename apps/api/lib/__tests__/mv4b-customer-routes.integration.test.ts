@@ -1495,6 +1495,102 @@ describe('POST /customer/checkout/quote · payment', () => {
         })
       })
     })
+
+    // CAX-004 (0295): una promoción de lanzamiento activa, con código y cupo, pero sin la ventana
+    // completa (`from` o `to` ausentes o null) NO es elegible: la creación no la aplica (0283:377),
+    // así que la cotización no puede anunciarla. Ejemplo de Codex: plato de 48.00, envío 2.00 y
+    // umbral 49.00 (total real 50.00).
+    describe('promoción de lanzamiento sin ventana completa (0295)', () => {
+      const CODIGO = 'mv4b-ventana-test'
+      const base = { code: CODIGO, active: true, max_redemptions: 100 }
+      let previa: unknown = null
+      let habia = false
+
+      beforeAll(async () => {
+        const { data } = await db
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'promo_free_delivery')
+          .maybeSingle()
+        habia = data !== null
+        previa = data?.value ?? null
+      })
+      afterAll(async () => {
+        await db.from('promo_redemptions').delete().eq('promo_code', CODIGO)
+        if (habia) {
+          await db
+            .from('app_settings')
+            .update({ value: previa as never })
+            .eq('key', 'promo_free_delivery')
+        } else {
+          await db.from('app_settings').delete().eq('key', 'promo_free_delivery')
+        }
+      })
+
+      const configurar = async (value: Record<string, unknown>) => {
+        const { error } = await db
+          .from('app_settings')
+          .upsert({ key: 'promo_free_delivery', value }, { onConflict: 'key' })
+        if (error) throw new Error(error.message)
+      }
+
+      it.each([
+        ['from y to ausentes', {}],
+        ['from null', { from: null, to: '2099-12-31' }],
+        ['to null', { from: '2000-01-01', to: null }],
+        ['from y to null', { from: null, to: null }],
+        ['solo from ausente', { to: '2099-12-31' }],
+        ['solo to ausente', { from: '2000-01-01' }],
+      ])('%s: no se anuncia envío gratis y cotización y creación coinciden (48.00 + 2.00)', async (_n, ventana) => {
+        await configurar({ ...base, ...ventana })
+        const c = await clienteDeConfianza()
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: false, reason: null })
+          expect(cot.body.data.deliveryFee).toBe('2.00')
+          expect(cot.body.data.total).toBe('50.00')
+          expect(cot.body.data.exceedsPrepayThreshold).toBe(true)
+          // Sin opción al recibir disponible, el trusted conserva prepaid.
+          expect(cot.body.data.payment.options).toEqual([
+            { intent: 'pending_cash', available: false, unavailableReason: 'exceeds_threshold' },
+            { intent: 'pending_yape', available: false, unavailableReason: 'exceeds_threshold' },
+            { intent: 'prepaid', available: true, unavailableReason: null },
+          ])
+          // La creación calcula lo mismo: la guardia corta con el total real...
+          const cash = await crear(c, 'pending_cash')
+          expect(cash.status, JSON.stringify(cash.body)).toBe(403)
+          expect(cash.body.detail).toContain('(S/ 50.00) pasa de')
+          // ...y el prepago, la única opción ofrecida, crea el pedido por 50.00.
+          const prepago = await crear(c, 'prepaid')
+          expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+          expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
+        })
+      })
+
+      it('control, ventana completa y vigente: se anuncia el envío gratis y la contraentrega pasa (48.00)', async () => {
+        await configurar({ ...base, from: '2000-01-01', to: '2099-12-31' })
+        const c = await clienteDeConfianza()
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: true, reason: 'launch_promo' })
+          expect(cot.body.data.total).toBe('48.00')
+          expect(intents(cot)).toEqual(['pending_cash', 'pending_yape'])
+          const r = await crear(c, 'pending_cash')
+          expect(r.status, JSON.stringify(r.body)).toBe(201)
+          expect(await totalDelPedido(r.body.data.id)).toBe(4800)
+        })
+      })
+
+      it('control, ventana completa pero vencida: no se anuncia (outside_window) y el total es 50.00', async () => {
+        await configurar({ ...base, from: '2000-01-01', to: '2001-01-01' })
+        const c = await clienteDeConfianza()
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: false, reason: null })
+          expect(cot.body.data.total).toBe('50.00')
+        })
+      })
+    })
   })
 
   it('cuenta con contraentrega bloqueada (risk_blocked): prepay_required y cash null', async () => {
