@@ -349,7 +349,7 @@ private fun NavGraphBuilder.ordersGraph(navController: NavHostController) {
             onBack = { navController.popBackStack() },
             onOpenOrder = { id -> navController.navigate(OrderDetailRoute(id)) },
             onExplore = { navController.popBackStack(CatalogHomeRoute, inclusive = false) },
-            onReorder = { businessId -> navController.navigate(BusinessRoute(businessId)) },
+            onOpenCart = { navController.navigate(CartRoute) },
             onReviewMoment = { open -> if (open) review.enableAutoPrompt() else review.disableAutoPrompt() },
         )
         ReviewHost(review)

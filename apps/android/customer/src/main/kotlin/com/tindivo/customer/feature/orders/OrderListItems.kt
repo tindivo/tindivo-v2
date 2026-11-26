@@ -210,7 +210,7 @@ private fun PastOrderItem(
             InlineAction(
                 text = stringResource(R.string.order_reorder),
                 icon = TindivoIcons.Replay,
-                onClick = { actions.onReorder(order.businessId.toString()) },
+                onClick = { actions.onReorder(order.id) },
                 modifier = linkModifier,
             )
         }
