@@ -2,7 +2,19 @@
 canvas: [Bolsa]
 requisitos: [CUS-CRT-001, CUS-CRT-003, CUS-CRT-005, CUS-CRT-007, CUS-CRT-009, CUS-CRT-010, CUS-CRT-011, CUS-CRT-013, CUS-CRT-014, CUS-CRT-015, CUS-CRT-016]
 operaciones: [getBusiness]
-textos: []
+textos:
+  - clave: bolsa.linea.plato_eliminado
+    es: "Este producto ya no está en la carta"
+  - clave: bolsa.linea.agotado
+    es: "Agotado por ahora"
+  - clave: bolsa.linea.fuera_de_franja
+    es: "Hoy no se sirve a esta hora"
+  - clave: bolsa.linea.precio_cambiado
+    es: "El precio cambió. Quítalo y vuelve a agregarlo."
+  - clave: bolsa.linea.opcion_retirada
+    es: "Una opción que elegiste ya no está disponible"
+  - clave: bolsa.continuar.reintentar
+    es: "Reintentar"
 tokens: []
 codigo:
   web: [apps/customer/features/cart/components/*.tsx]
@@ -34,7 +46,9 @@ codigo:
 |---|---|---|
 | Vacía | «Tu bolsa está vacía» y «Ver negocios» | CUS-CRT-003, CA-CRT-03 |
 | Validando | La bolsa se ve; «Continuar» dice «Cargando…» hasta que responde la carta | CUS-CRT-005, CUS-CRT-009 |
-| Línea inválida | Aviso en la línea (agotado, ya no está, otro precio, fuera de horario) y «Continuar» no avanza | CUS-CRT-005, CA-CRT-05 |
+| Línea inválida | Aviso en la línea con el texto de `bolsa.linea.*` (plato eliminado, agotado, precio cambiado, fuera de franja, opción retirada) y «Continuar» no avanza | CUS-CRT-005, CA-CRT-05 |
+| Carta no responde | «Continuar» no avanza y dice «Reintentar»; al tocarlo se vuelve a pedir la carta. Texto del aviso: pendiente | CUS-CRT-005 |
+| Importe no mostrable | Un importe roto del servidor se muestra «—», «Agregar» se bloquea y la bolsa avisa. Texto del aviso: pendiente | CUS-CRT-005 |
 | Negocio cerrado | «Continuar» dice «El restaurante está cerrado ahora» | CUS-CRT-009, CA-CRT-07 |
 | Recojo | Etiqueta «Recojo», sin la fila del envío | CUS-CRT-010, CA-CRT-08 |
 | Quitar una línea | «Quitaste "[plato]"» con «Deshacer» y una raya que se vacía en 5 s | CUS-CRT-013, CA-CRT-10 |
@@ -48,3 +62,12 @@ codigo:
 - La web del cliente se apaga: no recibe «Deshacer», «Editar», «Vaciar» con diálogo ni la píldora del total.
 - Movimiento según el tablero «4 · Bolsa» (curva `cubic-bezier(.2,.8,.2,1)`, 150–250 ms); con «reducir movimiento»,
   todo cambia al instante, en todas.
+
+## Decisiones de Jesús del 2026-11-26
+
+- **Textos de los avisos de línea:** se usan los de la frontmatter (`bolsa.linea.*`), que son los de Android en la
+  rama de la bolsa. iOS los adopta; los textos de iOS de hoy quedan retirados.
+- **Carta que no responde:** «Continuar» se bloquea con «Reintentar». No se deja pasar.
+- **Importe no mostrable:** se muestra «—», «Agregar» se bloquea y la bolsa avisa. Android deja de cerrar la app.
+- **Pendiente:** el texto del aviso de carta caída y el del importe no mostrable; y el texto de «Guardar» en la edición
+  de una línea (`Guardar · %s` en Android, `Guardar cambios · %@` en iOS). Jesús no los decidió.
