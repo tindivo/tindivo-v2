@@ -32,6 +32,9 @@ export const isPlainNumber = (v: unknown): v is number =>
 /** El mayor importe que cabe en `numeric(10,2)` y que el contrato escribe con dos decimales. */
 export const MAX_MONEY = 99999999.99
 
+/** `numeric(10,2)` redondea al guardar: SQL acepta hasta antes de 99999999.995 (se pinta igual que develop). */
+const MAX_PAINTABLE = 99999999.995
+
 /**
  * Un número ordinario que además SQL y JavaScript comparan igual: cabe en `numeric(10,2)`
  * (la columna donde se guarda la tarifa; más grande, el insert falla y la RPC responde 500) y
@@ -52,10 +55,11 @@ export const isMoneyNumber = (v: unknown): v is number =>
  * decimal del contrato (CAX-008). `NaN` manda al respaldo.
  */
 const paintable = (v: unknown): number => {
-  if (typeof v === 'number') return Number.isFinite(v) && Math.abs(v) <= MAX_MONEY ? v : Number.NaN
+  if (typeof v === 'number')
+    return Number.isFinite(v) && Math.abs(v) < MAX_PAINTABLE ? v : Number.NaN
   if (typeof v !== 'string' || v.trim() === '') return Number.NaN
   const n = Number(v)
-  return Number.isFinite(n) && Math.abs(n) <= MAX_MONEY ? n : Number.NaN
+  return Number.isFinite(n) && Math.abs(n) < MAX_PAINTABLE ? n : Number.NaN
 }
 
 /**

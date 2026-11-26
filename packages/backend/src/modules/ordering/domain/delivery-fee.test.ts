@@ -192,6 +192,25 @@ describe('CAX-008: los céntimos que se pintan son siempre finitos y con formato
   })
 })
 
+describe('CAX-007: el tope de pintado es el que SQL acepta (numeric(10,2) redondea)', () => {
+  it.each([
+    [99999999.994, 9999999999],
+    ['99999999.994', 9999999999],
+    [-99999999.994, -9999999999],
+  ])('tarifa de banda %s se pinta, reliable false', (valor, esperado) => {
+    expect(nominalDeliveryFee('near', { near: valor }, 3)).toEqual({
+      cents: esperado,
+      reliable: false,
+    })
+  })
+  it('99999999.995 ya no cabe: respaldo', () => {
+    expect(nominalDeliveryFee('near', { near: 99999999.995 }, 3)).toEqual({
+      cents: 300,
+      reliable: false,
+    })
+  })
+})
+
 describe('CAX-009: isMoneyNumber solo admite céntimos completos del valor recibido', () => {
   it.each([
     [49.990000001],
