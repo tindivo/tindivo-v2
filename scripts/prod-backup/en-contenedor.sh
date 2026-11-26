@@ -19,7 +19,7 @@ export LC_ALL=C
 MODO="${1:?falta el modo}"
 W=/work
 ESQUEMAS_OBLIGATORIOS=(public auth storage)
-ESQUEMAS_OPCIONALES=(supabase_migrations)
+# Todo esquema propio que no sea de la plataforma entra también (hoy: supabase_migrations y auth_hooks).
 # Esquemas que administra la plataforma: solo se excluyen en el segundo intento del esquema completo.
 ESQUEMAS_PLATAFORMA=(vault pgsodium pgsodium_masks net supabase_functions realtime _realtime _analytics
   _supavisor pgbouncer graphql graphql_public extensions cron pgmq)
@@ -63,8 +63,16 @@ comprobar_conexion_y_solo_lectura() {
   fi
 }
 
-esquema_existe() {
-  [ "$(q -c "select count(*) from pg_namespace where nspname = '$1'")" = 1 ]
+# Esquemas que existen y no son del sistema, uno por línea. Si la consulta falla, falla la copia.
+esquemas_de_la_base() {
+  q -c "select nspname from pg_namespace where nspname !~ '^pg_' and nspname <> 'information_schema' order by 1"
+}
+
+contiene() { # aguja, pajar...
+  local a="$1" x
+  shift
+  for x in "$@"; do [ "$x" = "$a" ] && return 0; done
+  return 1
 }
 
 # Guion SQL de conteos e inventario. Corre en la MISMA transacción que exporta el snapshot que usa pg_dump.
@@ -192,13 +200,18 @@ copiar() {
   [ "$mayor_srv" -le "$mayor_cli" ] || fallo "el servidor es Postgres $mayor_srv y este pg_dump es $mayor_cli: hace falta una imagen con pg_dump $mayor_srv o más nuevo (variable TINDIVO_COPIA_IMAGEN)"
 
   local s esquemas=() lista=''
+  local todos
+  todos="$(esquemas_de_la_base)" || fallo 'no se pudo leer la lista de esquemas'
+  mapfile -t todos <<<"$todos"
   for s in "${ESQUEMAS_OBLIGATORIOS[@]}"; do
-    esquema_existe "$s" || fallo "falta el esquema obligatorio «$s»: esta base no es la esperada"
-    esquemas+=("$s")
+    contiene "$s" "${todos[@]}" || fallo "falta el esquema obligatorio «$s»: esta base no es la esperada"
   done
-  for s in "${ESQUEMAS_OPCIONALES[@]}"; do
-    if esquema_existe "$s"; then esquemas+=("$s"); else log "aviso: no existe el esquema «$s»; no entra en la copia"; fi
+  for s in "${todos[@]}"; do
+    [[ "$s" =~ ^[a-z_][a-z0-9_]*$ ]] || fallo "nombre de esquema inesperado: «$s»"
+    contiene "$s" "${ESQUEMAS_PLATAFORMA[@]}" || esquemas+=("$s")
   done
+  log "esquemas con datos en la copia: ${esquemas[*]}"
+  contiene supabase_migrations "${esquemas[@]}" || log 'aviso: no existe supabase_migrations; la copia no lleva historial de migraciones'
   for s in "${esquemas[@]}"; do lista="${lista:+$lista, }'$s'"; done
   printf '%s\n' "${esquemas[@]}" >esquemas-con-datos.txt
 

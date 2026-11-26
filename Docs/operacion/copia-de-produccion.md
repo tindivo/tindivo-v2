@@ -16,7 +16,7 @@ se saca con él presente.
 
 | Archivo | Qué lleva | Credencial que pide |
 |---|---|---|
-| `1-base.tar.gpg` | Roles y pertenencias (sin contraseñas); **esquema y datos** de `public`, `auth` (usuarios e identidades), `storage` (metadatos de los objetos) y el historial de migraciones; el esquema completo de la base (permisos, RLS, funciones, extensiones); **conteo y suma de verificación por tabla**; inventario en CSV: permisos efectivos, políticas RLS, cron, extensiones, buckets, publicaciones, disparadores y **solo los nombres** de Vault | Contraseña de la base |
+| `1-base.tar.gpg` | Roles y pertenencias (sin contraseñas); **esquema y datos** de `public`, `auth` (usuarios e identidades), `storage` (metadatos de los objetos), el historial de migraciones y cualquier otro esquema propio (hoy, `auth_hooks`); el esquema completo de la base (permisos, RLS, funciones, extensiones); **conteo y suma de verificación por tabla**; inventario en CSV: permisos efectivos, políticas RLS, cron, extensiones, buckets, publicaciones, disparadores y **solo los nombres** de Vault | Contraseña de la base |
 | `2-storage.tar.gpg` | Los **archivos** de todos los buckets, con el sha256 de cada uno | Además, la clave `service_role` |
 | `3-config.tar.gpg` | Inventario de lo que no vive en la base: configuración de Auth, Edge Functions (versión y estado), nombres de los secretos, API, red y los respaldos de la plataforma. **Los valores secretos se tachan antes de empaquetar** | Un token personal de Supabase |
 
@@ -140,7 +140,9 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
 1. Baja la carpeta de Drive y corre `verificar.sh <carpeta> --conteos`: confirma que está entera e imprime las filas por tabla.
 2. Levanta un Postgres aislado con la misma imagen, **sin red** (`--network none`): así cron, `pg_net` y los webhooks
    no pueden llamar a nada real. P0.6 exige además neutralizar cron y Vault antes de arrancar.
-3. Mete la copia **directo al contenedor**, sin dejarla en claro en el disco del PC:
+3. Mete la copia **directo al contenedor**, sin pasar por una carpeta de Windows. Ojo: dentro del contenedor sí queda
+   en claro (su disco es un archivo de Docker en el PC), igual que la base restaurada. Por eso el contenedor de
+   restauración se **borra con sus volúmenes** al terminar (`docker rm -f -v`), y P0.6 decide si usa `tmpfs`:
 
    ```bash
    gpg --decrypt 1-base.tar.gpg | docker exec -i <contenedor> tar -x -C /var/tmp/copia
@@ -165,6 +167,8 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
 | `el servidor es Postgres N y este pg_dump es 17` | Producción está en una versión mayor más nueva que la imagen | Para: hace falta fijar otra imagen y volver a firmar |
 | `pg_dump de los datos falló` con `permission denied` | Una tabla de `auth` o `storage` que el rol `postgres` no puede leer en producción | Para y copia el mensaje: se ajusta el guion y se vuelve a firmar. No lo fuerces con otro rol |
 | `No space left on device` en la parte 1 | El dump no cabe en la memoria reservada (2 GB) | Repite con `TINDIVO_COPIA_TMPFS_MB=6000` delante del comando; Docker Desktop necesita tener esa memoria asignada |
+| `authentication method requirement "scram-sha-256" failed` | El servidor pidió la contraseña de una forma menos segura | Para y avisa: no se le entrega la contraseña. Se revisa antes de repetir |
+| `certificate verify failed` con `--ca` | El certificado descargado no es el que firma al pooler | Repite sin `--ca` (queda anotado en `RESUMEN.txt`); SCRAM sigue protegiendo la contraseña |
 | `Storage respondió HTTP 401/403` | `service_role` equivocada | Repite; la parte 1 se vuelve a sacar (es rápida) |
 | `la API de gestión no devolvió el proyecto…` | Token vencido o sin acceso | Crea otro token, o deja la parte 3 para después (Enter) |
 | `son las N h en Lima` | Ventana de servicio | Espera a que pase |
@@ -173,8 +177,9 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
 ## 9. Lo que este procedimiento no resuelve
 
 - **No sustituye a los respaldos de la plataforma** (los lista `3-config`): es la copia que controla Tindivo.
-- Docker Desktop corre en una máquina virtual: su memoria puede pasar al archivo de intercambio de Windows. Si el
-  disco del PC no está cifrado (BitLocker), ese es el único sitio donde podrían quedar restos en claro.
+- Docker Desktop corre en una máquina virtual. El contenedor va sin intercambio propio (`--memory-swap` igual a
+  `--memory`), pero la memoria de la máquina virtual y la de Node pueden pasar al archivo de paginación de Windows.
+  Si el disco del PC no está cifrado (BitLocker), ese es el único sitio donde podrían quedar restos en claro.
 - La contraseña de la base viaja al contenedor por una tubería y vive en su entorno mientras dura (segundos); quien
   ya controle Docker en este PC podría leerla en ese rato.
 - Sin `--ca`, la conexión va cifrada pero no comprueba la identidad del servidor.

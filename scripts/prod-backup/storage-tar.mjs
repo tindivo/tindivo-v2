@@ -59,8 +59,13 @@ export async function copiarStorage({ base, clave, lineas, salida, avisar = () =
   const resumen = { listados: 0, ok: 0, no_encontrados: 0, nombre_no_valido: 0, tamano_distinto: 0, bytes: 0 }
   for await (const linea of lineas) {
     if (!linea.trim()) continue
-    const obj = JSON.parse(linea)
     resumen.listados++
+    let obj
+    try {
+      obj = JSON.parse(linea)
+    } catch {
+      throw new Error(`la línea ${resumen.listados} de la lista de objetos no es JSON`)
+    }
     const registro = {
       bucket: obj.bucket,
       id: obj.id,
@@ -78,7 +83,13 @@ export async function copiarStorage({ base, clave, lineas, salida, avisar = () =
       objetos.push({ ...registro, estado: 'nombre_no_valido' })
       continue
     }
-    const { status, cuerpo } = await soloGet(url, cabeceras, { fetchImpl, esperar })
+    let status
+    let cuerpo
+    try {
+      ;({ status, cuerpo } = await soloGet(url, cabeceras, { fetchImpl, esperar }))
+    } catch (err) {
+      throw new Error(`objeto ${resumen.listados} (id ${obj.id}): ${err.message}`)
+    }
     if (status === 200) {
       const ruta = rutaEnTar(obj, resumen.listados)
       await tar.agregar(ruta, cuerpo)
@@ -94,6 +105,9 @@ export async function copiarStorage({ base, clave, lineas, salida, avisar = () =
       throw new Error(`Storage respondió HTTP ${status} en el objeto ${resumen.listados} (id ${obj.id})`)
     }
     if (resumen.listados % 50 === 0) avisar(`${resumen.listados} objetos vistos, ${resumen.bytes} bytes`)
+  }
+  if (resumen.listados > 0 && resumen.ok === 0) {
+    throw new Error(`se listaron ${resumen.listados} objetos y no se pudo bajar ninguno`)
   }
   const manifiestoSha256 = await tar.cerrar({
     tipo: 'storage',

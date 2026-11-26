@@ -12,6 +12,8 @@ set +x
 umask 077
 export LC_ALL=C
 
+unset NODE_OPTIONS NODE_DEBUG NODE_DEBUG_NATIVE NODE_PATH DOCKER_HOST DOCKER_CONTEXT TINDIVO_GUION TINDIVO_SIN_PGOPTIONS
+
 # shellcheck source=scripts/prod-backup/comun.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/comun.sh"
 
@@ -26,6 +28,7 @@ limpiar() {
   local rc=$?
   set +e
   CLAVE=''
+  [ -z "${REG:-}" ] || rm -rf -- "$REG"
   dk rm -f "$NOMBRE_CONT" >/dev/null 2>&1
   cerrar_gpg
   exit "$rc"

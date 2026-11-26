@@ -182,7 +182,44 @@ test('storage: un 403 detiene la copia y el error no trae la clave', async () =>
   )
 })
 
+test('storage: si no baja ningún objeto, o la red falla, la parte falla sin nombrar el archivo en el error', async () => {
+  const linea = JSON.stringify({ bucket: 'comprobantes', id: 'id-1', name: 'cliente-juan-perez/yape.png', size: 1 })
+  await assert.rejects(
+    copiarStorage({
+      base: 'http://127.0.0.1:54321',
+      clave: SECRETO,
+      lineas: Readable.from([linea]),
+      salida: sumidero().salida,
+      fetchImpl: async () => respuesta(404, 'no'),
+    }),
+    /no se pudo bajar ninguno/,
+  )
+  await assert.rejects(
+    copiarStorage({
+      base: 'http://127.0.0.1:54321',
+      clave: SECRETO,
+      lineas: Readable.from([linea]),
+      salida: sumidero().salida,
+      fetchImpl: async () => respuesta(503, 'caído'),
+      esperar: async () => {},
+    }),
+    (err) => /objeto 1 \(id id-1\)/.test(err.message) && !err.message.includes('juan') && !err.message.includes(SECRETO),
+  )
+  await assert.rejects(
+    copiarStorage({
+      base: 'http://127.0.0.1:54321',
+      clave: SECRETO,
+      lineas: Readable.from(['{"name":"cliente-juan-perez/yape.png"']),
+      salida: sumidero().salida,
+    }),
+    (err) => /línea 1/.test(err.message) && !err.message.includes('juan'),
+  )
+})
+
 test('config: tacha los valores secretos y deja lo que dice cómo está configurado', () => {
+  assert.equal(tachar({ hook_custom_access_token_uri: 'pg-functions://postgres/auth_hooks/x' }).hook_custom_access_token_uri, 'pg-functions://postgres/auth_hooks/x')
+  assert.equal(tachar({ password_required_characters: 'abc:123' }).password_required_characters, 'abc:123')
+  assert.equal(tachar({ hook_custom_access_token_secrets: SECRETO }).hook_custom_access_token_secrets, TACHADO)
   const entrada = {
     site_url: 'https://tindivo.com',
     external_google_enabled: true,

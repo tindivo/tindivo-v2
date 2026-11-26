@@ -45,7 +45,7 @@ fi
 
 # Variables del entorno que cambiarían a dónde habla docker o node, o qué carga node: no se heredan de nadie.
 unset DOCKER_HOST DOCKER_CONTEXT DOCKER_TLS_VERIFY DOCKER_CERT_PATH
-unset NODE_OPTIONS NODE_USE_ENV_PROXY NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED NODE_PATH
+unset NODE_OPTIONS NODE_DEBUG NODE_DEBUG_NATIVE NODE_USE_ENV_PROXY NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED NODE_PATH
 unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
 unset TINDIVO_SIN_PGOPTIONS TINDIVO_MOSTRAR_CONTEOS TINDIVO_CA_PEM TINDIVO_GUION
 
@@ -90,7 +90,7 @@ if [ "$DESTINO" = prod ]; then
     fallo "son las $HORA_LIMA h en Lima: de 18:00 a 23:00 no se toca producción"
   fi
   # Lo que haya en el entorno no se usa: las credenciales de prod solo entran por el teclado.
-  unset PGPASSWORD PGHOST PGPORT PGUSER PGDATABASE PGOPTIONS PGSERVICE PGSERVICEFILE PGPASSFILE PGSSLMODE DATABASE_URL
+  unset PGPASSWORD PGHOST PGPORT PGUSER PGDATABASE PGOPTIONS PGREQUIREAUTH PGSERVICE PGSERVICEFILE PGPASSFILE PGSSLMODE DATABASE_URL
   unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY TINDIVO_STORAGE_KEY TINDIVO_MGMT_TOKEN
   unset TINDIVO_COPIA_LOCAL_CLAVE TINDIVO_COPIA_LOCAL_SERVICE_KEY
 fi
@@ -126,7 +126,8 @@ else
   pedir_visible 'Host (termina en .pooler.supabase.com): ' PGHOST ''
   pedir_visible 'Puerto [5432]: ' PGPORT 5432
   pedir_visible "Usuario [postgres.$REF_PROD]: " PGUSER "postgres.$REF_PROD"
-  export PGHOST PGPORT PGUSER PGSSLMODE=require
+  # PGREQUIREAUTH: libpq solo acepta SCRAM, así un intermediario no puede pedir la contraseña en claro.
+  export PGHOST PGPORT PGUSER PGSSLMODE=require PGREQUIREAUTH=scram-sha-256
   case "$PGHOST$PGUSER" in *"$REF_ABANDONADO"*) fallo 'ese es el proyecto abandonado: nunca se usa' ;; esac
   if [[ "$PGHOST" =~ ^aws-[0-9]+-[a-z0-9-]+\.pooler\.supabase\.com$ ]]; then
     [ "$PGUSER" = "postgres.$REF_PROD" ] || fallo "por el pooler el usuario debe ser postgres.$REF_PROD"

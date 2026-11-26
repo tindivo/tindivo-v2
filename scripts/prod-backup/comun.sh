@@ -9,6 +9,10 @@ URL_PROD="https://${REF_PROD}.supabase.co"
 IMAGEN_PG_FIJADA='public.ecr.aws/supabase/postgres@sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453'
 IMAGEN_PG="${TINDIVO_COPIA_IMAGEN:-$IMAGEN_PG_FIJADA}"
 TMPFS_MB="${TINDIVO_COPIA_TMPFS_MB:-2048}"
+[[ "$TMPFS_MB" =~ ^[0-9]{3,5}$ ]] || {
+  printf 'TINDIVO_COPIA_TMPFS_MB debe ser un número de MB (de 100 a 99999)\n' >&2
+  exit 64
+}
 CLAVE_MINIMO=20
 DIR_GUIONES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NOMBRE_CONT="tindivo-copia-$$"
@@ -44,12 +48,15 @@ contenedor() {
   [ "$red" = bridge ] && extra=(--add-host=host.docker.internal:host-gateway)
   (
     TINDIVO_GUION="$(cat "$DIR_GUIONES/en-contenedor.sh")"
+    # Windows no admite variables de entorno de más de 32 767 caracteres.
+    [ "${#TINDIVO_GUION}" -lt 30000 ] || fallo 'en-contenedor.sh creció demasiado para viajar en una variable'
     export TINDIVO_GUION
     dk run --rm -i --name "$NOMBRE_CONT" --label tindivo-copia=1 --network "$red" "${extra[@]}" \
       --read-only --tmpfs "/work:rw,size=${TMPFS_MB}m,mode=1777" --tmpfs /tmp:rw,size=16m,mode=1777 \
+      --memory "$((TMPFS_MB + 1024))m" --memory-swap "$((TMPFS_MB + 1024))m" \
       --cap-drop ALL --security-opt no-new-privileges --user 65534:65534 -e HOME=/work \
       -e TINDIVO_GUION -e TINDIVO_SIN_PGOPTIONS -e TINDIVO_MOSTRAR_CONTEOS -e TINDIVO_CA_PEM \
-      -e PGHOST -e PGPORT -e PGUSER -e PGDATABASE -e PGSSLMODE -e PGOPTIONS -e PGCONNECT_TIMEOUT -e PGAPPNAME \
+      -e PGHOST -e PGPORT -e PGUSER -e PGDATABASE -e PGSSLMODE -e PGOPTIONS -e PGCONNECT_TIMEOUT -e PGAPPNAME -e PGREQUIREAUTH \
       --entrypoint bash "$IMAGEN_PG" -c 'eval "$TINDIVO_GUION"' guion "$modo"
   )
 }

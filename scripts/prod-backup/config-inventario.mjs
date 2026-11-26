@@ -30,13 +30,18 @@ export const CONSULTAS = [
   ['respaldos-de-la-plataforma', '/database/backups'],
 ]
 
+// Claves que suenan a secreto pero solo dicen cómo está configurado algo (una URI de hook, un límite, un interruptor).
+const CLAVE_DE_CONFIGURACION = /(_uri|_url|_enabled|_characters|_length|_exp|_id|_algorithm)$/i
+
 /** Tacha todo valor de texto cuya clave suene a secreto. Deja números, booleanos y vacíos (dicen si está configurado). */
 export function tachar(valor, clave = '') {
   if (Array.isArray(valor)) return valor.map((v) => tachar(v, clave))
   if (valor && typeof valor === 'object') {
     return Object.fromEntries(Object.entries(valor).map(([k, v]) => [k, tachar(v, k)]))
   }
-  if (typeof valor === 'string' && valor !== '' && CLAVE_SENSIBLE.test(clave)) return TACHADO
+  if (typeof valor === 'string' && valor !== '' && CLAVE_SENSIBLE.test(clave) && !CLAVE_DE_CONFIGURACION.test(clave)) {
+    return TACHADO
+  }
   return valor
 }
 

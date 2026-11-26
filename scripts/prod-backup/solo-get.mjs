@@ -35,7 +35,8 @@ export async function soloGet(url, cabeceras, opciones = {}) {
       ultimo = `fallo de red (${err?.name ?? 'Error'})`
     }
   }
-  throw new Error(`GET ${url.origin}${url.pathname}: ${ultimo} tras ${intentos} intentos`)
+  // Solo el host: la ruta puede llevar el nombre de un archivo de un cliente.
+  throw new Error(`GET ${url.origin}: ${ultimo} tras ${intentos} intentos`)
 }
 
 /** Lee una credencial del entorno y la quita de ahí para que no la hereden otros procesos. */
