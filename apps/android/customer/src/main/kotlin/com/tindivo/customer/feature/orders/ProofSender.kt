@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.orders
 import com.tindivo.core.network.ApiResult
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.UploadOutcome
+import kotlinx.coroutines.delay
 import java.util.UUID
 
 /** Hasta dónde llegó un envío y por qué paró. */
@@ -38,8 +39,8 @@ internal data class PendingConfirmation(
  * El envío del comprobante, en este orden y sin saltarse ninguno: recodificar la foto, pedir la URL firmada, subirla
  * con un PUT y confirmar el `path`. Si el PUT falla, no se confirma. Si la confirmación falla después de un PUT
  * correcto, el `path` queda pendiente y el próximo envío de la misma foto solo confirma: el servidor admite repetir el
- * mismo archivo sin gastar intento (0248). Un 4xx al confirmar dice que ese `path` ya no sirve: se olvida. Nada se
- * reintenta solo.
+ * mismo archivo sin gastar intento (0248). Un 4xx al confirmar dice que ese `path` ya no sirve: se olvida. Solo
+ * se reintenta solo, una vez, el PUT que cae por la red.
  *
  * Antes de cada paso se pregunta a `stillCurrent` (la sesión del principio sigue vigente): si no, se para sin seguir.
  * Vive dentro de un ViewModel y se usa desde el hilo principal: no está pensado para llamadas concurrentes.
@@ -117,10 +118,37 @@ internal class ProofSender(
         jpeg: ByteArray,
         stillCurrent: () -> Boolean,
     ): UploadResult {
+        var result = uploadOnce(account, orderId, photo, jpeg, stillCurrent)
+        var attempt = 1
+        // Una caída de red se reintenta UNA vez sola (CUS-PAY-003), con otra URL firmada: la anterior es de un solo uso.
+        while (result == DROPPED && attempt < MAX_UPLOAD_ATTEMPTS && stillCurrent()) {
+            attempt++
+            // Un respiro antes del reintento: pegado al corte casi siempre vuelve a caer. `delay` es cancelable.
+            delay(RETRY_DELAY_MS)
+            if (!stillCurrent()) return Halted(SendStep.Abandoned)
+            result = uploadOnce(account, orderId, photo, jpeg, stillCurrent, retry = true)
+        }
+        return if (result == DROPPED && !stillCurrent()) Halted(SendStep.Abandoned) else result
+    }
+
+    /** Un intento: pide la URL firmada y hace el PUT. [DROPPED] es una caída de red, sin saber si el archivo llegó. */
+    private suspend fun uploadOnce(
+        account: String,
+        orderId: UUID,
+        photo: String,
+        jpeg: ByteArray,
+        stillCurrent: () -> Boolean,
+        retry: Boolean = false,
+    ): UploadResult {
         val slot =
             when (val result = gateway.uploadSlot(account, orderId)) {
-                is ApiResult.Success -> result.data
-                is ApiResult.Failure -> return Halted(SendStep.ApiFailed(result.error, confirming = false))
+                is ApiResult.Success -> {
+                    result.data
+                }
+
+                is ApiResult.Failure -> {
+                    return slotFailure(result.error, retry)
+                }
             }
         if (!stillCurrent()) return Halted(SendStep.Abandoned)
         return when (gateway.upload(slot, jpeg)) {
@@ -129,9 +157,8 @@ internal class ProofSender(
                 Uploaded(slot.path)
             }
 
-            // Sin saber si llegó: el reintento pide otra URL (la firmada es de un solo uso) y sube de nuevo.
             is UploadOutcome.Network -> {
-                Halted(SendStep.Stopped(SendProblem.Offline))
+                DROPPED
             }
 
             is UploadOutcome.Rejected -> {
@@ -139,6 +166,13 @@ internal class ProofSender(
             }
         }
     }
+
+    /** En el reintento, si tampoco hay red para pedir la URL, es la misma caída: «revisa tu conexión». */
+    private fun slotFailure(
+        error: AppError,
+        retry: Boolean,
+    ): Halted =
+        if (retry && error is AppError.Network) DROPPED else Halted(SendStep.ApiFailed(error, confirming = false))
 
     private suspend fun encodedPhoto(photo: String): EncodedProof {
         encoded?.takeIf { it.first == photo }?.let { return EncodedProof.Ready(it.second) }
@@ -149,6 +183,15 @@ internal class ProofSender(
 
     private companion object {
         val CLIENT_ERRORS = 400..499
+
+        /** La caída de red: si es el último intento, es lo que ve la persona; si no, [putToStorage] reintenta. */
+        val DROPPED = Halted(SendStep.Stopped(SendProblem.Offline))
+
+        /** El PUT y un único reintento automático ante una caída de red (CUS-PAY-003). */
+        const val MAX_UPLOAD_ATTEMPTS = 2
+
+        /** La pausa antes del único reintento automático. */
+        const val RETRY_DELAY_MS = 1_500L
     }
 }
 
@@ -156,5 +199,6 @@ private fun EncodedProof.toProblem(): SendProblem =
     when (this) {
         EncodedProof.TooLarge -> SendProblem.TooLarge
         EncodedProof.Unreadable -> SendProblem.Unreadable
+        EncodedProof.HeicUnsupported -> SendProblem.HeicUnsupported
         is EncodedProof.Ready -> SendProblem.Generic
     }

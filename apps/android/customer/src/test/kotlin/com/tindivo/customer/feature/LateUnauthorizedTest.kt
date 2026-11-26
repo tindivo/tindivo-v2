@@ -17,6 +17,7 @@ import com.tindivo.customer.feature.account.AccountUiState
 import com.tindivo.customer.feature.account.AccountViewModel
 import com.tindivo.customer.feature.addresses.AddressFormViewModel
 import com.tindivo.customer.feature.addresses.FakeLocationSource
+import com.tindivo.customer.feature.addresses.FakeStreetSuggester
 import com.tindivo.customer.feature.addresses.FormOutcome
 import com.tindivo.customer.feature.checkout.sessionJwt
 import com.tindivo.customer.feature.phone.PhoneUiState
@@ -152,6 +153,7 @@ class LateUnauthorizedTest {
                     store,
                     configService,
                     FakeLocationSource(available = false),
+                    FakeStreetSuggester(),
                 )
             runCurrent()
             drain()

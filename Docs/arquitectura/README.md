@@ -2,11 +2,12 @@
 
 > Verificado: 2026-10-10 · entorno: `develop@7d00aa4` (estructura, rutas, jobs) y `tindivo-prod` (solo lectura:
 > tablas, RLS, crons, triggers) · Los estándares de código están aprobados (más abajo). La propuesta de arquitectura
-> objetivo, **sin aprobar**, está en `Docs/trabajo/arquitectura/`
+> objetivo, **sin aprobar**, está en `Docs/trabajo/arquitectura/04-arquitectura-objetivo.md`
 
 ## Las piezas
 
-Monorepo pnpm + Turborepo. Cinco aplicaciones Next.js y paquetes compartidos:
+Monorepo pnpm + Turborepo. Cinco aplicaciones Next.js, la app Android y paquetes compartidos (piezas verificadas en
+`develop@6de11405`, 2026-11-18):
 
 | App | Para quién | Puerto local |
 |---|---|---|
@@ -15,11 +16,13 @@ Monorepo pnpm + Turborepo. Cinco aplicaciones Next.js y paquetes compartidos:
 | `apps/negocios` | La cajera: tablero de pedidos, pedidos manuales, deuda, configuración | 3002 |
 | `apps/admin` | Jesús: operación, negocios, cobros, reportes, Store | 3003 |
 | `apps/motorizados` | El motorizado: cola, pedidos, Entregas, rendición | 3004 |
+| `apps/android` | Kotlin + Compose, Gradle aparte; hoy `:customer` (cliente) sobre `:core:network` y `:core:designsystem` | — |
 
 | Paquete | Qué es |
 |---|---|
 | `packages/contracts` | **La fuente canónica** de primitivas, enums, máquinas de estados, errores y el OpenAPI (Zod v4) |
-| `packages/core` | Dominio puro compartido por las apps web; la lógica de negocio nueva del backend va en `packages/backend` (ADR 0039, por crear) |
+| `packages/backend` | Lógica de negocio del backend (ADR 0039): `modules/`, `composition/`, `http/`, `shared/`; solo lo importa `apps/api` |
+| `packages/core` | Dominio puro compartido por las apps web |
 | `packages/api-client` | Cliente HTTP de la API para las apps |
 | `packages/supabase` | Clientes de Supabase y tipos generados de la base |
 | `packages/ui` | Sistema de diseño (Tailwind v4) |
@@ -74,7 +77,7 @@ Dos caminos, los dos nacen **dentro de la transacción** del cambio (invariante 
 
 1. **Avisos push:** las funciones escriben un evento en `domain_events`; un trigger (`trg_dispatch_event` →
    `dispatch_event`) llama por HTTP a la Edge Function `send-push`, que envía el Web Push. El tag de cada aviso es
-   `${event_type}-${shortId}` (invariante 5). Lo enviado queda en `push_delivery_log`.
+   el tipo de evento seguido de lo que distingue el aviso (`${eventType}-…`: el `sid`, la `action`, el id de la solicitud…); nunca es solo `shortId`. La forma exacta de cada aviso la fija `send-push` (invariante 5). Lo enviado queda en `push_delivery_log`.
 2. **Plazos:** los cambios de `orders` y de `courier_order_events` dejan una fila en `outbox_events` (triggers
    `trg_orders_outbox_events` y `courier_event_to_outbox`); un job de Inngest (`process-outbox-events-cron`) las
    reclama y programa los vencimientos (aceptación, validación, pago, comprobante, traspaso, Entregas).

@@ -1,6 +1,6 @@
 # Tindivo Entregas: llevar de A a B lo que ya está pagado
 
-> Verificado: 2026-10-10 · entorno: `tindivo-prod` (solo lectura: `app_settings.courier`, `create_courier_order`,
+> Verificado: 2026-11-17 (sección «Qué se lleva y qué no»); el resto, 2026-10-10 · entorno: `tindivo-prod` (solo lectura: `app_settings.courier`, `create_courier_order`,
 > conteos) + `develop@7d00aa4` · Horario: ADR 0035 · Dinero: `Docs/negocio/dinero.md` · Nombres: `Docs/glosario.md`
 
 ## Qué es
@@ -10,7 +10,7 @@ Jacinto. Puede ser de persona a persona o de un negocio a una persona. **No comp
 Encargos, y se descartó (ADR 0034).
 
 **Por qué existe:** el motorizado ya está pagado por noche y tiene tiempo libre entre pedidos de comida; Entregas lo
-usa sin competir con los restaurantes aliados.
+usa sin competir con los restaurantes partners.
 
 ## La referencia está en el código
 
@@ -37,23 +37,38 @@ terminal, igual que en los pedidos de restaurante.
 
 ## Qué se lleva y qué no
 
-Regla central: **solo lo que ya está coordinado, pagado y listo, hasta 5 kg**. Se llevan productos de bodega ya
-pagados, medicinas comunes ya compradas **en su bolsa sellada** (decisión de Jesús), objetos pequeños que quepan en la
-mochila (45 × 45 × 45 cm) y sobres sencillos, y también comida (ver arriba: la lista del 19-sep la permitía, el MVP
-del 30-sep la quitó y la web la devolvió el 1-oct). **No** se lleva dinero ni
-valores, documentos de identidad, medicinas con receta retenida, **alcohol**, animales ni nada peligroso, ni nada que
-el motorizado tenga que comprar. Lo frágil no se prohíbe ni se marca al pedir (decisión de Jesús, 2026-11-11): se le
-dice al motorizado cuando llega a recoger, y él decide si puede llevarlo. Las apps envían `isFragile = false`.
-(Versión 1.0 del 2026-09-19; los términos de responsabilidad, con tope de S/ 200, son un **borrador sin revisión
-legal**.)
+> Decisión de Jesús, 2026-11-16 (mochila, sin medida) y 2026-11-19 (medicamentos de venta libre sí; animales vivos y
+> objetos robados no; conversación con Claude Code: «apruebo las recomendaciones de los cuatro»).
+> Decisión de Jesús, 2026-11-17: la regla de qué se puede enviar es la lista de prohibidos de inDrive
+> (https://indrive.com/delivery), consultada el 2026-11-17. Sustituye a la lista anterior (dinero y valores,
+> documentos de identidad, alcohol, medicinas con receta retenida, animales y peligrosos).
+
+**Se lleva** lo que ya está coordinado, pagado y listo, siempre que quepa en la mochila del motorizado (sin medida en
+centímetros: lo decide el motorizado al recoger) y no pase de ⚙ `courier.maxWeightKg`. Los medicamentos de venta libre
+se permiten. Los **documentos se permiten**. También va comida (decisión de Jesús, 2026-11-11: ver arriba).
+
+**No se lleva:**
+
+- alcohol, tabaco y vapeadores;
+- joyas, metales y piedras preciosas;
+- efectivo, billetes y moneda;
+- armas, municiones y armas blancas;
+- explosivos, pólvora, fuegos artificiales y venenos;
+- drogas;
+- material obsceno;
+- artículos de venta restringida;
+- animales vivos;
+- objetos robados.
+
+Lo frágil no se prohíbe ni se marca al pedir (decisión de Jesús, 2026-11-11): se le dice al motorizado cuando llega a
+recoger, y él decide si puede llevarlo. Las apps envían `isFragile = false`. Los términos de responsabilidad, con tope
+de S/ 200, son un **borrador sin revisión legal**.
 
 ## Cómo se pide
 
-Aprobado por Jesús el 2026-10-07: **una sola entrada** (la tarjeta del inicio y `tindivo.com/entregas` abren lo mismo),
-el **mapa del punto A primero**, y los atajos dentro del mapa: **repetir una entrega** (hasta 3 anteriores), **buscar un
-lugar** por su nombre (negocios primero, luego referencias públicas) y, en el punto B, **«Usar mi dirección»**. «Listo
-y pagado» se vuelve a marcar en cada envío. Recoger de un negocio del directorio llega cuando haya negocios cargados con
-su contacto.
+Lo que hace la app del cliente al pedir (la entrada única, el mapa del punto A, los atajos, las confirmaciones y el
+seguimiento) vive en `Docs/producto/entregas/` (aprobado por Jesús el 2026-10-07). Aquí queda la regla: «listo y
+pagado» se vuelve a marcar en cada envío.
 
 ## El motorizado
 

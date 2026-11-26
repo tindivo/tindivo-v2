@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Revisa una ronda de Codex en modo provisional (codex-worker.md §13.1 bis): lee el JSONL de
+ * Revisa una ronda de Codex en modo provisional (Docs/operacion/codex-auditor.md §13.1 bis): lee el JSONL de
  * eventos de `codex exec --json` y marca todo lo que salga de la copia auditada.
  *
  *   node scripts/codex-audit-scope-check.mjs <eventos.jsonl> <AUDIT_ROOT>

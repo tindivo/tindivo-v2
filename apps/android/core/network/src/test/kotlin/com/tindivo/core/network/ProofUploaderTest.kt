@@ -148,6 +148,11 @@ class ProofUploaderTest {
         assertNull(client.cache)
     }
 
+    @Test
+    fun `el plazo total de la subida es de 120 segundos (CUS-PAY-003)`() {
+        assertEquals(120_000, createStorageUploadClient().callTimeoutMillis)
+    }
+
     private companion object {
         const val ORIGIN = "https://storage.test"
         const val PREFIX = StorageUploadTarget.UPLOAD_PATH_PREFIX

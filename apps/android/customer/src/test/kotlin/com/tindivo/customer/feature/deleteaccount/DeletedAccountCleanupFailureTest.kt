@@ -32,6 +32,27 @@ internal class DeletedAccountCleanupFailureTest : DeleteAccountHarness() {
     private suspend fun cartFingerprint(): String = checkNotNull(cart()).fingerprint()
 
     @Test
+    fun `CAX-002 - una sesion que no se pudo cerrar en el aparato deja la cuenta pendiente hasta que se cierre`() =
+        runTest {
+            fillCart()
+            session.localCloseFails = true
+            val vm = viewModel()
+
+            confirmAndDelete(vm)
+            answer(deleted)
+
+            assertEquals(DeletePhase.Deleted, vm.state.value.phase)
+            assertTrue("la cuenta sigue apuntada", journal.entries.any { it.accountId == A })
+
+            // Un reintento (o un arranque) ya pudo borrar lo guardado: la próxima pasada termina de soltarla.
+            session.localCloseFails = false
+            session.clearPending()
+            reopen()
+
+            assertEquals(emptyList<PendingCleanup>(), journal.entries)
+        }
+
+    @Test
     fun `un 204 sin fallos no deja nada pendiente`() =
         runTest {
             fillCart()

@@ -1,8 +1,8 @@
-import type { ScheduleDayRow } from '@tindivo/contracts'
+import { FEATURED_MAX_ITEMS, type ScheduleDayRow } from '@tindivo/contracts'
 import { Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
 import { BADGE_PRESETS } from '../lib/constants'
-import { findTotalPricingGroup } from '../lib/utils'
+import { featuredToggle, findTotalPricingGroup } from '../lib/utils'
 import type { Category, FormData, ModifierGroup, PriceDisplay } from '../types'
 import { AttachLibraryGroupModal } from './attach-library-group-modal'
 import { AvailabilitySection } from './availability-section'
@@ -18,6 +18,8 @@ export interface EditorFormProps {
   schedule: ScheduleDayRow[]
   /** Platos de la categoría del plato abierto, para rotular el botón de aplicar en bloque. */
   categoryItemCount: number
+  /** Cuántos OTROS platos del negocio ya están en «Destacados» (tope: FEATURED_MAX_ITEMS). */
+  featuredOthers: number
   onApplyToCategory?: () => void
   applyingToCategory?: boolean
   groups: ModifierGroup[]
@@ -60,6 +62,7 @@ export function EditorForm({
   cats,
   schedule,
   categoryItemCount,
+  featuredOthers,
   onApplyToCategory,
   applyingToCategory,
   groups,
@@ -294,13 +297,24 @@ export function EditorForm({
               },
               {
                 key: 'is_compact' as const,
-                label: 'Destacado',
-                sub: 'Se muestra primero y con badge',
+                label: 'Primero en su sección',
+                sub: 'Se muestra primero en su sección y con badge',
                 icon: 'star',
+              },
+              {
+                key: 'is_featured' as const,
+                label: 'En la sección de destacados',
+                sub: 'Sale arriba de la carta, con foto',
+                icon: 'restaurant_menu',
               },
             ] as const
           ).map((t) => {
             const on = formData[t.key]
+            const featured =
+              t.key === 'is_featured'
+                ? featuredToggle(featuredOthers, on, FEATURED_MAX_ITEMS)
+                : null
+            const blocked = featured?.blocked ?? false
             return (
               <div key={t.key} className="flex items-center gap-3 rounded-xl bg-surface p-2.5">
                 <Icon
@@ -311,7 +325,9 @@ export function EditorForm({
                 />
                 <div className="flex-1">
                   <div className="text-[14px] font-semibold text-ink">{t.label}</div>
-                  <div className="text-[11px] text-ink-muted">{t.sub}</div>
+                  <div className="text-[11px] text-ink-muted">
+                    {featured ? `${t.sub} · ${featured.count} de ${FEATURED_MAX_ITEMS}` : t.sub}
+                  </div>
                 </div>
                 {/* Excepción a check:ds — switch, igual que el de disponibilidad en
                     modifier-option-row: la superficie es el estado y el `<span>` de
@@ -320,6 +336,7 @@ export function EditorForm({
                   type="button"
                   role="switch"
                   aria-checked={on}
+                  disabled={blocked}
                   onClick={() => onFormChange({ [t.key]: !on })}
                   className={`relative h-[24px] w-[44px] shrink-0 rounded-full transition-colors duration-200 ${
                     on ? 'bg-brand' : 'bg-ink/20'

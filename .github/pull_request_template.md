@@ -5,6 +5,20 @@
 Impacto documental: 
 <!-- Complétalo en la misma línea: «canon: Docs/…» o «ninguno, porque …» (Docs/README.md §5). La CI falla si queda vacía. -->
 
+## Matriz de paridad (Docs/README.md §7.7, paso 4)
+
+<!-- Ciclo corto: bórrala y titula el PR «ciclo corto». Diferido = motivo + entrada en Docs/trabajo/decisiones-abiertas.md. -->
+
+| App | Estado |
+|---|---|
+| backend (API, SQL, contratos) | cambia / no aplica / diferido: … |
+| customer Android | |
+| customer iOS | |
+| customer web | |
+| negocios | |
+| motorizados | |
+| admin | |
+
 ## Evidencia
 
 <!-- Salida en crudo de tests, consultas o comandos que demuestran las reglas OBLIGATORIAS sin mecanismo (estándares, «Evidencia»). -->

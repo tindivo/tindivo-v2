@@ -128,13 +128,13 @@ fun ErrorState(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun LoadingStatePreview() {
     TindivoTheme { LoadingState(label = "Cargando tus pedidos") }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun EmptyStatePreview() {
     TindivoTheme {
@@ -147,7 +147,7 @@ private fun EmptyStatePreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun ErrorStatePreview() {
     TindivoTheme {

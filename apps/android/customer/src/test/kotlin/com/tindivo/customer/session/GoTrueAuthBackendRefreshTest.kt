@@ -90,7 +90,7 @@ class GoTrueAuthBackendRefreshTest {
 
     private fun signedIn(file: SessionFile) =
         runBlocking {
-            backend(file).also { it.signInWithGoogle("id-token", "nonce") }
+            backend(file).also { it.signInWithGoogle("id-token", "nonce", termsPending = false) }
         }
 
     @Test

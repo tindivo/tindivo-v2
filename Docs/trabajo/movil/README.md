@@ -10,8 +10,8 @@
 0. **[`../../planes/movil/contrato-rest.md`](../../planes/movil/contrato-rest.md) (2026-10-08)** — conclusión común de Claude y Codex: REST como
    contrato del dominio de las apps, tres defectos de corrección primero, el orden de trabajo 0-7 y la postura sobre el
    squash de migraciones. **Manda sobre todo lo demás de esta carpeta.** Su respaldo:
-   [`06-contrato-rest-movil.md`](06-contrato-rest-movil.md) (la puesta al día tras Entregas y Store) y las rondas en
-   [`debate-rest/`](debate-rest/).
+   `archive/movil:Docs/trabajo/movil/06-contrato-rest-movil.md` (archivado; la puesta al día tras Entregas y Store) y las rondas en
+   `archive/movil:Docs/trabajo/movil/debate-rest/` (archivado).
 1. [`00-resumen-ejecutivo.md`](00-resumen-ejecutivo.md) — veredicto, novedades, bloqueadores, qué replicar, plan y qué necesito de ti.
 2. [`04-decisiones-abiertas.md`](../../planes/movil/decisiones.md) — lo decidido, lo que falta por decidir y mis supuestos.
 3. [`05-arranque/`](05-arranque/03-plan-de-ejecucion.md) — **por dónde empezar**: cuentas de tienda, planes y región, plan de ejecución.

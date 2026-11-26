@@ -7,12 +7,15 @@ import com.tindivo.core.network.AppError
 import com.tindivo.core.network.CatalogRepository
 import com.tindivo.core.network.generated.model.ListBusinesses200ResponseDataInner
 import com.tindivo.customer.config.ConfigService
+import com.tindivo.customer.feature.isStale
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 
 /** Lo que la tarjeta de un negocio necesita, ya decidido: la pantalla no conoce los modelos generados. */
@@ -41,7 +44,10 @@ sealed interface CatalogHomeUiState {
         val whatsapp: List<BusinessCardUi>,
         val refreshing: Boolean = false,
         val refreshFailed: AppError? = null,
-    ) : CatalogHomeUiState
+    ) : CatalogHomeUiState {
+        /** Restaurantes de la plataforma abiertos ahora: el chip «N abiertos ahora». `closed` solo es `true` si el servidor lo dijo. */
+        val openNowCount: Int get() = restaurants.count { !it.closed }
+    }
 
     data class Failed(
         val error: AppError,
@@ -54,11 +60,13 @@ class CatalogHomeViewModel
     constructor(
         private val catalog: CatalogRepository,
         private val configService: ConfigService,
+        private val clock: Clock,
     ) : ViewModel() {
         private val _state = MutableStateFlow<CatalogHomeUiState>(CatalogHomeUiState.Loading)
         val state: StateFlow<CatalogHomeUiState> = _state.asStateFlow()
 
         private var loadJob: Job? = null
+        private var lastLoadedAt: Instant? = null
 
         init {
             refresh()
@@ -77,6 +85,7 @@ class CatalogHomeViewModel
                     _state.value =
                         when (val result = catalog.businesses()) {
                             is ApiResult.Success -> {
+                                lastLoadedAt = clock.instant()
                                 result.data.toLoaded()
                             }
 
@@ -87,6 +96,11 @@ class CatalogHomeViewModel
                             }
                         }
                 }
+        }
+
+        /** Al volver a la pestaña: recarga en silencio si lo cargado es viejo. Con una carga en curso no lanza otra. */
+        fun refreshIfStale() {
+            if (isStale(lastLoadedAt, clock.instant())) refresh()
         }
 
         private fun reportIfUpgrade(error: AppError) {

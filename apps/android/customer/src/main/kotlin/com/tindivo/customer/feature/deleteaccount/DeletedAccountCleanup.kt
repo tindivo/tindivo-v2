@@ -154,7 +154,12 @@ class DeletedAccountCleanup
         // Las tres etapas, cada una por su lado. Devuelve si no queda nada pendiente de [accountId]. Con [mutex].
         private suspend fun runStages(accountId: String): Boolean {
             val ledgerDone = attempt { ledger.forgetAccount(accountId) }.isSuccess
-            val sessionDone = attempt { sessionStore.signOutLocally(accountId) }.isSuccess
+            // `false` es «no era la sesión de esta cuenta» (nada que cerrar) o «no se pudo borrar lo guardado»: solo lo
+            // segundo deja la cuenta pendiente, y lo dice `closePending`.
+            val sessionDone =
+                attempt { sessionStore.signOutLocally(accountId) }
+                    .map { closed -> closed || !sessionStore.closePending.value }
+                    .getOrDefault(false)
             val target = pending[accountId]
             val cartDone =
                 target == null ||

@@ -1,4 +1,8 @@
-import { claimCustomerPhone, phoneClaimProblem } from '@tindivo/backend/identity/http'
+import {
+  claimCustomerPhone,
+  loadPhoneSettings,
+  phoneClaimProblem,
+} from '@tindivo/backend/identity/http'
 import { VerifyPhoneCodeRequestSchema } from '@tindivo/contracts'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
@@ -86,8 +90,11 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    const result = await claimCustomerPhone(createServiceClient(), user.id, fullPhone)
-    const conflict = phoneClaimProblem(result, requestId, corsHeaders(req))
+    const service = createServiceClient()
+    const result = await claimCustomerPhone(service, user.id, fullPhone)
+    const conflict = phoneClaimProblem(result, requestId, corsHeaders(req), {
+      offerTransfer: (await loadPhoneSettings(service)).transferEnabled,
+    })
     if (conflict) return conflict
 
     return ok({ verified: true, phone: fullPhone }, { status: 200, headers: corsHeaders(req) })

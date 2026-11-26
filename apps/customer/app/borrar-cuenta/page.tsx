@@ -49,10 +49,10 @@ export default function BorrarCuentaPage() {
             seguridad contra fraudes, los reportes de pedidos no recibidos ligados a un número de
             teléfono, y el directorio de direcciones que usa la cajera para reconocer vecinos. Si tu
             número estaba bloqueado o solo podía pagar por adelantado, esa restricción se queda con
-            el número hasta su fecha, aunque otra cuenta lo verifique después. Las reseñas se quedan
-            sin tu nombre. Las fotos de comprobantes de pago se guardan con el pedido anonimizado el
-            tiempo que su negocio las necesite para su caja; el plazo exacto está en la política de
-            privacidad.
+            el número hasta su fecha, aunque otra cuenta lo verifique después. De tus reseñas se
+            quedan la nota y las etiquetas, sin tu nombre; el comentario se borra. Las fotos de
+            comprobantes de pago se guardan con el pedido anonimizado el tiempo que su negocio las
+            necesite para su caja; el plazo exacto está en la política de privacidad.
           </p>
         </section>
 

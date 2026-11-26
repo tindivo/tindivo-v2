@@ -446,7 +446,7 @@ describe('/customer/addresses', () => {
     })
   })
 
-  it('validación: referencia corta o PATCH vacío son 422', async () => {
+  it('CA-ADR-01 · validación: referencia corta o PATCH vacío son 422', async () => {
     const c = await crearCliente()
     expect(
       (
@@ -505,7 +505,7 @@ describe('/customer/addresses', () => {
     expect(await defaults(c)).toHaveLength(1)
   })
 
-  it('borrar la predeterminada pasa el puesto a la más antigua que queda', async () => {
+  it('CA-ADR-05 · borrar la predeterminada pasa el puesto a la más antigua que queda', async () => {
     const c = await crearCliente()
     const a = await pedir(postAddress, {
       bearer: c.token,
@@ -556,7 +556,7 @@ describe('/customer/addresses', () => {
     expect((await pedir(getAddresses, { bearer: c.token })).body.data.items).toEqual([])
   })
 
-  it('solo del dueño: una dirección ajena no se ve, no se edita y no se borra (404)', async () => {
+  it('CA-ADR-07 · solo del dueño: una dirección ajena no se ve, no se edita y no se borra (404)', async () => {
     const dueno = await crearCliente()
     const otro = await crearCliente()
     const a = await pedir(postAddress, { bearer: dueno.token, method: 'POST', body: nueva() })
@@ -691,7 +691,13 @@ describe('GET /customer/orders y /{id}', () => {
       .update({ arrived_at_customer_at: new Date().toISOString() })
       .eq('id', id)
     const llegado = await pedir(getOrder, { bearer: c.token, params: { id } })
-    expect(llegado.body.data.driver.phone).toEqual(expect.any(String))
+    // CA-TRK-08: ni con el motorizado en la puerta recibe el cliente su teléfono.
+    expect(llegado.body.data.driver).toEqual({ name: expect.any(String), phone: null })
+    expect(llegado.body.data.pendingAcceptanceAt).toBeDefined()
+    expect(llegado.body.data.travelMinutes).toEqual({
+      min: expect.any(Number),
+      max: expect.any(Number),
+    })
   })
 })
 

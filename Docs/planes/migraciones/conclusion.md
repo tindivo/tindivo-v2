@@ -6,7 +6,7 @@
 > 2026-10-08/09. Dos rondas sobre el repo (`develop`, `99d70a0`), con Codex **leyendo el código por su cuenta** en
 > modo solo lectura, y datos de `tindivo-prod` medidos por Claude. Debate en [`../../trabajo/migraciones/debate/`](../../trabajo/migraciones/debate/); hechos en
 > [`00-contexto.md`](../../trabajo/migraciones/00-contexto.md). No reabre el contrato REST
-> (`../movil/contrato-rest.md`) ni la arquitectura (`../../trabajo/arquitectura/`).
+> (`../movil/contrato-rest.md`) ni la arquitectura (`archive/arquitectura:Docs/trabajo/arquitectura/`).
 
 ## En cinco líneas
 

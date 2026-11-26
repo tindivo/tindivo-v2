@@ -10,7 +10,7 @@ internal fun headlineOf(
     when (phase) {
         is OrderPhase.Cancelled -> {
             val copy = cancelCopyOf(phase.reason, isPickup, payment)
-            OrderHeadline.Cancelled(copy, alreadyPaid = payment.alreadyPaid)
+            OrderHeadline.Cancelled(copy, alreadyPaid = payment.alreadyPaid, prepaid = payment.prepaid)
         }
 
         OrderPhase.Delivered -> {
@@ -45,6 +45,7 @@ private fun receivedHeroOf(
     payment: PaymentFacts,
 ): OrderHero =
     when {
+        !payment.prepaid && status == "validando" -> OrderHero.CallToConfirm
         !payment.prepaid -> OrderHero.Received
         status == "pending_acceptance" -> OrderHero.AwaitingAvailability
         status == "validando" && !payment.proofSent -> OrderHero.AwaitingAvailability
@@ -100,3 +101,31 @@ private fun prepayTimeoutCopyOf(payment: PaymentFacts): CancelCopy =
         payment.proofStatus != null || payment.proofSent -> CancelCopy.PrepayProofNotReviewed
         else -> CancelCopy.PrepayTimeout
     }
+
+/**
+ * El nombre de pila para el titular «Luis llegó»: la primera palabra del nombre completo del motorizado, o `null` si no
+ * hay nombre (entonces el titular es «Tu pedido llegó»).
+ */
+internal fun driverFirstName(fullName: String?): String? =
+    fullName
+        ?.trim()
+        ?.split(Regex("""\s+"""))
+        ?.firstOrNull()
+        ?.takeIf { it.isNotEmpty() }
+
+/**
+ * «No se te cobró nada» solo es cierto cuando no pudo salir dinero: el pedido es de pago al recibir ([prepaid] en falso)
+ * y el motivo es uno de los cuatro en que la web dice «sin costo». En un prepago nunca: el Yape va directo al negocio y
+ * Tindivo no sabe si ya se pagó, aunque no haya comprobante.
+ */
+internal fun CancelCopy.nothingCharged(prepaid: Boolean): Boolean =
+    !prepaid &&
+        when (this) {
+            CancelCopy.CustomerCancelled,
+            CancelCopy.CouldNotConfirm,
+            CancelCopy.BusinessCancelled,
+            CancelCopy.BusinessNoResponse,
+            -> true
+
+            else -> false
+        }

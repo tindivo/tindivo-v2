@@ -1,0 +1,18 @@
+{
+  "descripcion": "Cuerpo de POST /customer/orders que la app Android envía para un recojo (todo recojo es prepago, CUS-CHK-028). Lo comprueba CheckoutViewModelTest.kt contra lo que el ViewModel envía de verdad y lo valida crear-pedido-recojo-vector.test.ts contra CreateOrderRequestSchema. pickupTiming va siempre en \"later\": el esquema lo exige en recojo (requests.ts) y la app ya no pregunta «¿vas al local ahora?».",
+  "cuerpo": {
+    "businessId": "8f1f2b5e-6d3c-4a7b-9e10-1a2b3c4d5e6f",
+    "deliveryMethod": "pickup",
+    "paymentIntent": "prepaid",
+    "customerName": "Rosa Quispe",
+    "customerPhone": "999888777",
+    "pickupTiming": "later",
+    "items": [
+      {
+        "menuItemId": "66666666-6666-4666-8666-666666666666",
+        "quantity": 2,
+        "modifiers": []
+      }
+    ]
+  }
+}

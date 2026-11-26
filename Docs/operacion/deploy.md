@@ -1,6 +1,6 @@
 # DEPLOY.md — Runbook de go-live (Tindivo 2.0)
 
-> Verificado: 2026-10-10 · solo que las rutas y comandos existen; los pasos de go-live no se han vuelto a ejecutar
+> Verificado: 2026-11-18 · erratas de `app_settings` contra `supabase/migrations` (0077, 0087, 0123, 0125); solo que las rutas y comandos existen; los pasos de go-live no se han vuelto a ejecutar
 > desde el lanzamiento de agosto **(sin verificar)**. Antes de seguirlo, contrástalo con `Docs/planes/migraciones/`.
 
 Checklist accionable para llevar el piloto a producción (San Jacinto · La Florencia · 1 moto).
@@ -20,13 +20,14 @@ Lo marcado **[tú]** requiere tus credenciales; el resto ya está preparado en e
 
 ```bash
 supabase db push      # aplica al remoto enlazado lo que falte
-pnpm db:types         # regenera los tipos DESPUÉS del push
+pnpm db:types         # tipos desde la base local migrada (no depende del push)
 pnpm check:deploy     # tiene que salir en verde ANTES de desplegar las apps
 ```
 
 **Este orden no es una preferencia, y equivocarlo no da un error visible.** El código de este
-repo se escribe contra el esquema que va a haber —`database.types.ts` se edita a mano al escribir
-la migración para que el árbol compile antes del push—, así que `pnpm type-check` compila igual
+repo se escribe contra el esquema que va a haber —`database.types.ts` no se edita a mano: se genera
+con `pnpm db:types` desde la base local, que debe estar en la última migración, para que el árbol
+compile antes del push—, así que `pnpm type-check` compila igual
 contra un prod que todavía no tiene las columnas. Cuando las apps salen primero:
 
 - un `select` con una columna que no existe → PostgREST responde **400 por todo el select**, y el
@@ -281,7 +282,7 @@ configuración manual en dashboards:
    - Crear **OAuth 2.0 Client ID** tipo "Web application".
    - Authorized JavaScript origins: `http://localhost:3000` y `https://tindivo.com`.
    - Authorized redirect URI: `https://zpnipajgwfthxhdtzhly.supabase.co/auth/v1/callback`.
-2. **Supabase dashboard** (proyecto Web v2):
+2. **Supabase dashboard** (proyecto `tindivo-prod`):
    - Authentication → Sign In / Providers → **Google: ON** (pegar Client ID + Secret del paso 1).
    - Authentication → Sign In / Providers → Email: **desactivar "Confirm email"**
      (el flujo es "sin verificación de correo; empiezas a pedir al instante").
@@ -328,21 +329,21 @@ Apunta el apex `tindivo.com` + los CNAME `api`/`negocios`/`motorizados`/`admin` 
 
 ## 6. Seeds de go-live
 
-Parámetros operativos (`app_settings`) ya sembrados: `commissions` (3.00/3.50/0.50), `delivery_bands`,
-`timers`, `prepay_threshold` (100), `validation` (80), `strikes` (2), `contingency_fund` (250),
-`platform_schedule` (mar–sáb 18:00–23:00), `coverage` (San Jacinto). Ajusta desde **Admin → Configuración**.
+Parámetros operativos (`app_settings`) ya sembrados: `commissions` (delivery 1.50, pickup 1.00; migración `0125`), `delivery_bands`,
+`timers`, `prepay_threshold` (80; DECISIONS §7; `0087`), `validation` (`amountThreshold` 80; lo siembra `supabase/migrations/0021_validation.sql`), `strikes` (2),
+`platform_schedule` (lunes a domingo 18:00–23:00; migración `0087`), `coverage` (San Jacinto). El fondo de contingencia
+ya no existe (migraciones `0077` y `0123`). Ajusta desde **Admin → Configuración**.
 
 Crear los actores del piloto (necesitan cuenta Auth → vía Admin, no SQL puro):
 
 1. **Admin → + Negocio**: crea *La Florencia* (capacidades: publica catálogo + delivery + recojo + usa moto Tindivo). Luego, como negocio, en **/configuracion** carga Yape/QR, ETA y horario; en **/menu** carga la carta.
 2. **Admin → + Motorizado**: crea el motorizado del piloto.
 3. **[tú]** Setea `NEXT_PUBLIC_SUPPORT_WHATSAPP` y `app_settings.support_whatsapp` con el número real (Admin → Configuración).
-4. **[tú]** Confirma el fondo de contingencia real disponible en el Yape del admin (S/200–300).
 
 ## 7. Contenido legal **[tú]**
 
 `/terminos` y `/privacidad` (Ley 29733) ya tienen contenido base en la app cliente. Revisa con
-asesoría legal antes de operar (cláusula de adelanto del fondo para restaurantes, política de strikes).
+asesoría legal antes de operar (cláusula de adelanto por apelación aprobada, ADR 0036; política de strikes).
 
 ## 8. Smoke post-deploy
 
@@ -367,6 +368,8 @@ Para las apps nativas en desarrollo (D-14: nunca hablan con producción). Montad
 | API | Proyecto Vercel **aparte** `tindivo-api-staging` → `https://tindivo-api-staging.vercel.app` |
 | Datos de prueba | `pnpm db:seed:staging -- --env-file <secretos>/staging.env --out-dir <secretos>` (PR #77): el mundo e2e (2 negocios con menú y horario, 2 motorizados, 3 clientes; sin admin) |
 | Secretos | `C:\Users\<usuario>\tindivo-secretos` (`staging.env` y las carpetas `staging-credenciales-<fecha>\cuentas.md`; vale la más reciente) |
+| Catálogo de prueba | La misma semilla siembra 4 negocios con carta, portada y fotos (`seed-staging-catalog.ts`). **La apertura vale solo el día en que se corre** (`business_service_days`, 0154): para probar otro día, vuelve a correr la semilla. |
+| Yape de prueba | Los 4 negocios del catálogo no tienen Yape, QR ni teléfono, y sus dueños no tienen cuenta de Auth (son solo filas de `users`/`user_roles`): esta semilla no recibe ni escribe ningún número. **No borres esas filas de `users` como «huérfanas»**: `businesses.user_id` es `on delete cascade` y arrastraría los negocios y sus cartas. Si quieres probar un cobro con un Yape tuyo, configúralo a mano desde el panel de Negocios (Configuración › «Cobros por Yape y Plin») con la cuenta Dueño E2E, **después** de sembrar: la semilla del mundo base (`seed-world.ts`, preexistente) vuelve a escribir sus números de ejemplo en ese negocio cada vez que se corre. |
 
 **Vercel.** La rama de producción del proyecto es **`develop`** (*Settings › Environments › Production › Branch
 Tracking*). Las tres variables (`NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` como *Config*;
