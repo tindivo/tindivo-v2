@@ -22,7 +22,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (co
 - [x] **P0.4** · Entorno autónomo: bloqueos de §2.2 en `.claude/settings.json`, candado de la base local (`pnpm db:cycle`, `pnpm db:lock status`) y `.env.local` revisados: solo claves locales — rama `chore/p0-entorno-autonomo`
 - [x] **P0.3** · Job de integración en CI (`api-integration` en `.github/workflows/ci.yml`): Supabase CLI fijada, `supabase start` desde las migraciones, `db:seed:e2e` y la suite de la API con `--force`. Visto correr en el PR #9: 40 ficheros en verde (2026-10-10). Que sea obligatorio para mergear se marca en la protección de rama de GitHub (nivel C, **Jesús**)
 - [x] **MV1** · *(carril móvil, adelantado)* Expediente de tiendas: [`07-publicacion-tiendas.md`](../../trabajo/movil/07-publicacion-tiendas.md) — camino crítico, causas de rechazo, lo que le falta a la política (con borrador), inventario de datos medido en prod, diseño del borrado y de la cuenta de revisión, nota al revisor y ficha. Abre D-44…D-47 — rama `docs/mv1-expediente-tiendas`
-- [!] **P0.5** · Copia de prod fuera del PC — **Jesús**: dónde se guarda, y presencia para sacarla (nivel B + C)
+- [!] **P0.5** · Copia de prod fuera del PC — **decidido por Jesús el 2026-11-26:** va **cifrada a su Google Drive**, con una clave que solo guarda él, y se saca el 2026-11-27 temprano con él presente (nivel B + C). Procedimiento: [`copia-de-produccion.md`](../../operacion/copia-de-produccion.md); guiones en `scripts/prod-backup/`. Falta sacarla
 - [!] **P0.6** · Restauración aislada y conciliación — espera a P0.5
 - [x] **P0.7** · Recorrido e2e real del comprobante: `viaje-pedido-online.spec.ts` sube la captura por la pantalla del cliente (Storage con su sesión + `POST /prepay-proof` + RPC), sin `UPDATE` a `orders`, y la cajera ve el comprobante; `comprobante-real.spec.ts` cubre cancelado + comprobante (409, sigue cancelado) y que el archivo registrado no se cambia ni se pisa. 6 pruebas de Playwright en verde con la base local bajo candado (2026-10-11) — rama `test/p0-7-e2e-comprobante`
 - [x] **CI-1** · *(lote menor)* Runner fijado a `ubuntu-24.04` antes de que `ubuntu-latest` pase a Ubuntu 26 (2026-10-19) y acciones sobre Node 24 (checkout, setup-node y upload-artifact v7, pnpm v6, setup-cli v3) — PR #14, integrado el 2026-10-10
@@ -63,7 +63,7 @@ mientras se construye el resto.
 
 ## Lo que espera a Jesús
 
-1. **P0.5** · Dónde guardar la copia de producción fuera del PC: en otro repositorio (Jesús, 2026-10-10); el detalle, más adelante. Ojo: el respaldo manual del 2026-10-19 (`D:\Tinkuy Creativo\Proyectos\Tindivo\base-de-datos`) tiene **solo esquema y roles, sin filas**; una copia que sirva para restaurar necesita también los datos.
+1. **P0.5** · Dónde guardar la copia de producción fuera del PC: **cifrada, en el Google Drive de Jesús, con una clave que solo guarda él (Jesús, 2026-11-26; sustituye a «en otro repositorio», del 2026-10-10)**. Le toca: estar presente para sacarla (2026-11-27) y guardar la clave. Ojo: el respaldo manual del 2026-10-19 (`D:\Tinkuy Creativo\Proyectos\Tindivo\base-de-datos`) tiene **solo esquema y roles, sin filas**; una copia que sirva para restaurar necesita también los datos.
 2. **Cuentas** · Apple Developer (US$ 99/año) y Google Play (US$ 25, un pago). La verificación de Google puede tardar días.
 3. **Testers** · 15-16 personas con Gmail y Android que vayan a usar la app (el mínimo es 12 durante 14 días seguidos).
 4. **Mac** · Confirmar macOS Sequoia 15.6+ o Tahoe 26.2+ (Xcode 26 es obligatorio desde el 2026-04-28).
