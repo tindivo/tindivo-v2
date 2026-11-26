@@ -255,8 +255,8 @@ jobs:
             apps/android/**/build/reports/lint-results-*.html
             apps/android/**/build/reports/lint-results-*.xml
             apps/android/**/build/test-results/
-            apps/android/**/build/outputs/roborazzi/
-            apps/android/**/build/intermediates/roborazzi/
+            apps/android/**/build/outputs/roborazzi/*_compare.png
+            apps/android/**/build/outputs/roborazzi/*_actual.png
           if-no-files-found: ignore
           retention-days: 14
 
