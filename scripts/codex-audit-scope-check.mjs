@@ -11,7 +11,9 @@
  *
  * QUÉ EXIGE
  * - Registro completo: archivo legible, todas las líneas JSON, al menos un evento, `thread.started`,
- *   `turn.completed`, y ningún `turn.failed` ni `error`.
+ *   `turn.completed`, y ningún `turn.failed` ni `error`. Única tolerancia: la reconexión del transporte
+ *   ANTES del primer `command_execution` (eventos `error` con `^Reconnecting... N/N` e item `error` con
+ *   `^Falling back from WebSockets`); después de un comando, o con otro texto, se marca.
  * - Cada `command_execution` trae `command` (texto no vacío) y, si aparece en `item.started` o
  *   `item.updated`, tiene su `item.completed`. Un `item.completed` sin `started` es válido.
  * - Ningún evento de item después del último `turn.completed`.
@@ -20,6 +22,11 @@
  *   file_change, web_search, tipos nuevos) se marca.
  *
  * QUÉ DETECTA EN CADA COMANDO
+ * - Codex escribe el comando como argv con comillas POSIX (dentro de "…" cada `\` sale como `\\`). Antes de
+ *   escanear se decodifica UN nivel de comillas: '…' es literal; dentro de "…", `\` solo escapa `\`, `"`, `$`
+ *   y el acento grave. Una comilla sin cerrar o una `\` fuera de comillas marca «comando no decodificable».
+ *   UNC y unidad (`X:`) corren sobre el texto decodificado (el que recibe el intérprete); las demás reglas,
+ *   sobre el texto crudo Y sobre el decodificado.
  * - PowerShell sin `-NoProfile`.
  * - Tras sustituir por `<ROOT>` las rutas internas a AUDIT_ROOT (con `\` o `/`, con espacios y
  *   comillas; la raíz solo cuenta si la sigue `\` (o `/`) o el fin del texto. Windows admite `'`, `;`,
@@ -48,6 +55,9 @@ const SENSITIVE =
 /** Unidad de una letra (no parte de una palabra), siga lo que siga: también `D:x` (relativa). */
 const DRIVE = /(?<![A-Za-z0-9_])[A-Za-z]:/
 const UNC = /\\\\/
+/** Reconexión del transporte que Codex reintenta solo; solo se tolera antes del primer comando. */
+const RECONNECT = /^Reconnecting\.\.\. \d\/\d/
+const FALLBACK = /^Falling back from WebSockets/
 const PARENT = /(?<![A-Za-z0-9_.-])\.\.(?=[\\\s'";|&)]|$)/
 const HOME_TILDE = /(?<![A-Za-z0-9_.-])~(?=[\\\s'";|&)]|$)/
 const ENV_VARS = /\$env:|\$\{env:|%[A-Za-z_][A-Za-z0-9_]*%|\$home\b/i
@@ -56,6 +66,29 @@ const PS_PROVIDERS =
 const CHDIR = /(?<![\w.\\-])(?:cd|chdir|set-location|sl|push-location|pushd)(?![\w.\\-])/i
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Decodifica un nivel de comillas POSIX (lo que hace un shell con el argv). Devuelve `null` si no se puede
+ * hacer sin ambigüedad: comilla sin cerrar o `\` fuera de comillas.
+ */
+function decodePosix(text) {
+  let out = ''
+  let quote = null
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (quote === "'") {
+      if (c === "'") quote = null
+      else out += c
+    } else if (quote === '"') {
+      if (c === '"') quote = null
+      else if (c === '\\' && '\\"$`'.includes(text[i + 1] ?? '')) out += text[++i]
+      else out += c
+    } else if (c === "'" || c === '"') quote = c
+    else if (c === '\\') return null
+    else out += c
+  }
+  return quote === null ? out : null
+}
 
 function main() {
   const [eventsPath, auditRootArg] = process.argv.slice(2)
@@ -66,6 +99,11 @@ function main() {
 
   const auditRoot = win32.normalize(auditRootArg.replaceAll('/', '\\')).replace(/\\+$/, '')
   const rootRe = new RegExp(`${escapeRegExp(auditRoot)}(?=\\\\|$)`, 'gi')
+  // En el texto crudo la barra puede venir duplicada (`\\`): solo sirve para no marcar nombres internos.
+  const rootRawRe = new RegExp(
+    `${auditRoot.split('\\').map(escapeRegExp).join('\\\\+')}(?=\\\\|$)`,
+    'gi',
+  )
 
   const findings = new Set()
   const add = (msg) => findings.add(msg)
@@ -98,12 +136,22 @@ function main() {
     if (!types.includes('thread.started')) add('registro incompleto: falta thread.started')
     if (!types.includes('turn.completed')) add('registro incompleto: falta turn.completed')
     if (types.includes('turn.failed')) add('registro incompleto: hay turn.failed')
-    if (types.includes('error')) add('registro incompleto: hay un evento error')
+  }
+
+  // La reconexión del transporte solo se tolera antes del primer comando.
+  const firstCommand = events.findIndex(
+    (e) => ITEM_EVENTS.has(e.type) && e.item?.type === 'command_execution',
+  )
+  const beforeCommands = (i) => firstCommand < 0 || i < firstCommand
+  for (const [i, event] of events.entries()) {
+    if (event.type !== 'error') continue
+    if (beforeCommands(i) && RECONNECT.test(String(event.message ?? ''))) continue
+    add('registro incompleto: hay un evento error')
   }
 
   const opened = new Set()
   const closed = new Set()
-  for (const event of events) {
+  for (const [i, event] of events.entries()) {
     if (!ITEM_EVENTS.has(event.type)) continue
     const item = event.item
     if (item === null || typeof item !== 'object') {
@@ -111,6 +159,8 @@ function main() {
       continue
     }
     const id = item.id ?? '(sin id)'
+    if (item.type === 'error' && beforeCommands(i) && FALLBACK.test(String(item.message ?? '')))
+      continue
     if (!ALLOWED_ITEMS.has(item.type)) {
       add(
         `${id}: herramienta no permitida en el modo provisional (${item.type} ${item.server ?? ''} ${item.tool ?? ''})`.trim(),
@@ -130,25 +180,37 @@ function main() {
     if (/(?:powershell|pwsh)(?:\.exe)?"?\s/i.test(command) && !/\s-NoProfile\b/i.test(command))
       add(`${id}: PowerShell sin -NoProfile (carga el perfil del usuario)`)
 
-    // Las rutas internas a la copia pasan a <ROOT>; lo que quede fuera de ella se busca después.
-    let scan = command.replaceAll('/', '\\').replace(rootRe, '<ROOT>')
     // Solo se ignora el primer token si es el intérprete (su propia ruta no cuenta).
-    scan = scan.replace(
+    const body = command.replace(
       /^\s*(?:"[^"]*(?:powershell|pwsh|cmd)(?:\.exe)?"|\S*(?:powershell|pwsh|cmd)(?:\.exe)?)(?=\s|$)/i,
       '',
     )
+    // Texto crudo (tal como lo escribe Codex) y texto decodificado (lo que recibe el intérprete).
+    // Las rutas internas a la copia pasan a <ROOT>; lo que quede fuera de ella se busca después.
+    const rawScan = body.replace(rootRawRe, '<ROOT>').replaceAll('/', '\\')
+    const decoded = decodePosix(body)
+    if (decoded === null)
+      add(
+        `${id}: comando no decodificable (comilla sin cerrar o \\ fuera de comillas) → ${command}`,
+      )
+    const decodedScan = decoded?.replaceAll('/', '\\').replace(rootRe, '<ROOT>')
 
-    const checks = [
-      [SENSITIVE.test(scan), 'nombre sensible'],
-      [DRIVE.test(scan), 'ruta con unidad fuera de AUDIT_ROOT'],
-      [UNC.test(scan), 'ruta UNC'],
-      [PARENT.test(scan), 'segmento ..'],
-      [HOME_TILDE.test(scan), 'segmento ~'],
-      [ENV_VARS.test(scan), 'variable de entorno'],
-      [PS_PROVIDERS.test(scan), 'proveedor de PowerShell'],
-      [CHDIR.test(scan), 'cambio de directorio'],
+    const both = [
+      [SENSITIVE, 'nombre sensible'],
+      [PARENT, 'segmento ..'],
+      [HOME_TILDE, 'segmento ~'],
+      [ENV_VARS, 'variable de entorno'],
+      [PS_PROVIDERS, 'proveedor de PowerShell'],
+      [CHDIR, 'cambio de directorio'],
     ]
-    for (const [hit, why] of checks) if (hit) add(`${id}: ${why} → ${command}`)
+    for (const [re, why] of both)
+      if (re.test(rawScan) || (decodedScan !== undefined && re.test(decodedScan)))
+        add(`${id}: ${why} → ${command}`)
+    // Unidad y UNC solo tienen sentido sobre lo decodificado: en el crudo cada `\` viene duplicada.
+    if (decodedScan !== undefined) {
+      if (DRIVE.test(decodedScan)) add(`${id}: ruta con unidad fuera de AUDIT_ROOT → ${command}`)
+      if (UNC.test(decodedScan)) add(`${id}: ruta UNC → ${command}`)
+    }
   }
 
   for (const id of opened)

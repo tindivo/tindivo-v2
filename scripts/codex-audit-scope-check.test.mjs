@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
@@ -12,7 +12,9 @@ const tmp = mkdtempSync(join(tmpdir(), 'scope-check-'))
 after(() => rmSync(tmp, { recursive: true, force: true }))
 
 const PS = '"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoProfile -Command '
-const ps = (body) => `${PS}'${body}'`
+// Codex serializa el argv con comillas POSIX: el cuerpo viaja entre '…' y cada ' interna sale como '"'"'.
+const quote = (body) => `'${body.replaceAll("'", `'"'"'`)}'`
+const ps = (body) => `${PS}${quote(body)}`
 
 const jl = (...events) => events.map((e) => JSON.stringify(e)).join('\n')
 const started = { type: 'thread.started', thread_id: 't1' }
@@ -161,7 +163,7 @@ describe('no marca (exit 0)', () => {
       ps("Get-Content 'D:/Copia Auditoria/audit-root/Docs/operacion/trampas.md'"),
     ],
     ['Get-FileHash', ps('Get-FileHash -Algorithm SHA256 MANIFEST.sha256')],
-    ['raíz con barra final', 'cmd /c dir "D:\\Copia Auditoria\\audit-root\\"'],
+    ['raíz con barra final', 'cmd /c dir "D:\\Copia Auditoria\\audit-root\\\\"'],
   ]
   for (const [name, command] of good)
     test(name, () => {
@@ -201,4 +203,94 @@ describe('eventos reales', () => {
       const r = spawnSync(process.execPath, [script, path, root], { encoding: 'utf8' })
       assert.equal(r.status, expected, `${r.stdout}${r.stderr}`)
     })
+})
+
+const fixture = (name) =>
+  readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), 'utf8')
+const raw = String.raw
+const reconnecting = { type: 'error', message: 'Reconnecting... 2/5 (request timed out)' }
+const fallback = {
+  type: 'item.completed',
+  item: {
+    id: 'item_0',
+    type: 'error',
+    message: 'Falling back from WebSockets to HTTPS transport.',
+  },
+}
+
+describe('comillas POSIX del argv de Codex', () => {
+  for (const [name, file] of [
+    ['R1 de #196 (item_2 e item_5: escapes de regex)', 'r1-196.events.jsonl'],
+    ['R2 de #196 (item_3 e item_4: escapes de regex)', 'r2-196.events.jsonl'],
+    ['reconexión antes del turno (#229)', 'reconexion-229.events.jsonl'],
+  ])
+    test(`${name} → 0`, () => {
+      const r = run(fixture(file))
+      assert.equal(r.status, 0, r.out)
+    })
+  test('fallo de transporte (#229, intento 1) → 1', () => {
+    assert.equal(run(fixture('fallo-transporte-229.events.jsonl')).status, 1)
+  })
+
+  const bad = [
+    ['UNC entre comillas dobles', raw`cmd /c type "\\\\srv\\share"`],
+    ['UNC entre comillas simples', raw`cmd /c type '\\srv\share'`],
+    ['unidad ajena con \\ dobles', raw`cmd /c type "D:\\\\otra\\\\x"`],
+    ['nombre sensible partido con comillas', "cmd /c type au'th'.json"],
+    ['comilla simple sin cerrar', "cmd /c type 'abc"],
+    ['comilla doble sin cerrar', 'cmd /c type "abc'],
+    ['barra suelta fuera de comillas', raw`cmd /c type D\:\x`],
+    ['barra final escapa la comilla de cierre', raw`cmd /c dir "D:\x\"`],
+    ['.. armado con barras fuera de comillas', raw`cmd /c type .\.\x`],
+  ]
+  for (const [name, command] of bad)
+    test(`${name} → 1`, () => {
+      const r = run(withCmd(command))
+      assert.equal(r.status, 1, r.out)
+    })
+
+  test('ruta absoluta interna con \\\\ entre comillas dobles → 0', () => {
+    const command = raw`cmd /c type "D:\\Copia Auditoria\\audit-root\\Docs\\x.txt"`
+    const r = run(withCmd(command))
+    assert.equal(r.status, 0, r.out)
+  })
+  test('escapes de regex dentro de comillas → 0', () => {
+    const r = run(withCmd(ps(raw`rg -n 'Jr\.|\A(?:x)\z' a.xml; $p = ' \*'`)))
+    assert.equal(r.status, 0, r.out)
+  })
+  test('UNC real dentro del cuerpo de PowerShell → 1', () => {
+    assert.equal(run(withCmd(ps(raw`Get-Content \\srv\share\x`))).status, 1)
+  })
+
+  describe('reconexión', () => {
+    const c = ps('Get-Content MANIFEST.sha256')
+    const body = [cmd(c), cmd(c, 'item.completed')]
+    const unknown = { type: 'error', message: 'workspace routing discovery failed' }
+    test('Reconnecting y Falling back antes del primer comando → 0', () => {
+      const r = run(jl(started, reconnecting, fallback, ...body, done))
+      assert.equal(r.status, 0, r.out)
+    })
+    test('evento error desconocido → 1', () => {
+      assert.equal(run(jl(started, unknown, ...body, done)).status, 1)
+    })
+    test('item error desconocido → 1', () => {
+      const e = { type: 'item.completed', item: { id: 'i0', type: 'error', message: 'otra cosa' } }
+      assert.equal(run(jl(started, e, ...body, done)).status, 1)
+    })
+    test('Reconnecting después de un comando → 1', () => {
+      assert.equal(run(jl(started, ...body, reconnecting, done)).status, 1)
+    })
+    test('Falling back después de un comando → 1', () => {
+      assert.equal(run(jl(started, ...body, fallback, done)).status, 1)
+    })
+    test('turn.failed tras reconectar → 1', () => {
+      assert.equal(run(jl(started, reconnecting, ...body, done, { type: 'turn.failed' })).status, 1)
+    })
+    test('reconexión sin turn.completed → 1', () => {
+      assert.equal(run(jl(started, reconnecting, ...body)).status, 1)
+    })
+    test('error final tras reconectar → 1', () => {
+      assert.equal(run(jl(started, reconnecting, ...body, done, unknown)).status, 1)
+    })
+  })
 })
