@@ -1325,6 +1325,47 @@ describe('POST /customer/checkout/quote · payment', () => {
         expect(r.body.detail).toContain('(S/ 50.00) pasa de S/ 49.99')
       })
 
+      it.each([
+        ['la cadena "NaN"', 'NaN'],
+        ['un texto no numérico', 'abc'],
+        ['un booleano', true],
+      ])('umbral presente pero no numérico (%s): la guardia no corta con el respaldo 80; decide SQL', async (_n, valor) => {
+        const dos = {
+          items: [
+            {
+              menuItemId: FIXTURES.ITEM_POLLO_ID,
+              quantity: 2,
+              modifiers: [FIXTURES.MODOPT_QUESO_ID],
+            },
+          ],
+        }
+        const c = await clienteDeConfianza()
+        const { data: previo } = await db
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'prepay_threshold')
+          .single()
+        await db
+          .from('app_settings')
+          .update({ value: valor as never })
+          .eq('key', 'prepay_threshold')
+        try {
+          const r = await crear(c, 'pending_cash', dos)
+          // Con un umbral no numérico la guardia HTTP no emite el 403 del respaldo 80: la
+          // RPC es la autoridad. (Con "NaN", SQL no rechaza: 98 > NaN es falso.)
+          expect(r.status, JSON.stringify(r.body)).not.toBe(403)
+          if (valor === 'NaN') {
+            expect(r.status, JSON.stringify(r.body)).toBe(201)
+            expect(await totalDelPedido(r.body.data.id)).toBe(9800)
+          }
+        } finally {
+          await db
+            .from('app_settings')
+            .update({ value: previo?.value as never })
+            .eq('key', 'prepay_threshold')
+        }
+      })
+
       it('falla la lectura del umbral (respaldo 80): umbral real 100, dos platos (98.00) -> 201, no 403', async () => {
         const dos = {
           items: [

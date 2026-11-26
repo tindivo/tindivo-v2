@@ -193,8 +193,20 @@ export async function POST(req: Request): Promise<Response> {
         .select('value')
         .eq('key', 'prepay_threshold')
         .maybeSingle()
-      const thresholdValue = Number(thresholdSetting?.value ?? 80)
+      const rawThreshold = thresholdSetting?.value
+      const thresholdValue = Number(rawThreshold ?? 80)
       const threshold = Number.isFinite(thresholdValue) ? thresholdValue : 80
+      // Ausente o null: el respaldo 80 (como `create_customer_order`). PRESENTE pero que no es
+      // un número finito ("NaN", texto, booleano): lo que SQL haga con ese valor no lo sabemos
+      // aquí, así que el respaldo no puede servir para RECHAZAR; decide la RPC.
+      const thresholdMalformed =
+        rawThreshold != null &&
+        !(
+          (typeof rawThreshold === 'number' && Number.isFinite(rawThreshold)) ||
+          (typeof rawThreshold === 'string' &&
+            rawThreshold.trim() !== '' &&
+            Number.isFinite(Number(rawThreshold)))
+        )
 
       const itemIds = body.items.map((i) => i.menuItemId)
       const modifierIds = body.items.flatMap((i) => i.modifiers || [])
@@ -237,7 +249,8 @@ export async function POST(req: Request): Promise<Response> {
       })
 
       const calculatedTotalCents = subtotalCents + delivery.deliveryCents
-      const readsReliable = delivery.reliable && !thresholdErr && !itemsErr && !modifiersErr
+      const readsReliable =
+        delivery.reliable && !thresholdErr && !thresholdMalformed && !itemsErr && !modifiersErr
       if (readsReliable && calculatedTotalCents > cents(threshold)) {
         // El mensaje nombra el ENVÍO porque el umbral se compara contra el total
         // con delivery dentro, aquí y en `create_customer_order` (0194). Decir
