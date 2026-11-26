@@ -12,6 +12,7 @@
     "lint": "biome check ."
   },
   "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "catalog:",
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "@tindivo/api-client": "workspace:*",
@@ -22,6 +23,7 @@
     "@tindivo/supabase": "workspace:*",
     "@tindivo/ui": "workspace:*",
     "@vercel/analytics": "catalog:",
+    "geist": "catalog:",
     "leaflet": "catalog:",
     "next": "catalog:",
     "react": "catalog:",

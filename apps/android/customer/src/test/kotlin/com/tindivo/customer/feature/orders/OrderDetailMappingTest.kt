@@ -25,6 +25,19 @@ class OrderDetailMappingTest {
     }
 
     @Test
+    fun `en recojo no hay motorizado ni aviso de llegada aunque el servidor mande uno`() {
+        val driver = GetCustomerOrder200ResponseDataDriver(name = "Luis Quispe", phone = null)
+        val ui =
+            detail(
+                status = "ready_for_pickup",
+                deliveryMethod = "pickup",
+                arrivedAtCustomerAt = "2026-10-26T15:20:00Z",
+                driver = driver,
+            ).toDetailUi()
+        assertEquals(null, ui?.driver)
+    }
+
+    @Test
     fun `CA-TRK-08 el toString del motorizado y del detalle no lleva su nombre ni su celular`() {
         val driver = GetCustomerOrder200ResponseDataDriver(name = "Luis Quispe", phone = "+51 987-654-321")
 
@@ -74,7 +87,9 @@ class OrderDetailMappingTest {
             method: String = "delivery",
         ) = detail(status = status, paymentIntent = intent, deliveryMethod = method).toDetailUi()?.headline
 
-        assertEquals(OrderHeadline.Progress(OrderHero.Received), hero("validando"))
+        // CUS-CHK-027: en `validando` sin prepago la cajera llama antes de aceptar.
+        assertEquals(OrderHeadline.Progress(OrderHero.CallToConfirm), hero("validando"))
+        assertEquals(OrderHeadline.Progress(OrderHero.Received), hero("pending_acceptance"))
         assertEquals(OrderHeadline.Progress(OrderHero.AwaitingAvailability), hero("pending_acceptance", "prepaid"))
         assertEquals(OrderHeadline.Progress(OrderHero.PayNow), hero("awaiting_payment", "prepaid"))
         assertEquals(OrderHeadline.Progress(OrderHero.PaymentVerified), hero("confirmed", "prepaid"))
@@ -138,19 +153,22 @@ class OrderDetailMappingTest {
 
         val verified = "2026-10-26T15:10:00Z"
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.CustomerCancelled, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.CustomerCancelled, alreadyPaid = true, prepaid = true),
             cancelled("customer_cancelled", proofAttempt = 1),
         )
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.BusinessCancelled, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.BusinessCancelled, alreadyPaid = true, prepaid = true),
             cancelled("business_cancelled", verifiedAt = verified),
         )
         // Un comprobante rechazado cuenta: pudo haber pagado, así que tampoco se le dice «sin costo».
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.AdminCancelled, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.AdminCancelled, alreadyPaid = true, prepaid = true),
             cancelled("admin_cancelled", proofAttempt = 2),
         )
-        assertEquals(OrderHeadline.Cancelled(CancelCopy.CouldNotConfirm), cancelled("validation_timeout"))
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.CouldNotConfirm, prepaid = true),
+            cancelled("validation_timeout"),
+        )
         // Solo el prepago: en efectivo no hay pago adelantado aunque llegue un dato de pago.
         assertEquals(
             OrderHeadline.Cancelled(CancelCopy.CustomerCancelled),
@@ -219,13 +237,16 @@ class OrderDetailMappingTest {
             .toDetailUi()
             ?.headline
 
-        assertEquals(OrderHeadline.Cancelled(CancelCopy.PrepayTimeout), cancelled("prepay_timeout", proofAttempt = 0))
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.PrepayProofNotReviewed, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.PrepayTimeout, prepaid = true),
+            cancelled("prepay_timeout", proofAttempt = 0),
+        )
+        assertEquals(
+            OrderHeadline.Cancelled(CancelCopy.PrepayProofNotReviewed, alreadyPaid = true, prepaid = true),
             cancelled("prepay_timeout", proofAttempt = 1),
         )
         assertEquals(
-            OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse, alreadyPaid = true),
+            OrderHeadline.Cancelled(CancelCopy.BusinessNoResponse, alreadyPaid = true, prepaid = true),
             cancelled("pending_acceptance_timeout", proofAttempt = 1),
         )
         assertEquals(

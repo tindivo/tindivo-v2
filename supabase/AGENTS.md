@@ -26,7 +26,7 @@ Se suman a las del `AGENTS.md` raíz. Aplican a todo lo que esté en `supabase/`
   | Editor SQL del panel | Aplica el código pero **no registra nada** en `schema_migrations`: el historial miente |
   | `docker cp` + `psql -f` | **Corrompe los acentos**: `dirección` acabó como `direcci??n` en 54 mensajes que ve el cliente |
 
-- **Después de cada migración:** `pnpm db:types` (lee el remoto, así que **después** del push) y revisa los advisors.
+- **Después de cada migración:** `pnpm db:types` (lee la base **local**, ya migrada; el CI compara el archivo con la base que levanta desde las migraciones) y revisa los advisors.
 
 ## Redefinir una función: comprueba que reemplaza, no que duplica
 

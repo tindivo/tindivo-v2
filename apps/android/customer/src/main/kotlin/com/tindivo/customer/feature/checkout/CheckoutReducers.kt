@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.checkout
 import com.tindivo.core.network.AppError
 import com.tindivo.core.network.generated.model.GetCustomerProfile200ResponseData
 import com.tindivo.customer.feature.cart.Cart
+import java.time.Instant
 
 /** Espera entre un cambio y la cotización siguiente. Se inyecta para probar sin esperar de verdad (KT-4). */
 fun interface QuoteDebounce {
@@ -38,9 +39,19 @@ internal fun CheckoutUiState.withQuote(
 ): CheckoutUiState =
     when (outcome) {
         is QuoteOutcome.Ok -> {
-            val pay = reconcilePayMethod(pay, lastIntent, outcome.view.options)
+            // En recojo solo hay prepago (CUS-CHK-006): aunque la cotización traiga otra cosa, no se ofrece.
+            val view =
+                if (isPickup) {
+                    outcome.view.copy(
+                        options = outcome.view.options.filter { it.method == PayMethod.Prepaid },
+                        cash = null,
+                    )
+                } else {
+                    outcome.view
+                }
+            val pay = reconcilePayMethod(pay, lastIntent, view.options)
             copy(
-                quote = outcome.view,
+                quote = view,
                 quoteStatus = QuoteStatus.Ready,
                 pay = pay,
                 cash = if (pay == PayMethod.Cash) cash else CashChoice.None,
@@ -110,6 +121,7 @@ internal fun CheckoutUiState.withRejection(error: AppError): CheckoutUiState {
 internal fun CheckoutUiState.withLoaded(
     data: CheckoutData,
     cart: Cart,
+    now: Instant = Instant.now(),
 ): CheckoutUiState {
     val business = data.business
     val acceptsDelivery = business?.acceptsWebDelivery ?: true
@@ -117,6 +129,8 @@ internal fun CheckoutUiState.withLoaded(
     return copy(
         phase = if (data.profile.blocked) CheckoutPhase.Blocked else CheckoutPhase.Form,
         businessName = business?.name ?: cart.businessName,
+        businessAddress = business?.address?.takeIf { it.isNotBlank() },
+        closesAt = closingLabel(data.schedule, now, data.openingConfirmed),
         etaMin = business?.estimatedEtaMin,
         etaMax = business?.estimatedEtaMax,
         acceptsDelivery = acceptsDelivery,
@@ -127,6 +141,7 @@ internal fun CheckoutUiState.withLoaded(
         name = data.profile.fullName.take(MAX_NAME_LENGTH),
         phone = data.profile.phone,
         phoneVerified = data.profile.phoneVerified && data.profile.phone != null,
+        previousPurchase = data.previousPurchase,
         lines = cart.toBagLines(),
         message = null,
     )

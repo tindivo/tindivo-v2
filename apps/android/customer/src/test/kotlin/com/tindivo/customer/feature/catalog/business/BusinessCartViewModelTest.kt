@@ -1,11 +1,11 @@
 package com.tindivo.customer.feature.catalog.business
 
-import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.tindivo.customer.feature.cart.CartLine
 import com.tindivo.customer.feature.cart.CartSerializer
 import com.tindivo.customer.feature.cart.CartSnapshot
 import com.tindivo.customer.feature.cart.CartStore
+import com.tindivo.customer.support.testDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,7 +37,7 @@ class BusinessCartViewModelTest {
         Dispatchers.setMain(dispatcher)
         store =
             CartStore(
-                DataStoreFactory.create(
+                testDataStore(
                     serializer = CartSerializer,
                     corruptionHandler = ReplaceFileCorruptionHandler<CartSnapshot?>(produceNewData = { null }),
                     scope = CoroutineScope(dispatcher),

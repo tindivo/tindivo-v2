@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- La superficie crema de TindivoTheme (Palette.Surface): el arranque se ve del mismo color que la primera pantalla. -->
-    <color name="tindivo_window_background">#FAF6F1</color>
+    <!-- El fondo de página de TindivoTheme (Palette.Surface): el arranque se ve del mismo color que la primera pantalla. -->
+    <color name="tindivo_window_background">#F7F8FA</color>
 
     <!-- Solo cubre el arranque: la UI real la pinta TindivoTheme de :core:designsystem. Solo claro, como el tema:
-         fondo crema e iconos oscuros en la barra de estado. -->
+         fondo claro e iconos oscuros en la barra de estado. -->
     <style name="Theme.Tindivo" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/tindivo_window_background</item>
         <item name="android:statusBarColor">@color/tindivo_window_background</item>

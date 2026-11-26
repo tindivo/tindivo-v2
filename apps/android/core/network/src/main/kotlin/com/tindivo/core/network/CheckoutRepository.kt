@@ -42,9 +42,12 @@ class CheckoutRepository(
             it.quoteCheckoutWithHttpInfo(request, null, null, null, null)
         }.map { it.data }
 
-    /** `GET /customer/payment-options`: si la persona puede pagar contra entrega o debe pagar antes. */
-    suspend fun paymentOptions(): ApiResult<GetPaymentOptions200ResponseData> =
-        apiCall(client, ioDispatcher, { CustomerApi(baseUrl, it) }) {
+    /**
+     * `GET /customer/payment-options`: si la persona puede pagar contra entrega o debe pagar antes. Solo sale con el
+     * token de [accountId] ([boundTo]): si la sesión cambió de cuenta, no se envía nada.
+     */
+    suspend fun paymentOptions(accountId: String): ApiResult<GetPaymentOptions200ResponseData> =
+        apiCall(client.boundTo(accountId), ioDispatcher, { CustomerApi(baseUrl, it) }) {
             it.getPaymentOptionsWithHttpInfo(null, null, null, null)
         }.map { it.data }
 

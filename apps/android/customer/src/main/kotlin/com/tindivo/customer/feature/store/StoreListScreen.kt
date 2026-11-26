@@ -177,7 +177,7 @@ internal fun StoreTopBar(
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFAF6F1)
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FA)
 @Composable
 private fun StoreListLoadingPreview() {
     TindivoTheme {

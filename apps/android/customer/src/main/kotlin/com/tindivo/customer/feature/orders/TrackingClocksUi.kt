@@ -2,16 +2,22 @@ package com.tindivo.customer.feature.orders
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -41,14 +47,17 @@ internal fun AcceptanceWaitBlock(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
-        Text(text = stringResource(R.string.order_wait_status), style = MaterialTheme.typography.bodyLarge)
-        // El plazo completo, como lo aprobó Jesús (CA-TRK-06); la cuenta atrás va aparte.
-        if (acceptanceMinutes != null) {
-            Text(
-                text = stringResource(R.string.order_wait_respond, acceptanceMinutes),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
+        // El plazo completo, como lo aprobó Jesús (CA-TRK-06); la cuenta atrás va aparte. Sin plazo, un subtítulo que no
+        // repite el título y sin cifra inventada.
+        Text(
+            text =
+                if (acceptanceMinutes != null) {
+                    stringResource(R.string.order_wait_respond, acceptanceMinutes)
+                } else {
+                    stringResource(R.string.order_wait_status)
+                },
+            style = MaterialTheme.typography.bodyLarge,
+        )
         when (val clock = acceptanceClockOf(start, acceptanceMinutes, now)) {
             is AcceptanceClock.Running -> {
                 Text(
@@ -82,7 +91,15 @@ internal fun EtaLine(order: OrderDetailUi) {
             is EtaView.Single -> stringResource(R.string.order_eta_single, eta.minutes)
             is EtaView.Range -> stringResource(R.string.order_eta_range, eta.min, eta.max)
         }
-    Text(text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(
+            TindivoIcons.Schedule,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    }
 }
 
 /** Mientras [keepOn], la pantalla no se apaga (CUS-TRK-012); al salir o al terminar el pedido, vuelve a lo normal. */

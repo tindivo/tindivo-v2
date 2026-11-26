@@ -4,14 +4,17 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.roborazzi)
 }
 
-// ID de cliente WEB de Google del Supabase de staging (tindivo-dev).
+// IDs de cliente WEB de Google (no son secretos). Cada entorno tiene el suyo: el de staging (tindivo-dev) y el de
+// producción (zpnipajgwfthxhdtzhly) son clientes distintos, y cada proyecto de Supabase acepta solo el suyo. Así un
+// ID token emitido para staging no sirve contra producción (CAX-001). La tarea `verificarGoogleIdsDistintos` impide
+// que vuelvan a ser iguales.
 val googleWebClientIdDev =
+    "484245553841-t6tjlljqi406venashq3lgvduc21nr7d.apps.googleusercontent.com"
+val googleWebClientIdProd =
     "484245553841-rj0glhkf7f1h76tpa1k0a7vacpilb6o7.apps.googleusercontent.com"
-
-// ID de cliente WEB de Google del Supabase de producción (no es secreto). PENDIENTE: lo da Jesús.
-val googleWebClientIdProd = ""
 
 android {
     namespace = "com.tindivo.customer"
@@ -59,8 +62,9 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://apiv2.tindivo.com/api/v1\"")
             buildConfigField("String", "SUPABASE_URL", "\"https://zpnipajgwfthxhdtzhly.supabase.co\"")
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_J8M8nH_cb2eYjAt2E5L27w_EhMnwS0W\"")
-            // PENDIENTE (Jesús): ID de cliente WEB del proveedor Google del Supabase de producción. Vacío, la app no
-            // ofrece iniciar sesión y la validación de abajo impide empaquetar prodRelease.
+            // ID de cliente WEB de Google del proveedor del Supabase de producción (distinto del de staging). Si
+            // quedara vacío, la app no ofrecería iniciar sesión y la validación de abajo impediría empaquetar
+            // prodRelease.
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientIdProd\"")
             buildConfigField("String", "WEB_BASE_URL", "\"https://www.tindivo.com\"")
         }
@@ -82,6 +86,19 @@ android {
     buildFeatures {
         buildConfig = true
         compose = true
+    }
+
+    testOptions {
+        // Robolectric necesita los recursos y el manifiesto de la app para montar las pantallas en la JVM.
+        unitTests.isIncludeAndroidResources = true
+        // Robolectric 4.17 con la API 36 crea memoria compartida con las clases internas del JDK: sin estas dos opciones de
+        // la JVM de prueba (solo de prueba, no del APK) todas las pruebas de Robolectric mueren con IllegalAccessException.
+        unitTests.all {
+            it.jvmArgs(
+                "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                "--add-opens=java.base/java.io=ALL-UNNAMED",
+            )
+        }
     }
 
     lint {
@@ -158,6 +175,13 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Capturas de pantalla en JVM (KT-16, Jesús, 2026-11-21). La versión de Compose UI test sale del mismo BOM.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
@@ -167,3 +191,23 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
+// CAX-001: un mismo cliente web en staging y en producción dejaría canjear en prod un ID token pedido para staging.
+// Corre en todo build (preBuild) y en `check`; falla si los dos IDs son iguales.
+val verificarGoogleIdsDistintos =
+    tasks.register("verificarGoogleIdsDistintos") {
+        group = "verification"
+        description = "Falla si staging y producción usan el mismo ID de cliente web de Google."
+        val dosIdsIguales = googleWebClientIdDev == googleWebClientIdProd
+        outputs.upToDateWhen { false }
+        doLast {
+            if (dosIdsIguales) {
+                throw GradleException(
+                    "googleWebClientIdDev y googleWebClientIdProd son iguales: staging y producción deben usar " +
+                        "clientes web de Google distintos (CAX-001).",
+                )
+            }
+        }
+    }
+tasks.named("preBuild") { dependsOn(verificarGoogleIdsDistintos) }
+tasks.named("check") { dependsOn(verificarGoogleIdsDistintos) }

@@ -78,6 +78,25 @@ internal data class DishSheetState(
     /** Cuántos grupos obligatorios faltan por completar. */
     val missing: Int get() = issues.count { it is ModifierSelectionIssue.Missing }
 
+    /** El primer grupo obligatorio, en el orden de la ficha, al que aún le falta elegir; `null` si no falta ninguno. */
+    fun firstMissingGroup(): ModifierGroupUi? =
+        item.modifierGroups.firstOrNull { it.isRequired && it.id.lowercase(Locale.ROOT) in missingGroupIds }
+
+    /** Al grupo le falta elegir lo obligatorio. */
+    fun isMissing(group: ModifierGroupUi): Boolean =
+        group.isRequired && group.id.lowercase(Locale.ROOT) in missingGroupIds
+
+    /**
+     * El grupo al que hay que llevar a la persona cuando el botón no puede agregar: el primero obligatorio sin elegir y,
+     * si no falta ninguno pero la selección sigue siendo inválida (de más, repetida), el primero que se pasó.
+     */
+    fun firstProblemGroup(): ModifierGroupUi? {
+        firstMissingGroup()?.let { return it }
+        val tooMany =
+            issues.filterIsInstance<ModifierSelectionIssue.TooMany>().map { it.groupId.lowercase(Locale.ROOT) }.toSet()
+        return item.modifierGroups.firstOrNull { it.id.lowercase(Locale.ROOT) in tooMany }
+    }
+
     // Que cada id elegido sea UNA opción del plato: si no, el precio sumaría otra cosa que lo validado.
     val isValid: Boolean
         get() = issues.isEmpty() && selectedIds.size <= MAX_MODIFIERS && selectedModifiers.size == selectedIds.size
@@ -212,3 +231,24 @@ internal data class DishSheetState(
 
 private fun ModifierGroupUi.toRule() =
     ModifierGroupRule(id, name, selectionType, isRequired, minSelections, maxSelections)
+
+/** Cuántos grupos obligatorios están listos de cuántos hay: la píldora «N de M listas» de la ficha. */
+internal data class RequiredProgress(
+    val done: Int,
+    val total: Int,
+)
+
+/** `null` si el plato no tiene grupos obligatorios: entonces no hay nada que completar ni píldora que mostrar. */
+internal fun DishSheetState.requiredProgress(): RequiredProgress? {
+    val required = item.modifierGroups.filter { it.isRequired }
+    if (required.isEmpty()) return null
+    return RequiredProgress(done = required.count { progress(it).done }, total = required.size)
+}
+
+private val ES_PE = Locale.forLanguageTag("es-PE")
+
+/** El nombre de un grupo para decir «Elige tu <nombre>»: en minúscula y sin espacios sobrantes. */
+internal fun ModifierGroupUi.chooseName(): String = name.trim().lowercase(ES_PE)
+
+/** «Elige tu guarnición» (un grupo de una opción) o «Elige salsas» (de varias): el plural no lleva «tu». */
+internal fun ModifierGroupUi.choosesOne(): Boolean = selectionType == SINGLE

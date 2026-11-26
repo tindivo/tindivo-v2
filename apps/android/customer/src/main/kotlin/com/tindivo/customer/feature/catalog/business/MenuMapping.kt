@@ -50,6 +50,8 @@ internal fun GetBusiness200ResponseData.toDetail(): BusinessDetailUi? {
         openingConfirmed = openingConfirmed,
         catalogOnly = business.primaryCapability == CATALOG_ONLY,
         whatsappNumber = business.whatsappNumber?.takeIf { it.isNotBlank() },
+        etaMin = business.estimatedEtaMin,
+        etaMax = business.estimatedEtaMax,
     )
 }
 

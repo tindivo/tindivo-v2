@@ -57,8 +57,14 @@ async function ensureGenerator() {
   if (existsSync(jar) && sha256(jar) === GENERATOR_SHA256) return
   mkdirSync(cacheDir, { recursive: true })
   console.log(`Descargando openapi-generator-cli ${GENERATOR_VERSION}...`)
-  const res = await fetch(GENERATOR_URL)
-  if (!res.ok) throw new Error(`No se pudo descargar el generador: HTTP ${res.status}`)
+  // Reintenta con espera creciente: Maven Central responde 429 o 5xx de forma pasajera.
+  let res
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    res = await fetch(GENERATOR_URL).catch(() => null)
+    if (res?.ok) break
+    if (attempt < 4) await new Promise((r) => setTimeout(r, attempt * 5000))
+  }
+  if (!res?.ok) throw new Error(`No se pudo descargar el generador: HTTP ${res ? res.status : 'sin respuesta'}`)
   writeFileSync(jar, Buffer.from(await res.arrayBuffer()))
   const got = sha256(jar)
   if (got !== GENERATOR_SHA256) {

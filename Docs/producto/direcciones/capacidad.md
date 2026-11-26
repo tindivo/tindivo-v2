@@ -27,6 +27,7 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 - Las reglas de texto viven en `packages/contracts` (`primitives.ts`) y las usan la API, la web y, copiadas, Android (`AddressRules.kt`). Si cambias una, cambia las tres en el mismo PR.
 - La zona de reparto es un polígono de `app_settings`; la app lo recibe en `GET /config`. Nunca se escribe en el código.
 - Trampa conocida: sin GPS ni gesto del cliente, el pin queda vacío. Nunca se usa el centro del pueblo por defecto (CUS-ADR-004).
+- Android: el mapa son dos pasos y un gesto que mueve el centro menos de 3 m no fija punto; la precisión del GPS (`accuracyM`) se guarda con el punto y se anula si la persona lo mueve (`pantallas/mapa.md`).
 - Trampa conocida: los valores de respaldo de cobertura en la web no coinciden con los reales (defecto 4).
 - Trampa conocida: una dirección guardada con el mínimo anterior puede tener una referencia de 5 a 14 caracteres. Sigue sirviendo para pedir (la API v1 acepta desde 5); el formulario pide completarla a 15 solo cuando el cliente la edita.
 - iOS aún no empieza: `codigo.ios` vacío.
@@ -75,4 +76,5 @@ reglas: [ADDRESS_LINE_MIN, ADDRESS_LINE_MAX, ADDRESS_REFERENCE_MIN, ADDRESS_REFE
 | # | Requisito | Hallazgo | Dónde |
 |---|---|---|---|
 | 4 | CUS-ADR-003 | Los valores de respaldo de cobertura de la web no coinciden con el polígono real. | `apps/customer/lib/coverage.ts` |
-| 6 | CUS-ADR-006 | El umbral de precisión «suficiente» es una constante local de la web, no una regla compartida: Android e iOS no tienen de dónde leerlo. | `apps/customer/components/map-picker.tsx` |
+| 6 | CUS-ADR-006 | El umbral de precisión «suficiente» es una constante local de la web, no una regla compartida. Android ya lo lee de `location_validation.maxAccuracyM` (`GET /config`, con 30 m si no llega) desde el 2026-11-23; la web y iOS siguen pendientes. | `apps/customer/components/map-picker.tsx` |
+| 7 | CUS-ADR-005, CUS-ADR-006, CUS-ADR-008, CUS-ADR-010 | El mapa de Android pasó a dos pasos (mapa con panel, luego datos) con los textos de `pantallas/mapa.md`; la web aún tiene el mapa de un solo paso y no guarda la precisión de la lectura. | `apps/customer/components/map-picker.tsx` |

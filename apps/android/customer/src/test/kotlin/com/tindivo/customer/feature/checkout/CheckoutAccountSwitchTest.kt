@@ -176,6 +176,20 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
         }
 
     @Test
+    fun `la lectura de ubicacion adelantada por A se descarta y B adelanta la suya`() =
+        runTest(dispatcher) {
+            formOfA()
+            assertEquals(1, gpsPrefetches)
+            assertEquals(0, gpsResets)
+
+            switchToB()
+            settle()
+
+            assertEquals(1, gpsResets)
+            assertEquals(2, gpsPrefetches)
+        }
+
+    @Test
     fun `la cotizacion de A ya terminada no se publica si la sesion pasa a B antes que el colector`() =
         runTest(dispatcher) {
             val viewModel = formOfA()
@@ -324,7 +338,6 @@ class CheckoutAccountSwitchTest : CheckoutHarness() {
             viewModel.selectPay(PayMethod.Yape)
             viewModel.selectCash(CashChoice.Exact)
             viewModel.setMethod(DeliveryChoice.Pickup)
-            viewModel.setPickupWhen(PickupWhen.Later)
             viewModel.retryQuote()
             runCurrent()
             release.countDown()

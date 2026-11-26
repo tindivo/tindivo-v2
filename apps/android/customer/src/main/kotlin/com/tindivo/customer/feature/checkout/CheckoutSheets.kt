@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -41,14 +43,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.SheetClose
 import com.tindivo.customer.feature.addresses.AddressFormActions
 import com.tindivo.customer.feature.addresses.AddressFormContent
 import com.tindivo.customer.feature.addresses.AddressFormViewModel
 import com.tindivo.customer.feature.addresses.FormOutcome
-import com.tindivo.customer.feature.addresses.SaveBar
-import com.tindivo.customer.feature.addresses.showsSaveBar
 import com.tindivo.customer.feature.phone.PhoneActions
 import com.tindivo.customer.feature.phone.PhoneStep
 import com.tindivo.customer.feature.phone.PhoneVerified
@@ -80,7 +81,9 @@ internal fun CheckoutSheetHost(
         CheckoutSheet.AddAddress -> AddressSheet(editingId = null, key = key, actions = actions)
         is CheckoutSheet.EditAddress -> AddressSheet(editingId = sheet.id, key = key, actions = actions)
         CheckoutSheet.VerifyPhone -> PhoneSheet(key, actions)
+        CheckoutSheet.EditName -> NameSheet(current = state.name, actions = actions)
         CheckoutSheet.CompleteProfile -> ProfileSheet(key, actions)
+        is CheckoutSheet.GpsBlock -> GpsBlockSheet(sheet, actions)
     }
 }
 
@@ -142,21 +145,23 @@ private fun ChooseAddressSheet(
                     selected = address.id == state.selectedAddressId,
                     enabled = true,
                     title = address.label,
-                    hint = address.line,
+                    hint = addressChoiceHint(address),
                     onClick = { actions.onPickAddress(address.id) },
                 )
             }
-            TextButton(onClick = onAddNew, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.checkout_sheet_add_new))
-            }
+            TindivoSecondaryButton(
+                text = stringResource(R.string.checkout_sheet_add_new),
+                onClick = onAddNew,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }
 
 /**
- * Alta o corrección de una dirección, con el mapa dentro: abre a altura completa y sin arrastre, para que mover el
- * mapa no mueva la hoja. Se cierra con «Cerrar» o con atrás, salvo mientras guarda o borra: lo que el servidor
- * responda tiene que llegar al checkout.
+ * Alta o corrección de una dirección, con el mapa dentro: se abre a pantalla completa fuera de la hoja ([AddressFullScreen]),
+ * para que mover el mapa no pelee con el arrastre de una hoja. Se cierra con «Cerrar» o con atrás, salvo mientras guarda
+ * o borra: lo que el servidor responda tiene que llegar al checkout.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -177,36 +182,38 @@ internal fun AddressSheet(
         }
     }
     val title = if (editingId == null) R.string.checkout_sheet_add_title else R.string.checkout_sheet_edit_title
-    SheetFrame(
+    AddressFullScreen(
         title = stringResource(title),
-        onClose = actions.onClose,
         busy = form.busy,
+        onClose = actions.onClose,
         closeIfIdle = { viewModel.closeIfIdle().deliverPending(deliver) },
-        holdsMap = true,
-    ) {
-        Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
-            AddressFormContent(
-                state = form,
-                actions =
-                    AddressFormActions(
-                        onLabel = viewModel::onLabel,
-                        onLine = viewModel::onLine,
-                        onReference = viewModel::onReference,
-                        onMakeDefault = viewModel::onMakeDefault,
-                        onPointChosen = viewModel::onPointChosen,
-                        onLocationPermission = viewModel::onLocationPermission,
-                        onStopLocating = viewModel::stopLocating,
-                        onForegroundChanged = viewModel::onForegroundChanged,
-                        onSave = viewModel::save,
-                        onAskDelete = viewModel::askDelete,
-                        onCancelDelete = viewModel::cancelDelete,
-                        onConfirmDelete = viewModel::confirmDelete,
-                        onRetry = viewModel::load,
-                        onCancel = { if (viewModel.closeIfIdle().deliverPending(deliver)) actions.onClose() },
-                    ),
-            )
-        }
-        if (form.showsSaveBar) SaveBar(form, viewModel::save)
+    ) { header ->
+        AddressFormContent(
+            state = form,
+            actions =
+                AddressFormActions(
+                    onLabel = viewModel::onLabel,
+                    onLine = viewModel::onLine,
+                    onReference = viewModel::onReference,
+                    onMakeDefault = viewModel::onMakeDefault,
+                    onPointChosen = viewModel::onPointChosen,
+                    onLocationPermission = viewModel::onLocationPermission,
+                    onStopLocating = viewModel::stopLocating,
+                    onForegroundChanged = viewModel::onForegroundChanged,
+                    onSave = viewModel::save,
+                    onAskDelete = viewModel::askDelete,
+                    onCancelDelete = viewModel::cancelDelete,
+                    onConfirmDelete = viewModel::confirmDelete,
+                    onRetry = viewModel::load,
+                    onCancel = { if (viewModel.closeIfIdle().deliverPending(deliver)) actions.onClose() },
+                    onBeginChange = viewModel::beginChange,
+                    onCancelChange = viewModel::cancelChange,
+                    onPointConfirmed = viewModel::onPointConfirmed,
+                ),
+            modifier = Modifier.fillMaxSize(),
+            showCloseOnMap = true,
+            header = header,
+        )
     }
 }
 
@@ -231,7 +238,12 @@ internal fun PhoneSheet(
     val viewModel = LocalCheckoutSheetModels.current.phone(key)
     DiscardOnLeave(viewModel::discardInput)
     val phone = viewModel.state.collectAsStateWithLifecycle().value
-    val deliver: (PhoneVerified) -> Unit = { actions.onPhoneVerified() }
+    val context = LocalContext.current
+    // Al verificar, la hoja se cierra sola con un aviso breve (decisión de Jesús, 2026-11-23).
+    val deliver: (PhoneVerified) -> Unit = {
+        Toast.makeText(context, R.string.phone_verified_toast, Toast.LENGTH_SHORT).show()
+        actions.onPhoneVerified()
+    }
     // La verificación sale por takeResult: una sola vez, aunque el cierre de la hoja llegue antes (CAX-005).
     LaunchedEffect(phone.step, phone.loggedOut) {
         when {
@@ -430,3 +442,10 @@ private fun SheetHeader(
         }
     }
 }
+
+/** La calle y la referencia de una dirección guardada, una debajo de la otra; `null` si no tiene ninguna. */
+internal fun addressChoiceHint(address: AddressUi): String? =
+    listOfNotNull(address.line, address.reference.takeIf { it.isNotBlank() })
+        .filter { it.isNotBlank() }
+        .joinToString("\n")
+        .takeIf { it.isNotEmpty() }

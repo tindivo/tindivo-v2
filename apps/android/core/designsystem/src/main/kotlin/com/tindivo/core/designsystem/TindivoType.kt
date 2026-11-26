@@ -47,12 +47,16 @@ private fun style(
  * La escala de la web (`--text-*` de `theme.css`) llevada a los nombres de Material 3. En el teléfono nada baja de
  * 11 sp y el cuerpo de los campos sube a 16 sp para que se lea a un brazo de distancia.
  *
+ * Los tamaños de título siguen los tokens del canon y los tableros v3.1 (`titleScreen` 26/32, `titleSection` 18/24,
+ * `cta` 18/24, `bodySecondary` 13/18). El cuerpo se queda en 16 sp (el canon dice 15) a propósito.
+ *
  * Cómo se usa:
- * - `headlineSmall`: el título de una pantalla sin barra («Mi cuenta»).
- * - `titleLarge`: barra superior. `titleMedium`: nombre de negocio, de plato, importe en tarjeta.
- * - `titleSmall`: encabezado de sección dentro de una pantalla.
- * - `bodyLarge`: campos y texto principal. `bodyMedium`: texto de apoyo. `bodySmall`: notas y ayudas.
- * - `labelLarge`: botones. `labelMedium`: chips e insignias. `labelSmall`: metadatos (hora, distancia).
+ * - `headlineMedium`: el título de una pantalla sin barra («Mis pedidos», «Cuenta»). `headlineSmall`: el saludo del
+ *   Inicio («¿Qué pedimos hoy?», 22/28).
+ * - `titleLarge`: barra superior, encabezado de sección y etiqueta del botón principal (18/24, negrita).
+ * - `titleMedium`: nombre de negocio, de plato, importe en tarjeta (16/22, negrita). `titleSmall`: dato destacado.
+ * - `bodyLarge`: campos y texto principal. `bodyMedium`: texto de apoyo. `bodySmall`: subtítulos, notas y ayudas.
+ * - `labelLarge`: botones secundarios y de texto. `labelMedium`: chips e insignias. `labelSmall`: metadatos.
  * - `displaySmall`: una cifra protagonista (el total a pagar).
  */
 internal val TindivoTypography =
@@ -61,14 +65,14 @@ internal val TindivoTypography =
         displayMedium = style(size = 32, line = 38, weight = FontWeight.Bold, tracking = -0.4),
         displaySmall = style(size = 28, line = 34, weight = FontWeight.Bold, tracking = -0.3),
         headlineLarge = style(size = 28, line = 34, weight = FontWeight.Bold, tracking = -0.3),
-        headlineMedium = style(size = 24, line = 30, weight = FontWeight.Bold, tracking = -0.2),
+        headlineMedium = style(size = 26, line = 32, weight = FontWeight.Bold, tracking = -0.3),
         headlineSmall = style(size = 22, line = 28, weight = FontWeight.Bold, tracking = -0.2),
-        titleLarge = style(size = 20, line = 26, weight = FontWeight.SemiBold, tracking = -0.1),
-        titleMedium = style(size = 17, line = 24, weight = FontWeight.SemiBold),
+        titleLarge = style(size = 18, line = 24, weight = FontWeight.Bold),
+        titleMedium = style(size = 16, line = 22, weight = FontWeight.Bold),
         titleSmall = style(size = 15, line = 20, weight = FontWeight.SemiBold),
         bodyLarge = style(size = 16, line = 24, weight = FontWeight.Normal),
         bodyMedium = style(size = 14, line = 20, weight = FontWeight.Normal),
-        bodySmall = style(size = 12, line = 16, weight = FontWeight.Normal),
+        bodySmall = style(size = 13, line = 18, weight = FontWeight.Normal),
         labelLarge = style(size = 15, line = 20, weight = FontWeight.Bold),
         labelMedium = style(size = 12, line = 16, weight = FontWeight.SemiBold),
         labelSmall = style(size = 11, line = 16, weight = FontWeight.Medium, tracking = 0.1),

@@ -58,7 +58,7 @@ class OrderCancelMappingTest {
     }
 
     @Test
-    fun `CA-ORD-05 volver a pedir abre el negocio del pedido salvo con el comprobante rechazado del todo`() {
+    fun `CA-ORD-05 y CA-ORD-06 solo un pedido entregado ofrece volver a pedir, y no el de comprobante rechazado`() {
         fun card(
             status: String,
             reason: String? = null,
@@ -66,8 +66,8 @@ class OrderCancelMappingTest {
 
         assertEquals(BUSINESS_ID, card("delivered")?.businessId)
         assertTrue(card("delivered")?.reorderable == true)
-        assertTrue(card("preparing")?.reorderable == true)
-        assertTrue(card("cancelled", "customer_cancelled")?.reorderable == true)
+        assertFalse(card("preparing")?.reorderable == true)
+        assertFalse(card("cancelled", "customer_cancelled")?.reorderable == true)
         assertFalse(card("cancelled", "proof_rejected_final")?.reorderable == true)
     }
 
