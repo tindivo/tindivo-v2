@@ -28,7 +28,7 @@ appId: com.tindivo.customer.dev
     visible: "Subtotal"
     timeout: 10000
 - takeScreenshot: 04-bolsa
-- tapOn: "Continuar.*"
+- tapOn: "Continuar(?! con| sin).*"
 - extendedWaitUntil:
     visible: "Entra para pedir"
     timeout: 15000

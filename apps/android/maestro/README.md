@@ -9,7 +9,7 @@ se apoyan en los textos de `apps/android/customer/src/main/res/values/strings.xm
 > dispositivo, con celular ya verificado en `tindivo-dev` (el SMS no se automatiza). Nadie pone contraseñas por Jesús.
 
 > Trampa medida: la app expone los botones con la `content-desc` completa (por ejemplo «Ver mi bolsa, 1 unidad · S/ 25.00»)
-> y Maestro exige que el regex coincida **entero**. Por eso los flujos usan `"Ver mi bolsa.*"` y `"Continuar.*"`.
+> y Maestro exige que el regex coincida **entero**. Por eso los flujos usan `"Ver mi bolsa.*"` y `"Continuar(?! con| sin).*"` (este último no toca «Continuar con Google» ni «Continuar sin ubicación»). El botón de la hoja de nombre es «Guardar».
 
 ## Requisitos
 
