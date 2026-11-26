@@ -27,6 +27,16 @@ Runbook de CLI-14 y OPS-6. Lo usan Jesús y los agentes. Alcance, fases y decisi
 3. En la ficha de Google Play, indicar las credenciales del negocio de demostración para el revisor (D-45). Publicar en producción con **despliegue escalonado**, por ejemplo 10 % → 50 % → 100 %.
 4. Vigilar *crashes* y errores durante 48 h. Si suben, detener el despliegue.
 
+### Inicio de sesión con Google en prodRelease (lista de comprobación)
+
+El ID de cliente **web** de Google (`googleWebClientIdProd` en `apps/android/customer/build.gradle.kts`) ya está puesto; no es secreto y es el mismo cliente web que usa el sabor `dev`. La tarea `verificarGoogleIdProd` sigue activa: si el ID queda vacío, `prodRelease` no se empaqueta. Antes de publicar, comprueba a mano (medido en 2026-11-25 solo el valor del ID; el resto sigue sin comprobar):
+
+- [ ] **Supabase prod** (`zpnipajgwfthxhdtzhly`): Authentication › Sign In / Providers › Google en **ON**, con el mismo Client ID y su Secret (`Docs/operacion/deploy.md` §2.1).
+- [ ] **Cliente web de Google** (Google Cloud Console › Credentials): entre los *Authorized redirect URIs* está `https://zpnipajgwfthxhdtzhly.supabase.co/auth/v1/callback`, además del de staging.
+- [ ] **Cliente Android de Google** (mismo proyecto de Cloud, tipo Android): paquete `com.tindivo.customer` con el **SHA-1 del certificado de release** (clave de subida) **y** el **SHA-1 de App Signing de Play** (Play Console › Integridad de la aplicación). Sin el segundo, el inicio de sesión falla solo en las builds instaladas desde Play.
+- [ ] Prueba en un teléfono real con la build de pruebas internas de Play: «Continuar con Google» abre el selector de cuentas y entra.
+
+
 ## Si algo sale mal
 
 - Apagar la función con su *kill switch*: Admin → Apps, interruptor de la función (`app_settings.client_features`, que sale en `GET /api/v1/config`; las apps muestran su `message`). Una función nueva y arriesgada se declara con una migración que añade su clave a `client_features.features` (el admin no crea claves); una clave que la app no encuentra = usa su valor por defecto compilado.

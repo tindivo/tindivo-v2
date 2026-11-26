@@ -6,12 +6,13 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// ID de cliente WEB de Google del Supabase de staging (tindivo-dev).
+// ID de cliente WEB de Google (no es secreto). Es el MISMO cliente web para los dos proyectos de Supabase: el de
+// staging (tindivo-dev) y el de producción (zpnipajgwfthxhdtzhly); cada proyecto lo registra en su proveedor Google y
+// cada uno tiene su propio redirect URI (`<proyecto>.supabase.co/auth/v1/callback`) en ese cliente.
 val googleWebClientIdDev =
     "484245553841-rj0glhkf7f1h76tpa1k0a7vacpilb6o7.apps.googleusercontent.com"
-
-// ID de cliente WEB de Google del Supabase de producción (no es secreto). PENDIENTE: lo da Jesús.
-val googleWebClientIdProd = ""
+val googleWebClientIdProd =
+    "484245553841-rj0glhkf7f1h76tpa1k0a7vacpilb6o7.apps.googleusercontent.com"
 
 android {
     namespace = "com.tindivo.customer"
@@ -59,8 +60,9 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://apiv2.tindivo.com/api/v1\"")
             buildConfigField("String", "SUPABASE_URL", "\"https://zpnipajgwfthxhdtzhly.supabase.co\"")
             buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_J8M8nH_cb2eYjAt2E5L27w_EhMnwS0W\"")
-            // PENDIENTE (Jesús): ID de cliente WEB del proveedor Google del Supabase de producción. Vacío, la app no
-            // ofrece iniciar sesión y la validación de abajo impide empaquetar prodRelease.
+            // ID de cliente WEB de Google del proveedor del Supabase de producción (el mismo que el de staging). Si
+            // quedara vacío, la app no ofrecería iniciar sesión y la validación de abajo impediría empaquetar
+            // prodRelease.
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientIdProd\"")
             buildConfigField("String", "WEB_BASE_URL", "\"https://www.tindivo.com\"")
         }
