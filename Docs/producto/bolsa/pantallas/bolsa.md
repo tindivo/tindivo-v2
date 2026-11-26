@@ -15,6 +15,14 @@ textos:
     es: "Una opción que elegiste ya no está disponible"
   - clave: bolsa.continuar.reintentar
     es: "Reintentar"
+  - clave: bolsa.carta.no_responde
+    es: "No pudimos revisar la carta. Toca Reintentar."
+  - clave: bolsa.linea.importe_no_mostrable
+    es: "No podemos mostrar el precio por ahora"
+  - clave: bolsa.importe_no_mostrable
+    es: "No podemos mostrar un precio. Intenta de nuevo en un rato."
+  - clave: bolsa.editar.guardar
+    es: "Guardar · %s"
 tokens: []
 codigo:
   web: [apps/customer/features/cart/components/*.tsx]
@@ -47,8 +55,8 @@ codigo:
 | Vacía | «Tu bolsa está vacía» y «Ver negocios» | CUS-CRT-003, CA-CRT-03 |
 | Validando | La bolsa se ve; «Continuar» dice «Cargando…» hasta que responde la carta | CUS-CRT-005, CUS-CRT-009 |
 | Línea inválida | Aviso en la línea con el texto de `bolsa.linea.*` (plato eliminado, agotado, precio cambiado, fuera de franja, opción retirada) y «Continuar» no avanza | CUS-CRT-005, CA-CRT-05 |
-| Carta no responde | «Continuar» no avanza y dice «Reintentar»; al tocarlo se vuelve a pedir la carta. Texto del aviso: pendiente | CUS-CRT-005 |
-| Importe no mostrable | Un importe roto del servidor se muestra «—», «Agregar» se bloquea y la bolsa avisa. Texto del aviso: pendiente | CUS-CRT-005 |
+| Carta no responde | «Continuar» no avanza y dice «Reintentar»; al tocarlo se vuelve a pedir la carta. Aviso: `bolsa.carta.no_responde` (se anuncia al aparecer y otra vez si el reintento vuelve a fallar) | CUS-CRT-005 |
+| Importe no mostrable | Un importe roto del servidor se muestra «—» con la etiqueta hablada «Precio no disponible»; «Agregar» se bloquea. Aviso en la línea: `bolsa.linea.importe_no_mostrable`; aviso en la bolsa: `bolsa.importe_no_mostrable` | CUS-CRT-005 |
 | Negocio cerrado | «Continuar» dice «El restaurante está cerrado ahora» | CUS-CRT-009, CA-CRT-07 |
 | Recojo | Etiqueta «Recojo», sin la fila del envío | CUS-CRT-010, CA-CRT-08 |
 | Quitar una línea | «Quitaste "[plato]"» con «Deshacer» y una raya que se vacía en 5 s | CUS-CRT-013, CA-CRT-10 |
@@ -69,5 +77,9 @@ codigo:
   rama de la bolsa. iOS los adopta; los textos de iOS de hoy quedan retirados.
 - **Carta que no responde:** «Continuar» se bloquea con «Reintentar». No se deja pasar.
 - **Importe no mostrable:** se muestra «—», «Agregar» se bloquea y la bolsa avisa. Android deja de cerrar la app.
-- **Pendiente:** el texto del aviso de carta caída y el del importe no mostrable; y el texto de «Guardar» en la edición
-  de una línea (`Guardar · %s` en Android, `Guardar cambios · %@` en iOS). Jesús no los decidió.
+- **Textos aprobados** (2026-11-26, con propuesta de criterio del asesor de producto): carta caída
+  (`bolsa.carta.no_responde`), importe no mostrable en la línea y en la bolsa (`bolsa.linea.importe_no_mostrable`,
+  `bolsa.importe_no_mostrable`) y el botón de edición «Guardar · %s» (`bolsa.editar.guardar`, el texto de Android; iOS lo adopta).
+- **Pendiente:** no está dicho si «Continuar» se bloquea cuando hay un importe no mostrable en la bolsa, ni si el
+  cliente puede quitar esa línea. Y «Guardar · —» en la edición de una línea con importe roto: se bloquea como «Agregar»
+  o no. Jesús lo decide antes de cerrar el estado.
