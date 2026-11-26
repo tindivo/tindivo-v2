@@ -26,7 +26,7 @@ reglas: [PHONE_PE_RE, UpdateCustomerProfileRequestSchema, app_settings:terms_ver
   pasa por Codex (`codex-worker.md` §2, S02 y S04). Este documento no lleva secretos ni valores reales.
 - En nativo se entra **solo con Google** (`movil:D-22`); correo y contraseña quedan retirados. En iOS se suma Apple.
 - La casilla de Términos va **siempre**, desmarcada, antes de «Continuar con Google» (Jesús, 2026-11-17).
-- Edad mínima de uso: 18 años (`movil:D-46`). La fija el texto de los Términos; la app no la pregunta (Jesús, 2026-11-19, aprobó las recomendaciones de los PR #198 a #201).
+- Edad mínima de uso: 14 años (`movil:D-46`, Jesús, 2026-11-26; antes 18). La fijan los Términos, que la casilla de aceptación declara («Declaro tener la edad mínima»); la app no pregunta la fecha de nacimiento (Jesús, 2026-11-19 y 2026-11-26).
 - Un número verificado pertenece a una sola cuenta (`movil:D-63`). En el lanzamiento **no hay traslado automático**:
   lo resuelve soporte por WhatsApp (CUS-AUT-028). `transferCustomerPhone` sigue en la API v1: hay apps instaladas.
 - La sesión de Android vive cifrada en el aparato (`session/`). Cerrar sesión es siempre local; borra el archivo y

@@ -37,15 +37,16 @@ terminal, igual que en los pedidos de restaurante.
 
 ## Qué se lleva y qué no
 
-> Decisión de Jesús, 2026-11-16 (mochila, sin medida) y 2026-11-19 (medicamentos de venta libre sí; animales vivos y
-> objetos robados no; conversación con Claude Code: «apruebo las recomendaciones de los cuatro»).
+> Decisión de Jesús, 2026-11-16 (mochila, sin medida) y 2026-11-19 (animales vivos y objetos robados no; conversación con
+> Claude Code: «apruebo las recomendaciones de los cuatro»). **Medicamentos, 2026-11-26: sin mención especial.** Tindivo
+> solo transporta lo que el cliente ya compró; no lo vende, no lo compra ni lo revisa, y el cliente responde de que esté
+> permitido.
 > Decisión de Jesús, 2026-11-17: la regla de qué se puede enviar es la lista de prohibidos de inDrive
 > (https://indrive.com/delivery), consultada el 2026-11-17. Sustituye a la lista anterior (dinero y valores,
 > documentos de identidad, alcohol, medicinas con receta retenida, animales y peligrosos).
 
 **Se lleva** lo que ya está coordinado, pagado y listo, siempre que quepa en la mochila del motorizado (sin medida en
-centímetros: lo decide el motorizado al recoger) y no pase de ⚙ `courier.maxWeightKg`. Los medicamentos de venta libre
-se permiten. Los **documentos se permiten**. También va comida (decisión de Jesús, 2026-11-11: ver arriba).
+centímetros: lo decide el motorizado al recoger) y no pase de ⚙ `courier.maxWeightKg`. Los **documentos se permiten**. También va comida (decisión de Jesús, 2026-11-11: ver arriba).
 
 **No se lleva:**
 
@@ -61,8 +62,16 @@ se permiten. Los **documentos se permiten**. También va comida (decisión de Je
 - objetos robados.
 
 Lo frágil no se prohíbe ni se marca al pedir (decisión de Jesús, 2026-11-11): se le dice al motorizado cuando llega a
-recoger, y él decide si puede llevarlo. Las apps envían `isFragile = false`. Los términos de responsabilidad, con tope
-de S/ 200, son un **borrador sin revisión legal**.
+recoger, y él decide si puede llevarlo. Las apps envían `isFragile = false`.
+
+**Alcohol y tabaco son solo para mayores de 18** (D-46, 2026-11-26): en Entregas están prohibidos; en pedidos de
+restaurante, el motorizado puede pedir el DNI y, si el cliente es menor o no lo muestra, no entrega eso, se devuelve lo
+pagado por eso y el resto del pedido sí se entrega. Falta la marca +18 en el catálogo y el choque de la categoría
+`drinks_liquor` del directorio (backlog).
+
+**Daños y pérdidas:** Tindivo responde ante el cliente y lo arregla después con el motorizado, hasta **S/ 200 por
+envío** más la devolución de los S/ 3; el cliente reclama en 24 horas, con foto, por el WhatsApp de soporte (Jesús,
+2026-11-26). El tope es un **borrador sin revisión legal**.
 
 ## Cómo se pide
 
@@ -75,13 +84,18 @@ pagado» se vuelve a marcar en cada envío.
 - Ve las entregas en su propia sección de la app y lleva **como máximo 2 activas** (`maxActivePerDriver`).
 - Si nadie la acepta en **15 minutos** (`timers.courierAcceptMinutes`), se cancela sola y sin cobro. En el punto A
   espera **5 minutos** (`timers.courierWaitMinutes`).
+- **Cliente no habido** (Jesús, 2026-11-26): si en el destino nadie recibe, el motorizado espera 5 minutos y prioriza otras
+  entregas. Si nadie se comunica hasta las **23:00**, la entrega queda «cliente no habido» y quien la pidió recibe un
+  strike. El objeto vuelve a quien lo envió sin cobrar la vuelta; si no se ubica a nadie, Tindivo lo guarda **7 días**; la
+  comida no se guarda. Los S/ 3 de la ida se pagan. **Aún no existe en el código** (estados de retorno y custodia: backlog).
 - Los pasos de recoger y entregar son atómicos en la base (`driver_courier_step`), para que un corte de conexión no
   deje la entrega a medio avanzar. **El cobro es obligatorio** y no puede soltar una entrega después de cobrar.
 
 ## El dinero
 
 S/ 3 (`courier.pricing.basePrice`) que paga el cliente al motorizado: quien entrega, al recoger, o quien recibe, al
-entregar. El motorizado lo rinde a Tindivo y Jesús confirma. Detalle y preguntas abiertas en `Docs/negocio/dinero.md`.
+entregar. **Lo cobra el motorizado y es parte de su pago** (Jesús, 2026-11-26). Detalle y lo que el código aún hace
+distinto en `Docs/negocio/dinero.md`.
 
 ## Lo que pasa de verdad (al 2026-10-10)
 

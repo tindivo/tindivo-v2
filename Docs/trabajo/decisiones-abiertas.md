@@ -125,3 +125,10 @@ Los números DA-01 a DA-14 se conservan aunque falten entradas.
 - **Contexto**: el correo oculto de Apple puede crear una segunda cuenta que choque con «un celular, una cuenta» (`D-63`). Sin verificar contra las tiendas. Es la única decisión del PR de Acceso y Cuenta que no traía una recomendación.
 - **Alternativas**: se miran al empezar iOS.
 - **Recomendación**: ninguna todavía.
+
+### DA-26 · ADR 0036 dice «el cobro es suyo» en Entregas
+
+- 2026-11-26 · No bloquea · Detectó: Claude (PR #194, Términos v2)
+- **Contexto**: el ADR 0036 dice, para Tindivo Entregas, «si una entrega se cancela después de cobrar, devuelve Tindivo: el cobro es suyo». Jesús decidió el 2026-11-26 (punto 12 de los Términos v2) que la tarifa la cobra el motorizado y es parte de su pago. El ADR no se reescribió. Mantiene su regla de fondo: Tindivo devuelve al cliente.
+- **Alternativas**: (a) enmendar el ADR 0036 para que diga que la tarifa es del motorizado y que Tindivo devuelve igual; (b) dejarlo y que `dinero.md` mande en el detalle.
+- **Recomendación**: (a), con la aprobación de Jesús: el ADR sigue «Vigente» y hoy se contradice con el canon de dinero. Si Tindivo devuelve una tarifa que cobró el motorizado, falta decir quién la absorbe (Tindivo o el motorizado).

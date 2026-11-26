@@ -28,7 +28,7 @@
 | D-39 | **El dinero viaja como texto** (`"12.50"`) en los campos nuevos de la API | Jesús, 2026-10-10 |
 | D-44 | Al borrar una cuenta: **pedidos anonimizados para siempre, comprobantes 90 días, directorio y antifraude por teléfono conservados** | Jesús, 2026-10-10 (recomendación aceptada) |
 | D-45 | El revisor de las tiendas entra con un **negocio de demostración**; vídeo solo de respaldo | Jesús, 2026-10-10 |
-| D-46 | Edad mínima de uso: **18 años** | Jesús, 2026-10-10 |
+| D-46 | Edad mínima de uso: **14 años** (antes 18, Jesús, 2026-10-10). **Alcohol y tabaco solo para mayores de 18.** Base: D.S. 016-2024-JUS art. 22.2, 22.3 y 25 | Jesús, 2026-11-26 |
 | D-47 | Versiones mínimas: **Android 8 (API 26) e iOS 17** | Jesús, 2026-10-10 |
 | D-48 | Los modelos de **Swift** se compilan en la CI **a diario**, no en cada PR (el runner de macOS cuesta diez veces más); Kotlin, en cada PR | Jesús, 2026-10-10 |
 
