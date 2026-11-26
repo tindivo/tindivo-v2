@@ -37,26 +37,39 @@ function falla(que, r) {
  * Dueños de los puertos: [{ puerto, pid, linea }]. Vacío si todos están libres.
  * `run` y `plataforma` se inyectan solo en las pruebas (`e2e-puertos.test.mjs`).
  */
-export function escuchadores(puertos, { run = spawnSync, plataforma = process.platform } = {}) {
+export function escuchadores(
+  puertos,
+  { run = spawnSync, plataforma = process.platform, estadoTcp = 'Listen' } = {},
+) {
   if (plataforma === 'win32') {
+    // `Stop`: cualquier fallo de un cmdlet detiene el guion con código distinto de 0 (nada se traga con
+    // `SilentlyContinue`). El ÚNICO error que vale como «nadie escucha» es el que `Get-NetTCPConnection` da cuando
+    // no encuentra filas (`CmdletizationQuery_NotFound…`); todo lo demás se relanza. `estadoTcp` solo cambia en
+    // las pruebas, para provocar un fallo real de enumeración (un estado inexistente).
     const ps = [
+      "$ErrorActionPreference = 'Stop'",
       "$ProgressPreference = 'SilentlyContinue'",
-      `$ps = @(${puertos.join(',')})`,
-      'foreach ($p in $ps) {',
-      '  Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue |',
-      '    ForEach-Object {',
-      '      $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($_.OwningProcess)"',
-      '      "$p`t$($_.OwningProcess)`t$($proc.CommandLine)"',
-      '    }',
+      `foreach ($p in @(${puertos.join(',')})) {`,
+      '  try {',
+      `    $conexiones = @(Get-NetTCPConnection -LocalPort $p -State ${estadoTcp})`,
+      '  } catch {',
+      "    if ($_.FullyQualifiedErrorId -like 'CmdletizationQuery_NotFound*') { continue }",
+      '    throw',
+      '  }',
+      '  foreach ($c in $conexiones) {',
+      '    $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($c.OwningProcess)"',
+      '    "$p`t$($c.OwningProcess)`t$($proc.CommandLine)"',
+      '  }',
       '}',
-      'exit 0', // sin esto el código de salida es el del último cmdlet, que sale 1 con el puerto libre
+      'exit 0',
     ].join('\n')
     // `-EncodedCommand` (UTF-16LE en base64): sin él, las comillas del guion se pierden al pasar por la línea de comandos.
     const codificado = Buffer.from(ps, 'utf16le').toString('base64')
     const r = run('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', codificado], {
       encoding: 'utf8',
     })
-    if (r.error || r.status !== 0) throw falla('PowerShell', r)
+    // Una salida correcta no escribe nada en el error estándar: si lo hay, algo falló aunque el código sea 0.
+    if (r.error || r.status !== 0 || String(r.stderr ?? '').trim()) throw falla('PowerShell', r)
     return String(r.stdout)
       .split(/\r?\n/)
       .filter(Boolean)

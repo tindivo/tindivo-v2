@@ -77,3 +77,36 @@ test('Windows: PowerShell que falla aborta; un dueño sin línea de comandos cue
   )
   assert.doesNotThrow(() => verificarPuertos(RAIZ, [3000], win(ok(`3000\t55\t${MIO}\n`))))
 })
+
+// Pruebas del guion REAL de PowerShell (solo Windows): lo que Codex pidió en CAX-001 (R2).
+const enWindows = { skip: process.platform !== 'win32' && 'solo corre en Windows' }
+
+test('Windows real: sin escuchadores en el puerto, devuelve [] (la ausencia reconocida no es un fallo)', enWindows, () => {
+  // Puerto efímero libre: se abre, se anota y se cierra antes de preguntar.
+  assert.deepEqual(escuchadores([59999, 59998]), [])
+})
+
+test('Windows real: un fallo de enumeración del cmdlet aborta (no se da por «libre»)', enWindows, () => {
+  // Un estado TCP inexistente hace fallar a `Get-NetTCPConnection` por dentro: con `SilentlyContinue` daba cero filas y código 0.
+  assert.throws(() => escuchadores([59999], { estadoTcp: 'EstadoQueNoExiste' }), /No se pudo comprobar.*PowerShell/)
+})
+
+test('Windows real: un servidor ajeno que escucha se detecta con su pid', enWindows, async () => {
+  const { createServer } = await import('node:net')
+  const srv = createServer()
+  await new Promise((ok) => srv.listen(0, '127.0.0.1', ok))
+  const puerto = srv.address().port
+  try {
+    const filas = escuchadores([puerto])
+    assert.equal(filas.length >= 1, true)
+    assert.equal(filas[0].puerto, puerto)
+    assert.equal(filas[0].pid, process.pid)
+  } finally {
+    srv.close()
+  }
+})
+
+test('Windows: código 0, salida vacía y error en stderr aborta (inyectado)', () => {
+  const run = () => ({ status: 0, stdout: '', stderr: 'Get-NetTCPConnection : fallo interno' })
+  assert.throws(() => escuchadores([3000], { run, plataforma: 'win32' }), /No se pudo comprobar.*PowerShell/)
+})
