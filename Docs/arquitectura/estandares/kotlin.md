@@ -64,6 +64,7 @@ apps/android/
 ## Decisiones aplicadas (Jesús, 2026-10-24)
 
 - **KT-16, ampliada** (`Docs/planes/movil/decisiones.md` D-54): Coil, Credential Manager, DataStore, Tink, Google Maps SDK y play-services-location (Jesús, 2026-11-10). Cada una entra con el PR que la usa, con su versión exacta en `libs.versions.toml`. Auth no usa SDK: va por REST sobre OkHttp, y no entran supabase-kt ni Ktor.
+- **KT-16, ampliada: pruebas de capturas en JVM.** Robolectric 4.17 y Roborazzi 1.77.0 (librerías `roborazzi`, `roborazzi-compose` y `roborazzi-junit-rule`, más su plugin de Gradle), solo como `testImplementation`: no entran al APK. Jesús las aprobó el 2026-11-21 y lo confirmó el 2026-11-26 en el chat («sí, regístralos en el canon»). Las usa el PR #232.
 - **KT-15, CI:** además de `devDebug`, la CI construye el AAB `prodRelease` sin firmar, con R8 y `isShrinkResources`, solo para medir su tamaño de descarga (D-57); no se publica ni se sube.
 
 ## Ejemplo: ViewModel (KT-3, KT-5, KT-6)
