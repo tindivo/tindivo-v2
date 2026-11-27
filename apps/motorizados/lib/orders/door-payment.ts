@@ -19,7 +19,7 @@ export type DoorPayment = {
 type DoorPaymentInput = Pick<
   OrderDetailResponse['order'],
   'paymentIntent' | 'paymentVerifiedAt' | 'hasPaymentProof' | 'paymentProofStatus'
->
+> & { isManual?: boolean }
 
 function proofOf(order: Partial<DoorPaymentInput>): DoorPayment['proof'] {
   if (!order.hasPaymentProof) return 'none'
@@ -33,6 +33,11 @@ function proofOf(order: Partial<DoorPaymentInput>): DoorPayment['proof'] {
 export function doorPayment(
   order: Partial<DoorPaymentInput> & { paymentIntent: string },
 ): DoorPayment {
+  // El pedido manual se comporta como en la base: prepago o se cobra, sin
+  // captura ni confirmación del pago único (esa mitigación no es suya).
+  if (order.isManual) {
+    return { mode: order.paymentIntent === 'prepaid' ? 'prepaid' : 'collect', proof: 'none' }
+  }
   const proof = proofOf(order)
   if (order.paymentIntent === 'prepaid') return { mode: 'prepaid', proof }
   // `payment_verified_at` solo lo escribe el servidor en el pago único
@@ -42,6 +47,57 @@ export function doorPayment(
     return { mode: 'confirmed_by_business', proof }
   }
   return { mode: 'collect', proof }
+}
+
+/** ¿Hay que releer? Pago único, no manual, que aún se muestra como «cobra». */
+export function needsRecheck(
+  order: Partial<DoorPaymentInput> & { paymentIntent: string },
+): boolean {
+  return (
+    order.paymentIntent === 'pending_yape' &&
+    !order.isManual &&
+    doorPayment(order).mode === 'collect'
+  )
+}
+
+export type DoorState = { door: DoorPayment; checking: boolean; checkFailed: boolean; gen: number }
+export type DoorEvent =
+  | { type: 'props'; door: DoorPayment }
+  | { type: 'recheck_start' }
+  | { type: 'recheck_done'; gen: number; door: DoorPayment; failed: boolean }
+
+export function initialDoorState(door: DoorPayment): DoorState {
+  return { door, checking: false, checkFailed: false, gen: 0 }
+}
+
+/**
+ * El cobro en la puerta como secuencia de eventos. Toda respuesta se fusiona
+ * contra el estado VIGENTE: una lectura vieja, un fallo o un tope nunca borran
+ * una confirmación que llegó por props mientras se esperaba.
+ */
+export function doorReducer(state: DoorState, event: DoorEvent): DoorState {
+  switch (event.type) {
+    case 'props': {
+      const door = mergeDoor(state.door, event.door)
+      return {
+        ...state,
+        door,
+        checkFailed: door.mode === 'confirmed_by_business' ? false : state.checkFailed,
+      }
+    }
+    case 'recheck_start':
+      return { ...state, checking: true, gen: state.gen + 1 }
+    case 'recheck_done': {
+      if (event.gen !== state.gen) return state
+      const door = mergeDoor(state.door, event.door)
+      return {
+        ...state,
+        door,
+        checking: false,
+        checkFailed: event.failed && door.mode === 'collect',
+      }
+    }
+  }
 }
 
 /** Lo que entró de verdad cuando el negocio ya confirmó el ingreso: Yape/Plin. */

@@ -2,6 +2,7 @@
 
 import { Card, Icon } from '@tindivo/ui'
 import { soles } from '@/lib/format'
+import { needsRecheck } from '@/lib/orders/door-payment'
 import { useDoorPayment } from '@/lib/orders/use-door-payment'
 import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
@@ -26,7 +27,7 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
   const { order, business } = detail
   // Pago único: el negocio pudo confirmar el ingreso, y solo él lo confirma. El
   // hook relee para que la tarjeta no siga mostrando el QR si ya lo confirmó.
-  const { door, checkFailed } = useDoorPayment(order)
+  const { door, checkFailed } = useDoorPayment(order, { pollMs: 20000 })
   const total = order.orderAmount + order.deliveryFee
 
   const vuelto = changeDue({
@@ -82,7 +83,7 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
       </Card>
     )
   }
-  const isSingle = order.paymentIntent === 'pending_yape'
+  const isSingle = needsRecheck(order)
 
   // pending_yape | pending_mixed: el cliente paga al Yape del restaurante.
   return (

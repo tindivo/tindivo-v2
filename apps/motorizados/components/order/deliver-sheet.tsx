@@ -3,7 +3,7 @@
 import { BottomSheet, Button, cn, Icon } from '@tindivo/ui'
 import { useMemo, useState } from 'react'
 import { soles } from '@/lib/format'
-import { paymentRealForConfirmed, submitDecision } from '@/lib/orders/door-payment'
+import { needsRecheck, paymentRealForConfirmed, submitDecision } from '@/lib/orders/door-payment'
 import { moneyLine } from '@/lib/orders/presentation'
 import { useDoorPayment } from '@/lib/orders/use-door-payment'
 import { changeDue } from '@/lib/payment'
@@ -124,7 +124,8 @@ export function DeliverSheet({
   const liveChange =
     cashOwed > 0 && paysN > cashOwed ? Math.round((paysN - cashOwed) * 100) / 100 : 0
 
-  const canConfirm = !busy && !checking && (kind !== 'changed' || (splitOk && billOk))
+  const canConfirm =
+    !busy && !checking && (nothingToCollect || kind !== 'changed' || (splitOk && billOk))
 
   async function submit() {
     if (!canConfirm) return
@@ -134,9 +135,12 @@ export function DeliverSheet({
     // siguiente envía lo elegido: nunca se bloquea la entrega.
     const warnedBefore = checkFailed
     const check =
-      order.paymentIntent === 'pending_yape' && door.mode === 'collect'
+      needsRecheck(order) && door.mode === 'collect'
         ? await recheckNow()
-        : { door, failed: false }
+        : { door, failed: false, aborted: false }
+    // La hoja se cerró mientras se leía: no se envía nada (la entrega no se
+    // registra después de cerrar la confirmación).
+    if (check.aborted) return
     const decision = submitDecision(door, check.door, {
       failed: check.failed,
       alreadyWarned: warnedBefore,
@@ -197,7 +201,7 @@ export function DeliverSheet({
           </p>
         ) : (
           <>
-            {checkFailed && order.paymentIntent === 'pending_yape' && (
+            {checkFailed && needsRecheck(order) && (
               <p className="mt-3 rounded-xl bg-warning-soft px-3 py-2 text-body font-semibold text-amber-900">
                 No pudimos comprobar si el restaurante ya confirmó el pago. Llama al restaurante
                 antes de cobrar; si no contesta, cobra con el QR.

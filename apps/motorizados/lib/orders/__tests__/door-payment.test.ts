@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   type DoorPayment,
   doorPayment,
+  doorReducer,
+  initialDoorState,
   mergeDoor,
+  needsRecheck,
   paymentRealForConfirmed,
   recheckDoorPayment,
   recheckWithTimeout,
@@ -221,5 +224,95 @@ describe('si la comprobación falla al enviar, el aviso se ve antes de cobrar', 
     expect(submitDecision(collect, collect, { failed: false, alreadyWarned: false })).toBe(
       'submit_as_chosen',
     )
+  })
+})
+
+describe('doorReducer · el cobro en la puerta como secuencia de eventos', () => {
+  const collect: DoorPayment = { mode: 'collect', proof: 'none' }
+  const confirmed: DoorPayment = { mode: 'confirmed_by_business', proof: 'verified' }
+
+  function pendingThenConfirmed() {
+    let s = initialDoorState(collect)
+    s = doorReducer(s, { type: 'recheck_start' })
+    s = doorReducer(s, { type: 'props', door: confirmed })
+    return s
+  }
+
+  it('CAX-001: relectura pendiente, llega la confirmación por props y la relectura vieja dice collect', () => {
+    let s = pendingThenConfirmed()
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: collect, failed: false })
+    expect(s.door.mode).toBe('confirmed_by_business')
+    expect(s.checkFailed).toBe(false)
+    expect(s.checking).toBe(false)
+  })
+
+  it('CAX-001: relectura pendiente, llega la confirmación y la relectura falla', () => {
+    let s = pendingThenConfirmed()
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: s.door, failed: true })
+    expect(s.door.mode).toBe('confirmed_by_business')
+    expect(s.checkFailed).toBe(false)
+  })
+
+  it('CAX-001: relectura pendiente, llega la confirmación y vence el tope con la fresca igual a la vieja', () => {
+    let s = pendingThenConfirmed()
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: collect, failed: true })
+    expect(s.door.mode).toBe('confirmed_by_business')
+    expect(s.checkFailed).toBe(false)
+  })
+
+  it('un gen viejo se ignora y checking no cambia', () => {
+    let s = initialDoorState(collect)
+    s = doorReducer(s, { type: 'recheck_start' })
+    const old = s.gen
+    s = doorReducer(s, { type: 'recheck_start' })
+    const after = doorReducer(s, { type: 'recheck_done', gen: old, door: confirmed, failed: false })
+    expect(after).toEqual(s)
+    expect(after.checking).toBe(true)
+  })
+
+  it('con el gen vigente, un fallo en collect marca checkFailed', () => {
+    let s = initialDoorState(collect)
+    s = doorReducer(s, { type: 'recheck_start' })
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: collect, failed: true })
+    expect(s.checkFailed).toBe(true)
+    expect(s.checking).toBe(false)
+  })
+
+  it('props confirmado limpia checkFailed', () => {
+    let s = initialDoorState(collect)
+    s = doorReducer(s, { type: 'recheck_start' })
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: collect, failed: true })
+    s = doorReducer(s, { type: 'props', door: confirmed })
+    expect(s.checkFailed).toBe(false)
+  })
+})
+
+describe('CAX-005 · el pedido manual se comporta como en la base', () => {
+  it.each([
+    [false, null],
+    [true, null],
+    [false, '2026-11-27T10:00:00Z'],
+    [true, '2026-11-27T10:00:00Z'],
+  ])('manual pending_yape (captura %s, verificado %s) cobra y no relee', (hasPaymentProof, paymentVerifiedAt) => {
+    const o = {
+      ...base,
+      isManual: true,
+      hasPaymentProof,
+      paymentProofStatus: hasPaymentProof ? 'verified' : null,
+      paymentVerifiedAt,
+    } as Input & { isManual: boolean }
+    expect(doorPayment(o).mode).toBe('collect')
+    expect(needsRecheck(o)).toBe(false)
+  })
+
+  it('manual prepago sigue prepagado', () => {
+    expect(doorPayment({ ...base, paymentIntent: 'prepaid', isManual: true }).mode).toBe('prepaid')
+  })
+
+  it('no manual pending_yape sin confirmar relee; confirmado no', () => {
+    expect(needsRecheck({ ...base, isManual: false })).toBe(true)
+    expect(
+      needsRecheck({ ...base, isManual: false, paymentVerifiedAt: '2026-11-27T10:00:00Z' }),
+    ).toBe(false)
   })
 })
