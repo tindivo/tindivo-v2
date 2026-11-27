@@ -301,6 +301,14 @@ describe('confirm_delivery_payment', () => {
     expect(await eventos(seed.orderId, 'OrderPaymentConfirmed')).toHaveLength(0)
   })
 
+  it('no confirma un pedido que el negocio todavía no aceptó (order_not_accepted)', async () => {
+    const seed = await pedido('pending_acceptance')
+    const { error } = await confirmar(seed.orderId, seed.userId)
+    expect(error?.code).toBe('P0001')
+    expect(error?.hint).toBe('order_not_accepted')
+    expect((await leer(seed.orderId))?.payment_verified_at).toBeNull()
+  })
+
   it('un prepago no se confirma por aquí (order_not_pending_yape)', async () => {
     const seed = await seedPrepaidOrder({ status: 'awaiting_payment', validationContext: 'proof' })
     sembrados.push(seed)

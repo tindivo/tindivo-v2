@@ -35,7 +35,8 @@
 --     rechazar; hoy `businesses.user_id`, la misma regla de `advance_order`). Un ajeno recibe
 --     `P0002` igual que un pedido inexistente: no se enumeran pedidos.
 --   · «Aceptado»: `confirmed`, `preparing`, `waiting_driver`, `heading_to_restaurant`,
---     `waiting_at_restaurant`, `picked_up`. Terminales: `delivered`, `cancelled`.
+--     `waiting_at_restaurant`, `picked_up`. Terminales: `delivered`, `cancelled`. Confirmar el
+--     ingreso también exige el pedido aceptado (`order_not_accepted`).
 --   · Dos intentos como máximo (los mismos que el prepago). Ruta `<cliente>/<pedido>/attempt-<n>-…`
 --     y archivo existente en `payment-proofs`.
 --   · Cada función bloquea la fila (`FOR UPDATE`) y escribe `order_event_log` y `domain_events` en
@@ -227,6 +228,12 @@ BEGIN
   IF v_order.status IN ('delivered', 'cancelled') THEN
     RAISE EXCEPTION 'El pedido ya está cerrado'
       USING ERRCODE = 'P0001', HINT = 'order_closed';
+  END IF;
+
+  IF v_order.status NOT IN ('confirmed', 'preparing', 'waiting_driver', 'heading_to_restaurant',
+                            'waiting_at_restaurant', 'picked_up') THEN
+    RAISE EXCEPTION 'El negocio todavía no acepta el pedido'
+      USING ERRCODE = 'P0001', HINT = 'order_not_accepted';
   END IF;
 
   v_at := now();

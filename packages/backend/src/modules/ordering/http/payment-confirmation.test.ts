@@ -95,6 +95,7 @@ describe('POST /business/orders/{id}/payment-confirmation', () => {
     ['P0002', null, 404],
     ['P0001', 'order_closed', 409],
     ['P0001', 'order_not_pending_yape', 409],
+    ['P0001', 'order_not_accepted', 409],
   ])('el error %s/%s sale como %i', async (code, hint, status) => {
     const { deps } = makeDeps(['business'], {
       rpc: async () => ({ data: null, error: { code, hint, message: 'x' } }),
