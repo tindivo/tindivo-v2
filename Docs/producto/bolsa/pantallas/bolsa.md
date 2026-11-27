@@ -2,7 +2,7 @@
 canvas: [Bolsa]
 requisitos: [CUS-CRT-001, CUS-CRT-003, CUS-CRT-005, CUS-CRT-007, CUS-CRT-009, CUS-CRT-010, CUS-CRT-011, CUS-CRT-013, CUS-CRT-014, CUS-CRT-015, CUS-CRT-016]
 operaciones: [getBusiness]
-textos: [bolsa.linea.plato_eliminado, bolsa.linea.agotado, bolsa.linea.fuera_de_franja, bolsa.linea.precio_cambiado, bolsa.linea.opcion_retirada, bolsa.continuar.reintentar, bolsa.carta.no_responde, bolsa.linea.importe_no_mostrable, bolsa.importe_no_mostrable, bolsa.editar.guardar, bolsa.editar.no_disponible]
+textos: [bolsa.linea.plato_eliminado, bolsa.linea.agotado, bolsa.linea.fuera_de_franja, bolsa.linea.precio_cambiado, bolsa.linea.opcion_retirada, bolsa.continuar.reintentar, bolsa.carta.no_responde, bolsa.linea.importe_no_mostrable, bolsa.importe_no_mostrable, bolsa.editar.guardar, bolsa.editar.no_disponible, bolsa.continuar.solo_whatsapp]
 tokens: []
 codigo:
   web: [apps/customer/features/cart/components/*.tsx]
@@ -20,13 +20,14 @@ codigo:
 
 ## Contenido, de arriba abajo
 
-1. Barra fija: volver · «Tu bolsa» · «[n] productos» · «Vaciar».
+1. Barra fija: volver · «Tu bolsa» · «[n] productos».
 2. Negocio: nombre y etiqueta «Delivery» con su plazo, o «Recojo».
 3. Líneas: nombre, precio de la línea, opciones, nota, selector de cantidad (− / n / +) y «Editar» si el plato tiene
    opciones. Con cantidad 1, «−» es un tacho rojo.
 4. «Agregar más de [negocio]».
 5. Resumen: «Subtotal» y, en delivery, «Delivery · Se calcula con tu dirección».
-6. Barra fija: «Continuar» con la píldora del total.
+6. «Vaciar», en rojo, al final de la lista, como en Android v3.1 (decisión de Jesús, 2026-11-27).
+7. Barra fija: «Continuar» con la píldora del total.
 
 ## Estados
 
@@ -39,6 +40,7 @@ codigo:
 | Importe no mostrable | Un importe roto del servidor se muestra «—» con la etiqueta hablada «Precio no disponible»; «Agregar» y, al editar, «Guardar · —» se bloquean; la línea se puede quitar y «Continuar» no avanza mientras esté. Aviso en la línea: `bolsa.linea.importe_no_mostrable`; aviso en la bolsa: `bolsa.importe_no_mostrable` | CUS-CRT-005, CA-CRT-15 |
 | Editar un plato no disponible | Al tocar «Editar» en una línea agotada o fuera de franja, se avisa: `bolsa.editar.no_disponible` | CUS-CRT-005, CUS-CRT-014 |
 | Negocio cerrado | «Continuar» dice «El restaurante está cerrado ahora» | CUS-CRT-009, CA-CRT-07 |
+| Negocio en modo catálogo | Una bolsa guardada de un negocio que pasó a modo catálogo: «Continuar» no avanza y dice `bolsa.continuar.solo_whatsapp`; la bolsa se puede vaciar (decisión de Jesús, 2026-11-27). Va antes que «cerrado»: el modo catálogo no depende del horario | CUS-CRT-009, CUS-CAT-015 |
 | Recojo | Etiqueta «Recojo», sin la fila del envío | CUS-CRT-010, CA-CRT-08 |
 | Quitar una línea | «Quitaste "[plato]"» con «Deshacer» y una raya que se vacía en 5 s | CUS-CRT-013, CA-CRT-10 |
 | Quitar la última | Pasa a vacía, sin aviso | CUS-CRT-003 |
@@ -63,6 +65,7 @@ Los de la cabecera; el catálogo (`packages/copy`) los tomará de aquí cuando e
 | `bolsa.importe_no_mostrable` | «No podemos mostrar un precio. Intenta de nuevo en un rato.» |
 | `bolsa.editar.guardar` | «Guardar · %s» |
 | `bolsa.editar.no_disponible` | «Este producto ya no está disponible» |
+| `bolsa.continuar.solo_whatsapp` | «Este restaurante solo recibe pedidos por WhatsApp» |
 
 ## Diferencias por plataforma
 
@@ -83,3 +86,9 @@ Los de la cabecera; el catálogo (`packages/copy`) los tomará de aquí cuando e
   cliente puede quitarla y «Guardar · —» se bloquea al editar, igual que «Agregar».
 - **«Editar» sobre un plato agotado o fuera de horario:** se avisa «Este producto ya no está disponible»
   (`bolsa.editar.no_disponible`).
+
+## Decisiones de Jesús del 2026-11-27
+
+- **«Vaciar»** va al final de la lista, como en Android v3.1; ya no está en la barra fija.
+- **Negocio en modo catálogo:** una bolsa guardada no avanza; «Continuar» dice «Este restaurante solo recibe pedidos por
+  WhatsApp» (`bolsa.continuar.solo_whatsapp`).
