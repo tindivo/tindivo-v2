@@ -208,6 +208,12 @@ export interface OrderDetailResponse {
     deliveryFee: number
     paymentIntent: string
     paymentReal: string | null
+    /** Pago único: el cliente mandó una captura. Solo se ve si el pedido es del motorizado asignado. */
+    hasPaymentProof?: boolean
+    /** Estado de esa captura (`pending`, `verified`, `rejected`); `null` sin captura. */
+    paymentProofStatus?: string | null
+    /** Cuándo el negocio confirmó el ingreso (UTC). `null` mientras nadie lo confirme. */
+    paymentVerifiedAt?: string | null
     /** Efectivo que quedó a deber por este pedido (0140). Lo que se rinde. */
     cashOwedAtDelivery: number | null
     yapeAmount: number | null
