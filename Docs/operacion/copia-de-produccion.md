@@ -237,8 +237,8 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
   los `GRANT` cubre el caso normal (primero lo que concede un superusuario y lo que da ADMIN), no cadenas largas de
   delegación. Restaurarlo sobre una base vacía es parte de P0.6.
 - `BASH_ENV` y funciones exportadas: con `bash -p` no se ejecutan ni se importan (y si `SHELLOPTS` viene exportado,
-  el guion se niega antes de su primera orden). Sin `-p` el guion se niega, pero bash ya habría leído `BASH_ENV` al
-  arrancar: por eso la orden se copia tal cual del runbook, en una ventana nueva de Git Bash.
+  el guion se niega). Sin `-p` el guion se niega, pero bash ya habría podido ejecutar código del entorno al
+  arrancar (`BASH_ENV`, o `PS4` con `SHELLOPTS`): por eso la orden se copia tal cual del runbook, en una ventana nueva de Git Bash.
 - Las copias sacadas con versiones anteriores de estos guiones (sin `faltas.txt` ni el vínculo entre partes) no pasan
   esta verificación. De producción no hay ninguna.
 - Una copia sin restauración ensayada no es todavía un respaldo probado: eso lo cierra P0.6.

@@ -11,7 +11,9 @@
 # Con -p, bash no lee BASH_ENV, no importa funciones del entorno e ignora SHELLOPTS/BASHOPTS heredados. Aquí solo hay
 # palabras reservadas y expansiones (ni `set`, ni `echo`, ni `exit`, que una función importada podría sombrear): si
 # falta -p, o si $- trae la «p» porque SHELLOPTS venía exportado (así bash importa funciones aunque diga -p), la
-# asignación con ${…:?} termina el guion con un mensaje de bash. Con -p real, SHELLOPTS nunca llega exportado.
+# asignación con ${…:?} termina el guion con un mensaje de bash. Si SHELLOPTS está en el entorno, se niega siempre
+# (con o sin -p). Límite: SIN -p, bash pudo ejecutar código del entorno al arrancar (BASH_ENV, o PS4 con xtrace en
+# SHELLOPTS) antes de esta línea; con `bash -p`, que es la orden del runbook, no.
 _c0=''
 case "$-:${SHELLOPTS@a}" in
   *p*:*x*) _c0=${_c0:?"SHELLOPTS viene exportado del entorno: abre una ventana nueva de Git Bash y lanza con bash -p"} ;;

@@ -658,4 +658,11 @@ test('C2-005: la parte 2 lleva la huella de la lista de la parte 1 y el verifica
   const r2 = spawnSync('node', [join(DIR, 'verificar-tar.mjs')], { input: otro.buffer(), encoding: 'utf8' })
   assert.notEqual(r2.status, 0)
   for (const h of ['copia.sh', 'verificar.sh']) assert.match(leer(h), /lista_de_storage .*= "\$LISTA_1"/, h)
+  assert.match(sinComentarios(leer('copia.sh')), /\[ "\$\(base_de_storage "\$SALIDA\/2-storage\.verificacion\.log"\)" = "\$M1" \] \|\| fallo/)
+  assert.match(sinComentarios(leer('verificar.sh')), /\[ "\$\(base_de_storage "\$REG\/2-storage\.log"\)" = "\$\(manifiesto_de "\$REG\/1\.log"\)" \] \|\| fallo/)
+  // La parte 1 dice «OK CON FALTAS» solo si la base trajo faltas (MOTIVOS aún no lleva el de la configuración externa).
+  assert.match(sinComentarios(leer('copia.sh')), /\[ "\$\{#MOTIVOS\[@\]\}" -eq 0 \] \|\| ESTADO_1="OK CON FALTAS/)
+  // La capa 3 exige que /usr/bin/env termine con 0 y muestre PATH.
+  assert.match(sinComentarios(leer('comun.sh')), /< <\(\/usr\/bin\/env -0; printf 'FIN-ENV:%s\\0' "\$\?"\)/)
+  assert.match(sinComentarios(leer('comun.sh')), /if \[ "\$_FIN" != 0 \] \|\| \[ -z "\$_P" \]; then/)
 })
