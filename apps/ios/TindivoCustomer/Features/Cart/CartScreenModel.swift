@@ -60,7 +60,7 @@ final class CartScreenModel {
         }
 
         /// ¿Se puede avanzar con esta bolsa? Solo con la carta ya revisada, sin líneas con problema y con todos los
-        /// importes mostrables. Con la carta caída no (CA-CRT-05b): se reintenta.
+        /// importes mostrables. Con la carta caída no (CA-CRT-14): se reintenta.
         var allowsContinue: Bool {
             validation == .checked && amountsAreValid && lines.allSatisfy { $0.issues.isEmpty }
         }
@@ -75,7 +75,7 @@ final class CartScreenModel {
         case validating
         /// La carta respondió: las líneas con problema llevan su aviso.
         case checked
-        /// La carta no se pudo leer: la bolsa no se puede continuar hasta «Reintentar» (CA-CRT-05b).
+        /// La carta no se pudo leer: la bolsa no se puede continuar hasta «Reintentar» (CA-CRT-14).
         case checkFailed
     }
 
@@ -179,7 +179,7 @@ final class CartScreenModel {
     }
 
     /// Revisa la bolsa contra la carta vigente del negocio (CUS-CRT-005). Se lanza con `.task` al abrir la pantalla.
-    /// Si la carta no carga, la bolsa queda en `checkFailed` y no se puede continuar (CA-CRT-05b). Quitar o editar
+    /// Si la carta no carga, la bolsa queda en `checkFailed` y no se puede continuar (CA-CRT-14). Quitar o editar
     /// líneas después se revisa de nuevo con la misma carta, sin pedirla otra vez.
     func validate() async {
         // Un «Reintentar» ya está pidiendo la carta: no se pide dos veces. Se mira otra vez después de leer la bolsa,
@@ -190,7 +190,7 @@ final class CartScreenModel {
         await fetchMenu(for: cart)
     }
 
-    /// «Reintentar» (CA-CRT-05b): vuelve a pedir la carta del negocio de la bolsa aunque `validate()` ya la pidiera.
+    /// «Reintentar» (CA-CRT-14): vuelve a pedir la carta del negocio de la bolsa aunque `validate()` ya la pidiera.
     /// Mientras llega la bolsa está «validando»; termina en `checked` o, si falla otra vez, en `checkFailed` con
     /// `checkFailures` más alto. Dos toques seguidos no lanzan dos peticiones.
     func retryCheck() async {
@@ -231,7 +231,7 @@ final class CartScreenModel {
     }
 
     /// «Continuar» (todavía no existe en iOS: llega con el checkout) solo podrá avanzar con la bolsa ya revisada y
-    /// sin líneas con problema. Con la carta caída (`checkFailed`) tampoco (CA-CRT-05b).
+    /// sin líneas con problema. Con la carta caída (`checkFailed`) tampoco (CA-CRT-14).
     var canContinue: Bool {
         guard case let .filled(filled) = state else { return false }
         return filled.allowsContinue

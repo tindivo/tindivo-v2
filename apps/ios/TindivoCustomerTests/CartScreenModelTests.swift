@@ -429,7 +429,7 @@ extension CartScreenModelTests {
     }
 
     @Test(
-        "CA-CRT-05b: si la carta no se puede leer la bolsa queda en «carta caída», sin avisos de línea, y no se puede continuar"
+        "CA-CRT-14: si la carta no se puede leer la bolsa queda en «carta caída», sin avisos de línea, y no se puede continuar"
     )
     func checkFailedWhenTheMenuFails() async throws {
         let store = temporaryStore()
@@ -443,7 +443,7 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05b falla la carta y «Reintentar» tiene éxito: pasa a «revisada» y se puede continuar")
+    @Test("CA-CRT-14 falla la carta y «Reintentar» tiene éxito: pasa a «revisada» y se puede continuar")
     func retrySucceeds() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -459,7 +459,7 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05b «Reintentar» con éxito y una línea con problema: revisada, pero no se puede continuar")
+    @Test("CA-CRT-14 «Reintentar» con éxito y una línea con problema: revisada, pero no se puede continuar")
     func retrySucceedsWithAnIssue() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -476,7 +476,7 @@ extension CartScreenModelTests {
     }
 
     @Test(
-        "CA-CRT-05b «Reintentar» que vuelve a fallar: sigue «carta caída» y la serie de fallos sube (se anuncia otra vez)"
+        "CA-CRT-14 «Reintentar» que vuelve a fallar: sigue «carta caída» y la serie de fallos sube (se anuncia otra vez)"
     )
     func retryFailsAgain() async throws {
         let store = temporaryStore()
@@ -492,7 +492,7 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05b dos toques seguidos en «Reintentar» lanzan una sola petición")
+    @Test("CA-CRT-14 dos toques seguidos en «Reintentar» lanzan una sola petición")
     func retryTwiceAtOnce() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -511,7 +511,7 @@ extension CartScreenModelTests {
         task.cancel()
     }
 
-    @Test("CA-CRT-05b mientras «Reintentar» espera la carta, el aviso y su botón siguen a la vista")
+    @Test("CA-CRT-14 mientras «Reintentar» espera la carta, el aviso y su botón siguen a la vista")
     func retryKeepsTheNoticeWhileLoading() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))
@@ -534,7 +534,7 @@ extension CartScreenModelTests {
     }
 
     @Test(
-        "CA-CRT-05b: una carta que no se puede mostrar tal cual (precio con tres decimales) también queda «carta caída» y no se puede continuar"
+        "CA-CRT-14: una carta que no se puede mostrar tal cual (precio con tres decimales) también queda «carta caída» y no se puede continuar"
     )
     func checkFailedWhenTheMenuIsInvalid() async throws {
         let store = temporaryStore()
@@ -697,7 +697,7 @@ extension CartScreenModelTests {
 extension CartScreenModelTests {
     // MARK: Validación: casos límite
 
-    @Test("un .cancelled que no viene de cerrar la pantalla es un fallo: «carta caída», y bloquea (CA-CRT-05b)")
+    @Test("un .cancelled que no viene de cerrar la pantalla es un fallo: «carta caída», y bloquea (CA-CRT-14)")
     func strayCancelledIsAFailure() async throws {
         let store = temporaryStore()
         _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line("a"))

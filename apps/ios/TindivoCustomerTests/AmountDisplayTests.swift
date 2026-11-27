@@ -8,7 +8,7 @@ import TindivoAPI
 @MainActor
 @Suite("Importes que no se pueden mostrar")
 struct AmountDisplayTests {
-    @Test("CA-CRT-05c VoiceOver lee «Precio no disponible» donde se ve «—», y deja lo demás como está")
+    @Test("CA-CRT-15 VoiceOver lee «Precio no disponible» donde se ve «—», y deja lo demás como está")
     func spokenText() {
         #expect(spokenAmountText(invalidAmountText) == "Precio no disponible")
         #expect(spokenAmountText("3 productos · —") == "3 productos · Precio no disponible")
@@ -56,7 +56,7 @@ struct AmountDisplayTests {
     }
 
     @Test(
-        "subtotal en «—» con todas las líneas válidas: aviso de subtotal; CA-CRT-05c con una línea rota, aviso de precio"
+        "subtotal en «—» con todas las líneas válidas: aviso de subtotal; CA-CRT-15 con una línea rota, aviso de precio"
     )
     func bagLevelNotice() {
         #expect(

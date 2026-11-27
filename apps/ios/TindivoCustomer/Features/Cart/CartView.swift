@@ -106,7 +106,7 @@ struct CartView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: Carta caída (CA-CRT-05b)
+    // MARK: Carta caída (CA-CRT-14)
 
     /// «No pudimos revisar la carta. Toca Reintentar.» y su botón. VoiceOver lo anuncia al aparecer y otra vez si el
     /// reintento vuelve a fallar: `checkFailures` sube con cada fallo y reinicia la tarea.
