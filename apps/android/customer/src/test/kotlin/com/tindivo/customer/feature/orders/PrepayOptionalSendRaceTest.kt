@@ -81,7 +81,7 @@ class PrepayOptionalSendRaceTest : PrepayHarness() {
         }
 
     @Test
-    fun `R3-1 durante la relectura en vuelo no se ofrece subir ni enviar y su respuesta vieja no gana`() =
+    fun `R3-1 durante la relectura en vuelo no sale un segundo confirm y la captura en revision gana`() =
         runTest {
             val env = loaded()
             env.viewModel.onPhotoPicked(PHOTO_A)
@@ -263,6 +263,106 @@ class PrepayOptionalSendRaceTest : PrepayHarness() {
             env.gateway.infoResult = optional(status = "confirmed", canUploadProof = false)
             env.gates.release("info")
             runCurrent()
+            assertFalse(env.state.reconciling)
+            finish(env)
+        }
+
+    // R4-1
+
+    @Test
+    fun `R4-1 un 429 no mata la consulta y la confirmacion posterior llega`() =
+        runTest {
+            val env = loaded()
+            env.gateway.infoResult = ApiResult.Failure(AppError.Known(ApiErrorCode.RateLimited, 429, null))
+            passTime(2)
+            assertEquals(3, env.gateway.count("info"))
+            env.gateway.infoResult = optional(paymentVerifiedAt = verified)
+
+            passTime(1)
+
+            assertTrue(details(env).paymentConfirmed)
+            finish(env)
+        }
+
+    @Test
+    fun `R4-1 un 408 ilegible no mata la consulta y la confirmacion posterior llega`() =
+        runTest {
+            val env = loaded()
+            env.gateway.infoResult = ApiResult.Failure(AppError.Unknown(null, null, 408))
+            passTime(2)
+            assertEquals(3, env.gateway.count("info"))
+            env.gateway.infoResult = optional(paymentVerifiedAt = verified)
+
+            passTime(1)
+
+            assertTrue(details(env).paymentConfirmed)
+            finish(env)
+        }
+
+    // R4-2
+
+    @Test
+    fun `R4-2 tras un confirm con red y una relectura sin captura se puede reintentar con la foto`() =
+        runTest {
+            val env = loaded()
+            env.viewModel.onPhotoPicked(PHOTO_A)
+            env.gateway.confirmResults += ApiResult.Failure(AppError.Network(IOException()))
+
+            env.viewModel.send()
+            runCurrent()
+
+            assertEquals(2, env.gateway.count("info"))
+            assertFalse(env.state.reconciling)
+            assertTrue(env.state.showsProofPicker)
+            assertTrue(env.state.canSend)
+            assertEquals(PHOTO_A, env.state.photo)
+            finish(env)
+        }
+
+    @Test
+    fun `R4-2 tras una relectura que falla con red tambien se puede reintentar con la foto`() =
+        runTest {
+            val env = loaded()
+            env.viewModel.onPhotoPicked(PHOTO_A)
+            env.gateway.confirmResults += ApiResult.Failure(AppError.Network(IOException()))
+            env.gateway.infoResult = network
+
+            env.viewModel.send()
+            runCurrent()
+
+            assertEquals(2, env.gateway.count("info"))
+            assertFalse(env.state.reconciling)
+            assertTrue(env.state.showsProofPicker)
+            assertTrue(env.state.canSend)
+            assertEquals(PHOTO_A, env.state.photo)
+            finish(env)
+        }
+
+    // R4-3
+
+    @Test
+    fun `R4-3 mientras se envia la consulta no pregunta y al terminar se reanuda`() =
+        runTest {
+            val env = loaded()
+            env.viewModel.onPhotoPicked(PHOTO_A)
+            env.gates.hold("confirm")
+
+            env.viewModel.send()
+            runCurrent()
+            assertEquals(SendState.Sending, env.state.send)
+            val asked = env.gateway.count("info")
+
+            passTime(2)
+            assertEquals(SendState.Sending, env.state.send)
+            assertEquals(asked, env.gateway.count("info"))
+
+            env.gateway.infoResult = optional(paymentProofStatus = "pending")
+            env.gates.release("confirm")
+            runCurrent()
+            assertEquals(SendState.Sent, env.state.send)
+
+            passTime(1)
+            assertTrue(env.gateway.count("info") > asked)
             finish(env)
         }
 }

@@ -481,15 +481,23 @@ internal class PrepayViewModel
 private const val HTTP_CONFLICT = 409
 private const val FIRST_CLIENT_ERROR = 400
 private const val LAST_CLIENT_ERROR = 499
+private const val HTTP_REQUEST_TIMEOUT = 408
+private const val HTTP_TOO_MANY_REQUESTS = 429
 private val CLIENT_ERROR_STATUSES = FIRST_CLIENT_ERROR..LAST_CLIENT_ERROR
 
-/** Un 4xx que reintentar no arregla (el 401 y el 426 se tratan aparte: el 426 no es un [AppError.Known]). */
-private fun AppError.isDefinitiveClientError(): Boolean =
-    when (this) {
-        is AppError.Known -> status in CLIENT_ERROR_STATUSES
-        is AppError.Unknown -> status in CLIENT_ERROR_STATUSES
-        else -> false
-    }
+/**
+ * Un 4xx que reintentar no arregla. El 408 y el 429 (`rate_limited`) son pasajeros: se reintentan en la siguiente
+ * vuelta. El 401 y el 426 se tratan aparte (el 426 no es un [AppError.Known]).
+ */
+private fun AppError.isDefinitiveClientError(): Boolean {
+    val status =
+        when (this) {
+            is AppError.Known -> status
+            is AppError.Unknown -> status
+            else -> null
+        }
+    return status in CLIENT_ERROR_STATUSES && status != HTTP_REQUEST_TIMEOUT && status != HTTP_TOO_MANY_REQUESTS
+}
 
 /**
  * El servidor dice que el pedido ya no espera el comprobante: `invalid_state_transition` (409 en esta API, sea cual sea
