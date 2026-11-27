@@ -62,6 +62,7 @@ export async function GET(
         // nuevos); el código nuevo lee `totalText`, que se suma en céntimos enteros.
         total: Number(order.order_amount) + Number(order.delivery_fee),
         totalText: prepayTotalText(order.order_amount, order.delivery_fee),
+        currency: 'PEN' as const,
         status: order.status,
         hasProof: Boolean(order.comprobante_prepago_url),
         proofAttempt: order.proof_attempt ?? 0,

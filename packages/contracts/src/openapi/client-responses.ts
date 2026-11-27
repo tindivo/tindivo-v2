@@ -110,6 +110,9 @@ export const PrepayInfoSchema = z.object({
     description:
       'Total (comida + envío) como texto decimal, D-39. `total` sigue siendo número por compatibilidad y no debe usarse en código nuevo',
   }),
+  currency: z
+    .literal('PEN')
+    .meta({ description: 'Moneda de `totalText` (D-39): siempre soles, `PEN`' }),
   proofOptional: z.boolean().meta({
     description:
       'Verdadero en el pago único del cliente de confianza (`pending_yape`): la captura es opcional y no frena al pedido',
