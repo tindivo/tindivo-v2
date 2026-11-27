@@ -32,6 +32,10 @@ internal fun prepayInfo(
     status: String = "awaiting_payment",
     awaitingPaymentAt: String? = null,
     proofAttempt: Int = 0,
+    proofOptional: Boolean = false,
+    canUploadProof: Boolean = true,
+    paymentProofStatus: String? = null,
+    paymentVerifiedAt: String? = null,
 ) = GetPrepayInfo200ResponseData(
     businessName = "Pollería Rosa",
     yapeNumber = "987654321",
@@ -53,10 +57,10 @@ internal fun prepayInfo(
     awaitingPaymentAt = awaitingPaymentAt,
     totalText = "43.50",
     currency = GetPrepayInfo200ResponseData.Currency.PEN,
-    proofOptional = false,
-    canUploadProof = true,
-    paymentProofStatus = null,
-    paymentVerifiedAt = null,
+    proofOptional = proofOptional,
+    canUploadProof = canUploadProof,
+    paymentProofStatus = paymentProofStatus,
+    paymentVerifiedAt = paymentVerifiedAt,
 )
 
 /**

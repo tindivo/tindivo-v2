@@ -20,12 +20,20 @@ internal data class PrepayPayee(
  * Lo que la sección de pago necesita del servidor. [deadline] es cuándo vence el plazo para pagar, o `null` si no se
  * sabe (sin la hora o sin los minutos del plazo): entonces no se pinta una cuenta regresiva inventada.
  * [lastTry]: ya se rechazó un comprobante y queda un solo intento.
+ *
+ * Pago único con captura opcional (`proofOptional`): [optional] es ese modo (no tiene plazo: [deadline] va en `null`);
+ * [canUpload] es `canUploadProof`, lo que el servidor deja hacer; [proofInReview], que ya hay una captura pendiente
+ * de revisión; [paymentConfirmed], que el negocio ya confirmó el pago. La app no lo deduce del estado del pedido.
  */
 internal data class PrepayDetails(
     val businessName: String,
     val payee: PrepayPayee?,
     val lastTry: Boolean,
     val deadline: Instant?,
+    val optional: Boolean = false,
+    val canUpload: Boolean = true,
+    val proofInReview: Boolean = false,
+    val paymentConfirmed: Boolean = false,
 )
 
 internal sealed interface PrepayInfoState {
@@ -117,6 +125,7 @@ internal data class PrepayUiState(
     val canSend: Boolean
         get() =
             info is PrepayInfoState.Ready &&
+                info.details.allowsProof &&
                 photo != null &&
                 send !is SendState.Sending &&
                 send !is SendState.Sent &&
@@ -129,14 +138,23 @@ internal data class PrepayUiState(
     val showsProofPicker: Boolean
         get() =
             info is PrepayInfoState.Ready &&
+                info.details.allowsProof &&
                 send !is SendState.Sent &&
                 countdown != PrepayCountdown.Expired
+
+    /** La tarjeta de pago opcional: con la carga fallida (para poder reintentar) o con el modo opcional ya leído. */
+    val showsOptionalCard: Boolean
+        get() = info is PrepayInfoState.Failed || (info is PrepayInfoState.Ready && info.details.optional)
 
     /** Sin el `Uri` de la foto: dice si hay una elegida, no cuál (CAX-003). */
     override fun toString(): String =
         "PrepayUiState(info=$info, countdown=$countdown, photo=${photo?.let { REDACTED }}, send=$send, " +
             "refreshRequests=$refreshRequests)"
 }
+
+/** El servidor deja subir captura, y no hay ya una en revisión ni el pago confirmado. */
+private val PrepayDetails.allowsProof: Boolean
+    get() = canUpload && !proofInReview && !paymentConfirmed
 
 /** Lo que se muestra en `toString` en lugar de un `Uri`, una ruta del bucket o una URL firmada. */
 internal const val REDACTED = "***"
@@ -150,6 +168,8 @@ internal data class PrepayActions(
 )
 
 private const val AWAITING_PAYMENT = "awaiting_payment"
+private const val PENDING = "pending"
+private const val REJECTED = "rejected"
 private const val MILLIS_PER_MINUTE = 60_000L
 
 /**
@@ -158,20 +178,41 @@ private const val MILLIS_PER_MINUTE = 60_000L
  * se reemplaza por otra: sin una de las dos no hay cuenta regresiva.
  */
 internal fun GetPrepayInfo200ResponseData.toPrepayState(paymentMinutes: Int?): PrepayInfoState {
-    if (status != AWAITING_PAYMENT) return PrepayInfoState.NotAwaiting
+    if (proofOptional) return optionalState()
+    if (status != AWAITING_PAYMENT || !canUploadProof) return PrepayInfoState.NotAwaiting
     val started = awaitingPaymentAt?.let(::apiInstantOrNull)
     val deadline = paymentMinutes?.let { started?.plus(Duration.ofMinutes(it.toLong())) }
+    return PrepayInfoState.Ready(
+        PrepayDetails(businessName = businessName, payee = payee(), lastTry = proofAttempt == 1, deadline = deadline),
+    )
+}
+
+/**
+ * El pago único con captura opcional: sin plazo (no hay cancelación por falta de pago) y con lo que dice el servidor
+ * de lo que se puede hacer, la revisión y la confirmación.
+ */
+private fun GetPrepayInfo200ResponseData.optionalState(): PrepayInfoState.Ready =
+    PrepayInfoState.Ready(
+        PrepayDetails(
+            businessName = businessName,
+            payee = payee(),
+            lastTry = canUploadProof && proofAttempt == 1 && paymentProofStatus == REJECTED,
+            deadline = null,
+            optional = true,
+            canUpload = canUploadProof,
+            proofInReview = paymentProofStatus == PENDING,
+            paymentConfirmed = paymentVerifiedAt != null,
+        ),
+    )
+
+private fun GetPrepayInfo200ResponseData.payee(): PrepayPayee? {
     val qr = paymentQr
     val fallbackNumber = yapeNumber
-    val payee =
-        when {
-            qr != null -> PrepayPayee(walletOf(qr.wallet), qr.accountNumber, qr.accountName.ifBlank { null }, qr.qrUrl)
-            fallbackNumber != null -> PrepayPayee(wallet = null, fallbackNumber, accountName = null, qrUrl)
-            else -> null
-        }
-    return PrepayInfoState.Ready(
-        PrepayDetails(businessName = businessName, payee = payee, lastTry = proofAttempt == 1, deadline = deadline),
-    )
+    return when {
+        qr != null -> PrepayPayee(walletOf(qr.wallet), qr.accountNumber, qr.accountName.ifBlank { null }, qr.qrUrl)
+        fallbackNumber != null -> PrepayPayee(wallet = null, fallbackNumber, accountName = null, qrUrl)
+        else -> null
+    }
 }
 
 private fun walletOf(wire: String): PayWallet =
