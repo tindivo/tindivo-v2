@@ -209,8 +209,14 @@ describe('el cliente y su captura del pago único', () => {
     const id = await pedido('preparing')
     const path = await uploadProofObject(CUSTOMER, id, 1)
     const ajeno = tokens.cliente2 as string
+    const ajenoId = JSON.parse(Buffer.from(ajeno.split('.')[1] ?? '', 'base64url').toString()).sub
     expect((await pedirUrl(id, ajeno)).status).toBe(404)
-    expect((await registrarPath(id, path, ajeno)).status).toBe(404)
+    // Con la ruta del dueño, la guarda de la ruta responde 403 ANTES de leer el pedido (no
+    // revela si existe); con una ruta dentro de su propia carpeta, el pedido ajeno es 404.
+    expect((await registrarPath(id, path, ajeno)).status).toBe(403)
+    const inexistente = crypto.randomUUID()
+    expect((await registrarPath(inexistente, path, ajeno)).status).toBe(403)
+    expect((await registrarPath(id, `${ajenoId}/${id}/attempt-1-x.jpg`, ajeno)).status).toBe(404)
     expect((await info(id, ajeno)).status).toBe(404)
     expect((await leer(id))?.proof_attempt).toBe(0)
   })
