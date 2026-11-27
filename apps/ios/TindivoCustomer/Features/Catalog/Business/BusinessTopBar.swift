@@ -63,7 +63,9 @@ struct BusinessTopBar: View {
     }
 
     /// Un círculo blanco con sombra sobre la portada, que se funde con la barra al volverse sólida.
-    private func roundButton(_ icon: TindivoIcon, label: LocalizedStringKey, identifier: String, action: @escaping () -> Void)
+    private func roundButton(
+        _ icon: TindivoIcon, label: LocalizedStringKey, identifier: String, action: @escaping () -> Void
+    )
         -> some View
     {
         Button(action: action) {
