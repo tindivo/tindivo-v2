@@ -269,7 +269,7 @@ class PushEntryBindingTest {
         }
 
     @Test
-    fun `PS202-002 bis con B ya en sesion y la lectura colgada el token tampoco se borra`() =
+    fun `PS202-002 bis con otra cuenta viva el cierre fallido no borra su token`() =
         runTest {
             val failing = FailingCloseInstallations(newDisk())
             val session = FakeSessionStore(SessionState.SignedIn("B", "eb"))
@@ -289,5 +289,22 @@ class PushEntryBindingTest {
             }
             assertTrue("el cierre tiene tope", bounded)
             assertEquals(0, tokens.deletes)
+        }
+
+    // Revisión ajena RV-R3-1: apagar los avisos con una instalación de la MISMA cuenta pero de otra entrada (la rotación
+    // falló y el proceso reinició) igual la da de baja en el servidor; la intención de baja no se pierde.
+    @Test
+    fun `apagar da de baja la instalacion de la misma cuenta aunque sea de otra entrada`() =
+        runTest {
+            val session = FakeSessionStore(SessionState.SignedIn("A", "e2"))
+            val rig = PresenterRig(session, prefs = prefs)
+            val old = rig.installations.bindTo("A", "e1").installId
+            val registrar = registrar(session, rig)
+
+            registrar.optOut()
+            runCurrent()
+
+            assertEquals(listOf(PushCall("DELETE", old, "A")), devices.calls.filter { it.method == "DELETE" })
+            assertFalse(prefs.flow.value.unregisterPending)
         }
 }
