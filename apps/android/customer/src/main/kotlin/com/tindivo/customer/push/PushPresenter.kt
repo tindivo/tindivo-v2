@@ -64,7 +64,7 @@ class PushPresenter(
             // Tras la lectura suspendida la sesión pudo cerrarse, cambiar de cuenta o ser A -> B -> A: se vuelve a
             // comprobar aquí y, bajo el candado de la sesión, no puede cambiar hasta que se haya pintado.
             publishLock.withLock {
-                if (!stillCurrent(account, generation)) return@withLock false
+                if (!stillCurrent(account, generation) || adoptedGeneration != generation) return@withLock false
                 notifications.show(payload)
                 true
             }
@@ -94,6 +94,18 @@ class PushPresenter(
     /** Vacía la bandeja sin esperar el candado: para un cierre cuyo tope venció con el candado tomado. */
     fun clearTray() = notifications.clearAll()
 
+    /**
+     * Retira la admisión de avisos cuando no se pudo soltar la identidad de la cuenta que se iba (el cierre venció o el
+     * disco falló): mientras esa identidad siga atada, un aviso viejo de la cuenta no debe pintarse, ni siquiera si la
+     * misma cuenta vuelve a entrar. Pone [adoptedGeneration] en un centinela que no coincide con ninguna generación real,
+     * así que [onPush] rechaza todo hasta la siguiente [adopt]. No suspende ni toma el `lock`: tiene que poder correr
+     * cuando el candado lo tiene un cierre colgado. Un [onPush] que ya pasó la lectura suspendida también lo ve, porque
+     * su comprobación final, bajo el candado de la sesión, exige `adoptedGeneration == generation`.
+     */
+    fun revoke() {
+        adoptedGeneration = REVOKED
+    }
+
     /** La identidad de antes de [generation] ya se invalidó: desde ahora se admiten los avisos de esa entrada. */
     suspend fun adopt(generation: Long) = lock.withLock { adoptedGeneration = generation }
 
@@ -103,4 +115,9 @@ class PushPresenter(
     ): Boolean =
         (sessionStore.state.value as? SessionState.SignedIn)?.userId == account &&
             sessionStore.signInGeneration.value == generation
+
+    private companion object {
+        /** Generación imposible: la admisión revocada por [revoke]. */
+        const val REVOKED = Long.MIN_VALUE
+    }
 }

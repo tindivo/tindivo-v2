@@ -121,6 +121,39 @@ class PushAuditR1Test {
             assertTrue(rig.presenter.onPush(payload(current?.installId)))
         }
 
+    // RV-1b: `revoke()` que llega entre la lectura suspendida de `onPush` y el candado de la sesión también gana.
+    @Test
+    fun `RV-1b revoke en mitad de onPush impide que el aviso se pinte`() =
+        runTest {
+            val inner = PresenterRig(session).installations
+            val install = inner.bindTo("A").installId.toString()
+            val gated = GatedInstallations(inner).also { it.gate = CompletableDeferred() }
+            val rig = PresenterRig(session, installations = gated)
+            val result = async { rig.presenter.onPush(payload(install)) }
+            runCurrent()
+            gated.reading.await()
+            rig.presenter.revoke()
+            gated.gate?.complete(Unit)
+            assertFalse(result.await())
+            assertTrue(rig.notifications.shows.isEmpty())
+        }
+
+    // RV-1 paso 6 (D2): con la sesión cerrada y ninguna cuenta atada, la bandeja se vacía igual.
+    @Test
+    fun `RV-1 al cerrarse la sesion sin cuenta atada la bandeja se vacia`() =
+        runTest {
+            val rig = PresenterRig(session, prefs = prefs)
+            registrar(rig)
+            rig.installations.beginSignOut("A")
+            assertEquals(null, rig.installations.current()?.accountId)
+            val clearsBefore = rig.notifications.clears
+
+            session.switchToSignedOut()
+            runCurrent()
+
+            assertTrue(rig.notifications.clears > clearsBefore)
+        }
+
     // PS202-002: una escritura de identidad que no termina no puede impedir que se cierre la sesión.
     @Test
     fun `PS202-002 un disco colgado no deja la sesion abierta y la escritura tardia no toca a la cuenta siguiente`() =
@@ -143,23 +176,27 @@ class PushAuditR1Test {
             assertTrue("el cierre de los avisos tiene tope", boundedClose)
             assertTrue(rig.notifications.clears > 0)
             // RV-3: con la identidad sin soltar y la sesión aún abierta, el aviso viejo tampoco se pinta.
-            assertFalse(rig.presenter.onPush(payload(oldInstall)))
             session.signOutIf("A")
             assertFalse(rig.presenter.onPush(payload(oldInstall)))
 
-            // Entra B (el cierre del colector también vence su tope) y queda atada; el disco se suelta DESPUÉS y las
-            // escrituras pedidas se aplican tarde: ninguna deshace la vinculación de B.
+            // Entra B con la identidad de A aún sin soltar (el disco sigue colgado): falla cerrado, B no se ata ni admite avisos.
             session.switchTo("B")
             advanceTimeBy(30_000)
             registrar.refresh()
             runCurrent()
-            assertEquals("B", rig.installations.current()?.accountId)
+            assertEquals("A", rig.installations.current()?.accountId)
+            assertFalse(rig.presenter.onPush(payload(oldInstall)))
             assertFalse("nunca se pide soltar «cualquier cuenta»", hanging.asked.contains(null))
-            val clearsBefore = rig.notifications.clears
+
+            // El disco se suelta DESPUÉS y las escrituras pedidas se aplican tarde (solo sueltan a A): al reintentar,
+            // B queda atada y ninguna escritura tardía deshace su vinculación.
             hanging.gate.complete(Unit)
+            registrar.refresh()
             runCurrent()
-            assertTrue("la bandeja se vació tras la última escritura tardía", rig.notifications.clears > clearsBefore)
             assertEquals("B", rig.installations.current()?.accountId)
+            assertFalse(rig.presenter.onPush(payload(oldInstall)))
+            assertTrue(rig.notifications.visible.isEmpty())
+            assertFalse("nunca se pide soltar «cualquier cuenta»", hanging.asked.contains(null))
             assertTrue(rig.presenter.onPush(payload(rig.installations.current()?.installId)))
         }
 

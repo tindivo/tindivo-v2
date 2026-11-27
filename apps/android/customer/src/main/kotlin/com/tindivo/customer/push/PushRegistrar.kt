@@ -74,6 +74,12 @@ class PushRegistrar(
     /** La cuenta que está cerrando sesión: mientras dure, no se registra. Se limpia cuando la sesión ya cambió. */
     @Volatile private var closing: String? = null
 
+    /**
+     * La cuenta cuya identidad no se pudo soltar (el cierre venció o falló): mientras siga atada, esa identidad no se
+     * reutiliza como la de una entrada nueva de la misma cuenta. Se limpia cuando el cierre termina bien.
+     */
+    @Volatile private var unreleased: String? = null
+
     /** Empieza a seguir la sesión. Se llama una vez, al arrancar el proceso. */
     fun start() {
         scope.launch {
@@ -98,7 +104,9 @@ class PushRegistrar(
                             seenAccount = null
                             entryAt = generation
                             // Con la cuenta atada, no `null`: una escritura tardía solo puede soltar ESA cuenta (H3).
-                            installations.current()?.accountId?.let { closeAccount(accountId = it, hasSession = false) }
+                            val bound = installations.current()?.accountId
+                            // Sin cuenta atada no hay nada que soltar, pero la bandeja se vacía igual (RV-1).
+                            if (bound == null) presenter.clearTray() else closeAccount(accountId = bound, hasSession = false)
                         }
 
                         is SessionState.SignedIn -> {
@@ -167,7 +175,10 @@ class PushRegistrar(
             return false
         }
         // La subida de generación de la entrada que sí se vio (la sesión publica el estado y luego la generación).
-        val seenEntry = entryAt != null && (generation == entryAt || generation == entryAt + 1)
+        // Una identidad que no se soltó nunca cuenta como «la de la entrada vista»: se cierra antes de adoptar.
+        val seenEntry =
+            entryAt != null && (generation == entryAt || generation == entryAt + 1) &&
+                !(bound != null && bound == unreleased)
         if (bound != null && (bound != account || !seenEntry)) closeAccount(accountId = bound, hasSession = false)
         val now = installations.current()?.accountId
         if (now != null && !(seenEntry && now == account)) return false
@@ -229,17 +240,23 @@ class PushRegistrar(
                         Result.success(presenter.closeAccount { installations.beginSignOut(accountId) })
                     }
                 if (outcome == null) {
+                    // Sin soltar la identidad: se revoca la admisión ANTES de vaciar, para que nada se pinte en medio.
+                    presenter.revoke()
+                    unreleased = accountId
                     // Si el tope venció esperando el candado de los avisos, el `finally` no llegó a correr (H4).
                     presenter.clearTray()
                     deleteTokenAfterFailure(accountId)
                     return
                 }
+                if (unreleased == accountId) unreleased = null
                 outcome.getOrNull()
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 // No se pudo guardar (CAX-010): la sesión se cierra igual. La bandeja ya se limpió; el
                 // token se intenta borrar y la identidad se suelta en el próximo cierre o arranque.
+                presenter.revoke()
+                unreleased = accountId
                 deleteTokenAfterFailure(accountId)
                 null
             } ?: return
