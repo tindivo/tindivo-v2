@@ -30,11 +30,14 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:",
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/react": "16.3.0",
     "@tindivo/tsconfig": "workspace:*",
     "@types/leaflet": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "jsdom": "26.1.0",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
