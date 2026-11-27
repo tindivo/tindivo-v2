@@ -200,7 +200,8 @@ private fun GetPrepayInfo200ResponseData.optionalState(): PrepayInfoState.Ready 
             deadline = null,
             optional = true,
             canUpload = canUploadProof,
-            proofInReview = paymentProofStatus == PENDING,
+            // Un ingreso ya confirmado nunca está «en revisión», diga lo que diga el estado de la captura.
+            proofInReview = paymentProofStatus == PENDING && paymentVerifiedAt == null,
             paymentConfirmed = paymentVerifiedAt != null,
         ),
     )
