@@ -22,7 +22,7 @@ codigo:
 
 La tarjeta vive dentro del seguimiento; no es una pantalla aparte. Qué ofrece depende de quién es el cliente, y eso lo decide el servidor:
 
-- **Cliente confiable** (puede pagar con «Efectivo» o con «Yape o Plin»; esto es cuando eligió «Yape o Plin»): «Subir captura» es opcional. La alternativa es «Pagaré al motorizado al llegar». El pedido avanza igual sin captura (CUS-PAY-014).
+- **Cliente confiable que eligió «Yape o Plin»** (también podía elegir «Efectivo»): «Subir captura» es opcional. La alternativa es «Pagaré al motorizado al llegar». El pedido avanza igual sin captura (CUS-PAY-014).
 - **Cliente no confiable** (prepago): la captura es obligatoria y se sube en `pagos/comprobante`.
 
 ## Contenido, de arriba abajo
@@ -42,7 +42,7 @@ La tarjeta vive dentro del seguimiento; no es una pantalla aparte. Qué ofrece d
 | Cargando datos de pago | Esqueleto de monto y cuenta | CUS-PAY-002 |
 | Error al cargar | «No pudimos cargar los datos para pagar.» y «Reintentar» | CUS-PAY-002 |
 | Sin cuenta publicada | «Todavía no vemos a qué número pagar. Vuelve a abrir tu pedido en un momento.» | CUS-PAY-002 |
-| Sin captura todavía | «Subir captura» disponible; el confiable puede pagar al llegar | CUS-PAY-014 |
+| Sin captura todavía | «Subir captura» disponible; el confiable puede pagar al llegar (con qué: pendiente de Jesús, PG-1) | CUS-PAY-014 |
 | Captura elegida | Vista previa «Tu captura» con «Cambiar» y «Enviar comprobante» | CUS-PAY-003 |
 | Enviando | Botón con progreso, «Subiendo…» | CUS-PAY-004 |
 | Enviada | «Recibimos tu comprobante. El negocio lo está revisando.» | CUS-PAY-004 |
