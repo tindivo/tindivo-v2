@@ -67,8 +67,9 @@ pega la salida cruda de cada comprobación y se archiva fuera del repo (`tindivo
    entre el PR #209, la corrida de sus 13 escenarios por la API (`pnpm e2e:todo --reset`; **ese script aún no existe en
    `develop`**, vive en #209). Evidencia: la salida cruda, no «está verde».
 3. **Esta guía firmada por Codex** sobre el commit que la contiene, sin condiciones abiertas (`codex-auditor.md` §7).
-4. **Dinero revisado por Jesús**, por escrito: la **0283** y la **0285** (invariante 9), y el efecto de la **0286**
-   (quien tuvo un strike hace más de 24 meses vuelve a poder pagar contra entrega: ya aceptado el 2026-11-12).
+4. **Dinero revisado por Jesús**, por escrito: la **0275**, la **0283**, la **0285** y la **0295** (invariante 9), y el
+   efecto de la **0286**, que actúa **en cuanto se aplica** (el directorio viejo deja de dar confianza y quien tuvo un
+   strike hace más de 24 meses vuelve a poder pagar contra entrega: aceptado el 2026-11-12; se cuenta antes con C-03b).
 5. **Decisión D-A: qué código corre durante y después de la ventana** (la guía no la toma: es de Jesús). Medido: `main`
    está **1041 commits** detrás de `develop`, y `main` tiene migraciones solo hasta la 0271. Leyendo `origin/main`, la
    **web del cliente** (`apps/customer`) escribe con el JWT del navegador en `terms_acceptance` y `customer_profiles`
@@ -103,7 +104,8 @@ Todas son `select`. Se corren en el editor SQL de `tindivo-prod` o con `psql` de
 
 - **C-01** (la base está donde se cree): `select version from supabase_migrations.schema_migrations order by version desc limit 3;` → la primera fila es **`0271`**. Si es otra, **para**: la guía no aplica.
 - **C-02** (0277 no abortará): `select count(*) from public.customer_profiles where phone_verified_at is not null and (phone is null or phone !~ '^[+]519[0-9]{8}$');` → **0**. Si no es 0, la 0277 falla a propósito; se corrige antes, con decisión de Jesús (es dato de clientes).
-- **C-03** (cuántos números se desverifican): `select count(*) from (select phone from public.customer_profiles where phone_verified_at is not null group by phone having count(*) > 1) d;` → Jesús decide si el número es aceptable. Cada perfil afectado **tendrá que volver a verificar su celular** y esto **no se puede deshacer** sin la copia.
+- **C-03** (cuántos números se desverifican): `select count(*) from public.customer_profiles where phone_verified_at is not null and phone in (select phone from public.customer_profiles where phone_verified_at is not null group by phone having count(*) > 1);` → cuenta **perfiles** (no números): son los que se desverifican. Jesús decide si es aceptable. Cada uno **tendrá que volver a verificar su celular**, perderá la contraentrega 24 meses (§3.3) y esto **no se puede deshacer** sin la copia.
+- **C-03b** (0286 actúa al aplicarse; antes del push): cuántas filas quedan fuera de los 24 meses y dejan de contar: `select count(*) from public.customer_strikes where created_at < now() - interval '24 months';` y `select count(*) from public.address_directory where greatest(coalesce(last_used_at, created_at), coalesce(updated_at, created_at), created_at) < now() - interval '24 months';` → con producción operando desde agosto de 2026 se espera **0** en ambas; si no, decide Jesús (cambia a quién se le exige pago adelantado, 0286:177-183).
 - **C-04** (cuántas reseñas pierden el comentario, 0284): `select count(*) from public.order_reviews r join public.orders o on o.id = r.order_id join public.users u on u.id = o.customer_user_id where r.customer_user_id is null and r.comment is not null and u.deleted_at is not null;` → Jesús lo acepta (irreversible sin la copia).
 - **C-05** (el corte del push sigue fijado): `select key, value, updated_at from public.app_settings where key in ('push_claim_since', 'push_dispatch');` → las dos filas existen y `push_claim_since` tiene fecha ISO válida. Sin ellas, `send-push` ya está fallando cerrado y hay que resolverlo antes (`deploy.md` §2.2).
 - **C-06** (informativa, no bloquea): `select status, count(*) from public.orders where status::text not in ('delivered','cancelled') group by 1;` → cuántos pedidos vivos hay; conviene empezar con pocos.
@@ -122,12 +124,15 @@ Jesús lo corre una vez, desde el worktree del commit firmado, con la salida en 
 en orden y, si uno falla, se detiene y los anteriores quedan aplicados (comportamiento del CLI; si cada archivo va en su
 propia transacción o no, se confirma en la salida del push: **sin verificar**; la 0272 dice de sí misma que el CLI no abre
 transacción). La 0272 fija `lock_timeout` de 5 s sobre `domain_events` (el outbox en caliente): si no consigue el bloqueo,
-falla. Es otra razón para empezar con pocos pedidos vivos (C-06); se reintenta el push, no se edita la migración. Después:
+falla. Es otra razón para empezar con pocos pedidos vivos (C-06); se reintenta el push, no se edita la migración.
+**Solo la 0272 pone `lock_timeout`**: la **0281** (CHECK en `orders`) y la **0277** (índice único y CHECK en
+`customer_profiles`) toman bloqueo exclusivo sobre tablas calientes sin tope de espera. Hay que ensayarlo sobre una copia
+restaurada (P0.6, aún abierto) y verificar allí si cada archivo va en su propia transacción. Después:
 
 - **C-10** `select version from supabase_migrations.schema_migrations order by version desc limit 1;` → **0295**; y `select count(*) from supabase_migrations.schema_migrations where version >= '0272';` → **21**.
 - **C-11** (una sola función por nombre, sin sobrecargas; `supabase/AGENTS.md`): `select p.proname, count(*) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('create_customer_order','create_courier_order','create_order_idempotently','search_catalog','get_tracking','courier_service_status','cancel_expired_prepay_orders','delete_customer_account','customer_is_blocked','customer_requires_prepayment','customer_contraentrega_decision','push_event_types','claim_push_event','get_pending_review','create_order_review','current_customer_promo_free_delivery') group by 1 order by 1;` → **16 filas, todas con `count` = 1** (si falta un nombre o hay un 2, para; una consulta con `having` no vería las ausentes).
 - **C-12** (RLS en las tablas nuevas): `select relname, relrowsecurity from pg_class where relnamespace = 'public'::regnamespace and relname in ('phone_assignments','phone_transfer_challenges','phone_restrictions','customer_security_notices','retention_storage_tombstones');` → 5 filas, todas `true`.
-- **C-13** (0276: el navegador ya no escribe): `select has_table_privilege('authenticated','public.customer_profiles','INSERT,UPDATE'), has_table_privilege('authenticated','public.terms_acceptance','INSERT'), has_table_privilege('authenticated','public.reports','INSERT');` → las tres `false`.
+- **C-13** (0276: el navegador ya no escribe): `select has_table_privilege('authenticated','public.customer_profiles','INSERT,UPDATE'), has_table_privilege('authenticated','public.terms_acceptance','INSERT'), has_table_privilege('authenticated','public.reports','INSERT'), has_any_column_privilege('authenticated','public.customer_profiles','INSERT,UPDATE'), has_any_column_privilege('authenticated','public.terms_acceptance','INSERT,UPDATE'), has_any_column_privilege('authenticated','public.reports','INSERT,UPDATE');` → las seis `false` (la 0276 revoca también por columna).
 - **C-14** (columnas nuevas): `select table_name, column_name from information_schema.columns where table_schema = 'public' and (table_name, column_name) in (('menu_items','thumbnail_url'),('menu_items','is_featured'),('businesses','featured_title'),('orders','client_platform'),('domain_events','push_attempts'),('domain_events','push_done_at'),('domain_events','push_dead_at'));` → 7 filas.
 - **C-15** (cron de reintento creado y **apagado**): `select jobname, schedule, active from cron.job where jobname = 'retry-push-dispatch';` → una fila, `* * * * *`, activo; y `select value ? 'since' from public.app_settings where key = 'push_retry';` → **`false`** (sin `since` no hace nada).
 - **C-16** (parámetros): `select key, value from public.app_settings where key in ('phone_code_max_per_24h','phone_transfer_enabled','data_retention') order by key;` → `3`, `false` y los plazos de retención (24/13 meses y `cashRecordsYears` 5, `strikesMonths`, `addressDirectoryMonths`, `phoneAssignmentsMonths`).
@@ -155,7 +160,9 @@ existe desde el paso 3. **Va después del push, nunca antes.**
 
 ### Paso 5 · Encender el reintento de avisos (`push_retry.since`)
 
-Solo después de que `send-push` nuevo esté vivo (`deploy.md` §2.2.1). SQL de escritura, ejecutado por Jesús:
+Solo después de que `send-push` nuevo esté vivo (`deploy.md` §2.2.1). **Espera al menos 1 minuto** tras el despliegue (que
+drenen las instancias viejas) y pon `since` = `now()` en ese momento (`deploy.md` §2.2, paso 4); si no, el cron repite
+avisos ya entregados (0272:392-413). SQL de escritura, ejecutado por Jesús:
 
 ```sql
 update public.app_settings
@@ -234,7 +241,7 @@ lo irreversible va en §3.3.
 |---|---|---|
 | El push falló en la migración N | 0272..N-1 aplicadas, N sin registrar | **No** se reintenta a ciegas: se lee el error, se corrige con una **migración nueva** (nunca se edita una aplicada) y se vuelve a firmar. Las funciones redefinidas ya aplicadas son compatibles con el código viejo (ver §3.4) |
 | El push terminó, algo falla después | 0295 aplicada | Casi todo es **aditivo**: se deja la base como está, se apaga lo nuevo (hook, `since`) y se arregla hacia adelante. Volver atrás es la excepción, y se hace con el rollback de la fila (abajo) |
-| `send-push` nuevo falla | Función nueva viva | `deploy.md` §2.2 «Rollback»: **primero** `delete from public.app_settings where key = 'push_claim_since';` (con su comprobación en 0 filas), **después** redesplegar la función anterior desde el commit previo a la 0264/0272; y apagar el reintento (`deploy.md` §2.2.1) |
+| `send-push` nuevo falla | Función nueva viva | **No se borra `push_claim_since`**: la función de `main` ya llama a `claim_push_event` (`origin/main:supabase/functions/send-push/index.ts:1390`) y, sin corte, la 0272 (líneas 256-261) responde 409 a todo: se cortarían **todos** los avisos. Se hace: (1) quitar `since` (`update public.app_settings set value = value - 'since', updated_at = now() where key = 'push_retry';`), (2) redesplegar la función de `main`, (3) **conservar el corte**. El rollback de `deploy.md` §2.2 (borrar el corte) sirve solo para volver a antes de la 0264 |
 | El reintento duplica avisos | `push_retry.since` puesto | `update public.app_settings set value = value - 'since', updated_at = now() where key = 'push_retry';` (apaga el cron sin tocar nada más) |
 | El alta de cuentas falla o un cliente legítimo no entra | Hook activo | **Apagar el hook en el panel** (Authentication > Hooks). La función puede quedarse. **Antes** de ejecutar `rollbacks/0279_*` hay que apagar el hook: si no, GoTrue falla TODA alta |
 | La web del cliente de `main` falla por la 0276 | Permisos revocados | **No hay un rollback de la 0276 en el repo.** La salida es hacia adelante: desplegar la web/API del commit firmado (opción b de D-A), o decidir (Jesús) una migración nueva que devuelva los permisos, con revisión de seguridad. Por eso D-A se decide **antes** |
@@ -243,7 +250,9 @@ lo irreversible va en §3.3.
 ### 3.3 Qué NO tiene vuelta (se dice antes, se acepta antes)
 
 - **0277**: los perfiles con el mismo teléfono verificado quedan desverificados (C-03). Las asignaciones quedan en
-  `phone_assignments` (`duplicate_cleared`), pero el campo `phone_verified_at` solo vuelve de la copia.
+  `phone_assignments` (`duplicate_cleared`), pero el campo `phone_verified_at` solo vuelve de la copia. Además, quien
+  vuelva a verificar su número **pierde la contraentrega durante 24 meses**: `duplicate_cleared` lo deja en `no_history`
+  (0277, `customer_contraentrega_decision`; 0286).
 - **0284**: los comentarios de reseñas de cuentas ya borradas se vacían (C-04).
 - **0293**: `phone_transfer_enabled` pasa a `false` aunque estuviera encendido.
 - **La purga y la anonimización de la API** (0284, 0285, 0286): una vez desplegada la API con `apply-data-retention-cron`,
@@ -258,6 +267,17 @@ rollback se ejecuta sin que Jesús lo mande y sin la comprobación de solo lectu
 redefinidas son copias literales de la versión anterior más un cambio puntual (lo dice cada migración), así que el
 código de la API de `main` las sigue llamando con la misma firma: lo que **sí** cambia el comportamiento visible para
 el código viejo son la 0276 (permisos), la 0279 (hook), la 0283 (recojo solo prepagado) y la 0293 (traslado apagado).
+
+Lo que el código de `main` **nota** con la base en la 0295 (leído en `origin/main`, sin probar):
+
+- **0292**: el WhatsApp del motorizado desaparece del seguimiento (`tracking-driver.tsx:34`).
+- **0275**: se rechazan pedidos con opciones obligatorias faltantes o repetidas.
+- **0287**: aparece un `OrderExpired` nuevo en el outbox al cancelar por vencimiento.
+- **0277**: nace `phone_restrictions`; `phone/verify/route.ts:91` de `main` sella el número **sin crear `phone_assignments`**.
+- **Cuenta nueva desde la web de `main`**: el insert de `persistence.ts:155` queda revocado por la 0276, no se crea el perfil, `verify` actualiza 0 filas y responde `verified:true`, y ese cliente **no puede pedir**.
+
+**Conclusión: la base NO puede pasar sola.** Tiene que ir junto con el despliegue de las apps desde `develop`, o la web de
+`main` se rompe para los clientes nuevos. Es decisión de Jesús y Fable (J3), antes de fijar la fecha.
 
 ## 4. Lo que esta guía no resuelve (a la vista de todos)
 
