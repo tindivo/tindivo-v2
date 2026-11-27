@@ -179,6 +179,12 @@ private fun PrepayErrorHelp() {
     val number =
         LocalSupportNumber.current ?: hiltViewModel<SupportViewModel>().number.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
+    // La frase de CUS-SUP-005 va junto al botón: la fila de Efectivo ya dice el motivo (CUS-CHK-023).
+    Text(
+        text = stringResource(R.string.support_error_phrase),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     TextButton(
         onClick = { uriHandler.openSafely(accountErrorHelpLink(number)) },
         modifier = Modifier.heightIn(min = 48.dp),
