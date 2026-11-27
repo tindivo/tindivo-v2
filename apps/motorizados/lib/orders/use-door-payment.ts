@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchOrderDetail } from '@/lib/orders/detail-cache'
-import { type DoorPayment, doorPayment, recheckWithTimeout } from '@/lib/orders/door-payment'
+import {
+  type DoorPayment,
+  doorPayment,
+  mergeDoor,
+  recheckWithTimeout,
+} from '@/lib/orders/door-payment'
 import type { OrderDetailResponse } from '@/lib/types'
 
 const RECHECK_TIMEOUT_MS = 4000
@@ -33,7 +38,7 @@ export function useDoorPayment(order: DoorOrder): {
   door: DoorPayment
   checking: boolean
   checkFailed: boolean
-  recheckNow: () => Promise<DoorPayment>
+  recheckNow: () => Promise<{ door: DoorPayment; failed: boolean }>
 } {
   const [door, setDoor] = useState<DoorPayment>(() => doorPayment(order))
   const [checking, setChecking] = useState(() => needsRecheck(order, doorPayment(order)))
@@ -52,10 +57,9 @@ export function useDoorPayment(order: DoorOrder): {
   }, [])
 
   // El detalle cambió (otra lectura trajo la confirmación, la captura…): se
-  // recalcula desde él.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: solo cambian estos cuatro campos del detalle
+  // recalcula desde él, sin que lo confirmado retroceda por un dato viejo.
   useEffect(() => {
-    setDoor(doorPayment(order))
+    setDoor((prev) => mergeDoor(prev, doorPayment(order)))
   }, [
     order.paymentIntent,
     order.paymentVerifiedAt,
@@ -63,7 +67,7 @@ export function useDoorPayment(order: DoorOrder): {
     order.paymentProofStatus,
   ])
 
-  const recheck = useCallback(async (): Promise<DoorPayment> => {
+  const recheck = useCallback(async (): Promise<{ door: DoorPayment; failed: boolean }> => {
     const stale = doorRef.current
     const { door: next, failed } = await recheckWithTimeout(
       stale,
@@ -74,10 +78,10 @@ export function useDoorPayment(order: DoorOrder): {
       setDoor(next)
       setCheckFailed(failed)
     }
-    return next
+    return { door: next, failed }
   }, [orderId])
 
-  const recheckNow = useCallback(async (): Promise<DoorPayment> => {
+  const recheckNow = useCallback(async (): Promise<{ door: DoorPayment; failed: boolean }> => {
     if (mounted.current) setChecking(true)
     try {
       return await recheck()
@@ -87,7 +91,6 @@ export function useDoorPayment(order: DoorOrder): {
   }, [recheck])
 
   // Al montar: solo el pago único que aún se cobra.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: una sola relectura al montar
   useEffect(() => {
     if (!needsRecheck(order, doorRef.current)) {
       setChecking(false)

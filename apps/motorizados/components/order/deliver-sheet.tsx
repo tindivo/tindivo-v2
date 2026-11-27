@@ -129,11 +129,19 @@ export function DeliverSheet({
   async function submit() {
     if (!canConfirm) return
     // Lo último que se sabe del cobro. Si se mostraba «cobra» en un pago único,
-    // se vuelve a leer justo antes de enviar. Si la relectura falla, `recheckNow`
-    // devuelve lo que había y se envía lo elegido: nunca se bloquea la entrega.
-    const latest =
-      order.paymentIntent === 'pending_yape' && door.mode === 'collect' ? await recheckNow() : door
-    const decision = submitDecision(door, latest)
+    // se vuelve a leer justo antes de enviar. Si la relectura falla, este toque
+    // solo deja ver el aviso (que el motorizado lo lea ANTES de cobrar) y el
+    // siguiente envía lo elegido: nunca se bloquea la entrega.
+    const warnedBefore = checkFailed
+    const check =
+      order.paymentIntent === 'pending_yape' && door.mode === 'collect'
+        ? await recheckNow()
+        : { door, failed: false }
+    const decision = submitDecision(door, check.door, {
+      failed: check.failed,
+      alreadyWarned: warnedBefore,
+    })
+    if (decision === 'hold_for_warning') return
     // El negocio confirmó con la hoja abierta: no se envía; la hoja pasa a «No
     // cobres nada» y pide otro toque.
     if (decision === 'switch_to_confirmed') return setJustConfirmed(true)
@@ -191,8 +199,8 @@ export function DeliverSheet({
           <>
             {checkFailed && order.paymentIntent === 'pending_yape' && (
               <p className="mt-3 rounded-xl bg-warning-soft px-3 py-2 text-body font-semibold text-amber-900">
-                No pudimos comprobar si el restaurante ya confirmó el pago. Pregúntale al cliente si
-                ya pagó antes de cobrar.
+                No pudimos comprobar si el restaurante ya confirmó el pago. Llama al restaurante
+                antes de cobrar; si no contesta, cobra con el QR.
               </p>
             )}
             {/* El plan, para comparar contra lo que de verdad pasó. */}

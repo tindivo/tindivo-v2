@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   type DoorPayment,
   doorPayment,
+  mergeDoor,
   paymentRealForConfirmed,
   recheckDoorPayment,
   recheckWithTimeout,
@@ -176,5 +177,49 @@ describe('submitDecision · qué se envía al pulsar «Confirmar entrega»', () 
 
   it('se mostraba collect y sigue en collect: se envía lo elegido', () => {
     expect(submitDecision(collect, collect)).toBe('submit_as_chosen')
+  })
+})
+
+describe('lo confirmado por el negocio no retrocede (dinero)', () => {
+  const confirmed: DoorPayment = { mode: 'confirmed_by_business', proof: 'pending' }
+  const collect: DoorPayment = { mode: 'collect', proof: 'pending' }
+
+  it('una relectura que trae «cobra» no pisa una confirmación ya vista', () => {
+    expect(recheckDoorPayment(confirmed, collect)).toEqual(confirmed)
+  })
+
+  it('un detalle viejo que llega por props tampoco la pisa', () => {
+    expect(mergeDoor(confirmed, collect)).toEqual(confirmed)
+  })
+
+  it('un detalle nuevo con la confirmación sí entra', () => {
+    expect(mergeDoor(collect, confirmed)).toEqual(confirmed)
+  })
+
+  it('sin confirmación de por medio manda el detalle nuevo', () => {
+    const rejected: DoorPayment = { mode: 'collect', proof: 'rejected' }
+    expect(mergeDoor(collect, rejected)).toEqual(rejected)
+  })
+})
+
+describe('si la comprobación falla al enviar, el aviso se ve antes de cobrar', () => {
+  const collect: DoorPayment = { mode: 'collect', proof: 'none' }
+
+  it('primer fallo: no se envía; la hoja muestra el aviso y pide otro toque', () => {
+    expect(submitDecision(collect, collect, { failed: true, alreadyWarned: false })).toBe(
+      'hold_for_warning',
+    )
+  })
+
+  it('con el aviso ya visto, el siguiente toque envía lo elegido (nunca se bloquea)', () => {
+    expect(submitDecision(collect, collect, { failed: true, alreadyWarned: true })).toBe(
+      'submit_as_chosen',
+    )
+  })
+
+  it('si la comprobación salió bien, se envía sin más', () => {
+    expect(submitDecision(collect, collect, { failed: false, alreadyWarned: false })).toBe(
+      'submit_as_chosen',
+    )
   })
 })

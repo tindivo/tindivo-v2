@@ -61,8 +61,22 @@ export function paymentRealForConfirmed(): 'paid_yape' {
 export function recheckDoorPayment(stale: DoorPayment, fresh: DoorPayment | null): DoorPayment {
   if (!fresh) return stale
   if (fresh.mode === 'confirmed_by_business') return fresh
-  if (fresh.mode === 'collect') return fresh
+  // Lo confirmado no retrocede: una lectura que llega con «cobra» después de
+  // haber visto la confirmación es vieja, no un cambio de idea del negocio.
+  if (fresh.mode === 'collect') return mergeDoor(stale, fresh)
   return stale
+}
+
+/**
+ * El cobro que queda cuando llega un detalle nuevo (props o relectura).
+ * `confirmed_by_business` no vuelve a `collect`: el servidor no deshace una
+ * confirmación (`confirm_delivery_payment` es idempotente y rechazar una captura
+ * no la toca), así que un «cobra» posterior solo puede ser un dato viejo, y
+ * creerlo es volver a cobrarle al cliente.
+ */
+export function mergeDoor(current: DoorPayment, incoming: DoorPayment): DoorPayment {
+  if (current.mode === 'confirmed_by_business' && incoming.mode === 'collect') return current
+  return incoming
 }
 
 /**
@@ -101,10 +115,20 @@ export async function recheckWithTimeout(
 export function submitDecision(
   shown: DoorPayment,
   latest: DoorPayment,
-): 'submit_prepaid' | 'submit_confirmed' | 'switch_to_confirmed' | 'submit_as_chosen' {
+  check: { failed: boolean; alreadyWarned: boolean } = { failed: false, alreadyWarned: false },
+):
+  | 'submit_prepaid'
+  | 'submit_confirmed'
+  | 'switch_to_confirmed'
+  | 'hold_for_warning'
+  | 'submit_as_chosen' {
   if (shown.mode === 'collect' && latest.mode === 'confirmed_by_business') {
     return 'switch_to_confirmed'
   }
+  // La comprobación de este toque falló y el motorizado aún no vio el aviso: no
+  // se envía todavía, para que lo lea antes de cobrar. El toque siguiente envía
+  // (la entrega nunca se bloquea por esto).
+  if (shown.mode === 'collect' && check.failed && !check.alreadyWarned) return 'hold_for_warning'
   if (shown.mode === 'confirmed_by_business') return 'submit_confirmed'
   if (shown.mode === 'prepaid') return 'submit_prepaid'
   return 'submit_as_chosen'

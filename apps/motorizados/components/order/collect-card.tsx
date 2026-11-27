@@ -89,8 +89,8 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
     <Card className="mt-3 p-[18px]">
       {isSingle && checkFailed && (
         <p className="mb-3 rounded-xl bg-warning-soft px-3 py-2 text-body font-semibold text-amber-900">
-          No pudimos comprobar si el restaurante ya confirmó el pago. Pregúntale al cliente si ya
-          pagó antes de cobrar.
+          No pudimos comprobar si el restaurante ya confirmó el pago. Llama al restaurante antes de
+          cobrar; si no contesta, cobra con el QR.
         </p>
       )}
       {isSingle && door.proof === 'rejected' && (
