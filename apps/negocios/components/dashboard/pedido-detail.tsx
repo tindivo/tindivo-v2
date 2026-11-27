@@ -1,10 +1,11 @@
 'use client'
 
-import type { PaymentQrView } from '@tindivo/contracts'
+import type { DeliveryPaymentRejectReason, PaymentQrView } from '@tindivo/contracts'
 import { Button, cn, Icon } from '@tindivo/ui'
 
 import { useEffect, useState } from 'react'
-import { formatReadyDelta, type OrderVM } from '@/lib/orders/view-model'
+import { PagoUnicoCard } from '@/features/pedidos/components/pago-unico-card'
+import { formatReadyDelta, type OrderVM, pagoUnicoView } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { CANCEL_REASONS, REJECT_REASONS_BASE, REJECT_REASONS_TAIL } from './pedido-detail/constants'
 import { DetailRow } from './pedido-detail/detail-row'
@@ -56,6 +57,16 @@ export interface DetailActions {
   onCallDriver?: (o: OrderVM) => void
   /** La cajera corrigio el pedido (0190): refresca el tablero. */
   onEdited?: () => void
+  /**
+   * PAGO ÚNICO · el negocio confirma que el Yape o Plin entró. Opcional: el
+   * historial (solo lectura) no lo pasa y la tarjeta no se pinta.
+   */
+  onConfirmDeliveryPayment?: () => void | Promise<void>
+  /** PAGO ÚNICO · rechaza la captura del intento vigente. Opcional, igual. */
+  onRejectDeliveryProof?: (
+    attempt: number,
+    reasonCode: DeliveryPaymentRejectReason,
+  ) => void | Promise<void>
 }
 
 // ── Payment sections ──────────────────────────────────────────────────────────
@@ -297,6 +308,7 @@ export function DetailScreen({
   const paymentChanged =
     order.method === 'delivery' && order.paymentReal != null && order.paymentReal !== order.payment
   const isOnline = order.source === 'web'
+  const pagoUnico = pagoUnicoView(order)
   const acceptDisabled = busy || isLoadingActions
   const isPrepaidAwaitingProof =
     isPrepaid && !proofUrl && !isLoadingActions && order.status === 'pending_acceptance'
@@ -749,6 +761,16 @@ export function DetailScreen({
             En pickup no cambia nada: ahí decide `cobroEnCaja`, más abajo. */}
         {effectivePayment === 'pending_cash' && <PaySectionCash order={order} />}
         {effectivePayment === 'pending_wallet' && <PaySectionWallet qrs={paymentQrs} />}
+        {/* Pago único (solo delivery web): el recojo y el manual no pasan por aquí. */}
+        {pagoUnico && actions.onConfirmDeliveryPayment && (
+          <PagoUnicoCard
+            order={order}
+            view={pagoUnico}
+            onConfirm={actions.onConfirmDeliveryPayment}
+            onReject={actions.onRejectDeliveryProof}
+            busy={busy}
+          />
+        )}
         {order.payment === 'prepaid' &&
           (isLoadingActions ? (
             <div className="h-16 animate-pulse rounded-md border border-ink/[0.08] bg-ink/[0.06] px-3.5 py-3" />

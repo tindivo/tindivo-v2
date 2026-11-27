@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiError } from '@tindivo/api-client'
+import type { DeliveryPaymentRejectReason } from '@tindivo/contracts'
 import { useCallback, useState } from 'react'
 import { api } from '@/lib/api'
 import { cobroEnCaja, type OrderVM } from '@/lib/orders/view-model'
@@ -35,6 +36,17 @@ export interface OrderActions {
   onVerifyProof: () => Promise<void>
   onRejectProof: () => Promise<void>
   onConfirmDirectPayment: (prepTimeMinutes: number) => Promise<void>
+  /**
+   * PAGO ÚNICO · el negocio confirma que el Yape o Plin ya le entró, con o sin
+   * captura. Solo el negocio lo confirma. No cambia el estado del pedido, así
+   * que no cierra el detalle.
+   */
+  onConfirmDeliveryPayment: () => Promise<void>
+  /**
+   * PAGO ÚNICO · rechaza la captura del intento vigente (`attempt`); el
+   * servidor devuelve 409 si ya no es el vigente. Tampoco cierra el detalle.
+   */
+  onRejectDeliveryProof: (attempt: number, reasonCode: DeliveryPaymentRejectReason) => Promise<void>
   onExtend: () => Promise<void>
   onReady: () => Promise<void>
   /**
@@ -219,6 +231,23 @@ export function useOrderActions({
           reasonCode: 'invalid_proof',
         })
         onDone?.()
+        await refetchOrders()
+      })
+    },
+    onConfirmDeliveryPayment: async () => {
+      await run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/payment-confirmation`, undefined)
+        await refetchOrders()
+      })
+    },
+    onRejectDeliveryProof: async (attempt, reasonCode) => {
+      await run(async () => {
+        if (!selected) return
+        await post(`/business/orders/${selected.rowId}/payment-proof/reject`, {
+          attempt,
+          reasonCode,
+        })
         await refetchOrders()
       })
     },
