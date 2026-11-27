@@ -39,9 +39,13 @@ export function PaySectionCash({ order }: { order: OrderVM }) {
    * de la tarjeta y esta sección calculaban lo mismo por separado y por eso
    * podían contradecirse. Aquí solo se elige el tamaño de la frase.
    *
-   * No toca el delivery aunque comparta componente: `payment_verified_at` solo
-   * lo escriben `validate_order` (prepago) y el `accept` del mostrador, así
-   * que un efectivo cobrado en la puerta nunca llega con `yaCobrado` en true.
+   * No toca el delivery aunque comparta componente: `cobroEnCaja` devuelve
+   * `null` fuera del recojo. `payment_verified_at` ahora tiene tres
+   * escritores (`validate_order`, el `accept` del mostrador y
+   * `confirm_delivery_payment` del pago único), pero en delivery esta sección
+   * no se pinta con ellos: un efectivo cobrado en la puerta nunca llega con
+   * `yaCobrado` en true, y la confirmación del pago único la muestra
+   * `PagoUnicoCard`.
    */
   const caja = cobroEnCaja(order)
   if (caja?.cobrado) {

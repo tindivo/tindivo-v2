@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { OrderVM } from '@/lib/orders/view-model'
+import { type OrderVM, withConfirmedPayment } from '@/lib/orders/view-model'
 import { buildComandaHtml, getAvailablePrintModes } from '../comanda-ticket'
 import type { DetailItem } from '../types'
 
@@ -173,6 +173,73 @@ describe('buildComandaHtml', () => {
 
     expect(html).toContain('BILLETERA (YAPE / PLIN)')
     expect(html).toContain('*** COBRAR AL ENTREGAR: S/ 35.50 ***')
+  })
+
+  it('pago único con entrega confirmado por el negocio: el motorizado no cobra', () => {
+    const html = buildComandaHtml({
+      order: { ...baseOrder, method: 'delivery', payment: 'pending_wallet', yaCobrado: true },
+      items,
+      bizName: 'Al Punto',
+    })
+
+    expect(html).toContain('*** [ ✓ YA PAGÓ CON YAPE/PLIN - NO COBRAR ] ***')
+    expect(html).not.toContain('COBRAR AL ENTREGAR')
+  })
+
+  it('pago único: tablero viejo y la tarjeta ya confirmada por la respuesta: la comanda no manda cobrar', () => {
+    const viejo: OrderVM = {
+      ...baseOrder,
+      method: 'delivery',
+      payment: 'pending_wallet',
+      yaCobrado: false,
+    }
+    const html = buildComandaHtml({
+      order: withConfirmedPayment(viejo, 'confirmed'),
+      items,
+      bizName: 'Al Punto',
+    })
+
+    expect(html).toContain('*** [ ✓ YA PAGÓ CON YAPE/PLIN - NO COBRAR ] ***')
+    expect(html).not.toContain('COBRAR AL ENTREGAR')
+    expect(html).not.toContain('TOTAL A COBRAR')
+  })
+
+  it('pago único confirmado en el servidor: el total del pie tampoco dice «A COBRAR»', () => {
+    const html = buildComandaHtml({
+      order: { ...baseOrder, method: 'delivery', payment: 'pending_wallet', yaCobrado: true },
+      items,
+      bizName: 'Al Punto',
+    })
+
+    expect(html).not.toContain('TOTAL A COBRAR')
+    expect(html).toContain('TOTAL:')
+  })
+
+  it('pago único con entrega sin confirmar: se cobra al entregar', () => {
+    const html = buildComandaHtml({
+      order: { ...baseOrder, method: 'delivery', payment: 'pending_wallet', yaCobrado: false },
+      items,
+      bizName: 'Al Punto',
+    })
+
+    expect(html).toContain('COBRAR AL ENTREGAR')
+    expect(html).not.toContain('NO COBRAR')
+  })
+
+  it('recojo con Yape cobrado en caja sigue diciendo «EN CAJA»', () => {
+    const html = buildComandaHtml({
+      order: {
+        ...baseOrder,
+        method: 'pickup',
+        pickupTiming: 'now',
+        payment: 'pending_wallet',
+        yaCobrado: true,
+      },
+      items,
+      bizName: 'Al Punto',
+    })
+
+    expect(html).toContain('*** [ ✓ YA PAGÓ EN CAJA ] ***')
   })
 
   it('escapa caracteres especiales contra XSS', () => {

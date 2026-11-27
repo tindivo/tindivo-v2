@@ -1,0 +1,318 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  type DoorPayment,
+  doorPayment,
+  doorReducer,
+  initialDoorState,
+  mergeDoor,
+  needsRecheck,
+  paymentRealForConfirmed,
+  recheckDoorPayment,
+  recheckWithTimeout,
+  submitDecision,
+} from '../door-payment'
+
+type Input = Parameters<typeof doorPayment>[0]
+
+const base: Input = {
+  paymentIntent: 'pending_yape',
+  paymentVerifiedAt: null,
+  hasPaymentProof: false,
+  paymentProofStatus: null,
+}
+
+describe('doorPayment · qué se hace con el dinero en la puerta', () => {
+  it('prepago: ya está pagado', () => {
+    expect(doorPayment({ ...base, paymentIntent: 'prepaid' }).mode).toBe('prepaid')
+  })
+
+  it('pago único con el ingreso confirmado por el negocio: no se cobra', () => {
+    expect(doorPayment({ ...base, paymentVerifiedAt: '2026-11-26T15:00:00Z' }).mode).toBe(
+      'confirmed_by_business',
+    )
+  })
+
+  it('pago único sin confirmar: se cobra', () => {
+    expect(doorPayment(base).mode).toBe('collect')
+  })
+
+  it('efectivo o mixto con paymentVerifiedAt NO cambia: el servidor solo lo escribe en el pago único', () => {
+    for (const paymentIntent of ['pending_cash', 'pending_mixed']) {
+      expect(
+        doorPayment({ ...base, paymentIntent, paymentVerifiedAt: '2026-11-26T15:00:00Z' }).mode,
+      ).toBe('collect')
+    }
+  })
+
+  it('sin captura, proof es none aunque el estado diga algo', () => {
+    expect(
+      doorPayment({ ...base, hasPaymentProof: false, paymentProofStatus: 'pending' }).proof,
+    ).toBe('none')
+  })
+
+  it('con captura, proof sigue el estado', () => {
+    const con = (paymentProofStatus: string | null) =>
+      doorPayment({ ...base, hasPaymentProof: true, paymentProofStatus }).proof
+    expect(con('pending')).toBe('pending')
+    expect(con('rejected')).toBe('rejected')
+    expect(con('verified')).toBe('verified')
+  })
+
+  it('con captura y estado desconocido o ausente, proof es pending', () => {
+    const con = (paymentProofStatus: string | null | undefined) =>
+      doorPayment({ ...base, hasPaymentProof: true, paymentProofStatus }).proof
+    expect(con('otra_cosa')).toBe('pending')
+    expect(con(null)).toBe('pending')
+    expect(con(undefined)).toBe('pending')
+  })
+
+  it('un detalle sin los campos nuevos (servidor viejo) se cobra y no tiene captura', () => {
+    expect(doorPayment({ paymentIntent: 'pending_yape' })).toEqual<DoorPayment>({
+      mode: 'collect',
+      proof: 'none',
+    })
+  })
+})
+
+describe('paymentRealForConfirmed', () => {
+  it('cuando el negocio ya confirmó, lo que entró es Yape', () => {
+    expect(paymentRealForConfirmed()).toBe('paid_yape')
+  })
+})
+
+describe('recheckDoorPayment · la carrera de la puerta', () => {
+  const collect: DoorPayment = { mode: 'collect', proof: 'pending' }
+  const confirmed: DoorPayment = { mode: 'confirmed_by_business', proof: 'verified' }
+
+  it('detalle viejo collect y relectura confirmada: gana la confirmación', () => {
+    expect(recheckDoorPayment(collect, confirmed)).toEqual(confirmed)
+  })
+
+  it('si la relectura falló, se queda lo viejo', () => {
+    expect(recheckDoorPayment(collect, null)).toEqual(collect)
+  })
+
+  it('si la relectura sigue diciendo collect, se queda la fresca (trae la captura al día)', () => {
+    const fresh: DoorPayment = { mode: 'collect', proof: 'rejected' }
+    expect(recheckDoorPayment(collect, fresh)).toEqual(fresh)
+  })
+
+  it('una relectura que dice prepaid no cambia lo viejo', () => {
+    expect(recheckDoorPayment(collect, { mode: 'prepaid', proof: 'none' })).toEqual(collect)
+  })
+})
+
+describe('recheckWithTimeout · la relectura con tope', () => {
+  const collect: DoorPayment = { mode: 'collect', proof: 'pending' }
+  const confirmed: DoorPayment = { mode: 'confirmed_by_business', proof: 'verified' }
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('si la relectura llega a tiempo y confirma, gana la confirmación y no falla', async () => {
+    const r = await recheckWithTimeout(collect, () => Promise.resolve(confirmed), 4000)
+    expect(r).toEqual({ door: confirmed, failed: false })
+  })
+
+  it('un pending_cash o pending_mixed con paymentVerifiedAt relee y sigue en collect', async () => {
+    for (const paymentIntent of ['pending_cash', 'pending_mixed']) {
+      const fresh = doorPayment({
+        paymentIntent,
+        paymentVerifiedAt: '2026-11-26T15:00:00Z',
+        hasPaymentProof: false,
+        paymentProofStatus: null,
+      })
+      const r = await recheckWithTimeout(collect, () => Promise.resolve(fresh), 4000)
+      expect(r.door.mode).toBe('collect')
+      expect(r.failed).toBe(false)
+    }
+  })
+
+  it('si la relectura se rechaza, se queda lo viejo y falla', async () => {
+    const r = await recheckWithTimeout(collect, () => Promise.reject(new Error('red')), 4000)
+    expect(r).toEqual({ door: collect, failed: true })
+  })
+
+  it('si fetchFresh lanza de inmediato, también se queda lo viejo y falla', async () => {
+    const r = await recheckWithTimeout(
+      collect,
+      () => {
+        throw new Error('boom')
+      },
+      4000,
+    )
+    expect(r).toEqual({ door: collect, failed: true })
+  })
+
+  it('si el tope vence antes que la relectura, se queda lo viejo y falla', async () => {
+    vi.useFakeTimers()
+    const pending = recheckWithTimeout(collect, () => new Promise<DoorPayment>(() => {}), 4000)
+    await vi.advanceTimersByTimeAsync(4000)
+    expect(await pending).toEqual({ door: collect, failed: true })
+  })
+
+  it('limpia el temporizador cuando gana la relectura', async () => {
+    vi.useFakeTimers()
+    const r = await recheckWithTimeout(collect, () => Promise.resolve(confirmed), 4000)
+    expect(r.failed).toBe(false)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+describe('submitDecision · qué se envía al pulsar «Confirmar entrega»', () => {
+  const collect: DoorPayment = { mode: 'collect', proof: 'pending' }
+  const confirmed: DoorPayment = { mode: 'confirmed_by_business', proof: 'verified' }
+  const prepaid: DoorPayment = { mode: 'prepaid', proof: 'none' }
+
+  it('se mostraba collect y el negocio confirmó: no se envía, la hoja cambia', () => {
+    expect(submitDecision(collect, confirmed)).toBe('switch_to_confirmed')
+  })
+
+  it('se mostraba confirmado: se envía como confirmado', () => {
+    expect(submitDecision(confirmed, confirmed)).toBe('submit_confirmed')
+    expect(submitDecision(confirmed, collect)).toBe('submit_confirmed')
+  })
+
+  it('prepago: se envía como prepagado', () => {
+    expect(submitDecision(prepaid, prepaid)).toBe('submit_prepaid')
+  })
+
+  it('se mostraba collect y sigue en collect: se envía lo elegido', () => {
+    expect(submitDecision(collect, collect)).toBe('submit_as_chosen')
+  })
+})
+
+describe('lo confirmado por el negocio no retrocede (dinero)', () => {
+  const confirmed: DoorPayment = { mode: 'confirmed_by_business', proof: 'pending' }
+  const collect: DoorPayment = { mode: 'collect', proof: 'pending' }
+
+  it('una relectura que trae «cobra» no pisa una confirmación ya vista', () => {
+    expect(recheckDoorPayment(confirmed, collect)).toEqual(confirmed)
+  })
+
+  it('un detalle viejo que llega por props tampoco la pisa', () => {
+    expect(mergeDoor(confirmed, collect)).toEqual(confirmed)
+  })
+
+  it('un detalle nuevo con la confirmación sí entra', () => {
+    expect(mergeDoor(collect, confirmed)).toEqual(confirmed)
+  })
+
+  it('sin confirmación de por medio manda el detalle nuevo', () => {
+    const rejected: DoorPayment = { mode: 'collect', proof: 'rejected' }
+    expect(mergeDoor(collect, rejected)).toEqual(rejected)
+  })
+})
+
+describe('si la comprobación falla al enviar, el aviso se ve antes de cobrar', () => {
+  const collect: DoorPayment = { mode: 'collect', proof: 'none' }
+
+  it('primer fallo: no se envía; la hoja muestra el aviso y pide otro toque', () => {
+    expect(submitDecision(collect, collect, { failed: true, alreadyWarned: false })).toBe(
+      'hold_for_warning',
+    )
+  })
+
+  it('con el aviso ya visto, el siguiente toque envía lo elegido (nunca se bloquea)', () => {
+    expect(submitDecision(collect, collect, { failed: true, alreadyWarned: true })).toBe(
+      'submit_as_chosen',
+    )
+  })
+
+  it('si la comprobación salió bien, se envía sin más', () => {
+    expect(submitDecision(collect, collect, { failed: false, alreadyWarned: false })).toBe(
+      'submit_as_chosen',
+    )
+  })
+})
+
+describe('doorReducer · el cobro en la puerta como secuencia de eventos', () => {
+  const collect: DoorPayment = { mode: 'collect', proof: 'none' }
+  const confirmed: DoorPayment = { mode: 'confirmed_by_business', proof: 'verified' }
+
+  function pendingThenConfirmed() {
+    let s = initialDoorState(collect)
+    s = doorReducer(s, { type: 'recheck_start' })
+    s = doorReducer(s, { type: 'props', door: confirmed })
+    return s
+  }
+
+  it('CAX-001: relectura pendiente, llega la confirmación por props y la relectura vieja dice collect', () => {
+    let s = pendingThenConfirmed()
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: collect, failed: false })
+    expect(s.door.mode).toBe('confirmed_by_business')
+    expect(s.checkFailed).toBe(false)
+    expect(s.checking).toBe(false)
+  })
+
+  it('CAX-001: relectura pendiente, llega la confirmación y la relectura falla', () => {
+    let s = pendingThenConfirmed()
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: s.door, failed: true })
+    expect(s.door.mode).toBe('confirmed_by_business')
+    expect(s.checkFailed).toBe(false)
+  })
+
+  it('CAX-001: relectura pendiente, llega la confirmación y vence el tope con la fresca igual a la vieja', () => {
+    let s = pendingThenConfirmed()
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: collect, failed: true })
+    expect(s.door.mode).toBe('confirmed_by_business')
+    expect(s.checkFailed).toBe(false)
+  })
+
+  it('un gen viejo se ignora y checking no cambia', () => {
+    let s = initialDoorState(collect)
+    s = doorReducer(s, { type: 'recheck_start' })
+    const old = s.gen
+    s = doorReducer(s, { type: 'recheck_start' })
+    const after = doorReducer(s, { type: 'recheck_done', gen: old, door: confirmed, failed: false })
+    expect(after).toEqual(s)
+    expect(after.checking).toBe(true)
+  })
+
+  it('con el gen vigente, un fallo en collect marca checkFailed', () => {
+    let s = initialDoorState(collect)
+    s = doorReducer(s, { type: 'recheck_start' })
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: collect, failed: true })
+    expect(s.checkFailed).toBe(true)
+    expect(s.checking).toBe(false)
+  })
+
+  it('props confirmado limpia checkFailed', () => {
+    let s = initialDoorState(collect)
+    s = doorReducer(s, { type: 'recheck_start' })
+    s = doorReducer(s, { type: 'recheck_done', gen: s.gen, door: collect, failed: true })
+    s = doorReducer(s, { type: 'props', door: confirmed })
+    expect(s.checkFailed).toBe(false)
+  })
+})
+
+describe('CAX-005 · el pedido manual se comporta como en la base', () => {
+  it.each([
+    [false, null],
+    [true, null],
+    [false, '2026-11-27T10:00:00Z'],
+    [true, '2026-11-27T10:00:00Z'],
+  ])('manual pending_yape (captura %s, verificado %s) cobra y no relee', (hasPaymentProof, paymentVerifiedAt) => {
+    const o = {
+      ...base,
+      isManual: true,
+      hasPaymentProof,
+      paymentProofStatus: hasPaymentProof ? 'verified' : null,
+      paymentVerifiedAt,
+    } as Input & { isManual: boolean }
+    expect(doorPayment(o).mode).toBe('collect')
+    expect(needsRecheck(o)).toBe(false)
+  })
+
+  it('manual prepago sigue prepagado', () => {
+    expect(doorPayment({ ...base, paymentIntent: 'prepaid', isManual: true }).mode).toBe('prepaid')
+  })
+
+  it('no manual pending_yape sin confirmar relee; confirmado no', () => {
+    expect(needsRecheck({ ...base, isManual: false })).toBe(true)
+    expect(
+      needsRecheck({ ...base, isManual: false, paymentVerifiedAt: '2026-11-27T10:00:00Z' }),
+    ).toBe(false)
+  })
+})
