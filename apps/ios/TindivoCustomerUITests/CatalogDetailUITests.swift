@@ -86,6 +86,29 @@ final class CatalogDetailUITests: CatalogUITestCase {
         XCTAssertTrue(bar.label.contains("Abre mañana a las 12:00"), "La barra dice: \(bar.label)")
     }
 
+    /// CUS-CRT-009 y CUS-CRT-015: con la bolsa revisada «Continuar» lleva el mismo monto que el subtotal, se puede tocar
+    /// y, como iOS aún no tiene checkout, lleva a «Próximamente».
+    func testContinueFromTheBagLeadsToComingSoon() throws {
+        launch(fakeCatalog: true)
+        openDonLucho()
+        app.buttons["Agregar Chicha morada"].tap()
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10), "No se abrió el plato")
+        element("dish.add").tap()
+        let bar = element("business.cartBar")
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "No apareció «Ver bolsa»")
+        bar.tap()
+        let next = element("cart.continue")
+        XCTAssertTrue(next.waitForExistence(timeout: 10), "Falta «Continuar»")
+        expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: next)
+        waitForExpectations(timeout: 20)
+        XCTAssertTrue(next.label.hasPrefix("Continuar"), "«Continuar» dice: \(next.label)")
+        // El formato de Perú separa «S/» del monto con un espacio que no se parte (U+00A0).
+        let spoken = next.label.replacingOccurrences(of: "\u{00A0}", with: " ")
+        XCTAssertTrue(spoken.contains("S/ 5.00"), "El monto no es el del subtotal: \(next.label)")
+        next.tap()
+        XCTAssertTrue(element("comingSoon.checkout").waitForExistence(timeout: 10), "No llegó a «Próximamente»")
+    }
+
     /// El gesto de volver desde el borde funciona sin la barra del sistema, pero no mientras se busca: ahí «Volver»
     /// cierra primero la búsqueda (`BackHandler(enabled = searching)` de Android).
     func testEdgeSwipeGoesBackExceptWhileSearching() throws {
@@ -127,7 +150,7 @@ final class CatalogDetailUITests: CatalogUITestCase {
 
     /// CA-CRT-14: con la carta caída la bolsa avisa «No pudimos revisar la carta. Toca Reintentar.»; un reintento que
     /// vuelve a fallar (el gancho cuenta un intento más) deja el aviso, y uno que funciona lo quita sin perder la línea.
-    /// Que «Continuar» no avance con la carta sin revisar se prueba solo en el modelo: ese botón aún no existe en iOS.
+    /// «Continuar» pasa a «Reintentar»; que no avance con la carta sin revisar lo prueba `CartContinueTests`.
     func testBagWithTheMenuDownOffersRetryAndRecovers() throws {
         let failFile = NSTemporaryDirectory() + "tindivo-fail-menu-\(UUID().uuidString).txt"
         defer { try? FileManager.default.removeItem(atPath: failFile) }

@@ -35,7 +35,7 @@ struct CartValidationTests {
         "g", single: true, required: true, options: [Fixture.option("a", "1"), Fixture.option("b", "2")])
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una línea igual a la carta no tiene avisos, aunque el precio se escriba distinto (12.5 y 12.50)"
+        "CA-CRT-05 (aviso en la línea y canContinue): una línea igual a la carta no tiene avisos, aunque el precio se escriba distinto (12.5 y 12.50)"
     )
     func validLine() throws {
         let result = try issues(of: [line("i1", price: "12.5")], in: [Fixture.item("i1", price: "12.50")])
@@ -43,21 +43,21 @@ struct CartValidationTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato que ya no está en la carta"
+        "CA-CRT-05 (aviso en la línea y canContinue): un plato que ya no está en la carta"
     )
     func removedDish() throws {
         let result = try issues(of: [line("gone")], in: [Fixture.item("i1")])
         #expect(result == [[.removed]])
     }
 
-    @Test("CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato agotado")
+    @Test("CA-CRT-05 (aviso en la línea y canContinue): un plato agotado")
     func unavailableDish() throws {
         let result = try issues(of: [line("i1")], in: [Fixture.item("i1", available: false)])
         #expect(result == [[.unavailable]])
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato fuera de su franja se avisa"
+        "CA-CRT-05 (aviso en la línea y canContinue): un plato fuera de su franja se avisa"
     )
     func outOfWindowDish() throws {
         let result = try issues(of: [line("i1")], in: [Fixture.item("i1", from: "11:00", to: "15:00")])
@@ -88,7 +88,7 @@ struct CartValidationTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato dentro de su franja se puede pedir"
+        "CA-CRT-05 (aviso en la línea y canContinue): un plato dentro de su franja se puede pedir"
     )
     func insideWindowDish() throws {
         let result = try issues(of: [line("i1")], in: [Fixture.item("i1", from: "18:00", to: "23:00")])
@@ -96,14 +96,14 @@ struct CartValidationTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): el precio base cambió")
+        "CA-CRT-05 (aviso en la línea y canContinue): el precio base cambió")
     func basePriceChanged() throws {
         let result = try issues(of: [line("i1", price: "10")], in: [Fixture.item("i1", price: "12")])
         #expect(result == [[.priceChanged(old: dec("10"), new: dec("12"))]])
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): el precio de una opción cambió"
+        "CA-CRT-05 (aviso en la línea y canContinue): el precio de una opción cambió"
     )
     func optionPriceChanged() throws {
         let result = try issues(
@@ -115,7 +115,7 @@ struct CartValidationTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una opción que ya no existe"
+        "CA-CRT-05 (aviso en la línea y canContinue): una opción que ya no existe"
     )
     func optionRemoved() throws {
         let result = try issues(
@@ -126,7 +126,7 @@ struct CartValidationTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): el negocio añadió un grupo obligatorio y lo elegido ya no cumple las reglas"
+        "CA-CRT-05 (aviso en la línea y canContinue): el negocio añadió un grupo obligatorio y lo elegido ya no cumple las reglas"
     )
     func invalidSelection() throws {
         let result = try issues(of: [line("i1")], in: [Fixture.item("i1", groups: [sizes])])
@@ -134,7 +134,7 @@ struct CartValidationTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): opciones iguales a la carta no dan aviso"
+        "CA-CRT-05 (aviso en la línea y canContinue): opciones iguales a la carta no dan aviso"
     )
     func matchingOptions() throws {
         let result = try issues(

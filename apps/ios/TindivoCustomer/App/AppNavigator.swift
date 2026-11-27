@@ -40,6 +40,12 @@ final class AppNavigator {
         path.append(.cart)
     }
 
+    /// «Continuar» de la bolsa.
+    func openCheckout() {
+        if case .checkout? = path.last { return }
+        path.append(.checkout)
+    }
+
     #if DEBUG
     func openDiagnostics() {
         path.append(.diagnostics)

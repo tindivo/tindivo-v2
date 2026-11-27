@@ -92,6 +92,8 @@ struct RootView: View {
             BusinessRoute(id: id, environment: environment, navigator: navigator)
         case .cart:
             CartRoute(environment: environment, navigator: navigator)
+        case .checkout:
+            ComingSoonView(title: "Confirmar pedido", icon: .bag, identifier: "comingSoon.checkout")
         #if DEBUG
         case .diagnostics:
             DiagnosticsView(model: DiagnosticsScreenModel(system: environment.system, config: environment.config))
@@ -142,7 +144,8 @@ private struct CartRoute: View {
         CartView(
             model: model,
             onAddMore: navigator.addMore(to:),
-            onSeeBusinesses: navigator.seeBusinesses
+            onSeeBusinesses: navigator.seeBusinesses,
+            onContinue: navigator.openCheckout
         )
     }
 }

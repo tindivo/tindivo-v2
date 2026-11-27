@@ -6,6 +6,8 @@ enum AppRoute: Hashable {
     /// `id` es el uuid del negocio (o su slug: la API acepta los dos).
     case business(id: String)
     case cart
+    /// El checkout al que lleva «Continuar»: iOS aún no lo tiene y la pantalla dice «Próximamente».
+    case checkout
     #if DEBUG
     case diagnostics
     #endif

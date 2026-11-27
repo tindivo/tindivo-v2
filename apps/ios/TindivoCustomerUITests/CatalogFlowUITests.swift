@@ -148,6 +148,18 @@ final class CatalogFlowUITests: CatalogUITestCase {
 
         // «Editar» solo en el plato con opciones: abre la ficha.
         XCTAssertEqual(query("cart.edit").count, 1)
+        // Con la letra más grande la lista es larga: se desliza hasta que «Editar» quede entre la barra de arriba (hasta
+        // y=210) y la de abajo (desde y=650). `isHittable` no basta: una barra translúcida no lo tapa para XCUITest.
+        let edit = element("cart.edit")
+        var swipes = 0
+        while swipes < 8, !(edit.frame.minY > 210 && edit.frame.maxY < 650) {
+            // Se arrastra con coordenadas: `swipeDown()` no movió esta lista (medido, causa sin aclarar).
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: edit.frame.minY <= 210 ? 0.3 : 0.7))
+            let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: edit.frame.minY <= 210 ? 0.7 : 0.3))
+            from.press(forDuration: 0.1, thenDragTo: to)
+            swipes += 1
+        }
+        XCTAssertTrue(edit.frame.minY > 210 && edit.frame.maxY < 650, "«Editar» no quedó a la vista: \(edit.frame)")
         element("cart.edit").tap()
         XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10), "«Editar» no abrió el plato")
         attach("ax5-bolsa-editar")

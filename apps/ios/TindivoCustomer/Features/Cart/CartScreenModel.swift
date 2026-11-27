@@ -28,6 +28,8 @@ struct CartLineRow: Equatable {
     let issues: [String]
     /// «Editar» solo existe si el plato lleva opciones (CUS-CRT-014).
     let canEdit: Bool
+    /// La foto con la que se agregó el plato; sin ella (o mientras carga) va el isotipo sobre crema.
+    var imageURL: String?
 
     /// Identidad en la lista: unidades UTF-16 (como `CartLine.signatureKey`), no la igualdad canónica de `String`.
     var signatureKey: [UInt16] { Array(signature.utf16) }
@@ -50,6 +52,29 @@ final class CartScreenModel {
         let validation: Validation
         /// «[n] productos» de la barra (unidades en total).
         let countLabel: String
+        /// El negocio está cerrado ahora (CA-CRT-07): se sabe con la carta ya cargada.
+        var closed = false
+        /// El negocio pasó a modo catálogo (CUS-CAT-015): ya no recibe pedidos por la app.
+        var catalogOnly = false
+
+        /// Lo que dice y hace «Continuar» (CUS-CRT-009: cuando no avanza, la pantalla dice por qué).
+        var continueState: ContinueState {
+            switch validation {
+            case .validating: .loading
+            case .checkFailed: .retry
+            case .checked:
+                // El modo catálogo va antes que «cerrado»: no depende del horario (CUS-CAT-015).
+                if catalogOnly {
+                    .catalogOnly
+                } else if closed {
+                    .closed
+                } else if allowsContinue {
+                    .ready
+                } else {
+                    .blocked
+                }
+            }
+        }
 
         /// La etiqueta del método de entrega (CUS-CRT-007, CUS-CRT-010).
         var methodLabel: String {
@@ -69,9 +94,29 @@ final class CartScreenModel {
         var showsShipping: Bool { method == .delivery }
     }
 
+    /// El estado del botón «Continuar» de la bolsa.
+    enum ContinueState: Equatable {
+        /// Esperando la carta: «Cargando…», no avanza.
+        case loading
+        /// La carta no respondió (CA-CRT-14): dice «Reintentar» y vuelve a pedirla.
+        case retry
+        /// El negocio está cerrado (CA-CRT-07): «El restaurante está cerrado ahora», no avanza.
+        case closed
+        /// El negocio pasó a modo catálogo (CUS-CAT-015): «Este restaurante solo recibe pedidos por WhatsApp», no avanza
+        /// (decisión de Jesús, 2026-11-27).
+        case catalogOnly
+        /// Una línea con problema o un importe que no se puede mostrar (CA-CRT-05, CA-CRT-15): no avanza; la pantalla
+        /// lo dice en la línea y en la bolsa.
+        case blocked
+        /// Se puede avanzar.
+        case ready
+
+        var advances: Bool { self == .ready }
+    }
+
     /// Cómo va la revisión de la bolsa contra la carta vigente. No se guarda: se repite cada vez que se abre.
     enum Validation: Equatable {
-        /// Esperando la carta; «Continuar» (cuando exista) dice «Cargando…».
+        /// Esperando la carta; «Continuar» dice «Cargando…».
         case validating
         /// La carta respondió: las líneas con problema llevan su aviso.
         case checked
@@ -230,11 +275,11 @@ final class CartScreenModel {
         }
     }
 
-    /// «Continuar» (todavía no existe en iOS: llega con el checkout) solo podrá avanzar con la bolsa ya revisada y
-    /// sin líneas con problema. Con la carta caída (`checkFailed`) tampoco (CA-CRT-14).
+    /// «Continuar» solo avanza con la bolsa ya revisada, sin líneas con problema y con el negocio abierto. Con la carta
+    /// caída (`checkFailed`) tampoco (CA-CRT-14): se reintenta.
     var canContinue: Bool {
         guard case let .filled(filled) = state else { return false }
-        return filled.allowsContinue
+        return filled.continueState.advances
     }
 
     private func rebuild() {
@@ -248,7 +293,7 @@ final class CartScreenModel {
             state = Self.state(
                 for: cart, validation: .checked,
                 issues: CartValidation.issues(of: cart, against: detail, now: clock.now()),
-                menu: detail
+                menu: detail, now: clock.now()
             )
         case .failed:
             state = Self.state(for: cart, validation: .checkFailed)
@@ -470,7 +515,7 @@ extension CartScreenModel {
     /// línea (tiene opciones elegidas).
     static func state(
         for cart: Cart?, validation: Validation = .validating, issues: [[CartLineIssue]] = [],
-        menu: BusinessDetail? = nil
+        menu: BusinessDetail? = nil, now: Date? = nil
     ) -> State {
         guard let cart, !cart.isEmpty else { return .empty }
         return .filled(
@@ -498,7 +543,8 @@ extension CartScreenModel {
                         issues: (issues.indices.contains(index) ? Self.messages(issues[index]) : [])
                             + (formatAmount(line.total) == nil
                                 ? [String(localized: "No podemos mostrar el precio por ahora")] : []),
-                        canEdit: dishHasOptions(line, in: menu) ?? !line.modifiers.isEmpty
+                        canEdit: dishHasOptions(line, in: menu) ?? !line.modifiers.isEmpty,
+                        imageURL: line.imageURL
                     )
                 },
                 subtotal: displayAmount(cart.subtotal),
@@ -506,7 +552,9 @@ extension CartScreenModel {
                     && cart.lines.allSatisfy { formatAmount($0.total) != nil },
                 method: cart.method,
                 validation: validation,
-                countLabel: String(localized: "\(cart.count) productos")
+                countLabel: String(localized: "\(cart.count) productos"),
+                closed: isClosed(menu, at: now),
+                catalogOnly: isCatalogOnly(menu, at: now)
             ))
     }
 
@@ -514,6 +562,18 @@ extension CartScreenModel {
     nonisolated static func messages(_ issues: [CartLineIssue]) -> [String] {
         var seen = Set<String>()
         return issues.map(\.message).filter { seen.insert($0).inserted }
+    }
+
+    /// ¿El negocio está cerrado en `now`? Sin carta o sin instante no se sabe, y no se dice.
+    private static func isClosed(_ menu: BusinessDetail?, at now: Date?) -> Bool {
+        guard let menu, let now, case .closed = orderingMode(for: menu, now: now) else { return false }
+        return true
+    }
+
+    /// ¿El negocio está en modo catálogo? Sin carta o sin instante no se sabe, y no se dice.
+    private static func isCatalogOnly(_ menu: BusinessDetail?, at now: Date?) -> Bool {
+        guard let menu, let now, case .contact = orderingMode(for: menu, now: now) else { return false }
+        return true
     }
 
     /// ¿El plato de la línea tiene grupos de opciones en la carta vigente? `nil` si no hay carta o el plato no está.

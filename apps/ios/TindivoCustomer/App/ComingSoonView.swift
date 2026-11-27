@@ -4,12 +4,25 @@ import TindivoDesign
 /// La pantalla de una pestaña que aún no existe en iPhone (Entregas, Pedidos, Cuenta): el título de la pestaña, la
 /// píldora «Próximamente» y una línea.
 struct ComingSoonView: View {
-    let tab: RootTab
+    let title: LocalizedStringResource
+    let icon: TindivoIcon
+    let identifier: String
+
+    init(tab: RootTab) {
+        self.init(title: tab.title, icon: tab.icon, identifier: "comingSoon.\(tab.identifier)")
+    }
+
+    /// Para lo que aún no existe y no es una pestaña (hoy, el checkout al que lleva «Continuar»).
+    init(title: LocalizedStringResource, icon: TindivoIcon, identifier: String) {
+        self.title = title
+        self.icon = icon
+        self.identifier = identifier
+    }
 
     var body: some View {
         VStack(spacing: TindivoTokens.Spacing.spaceInner) {
-            TindivoRoundIcon(tab.icon, size: 64)
-            Text(tab.title)
+            TindivoRoundIcon(icon, size: 64)
+            Text(title)
                 .tindivoText(TypeToken.greeting)
                 .foregroundStyle(Color.tindivo.ink)
                 .accessibilityAddTraits(.isHeader)
@@ -23,7 +36,7 @@ struct ComingSoonView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.tindivo.background)
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("comingSoon.\(tab.identifier)")
+        .accessibilityIdentifier(identifier)
     }
 }
 

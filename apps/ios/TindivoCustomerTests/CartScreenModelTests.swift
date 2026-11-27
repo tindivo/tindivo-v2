@@ -337,7 +337,7 @@ extension CartScreenModelTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): antes de que responda la carta la bolsa se ve, está «validando» y no se puede continuar"
+        "CA-CRT-05 (aviso en la línea y canContinue): antes de que responda la carta la bolsa se ve, está «validando» y no se puede continuar"
     )
     func validatingBeforeTheMenuAnswers() async throws {
         let store = temporaryStore()
@@ -362,7 +362,7 @@ extension CartScreenModelTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato agotado se avisa en su línea y no se puede continuar hasta quitarlo"
+        "CA-CRT-05 (aviso en la línea y canContinue): un plato agotado se avisa en su línea y no se puede continuar hasta quitarlo"
     )
     func unavailableLineBlocksContinuing() async throws {
         let (model, _, task) = try await validated(
@@ -382,7 +382,7 @@ extension CartScreenModelTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un precio cambiado se avisa en la línea y bloquea; la bolsa no se toca"
+        "CA-CRT-05 (aviso en la línea y canContinue): un precio cambiado se avisa en la línea y bloquea; la bolsa no se toca"
     )
     func changedPriceBlocksContinuing() async throws {
         let (model, store, task) = try await validated(
@@ -398,7 +398,7 @@ extension CartScreenModelTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): un plato eliminado, uno fuera de franja y una opción que ya no existe se avisan en su línea"
+        "CA-CRT-05 (aviso en la línea y canContinue): un plato eliminado, uno fuera de franja y una opción que ya no existe se avisan en su línea"
     )
     func otherIssuesAreShownOnTheLine() async throws {
         let sizes = Fixture.group("g", single: true, required: true, options: [Fixture.option("a", "1")])
@@ -419,7 +419,7 @@ extension CartScreenModelTests {
     }
 
     @Test(
-        "CA-CRT-05 parcial (aviso en la línea y canContinue; «Continuar» llega con el checkout): una bolsa que coincide con la carta puede continuar"
+        "CA-CRT-05 (aviso en la línea y canContinue): una bolsa que coincide con la carta puede continuar"
     )
     func matchingBagCanContinue() async throws {
         let (model, _, task) = try await validated(lines: [line("a")], menu: validationMenu([Fixture.item("a")]))
