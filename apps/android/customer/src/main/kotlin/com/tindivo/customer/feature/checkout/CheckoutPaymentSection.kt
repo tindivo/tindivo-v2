@@ -1,6 +1,5 @@
 package com.tindivo.customer.feature.checkout
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -23,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,7 +45,7 @@ import com.tindivo.customer.support.accountErrorHelpLink
 import com.tindivo.customer.support.openSafely
 import com.tindivo.customer.ui.NumberedStep
 
-/** «¿Cómo pagas?»: las opciones de la cotización, en su orden, agrupadas por momento. */
+/** «¿Cómo pagas?»: dos filas como máximo, Efectivo y Yape o Plin, sin grupos (CUS-CHK-024). */
 internal fun LazyListScope.paymentSection(
     state: CheckoutUiState,
     form: CheckoutFormActions,
@@ -61,24 +61,7 @@ internal fun LazyListScope.paymentSection(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             } else {
-                PayGroup(
-                    R.string.checkout_pay_group_receive,
-                    quote.options.filter {
-                        it.method != PayMethod.Prepaid
-                    },
-                    state,
-                    quote,
-                    form,
-                )
-                PayGroup(
-                    R.string.checkout_pay_group_before,
-                    quote.options.filter {
-                        it.method == PayMethod.Prepaid
-                    },
-                    state,
-                    quote,
-                    form,
-                )
+                PayRows(state, quote, form)
                 // Todo recojo es prepago y el dinero no se devuelve si no pasa (DECISIONS §0224): se dice antes de pagar.
                 if (state.isPickup) {
                     Text(
@@ -99,25 +82,30 @@ internal fun LazyListScope.paymentSection(
 }
 
 @Composable
-private fun PayGroup(
-    @StringRes titleRes: Int,
-    options: List<PayOption>,
+private fun PayRows(
     state: CheckoutUiState,
     quote: QuoteView,
     form: CheckoutFormActions,
 ) {
-    if (options.isEmpty()) return
+    val rows = payRows(quote.options, state.pay)
+    if (rows.isEmpty()) return
     TindivoCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = stringResource(titleRes), style = MaterialTheme.typography.titleSmall)
-            options.forEach { option ->
+            rows.forEach { row ->
+                val selected = state.pay == row.method
                 ChoiceRow(
-                    selected = state.pay == option.method,
-                    enabled = option.available,
-                    title = payTitle(option.method),
-                    hint = if (option.available) payHint(option.method) else unavailableText(option, quote),
-                    onClick = { form.onSelectPay(option.method) },
-                    leading = { PayArt(method = option.method, enabled = option.available) },
+                    selected = selected,
+                    enabled = row.available,
+                    title = payTitle(row.method),
+                    // Una sola línea: el motivo si no se puede, el del método si está elegida, nada si no (CA-CHK-P3).
+                    hint =
+                        when {
+                            !row.available -> unavailableText(row.unavailableReason, quote)
+                            selected -> payHint(row.method)
+                            else -> null
+                        },
+                    onClick = { form.onSelectPay(row.method) },
+                    leading = { PayArt(method = row.method, enabled = row.available) },
                 )
             }
         }
@@ -179,10 +167,17 @@ private fun payHint(method: PayMethod): String =
 
 private const val PREPAY_REQUIRED = "prepay_required"
 
+/**
+ * El número de soporte ya resuelto. En la app va vacío y se lee del ViewModel de soporte; las pruebas de pantalla, que
+ * no tienen Hilt, lo ponen aquí.
+ */
+internal val LocalSupportNumber = staticCompositionLocalOf<String?> { null }
+
 /** «Si crees que hubo un error…» (CUS-SUP-005): el botón a WhatsApp de soporte, sin formulario de apelación. */
 @Composable
-private fun PrepayErrorHelp(supportViewModel: SupportViewModel = hiltViewModel()) {
-    val number = supportViewModel.number.collectAsStateWithLifecycle().value
+private fun PrepayErrorHelp() {
+    val number =
+        LocalSupportNumber.current ?: hiltViewModel<SupportViewModel>().number.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
     TextButton(
         onClick = { uriHandler.openSafely(accountErrorHelpLink(number)) },
@@ -195,10 +190,10 @@ private fun PrepayErrorHelp(supportViewModel: SupportViewModel = hiltViewModel()
 /** Por qué una opción no está disponible, con las palabras de la web (el motivo viene del servidor). */
 @Composable
 private fun unavailableText(
-    option: PayOption,
+    reason: String?,
     quote: QuoteView,
 ): String =
-    when (option.unavailableReason) {
+    when (reason) {
         "exceeds_threshold" -> stringResource(R.string.checkout_pay_reason_threshold, quote.prepayThreshold.soles())
         PREPAY_REQUIRED -> stringResource(R.string.checkout_pay_reason_required)
         else -> stringResource(R.string.checkout_pay_reason_other)

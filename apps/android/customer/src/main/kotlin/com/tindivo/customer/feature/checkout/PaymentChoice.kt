@@ -78,3 +78,35 @@ fun reconcilePayMethod(
     } else {
         defaultPayMethod(lastIntent, options)
     }
+
+/** Una fila de «¿Cómo pagas?» (CUS-CHK-024): un método, si se puede elegir y, si no, el motivo del servidor. */
+data class PayRow(
+    val method: PayMethod,
+    val available: Boolean,
+    val unavailableReason: String?,
+)
+
+/**
+ * Las filas de «¿Cómo pagas?», como máximo dos y sin grupos: primero efectivo, si la cotización lo trae (disponible o
+ * no, tal cual), y después la fila digital «Yape o Plin». Esa fila es `Prepaid` si es lo elegido y se puede, si no
+ * `Yape` si se puede, si no `Prepaid` si se puede; y si ninguna se puede, la de `Yape` (o `Prepaid`) apagada con su
+ * motivo. La app no decide quién paga cómo: solo escoge cuál de las opciones del servidor pinta en esa fila.
+ */
+fun payRows(
+    options: List<PayOption>,
+    chosen: PayMethod?,
+): List<PayRow> {
+    fun find(method: PayMethod) = options.firstOrNull { it.method == method }
+
+    val cash = find(PayMethod.Cash)
+    val yape = find(PayMethod.Yape)
+    val prepaid = find(PayMethod.Prepaid)
+    val digital =
+        when {
+            chosen == PayMethod.Prepaid && prepaid?.available == true -> prepaid
+            yape?.available == true -> yape
+            prepaid?.available == true -> prepaid
+            else -> yape ?: prepaid
+        }
+    return listOfNotNull(cash, digital).map { PayRow(it.method, it.available, it.unavailableReason) }
+}

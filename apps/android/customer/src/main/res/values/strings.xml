@@ -491,16 +491,14 @@
     <string name="checkout_note_support">La verá solo el motorizado, al salir a tu dirección.</string>
 
     <string name="checkout_pay_title">¿Cómo pagas?</string>
-    <string name="checkout_pay_group_receive">Al recibir</string>
-    <string name="checkout_pay_group_before">Antes de recibir</string>
     <string name="checkout_pay_cash">Efectivo</string>
     <string name="checkout_pay_cash_hint">Le pagas al motorizado en tu puerta</string>
     <string name="checkout_pay_yape">Yape o Plin</string>
-    <string name="checkout_pay_yape_hint">Le transfieres al motorizado en tu puerta</string>
-    <string name="checkout_pay_prepaid">Yape o Plin adelantado</string>
-    <string name="checkout_pay_prepaid_hint">Pagas apenas el local confirme. No pagas nada ahora.</string>
-    <string name="checkout_pay_reason_threshold">Tu total con envío pasa de %1$s, así que el pago va adelantado.</string>
-    <string name="checkout_pay_reason_required">Por ahora tus pedidos van con pago adelantado. Si crees que hubo un error, escríbenos por WhatsApp.</string>
+    <string name="checkout_pay_yape_hint">Ves el número cuando el negocio acepte</string>
+    <string name="checkout_pay_prepaid">Yape o Plin por adelantado</string>
+    <string name="checkout_pay_prepaid_hint">Pagas apenas el local acepte</string>
+    <string name="checkout_pay_reason_threshold">Pedido mayor a %1$s</string>
+    <string name="checkout_pay_reason_required">Por pedidos anteriores sin recibir</string>
     <string name="checkout_pay_reason_other">Por ahora no puedes elegir esta opción en este pedido.</string>
     <string name="checkout_prepay_how">¿Cómo funciona el pago adelantado?</string>
     <string name="checkout_prepay_step1">El local confirma tu pedido.</string>
