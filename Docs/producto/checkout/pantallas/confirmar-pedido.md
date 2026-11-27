@@ -37,7 +37,7 @@ codigo:
    | **Confiable** (`trusted`) | «Efectivo» y «Yape o Plin» (con logos; «Ves el número cuando el negocio acepte»). Sin selector «Al recibir» / «Pagar ahora» | ninguna |
    | **No confiable** por faltas o riesgo (`risk_blocked`) | «Yape o Plin por adelantado» y «Pagas apenas el local acepte» | «Efectivo», con candado y el motivo **una sola vez**: «Por pedidos anteriores sin recibir» |
    | **No confiable por monto** (total con envío sobre el umbral) | igual | motivo: «Pedido mayor a S/ [umbral]» |
-   | **Sin historial con GPS en cobertura** (`no_history`) | las del confiable; el pedido pasa a `validando` (la cajera llama) | ninguna; bajo el botón: «Te llamaremos para confirmar tu pedido» y, debajo, el número verificado (CUS-CHK-027) |
+   | **Sin historial con GPS en cobertura** (`no_history`) | las del confiable (pendiente de Jesús, PG-3: la cotización de hoy le ofrece tres); el pedido pasa a `validando` (la cajera llama) | ninguna; bajo el botón: «Te llamaremos para confirmar tu pedido» y, debajo, el número verificado (CUS-CHK-027) |
    | **Sin historial y sin GPS** (permiso negado o sin señal) | prepago, o llamada (regla 6 de [`antifraude.md`](../../../negocio/antifraude.md)); **nunca se le impide pedir** | «Efectivo», con el motivo una sola vez, si le toca prepago |
 
    - La opción elegida se expande; las demás quedan en una línea.
