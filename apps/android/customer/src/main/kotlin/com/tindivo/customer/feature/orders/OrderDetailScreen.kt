@@ -206,8 +206,8 @@ private fun OrderBody(
     acceptanceMinutes: Int?,
 ) {
     KeepScreenOn(keepOn = !order.phase.isTerminal())
-    LaunchedEffect(order.awaitingPrepayment) {
-        if (order.awaitingPrepayment) prepay.actions.load()
+    LaunchedEffect(order.awaitingPrepayment || order.offersOptionalProof) {
+        if (order.awaitingPrepayment || order.offersOptionalProof) prepay.actions.load()
     }
     val countdown = prepay.state.countdown.takeIf { order.awaitingPrepayment && prepay.state.send !is SendState.Sent }
     Column(modifier = Modifier.fillMaxSize()) {
@@ -272,6 +272,8 @@ private fun OrderScrollBody(
             )
         }
         if (order.awaitingPrepayment) {
+            PrepaySection(state = prepay.state, amount = order.total, actions = prepay.actions)
+        } else if (order.offersOptionalProof && prepay.state.showsOptionalCard) {
             PrepaySection(state = prepay.state, amount = order.total, actions = prepay.actions)
         } else if (prepay.state.send is SendState.Sent &&
             order.headline == OrderHeadline.Progress(OrderHero.VerifyingProof)

@@ -15,6 +15,11 @@ import java.time.Instant
 private const val PICKUP = "pickup"
 private const val PENDING_CASH = "pending_cash"
 private const val PREPAID = "prepaid"
+private const val PENDING_YAPE = "pending_yape"
+
+/** Los estados en que el servidor ya aceptó el pedido (`ACCEPTED`): ahí puede ofrecerse la captura opcional. */
+private val OPTIONAL_PROOF_STATUSES =
+    setOf("confirmed", "preparing", "waiting_driver", "heading_to_restaurant", "waiting_at_restaurant", "picked_up")
 private const val ITEM_SEPARATOR = " · "
 private const val PROOF_REJECTED_FINAL = "proof_rejected_final"
 
@@ -105,6 +110,7 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
         driver = if (pickup) null else driverOf(phase),
         appealViaSupport = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPrepayment = payment.prepaid && status == "awaiting_payment",
+        offersOptionalProof = paymentIntent == PENDING_YAPE && !pickup && status in OPTIONAL_PROOF_STATUSES,
         cancel = cancelOfferOf(status, payment),
         waitingForBusiness = status == "pending_acceptance",
         etaStage = etaStageOf(status),

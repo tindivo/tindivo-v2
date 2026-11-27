@@ -179,6 +179,8 @@ internal data class OrderDetailUi(
     val appealViaSupport: Boolean,
     /** Prepago esperando el pago: el detalle muestra «Paga tu pedido» para subir el comprobante. */
     val awaitingPrepayment: Boolean = false,
+    /** Yape o Plin al motorizado en un delivery ya aceptado: el detalle puede ofrecer la tarjeta de captura opcional. */
+    val offersOptionalProof: Boolean = false,
     /** Si el detalle ofrece cancelar y con qué aviso ([cancelOfferOf]). */
     val cancel: CancelOffer = CancelOffer.None,
     /** Espera a que el negocio acepte (`pending_acceptance`): se enseña la espera con su cuenta atrás. */
