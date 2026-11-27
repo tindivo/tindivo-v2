@@ -22,7 +22,7 @@ codigo:
 
 La tarjeta vive dentro del seguimiento; no es una pantalla aparte. Qué ofrece depende de quién es el cliente, y eso lo decide el servidor:
 
-- **Cliente confiable** (puede pagar con «Efectivo» o con «Yape o Plin»; esto es cuando eligió «Yape o Plin»): «Subir captura» es opcional. La alternativa es «Pagaré al motorizado al llegar». El pedido avanza igual sin captura (CUS-PAY-014).
+- **Cliente confiable que eligió «Yape o Plin»** (también podía elegir «Efectivo»): «Subir captura» es opcional. La alternativa es «Pagaré al motorizado al llegar». El pedido avanza igual sin captura (CUS-PAY-014).
 - **Cliente no confiable** (prepago): la captura es obligatoria y se sube en `pagos/comprobante`.
 
 ## Contenido, de arriba abajo
@@ -32,7 +32,7 @@ La tarjeta vive dentro del seguimiento; no es una pantalla aparte. Qué ofrece d
 3. **Cuenta de cobro:** el número del negocio, «Titular: [nombre]» y «Copiar» (cambia a «Copiado» con check durante 2 s) (CUS-PAY-011).
 4. **QR:** «Ver QR» abre una hoja inferior con el código grande. Si la cuenta no tiene QR: «Esta cuenta no tiene QR: transfiere al número desde tu billetera.» (CUS-PAY-013).
 5. **Acción:** «Subir captura» (botón primario). Antes de enviarla, el aviso de que el restaurante y el motorizado asignado podrán verla y de que solo el restaurante confirma el pago (CUS-PAY-015).
-6. **Solo el confiable:** «Pagaré al motorizado al llegar».
+6. **Solo el confiable:** «Pagaré al motorizado al llegar» (el texto está pendiente de Jesús, PG-4; mientras, rige este).
 7. **Ayuda:** «Ayuda con este pedido», para cualquier incidencia de pago (CUS-PAY-016).
 
 ## Estados
@@ -42,7 +42,7 @@ La tarjeta vive dentro del seguimiento; no es una pantalla aparte. Qué ofrece d
 | Cargando datos de pago | Esqueleto de monto y cuenta | CUS-PAY-002 |
 | Error al cargar | «No pudimos cargar los datos para pagar.» y «Reintentar» | CUS-PAY-002 |
 | Sin cuenta publicada | «Todavía no vemos a qué número pagar. Vuelve a abrir tu pedido en un momento.» | CUS-PAY-002 |
-| Sin captura todavía | «Subir captura» disponible; el confiable puede pagar al llegar | CUS-PAY-014 |
+| Sin captura todavía | «Subir captura» disponible; el confiable puede pagar al llegar (con qué: pendiente de Jesús, PG-1) | CUS-PAY-014 |
 | Captura elegida | Vista previa «Tu captura» con «Cambiar» y «Enviar comprobante» | CUS-PAY-003 |
 | Enviando | Botón con progreso, «Subiendo…» | CUS-PAY-004 |
 | Enviada | «Recibimos tu comprobante. El negocio lo está revisando.» | CUS-PAY-004 |
@@ -57,4 +57,5 @@ La tarjeta entra con subida de 8 px y fundido en 200 ms. «Copiar» cambia a «C
 
 ## Diferencias por plataforma
 
-- Hoy Android no tiene esta tarjeta: el cliente confiable con «Yape o Plin» paga al motorizado en la puerta (intención de pago `pending_yape`) y no ve ninguna cuenta del negocio. Que el confiable pague al negocio y pueda subir captura necesita el servidor del pago único (PR #112), que todavía no está en `develop`; Jesús decidió el 2026-11-19 (opción A) que ese servidor se construye antes que la app. La captura del confiable la ven el negocio, el motorizado y el admin; solo el negocio confirma el ingreso.
+- Android aún no tiene esta tarjeta (contrastado el 2026-11-27 contra `develop@8ea8dd99`): la sección de pago solo existe para el prepago (`awaiting_payment`), y el cliente confiable con «Yape o Plin» paga en la puerta (intención de pago `pending_yape`) sin ver la cuenta del negocio ni «Subir captura». El servidor de la captura del confiable es el PR #245 y su sucesor, y la cotización de dos opciones, el PR #244: ninguno está en `develop`. Jesús decidió el 2026-11-19 (opción A) que ese servidor se construye antes que la app. La captura del confiable la ven el negocio, el motorizado y el admin, nunca antes de que el negocio acepte; solo el negocio confirma el ingreso.
+- iOS aún no empieza.
