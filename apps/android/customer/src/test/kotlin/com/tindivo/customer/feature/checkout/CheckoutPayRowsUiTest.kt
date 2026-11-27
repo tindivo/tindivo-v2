@@ -2,9 +2,11 @@ package com.tindivo.customer.feature.checkout
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasScrollToKeyAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToKey
 import com.tindivo.core.designsystem.TindivoTheme
 import org.junit.Rule
@@ -118,6 +120,7 @@ class CheckoutPayRowsUiTest {
         val yape = PayOption(PayMethod.Yape, false, "prepay_required")
         show(state(null, cash, yape, PayOption(PayMethod.Prepaid, true, null)))
         count("Por pedidos anteriores sin recibir").assertCountEquals(1)
+        composeRule.onNodeWithText("Efectivo").assertIsNotEnabled()
         count("Yape o Plin por adelantado").assertCountEquals(1)
     }
 

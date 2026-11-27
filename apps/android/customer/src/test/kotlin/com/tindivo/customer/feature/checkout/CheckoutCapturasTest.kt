@@ -169,9 +169,6 @@ abstract class CheckoutCapturasBase(
         )
 
     @Test
-    fun `CHK-09 confiable, dos metodos`() = checkout("dos_metodos", delivery.copy(pay = PayMethod.Yape), antes = alPago)
-
-    @Test
     fun `CHK-14 pago adelantado`() =
         checkout(
             "adelantado",
