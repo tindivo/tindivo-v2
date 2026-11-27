@@ -36,7 +36,7 @@ class SessionEntryTest {
 
     @Test
     fun `una base64 rota devuelve null`() {
-        assertNull(sessionEntry("cabecera.!!!no-es-base64!!!.firma"))
+        assertNull(sessionEntry("cabecera.%%%no-es-base64%%%.firma"))
     }
 
     @Test
