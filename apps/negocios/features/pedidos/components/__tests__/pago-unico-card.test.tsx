@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type OrderVM, pagoUnicoView } from '@/lib/orders/view-model'
 import {
   confirmationOutcome,
   rememberConfirmation,
   resetConfirmationMemoryForTests,
+  useOrderWithConfirmation,
 } from '../../lib/payment-confirmation-memory'
 import { PagoUnicoCard } from '../pago-unico-card'
 
@@ -261,5 +262,30 @@ describe('PagoUnicoCard (negocios)', () => {
     expect(screen.getByText('El cliente envió su captura')).toBeTruthy()
     expect(screen.queryByText(/No sabemos si se guardó tu confirmación/)).toBeNull()
     expect(screen.getByRole('button', { name: 'Rechazar captura' })).toBeTruthy()
+  })
+
+  it('una sola fuente: con el tablero viejo y la tarjeta confirmada, el detalle lee el pedido como cobrado', async () => {
+    const viejo = pedido({ proofStatus: 'rejected', proofAttempt: 2 })
+    const detalle = renderHook(({ o }) => useOrderWithConfirmation(o), {
+      initialProps: { o: viejo },
+    })
+    expect(detalle.result.current.yaCobrado).toBe(false)
+
+    render(tarjeta(viejo, async () => 'confirmed' as const))
+    await confirmar()
+    await waitFor(() => expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy())
+    // El tablero sigue viejo, pero «Total a cobrar» y la comanda leen esto.
+    expect(detalle.result.current.yaCobrado).toBe(true)
+  })
+
+  it('una sola fuente: lo incierto no marca el pedido como cobrado', async () => {
+    const viejo = sinCaptura()
+    const detalle = renderHook(({ o }) => useOrderWithConfirmation(o), {
+      initialProps: { o: viejo },
+    })
+    render(tarjeta(viejo, async () => 'uncertain' as const))
+    await confirmar()
+    await waitFor(() => expect(confirmationOutcome(viejo.rowId)).toBe('uncertain'))
+    expect(detalle.result.current.yaCobrado).toBe(false)
   })
 })

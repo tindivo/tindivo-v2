@@ -652,7 +652,7 @@ export function ComandaModal({
                   </div>
                 )}
                 <div className="mt-1.5 flex justify-between border-t border-border pt-1.5 text-[15px] font-black text-ink">
-                  <span>TOTAL A COBRAR:</span>
+                  <span>{order.yaCobrado ? 'TOTAL:' : 'TOTAL A COBRAR:'}</span>
                   <span className="font-mono">{soles(order.total)}</span>
                 </div>
               </div>

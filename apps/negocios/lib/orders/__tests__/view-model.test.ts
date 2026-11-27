@@ -13,6 +13,7 @@ import {
   resolveChannelFilter,
   resolveMobileTab,
   toOrderVM,
+  withConfirmedPayment,
 } from '../view-model'
 
 function mockOrderRow(overrides: Partial<OrderRow> = {}): OrderRow {
@@ -1355,5 +1356,37 @@ describe('pagoUnicoView · la captura del pago único', () => {
       proofAttempt: 1,
     })
     expect(v?.canReject).toBe(false)
+  })
+})
+
+describe('withConfirmedPayment · una sola fuente para «cobra» y «confirmado»', () => {
+  const viejo = {
+    method: 'delivery' as const,
+    payment: 'pending_wallet' as const,
+    source: 'web' as const,
+    status: 'preparing' as const,
+    yaCobrado: false,
+    proofStatus: 'rejected' as string | null,
+    proofUrl: null as string | null,
+    proofAttempt: 2,
+    paymentReal: null as 'pending_wallet' | 'pending_cash' | 'pending_mixed' | null,
+  }
+
+  it('tablero viejo y la respuesta del servidor confirmada: yaCobrado pasa a true', () => {
+    expect(withConfirmedPayment(viejo, 'confirmed').yaCobrado).toBe(true)
+  })
+
+  it('lo incierto o sin respuesta no cambia el pedido', () => {
+    expect(withConfirmedPayment(viejo, 'uncertain')).toBe(viejo)
+    expect(withConfirmedPayment(viejo, undefined)).toBe(viejo)
+  })
+
+  it('fuera del pago único (manual, recojo, otro método) no cambia nada', () => {
+    const manual = { ...viejo, source: 'manual' as const }
+    const recojo = { ...viejo, method: 'pickup' as const }
+    const efectivo = { ...viejo, payment: 'pending_cash' as const }
+    expect(withConfirmedPayment(manual, 'confirmed')).toBe(manual)
+    expect(withConfirmedPayment(recojo, 'confirmed')).toBe(recojo)
+    expect(withConfirmedPayment(efectivo, 'confirmed')).toBe(efectivo)
   })
 })

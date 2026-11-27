@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { type OrderVM, withConfirmedPayment } from '@/lib/orders/view-model'
 
 /**
  * Lo que respondió «Sí, me llegó» para cada pedido, mientras el tablero no lo
@@ -69,6 +70,17 @@ export function useConfirmationOutcome(orderId: string): RememberedConfirmation 
     () => outcomes.get(orderId),
     () => undefined,
   )
+}
+
+/**
+ * El pedido tal como debe leerlo todo el detalle (filas de total, comanda,
+ * vista previa): cobrado si la respuesta del servidor ya confirmó el ingreso,
+ * aunque el tablero siga viejo. La tarjeta del pago único recibe el pedido
+ * crudo: es la que reconcilia y borra la memoria cuando el tablero se pone al día.
+ */
+export function useOrderWithConfirmation(order: OrderVM): OrderVM {
+  const outcome = effectiveOutcome(useConfirmationOutcome(order.rowId), order.proofAttempt ?? 0)
+  return withConfirmedPayment(order, outcome)
 }
 
 export function resetConfirmationMemoryForTests() {

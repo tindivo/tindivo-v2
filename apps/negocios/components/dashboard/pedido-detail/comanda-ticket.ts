@@ -557,7 +557,7 @@ export function buildComandaHtml({
         : ''
     }
     <div class="row total-grand">
-      <span>TOTAL A COBRAR:</span>
+      <span>${order.yaCobrado ? 'TOTAL:' : 'TOTAL A COBRAR:'}</span>
       <span>${fmtMoney(order.total)}</span>
     </div>
   </div>

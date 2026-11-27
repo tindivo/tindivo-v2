@@ -531,6 +531,25 @@ const ESTADOS_ACEPTADOS: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
   'picked_up',
 ])
 
+/**
+ * UNA SOLA FUENTE PARA «COBRA» Y «CONFIRMADO».
+ *
+ * En el pago único, «Sí, me llegó» puede tener ya la respuesta del servidor
+ * (`'confirmed'`) mientras el tablero sigue con el pedido viejo
+ * (`payment_verified_at` aún nulo). La tarjeta lo muestra como confirmado; sin
+ * esto, el resto del detalle y la comanda seguirían leyendo `yaCobrado` en
+ * false y dirían «cobra» a la vez. Con la respuesta confirmada, el pedido se lee
+ * como cobrado en todas partes. Lo incierto no cambia nada: ahí la tarjeta
+ * misma evita dar instrucción de cobro.
+ */
+export function withConfirmedPayment<T extends Parameters<typeof pagoUnicoView>[0]>(
+  order: T,
+  outcome: 'confirmed' | 'uncertain' | undefined,
+): T {
+  if (outcome !== 'confirmed' || order.yaCobrado || pagoUnicoView(order) == null) return order
+  return { ...order, yaCobrado: true }
+}
+
 export function pagoUnicoView(
   order: Pick<
     OrderVM,

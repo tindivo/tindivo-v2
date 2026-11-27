@@ -5,6 +5,7 @@ import { Button, cn, Icon } from '@tindivo/ui'
 
 import { useEffect, useState } from 'react'
 import { PagoUnicoCard } from '@/features/pedidos/components/pago-unico-card'
+import { useOrderWithConfirmation } from '@/features/pedidos/lib/payment-confirmation-memory'
 import { formatReadyDelta, type OrderVM, pagoUnicoView } from '@/lib/orders/view-model'
 import { getSupabaseBrowser } from '@/lib/supabase/client'
 import { CANCEL_REASONS, REJECT_REASONS_BASE, REJECT_REASONS_TAIL } from './pedido-detail/constants'
@@ -238,7 +239,7 @@ function PaySectionPrepaid({ order, proofUrl }: { order: OrderVM; proofUrl: stri
 
 // ── Detail screen ─────────────────────────────────────────────────────────────
 export function DetailScreen({
-  order,
+  order: rawOrder,
   items,
   proofUrl,
   paymentQrs,
@@ -258,6 +259,10 @@ export function DetailScreen({
   bizName?: string
   actions: DetailActions
 }) {
+  // Con la confirmación del pago único ya respondida, todo el detalle lee el
+  // pedido como cobrado aunque el tablero siga viejo: nunca «cobra» y
+  // «confirmado» a la vez. Solo la tarjeta del pago único usa `rawOrder`.
+  const order = useOrderWithConfirmation(rawOrder)
   const [modal, setModal] = useState<null | 'reject' | 'cancel'>(null)
   const [showEditar, setShowEditar] = useState(false)
   const [showPrepModal, setShowPrepModal] = useState(false)
@@ -760,12 +765,16 @@ export function DetailScreen({
             efectivo» aquí incluso ya entregado, dentro del propio historial.
             En pickup no cambia nada: ahí decide `cobroEnCaja`, más abajo. */}
         {effectivePayment === 'pending_cash' && <PaySectionCash order={order} />}
-        {effectivePayment === 'pending_wallet' && <PaySectionWallet qrs={paymentQrs} />}
+        {/* Pago único con el ingreso ya confirmado: «Cobrar con billetera» sería una
+            orden de cobro junto a «el motorizado no cobra». Se queda la tarjeta. */}
+        {effectivePayment === 'pending_wallet' && !(pagoUnico && order.yaCobrado) && (
+          <PaySectionWallet qrs={paymentQrs} />
+        )}
         {/* Pago único (solo delivery web): el recojo y el manual no pasan por aquí. */}
         {pagoUnico && actions.onConfirmDeliveryPayment && (
           <PagoUnicoCard
-            key={order.rowId}
-            order={order}
+            key={rawOrder.rowId}
+            order={rawOrder}
             view={pagoUnico}
             onConfirm={actions.onConfirmDeliveryPayment}
             onReject={actions.onRejectDeliveryProof}
