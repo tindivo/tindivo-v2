@@ -1,7 +1,7 @@
 import SwiftUI
 import TindivoDesign
 
-/// La raíz de la interfaz: Inicio y la pila de pantallas que se empujan encima (SW-11).
+/// La raíz de la interfaz: las cuatro pestañas y, en Inicio, la pila de pantallas que se empujan encima (SW-11).
 struct RootView: View {
     private let environment: AppEnvironment
     @State private var navigator = AppNavigator()
@@ -31,16 +31,13 @@ struct RootView: View {
         if config.state.isUpgradeRequired {
             UpdateView(minVersion: config.state.minVersion, storeURL: environment.config.storeURL)
         } else {
-            NavigationStack(path: $navigator.path) {
-                CatalogHomeView(
-                    model: home,
-                    onOpenBusiness: { navigator.openBusiness($0) },
-                    onOpenCart: navigator.openCart,
-                    onOpenDiagnostics: diagnosticsAction
-                )
-                .navigationDestination(for: AppRoute.self) { route in
-                    destination(route)
-                }
+            // Cada pestaña tiene su propio `NavigationStack`. `TabView` solo guarda el estado de cada una (la pila de
+            // Inicio, el scroll): su barra se oculta y la dibuja `RootTabBar`.
+            TabView(selection: $navigator.tab) {
+                homeStack.tag(RootTab.home)
+                comingSoonStack(.courier)
+                comingSoonStack(.orders)
+                comingSoonStack(.account)
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if !osNoticeDismissed,
@@ -50,6 +47,34 @@ struct RootView: View {
                 }
             }
         }
+    }
+
+    private var homeStack: some View {
+        NavigationStack(path: $navigator.path) {
+            CatalogHomeView(
+                model: home,
+                onOpenBusiness: { navigator.openBusiness($0) },
+                onOpenCart: navigator.openCart,
+                onOpenCourier: navigator.openCourier,
+                onOpenDiagnostics: diagnosticsAction
+            )
+            .rootTabBar(selected: navigator.tab, onSelect: { navigator.tab = $0 })
+            .toolbar(.hidden, for: .tabBar)
+            .navigationDestination(for: AppRoute.self) { route in
+                destination(route)
+            }
+        }
+    }
+
+    private func comingSoonStack(_ tab: RootTab) -> some View {
+        NavigationStack {
+            ComingSoonView(tab: tab)
+                .rootTabBar(selected: navigator.tab, onSelect: { navigator.tab = $0 })
+                .navigationTitle(Text(tab.title))
+                .toolbar(.hidden, for: .navigationBar)
+                .toolbar(.hidden, for: .tabBar)
+        }
+        .tag(tab)
     }
 
     private var diagnosticsAction: (() -> Void)? {

@@ -7,6 +7,8 @@ import Observation
 @Observable
 final class AppNavigator {
     var path: [AppRoute] = []
+    /// La pestaña a la vista. La pila `path` es la de Inicio: las demás pestañas aún no tienen pantallas empujadas.
+    var tab: RootTab = .home
 
     /// Los nombres con que se llegó a un negocio (su slug) y el id que resultó ser, ya normalizados. La ruta lleva lo
     /// que se pidió (id o slug); la bolsa guarda el id: hay que poder decir que son el mismo negocio.
@@ -58,6 +60,12 @@ final class AppNavigator {
 
     /// «Ver negocios»: de vuelta a Inicio, la raíz.
     func seeBusinesses() {
+        tab = .home
         path.removeAll()
+    }
+
+    /// El banner «Entregas» de Inicio lleva a la pestaña Entregas.
+    func openCourier() {
+        tab = .courier
     }
 }

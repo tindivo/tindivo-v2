@@ -131,6 +131,11 @@ final class CatalogHomeScreenModel {
         }
     }
 
+    /// Cuántos restaurantes (los de WhatsApp no cuentan) están abiertos ahora: el chip «N abiertos ahora» de Inicio.
+    var openNowCount: Int {
+        loaded?.listing.restaurants.filter { !$0.closed }.count ?? 0
+    }
+
     /// Lo que lee VoiceOver en el botón de la bolsa: «Bolsa» o «Bolsa, 3 productos».
     var bagAccessibilityLabel: String {
         bagCount == 0 ? String(localized: "Bolsa") : String(localized: "Bolsa, \(bagCount) productos")

@@ -42,6 +42,14 @@ class CatalogUITestCase: XCTestCase {
         XCTAssertTrue(app.staticTexts["¿Qué pedimos hoy?"].waitForExistence(timeout: 30), "Inicio no cargó")
         let card = app.staticTexts["Pollería Don Lucho"].firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 20), "No está Pollería Don Lucho en Inicio")
+        // La barra de pestañas tapa el final de la lista: con letra grande la tarjeta queda debajo de ella y, aunque
+        // XCUITest la da por tocable, el toque cae en la barra. Se sube la lista hasta que quede encima.
+        let bar = element("tab.bar")
+        var swipes = 0
+        while bar.exists, card.frame.midY > bar.frame.minY - 24, swipes < 8 {
+            app.swipeUp(velocity: .slow)
+            swipes += 1
+        }
         card.tap()
     }
 

@@ -174,9 +174,7 @@ final class CatalogDetailUITests: CatalogUITestCase {
         XCTAssertTrue(app.staticTexts["¿Qué pedimos hoy?"].waitForExistence(timeout: 60), "Inicio no cargó")
         XCTAssertTrue(element("home.bag").waitForExistence(timeout: 10))
         attach("\(prefix)-1-inicio")
-        let card = app.staticTexts["Pollería Don Lucho"].firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 20))
-        card.tap()
+        openDonLucho()
         let row = element("business.infoRow")
         XCTAssertTrue(row.waitForExistence(timeout: 30), "No está la fila de información")
         attach("\(prefix)-2-negocio")

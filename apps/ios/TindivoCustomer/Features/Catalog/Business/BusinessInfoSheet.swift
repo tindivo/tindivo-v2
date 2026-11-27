@@ -93,7 +93,7 @@ struct BusinessInfoSheet: View {
                 .fontWeight(row.isToday ? .bold : .regular)
                 .foregroundStyle(Color.tindivo.ink)
             if row.isToday {
-                TindivoChip(String(localized: "hoy"))
+                TindivoStatusPill(String(localized: "hoy"))
             }
         }
     }
@@ -140,9 +140,9 @@ struct BusinessInfoSheet: View {
                 columns: [GridItem(.adaptive(minimum: 88), spacing: 8, alignment: .leading)], alignment: .leading,
                 spacing: 8
             ) {
-                TindivoChip(String(localized: "Yape"))
-                TindivoChip(String(localized: "Plin"))
-                TindivoChip(String(localized: "Efectivo"))
+                TindivoStatusPill(String(localized: "Yape"))
+                TindivoStatusPill(String(localized: "Plin"))
+                TindivoStatusPill(String(localized: "Efectivo"))
             }
             Text("Pagas directo al negocio. Tindivo no retiene tu dinero")
                 .tindivoText(TindivoTokens.Typography.body)

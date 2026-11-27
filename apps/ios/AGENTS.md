@@ -46,3 +46,7 @@ Se suma al `AGENTS.md` raíz. La norma es `Docs/arquitectura/estandares/swift.md
 - **Textos:** catálogo `Localizable.xcstrings` en la app y en cada paquete con UI; en un paquete, `Text(…, bundle: .module)`.
 - **Geist** se registra en código (`TindivoFonts.register()`, en la raíz de la app): `UIAppFonts` no ve recursos de
   un paquete SwiftPM. Tema solo claro (`UIUserInterfaceStyle: Light`).
+- **Diagnóstico (solo DEBUG):** ya no es un enlace de Inicio; se abre con una pulsación larga (1 s) en el isotipo de la barra
+  superior (`HomeTopBar`). Las demás compilaciones no lo tienen.
+- **Pestañas:** `RootTabBar` es propia (no la de `TabView`, que se oculta): la píldora de 56×32 no se dibuja con la de la
+  plataforma. Entregas, Pedidos y Cuenta son `ComingSoonView` hasta que existan.

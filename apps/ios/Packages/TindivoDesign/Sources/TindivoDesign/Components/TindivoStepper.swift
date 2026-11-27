@@ -5,9 +5,17 @@ import SwiftUI
 /// - `label` nombra de qué es la cantidad («Cantidad de Chicha morada»).
 /// - `identifier` pone un identificador a cada botón (`<identifier>.decrease`, `<identifier>.increase`).
 /// - `decreaseRemoves`: con una unidad el «−» quita la línea; se dibuja como tacho, en rojo (token `error`).
+/// - `style`: `.round` son dos botones con contorno redondo; `.pill` es la píldora de Android (alto 48, borde de 1 en
+///   `outline`, «−», el número y «+» de 48 dentro).
 /// - Con VoiceOver encendido es UN control ajustable (como un `Stepper` del sistema): deslizar arriba o abajo suma o
 ///   quita una unidad. Sin VoiceOver los botones son independientes (control por voz, por botones y pruebas).
 public struct TindivoStepper: View {
+    public enum Style: Sendable {
+        case round
+        case pill
+    }
+
+    private let style: Style
     private let quantity: Int
     private let label: String
     private let identifier: String?
@@ -21,6 +29,7 @@ public struct TindivoStepper: View {
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
 
     public init(
+        style: Style = .round,
         quantity: Int,
         label: String,
         identifier: String? = nil,
@@ -32,6 +41,7 @@ public struct TindivoStepper: View {
         onDecrease: @escaping () -> Void,
         onIncrease: @escaping () -> Void
     ) {
+        self.style = style
         self.quantity = quantity
         self.label = label
         self.identifier = identifier
@@ -82,10 +92,10 @@ public struct TindivoStepper: View {
     }
 
     private var controls: some View {
-        HStack(spacing: TindivoTokens.Spacing.spaceInner) {
+        HStack(spacing: style == .pill ? 0 : TindivoTokens.Spacing.spaceInner) {
             TindivoRoundButton(
                 decreaseRemoves ? .trash : .minus, label: decreaseLabel, enabled: canDecrease,
-                tint: decreaseRemoves ? Color.tindivo.error : nil, action: onDecrease
+                tint: decreaseRemoves ? Color.tindivo.error : nil, bordered: style == .round, action: onDecrease
             )
             .accessibilityIdentifier(identifier.map { "\($0).decrease" } ?? "")
             Text(verbatim: "\(quantity)")
@@ -95,8 +105,13 @@ public struct TindivoStepper: View {
                 .fixedSize()
                 .foregroundStyle(Color.tindivo.ink)
                 .frame(minWidth: 24)
-            TindivoRoundButton(.plus, label: increaseLabel, enabled: canIncrease, action: onIncrease)
-                .accessibilityIdentifier(identifier.map { "\($0).increase" } ?? "")
+            TindivoRoundButton(
+                .plus, label: increaseLabel, enabled: canIncrease, bordered: style == .round, action: onIncrease
+            )
+            .accessibilityIdentifier(identifier.map { "\($0).increase" } ?? "")
+        }
+        .overlay {
+            if style == .pill { Capsule().stroke(Color.tindivo.outline, lineWidth: 1) }
         }
     }
 }
@@ -108,17 +123,21 @@ public struct TindivoRoundButton: View {
     private let label: String
     private let enabled: Bool
     private let tint: Color?
+    private let bordered: Bool
     private let action: () -> Void
     @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 16
 
-    /// `tint` cambia el color del icono y del contorno (el tacho de quitar va en rojo).
+    /// `tint` cambia el color del icono y del contorno (el tacho de quitar va en rojo). `bordered: false` quita el
+    /// contorno: lo usa la píldora del selector de cantidad, que ya trae el suyo.
     public init(
-        _ icon: TindivoIcon, label: String, enabled: Bool = true, tint: Color? = nil, action: @escaping () -> Void
+        _ icon: TindivoIcon, label: String, enabled: Bool = true, tint: Color? = nil, bordered: Bool = true,
+        action: @escaping () -> Void
     ) {
         self.icon = icon
         self.label = label
         self.enabled = enabled
         self.tint = tint
+        self.bordered = bordered
         self.action = action
     }
 
@@ -129,9 +148,12 @@ public struct TindivoRoundButton: View {
                 .font(.system(size: iconSize, weight: .bold))
                 .foregroundStyle(enabled ? (tint ?? Color.tindivo.ink) : Color.tindivo.onDisabled)
                 .frame(width: TindivoTokens.Spacing.touchTarget, height: TindivoTokens.Spacing.touchTarget)
-                .overlay(
-                    Circle().stroke(enabled ? (tint ?? Color.tindivo.outline) : Color.tindivo.disabled, lineWidth: 1)
-                )
+                .overlay {
+                    if bordered {
+                        Circle().stroke(
+                            enabled ? (tint ?? Color.tindivo.outline) : Color.tindivo.disabled, lineWidth: 1)
+                    }
+                }
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -148,6 +170,15 @@ public struct TindivoRoundButton: View {
         )
         TindivoStepper(
             quantity: 1, label: "Cantidad de Chicha morada", canDecrease: true, canIncrease: true,
+            decreaseRemoves: true,
+            decreaseLabel: "Quitar Chicha morada", increaseLabel: "Una más", onDecrease: {}, onIncrease: {}
+        )
+        TindivoStepper(
+            style: .pill, quantity: 2, label: "Cantidad de Chicha morada", canDecrease: true, canIncrease: true,
+            decreaseLabel: "Una menos", increaseLabel: "Una más", onDecrease: {}, onIncrease: {}
+        )
+        TindivoStepper(
+            style: .pill, quantity: 1, label: "Cantidad de Chicha morada", canDecrease: true, canIncrease: true,
             decreaseRemoves: true,
             decreaseLabel: "Quitar Chicha morada", increaseLabel: "Una más", onDecrease: {}, onIncrease: {}
         )

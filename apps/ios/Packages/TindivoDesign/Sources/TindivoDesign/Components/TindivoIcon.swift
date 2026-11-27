@@ -23,6 +23,14 @@ public enum TindivoIcon: Sendable, CaseIterable {
     case radioOff
     case checkOn
     case checkOff
+    /// Las cuatro pestañas de la barra de abajo.
+    case home
+    case courier
+    /// «Pedidos» en la barra de pestañas y la fila del subtotal en la bolsa.
+    case receipt
+    case account
+    /// La flecha «→» del banner de Entregas.
+    case arrowForward
 
     var systemName: String {
         switch self {
@@ -41,6 +49,11 @@ public enum TindivoIcon: Sendable, CaseIterable {
         case .radioOff: "circle"
         case .checkOn: "checkmark.square.fill"
         case .checkOff: "square"
+        case .home: "house.fill"
+        case .courier: "box.truck.fill"
+        case .receipt: "list.clipboard.fill"
+        case .account: "person.fill"
+        case .arrowForward: "arrow.right"
         }
     }
 }

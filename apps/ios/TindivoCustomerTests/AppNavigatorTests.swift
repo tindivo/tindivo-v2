@@ -59,6 +59,16 @@ struct AppNavigatorTests {
         #expect(navigator.path.isEmpty)
     }
 
+    @Test("la app arranca en Inicio; el banner «Entregas» abre la pestaña Entregas y «Ver negocios» vuelve a Inicio")
+    func tabs() {
+        let navigator = AppNavigator()
+        #expect(navigator.tab == .home)
+        navigator.openCourier()
+        #expect(navigator.tab == .courier)
+        navigator.seeBusinesses()
+        #expect(navigator.tab == .home)
+    }
+
     @Test("un negocio abierto por slug y pedido por id es el mismo: «+ Agregar más» no lo apila dos veces")
     func addMoreMatchesSlugAndId() {
         let navigator = AppNavigator()

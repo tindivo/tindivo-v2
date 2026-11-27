@@ -399,7 +399,37 @@
     "Recojo" : {},
     "Tu bolsa" : {},
     "Una opción que elegiste ya no está disponible" : {},
-    "Yape" : {}
+    "Yape" : {},
+    "Entregas" : {},
+    "Pedidos" : {},
+    "Cuenta" : {},
+    "De A a B, ya pagado" : {},
+    "Pedir una entrega" : {},
+    "Próximamente" : {},
+    "Muy pronto en la app de iPhone." : {},
+    "Abierto" : {},
+    "%lld abiertos ahora" : {
+      "localizations" : {
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld abierto ahora"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld abiertos ahora"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   },
   "version" : "1.0"
 }

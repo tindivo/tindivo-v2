@@ -6,7 +6,10 @@ struct CatalogHomeView: View {
     let model: CatalogHomeScreenModel
     let onOpenBusiness: (String) -> Void
     let onOpenCart: () -> Void
-    /// `nil` fuera de las compilaciones de desarrollo: Diagnóstico no es de quien pide comida.
+    /// El banner «Entregas»: lleva a la pestaña Entregas.
+    let onOpenCourier: () -> Void
+    /// `nil` fuera de las compilaciones de desarrollo: Diagnóstico no es de quien pide comida. Se abre con una pulsación
+    /// larga en el isotipo de la barra superior.
     let onOpenDiagnostics: (() -> Void)?
 
     var body: some View {
@@ -30,7 +33,7 @@ struct CatalogHomeView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             HomeTopBar(
                 address: model.deliveryAddress, bagBadge: model.bagBadgeText, bagLabel: model.bagAccessibilityLabel,
-                onOpenBag: onOpenCart
+                onOpenBag: onOpenCart, onOpenDiagnostics: onOpenDiagnostics
             )
         }
         .task { await model.load() }
@@ -41,11 +44,9 @@ struct CatalogHomeView: View {
     private func list(_ loaded: CatalogHomeScreenModel.Loaded) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: TindivoTokens.Spacing.spaceInner) {
-                header
-                Text("Restaurantes")
-                    .tindivoText(TindivoTokens.Typography.titleSection)
-                    .foregroundStyle(Color.tindivo.ink)
-                    .accessibilityAddTraits(.isHeader)
+                title
+                CourierEntryCard(onTap: onOpenCourier)
+                restaurantsHeader
                 if let error = loaded.refreshFailed {
                     Text(ErrorText.message(for: error))
                         .tindivoText(TindivoTokens.Typography.body)
@@ -73,23 +74,41 @@ struct CatalogHomeView: View {
         .refreshable { await model.refresh() }
     }
 
-    /// Con letra grande el botón de Diagnóstico pasa debajo del título en vez de apretarlo hasta partir palabras.
-    private var header: some View {
+    /// «Restaurantes» y, a la derecha, la píldora «N abiertos ahora» (solo con alguno abierto). Con letra grande la
+    /// píldora pasa debajo del título en vez de apretarlo.
+    private var restaurantsHeader: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline) {
-                title
-                if let onOpenDiagnostics { TindivoTextButton("Diagnóstico", action: onOpenDiagnostics) }
+            HStack {
+                restaurantsTitle
+                Spacer(minLength: 8)
+                openNowPill
             }
-            VStack(alignment: .leading, spacing: 0) {
-                title
-                if let onOpenDiagnostics { TindivoTextButton("Diagnóstico", action: onOpenDiagnostics) }
+            VStack(alignment: .leading, spacing: 4) {
+                restaurantsTitle
+                openNowPill
             }
+        }
+        .padding(.top, 10)
+    }
+
+    private var restaurantsTitle: some View {
+        Text("Restaurantes")
+            .tindivoText(TindivoTokens.Typography.titleSection)
+            .foregroundStyle(Color.tindivo.ink)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    @ViewBuilder private var openNowPill: some View {
+        let count = model.openNowCount
+        if count > 0 {
+            TindivoStatusPill(String(localized: "\(count) abiertos ahora"), tone: .success)
+                .accessibilityIdentifier("home.openNow")
         }
     }
 
     private var title: some View {
         Text("¿Qué pedimos hoy?")
-            .tindivoText(TindivoTokens.Typography.titleScreen)
+            .tindivoText(TypeToken.greeting)
             .foregroundStyle(Color.tindivo.ink)
             .accessibilityAddTraits(.isHeader)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -131,7 +150,7 @@ struct CatalogHomeView: View {
 #Preview("Inicio") {
     CatalogHomeView(
         model: CatalogHomeScreenModel(catalog: PreviewCatalog()), onOpenBusiness: { _ in }, onOpenCart: {},
-        onOpenDiagnostics: {}
+        onOpenCourier: {}, onOpenDiagnostics: {}
     )
     .onAppear { TindivoFonts.register() }
 }
@@ -139,7 +158,7 @@ struct CatalogHomeView: View {
 #Preview("Inicio sin conexión") {
     CatalogHomeView(
         model: CatalogHomeScreenModel(catalog: PreviewCatalog(businesses: .failure(.network))),
-        onOpenBusiness: { _ in }, onOpenCart: {}, onOpenDiagnostics: nil
+        onOpenBusiness: { _ in }, onOpenCart: {}, onOpenCourier: {}, onOpenDiagnostics: nil
     )
     .onAppear { TindivoFonts.register() }
 }

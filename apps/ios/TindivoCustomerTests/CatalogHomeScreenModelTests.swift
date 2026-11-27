@@ -26,6 +26,18 @@ struct CatalogHomeScreenModelTests {
         #expect(loaded.refreshFailed == nil)
     }
 
+    @Test("«N abiertos ahora» cuenta los restaurantes abiertos; los de WhatsApp y los cerrados no cuentan")
+    func openNowCount() async {
+        let catalog = StubCatalog(
+            businesses: Script(just: [
+                summary("a"), summary("b", open: false), summary("c"), summary("d", capability: .catalogOnly),
+            ]))
+        let model = CatalogHomeScreenModel(catalog: catalog)
+        #expect(model.openNowCount == 0)
+        await model.load()
+        #expect(model.openNowCount == 2)
+    }
+
     @Test("una lista vacía es un estado cargado, no un error")
     func empty() async {
         let model = CatalogHomeScreenModel(catalog: StubCatalog(businesses: Script(just: [])))

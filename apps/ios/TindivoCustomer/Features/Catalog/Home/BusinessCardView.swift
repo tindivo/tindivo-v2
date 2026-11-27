@@ -1,7 +1,8 @@
 import SwiftUI
 import TindivoDesign
 
-/// La tarjeta de un negocio en Inicio: logo (o su inicial sobre el color de acento), nombre, eslogan y su estado.
+/// La tarjeta de un negocio en Inicio (una línea para nombre y eslogan, como Android; con las tallas de accesibilidad
+/// pasan a varias para no cortarse): logo (o su inicial sobre el color de acento), nombre, eslogan y su estado.
 struct BusinessCardView: View {
     let business: BusinessCard
     let whatsapp: Bool
@@ -10,29 +11,38 @@ struct BusinessCardView: View {
     let onTap: () -> Void
 
     private static let logoSize: CGFloat = 72
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: TindivoTokens.Spacing.spaceInner) {
-                logo
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(business.name)
-                        .tindivoText(TindivoTokens.Typography.titleSection)
-                        .foregroundStyle(Color.tindivo.ink)
-                        .lineLimit(2)
-                    if let tagline = business.tagline {
-                        Text(tagline)
-                            .tindivoText(TindivoTokens.Typography.bodySecondary)
-                            .foregroundStyle(Color.tindivo.inkSecondary)
-                            .lineLimit(2)
+            // Cerrado: fondo `surfaceSunken` y el logo en grises; el estado lo dice además la píldora.
+            TindivoCard(
+                padding: 10, background: business.closed ? Color.tindivo.surfaceSunken : Color.tindivo.surface
+            ) {
+                HStack(spacing: TindivoTokens.Spacing.spaceInner) {
+                    logo
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(business.name)
+                            .tindivoText(TypeToken.titleCard)
+                            .foregroundStyle(Color.tindivo.ink)
+                            .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+                        if let tagline = business.tagline {
+                            Text(tagline)
+                                .tindivoText(TindivoTokens.Typography.bodySecondary)
+                                .foregroundStyle(Color.tindivo.inkSecondary)
+                                .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+                        }
+                        status.padding(.top, 6)
                     }
-                    status.padding(.top, 6)
+                    .frame(maxWidth: .infinity, minHeight: Self.logoSize, alignment: .leading)
+                    // Decorativo: la tarjeta entera ya es el botón que abre el negocio.
+                    Image(tindivo: .forward)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.tindivo.inkSecondary)
+                        .accessibilityHidden(true)
                 }
-                .frame(maxWidth: .infinity, minHeight: Self.logoSize, alignment: .leading)
+                .frame(minHeight: 92 - 20)
             }
-            .padding(TindivoTokens.Spacing.spaceInner)
-            .background(Color.tindivo.surface, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusCard))
-            .tindivoElevation(TindivoTokens.Elevation.elevation1)
             .contentShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusCard))
         }
         .buttonStyle(.plain)
@@ -47,29 +57,32 @@ struct BusinessCardView: View {
     }
 
     @ViewBuilder private var status: some View {
-        HStack(spacing: 8) {
-            if business.closed {
-                TindivoChip(closedLabel, tone: .warning)
-            }
-            if whatsapp {
-                TindivoChip(String(localized: "Pedidos por WhatsApp"))
-            } else if !business.closed {
-                // El tiempo estimado solo cuando se puede cumplir: un negocio cerrado no dice cuánto tarda.
-                Text(String(localized: "\(business.etaMin)–\(business.etaMax) min"))
-                    .tindivoText(TindivoTokens.Typography.bodySecondary)
-                    .foregroundStyle(Color.tindivo.inkSecondary)
-            }
+        // ViewThatFits: con letra grande la píldora y el plazo pasan a dos líneas en vez de cortarse.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { statusContent }
+            VStack(alignment: .leading, spacing: 4) { statusContent }
+        }
+    }
+
+    @ViewBuilder private var statusContent: some View {
+        if business.closed {
+            TindivoStatusPill(closedLabel, tone: .warning)
+        } else if whatsapp {
+            TindivoStatusPill(String(localized: "Pedidos por WhatsApp"))
+        } else {
+            TindivoStatusPill(String(localized: "Abierto"), tone: .success)
+            // El tiempo estimado solo cuando se puede cumplir: un negocio cerrado no dice cuánto tarda.
+            Text(String(localized: "\(business.etaMin)–\(business.etaMax) min"))
+                .tindivoText(TypeToken.labelMedium)
+                .foregroundStyle(Color.tindivo.inkSecondary)
         }
     }
 
     /// Decorativo a propósito: el nombre está al lado, y una etiqueta lo haría sonar dos veces. Sin logo, el respaldo de
-    /// marca. Cerrado, el logo se ve en gris y atenuado; el texto de estado no se atenúa.
+    /// marca. Cerrado, el logo se ve en grises (la señal grande de «hoy no»).
     private var logo: some View {
-        TindivoAsyncImage(url: business.logoURL)
+        TindivoThumbnail(url: business.logoURL, size: Self.logoSize, radius: 16)
             .grayscale(business.closed ? 1 : 0)
-            .frame(width: Self.logoSize, height: Self.logoSize)
-            .clipShape(RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusThumb))
-            .opacity(business.closed ? MenuItemRowView.dimmedOpacity : 1)
     }
 }
 

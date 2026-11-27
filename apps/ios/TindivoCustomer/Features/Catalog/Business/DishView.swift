@@ -118,7 +118,7 @@ struct DishView: View {
                 columns: [GridItem(.adaptive(minimum: 88), spacing: 8, alignment: .leading)], alignment: .leading,
                 spacing: 8
             ) {
-                ForEach(model.item.badges, id: \.self) { TindivoChip($0) }
+                ForEach(model.item.badges, id: \.self) { TindivoStatusPill($0) }
             }
             .padding(.top, 4)
         }

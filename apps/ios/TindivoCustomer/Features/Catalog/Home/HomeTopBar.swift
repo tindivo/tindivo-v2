@@ -11,11 +11,14 @@ struct HomeTopBar: View {
     let bagBadge: String?
     let bagLabel: String
     let onOpenBag: () -> Void
+    /// Solo en DEBUG: una pulsación larga en el isotipo abre Diagnóstico. `nil` en las demás compilaciones.
+    var onOpenDiagnostics: (() -> Void)?
 
     var body: some View {
         HStack(spacing: TindivoTokens.Spacing.spaceInner) {
             TindivoLogo()
                 .accessibilityIdentifier("home.logo")
+                .onLongPressGesture(minimumDuration: 1) { onOpenDiagnostics?() }
             if let address {
                 deliveryChip(address)
             }
@@ -25,8 +28,7 @@ struct HomeTopBar: View {
         .padding(.leading, TindivoTokens.Spacing.spaceScreen)
         .padding(.trailing, 4)
         .frame(minHeight: 56)
-        .background(Color.tindivo.surface)
-        .tindivoElevation(TindivoTokens.Elevation.elevation1)
+        .background(Color.tindivo.surface.shadow(.drop(color: Color.tindivo.ink.opacity(0.14), radius: 2, y: 1)))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.topBar")
     }
@@ -34,10 +36,11 @@ struct HomeTopBar: View {
     private func deliveryChip(_ address: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Entregar en")
-                .tindivoText(TindivoTokens.Typography.bodySecondary)
+                .tindivoText(TypeToken.labelSmall)
                 .foregroundStyle(Color.tindivo.inkSecondary)
             Text(address)
-                .tindivoText(TindivoTokens.Typography.chip)
+                .tindivoText(TypeToken.labelLarge)
+                .fontWeight(.semibold)
                 .foregroundStyle(Color.tindivo.ink)
                 .lineLimit(1)
         }
@@ -49,7 +52,7 @@ struct HomeTopBar: View {
         Button(action: onOpenBag) {
             Image(tindivo: .bag)
                 .accessibilityHidden(true)
-                .font(.title3)
+                .font(.system(size: 24))
                 .foregroundStyle(Color.tindivo.ink)
                 .frame(minWidth: TindivoTokens.Spacing.touchTarget, minHeight: TindivoTokens.Spacing.touchTarget)
                 .overlay(alignment: .topTrailing) { badge }
@@ -60,18 +63,19 @@ struct HomeTopBar: View {
         .accessibilityIdentifier("home.bag")
     }
 
-    /// `primaryText` (`#C2410C`, 5,2:1 con blanco) y negrita: la insignia es texto sobre un fondo de la marca.
+    /// `primaryText` (`#C2410C`, el `primary` de Android; 5,2:1 con blanco) y negrita: la insignia es texto sobre un fondo de
+    /// la marca. Sin interlineado extra para que la cápsula no crezca. Sale 8 a la derecha y 6 arriba del icono.
     @ViewBuilder private var badge: some View {
         if let bagBadge {
             Text(verbatim: bagBadge)
-                .tindivoText(TindivoTokens.Typography.bodySecondary)
+                .font(.tindivo(TindivoTokens.Typography.bodySecondary))
                 .fontWeight(.bold)
                 .monospacedDigit()
                 .foregroundStyle(Color.tindivo.onPrimary)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, 4)
                 .frame(minWidth: 20, minHeight: 20)
                 .background(Color.tindivo.primaryText, in: Capsule())
-                .offset(x: -2, y: 4)
+                .offset(x: 8, y: -6)
                 .accessibilityIdentifier("home.bag.badge")
         }
     }
