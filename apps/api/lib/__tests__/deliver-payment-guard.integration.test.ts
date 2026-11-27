@@ -247,13 +247,22 @@ describe('deliver con el pago único ya confirmado por el negocio', () => {
     expect(Number(o?.cash_owed_at_delivery)).toBe(0)
   })
 
+  it('D2. paymentReal null explícito cuenta como ausente: paid_yape', async () => {
+    const { orderId: id } = await pedido({ confirmado: true })
+    const r = await entregar(id, { paymentReal: null })
+    expect(r.error).toBeNull()
+    expect((await leer(id))?.payment_real).toBe('paid_yape')
+  })
+
+  // El reenvío choca con `delivered` (terminal), no con la guardia: lo que se amarra es que el cobro no cambia.
   it('I. el reenvío de la cola sin conexión con paid_cash falla y el cobro no cambia', async () => {
     const { orderId: id } = await pedido({ confirmado: true })
     expect((await entregar(id, { paymentReal: 'paid_yape' })).error).toBeNull()
     const antes = await leer(id)
 
     const reenvio = await entregar(id, { paymentReal: 'paid_cash' })
-    expect(reenvio.error).not.toBeNull()
+    expect(reenvio.error?.code).toBe('P0001')
+    expect(reenvio.error?.message).toBe('El pedido no esta recogido')
     const despues = await leer(id)
     expect(despues?.payment_real).toBe('paid_yape')
     expect(despues).toEqual(antes)
