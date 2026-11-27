@@ -16,24 +16,22 @@ codigo:
 |---|---|
 | **Tarea de la persona** | Ver la carta de un negocio, saber si puede pedirle y agregar platos a la bolsa. |
 | **Se llega desde** | `catalogo/inicio` (tarjeta), un enlace `/negocio/{slug}` (CUS-CAT-022, diferido), «Volver a pedir» en pedidos, «Agregar más» en `bolsa/bolsa`. |
-| **Se sale hacia** | Plato → `catalogo/plato`. «Ver bolsa» → `bolsa/bolsa`. Fila «Información del negocio ›» → hoja «Información». Cuadrícula → hoja «Todas las secciones». Volver → origen. |
+| **Se sale hacia** | Plato → `catalogo/plato`. «Ver bolsa» → `bolsa/bolsa`. Cuadrícula → hoja «Todas las secciones». Volver → origen. |
 
 ## Contenido, de arriba abajo
 
 1. **Barra superior:** transparente sobre la portada; tras ~140 px de scroll se vuelve blanca con sombra y muestra el
    nombre y el estado. Volver · nombre · «Abierto · cierra [hora]» · buscar. Sin botón «i» (CUS-CAT-027).
-2. **Portada y cabecera:** foto, nombre, rubro, estado y, debajo, la fila de 48 dp **«Información del negocio ›»**, que abre
-   la hoja «Información» (CUS-CAT-027).
-3. **Dos modos de entrega**, solo los que el negocio acepta: «Delivery» («[PLAZO] min · [ENVÍO]») y «Recojo» («En el
-   local»); si solo acepta uno, queda fijo (CUS-CAT-017).
-4. **Selector de secciones**, pegado bajo la barra: «Destacados» y las demás, y un botón de cuadrícula con el total que
+2. **Portada y cabecera:** foto, nombre, rubro y estado. Sin fila «Información del negocio ›» (CUS-CAT-027) ni modos de
+   entrega: el método se elige en el checkout (CUS-CAT-017). Decisión de Jesús, 2026-11-26: la carta toma la forma de
+   Android v3.1.
+3. **Selector de secciones**, pegado bajo la barra: «Destacados» y las demás, y un botón de cuadrícula con el total que
    abre «Todas las secciones». Tocar una sección lleva a ella; la visible se resalta sola al hacer scroll.
-5. **Secciones de platos.** Cada una: título, «[N] productos» y sus filas. «Destacados» es una sección reutilizable cuyos
+4. **Secciones de platos.** Cada una: título, «[N] productos» y sus filas. «Destacados» es una sección reutilizable cuyos
    productos y nombre elige el restaurante, en carrusel manual (CUS-CAT-028). Una fila: nombre, descripción de una línea,
-   precio y foto. Con unidades en la bolsa, el contador «− 1 +» va fuera de la foto y no hay «En bolsa · 1»; un plato
-   configurable dice «En tu bolsa: [N]» y «Editar selección» (CUS-CAT-029). Un plato con opciones obligatorias dice
-   «Desde S/ [PRECIO]» y «Elegir».
-6. **Pastilla «Ver bolsa»** con contador y total, sobre el borde inferior; solo con la bolsa de este negocio.
+   precio y foto, **sin control**: tocarla abre la ficha del plato (CUS-CAT-029). El «+» solo está en «Destacados». Un
+   plato con opciones obligatorias dice «Desde S/ [PRECIO]».
+5. **Pastilla «Ver bolsa»** con contador y total, sobre el borde inferior; solo con la bolsa de este negocio.
 
 ### Hoja «Todas las secciones»
 
@@ -79,6 +77,7 @@ rebota. Las hojas suben 250 ms con el scrim en fundido. Con «reducir movimiento
 
 ## Pendiente
 
+- Dónde se ofrece la hoja «Información» ahora que la carta no lleva su fila (CUS-CAT-027, decisión del 2026-11-26).
 - «Para compartir» (distintivo): sin definir (DA-17 de `Docs/trabajo/decisiones-abiertas.md`); no entra.
 - «Cómo pagas» mantiene los nombres Yape y Plin: es información, no una opción de pago (decisión de Jesús, 2026-11-19).
 - La referencia «a una cuadra de la plaza» de la maqueta no tiene campo en el negocio.
