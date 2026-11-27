@@ -1,5 +1,6 @@
 # Conclusión común · Backend REST para las apps nativas y squash de migraciones
 
+> Verificado: 2026-11-19 (solo la fila «Sesión» del §1, contra `D-54` y `D-65`)
 > Estado: **en ejecución** · Aprobado por Jesús el 2026-10-10 (conversación con Claude Code: «oka») · Alcance: el
 > contrato entre las apps nativas y la API, y el orden del paso 0. Debate: `archive/movil:Docs/trabajo/movil/debate-rest/`
 > Debate Claude + Codex, 2026-10-07/08, sobre `develop` en `0306918` y `tindivo-prod` en la migración 0247. Tres
@@ -24,7 +25,7 @@
 | Pieza | Frontera |
 |---|---|
 | **Datos y acciones del negocio** (catálogo, cotización, pedidos, Entregas, Store, perfil, direcciones, reseñas) | **Solo REST.** Las apps no leen ni escriben tablas ni RPC de Supabase |
-| **Sesión** | SDK de Supabase Auth (Google, Apple, renovación). El token viaja como `Authorization: Bearer` |
+| **Sesión** | Auth por REST (`token?grant_type=id_token` para Google y Apple; renovación con el refresh token), sin SDK de Supabase, detrás de `SessionStore`/`AuthBackend` con refresco único (CLI-7); `D-54` (Android) y `D-65` (iOS) en `decisiones.md`. El token viaja como `Authorization: Bearer` |
 | **Tiempo real** | Push nativo como canal principal; Realtime solo como aviso de «algo cambió», y la app vuelve a pedir por REST. Recuperación al reconectar y al volver al primer plano |
 | **Archivos** (comprobante) | Carga autorizada por el servidor; el servidor comprueba propiedad, tipo, tamaño y asociación al pedido, y el archivo **no puede cambiar** una vez registrado |
 | **Autorización** | La de verdad se comprueba **dentro de la operación** (rol vigente y propiedad o asignación del recurso). Un *claim* del token orienta, no autoriza. **Las lecturas privadas también verifican permisos efectivos.** Recibir `p_actor_user_id` no prueba autorización: cada RPC debe validarla |

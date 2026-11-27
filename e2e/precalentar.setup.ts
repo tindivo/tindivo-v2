@@ -42,6 +42,7 @@ import { E2E } from '../apps/api/scripts/e2e-fixtures.ts'
 const APPS = {
   api: 'http://localhost:3001/api/v1',
   customer: 'http://localhost:3000',
+  admin: 'http://localhost:3003',
   negocios: 'http://localhost:3002',
   motorizados: 'http://localhost:3004',
 } as const
@@ -63,6 +64,9 @@ const RUTAS: Record<keyof typeof APPS, string[]> = {
   customer: ['/', '/entrar', `/negocio/${E2E.BUSINESS_ID}`, '/checkout', '/cuenta', '/pedidos'],
   // El editor de plato y el panel de Extras: los toca el spec de negocios y
   // son de las rutas más caras de compilar.
+  // El admin de Tindivo Store: `store-admin.spec.ts` entra a estas cuatro y antes se compilaban dentro del
+  // primer test que las tocaba (medido: /store 2.0 s, /store/[id] 2.7 s, /store/nuevo 1.7 s en frío).
+  admin: ['/store', '/store/nuevo', '/store/ajustes', '/store/e2e-precalentar'],
   negocios: ['/', '/menu', '/menu/extras'],
   motorizados: ['/'],
 }

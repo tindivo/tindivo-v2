@@ -185,6 +185,26 @@ internal class AddressListViewModelTest : AddressHarness() {
             assertEquals(2, server.requestCount)
         }
 
+    @Test
+    fun `un refresco silencioso no pasa por cargando y trae lo nuevo, el normal si`() =
+        runTest {
+            server.enqueue(addressList(address()))
+            val vm = viewModel()
+            vm.settled()
+            val seen = CopyOnWriteArrayList<AddressListUiState>()
+            val job = CoroutineScope(Dispatchers.Unconfined).launch { vm.state.collect { seen += it } }
+            server.enqueue(addressList(address(), address(ID_B, isDefault = false)))
+
+            vm.refresh(quiet = true)
+
+            assertTrue(seen.none { it is AddressListUiState.Loading })
+            assertEquals(2, (vm.state.value as AddressListUiState.Loaded).items.size)
+            server.enqueue(addressList(address()))
+            vm.refresh()
+            assertTrue(seen.any { it is AddressListUiState.Loading })
+            job.cancel()
+        }
+
     /** Un paso del servidor: [gated] lo deja RETENIDO (avisa en [held]) hasta que la prueba libere [release]. */
     private class Step(
         val response: MockResponse,

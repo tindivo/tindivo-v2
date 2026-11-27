@@ -1,48 +1,71 @@
 package com.tindivo.customer.feature.cart
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoCard
+import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.catalog.business.DishPhoto
 
 /** Une el ViewModel con la pantalla. [onAddMore] vuelve a la carta del negocio de la bolsa. */
 @Composable
@@ -79,7 +102,11 @@ class CartActions(
     val onCheckout: () -> Unit,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * La bolsa (tablero «Bolsa»): barra blanca con «Vaciar» en rojo, el negocio arriba, los platos en una tarjeta con
+ * su miniatura, «Agregar más» como píldora, el subtotal en su tarjeta y, fija abajo, la píldora «Continuar» con el
+ * subtotal. Las acciones son las mismas de siempre: aquí solo cambia cómo se ve.
+ */
 @Composable
 fun CartScreen(
     state: CartUiState,
@@ -87,52 +114,32 @@ fun CartScreen(
 ) {
     var confirmingClear by rememberSaveable { mutableStateOf(false) }
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.cart_title),
-                        modifier = Modifier.semantics { heading() },
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = actions.onBack, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = TindivoIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.business_back),
-                        )
-                    }
-                },
-                actions = {
-                    if (state is CartUiState.Filled) {
-                        TextButton(onClick = { confirmingClear = true }, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text(text = stringResource(R.string.cart_clear))
-                        }
-                    }
-                },
+            CartTopBar(
+                units = (state as? CartUiState.Filled)?.lines?.sumOf { it.quantity },
+                onBack = actions.onBack,
             )
         },
         bottomBar = {
             if (state is CartUiState.Filled) {
-                Button(
-                    onClick = actions.onCheckout,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(16.dp)
-                            .heightIn(min = 48.dp),
-                ) {
-                    Text(text = stringResource(R.string.cart_continue))
-                }
+                ContinueBar(subtotal = state.subtotal, onClick = actions.onCheckout)
             }
         },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when (state) {
-                CartUiState.Loading -> Unit
-                CartUiState.Empty -> EmptyBag(onSeeBusinesses = actions.onSeeBusinesses)
-                is CartUiState.Filled -> FilledBag(state = state, actions = actions)
+                CartUiState.Loading -> {
+                    Unit
+                }
+
+                CartUiState.Empty -> {
+                    EmptyBag(onSeeBusinesses = actions.onSeeBusinesses)
+                }
+
+                is CartUiState.Filled -> {
+                    FilledBag(state = state, actions = actions, onClear = { confirmingClear = true })
+                }
             }
         }
     }
@@ -147,17 +154,136 @@ fun CartScreen(
     }
 }
 
+/** [units] es `null` con la bolsa vacía: entonces no hay contador. «Vaciar» no va aquí: está al final de la lista. */
+@Composable
+private fun CartTopBar(
+    units: Int?,
+    onBack: () -> Unit,
+) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shadowElevation = 4.dp) {
+        Row(
+            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            IconButton(onClick = onBack, modifier = Modifier.size(TindivoSpacing.touchTarget)) {
+                Icon(imageVector = TindivoIcons.ArrowBack, contentDescription = stringResource(R.string.business_back))
+            }
+            // El título y el contador toman lo que deja «Vaciar»: con letra grande el contador se corta con «…» y
+            // «Vaciar» ya no se parte letra por letra.
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.cart_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    modifier = Modifier.semantics { heading() },
+                )
+                units?.let {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(start = 8.dp).weight(1f, fill = false),
+                    ) {
+                        Text(
+                            text = pluralStringResource(R.plurals.cart_units, it, it),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** La píldora de abajo: «Continuar →» y el subtotal en su cápsula oscura, sobre una barra blanca redondeada. */
+@Composable
+private fun ContinueBar(
+    subtotal: String,
+    onClick: () -> Unit,
+) {
+    val label = stringResource(R.string.cart_continue)
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shadowElevation = 12.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            modifier =
+                Modifier
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp)
+                    .fillMaxWidth()
+                    .heightIn(min = TindivoSpacing.primaryButtonHeight)
+                    .clearAndSetSemantics {
+                        contentDescription = "$label, $subtotal"
+                        role = Role.Button
+                    },
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 24.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // «Continuar →» toma lo que deja el subtotal: el monto nunca se corta; con letra grande, el texto sí («…»).
+                Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Icon(
+                        imageVector = TindivoIcons.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.padding(start = 8.dp).size(20.dp),
+                    )
+                }
+                Box(
+                    modifier =
+                        Modifier
+                            .padding(start = 8.dp)
+                            .heightIn(min = 40.dp)
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f), CircleShape)
+                            .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = subtotal, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun EmptyBag(onSeeBusinesses: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        modifier = Modifier.fillMaxSize().padding(TindivoSpacing.screen),
+        verticalArrangement = Arrangement.spacedBy(TindivoSpacing.screen, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = stringResource(R.string.cart_empty), style = MaterialTheme.typography.titleMedium)
-        Button(onClick = onSeeBusinesses, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(text = stringResource(R.string.cart_see_businesses))
+        Box(
+            modifier = Modifier.size(96.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = TindivoIcons.ShoppingBag,
+                contentDescription = null,
+                tint = TindivoColors.brandText,
+                modifier = Modifier.size(44.dp),
+            )
         }
+        Text(text = stringResource(R.string.cart_empty), style = MaterialTheme.typography.titleLarge)
+        TindivoPrimaryButton(text = stringResource(R.string.cart_see_businesses), onClick = onSeeBusinesses)
     }
 }
 
@@ -165,78 +291,146 @@ private fun EmptyBag(onSeeBusinesses: () -> Unit) {
 private fun FilledBag(
     state: CartUiState.Filled,
     actions: CartActions,
+    onClear: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(TindivoSpacing.screen),
+        verticalArrangement = Arrangement.spacedBy(TindivoSpacing.screen),
     ) {
+        item { BusinessLine(name = state.businessName) }
         item {
-            Text(text = state.businessName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        }
-        items(state.lines, key = { it.signature }) { line ->
-            CartLineRow(line = line, actions = actions)
-            HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
-        }
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = stringResource(R.string.cart_subtotal), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = state.subtotal,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
+            TindivoCard(modifier = Modifier.fillMaxWidth()) {
+                // Una sola tarjeta, como el tablero; `key` da a cada plato su identidad (la de `items(key = …)`), así
+                // que quitar uno no le pasa su estado al siguiente.
+                state.lines.forEachIndexed { index, line ->
+                    key(line.signature) {
+                        if (index > 0) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                            )
+                        }
+                        CartLineRow(line = line, actions = actions)
+                    }
+                }
             }
         }
+        item { AddMorePill(businessName = state.businessName, onClick = { actions.onAddMore(state.businessId) }) }
+        item { TotalsCard(subtotal = state.subtotal) }
+        // Destructivo y poco frecuente: al final, como texto, y con confirmación antes de vaciar.
         item {
-            Text(
-                text = stringResource(R.string.cart_shipping_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item {
-            OutlinedButton(
-                onClick = { actions.onAddMore(state.businessId) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            TextButton(
+                onClick = onClear,
+                modifier = Modifier.fillMaxWidth().heightIn(min = TindivoSpacing.touchTarget),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
             ) {
-                Text(text = stringResource(R.string.cart_add_more))
+                Text(text = stringResource(R.string.cart_clear), fontWeight = FontWeight.SemiBold, maxLines = 1)
             }
         }
     }
 }
 
 @Composable
+private fun BusinessLine(name: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.item),
+    ) {
+        RoundIcon(TindivoIcons.ShoppingBag, size = 44.dp)
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.semantics { heading() },
+        )
+    }
+}
+
+@Composable
+private fun RoundIcon(
+    icon: ImageVector,
+    size: Dp = 40.dp,
+) {
+    Box(
+        modifier = Modifier.size(size).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = TindivoColors.brandText,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
 private fun CartLineRow(
     line: CartLineUi,
     actions: CartActions,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = line.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            Text(text = line.total, style = MaterialTheme.typography.titleMedium)
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.item),
+    ) {
+        // La foto que se guardó al agregar el plato; sin ella (o mientras carga) va el isotipo sobre crema.
+        DishPhoto(
+            imageUrl = line.imageUrl,
+            shape = RoundedCornerShape(14.dp),
+            markWidth = 40.dp,
+            modifier = Modifier.size(72.dp),
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = line.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(text = line.total, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            }
+            if (line.options.isNotEmpty() || line.note != null) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    line.options.forEach {
+                        Chip(
+                            text = stringResource(R.string.cart_option, it.group, it.option),
+                            container = MaterialTheme.colorScheme.surfaceVariant,
+                            content = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    line.note?.let {
+                        Chip(
+                            text = stringResource(R.string.cart_line_note, it),
+                            container = MaterialTheme.colorScheme.primaryContainer,
+                            content = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
+            }
+            QuantityControls(line = line, actions = actions)
         }
-        line.options.forEach {
-            Text(
-                text = stringResource(R.string.cart_option, it.group, it.option),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        line.note?.let {
-            Text(
-                text = stringResource(R.string.cart_line_note, it),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        QuantityControls(line = line, actions = actions)
     }
+}
+
+@Composable
+private fun Chip(
+    text: String,
+    container: Color,
+    content: Color,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = FontWeight.SemiBold,
+        color = content,
+        modifier = Modifier.background(container, CircleShape).padding(horizontal = 10.dp, vertical = 4.dp),
+    )
 }
 
 @Composable
@@ -244,29 +438,112 @@ private fun QuantityControls(
     line: CartLineUi,
     actions: CartActions,
 ) {
-    val less = stringResource(R.string.cart_line_less, line.name)
-    val more = stringResource(R.string.cart_line_more, line.name)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(
-            onClick = { actions.onChangeQuantity(line.signature, -1) },
-            enabled = line.canDecrease,
-            modifier = Modifier.size(48.dp).semantics { contentDescription = less },
-            contentPadding = PaddingValues(0.dp),
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier =
+                Modifier
+                    .height(TindivoSpacing.touchTarget)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = "−")
+            if (line.minusRemoves) {
+                // Con una sola unidad el «−» es un tacho: quita el plato, y por eso «Quitar» ya no hace falta.
+                IconButton(
+                    onClick = { actions.onRemove(line.signature) },
+                    modifier = Modifier.size(TindivoSpacing.touchTarget),
+                ) {
+                    Icon(
+                        TindivoIcons.Delete,
+                        contentDescription = stringResource(R.string.cart_line_remove, line.name),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            } else {
+                IconButton(
+                    onClick = { actions.onChangeQuantity(line.signature, -1) },
+                    modifier = Modifier.size(TindivoSpacing.touchTarget),
+                ) {
+                    Icon(TindivoIcons.Remove, contentDescription = stringResource(R.string.cart_line_less, line.name))
+                }
+            }
+            Text(text = line.quantity.toString(), style = MaterialTheme.typography.titleMedium)
+            IconButton(
+                onClick = { actions.onChangeQuantity(line.signature, 1) },
+                enabled = line.canIncrease,
+                modifier = Modifier.size(TindivoSpacing.touchTarget),
+            ) {
+                Icon(TindivoIcons.Add, contentDescription = stringResource(R.string.cart_line_more, line.name))
+            }
         }
-        Text(text = line.quantity.toString(), style = MaterialTheme.typography.titleMedium)
-        OutlinedButton(
-            onClick = { actions.onChangeQuantity(line.signature, 1) },
-            enabled = line.canIncrease,
-            modifier = Modifier.size(48.dp).semantics { contentDescription = more },
-            contentPadding = PaddingValues(0.dp),
+        Spacer(modifier = Modifier.weight(1f))
+        if (!line.minusRemoves) {
+            TextButton(
+                onClick = { actions.onRemove(line.signature) },
+                modifier = Modifier.heightIn(min = TindivoSpacing.touchTarget),
+            ) {
+                Text(text = stringResource(R.string.cart_remove), fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddMorePill(
+    businessName: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 6.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.item),
         ) {
-            Text(text = "+")
+            RoundIcon(TindivoIcons.Add)
+            Text(
+                text = stringResource(R.string.cart_add_more_from, businessName),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(TindivoIcons.ChevronRight, contentDescription = null)
         }
-        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { actions.onRemove(line.signature) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.cart_remove))
+    }
+}
+
+@Composable
+private fun TotalsCard(subtotal: String) {
+    TindivoCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(TindivoSpacing.screen), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.item),
+            ) {
+                RoundIcon(TindivoIcons.Receipt)
+                Text(
+                    text = stringResource(R.string.cart_subtotal),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(text = subtotal, style = MaterialTheme.typography.titleLarge)
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.item),
+            ) {
+                RoundIcon(TindivoIcons.LocalShipping)
+                Text(
+                    text = stringResource(R.string.cart_shipping_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }
@@ -304,8 +581,8 @@ private fun CartPreview() {
             note = "sin ají",
             quantity = 2,
             total = "S/ 25.00",
-            canDecrease = true,
             canIncrease = true,
+            imageUrl = null,
         )
     TindivoTheme {
         CartScreen(

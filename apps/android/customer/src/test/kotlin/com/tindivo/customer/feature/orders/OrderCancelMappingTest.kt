@@ -58,7 +58,7 @@ class OrderCancelMappingTest {
     }
 
     @Test
-    fun `volver a pedir abre el negocio del pedido salvo con el comprobante rechazado del todo`() {
+    fun `CA-ORD-05 y CA-ORD-06 solo un pedido entregado ofrece volver a pedir, y no el de comprobante rechazado`() {
         fun card(
             status: String,
             reason: String? = null,
@@ -66,9 +66,21 @@ class OrderCancelMappingTest {
 
         assertEquals(BUSINESS_ID, card("delivered")?.businessId)
         assertTrue(card("delivered")?.reorderable == true)
-        assertTrue(card("preparing")?.reorderable == true)
-        assertTrue(card("cancelled", "customer_cancelled")?.reorderable == true)
+        assertFalse(card("preparing")?.reorderable == true)
+        assertFalse(card("cancelled", "customer_cancelled")?.reorderable == true)
         assertFalse(card("cancelled", "proof_rejected_final")?.reorderable == true)
+    }
+
+    @Test
+    fun `CA-ORD-05 ver caso de pago solo con el comprobante rechazado del todo`() {
+        fun card(
+            status: String,
+            reason: String? = null,
+        ) = page(listItem(status = status, cancelReason = reason)).toPageUi(now)?.items?.single()
+
+        assertTrue(card("cancelled", "proof_rejected_final")?.paymentCase == true)
+        assertFalse(card("cancelled", "customer_cancelled")?.paymentCase == true)
+        assertFalse(card("delivered")?.paymentCase == true)
     }
 
     @Test
@@ -88,7 +100,7 @@ class OrderCancelMappingTest {
     }
 
     @Test
-    fun `cancelar se ofrece donde lo permite cancel_customer_order`() {
+    fun `CA-TRK-01 cancelar se ofrece donde lo permite cancel_customer_order`() {
         fun offer(
             status: String,
             intent: String,
@@ -111,7 +123,7 @@ class OrderCancelMappingTest {
     }
 
     @Test
-    fun `un prepago con comprobante o pago verificado nunca ofrece cancelar sin costo`() {
+    fun `CA-TRK-01 un prepago con comprobante o pago verificado nunca ofrece cancelar sin costo`() {
         val withProof = detail(status = "pending_acceptance", paymentIntent = "prepaid", proofAttempt = 1)
         val verified =
             detail(status = "pending_acceptance", paymentIntent = "prepaid", paymentVerifiedAt = "2026-10-26T15:10:00Z")

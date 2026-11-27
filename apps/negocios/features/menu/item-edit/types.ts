@@ -66,6 +66,7 @@ export interface FormData {
   base_price: string
   is_available: boolean
   is_compact: boolean
+  is_featured: boolean
   image_url: string | null
   badges: string[]
   /**

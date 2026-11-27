@@ -120,6 +120,15 @@ export function ConfigView({
               onChange={(e) => set({ tagline: e.target.value })}
             />
           </Field>
+          <Field label="Nombre de tu sección de destacados">
+            <input
+              className={inputCls}
+              value={form.featuredTitle}
+              maxLength={30}
+              placeholder="Destacados"
+              onChange={(e) => set({ featuredTitle: e.target.value })}
+            />
+          </Field>
           <Field label="Teléfono">
             <input
               className={inputMonoCls}
@@ -322,6 +331,17 @@ export function ConfigView({
                     className={inputCls}
                     value={form.tagline}
                     onChange={(e) => set({ tagline: e.target.value })}
+                  />
+                </Field>
+              </div>
+              <div className="col-span-2">
+                <Field label="Nombre de tu sección de destacados">
+                  <input
+                    className={inputCls}
+                    value={form.featuredTitle}
+                    maxLength={30}
+                    placeholder="Destacados"
+                    onChange={(e) => set({ featuredTitle: e.target.value })}
                   />
                 </Field>
               </div>

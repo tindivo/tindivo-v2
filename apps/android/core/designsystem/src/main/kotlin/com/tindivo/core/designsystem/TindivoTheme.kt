@@ -37,7 +37,7 @@ object TindivoSpacing {
     val touchTarget: Dp = 48.dp
 
     /** Alto del botón principal de una pantalla, como el de la web. */
-    val primaryButtonHeight: Dp = 52.dp
+    val primaryButtonHeight: Dp = 56.dp
 }
 
 /**

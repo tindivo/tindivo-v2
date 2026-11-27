@@ -28,13 +28,22 @@ internal fun rememberReviewController(
                 onDismiss = viewModel::dismiss,
             )
         }
-    return ReviewController(state = state, actions = actions, openForm = viewModel::openForm)
+    return ReviewController(
+        state = state,
+        actions = actions,
+        openForm = viewModel::openForm,
+        enableAutoPrompt = viewModel::enableAutoPrompt,
+        disableAutoPrompt = viewModel::disableAutoPrompt,
+    )
 }
 
+/** [enableAutoPrompt] y [disableAutoPrompt]: quien lo usa decide cuándo es buen momento (el historial, sin pedido activo). */
 internal class ReviewController(
     val state: ReviewUiState,
     val actions: ReviewActions,
     val openForm: () -> Unit,
+    val enableAutoPrompt: () -> Unit = {},
+    val disableAutoPrompt: () -> Unit = {},
 )
 
 /** Dibuja las hojas del [ReviewController]. */

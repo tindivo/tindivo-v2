@@ -117,7 +117,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
                 json(200, """{"data":{"contraentregaAllowed":false,"prepayRequired":true,"reason":"first_order"}}"""),
             )
 
-            val data = (checkout().paymentOptions() as ApiResult.Success).data
+            val data = (checkout().paymentOptions(ACCOUNT) as ApiResult.Success).data
 
             assertFalse(data.contraentregaAllowed)
             assertTrue(data.prepayRequired)
@@ -131,7 +131,7 @@ class CheckoutRepositoryTest : HttpClientTestBase() {
         runTest {
             server.enqueue(problem(401, "unauthorized"))
 
-            val error = (checkout().paymentOptions() as ApiResult.Failure).error
+            val error = (checkout().paymentOptions(ACCOUNT) as ApiResult.Failure).error
 
             assertEquals(ApiErrorCode.Unauthorized, (error as AppError.Known).code)
         }

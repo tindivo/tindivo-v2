@@ -31,7 +31,6 @@ export interface Tracking {
   estimatedReadyAt: string | null
   driverName: string | null
   arrivedAtCustomerAt?: string | null
-  driverPhone?: string | null
   /** La cajera declaró la comida lista antes de tiempo (0109). `estimated_ready_at`
    *  NO se toca en ese caso, así que sin este flag el ETA anunciaría minutos de
    *  cocción para comida ya hecha. */

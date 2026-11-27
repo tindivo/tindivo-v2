@@ -150,6 +150,16 @@ class PhoneVerifyViewModelTest {
         }
 
     @Test
+    fun `un numero pegado con +51 y espacios queda en los 9 digitos`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.onPhoneChanged("+51 987 654 321")
+
+            assertEquals("987654321", viewModel.state.value.phone)
+        }
+
+    @Test
     fun `un codigo de menos de 6 digitos no sale a la red`() =
         runTest {
             val viewModel = viewModel()
@@ -176,6 +186,74 @@ class PhoneVerifyViewModelTest {
             val state = viewModel.state.value
             assertEquals(PhoneStep.Code, state.step)
             assertEquals(PhoneError.Server("El código ya no sirve. Pide uno nuevo."), state.error)
+            assertNull(state.transfer)
+        }
+
+    @Test
+    fun `CA-AUT-P8 el sexto digito verifica solo y con menos de seis no sale nada`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+
+            viewModel.onCodeTyped("12345")
+            assertEquals(1, server.requestCount)
+            assertEquals(PhoneStep.Code, viewModel.state.value.step)
+
+            viewModel.onCodeTyped("123456")
+
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+            assertEquals(2, server.requestCount)
+        }
+
+    @Test
+    fun `un codigo de seis digitos pegado con espacios verifica solo`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(200, VERIFIED))
+
+            viewModel.onCodeTyped("123 456")
+
+            assertEquals(PhoneStep.Done, viewModel.state.value.step)
+            server.takeRequest()
+            assertEquals("""{"phone":"987654321","code":"123456"}""", server.takeRequest().body?.utf8())
+        }
+
+    @Test
+    fun `CA-AUT-09 el texto que la app reconoce es el del vector compartido con el servidor`() {
+        val vector =
+            requireNotNull(javaClass.getResourceAsStream("/fixtures/vectores/celular-otra-cuenta.json")) {
+                "falta el recurso fixtures/vectores/celular-otra-cuenta.json"
+            }.bufferedReader().readText()
+        assertTrue(vector.contains("\"detail\": \"$OTHER_ACCOUNT_DETAIL\""))
+    }
+
+    @Test
+    fun `CA-AUT-P8 repetir el mismo codigo de seis digitos tras un fallo no vuelve a verificar`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(409, CONFLICT_PLAIN))
+
+            viewModel.onCodeTyped("123456")
+            assertEquals(2, server.requestCount)
+            viewModel.onCodeTyped("123456")
+
+            assertEquals(2, server.requestCount)
+        }
+
+    @Test
+    fun `CA-AUT-09 un celular de otra cuenta sin traslado da el aviso de soporte y no ofrece trasladar`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.toCodeStep()
+            server.enqueue(response(409, CONFLICT_OTHER_ACCOUNT))
+
+            viewModel.onCodeTyped("123456")
+
+            val state = viewModel.state.value
+            assertEquals(PhoneError.OtherAccount, state.error)
             assertNull(state.transfer)
         }
 
@@ -361,7 +439,7 @@ class PhoneVerifyViewModelTest {
             viewModel.toCodeStep()
 
             store.signInUserId = "user-2"
-            store.signInWithGoogle("token", "nonce")
+            store.signInWithGoogle("token", "nonce", termsPending = false)
 
             val closed = PhoneUiState(loggedOut = true)
             assertEquals(closed, viewModel.state.value)
@@ -648,6 +726,10 @@ class PhoneVerifyViewModelTest {
             {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",
              "detail":"El código ya no sirve. Pide uno nuevo."}
         """
+
+        // El texto lo fija el vector compartido con el servidor (celular-otra-cuenta.json).
+        val CONFLICT_OTHER_ACCOUNT =
+            """{"type":"about:blank","title":"Conflicto","status":409,"code":"conflict","detail":"$OTHER_ACCOUNT_DETAIL"}"""
         const val CONFLICT_TRANSFER = """
             {"type":"about:blank","title":"Conflicto","status":409,"code":"conflict",
              "detail":"Ese número ya está verificado en otra cuenta.",

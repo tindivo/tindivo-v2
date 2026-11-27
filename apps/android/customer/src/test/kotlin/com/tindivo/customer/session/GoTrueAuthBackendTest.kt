@@ -124,7 +124,7 @@ class GoTrueAuthBackendTest {
             val file = MemoryFile()
             server.enqueue(tokens("acceso-1", "refresh-1", expiresAt = now + 3600))
 
-            val snapshot = backend(file).signInWithGoogle("id-token-google", "nonce-crudo")
+            val snapshot = backend(file).signInWithGoogle("id-token-google", "nonce-crudo", termsPending = false)
 
             assertSnapshot("acceso-1", "user-1", now + 3600, snapshot)
             val request = server.takeRequest()
@@ -145,7 +145,7 @@ class GoTrueAuthBackendTest {
         runTest {
             server.enqueue(tokens("acceso-1", "refresh-1"))
 
-            val snapshot = backend(MemoryFile()).signInWithGoogle("id", "nonce")
+            val snapshot = backend(MemoryFile()).signInWithGoogle("id", "nonce", termsPending = false)
 
             assertEquals(now + 3600, snapshot.expiresAtEpochSeconds)
         }
@@ -155,7 +155,7 @@ class GoTrueAuthBackendTest {
         runTest {
             val file = MemoryFile()
             server.enqueue(tokens("acceso-1", "refresh-1", expiresAt = now + 3600))
-            backend(file).signInWithGoogle("id", "nonce")
+            backend(file).signInWithGoogle("id", "nonce", termsPending = false)
             server.takeRequest()
 
             val again = backend(file)
@@ -187,7 +187,7 @@ class GoTrueAuthBackendTest {
             val file = MemoryFile()
             server.enqueue(tokens("acceso-1", "refresh-1"))
             val auth = backend(file)
-            auth.signInWithGoogle("id", "nonce")
+            auth.signInWithGoogle("id", "nonce", termsPending = false)
             val saved = file.plain
             server.enqueue(status(400))
 
@@ -217,7 +217,7 @@ class GoTrueAuthBackendTest {
         runTest {
             server.enqueue(tokens("acceso-1", "refresh-1"))
             val auth = backend(MemoryFile())
-            auth.signInWithGoogle("id", "nonce")
+            auth.signInWithGoogle("id", "nonce", termsPending = false)
             server.takeRequest()
             server.enqueue(MockResponse.Builder().code(204).build())
 
@@ -245,7 +245,7 @@ class GoTrueAuthBackendTest {
             val file = MemoryFile()
             server.enqueue(tokens("acceso-1", "refresh-1"))
             val auth = backend(file)
-            auth.signInWithGoogle("id", "nonce")
+            auth.signInWithGoogle("id", "nonce", termsPending = false)
 
             auth.clear()
 
@@ -277,7 +277,7 @@ class GoTrueAuthBackendTest {
                         .build(),
                 )
 
-                expectIOException { auth.signInWithGoogle("id", "nonce") }
+                expectIOException { auth.signInWithGoogle("id", "nonce", termsPending = false) }
             }
             assertNull(file.plain)
         }
@@ -307,7 +307,12 @@ class GoTrueAuthBackendTest {
             assertFalse(session.toString().contains("secreto"))
 
             server.enqueue(status(401))
-            val error = expectIOException { backend(MemoryFile()).signInWithGoogle("id-secreto", "nonce-secreto") }
+            val error =
+                expectIOException {
+                    backend(
+                        MemoryFile(),
+                    ).signInWithGoogle("id-secreto", "nonce-secreto", termsPending = false)
+                }
             assertFalse(error.toString().contains("secreto"))
         }
 }

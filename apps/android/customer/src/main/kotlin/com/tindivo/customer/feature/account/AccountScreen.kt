@@ -3,19 +3,28 @@ package com.tindivo.customer.feature.account
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,24 +35,47 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoCard
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.addresses.AddressListUiState
+import com.tindivo.customer.feature.addresses.AddressListViewModel
+import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
+import com.tindivo.customer.support.SupportViewModel
+import java.util.UUID
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
 fun AccountDestination(
     onLeave: () -> Unit,
-    onOpenOrders: () -> Unit,
     onOpenAddresses: () -> Unit,
     onVerifyPhone: () -> Unit,
     phoneChanged: Boolean,
     onPhoneChangeHandled: () -> Unit,
     profile: ProfileLink,
     onDeleteAccount: () -> Unit,
+    onAddAddress: () -> Unit,
+    onEditAddress: (String) -> Unit,
+    addressesChanged: Boolean,
+    onAddressesChangeHandled: () -> Unit,
+    onOpenDiagnostics: (() -> Unit)? = null,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val addressList = hiltViewModel<AddressListViewModel>()
+    val addresses = addressList.state.collectAsStateWithLifecycle().value
+    // Volvió del formulario o de la libreta con algo cambiado: la lista que se tenía ya no es la del servidor.
+    LaunchedEffect(addressesChanged) {
+        if (addressesChanged) {
+            addressList.refresh(quiet = true)
+            onAddressesChangeHandled()
+        }
+    }
+    val supportNumber = hiltViewModel<SupportViewModel>().number.collectAsStateWithLifecycle().value
+    val nameEdit = viewModel.nameEdit.collectAsStateWithLifecycle().value
     // Volvió de «Completa tu perfil» con el perfil ya creado: se carga la cuenta.
     LaunchedEffect(profile.completed) {
         if (profile.completed) {
@@ -71,13 +103,20 @@ fun AccountDestination(
     AccountScreen(
         state = state,
         onRetry = viewModel::load,
-        onOpenOrders = onOpenOrders,
         onOpenAddresses = onOpenAddresses,
         onVerifyPhone = onVerifyPhone,
         onSignOut = viewModel::signOut,
-        onBack = onLeave,
         onCompleteProfile = profile.onOpen,
         onDeleteAccount = onDeleteAccount,
+        onOpenDiagnostics = onOpenDiagnostics,
+        supportNumber = supportNumber,
+        nameEdit = nameEdit,
+        onSaveName = viewModel::saveName,
+        onDismissNameEdit = viewModel::dismissNameEdit,
+        addresses = addresses,
+        onAddAddress = onAddAddress,
+        onEditAddress = { onEditAddress(it.toString()) },
+        onRetryAddresses = { addressList.refresh() },
     )
 }
 
@@ -89,29 +128,41 @@ class ProfileLink(
 )
 
 @Composable
-fun AccountScreen(
+internal fun AccountScreen(
     state: AccountUiState,
     onRetry: () -> Unit,
-    onOpenOrders: () -> Unit,
     onOpenAddresses: () -> Unit,
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
-    onBack: () -> Unit,
     onCompleteProfile: () -> Unit = {},
     onDeleteAccount: () -> Unit = {},
+    onOpenDiagnostics: (() -> Unit)? = null,
+    supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
+    nameEdit: NameEditState = NameEditState.Idle,
+    onSaveName: (String) -> Unit = {},
+    onDismissNameEdit: () -> Unit = {},
+    addresses: AddressListUiState = AddressListUiState.Loading,
+    onAddAddress: () -> Unit = {},
+    onEditAddress: (UUID) -> Unit = {},
+    onRetryAddresses: () -> Unit = {},
 ) {
+    val addressesCard =
+        AddressesCardModel(
+            state = addresses,
+            onOpenAll = onOpenAddresses,
+            onAdd = onAddAddress,
+            onEdit = onEditAddress,
+            onRetry = onRetryAddresses,
+        )
     Scaffold { innerPadding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp),
         ) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.account_back))
-            }
+            // Pestaña raíz (tablero «9 · Cuenta»): título de 26 sp y sin «Volver».
             Text(
                 text = stringResource(R.string.account_title),
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() },
+                modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 12.dp).semantics { heading() },
             )
             when (state) {
                 AccountUiState.Loading, AccountUiState.LoggedOut -> {
@@ -125,19 +176,26 @@ fun AccountScreen(
                 is AccountUiState.ProfileMissing -> {
                     ProfileMissing(
                         onCompleteProfile = onCompleteProfile,
+                        addresses = addressesCard,
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
+                        onOpenDiagnostics = onOpenDiagnostics,
+                        supportNumber = supportNumber,
                     )
                 }
 
                 is AccountUiState.Loaded -> {
                     Profile(
                         profile = state.profile,
-                        onOpenOrders = onOpenOrders,
-                        onOpenAddresses = onOpenAddresses,
+                        addresses = addressesCard,
                         onVerifyPhone = onVerifyPhone,
                         onSignOut = onSignOut,
                         onDeleteAccount = onDeleteAccount,
+                        onOpenDiagnostics = onOpenDiagnostics,
+                        supportNumber = supportNumber,
+                        nameEdit = nameEdit,
+                        onSaveName = onSaveName,
+                        onDismissNameEdit = onDismissNameEdit,
                     )
                 }
             }
@@ -178,101 +236,159 @@ private fun Failure(
     }
 }
 
+/**
+ * El contenido de Cuenta desplaza; entre tarjetas, 24 dp como el tablero. Toma todo el alto que deja el título
+ * (`weight(1f)`) y desplaza dentro de él: así, en una pantalla ancha o baja, «Borrar mi cuenta» queda al final del
+ * recorrido y se alcanza con el dedo, sin quedar tapado.
+ */
 @Composable
-private fun ProfileMissing(
+private fun ColumnScope.AccountColumn(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier =
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(top = 4.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(TindivoSpacing.section),
+        content = content,
+    )
+}
+
+@Composable
+private fun ColumnScope.ProfileMissing(
     onCompleteProfile: () -> Unit,
+    addresses: AddressesCardModel,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
+    onOpenDiagnostics: (() -> Unit)?,
+    supportNumber: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(text = stringResource(R.string.account_profile_missing_title), style = MaterialTheme.typography.titleLarge)
-        Text(
-            text = stringResource(R.string.account_profile_missing_message),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        Button(
-            onClick = onCompleteProfile,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.profile_complete))
+    AccountColumn {
+        TindivoCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(TindivoSpacing.screen),
+                verticalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
+            ) {
+                Text(
+                    text = stringResource(R.string.account_profile_missing_title),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = stringResource(R.string.account_profile_missing_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TindivoPrimaryButton(
+                    text = stringResource(R.string.profile_complete),
+                    onClick = onCompleteProfile,
+                    modifier = Modifier.padding(top = TindivoSpacing.tight),
+                )
+            }
         }
-        OutlinedButton(
-            onClick = onSignOut,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.account_sign_out))
-        }
+        AddressesCard(addresses)
+        SettingsCard(supportNumber = supportNumber)
+        SignOutCard(onSignOut = onSignOut)
         // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
-        DeleteAccountButton(onDeleteAccount = onDeleteAccount)
+        AccountFooter(onDeleteAccount = onDeleteAccount, onOpenDiagnostics = onOpenDiagnostics)
     }
 }
 
 @Composable
-private fun Profile(
+private fun ColumnScope.Profile(
     profile: AccountProfileUi,
-    onOpenOrders: () -> Unit,
-    onOpenAddresses: () -> Unit,
+    addresses: AddressesCardModel,
     onVerifyPhone: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
+    onOpenDiagnostics: (() -> Unit)?,
+    supportNumber: String,
+    nameEdit: NameEditState,
+    onSaveName: (String) -> Unit,
+    onDismissNameEdit: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(text = profile.fullName, style = MaterialTheme.typography.titleLarge)
-        Text(
-            text =
-                stringResource(
-                    if (profile.phoneVerified) R.string.account_phone_verified else R.string.account_phone_missing,
-                ),
-            style = MaterialTheme.typography.bodyLarge,
+    var editing by remember { mutableStateOf(false) }
+    LaunchedEffect(nameEdit) {
+        if (nameEdit == NameEditState.Done) {
+            editing = false
+            onDismissNameEdit()
+        }
+    }
+    if (editing) {
+        NameEditDialog(
+            current = profile.fullName,
+            state = nameEdit,
+            onSave = onSaveName,
+            onCancel = {
+                editing = false
+                onDismissNameEdit()
+            },
         )
-        if (profile.phoneVerified && profile.phone != null) {
-            Text(text = profile.phone, style = MaterialTheme.typography.bodyLarge)
-        }
-        OutlinedButton(
-            onClick = onVerifyPhone,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(
-                text =
-                    stringResource(
-                        if (profile.phoneVerified) R.string.account_phone_change else R.string.account_phone_verify,
-                    ),
-            )
-        }
-        Button(
-            onClick = onOpenOrders,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.account_orders))
-        }
-        OutlinedButton(
-            onClick = onOpenAddresses,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.account_addresses))
-        }
-        OutlinedButton(
-            onClick = onSignOut,
-            modifier = Modifier.heightIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(text = stringResource(R.string.account_sign_out))
-        }
-        DeleteAccountButton(onDeleteAccount = onDeleteAccount)
+    }
+    AccountColumn {
+        ProfileCard(profile = profile, onEditName = { editing = true }, onVerifyPhone = onVerifyPhone)
+        AddressesCard(addresses)
+        SettingsCard(supportNumber = supportNumber)
+        SignOutCard(onSignOut = onSignOut)
+        AccountFooter(onDeleteAccount = onDeleteAccount, onOpenDiagnostics = onOpenDiagnostics)
     }
 }
 
-/** Discreto a propósito, pero siempre a la vista: Google Play exige poder borrar la cuenta dentro de la app. */
+/** Cambiar el nombre del perfil sin salir de Cuenta (CUS-AUT-014): el mismo largo y los mismos caracteres que el servidor. */
 @Composable
-private fun DeleteAccountButton(onDeleteAccount: () -> Unit) {
-    TextButton(onClick = onDeleteAccount, modifier = Modifier.heightIn(min = 48.dp)) {
-        Text(text = stringResource(R.string.account_delete), color = MaterialTheme.colorScheme.error)
-    }
+private fun NameEditDialog(
+    current: String,
+    state: NameEditState,
+    onSave: (String) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var text by remember { mutableStateOf(current) }
+    val saving = state == NameEditState.Saving
+    AlertDialog(
+        onDismissRequest = { if (!saving) onCancel() },
+        title = { Text(text = stringResource(R.string.account_name_edit_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text(text = stringResource(R.string.profile_name_label)) },
+                    singleLine = true,
+                    enabled = !saving,
+                    isError = state == NameEditState.Invalid,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                when (state) {
+                    NameEditState.Invalid -> NameEditError(R.string.profile_name_error)
+                    NameEditState.Failed -> NameEditError(R.string.profile_error_generic)
+                    else -> Unit
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(text) },
+                enabled = !saving,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
+                Text(text = stringResource(if (saving) R.string.profile_saving else R.string.account_name_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel, enabled = !saving, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(text = stringResource(R.string.account_name_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun NameEditError(message: Int) {
+    Text(
+        text = stringResource(message),
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
 
 @Preview(showBackground = true)
@@ -282,11 +398,9 @@ private fun AccountPreview() {
         AccountScreen(
             state = AccountUiState.Loaded(AccountProfileUi("Rosa Quispe", phoneVerified = false)),
             onRetry = {},
-            onOpenOrders = {},
             onOpenAddresses = {},
             onVerifyPhone = {},
             onSignOut = {},
-            onBack = {},
         )
     }
 }

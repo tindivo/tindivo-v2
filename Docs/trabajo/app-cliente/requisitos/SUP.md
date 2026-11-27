@@ -36,3 +36,11 @@ Los requisitos que cambian conservan su ID y llevan la marca **reemplazado por**
 | CUS-SUP-006 ★ | La app debe ofrecer «Ayuda con este pedido» en el seguimiento y en el detalle del pedido, y abrir el WhatsApp de soporte de Tindivo. | Fila secundaria de 48 dp; mensaje prellenado, revisable antes de enviar: «Hola, necesito ayuda con mi pedido #TDV-[CÓDIGO] de [NEGOCIO].» (junta A, T3). Sin selector de motivos. Sustituye a «Ayuda por WhatsApp» y al contacto del negocio y del motorizado. WhatsApp: ⚙ `support_whatsapp`. **Quién responde, en qué horario y qué puede resolver sigue abierto** (decisiones-abiertas.md, punto U). | Decisión de Jesús, 2026-11-17 (decisiones 3 y 4) | 🟡 | ⬜ | IGUAL · M1 |
 
 Nota: CUS-SUP-005 (falta y «Si crees que hubo un error, escríbenos por WhatsApp») sigue; la revisión formal de faltas pasó al backlog (decisión 10).
+
+## Migrado a `Docs/producto/soporte/` (2026-11-19)
+
+Esta área pasó a la capacidad `Docs/producto/soporte/` (ficha de pantallas incluida); allí manda. Decisiones de Jesús que recoge, además de las de arriba:
+
+- Soporte solo por WhatsApp, sin contacto con el negocio (2026-11-17). El número vigente es 906550166 (E.164: 51906550166).
+- El mensaje a soporte por WhatsApp para el celular de otra cuenta entra en el lanzamiento (CUS-AUT-028, PR #201).
+- La casilla de Términos va siempre (CUS-AUT-020). Los enlaces legales cuando se apague la web (D-27) siguen abiertos.

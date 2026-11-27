@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -18,18 +17,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import com.tindivo.core.designsystem.TindivoCard
 import com.tindivo.core.designsystem.TindivoSecondaryButton
 import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.checkout.ChoiceRow
+import com.tindivo.customer.ui.fields.NameField
+import com.tindivo.customer.ui.fields.PhoneField
 
 /** Las categorías de la web: solo llenan «¿Qué llevamos?» si está vacío (el contrato no tiene categoría). */
 private val CATEGORIES =
@@ -100,32 +102,28 @@ private fun ContactFields(
     form: CourierFormActions,
 ) {
     val point = state.draft.point(end)
-    OutlinedTextField(
+    val focus = LocalFocusManager.current
+    PhoneField(
         value = point.phone,
         onValueChange = { form.onPhone(end, it) },
-        label = { Text(stringResource(R.string.courier_phone_label)) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-        modifier = Modifier.fillMaxWidth(),
+        label = stringResource(R.string.courier_phone_label),
     )
-    OutlinedTextField(
+    NameField(
         value = point.name,
         onValueChange = { form.onName(end, it) },
-        label = {
-            Text(
-                stringResource(
-                    if (end ==
-                        CourierEnd.Origin
-                    ) {
-                        R.string.courier_origin_name_hint
-                    } else {
-                        R.string.courier_destination_name_hint
-                    },
-                ),
-            )
-        },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        label =
+            stringResource(
+                if (end ==
+                    CourierEnd.Origin
+                ) {
+                    R.string.courier_origin_name_hint
+                } else {
+                    R.string.courier_destination_name_hint
+                },
+            ),
+        maxLength = COURIER_NAME_MAX,
+        imeAction = ImeAction.Done,
+        onImeAction = { focus.clearFocus() },
     )
     // «Soy yo» nunca se prende solo: quien pide puede no ser quien entrega ni quien recibe.
     if (state.requester?.phone != null) {
@@ -165,7 +163,7 @@ internal fun ItemSection(
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            text = stringResource(R.string.courier_allowed_info),
+            text = stringResource(R.string.courier_prohibited_info),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -210,8 +208,31 @@ internal fun PayerSection(
 }
 
 @Composable
-internal fun ReadyAndPaid(
+internal fun PrepaidCheck(
     checked: Boolean,
+    onChange: (Boolean) -> Unit,
+) = ConfirmRow(checked, stringResource(R.string.courier_ready_paid), onChange)
+
+/** «Lo que envío está permitido…»; con el peso del servidor si lo mandó, sin él no se escribe uno. */
+@Composable
+internal fun AllowedCheck(
+    checked: Boolean,
+    maxWeightKg: String?,
+    onChange: (Boolean) -> Unit,
+) = ConfirmRow(
+    checked,
+    if (maxWeightKg != null) {
+        stringResource(R.string.courier_allowed_check_weight, maxWeightKg)
+    } else {
+        stringResource(R.string.courier_allowed_check)
+    },
+    onChange,
+)
+
+@Composable
+private fun ConfirmRow(
+    checked: Boolean,
+    text: String,
     onChange: (Boolean) -> Unit,
 ) {
     Row(
@@ -224,7 +245,7 @@ internal fun ReadyAndPaid(
         horizontalArrangement = Arrangement.spacedBy(TindivoSpacing.tight),
     ) {
         Checkbox(checked = checked, onCheckedChange = null)
-        Text(text = stringResource(R.string.courier_ready_paid), style = MaterialTheme.typography.bodyMedium)
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

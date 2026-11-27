@@ -164,6 +164,30 @@ class CheckoutSheetTest : CheckoutHarness() {
         }
 
     @Test
+    fun `el nombre editado en la hoja se aplica y la cierra`() =
+        runTest(dispatcher) {
+            val vm = ready()
+            vm.openSheet(CheckoutSheet.EditName)
+            assertEquals(CheckoutSheet.EditName, vm.state.value.sheet)
+
+            vm.onNameSaved("Maria Quispe")
+
+            assertNull(vm.state.value.sheet)
+            assertEquals("Maria Quispe", vm.state.value.name)
+        }
+
+    @Test
+    fun `cerrar la hoja del nombre sin guardar no cambia el nombre`() =
+        runTest(dispatcher) {
+            val vm = ready()
+            val before = vm.state.value.name
+            vm.openSheet(CheckoutSheet.EditName)
+            vm.closeSheet()
+            assertEquals(before, vm.state.value.name)
+            assertNull(vm.state.value.sheet)
+        }
+
+    @Test
     fun `con el perfil completado en la hoja el checkout sale de Completa tu perfil`() =
         runTest(dispatcher) {
             handlers["GET /customer/profile"] = { reply(404, problem(404, "not_found", "customer_profile_not_found")) }

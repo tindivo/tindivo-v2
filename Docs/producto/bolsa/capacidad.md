@@ -90,5 +90,5 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
 | 4 | CUS-CRT-009 | En Android «Continuar» nunca se deshabilita ni dice por qué. | `feature/cart/CartScreen.kt` |
 | 5 | CUS-CRT-010 | Android no muestra la etiqueta de recojo en la bolsa. | `feature/cart/CartScreen.kt` |
 | 6 | CUS-CRT-011 | Los topes son números sueltos en Kotlin y en el contrato, sin fuente común. | `feature/cart/Cart.kt` · `packages/contracts/src/client-requests.ts` |
-| 7 | CUS-CRT-012 | «Volver a pedir» solo abre el negocio en web y Android. | `feature/orders/OrdersScreen.kt` |
+| 7 | CUS-CRT-012 | «Volver a pedir» solo abre el negocio en la web. **Resuelto en Android** (repone la bolsa con `getCustomerReorder`, avisa de lo que cambió y pregunta antes de vaciar la bolsa de otro negocio); pendiente en la web, que se apaga (D-27). | `feature/orders/ReorderViewModel.kt` · `apps/customer` |
 | 8 | CUS-CRT-013, CUS-CRT-014, CUS-CRT-015 | «Deshacer», «Editar» y el monto en «Continuar» no existen en ninguna app. | `feature/cart/CartScreen.kt` |

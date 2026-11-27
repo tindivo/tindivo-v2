@@ -351,6 +351,11 @@ async function expectRestricted(c: Customer, number: string, until: string, sour
 
 beforeAll(async () => {
   expect(OTP_DEV_SIMULATION).toBe(true)
+  // El lanzamiento no traslada el celular (migración 0293): estas pruebas lo encienden y lo dejan como estaba.
+  await db
+    .from('app_settings')
+    .upsert({ key: 'phone_transfer_enabled', value: true })
+    .throwOnError()
   const owner = await customer()
   ownerId = owner.id
   const { data: business } = await db
@@ -413,6 +418,10 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await db
+    .from('app_settings')
+    .upsert({ key: 'phone_transfer_enabled', value: false })
+    .throwOnError()
   if (courierSettings !== null)
     await db
       .from('app_settings')
@@ -460,6 +469,41 @@ afterAll(async () => {
 })
 
 describe('0277 · un número, una cuenta', () => {
+  it('CA-AUT-09 · con el traslado apagado, el número de otra cuenta da un conflicto simple y no se traslada', async () => {
+    const a = await customer()
+    const b = await customer()
+    expect((await call(verify, a, { phone: a.phone, code: DEV_OTP_CODE })).status).toBe(200)
+    await db
+      .from('app_settings')
+      .upsert({ key: 'phone_transfer_enabled', value: false })
+      .throwOnError()
+    try {
+      const refused = await call(verify, b, { phone: a.phone, code: DEV_OTP_CODE })
+      expect(refused.status).toBe(409)
+      const body = await refused.json()
+      expect(body).toMatchObject({
+        code: 'conflict',
+        detail: 'Este número ya está asociado a otra cuenta.',
+      })
+      expect(body).not.toHaveProperty('transfer')
+      // El servidor crea el desafío pero no lo ofrece; aun así `transfer` lo rechaza mientras esté apagado.
+      const { data } = await db
+        .from('phone_transfer_challenges')
+        .select('id')
+        .eq('user_id', b.id)
+        .maybeSingle()
+      expect(data).not.toBeNull()
+      const stale = await call(transfer, b, { challengeId: data?.id ?? '' })
+      expect(stale.status).toBe(409)
+      expect(await profile(a)).toMatchObject({ phone_verified_at: expect.any(String) })
+    } finally {
+      await db
+        .from('app_settings')
+        .upsert({ key: 'phone_transfer_enabled', value: true })
+        .throwOnError()
+    }
+  })
+
   it('verifica por simulacro y reverifica por OTP sin abrir otra asignación', async () => {
     const c = await customer()
     const sent = await call(sendCode, c, { phone: c.phone })

@@ -7,8 +7,11 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tindivo.customer.feature.addresses.AddressFormViewModel
+import com.tindivo.customer.feature.addresses.GeoPoint
 import com.tindivo.customer.feature.addresses.LocationReading
 import com.tindivo.customer.feature.addresses.LocationSource
+import com.tindivo.customer.feature.addresses.StreetSuggester
+import com.tindivo.customer.feature.addresses.StreetSuggestion
 import com.tindivo.customer.feature.phone.PhoneVerifyViewModel
 import com.tindivo.customer.feature.profile.ProfileViewModel
 import com.tindivo.customer.session.SessionState
@@ -30,6 +33,8 @@ internal class SheetTestSession(
     /** Una sola entrada, la de la apertura: la prueba no vuelve a entrar. */
     override val signInGeneration: StateFlow<Long> = MutableStateFlow(1L).asStateFlow()
 
+    override val termsRequired: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+
     override suspend fun accessToken(): String? = null
 
     override suspend fun refresh(): String? = null
@@ -37,7 +42,10 @@ internal class SheetTestSession(
     override suspend fun signInWithGoogle(
         idToken: String,
         rawNonce: String,
+        termsPending: Boolean,
     ): SignInResult = SignInResult.Failed
+
+    override suspend fun confirmTerms(accountId: String): Boolean = false
 
     override suspend fun signOut() {
         mutable.value = SessionState.SignedOut
@@ -74,9 +82,16 @@ internal object NoAttempts : AttemptLookup {
     ): LookupResult = LookupResult.NotFound
 }
 
+/** Sin geocodificador: las pruebas de UI no sugieren calle. */
+internal object NoStreets : StreetSuggester {
+    override suspend fun suggest(point: GeoPoint): StreetSuggestion = StreetSuggestion.None
+}
+
 /** Sin GPS: «Usar mi ubicación» no se ofrece y las hojas se prueban con el pin a mano, como antes. */
 internal object NoLocation : LocationSource {
     override fun isAvailable(): Boolean = false
+
+    override fun hasPermission(): Boolean = true
 
     override suspend fun current(): LocationReading = LocationReading.NoFix
 }

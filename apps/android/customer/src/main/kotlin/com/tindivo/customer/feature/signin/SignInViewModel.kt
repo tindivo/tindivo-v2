@@ -3,18 +3,23 @@ package com.tindivo.customer.feature.signin
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tindivo.core.network.ApiResult
+import com.tindivo.core.network.AppError
 import com.tindivo.core.network.isProfileMissing
+import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.profile.GoogleNameHint
 import com.tindivo.customer.feature.profile.ProfileGateway
+import com.tindivo.customer.feature.profile.TERMS_VERSION
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.SignInResult
 import com.tindivo.customer.session.newGoogleNonce
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.security.SecureRandom
 import javax.inject.Inject
 
@@ -29,6 +34,14 @@ sealed interface SignInUiState {
     /** Ya hay sesión: la pantalla vuelve atrás. */
     data object Done : SignInUiState
 
+    /** Se tocó «Continuar con Google» sin la casilla de Términos: [taps] cuenta los toques para repetir el aviso. */
+    data class TermsMissing(
+        val taps: Int,
+    ) : SignInUiState
+
+    /** Entró con Google pero no se pudo guardar la aceptación: la sesión se cerró y se pide intentar otra vez. */
+    data object TermsNotSaved : SignInUiState
+
     /** Ya hay sesión, pero la cuenta aún no tiene perfil: antes de volver, la persona dice cómo se llama. */
     data object NeedsProfile : SignInUiState
 }
@@ -40,10 +53,27 @@ class SignInViewModel
         private val sessionStore: SessionStore,
         private val profiles: ProfileGateway,
         private val nameHint: GoogleNameHint,
+        private val configService: ConfigService,
     ) : ViewModel() {
         private val random = SecureRandom()
         private val _state = MutableStateFlow<SignInUiState>(SignInUiState.Idle)
         val state: StateFlow<SignInUiState> = _state.asStateFlow()
+
+        private val _termsChecked = MutableStateFlow(false)
+        val termsChecked: StateFlow<Boolean> = _termsChecked.asStateFlow()
+
+        /** La casilla «Acepto los Términos y la Política de privacidad»; al marcarla se quita el aviso de que faltaba. */
+        fun onTermsChecked(checked: Boolean) {
+            _termsChecked.value = checked
+            if (_state.value is SignInUiState.TermsMissing) _state.value = SignInUiState.Idle
+        }
+
+        /** Un cierre de sesión anterior no pudo borrar lo guardado: la pantalla lo avisa y ofrece reintentar. */
+        val closePending: StateFlow<Boolean> = sessionStore.closePending
+
+        fun retryClose() {
+            viewModelScope.launch { sessionStore.retryClose() }
+        }
 
         /**
          * Pide la cuenta a Google con un nonce nuevo y, con el ID token, entra. Cancelar el selector no es un error:
@@ -52,6 +82,11 @@ class SignInViewModel
          */
         fun signIn(google: GoogleIdSource) {
             if (_state.value is SignInUiState.Loading || _state.value is SignInUiState.NeedsProfile) return
+            if (!_termsChecked.value) {
+                val taps = (_state.value as? SignInUiState.TermsMissing)?.taps ?: 0
+                _state.value = SignInUiState.TermsMissing(taps + 1)
+                return
+            }
             _state.value = SignInUiState.Loading
             viewModelScope.launch {
                 val nonce = newGoogleNonce(random)
@@ -68,9 +103,38 @@ class SignInViewModel
             token: GoogleIdResult.Token,
             rawNonce: String,
         ): SignInUiState =
-            when (sessionStore.signInWithGoogle(token.idToken, rawNonce)) {
-                SignInResult.Success -> afterEntry(token.displayName)
+            when (sessionStore.signInWithGoogle(token.idToken, rawNonce, termsPending = true)) {
+                SignInResult.Success -> acceptThenContinue(token.displayName)
                 SignInResult.Failed -> SignInUiState.Failed
+            }
+
+        /**
+         * La casilla ya estaba marcada: se registra la aceptación de la versión vigente con la cuenta que acaba de entrar. Si no
+         * se guarda, no se sigue: la sesión se cierra y se pide intentar otra vez (CA-AUT-03).
+         */
+        private suspend fun acceptThenContinue(displayName: String?): SignInUiState {
+            val account = currentAccount() ?: return SignInUiState.Done
+            // Sin cancelación: si la pantalla se va a mitad, la aceptación termina y, si falla, la sesión igual se cierra.
+            // La sesión se guardó con la marca «aceptación pendiente»: solo `confirmTerms` la quita. Si el proceso muere
+            // antes, al reabrir la app esa sesión no se restaura (CAX-001).
+            val outcome =
+                withContext(NonCancellable) {
+                    val failure = (profiles.acceptTerms(TERMS_VERSION, account) as? ApiResult.Failure)?.error
+                    val confirmed = failure == null && confirm(account)
+                    if (!confirmed) sessionStore.signOutIf(account)
+                    failure to confirmed
+                }
+            if (outcome.second) return afterEntry(displayName)
+            // Un 426 lleva al flujo de «Actualiza la app», como en el resto de la app.
+            (outcome.first as? AppError.UpgradeRequired)?.let { configService.reportUpgradeRequired(it.minVersion) }
+            return SignInUiState.TermsNotSaved
+        }
+
+        private suspend fun confirm(account: String): Boolean =
+            try {
+                sessionStore.confirmTerms(account)
+            } catch (_: Exception) {
+                false
             }
 
         /**

@@ -89,9 +89,9 @@ dónde está hoy cada sección. **«Vigente aquí»** significa que su texto sig
 | Monorepo | Turborepo + pnpm workspaces (catalog) | **2.9 / pnpm 9.15** |
 | Runtime | Node | **24** (LTS; `engines >=20.9`) |
 
-- **Sin Server Actions ni BFFs**: las 4 apps frontend consumen un REST único (`apps/api`, `/api/v1`) → portabilidad a Capacitor (móvil nativo) futura.
+- **Sin Server Actions ni BFFs**: las 4 apps frontend consumen un REST único (`apps/api`, `/api/v1`) → las apps nativas (Swift y Kotlin, D-00 de `Docs/planes/movil/decisiones.md`) consumen la misma API; Capacitor está descartado.
 - **Sin Prisma/Drizzle**: conectan como superuser y *bypassan RLS*. Usamos `supabase-js` + tipos generados.
-- **Postgres 17** en el proyecto Supabase "Web v2" (más nuevo que el PG 15 que mencionaban los docs).
+- **Postgres 17** en el proyecto Supabase `tindivo-prod` (más nuevo que el PG 15 que mencionaban los docs).
 - **Light mode siempre** (sin dark mode). Timezone `America/Lima`. Moneda `PEN`. Español peruano.
 
 ---
@@ -578,7 +578,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 ## 11. Outbox, push y scheduling
 
 - **Outbox real y transaccional**: el `INSERT` en `domain_events` ocurre en la **MISMA transacción** que el cambio del agregado (vía RPC/repositorio transaccional, **no** dos `await` separados como en el ejemplo del spec).
-- **Relay push**: trigger `AFTER INSERT` (pg_net) lee secrets de Vault → Edge Function `send-push` (Deno + web-push). **Tag = `${event_type}-${shortId}`** (el v1 usaba solo `shortId` y colapsaba `OrderAssigned` con `OrderOverdue`). Objetivo P99 < 5s.
+- **Relay push**: trigger `AFTER INSERT` (pg_net) lee secrets de Vault → Edge Function `send-push` (Deno + web-push). **Tag = el tipo de evento seguido de lo que distingue el aviso (`${eventType}-…`: el `sid`, la `action`, el id de la solicitud…); nunca es solo `shortId`. La forma exacta de cada aviso la fija `send-push`** (el v1 usaba solo `shortId` y colapsaba `OrderAssigned` con `OrderOverdue`). Objetivo P99 < 5s.
 - **Lista de `event_types` con push** debe coincidir con el mapa de UX (fuente única en `contracts`); test que lo verifique. (El spec tenía 20 en trigger vs 26 en UX.)
 - **`published_at`/retry**: la Edge Function marca `published_at`; un cron de reconciliación reprocesa no publicados con `retry_count` incremental.
 - **Scheduling**: Inngest `step.sleepUntil()` para deadlines individuales (auto-cancel-pending, checkOrderOverdue, processTransferTimeout, closeDriversAtShiftEnd). **Crons failsafe pg_cron** como red de seguridad, **idempotentes** (verifican estado antes de mutar).
@@ -664,8 +664,8 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 ## 16. Diseño (fuente: `packages/ui/src/theme.css` + `apps/motorizados`)
 
 - **Filosofía**: cercano, no corporativo. Mobile-first 1:1 (base 402×874). **Sin dark mode**. Bordes muy redondeados. Naranja protagonista.
-- **Color**: Brand `#F97316` · Brand Dark `#C2410C` · Brand Light `#FED7AA` · Ink `#1A1614` · Surface `#FAF6F1` · Card `#FFFFFF` · Border `#EAE7E2` · Success `#16A34A` · Warning `#F59E0B` · Danger `#DC2626` · Info `#0EA5E9`.
-- **Tipografía**: **Geist** para display, body y labels; **JetBrains Mono** solo para datos técnicos (IDs, precios, horas), con `tabular-nums` en contextos numéricos. Máx 3 tamaños por vista. La jerarquía se logra con peso (600-800 displays · 400-600 body · 500-700 microlabels), no con familias distintas.
+- **Color** (solo la web del cliente, que se apaga; las apps usan `primary` #EE6417, ver `Docs/negocio/sistema-de-diseno.md`): Brand `#F97316` · Brand Dark `#C2410C` · Brand Light `#FED7AA` · Ink `#1A1614` · Surface `#FAF6F1` · Card `#FFFFFF` · Border `#EAE7E2` · Success `#16A34A` · Warning `#F59E0B` · Danger `#DC2626` · Info `#0EA5E9`.
+- **Tipografía** (solo la web del cliente, que se apaga; las apps: Geist 400–700, ver `Docs/negocio/sistema-de-diseno.md`): **Geist** para display, body y labels; **JetBrains Mono** solo para datos técnicos (IDs, precios, horas), con `tabular-nums` en contextos numéricos. Máx 3 tamaños por vista. La jerarquía se logra con peso (600-800 displays · 400-600 body · 500-700 microlabels), no con familias distintas.
   > Esta línea decía «Manrope única en toda la plataforma» y contradecía al código
   > desde la migración del design system (ver `Docs/context/design-system-migration-plan.md` (borrado; en git: `8f26aed`),
   > que eligió Geist por ser más cercana al look moderno manteniendo legibilidad en
@@ -675,7 +675,7 @@ Si algún día se automatiza: el umbral ya está en `app_settings`, pero mete
 > eliminó porque llevaba tiempo desviado del código y ya indujo a error a más de una
 > sesión. La fuente de verdad son los **tokens en `packages/ui/src/theme.css`** y el
 > **uso real en `apps/motorizados`**, que es la app más pulida. Si necesitas el
-> contenido histórico: `git show HEAD~1:Docs/06-ui-design-system.md`.
+> contenido histórico: `git show 5a966a4c^:Docs/06-ui-design-system.md`.
 - **Iconos**: Material Symbols Rounded (único set). Nunca emojis como iconos UI.
 - **Radius**: sm8/md12/lg16/xl24/2xl32/3xl48. **Glassmorphism solo en topbars**.
 - **Color de papelito por negocio**: franja/dot vertical único por negocio en todas las cards de pedido.
@@ -746,11 +746,11 @@ Supera el "search bar no funcional v1.0" de `Docs/07-flujo-cliente.md` (borrado;
 
 El alta de un negocio fallaba con `conflict` cuando el color elegido ya pertenecía a un negocio activo (índice único parcial `businesses_accent_color_active_idx` de `0002`; el default del form de alta era además `e11d48`, ya ocupado por La Florencia). Con una paleta documentada de 12 colores la unicidad no escala más allá de 12 negocios activos.
 
-- **Paleta canónica en código**: `BUSINESS_ACCENT_PALETTE` (12 colores de `Docs/06 §2`, hex minúsculas sin `#`) + `AccentColorSchema` + `DEFAULT_ACCENT_COLOR` + `isPaletteAccentColor` en `packages/contracts/src/accent-colors.ts`. El spec 06 referencia esta constante como fuente.
+- **Paleta canónica en código**: `BUSINESS_ACCENT_PALETTE` (12 colores de `Docs/06-ui-design-system.md` §2 (borrado; en git: `5a966a4c^`), hex minúsculas sin `#`) + `AccentColorSchema` + `DEFAULT_ACCENT_COLOR` + `isPaletteAccentColor` en `packages/contracts/src/accent-colors.ts`. El spec 06 referencia esta constante como fuente.
 - **Unicidad eliminada** (migración `0053`): dos negocios activos PUEDEN compartir color. Sin índice de reemplazo (ninguna query filtra/joinea por `accent_color`). El CHECK `accent_color_format` (minúsculas sin `#`) sigue vigente.
 - **Colisiones visuales aceptadas por diseño**: el papelito sigue siendo identificador *referencial*, no clave. Mitigación: el picker del admin marca "en uso" (dot advisory, no bloquea) los colores de negocios activos — el panel del negocio NO lo muestra (RLS no le deja ver otros negocios y no es su decisión).
 - **El color lo gestiona SOLO el admin** (confirmado por el usuario, 2026-07-02): `accentColor` se acepta únicamente en `POST /admin/businesses` (alta) y `PATCH /admin/businesses/:id`. `PATCH /business/profile` ya NO lo acepta (mismo enforcement server-side que las capacidades, §18). El panel del negocio lo muestra **solo lectura** (swatch + candado "Lo gestiona Tindivo") en Configuración → Datos.
-- **`AccentColorSchema` normaliza** (`trim`, quita `#`, `toLowerCase`) antes de validar — cualquier cliente (curl/Capacitor) queda cubierto por el server.
+- **`AccentColorSchema` normaliza** (`trim`, quita `#`, `toLowerCase`) antes de validar — cualquier cliente (curl, apps nativas) queda cubierto por el server.
 - **Selector visual** (grid de 12 swatches + "Color personalizado" colapsable, auto-expandido si el valor no es de paleta — negocios legacy): en el alta del admin (`negocios/nuevo`). Hex libre sigue permitido.
 - **Defaults**: el form de alta preselecciona el primer color de la paleta (Rosado `f472b6`); el default de la columna en DB sigue `f97316` (naranja = brand, con la reserva del spec: solo asignarlo si Tindivo no opera ese pueblo).
 

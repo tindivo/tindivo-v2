@@ -7,145 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
-      // DUDA(Claude): tipos aditivos de 0277 escritos sin consultar la base;
-      // el orquestador debe regenerarlos después de aplicar la migración.
-      phone_assignments: {
-        Row: {
-          id: string
-          phone: string
-          user_id: string
-          started_at: string
-          start_reason: string
-          ended_at: string | null
-          end_reason: string | null
-        }
-        Insert: {
-          id?: string
-          phone: string
-          user_id: string
-          started_at?: string
-          start_reason: string
-          ended_at?: string | null
-          end_reason?: string | null
-        }
-        Update: {
-          id?: string
-          phone?: string
-          user_id?: string
-          started_at?: string
-          start_reason?: string
-          ended_at?: string | null
-          end_reason?: string | null
-        }
-        Relationships: []
-      }
-      phone_transfer_challenges: {
-        Row: {
-          id: string
-          user_id: string
-          phone: string
-          assignment_id: string
-          created_at: string
-          expires_at: string
-          consumed_at: string | null
-          result_assignment_id: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          phone: string
-          assignment_id: string
-          created_at?: string
-          expires_at?: string
-          consumed_at?: string | null
-          result_assignment_id?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          phone?: string
-          assignment_id?: string
-          created_at?: string
-          expires_at?: string
-          consumed_at?: string | null
-          result_assignment_id?: string | null
-        }
-        Relationships: []
-      }
-      phone_restrictions: {
-        Row: {
-          id: string
-          phone: string
-          kind: string
-          until: string | null
-          source_user_id: string | null
-          source: string
-          created_at: string
-          lifted_at: string | null
-          lifted_by: string | null
-          lift_reason: string | null
-        }
-        Insert: {
-          id?: string
-          phone: string
-          kind: string
-          until?: string | null
-          source_user_id?: string | null
-          source: string
-          created_at?: string
-          lifted_at?: string | null
-          lifted_by?: string | null
-          lift_reason?: string | null
-        }
-        Update: {
-          id?: string
-          phone?: string
-          kind?: string
-          until?: string | null
-          source_user_id?: string | null
-          source?: string
-          created_at?: string
-          lifted_at?: string | null
-          lifted_by?: string | null
-          lift_reason?: string | null
-        }
-        Relationships: []
-      }
-      customer_security_notices: {
-        Row: {
-          id: string
-          user_id: string
-          kind: string
-          phone_last3: string
-          created_at: string
-          seen_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          kind: string
-          phone_last3: string
-          created_at?: string
-          seen_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          kind?: string
-          phone_last3?: string
-          created_at?: string
-          seen_at?: string | null
-        }
-        Relationships: []
-      }
-
       address_directory: {
         Row: {
           accuracy_m: number | null
@@ -509,6 +372,7 @@ export type Database = {
           delivery_fee: number
           estimated_eta_max: number
           estimated_eta_min: number
+          featured_title: string | null
           id: string
           is_active: boolean
           is_blocked: boolean
@@ -551,6 +415,7 @@ export type Database = {
           delivery_fee?: number
           estimated_eta_max?: number
           estimated_eta_min?: number
+          featured_title?: string | null
           id?: string
           is_active?: boolean
           is_blocked?: boolean
@@ -593,6 +458,7 @@ export type Database = {
           delivery_fee?: number
           estimated_eta_max?: number
           estimated_eta_min?: number
+          featured_title?: string | null
           id?: string
           is_active?: boolean
           is_blocked?: boolean
@@ -1288,6 +1154,41 @@ export type Database = {
           },
         ]
       }
+      customer_security_notices: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          phone_last3: string
+          seen_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          phone_last3: string
+          seen_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          phone_last3?: string
+          seen_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_security_notices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_strikes: {
         Row: {
           created_at: string
@@ -1488,7 +1389,11 @@ export type Database = {
           occurred_at: string
           payload: Json
           published_at: string | null
+          push_attempts: number
           push_claimed_at: string | null
+          push_dead_at: string | null
+          push_done_at: string | null
+          push_last_dispatch_at: string | null
           retry_count: number
         }
         Insert: {
@@ -1501,7 +1406,11 @@ export type Database = {
           occurred_at?: string
           payload: Json
           published_at?: string | null
+          push_attempts?: number
           push_claimed_at?: string | null
+          push_dead_at?: string | null
+          push_done_at?: string | null
+          push_last_dispatch_at?: string | null
           retry_count?: number
         }
         Update: {
@@ -1514,7 +1423,11 @@ export type Database = {
           occurred_at?: string
           payload?: Json
           published_at?: string | null
+          push_attempts?: number
           push_claimed_at?: string | null
+          push_dead_at?: string | null
+          push_done_at?: string | null
+          push_last_dispatch_at?: string | null
           retry_count?: number
         }
         Relationships: []
@@ -1898,6 +1811,7 @@ export type Database = {
           image_url: string | null
           is_available: boolean
           is_compact: boolean
+          is_featured: boolean
           name: string
           thumbnail_url: string | null
           updated_at: string
@@ -1921,6 +1835,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           is_compact?: boolean
+          is_featured?: boolean
           name: string
           thumbnail_url?: string | null
           updated_at?: string
@@ -1944,6 +1859,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           is_compact?: boolean
+          is_featured?: boolean
           name?: string
           thumbnail_url?: string | null
           updated_at?: string
@@ -2781,6 +2697,153 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_assignments: {
+        Row: {
+          end_reason: string | null
+          ended_at: string | null
+          id: string
+          phone: string
+          start_reason: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          end_reason?: string | null
+          ended_at?: string | null
+          id?: string
+          phone: string
+          start_reason: string
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          end_reason?: string | null
+          ended_at?: string | null
+          id?: string
+          phone?: string
+          start_reason?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phone_restrictions: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          lift_reason: string | null
+          lifted_at: string | null
+          lifted_by: string | null
+          phone: string
+          source: string
+          source_user_id: string | null
+          until: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          lift_reason?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          phone: string
+          source: string
+          source_user_id?: string | null
+          until?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          lift_reason?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          phone?: string
+          source?: string
+          source_user_id?: string | null
+          until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_restrictions_lifted_by_fkey"
+            columns: ["lifted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_restrictions_source_user_id_fkey"
+            columns: ["source_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phone_transfer_challenges: {
+        Row: {
+          assignment_id: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          result_assignment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          assignment_id: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone: string
+          result_assignment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          assignment_id?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          result_assignment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_transfer_challenges_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "phone_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_transfer_challenges_result_assignment_id_fkey"
+            columns: ["result_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "phone_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_transfer_challenges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       promo_redemptions: {
         Row: {
           customer_user_id: string
@@ -3189,6 +3252,33 @@ export type Database = {
           },
         ]
       }
+      retention_storage_tombstones: {
+        Row: {
+          bucket: string
+          created_at: string
+          deleted_at: string | null
+          path: string
+          source_id: string
+          source_table: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          deleted_at?: string | null
+          path: string
+          source_id: string
+          source_table: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          deleted_at?: string | null
+          path?: string
+          source_id?: string
+          source_table?: string
+        }
+        Relationships: []
+      }
       store_categories: {
         Row: {
           active: boolean
@@ -3478,11 +3568,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      claim_customer_phone: {
-        Args: { p_user_id: string; p_phone: string; p_challenge_id?: string }
-        Returns: Json
-      }
-
       account_deletion_blockers: { Args: { p_user_id: string }; Returns: Json }
       admin_confirm_courier_remittance: {
         Args: { p_actor_user_id: string; p_courier_order_id: string }
@@ -3522,6 +3607,18 @@ export type Database = {
           p_params?: Json
         }
         Returns: Json
+      }
+      anonymize_old_cash_settlement_notes: {
+        Args: { p_limit: number }
+        Returns: number
+      }
+      anonymize_old_customer_incidents: {
+        Args: { p_limit: number }
+        Returns: number
+      }
+      anonymize_old_customer_strikes: {
+        Args: { p_limit: number }
+        Returns: number
       }
       apply_order_transfer: {
         Args: {
@@ -3563,6 +3660,10 @@ export type Database = {
         Args: { p_business_id: string; p_item_ids: string[] }
         Returns: boolean
       }
+      claim_customer_phone: {
+        Args: { p_challenge_id?: string; p_phone: string; p_user_id: string }
+        Returns: Json
+      }
       claim_ops_alert: {
         Args: { p_kind: string; p_window?: string }
         Returns: boolean
@@ -3586,6 +3687,7 @@ export type Database = {
         }[]
       }
       close_drivers_outside_schedule: { Args: never; Returns: number }
+      complete_push_event: { Args: { p_event_id: string }; Returns: boolean }
       confirm_order_cash: {
         Args: { p_business_user_id: string; p_settlement_id: string }
         Returns: Json
@@ -3899,6 +4001,10 @@ export type Database = {
       }
       f_unaccent: { Args: { p_text: string }; Returns: string }
       finish_proof_purge: { Args: { p_user_id: string }; Returns: Json }
+      fraud_claim_retention_apply: {
+        Args: { p_claim_id: string }
+        Returns: string
+      }
       generate_courier_short_id: { Args: never; Returns: string }
       generate_short_id: { Args: never; Returns: string }
       geo_distance_km: {
@@ -3922,6 +4028,10 @@ export type Database = {
         Returns: boolean
       }
       is_within_platform_schedule: { Args: never; Returns: boolean }
+      keep_phone_restrictions: {
+        Args: { p_phone: string; p_source: string; p_user_id: string }
+        Returns: undefined
+      }
       lift_phone_restriction: {
         Args: {
           p_admin_user_id: string
@@ -3929,6 +4039,12 @@ export type Database = {
           p_restriction_id: string
         }
         Returns: Json
+      }
+      list_fraud_claim_retention_due: {
+        Args: { p_after_id?: string; p_limit: number }
+        Returns: {
+          row_id: string
+        }[]
       }
       list_proof_purge_due: {
         Args: {
@@ -3939,6 +4055,12 @@ export type Database = {
         Returns: {
           deleted_at: string
           user_id: string
+        }[]
+      }
+      list_report_retention_due: {
+        Args: { p_after_id?: string; p_limit: number }
+        Returns: {
+          row_id: string
         }[]
       }
       list_store_products: {
@@ -4020,6 +4142,15 @@ export type Database = {
         Args: { p_lat: number; p_lng: number; p_ring: Json }
         Returns: boolean
       }
+      post_push_dispatch: {
+        Args: {
+          p_aggregate_id: string
+          p_event_id: string
+          p_event_type: string
+          p_payload: Json
+        }
+        Returns: boolean
+      }
       prepay_proof_next_attempt: {
         Args: { p_customer_user_id: string; p_order_id: string }
         Returns: number
@@ -4027,6 +4158,29 @@ export type Database = {
       proof_purge_precheck: { Args: { p_user_id: string }; Returns: string }
       prune_creation_idempotency: { Args: never; Returns: number }
       prune_push_devices: { Args: never; Returns: number }
+      purge_old_address_directory: {
+        Args: { p_limit: number }
+        Returns: number
+      }
+      purge_old_admin_alerts: { Args: { p_limit: number }; Returns: number }
+      purge_old_phone_assignments: {
+        Args: { p_limit: number }
+        Returns: number
+      }
+      purge_old_phone_restrictions: {
+        Args: { p_limit: number }
+        Returns: number
+      }
+      purge_old_push_delivery_log: {
+        Args: { p_limit: number }
+        Returns: number
+      }
+      purge_old_store_events: { Args: { p_limit: number }; Returns: number }
+      push_event_types: { Args: never; Returns: string[] }
+      push_retry_settings: {
+        Args: { p_require_since: boolean }
+        Returns: Record<string, unknown>
+      }
       push_token_hash: { Args: { p_token: string }; Returns: string }
       queue_lead_minutes: { Args: never; Returns: number }
       record_native_push_result: {
@@ -4037,6 +4191,14 @@ export type Database = {
           p_token: string
         }
         Returns: boolean
+      }
+      record_push_undelivered: {
+        Args: {
+          p_count: number
+          p_event_types: string
+          p_first_event_id: string
+        }
+        Returns: undefined
       }
       redact_personal_json: { Args: { j: Json }; Returns: Json }
       refresh_customer_profile_risk: {
@@ -4102,10 +4264,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      release_phone_code: {
+        Args: { p_attempt_id: string; p_user_id: string }
+        Returns: boolean
+      }
       reorder_store_images: {
         Args: { p_ids: string[]; p_product_id: string }
         Returns: undefined
       }
+      report_retention_apply: { Args: { p_report_id: string }; Returns: string }
       request_order_transfer: {
         Args: {
           p_order_id: string
@@ -4138,6 +4305,7 @@ export type Database = {
           change_advanced: number | null
           change_to_give: number | null
           client_pays_with: number | null
+          client_platform: string | null
           commission_amount: number | null
           comprobante_prepago_url: string | null
           confirmed_at: string | null
@@ -4225,6 +4393,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      reserve_phone_code: {
+        Args: { p_max: number; p_phone: string; p_user_id: string }
+        Returns: string
+      }
       resolve_appeal: {
         Args: { p_note?: string; p_report_id: string; p_resolution: string }
         Returns: Json
@@ -4279,6 +4451,58 @@ export type Database = {
         Args: { p_business_user_id: string }
         Returns: Json
       }
+      retention_cash_cutoff: { Args: never; Returns: string }
+      retention_cutoff: { Args: { p_key: string }; Returns: string }
+      retention_fraud_claim_due: {
+        Args: {
+          p_claim: Database["public"]["Tables"]["fraud_coverage_claims"]["Row"]
+          p_cutoff: string
+        }
+        Returns: boolean
+      }
+      retention_lock_path: { Args: { p_path: string }; Returns: undefined }
+      retention_pending_tombstones: {
+        Args: {
+          p_after_bucket?: string
+          p_after_path?: string
+          p_limit: number
+        }
+        Returns: {
+          bucket: string
+          path: string
+          source_table: string
+        }[]
+      }
+      retention_ref_in_use: { Args: { p_ref: string }; Returns: boolean }
+      retention_ref_is_path: { Args: { p_ref: string }; Returns: boolean }
+      retention_ref_objects: {
+        Args: { p_ref: string }
+        Returns: {
+          bucket: string
+          path: string
+        }[]
+      }
+      retention_ref_shared: {
+        Args: { p_id: string; p_ref: string; p_source: string }
+        Returns: boolean
+      }
+      retention_report_due: {
+        Args: {
+          p_cutoff: string
+          p_report: Database["public"]["Tables"]["reports"]["Row"]
+        }
+        Returns: boolean
+      }
+      retention_tombstone_done: {
+        Args: { p_bucket: string; p_path: string }
+        Returns: undefined
+      }
+      retention_tombstone_ref: {
+        Args: { p_ref: string; p_row_id: string; p_source: string }
+        Returns: number
+      }
+      retention_window_start: { Args: { p_key: string }; Returns: string }
+      retry_push_dispatch: { Args: never; Returns: number }
       review_customer_incident: {
         Args: { p_incident_id: string; p_result: string; p_reviewer: string }
         Returns: {
@@ -4530,12 +4754,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4559,11 +4783,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4584,11 +4808,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4609,11 +4833,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4626,11 +4850,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4784,3 +5008,4 @@ export const Constants = {
     },
   },
 } as const
+

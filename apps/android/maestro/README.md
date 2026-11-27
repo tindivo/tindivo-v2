@@ -1,39 +1,60 @@
 # Pruebas de punta a punta de la app Android del cliente (Maestro)
 
-Maestro maneja la app instalada como lo haría una persona: toca textos que ve en pantalla. No hay `testTag`: los flujos
+Maestro maneja la app instalada como lo haría una persona: toca textos que ve en pantalla. Los flujos no usan `testTag`:
 se apoyan en los textos de `apps/android/customer/src/main/res/values/strings.xml`. Si cambias un texto, cambia el flujo.
 
-> Estado (2026-11-19): hay 8 flujos en `flows/`, escritos contra los textos de `strings.xml`. **Ninguno se ha corrido
-> en CI ni en un emulador desde que se añadieron los cuatro nuevos**: en el PC del dueño no hay SDK de Android,
-> emulador ni Maestro, y los flujos con sesión necesitan una cuenta de Google ya añadida al dispositivo. Todos están
-> `NO_EJECUTADO` salvo que una corrida posterior diga lo contrario. En CI hay una propuesta que corre solo el del
-> invitado (`.github/workflows/android-maestro.yml`, solo a mano, sin probar).
+> Estado (2026-11-26): `flows/invitado-hasta-identificacion.yaml` corrió en el emulador `tindivo_phone` (Pixel 7,
+> Android 15 con Google Play) con el APK dev de la rama: EXIT=0. Los otros 7 flujos de `flows/` necesitan una cuenta de Google de prueba ya añadida al
+> emulador: siguen `NO_EJECUTADO` y sin cotejar con la app actual (pueden fallar por la trampa de abajo) hasta que haya
+> esa cuenta y se corran y corrijan.
+
+> Trampa medida: la app expone los botones con la `content-desc` completa (por ejemplo «Ver mi bolsa, 1 unidad · S/ 25.00»)
+> y Maestro exige que el regex coincida **entero**. Por eso el flujo usa `"Ver mi bolsa.*"` y
+> `"Continuar(?! con| sin).*"` (este último no toca «Continuar con Google» ni «Continuar sin ubicación»).
 
 ## Requisitos
 
 | Qué | Cómo |
 |---|---|
 | Maestro CLI | <https://maestro.mobile.dev> (`maestro --version`). Necesita Java 17+. |
-| Dispositivo | Tablet o teléfono por USB con depuración activada (`adb devices` lo lista), o un emulador con Google Play (para Google Sign-In). |
-| SDK Android | `ANDROID_HOME` apuntando a tu SDK (en Windows suele estar en `%LOCALAPPDATA%\Android\Sdk`; puede no estar definido: exportarlo). |
-| APK de staging | `cd apps/android && ./gradlew :customer:assembleDevDebug`, luego `ls customer/build/outputs/apk/dev/debug/` y `adb install -r` con ese único APK (un comodín que case con varios archivos rompe `adb`). Paquete: `com.tindivo.customer.dev` (apunta a `tindivo-dev`). |
-| Datos en staging | Negocio abierto hoy «La Florencia E2E» con el plato «Medio pollo»; una cuenta Google de prueba ya añadida al dispositivo, con **celular verificado** (el SMS no se automatiza). |
+| Dispositivo | Emulador `tindivo_phone` (Android 15, Google Play) o un dispositivo por USB con depuración activada (`adb devices`). |
+| APK de staging | `cd apps/android && ./gradlew :customer:assembleDevDebug`. Paquete: `com.tindivo.customer.dev` (apunta a `tindivo-dev`). |
+| Datos en staging | Negocio abierto hoy «La Florencia E2E» con el plato «Medio pollo» (salen de `apps/api/scripts/e2e-fixtures.ts` y `seed-world.ts`). Si el negocio está cerrado, el flujo falla en la portada: abre su horario o espera a su turno. Los flujos con sesión piden además una cuenta Google de prueba ya añadida al dispositivo, con **celular verificado** (el SMS no se automatiza), y `-e GOOGLE_EMAIL=<cuenta-de-prueba>`; opcionales `NEGOCIO`, `PLATO`, `NOMBRE_CLIENTE`. |
 
 Nunca contra producción: la variante `prod` (`com.tindivo.customer`) no se prueba con Maestro.
 
-## Cómo correrlo
+## Cómo correrlo (Git Bash, emulador)
+
+Si hay otro dispositivo por adb (`<serial-de-otro-dispositivo>`), no lo toques: usa siempre `--device emulator-5554`.
 
 ```bash
+export MSYS_NO_PATHCONV=1
+SDK="$(cygpath -u "$LOCALAPPDATA")/Android/Sdk"
+export ANDROID_HOME="$SDK" ANDROID_SDK_ROOT="$SDK"
+export JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"
+# Ajusta la ruta de Maestro a donde lo instalaste (comprueba con `command -v maestro`; el instalador oficial usa ~/.maestro/bin)
+export PATH="$HOME/.maestro/bin:$SDK/emulator:$SDK/platform-tools:$PATH"
+
+# 1. Emulador (el primer arranque tarda minutos; añade -no-window para ir sin ventana)
+emulator -avd tindivo_phone -no-snapshot -no-audio -gpu swiftshader_indirect &
+adb -s emulator-5554 wait-for-device
+until [ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; do sleep 5; done
+
+# 2. APK dev e instalación (desde la raíz del repo)
+(cd apps/android && ./gradlew :customer:assembleDevDebug)
+adb -s emulator-5554 install -r apps/android/customer/build/outputs/apk/dev/debug/customer-dev-debug.apk
+
+# 3. Flujo (tarda más de 2 minutos: sin tope de tiempo)
 cd apps/android/maestro
-export ANDROID_HOME=<ruta-a-tu-sdk>
-maestro --device <serial> test -e GOOGLE_EMAIL=<cuenta-de-prueba> \
-  --test-output-dir ../../../scratch/maestro-<fecha> flows/<flujo>.yaml
+maestro --device emulator-5554 test --test-output-dir "../../../scratch/maestro-$(date +%F)" flows/invitado-hasta-identificacion.yaml
+
+# Apagar
+adb -s emulator-5554 emu kill
 ```
 
-Variables opcionales: `NEGOCIO`, `PLATO`, `NOMBRE_CLIENTE`. Los flujos no usan `clearState` (salvo el del invitado):
-la sesión de Google persiste entre corridas.
+El flujo empieza con `clearState`: borra los datos de la app dev en el emulador (y cierra la sesión si la había).
 
-## Qué cubre cada flujo
+## Qué cubre
 
 | Archivo | Cubre | Crea datos |
 |---|---|---|
@@ -58,15 +79,15 @@ la lista de pendientes de `Docs/trabajo/e2e/escenarios.md`.
 ## Lo que Maestro no cubre bien: prueba MANUAL
 
 1. **Push real (FCM):** que llegue el aviso con la app cerrada y en segundo plano, y que el toque abra el pedido correcto.
-2. **Google Sign-In real:** el selector de cuentas es de Google Play services; los flujos asumen la sesión ya iniciada.
+2. **Google Sign-In real:** el selector de cuentas es de Google Play services.
 3. **Verificación de celular por SMS:** requiere un código real.
 4. **Cámara/galería del comprobante:** elegir captura, vista previa, «Cambiar», enviar, imagen pesada o ilegible.
-5. **Sin conexión:** modo avión en el checkout («Sin conexión…»), en el envío del comprobante y al reabrir la app.
+5. **Sin conexión:** modo avión en el checkout, en el envío del comprobante y al reabrir la app.
 6. **Actualización obligatoria (426):** con una versión por debajo de la mínima debe salir «Actualiza la app».
 7. **Mapa y GPS:** pin de la dirección y permiso de ubicación (concedido, denegado, GPS apagado).
 
 ## Trampas conocidas
 
-- Los tests unitarios de Android fallan en la máquina Windows del dueño (DataStore); la CI sí pasa. No son señal local.
-- `adb devices` vacío = nada que probar; Maestro no arranca emuladores solo.
+- Con `--device emulator-5554` Maestro no arranca el emulador: arráncalo antes (paso 1). `adb devices` vacío = nada que probar.
+- Si el emulador muestra «X isn't responding» en el primer arranque, ciérralo (va lento al inicio).
 - Un cliente solo puede tener un pedido activo por negocio: un pedido colgado bloquea la siguiente corrida.

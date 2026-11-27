@@ -56,7 +56,7 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 2. **`numero_pedido`** atómico desde el backend, **nunca `Date.now()`**.
 3. **RLS en TODAS las tablas** con policies explícitas; helpers `SECURITY DEFINER` con `SET search_path = ''`.
 4. **Outbox transaccional**: `domain_events` en la MISMA transacción que el agregado.
-5. **Tag de push** = `${event_type}-${shortId}`, no solo `shortId`.
+5. **Tag de push** = el tipo de evento seguido de lo que distingue el aviso (`${eventType}-…`: el `sid`, la `action`, el id de la solicitud…); nunca es solo `shortId`. La forma exacta de cada aviso la fija `send-push`.
 6. **Migraciones idempotentes** y versionadas (`DROP IF EXISTS` / `CREATE OR REPLACE`), inmutables una vez aplicadas.
 7. **Multi-rol desde el día 1**: `users` + `user_roles` + claims del JWT.
 8. **`delivered` es terminal.** Ninguna función puede sacar un pedido de ahí; si alguna vez se abre ese camino, antes
@@ -125,7 +125,7 @@ pnpm install · pnpm dev · pnpm lint · pnpm type-check · pnpm test
 # revisa qué tareas se ejecutaron y cuáles salieron de caché (la base no entra en el hash de Turbo):
 # un verde entero puede no haber ejecutado nada; para verificar de nuevo, usa --force
 pnpm db:cycle            # base local bajo candado: reset → seed e2e → tests de la API
-pnpm db:types            # tipos desde tindivo-prod (después del db push)
+pnpm db:types            # tipos desde la base local (en la última migración); el CI los compara
 pnpm test:e2e            # Playwright
 graphify update .        # grafo al día (AST, sin coste)
 ```

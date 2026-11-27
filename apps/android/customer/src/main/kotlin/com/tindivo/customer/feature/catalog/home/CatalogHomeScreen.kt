@@ -1,7 +1,5 @@
 package com.tindivo.customer.feature.catalog.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,12 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -28,51 +24,54 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.tindivo.core.designsystem.TindivoColors
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
-import com.tindivo.customer.feature.account.AccountEntryViewModel
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
 fun CatalogHomeDestination(
     onOpenBusiness: (id: String) -> Unit,
-    onOpenDiagnostics: (() -> Unit)?,
-    onOpenAccount: (signedIn: Boolean) -> Unit,
+    onOpenCart: () -> Unit,
     onOpenCourier: () -> Unit,
     onOpenStore: () -> Unit,
+    onOpenAddresses: () -> Unit,
+    onSignIn: () -> Unit,
     viewModel: CatalogHomeViewModel = hiltViewModel(),
-    accountEntry: AccountEntryViewModel = hiltViewModel(),
+    bag: HomeBagViewModel = hiltViewModel(),
+    addressViewModel: HomeAddressViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
-    val signedIn = accountEntry.signedIn.collectAsStateWithLifecycle().value
+    val bagCount = bag.count.collectAsStateWithLifecycle().value
+    val address = addressViewModel.state.collectAsStateWithLifecycle().value
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshIfStale()
+        addressViewModel.refresh()
+        onPauseOrDispose {}
+    }
     CatalogHomeScreen(
         state = state,
         onRefresh = viewModel::refresh,
         onOpenBusiness = onOpenBusiness,
-        onOpenDiagnostics = onOpenDiagnostics,
-        signedIn = signedIn,
-        onOpenAccount = { onOpenAccount(signedIn) },
+        bagCount = bagCount,
+        onOpenCart = onOpenCart,
         onOpenCourier = onOpenCourier,
         onOpenStore = onOpenStore,
+        chip = address.chip(),
+        // La libreta pide sesión: sin ella, el chip lleva a la entrada, como el resto de la app.
+        onOpenAddress = if (address.signedIn) onOpenAddresses else onSignIn,
     )
 }
 
@@ -82,13 +81,18 @@ fun CatalogHomeScreen(
     state: CatalogHomeUiState,
     onRefresh: () -> Unit,
     onOpenBusiness: (id: String) -> Unit,
-    onOpenDiagnostics: (() -> Unit)? = null,
-    signedIn: Boolean = false,
-    onOpenAccount: () -> Unit = {},
+    bagCount: Int = 0,
+    onOpenCart: () -> Unit = {},
     onOpenCourier: () -> Unit = {},
     onOpenStore: () -> Unit = {},
+    chip: HomeChip? = HomeChip.Pick,
+    onOpenAddress: () -> Unit = {},
 ) {
-    Scaffold { innerPadding ->
+    Scaffold(
+        topBar = {
+            HomeTopBar(bagCount = bagCount, onOpenBag = onOpenCart, chip = chip, onOpenAddress = onOpenAddress)
+        },
+    ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when (state) {
                 CatalogHomeUiState.Loading -> {
@@ -104,9 +108,6 @@ fun CatalogHomeScreen(
                         BusinessList(
                             state = state,
                             onOpenBusiness = onOpenBusiness,
-                            onOpenDiagnostics = onOpenDiagnostics,
-                            signedIn = signedIn,
-                            onOpenAccount = onOpenAccount,
                             onOpenCourier = onOpenCourier,
                             onOpenStore = onOpenStore,
                         )
@@ -121,9 +122,6 @@ fun CatalogHomeScreen(
 private fun BusinessList(
     state: CatalogHomeUiState.Loaded,
     onOpenBusiness: (id: String) -> Unit,
-    onOpenDiagnostics: (() -> Unit)?,
-    signedIn: Boolean,
-    onOpenAccount: () -> Unit,
     onOpenCourier: () -> Unit,
     onOpenStore: () -> Unit,
 ) {
@@ -133,26 +131,30 @@ private fun BusinessList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.catalog_home_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.weight(1f).semantics { heading() },
-                )
-                onOpenDiagnostics?.let {
-                    TextButton(onClick = it, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(text = stringResource(R.string.diagnostics_title))
-                    }
-                }
-                TextButton(onClick = onOpenAccount, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(text = stringResource(if (signedIn) R.string.account_entry else R.string.signin_entry))
-                }
-            }
+            Text(
+                text = stringResource(R.string.catalog_home_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.fillMaxWidth().semantics { heading() },
+            )
         }
         // Primero qué se quiere hacer (llevar algo de un lugar a otro), después dónde comer (como la web).
-        item { CourierEntryCard(onClick = onOpenCourier) }
-        // Store va antes de los negocios: es otra cosa que se puede hacer, no un negocio más.
-        item { StoreEntryCard(onClick = onOpenStore) }
+        // La tarjeta de Store no está mientras Store esté fuera del lanzamiento (CUS-CAT-032).
+        item { ServiceGrid(cards = serviceCards(), onOpenCourier = onOpenCourier, onOpenStore = onOpenStore) }
+        item {
+            // Como el tablero: 22 dp sobre el encabezado y el conteo de abiertos alineado a la derecha.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(R.string.catalog_home_restaurants),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.semantics { heading() },
+                )
+                if (state.openNowCount > 0) OpenNowChip(count = state.openNowCount)
+            }
+        }
         state.refreshFailed?.let { error ->
             item { Text(text = errorMessage(error), color = MaterialTheme.colorScheme.error) }
         }
@@ -189,119 +191,39 @@ private fun BusinessList(
     }
 }
 
-private val LOGO_SIZE = 72.dp
-private const val CLOSED_ALPHA = 0.45f
-
-/** Gris para el logo de un negocio cerrado: es la señal grande de «hoy no»; el chip la confirma. */
-private val Grayscale = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-
+/** Entregas y Store lado a lado, cada una de la mitad; si solo hay una, ocupa todo el ancho. */
 @Composable
-private fun BusinessCard(
-    business: BusinessCardUi,
-    whatsapp: Boolean,
-    onClick: () -> Unit,
+private fun ServiceGrid(
+    cards: List<ServiceCard>,
+    onOpenCourier: () -> Unit,
+    onOpenStore: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BusinessLogo(business)
-            Column(
-                modifier = Modifier.weight(1f).heightIn(min = LOGO_SIZE),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = business.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                business.tagline?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Row(
-                    modifier = Modifier.padding(top = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (business.closed) Chip(stringResource(R.string.catalog_closed_now), warning = true)
-                    when {
-                        whatsapp -> {
-                            Chip(stringResource(R.string.catalog_whatsapp_orders), warning = false)
-                        }
-
-                        // El tiempo estimado solo cuando se puede cumplir: un negocio cerrado no dice cuánto tarda.
-                        !business.closed -> {
-                            MetaText(stringResource(R.string.catalog_eta, business.etaMin, business.etaMax))
-                        }
-                    }
-                }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        cards.forEach { card ->
+            val tile = Modifier.weight(1f)
+            when (card) {
+                ServiceCard.Courier -> CourierEntryCard(onClick = onOpenCourier, modifier = tile)
+                ServiceCard.Store -> StoreEntryCard(onClick = onOpenStore, modifier = tile)
             }
         }
     }
 }
 
+/** El chip verde «N abiertos ahora»: texto y color dicen lo mismo. */
 @Composable
-private fun BusinessLogo(business: BusinessCardUi) {
-    val tone = if (business.closed) Modifier.alpha(CLOSED_ALPHA) else Modifier
-    val logoModifier = Modifier.size(LOGO_SIZE).clip(MaterialTheme.shapes.medium).then(tone)
-    if (business.logoUrl != null) {
-        // Decorativo a propósito: el nombre está al lado, y un contentDescription lo haría sonar dos veces.
-        AsyncImage(
-            model = business.logoUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            colorFilter = if (business.closed) Grayscale else null,
-            modifier = logoModifier,
-        )
-    } else {
-        val accent = business.accent?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
-        Box(modifier = logoModifier.background(accent), contentAlignment = Alignment.Center) {
-            Text(
-                text =
-                    business.name
-                        .trim()
-                        .firstOrNull()
-                        ?.uppercase() ?: "T",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-            )
-        }
-    }
-}
-
-@Composable
-private fun Chip(
-    text: String,
-    warning: Boolean,
-) {
+private fun OpenNowChip(count: Int) {
     Surface(
         shape = CircleShape,
-        color = if (warning) TindivoColors.warningContainer else MaterialTheme.colorScheme.secondaryContainer,
-        contentColor =
-            if (warning) TindivoColors.onWarningContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
     ) {
         Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
+            text = pluralStringResource(R.plurals.home_open_now, count, count),
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
-}
-
-@Composable
-private fun MetaText(text: String) {
-    Text(text = text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable

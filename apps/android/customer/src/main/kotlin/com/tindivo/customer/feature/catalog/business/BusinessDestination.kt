@@ -26,8 +26,9 @@ fun BusinessDestination(
     val now = viewModel.now.collectAsStateWithLifecycle().value
     val cart = cartViewModel.cart.collectAsStateWithLifecycle().value
     val outcome = cartViewModel.outcome.collectAsStateWithLifecycle().value
-    val visible = remember(state, now) { state.visibleAt(now) }
+    val visible = remember(state, now) { state.atInstant(now) }
     val business = (visible as? BusinessUiState.Loaded)?.business
+    val ordering = remember(business, now) { business?.let { orderingModeFor(it, now) } ?: OrderingMode.Open }
     val bag =
         remember(cart, outcome, business?.id) {
             BusinessCartState(business?.let { cartBarFor(cart, it.id) }, outcome)
@@ -37,6 +38,7 @@ fun BusinessDestination(
         onRefresh = viewModel::refresh,
         onBack = onBack,
         cart = bag,
+        ordering = ordering,
         cartActions =
             BusinessCartActions(
                 onAdd = { line -> business?.let { cartViewModel.add(it.id, it.name, line) } },
@@ -66,11 +68,12 @@ internal fun BusinessDetailUi?.findDish(id: String?): MenuItemUi? =
     ) {
         null
     } else {
-        categories.firstNotNullOfOrNull { c -> c.items.firstOrNull { it.id == id } }
+        // Un plato apagado por su franja no se abre: si se apaga con la ficha abierta, esta se cierra sola.
+        categories.firstNotNullOfOrNull { c -> c.items.firstOrNull { it.id == id && it.orderable } }
     }
 
 /**
- * Lo que pasa después de «Agregar»: el aviso de «Añadido a tu bolsa» (y cerrar la ficha), el error de guardado, o la
+ * Lo que pasa después de «Agregar»: el aviso de «Agregado a tu bolsa» (y cerrar la ficha), el error de guardado, o la
  * pregunta de vaciar la bolsa de otro restaurante.
  */
 @Composable

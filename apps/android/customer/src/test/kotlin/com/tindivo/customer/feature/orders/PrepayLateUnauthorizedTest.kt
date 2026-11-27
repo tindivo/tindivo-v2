@@ -60,7 +60,7 @@ internal class PrepayLateUnauthorizedTest : PrepayHarness() {
         val entering = CompletableDeferred<Unit>()
         backend.signInGate = { entering.await() }
         backend.signInResult = { TokenSnapshot("token-b", OTHER_ACCOUNT, TEST_NOW + 3600) }
-        backgroundScope.launch { store.signInWithGoogle("id-token-b", "nonce") }
+        backgroundScope.launch { store.signInWithGoogle("id-token-b", "nonce", termsPending = false) }
         runCurrent()
         assertEquals(SessionState.SignedIn(PREPAY_ACCOUNT), store.state.value)
         return entering

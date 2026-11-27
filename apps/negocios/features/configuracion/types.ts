@@ -4,6 +4,7 @@ export interface Form {
   whatsappNumber: string
   yapeNumber: string
   tagline: string
+  featuredTitle: string
   accentColor: string
   estimatedEtaMin: number
   estimatedEtaMax: number
