@@ -2,7 +2,7 @@
 
 import { Card, Icon } from '@tindivo/ui'
 import { soles } from '@/lib/format'
-import { doorPayment } from '@/lib/orders/door-payment'
+import { useDoorPayment } from '@/lib/orders/use-door-payment'
 import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
 import { PaymentProofViewer } from './payment-proof-viewer'
@@ -24,6 +24,9 @@ import { YapeQr } from './yape-qr'
  */
 export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
   const { order, business } = detail
+  // Pago único: el negocio pudo confirmar el ingreso, y solo él lo confirma. El
+  // hook relee para que la tarjeta no siga mostrando el QR si ya lo confirmó.
+  const { door, checkFailed } = useDoorPayment(order)
   const total = order.orderAmount + order.deliveryFee
 
   const vuelto = changeDue({
@@ -69,8 +72,6 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
     )
   }
 
-  // Pago único: el negocio pudo confirmar el ingreso, y solo él lo confirma.
-  const door = doorPayment(order)
   if (door.mode === 'confirmed_by_business') {
     return (
       <Card className="mt-3 flex items-center gap-2.5 border-none bg-success-soft p-4 text-success shadow-none">
@@ -86,6 +87,12 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
   // pending_yape | pending_mixed: el cliente paga al Yape del restaurante.
   return (
     <Card className="mt-3 p-[18px]">
+      {isSingle && checkFailed && (
+        <p className="mb-3 rounded-xl bg-warning-soft px-3 py-2 text-body font-semibold text-amber-900">
+          No pudimos comprobar si el restaurante ya confirmó el pago. Pregúntale al cliente si ya
+          pagó antes de cobrar.
+        </p>
+      )}
       {isSingle && door.proof === 'rejected' && (
         <p className="mb-3 rounded-xl bg-warning-soft px-3 py-2 text-body font-semibold text-amber-900">
           El restaurante rechazó la captura. Cobra en la puerta.
@@ -95,7 +102,7 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
         <div className="mb-3 rounded-xl bg-surface px-3 py-2.5">
           <p className="text-body font-semibold text-ink">El cliente envió su captura</p>
           <p className="mt-0.5 text-caption text-ink-muted">
-            Solo el restaurante confirma el pago. Si no lo confirma, cobra con el QR.
+            Mientras el restaurante no lo confirme, cobra con el QR.
           </p>
           <div className="mt-2">
             <PaymentProofViewer orderId={order.id} />

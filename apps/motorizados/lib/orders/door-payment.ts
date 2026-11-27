@@ -64,3 +64,48 @@ export function recheckDoorPayment(stale: DoorPayment, fresh: DoorPayment | null
   if (fresh.mode === 'collect') return fresh
   return stale
 }
+
+/**
+ * Relee el cobro con un tope: si la relectura falla o tarda más de `timeoutMs`,
+ * se queda lo que había (`failed: true`) y la entrega nunca se bloquea. El
+ * temporizador se limpia siempre que gana la relectura.
+ */
+export async function recheckWithTimeout(
+  stale: DoorPayment,
+  fetchFresh: () => Promise<DoorPayment>,
+  timeoutMs: number,
+): Promise<{ door: DoorPayment; failed: boolean }> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs)
+  })
+  const fresh = (async () => fetchFresh())().then(
+    (d) => d,
+    () => null,
+  )
+  try {
+    const result = await Promise.race([fresh, timeout])
+    if (!result) return { door: stale, failed: true }
+    return { door: recheckDoorPayment(stale, result), failed: false }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Qué hacer al pulsar «Confirmar entrega» con lo último que se sabe del cobro.
+ * Si la hoja mostraba «cobra» y el negocio acaba de confirmar, NO se envía: la
+ * hoja pasa a «No cobres nada» y pide otro toque, para que el motorizado no
+ * cobre de nuevo algo que ya entró.
+ */
+export function submitDecision(
+  shown: DoorPayment,
+  latest: DoorPayment,
+): 'submit_prepaid' | 'submit_confirmed' | 'switch_to_confirmed' | 'submit_as_chosen' {
+  if (shown.mode === 'collect' && latest.mode === 'confirmed_by_business') {
+    return 'switch_to_confirmed'
+  }
+  if (shown.mode === 'confirmed_by_business') return 'submit_confirmed'
+  if (shown.mode === 'prepaid') return 'submit_prepaid'
+  return 'submit_as_chosen'
+}

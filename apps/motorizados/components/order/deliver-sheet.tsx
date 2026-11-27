@@ -1,16 +1,11 @@
 'use client'
 
 import { BottomSheet, Button, cn, Icon } from '@tindivo/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { soles } from '@/lib/format'
-import { fetchOrderDetail } from '@/lib/orders/detail-cache'
-import {
-  type DoorPayment,
-  doorPayment,
-  paymentRealForConfirmed,
-  recheckDoorPayment,
-} from '@/lib/orders/door-payment'
+import { paymentRealForConfirmed, submitDecision } from '@/lib/orders/door-payment'
 import { moneyLine } from '@/lib/orders/presentation'
+import { useDoorPayment } from '@/lib/orders/use-door-payment'
 import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
 import { YapeQr } from './yape-qr'
@@ -64,32 +59,12 @@ export function DeliverSheet({
   const { order, business } = detail
 
   // PAGO ÚNICO, LA CARRERA (dinero). El negocio puede confirmar el ingreso
-  // mientras el motorizado camina, y la hoja se abrió con un detalle de antes:
-  // sin releer, le haría cobrar de nuevo algo que ya entró. Se relee al montar,
-  // con un tope de 4 s: si falla o tarda, se sigue con lo que había, porque la
-  // entrega (y la cola offline) nunca se bloquea por esto.
-  const [door, setDoor] = useState<DoorPayment>(() => doorPayment(order))
-  const [rechecking, setRechecking] = useState(
-    () => order.paymentIntent === 'pending_yape' && doorPayment(order).mode === 'collect',
-  )
-  useEffect(() => {
-    if (!rechecking) return
-    let cancelled = false
-    const stale = doorPayment(order)
-    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000))
-    const fresh = fetchOrderDetail(order.id, { fresh: true }).then(
-      (d) => doorPayment(d.order),
-      () => null,
-    )
-    Promise.race([fresh, timeout]).then((result) => {
-      if (cancelled) return
-      setDoor(recheckDoorPayment(stale, result))
-      setRechecking(false)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  // mientras el motorizado camina, o con la hoja ya abierta. El hook relee al
+  // montar y vuelve a leer al pulsar «Confirmar entrega»: si falla o tarda se
+  // sigue con lo que había, porque la entrega (y la cola offline) nunca se
+  // bloquea por esto.
+  const { door, checking, checkFailed, recheckNow } = useDoorPayment(order)
+  const [justConfirmed, setJustConfirmed] = useState(false)
 
   const prepaid = door.mode === 'prepaid'
   const confirmedByBusiness = door.mode === 'confirmed_by_business'
@@ -149,13 +124,24 @@ export function DeliverSheet({
   const liveChange =
     cashOwed > 0 && paysN > cashOwed ? Math.round((paysN - cashOwed) * 100) / 100 : 0
 
-  const canConfirm = !busy && !rechecking && (kind !== 'changed' || (splitOk && billOk))
+  const canConfirm = !busy && !checking && (kind !== 'changed' || (splitOk && billOk))
 
-  function submit() {
+  async function submit() {
     if (!canConfirm) return
-    if (prepaid) return onConfirm({ paymentReal: 'paid_prepaid' })
+    // Lo último que se sabe del cobro. Si se mostraba «cobra» en un pago único,
+    // se vuelve a leer justo antes de enviar. Si la relectura falla, `recheckNow`
+    // devuelve lo que había y se envía lo elegido: nunca se bloquea la entrega.
+    const latest =
+      order.paymentIntent === 'pending_yape' && door.mode === 'collect' ? await recheckNow() : door
+    const decision = submitDecision(door, latest)
+    // El negocio confirmó con la hoja abierta: no se envía; la hoja pasa a «No
+    // cobres nada» y pide otro toque.
+    if (decision === 'switch_to_confirmed') return setJustConfirmed(true)
+    if (decision === 'submit_prepaid') return onConfirm({ paymentReal: 'paid_prepaid' })
     // El negocio ya vio el dinero: sin importes ni billete.
-    if (confirmedByBusiness) return onConfirm({ paymentReal: paymentRealForConfirmed() })
+    if (decision === 'submit_confirmed') {
+      return onConfirm({ paymentReal: paymentRealForConfirmed() })
+    }
 
     if (kind === 'changed') {
       return onConfirm({
@@ -189,6 +175,12 @@ export function DeliverSheet({
       <div className="max-h-[85vh] overflow-y-auto p-5 pb-7">
         <h2 className="font-display text-title font-bold tracking-tight">{titulo}</h2>
 
+        {justConfirmed && confirmedByBusiness && (
+          <p className="mt-3 rounded-xl bg-success-soft px-3 py-2 text-body font-semibold text-success">
+            El restaurante acaba de confirmar el pago. No cobres nada.
+          </p>
+        )}
+
         {nothingToCollect ? (
           <p className="mt-1 text-body text-ink-muted">
             {confirmedByBusiness
@@ -197,6 +189,12 @@ export function DeliverSheet({
           </p>
         ) : (
           <>
+            {checkFailed && order.paymentIntent === 'pending_yape' && (
+              <p className="mt-3 rounded-xl bg-warning-soft px-3 py-2 text-body font-semibold text-amber-900">
+                No pudimos comprobar si el restaurante ya confirmó el pago. Pregúntale al cliente si
+                ya pagó antes de cobrar.
+              </p>
+            )}
             {/* El plan, para comparar contra lo que de verdad pasó. */}
             <div className="mt-3 rounded-[16px] border border-ink/[0.07] bg-surface px-4 py-3">
               <p className="font-mono text-title font-bold leading-none tabular-nums text-ink">
@@ -323,8 +321,8 @@ export function DeliverSheet({
           </>
         )}
 
-        <Button className="mt-5 w-full" disabled={!canConfirm} onClick={submit}>
-          {rechecking ? 'Comprobando el pago…' : busy ? 'Confirmando…' : 'Confirmar entrega'}
+        <Button className="mt-5 w-full" disabled={!canConfirm} onClick={() => void submit()}>
+          {checking ? 'Comprobando el pago…' : busy ? 'Confirmando…' : 'Confirmar entrega'}
         </Button>
 
         <div className="mt-5 border-t border-ink/10 pt-4">
