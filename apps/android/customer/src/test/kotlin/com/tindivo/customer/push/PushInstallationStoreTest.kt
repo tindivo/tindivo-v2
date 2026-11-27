@@ -1,7 +1,8 @@
 package com.tindivo.customer.push
 
 import androidx.datastore.core.CorruptionException
-import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.ReplaceFileCorruptionHandler
+import com.tindivo.customer.support.testDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -29,8 +30,12 @@ class PushInstallationStoreTest {
 
     private fun TestScope.store(file: File = File(folder.root, "push.json")) =
         DataStorePushInstallationStore(
-            DataStoreFactory.create(
+            testDataStore(
                 serializer = PushInstallationSerializer,
+                corruptionHandler =
+                    ReplaceFileCorruptionHandler<PushInstallationSnapshot>(
+                        produceNewData = { PushInstallationSerializer.defaultValue },
+                    ),
                 scope = CoroutineScope(backgroundScope.coroutineContext + UnconfinedTestDispatcher(testScheduler)),
                 produceFile = { file },
             ),
