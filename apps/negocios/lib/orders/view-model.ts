@@ -158,9 +158,10 @@ export interface OrderVM {
    * `true` cuando alguien ya confirmó que el dinero de este pedido entró.
    *
    * Sale de `orders.payment_verified_at`, que tiene UN solo significado desde la
-   * 0181 —«una persona vio el dinero»— y ahora dos escritores: `validate_order`
-   * al aprobar una captura de Yape, y `advance_order` acción `accept` al cobrar
-   * un recojo «ahora» en la caja (0224).
+   * 0181 —«una persona vio el dinero»— y ahora TRES escritores: `validate_order`
+   * al aprobar una captura de Yape, `advance_order` acción `accept` al cobrar
+   * un recojo «ahora» en la caja (0224), y `confirm_delivery_payment` (0296)
+   * cuando el negocio confirma el ingreso de un pago único con entrega.
    *
    * Gobierna dos cosas del mostrador: que el pie de entrega no vuelva a
    * preguntar «¿cómo pagó?» por algo ya cobrado, y que declarar un plantón NO
@@ -489,6 +490,81 @@ export function cobroEnCaja(order: {
     icon: 'verified',
     cobrado: true,
   }
+}
+
+/**
+ * Dónde está el pago único de un pedido con entrega (Yape o Plin directo al
+ * negocio, sin pasar por la validación del prepago).
+ *
+ * Solo el negocio confirma que el dinero entró, con o sin captura; el
+ * motorizado la ve y nunca la aprueba. Se calcula aquí y no en el JSX para que
+ * la tarjeta y el servidor hablen del mismo momento: el servidor solo admite
+ * confirmar o rechazar en los estados «aceptado».
+ */
+export type PagoUnicoStage =
+  | 'antes_de_aceptar'
+  | 'sin_captura'
+  | 'captura_por_revisar'
+  | 'captura_rechazada'
+  | 'confirmado'
+  | 'cerrado'
+
+export interface PagoUnicoView {
+  stage: PagoUnicoStage
+  canConfirm: boolean
+  canReject: boolean
+  /** El intento vigente de la captura (0 si no hay). Es el que se manda al rechazar. */
+  attempt: number
+}
+
+const ESTADOS_ACEPTADOS: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
+  'confirmed',
+  'preparing',
+  'waiting_driver',
+  'heading_to_restaurant',
+  'waiting_at_restaurant',
+  'picked_up',
+])
+
+export function pagoUnicoView(
+  order: Pick<
+    OrderVM,
+    | 'method'
+    | 'payment'
+    | 'source'
+    | 'status'
+    | 'yaCobrado'
+    | 'proofStatus'
+    | 'proofUrl'
+    | 'proofAttempt'
+  >,
+): PagoUnicoView | null {
+  // El manual no tiene app del cliente: su flujo no se toca.
+  if (
+    order.method !== 'delivery' ||
+    order.payment !== 'pending_wallet' ||
+    order.source === 'manual'
+  ) {
+    return null
+  }
+  const attempt = order.proofAttempt ?? 0
+  const sinAcciones = { canConfirm: false, canReject: false, attempt }
+
+  if (order.yaCobrado) return { stage: 'confirmado', ...sinAcciones }
+  if (order.status === 'delivered' || order.status === 'cancelled') {
+    return { stage: 'cerrado', ...sinAcciones }
+  }
+  if (!ESTADOS_ACEPTADOS.has(order.status)) return { stage: 'antes_de_aceptar', ...sinAcciones }
+
+  const tieneCaptura = Boolean(order.proofUrl)
+  const pendiente = tieneCaptura && order.proofStatus === 'pending'
+  const stage: PagoUnicoStage =
+    order.proofStatus === 'rejected'
+      ? 'captura_rechazada'
+      : pendiente
+        ? 'captura_por_revisar'
+        : 'sin_captura'
+  return { stage, canConfirm: true, canReject: pendiente && attempt >= 1, attempt }
 }
 
 /** Cómo se nombra, en una palabra con mayúscula, cada forma de pago real. */

@@ -8,6 +8,7 @@ import {
   getColumn,
   matchesChannel,
   needsClockTick,
+  pagoUnicoView,
   paymentChangeAlert,
   resolveChannelFilter,
   resolveMobileTab,
@@ -1202,5 +1203,106 @@ describe('0220 · el icono de la acción 1-tap', () => {
       ),
     )
     expect(card.primaryAction?.icon).toBe('local_shipping')
+  })
+})
+
+describe('pagoUnicoView · la captura del pago único', () => {
+  const base = {
+    method: 'delivery' as const,
+    payment: 'pending_wallet' as const,
+    source: 'web' as const,
+    status: 'preparing' as const,
+    yaCobrado: false,
+    proofStatus: null as string | null,
+    proofUrl: null as string | null,
+    proofAttempt: 0,
+  }
+
+  it('antes de aceptar no hay acciones', () => {
+    const v = pagoUnicoView({ ...base, status: 'pending_acceptance' })
+    expect(v?.stage).toBe('antes_de_aceptar')
+    expect(v?.canConfirm).toBe(false)
+    expect(v?.canReject).toBe(false)
+  })
+
+  it('aceptado y sin captura: se puede confirmar, no rechazar', () => {
+    const v = pagoUnicoView(base)
+    expect(v?.stage).toBe('sin_captura')
+    expect(v?.canConfirm).toBe(true)
+    expect(v?.canReject).toBe(false)
+    expect(v?.attempt).toBe(0)
+  })
+
+  it('con captura pendiente se puede confirmar y rechazar el intento vigente', () => {
+    const v = pagoUnicoView({
+      ...base,
+      proofUrl: 'p/1.jpg',
+      proofStatus: 'pending',
+      proofAttempt: 1,
+    })
+    expect(v?.stage).toBe('captura_por_revisar')
+    expect(v?.canConfirm).toBe(true)
+    expect(v?.canReject).toBe(true)
+    expect(v?.attempt).toBe(1)
+  })
+
+  it('captura rechazada: sin rechazar de nuevo, se puede confirmar el ingreso', () => {
+    const v = pagoUnicoView({
+      ...base,
+      proofUrl: 'p/1.jpg',
+      proofStatus: 'rejected',
+      proofAttempt: 2,
+    })
+    expect(v?.stage).toBe('captura_rechazada')
+    expect(v?.canConfirm).toBe(true)
+    expect(v?.canReject).toBe(false)
+    expect(v?.attempt).toBe(2)
+  })
+
+  it('confirmado gana a una captura pendiente', () => {
+    const v = pagoUnicoView({
+      ...base,
+      yaCobrado: true,
+      proofUrl: 'p/1.jpg',
+      proofStatus: 'pending',
+      proofAttempt: 1,
+    })
+    expect(v?.stage).toBe('confirmado')
+    expect(v?.canConfirm).toBe(false)
+    expect(v?.canReject).toBe(false)
+  })
+
+  it('entregado sin confirmar el ingreso: cerrado y sin acciones', () => {
+    const v = pagoUnicoView({
+      ...base,
+      status: 'delivered',
+      proofUrl: 'p/1.jpg',
+      proofStatus: 'pending',
+      proofAttempt: 1,
+    })
+    expect(v?.stage).toBe('cerrado')
+    expect(v?.canConfirm).toBe(false)
+    expect(v?.canReject).toBe(false)
+  })
+
+  it('cancelado sin confirmar: cerrado', () => {
+    expect(pagoUnicoView({ ...base, status: 'cancelled' })?.stage).toBe('cerrado')
+  })
+
+  it('recojo, prepago y manual no tienen pago único', () => {
+    expect(pagoUnicoView({ ...base, method: 'pickup' })).toBeNull()
+    expect(pagoUnicoView({ ...base, payment: 'prepaid' })).toBeNull()
+    expect(pagoUnicoView({ ...base, payment: 'pending_cash' })).toBeNull()
+    expect(pagoUnicoView({ ...base, source: 'manual' })).toBeNull()
+  })
+
+  it('con un proofStatus desconocido no se ofrece rechazar', () => {
+    const v = pagoUnicoView({
+      ...base,
+      proofUrl: 'p/1.jpg',
+      proofStatus: 'otra_cosa',
+      proofAttempt: 1,
+    })
+    expect(v?.canReject).toBe(false)
   })
 })
