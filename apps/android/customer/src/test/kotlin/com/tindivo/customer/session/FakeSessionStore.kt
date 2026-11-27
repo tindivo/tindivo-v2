@@ -16,8 +16,11 @@ class FakeSessionStore(
     override val signInGeneration: StateFlow<Long> = signIns.asStateFlow()
 
     // Como el almacén real: primero el estado, después la generación.
-    private fun enter(userId: String) {
-        mutableState.value = SessionState.SignedIn(userId)
+    private fun enter(
+        userId: String,
+        entry: String? = null,
+    ) {
+        mutableState.value = SessionState.SignedIn(userId, entry)
         signIns.value += 1
     }
 
@@ -38,6 +41,9 @@ class FakeSessionStore(
 
     /** La cuenta con la que entra [signInWithGoogle]. */
     var signInUserId = "user-1"
+
+    /** La `entry` (claim `session_id`) con la que entra [signInWithGoogle]. */
+    var signInEntry: String? = null
 
     override suspend fun accessToken(): String? = null
 
@@ -62,13 +68,24 @@ class FakeSessionStore(
     ): SignInResult {
         signInTermsPending += termsPending
         signInCalls += idToken to rawNonce
-        if (signInResult == SignInResult.Success) enter(signInUserId)
+        if (signInResult == SignInResult.Success) enter(signInUserId, signInEntry)
         return signInResult
     }
 
     /** Una entrada de [userId] (cuenta como entrada en [signInGeneration]), sin pasar por SignedOut. */
-    fun switchTo(userId: String) {
-        enter(userId)
+    fun switchTo(
+        userId: String,
+        entry: String? = null,
+    ) {
+        enter(userId, entry)
+    }
+
+    /** Un refresco de token: la misma sesión se vuelve a publicar (sin subir [signInGeneration]). */
+    fun republish(
+        userId: String,
+        entry: String? = null,
+    ) {
+        mutableState.value = SessionState.SignedIn(userId, entry)
     }
 
     /** La sesión se cierra sola (un refresco que falla), sin que nadie llame a [signOut]. */
