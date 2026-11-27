@@ -1,6 +1,11 @@
 import type { TypedSupabaseClient } from '@tindivo/supabase'
 import { describe, expect, it } from 'vitest'
-import { deliveryPaymentDomainError, registerDeliveryPaymentProof } from './delivery-payment'
+import {
+  deliveryPaymentDomainError,
+  prepayProofState,
+  prepayTotalText,
+  registerDeliveryPaymentProof,
+} from './delivery-payment'
 import { nextProofAttempt } from './proof-upload'
 
 type Reply = { data: unknown; error: { code: string; hint?: string; message: string } | null }
@@ -99,5 +104,110 @@ describe('deliveryPaymentDomainError', () => {
   it('un fallo que no es de negocio no se disfraza', () => {
     expect(deliveryPaymentDomainError({ code: '57014', message: 'timeout' })).toBeNull()
     expect(deliveryPaymentDomainError({ code: 'P0001', hint: 'otra', message: 'm' })).toBeNull()
+  })
+})
+
+describe('prepayTotalText: el total del prepago se suma en céntimos enteros', () => {
+  it('suma importe y envío con dos decimales', () => {
+    expect(prepayTotalText(12.35, 2)).toBe('14.35')
+  })
+  it('no arrastra el error de coma flotante de 0.1 + 0.2', () => {
+    expect(prepayTotalText(0.1, 0.2)).toBe('0.30')
+  })
+  it('un envío en cero deja el importe con dos decimales', () => {
+    expect(prepayTotalText(10, 0)).toBe('10.00')
+  })
+  it('acepta cadenas decimales como las que devuelve la base', () => {
+    expect(prepayTotalText('12.35', '2.00')).toBe('14.35')
+  })
+  it('rellena los céntimos menores de diez', () => {
+    expect(prepayTotalText(0.05, 0)).toBe('0.05')
+  })
+  it('respeta el máximo de numeric(10,2)', () => {
+    expect(prepayTotalText(99999999.99, 0)).toBe('99999999.99')
+  })
+  it.each([
+    ['NaN', Number.NaN],
+    ['null', null],
+    ['undefined', undefined],
+    ['texto', 'abc'],
+    ['cadena vacía', ''],
+    ['un importe negativo', -5],
+  ])('lanza si el importe es ilegible (%s)', (_nombre, importe) => {
+    expect(() => prepayTotalText(importe, 1)).toThrow('Importe del pedido ilegible')
+  })
+})
+
+describe('prepayProofState: qué puede hacer el cliente con la captura', () => {
+  const base = {
+    status: 'confirmed',
+    payment_intent: 'pending_yape',
+    delivery_method: 'delivery',
+    proof_attempt: 0,
+    payment_proof_status: null,
+    payment_verified_at: null,
+  }
+  const aceptados = [
+    'confirmed',
+    'preparing',
+    'waiting_driver',
+    'heading_to_restaurant',
+    'waiting_at_restaurant',
+    'picked_up',
+  ]
+
+  it.each(aceptados)('pago único en %s sin ingreso: admite captura y es opcional', (status) => {
+    for (const proof_attempt of [0, 1]) {
+      const r = prepayProofState({ ...base, status, proof_attempt })
+      expect(r.canUploadProof).toBe(true)
+      expect(r.proofOptional).toBe(true)
+    }
+  })
+  it.each(['pending', 'delivered', 'cancelled'])('pago único en %s no admite captura', (status) => {
+    const r = prepayProofState({ ...base, status })
+    expect(r.canUploadProof).toBe(false)
+    expect(r.proofOptional).toBe(true)
+  })
+  it('con el ingreso ya confirmado no admite captura', () => {
+    const r = prepayProofState({ ...base, payment_verified_at: '2026-11-27T10:00:00Z' })
+    expect(r.canUploadProof).toBe(false)
+  })
+  it('con dos intentos gastados no admite captura', () => {
+    expect(prepayProofState({ ...base, proof_attempt: 2 }).canUploadProof).toBe(false)
+  })
+  it('un intento nulo cuenta como cero', () => {
+    expect(prepayProofState({ ...base, proof_attempt: null }).canUploadProof).toBe(true)
+  })
+  it('prepago esperando el pago admite captura y es obligatoria', () => {
+    const r = prepayProofState({
+      ...base,
+      payment_intent: 'prepaid',
+      status: 'awaiting_payment',
+    })
+    expect(r.canUploadProof).toBe(true)
+    expect(r.proofOptional).toBe(false)
+  })
+  it('prepago ya confirmado no admite captura', () => {
+    const r = prepayProofState({ ...base, payment_intent: 'prepaid', status: 'confirmed' })
+    expect(r.canUploadProof).toBe(false)
+  })
+  it('pago en efectivo no admite captura ni es opcional', () => {
+    const r = prepayProofState({ ...base, payment_intent: 'pending_cash' })
+    expect(r.canUploadProof).toBe(false)
+    expect(r.proofOptional).toBe(false)
+  })
+  it('un pending_yape de recojo no es pago único', () => {
+    const r = prepayProofState({ ...base, delivery_method: 'pickup' })
+    expect(r.proofOptional).toBe(false)
+    expect(r.canUploadProof).toBe(false)
+  })
+  it('paymentVerifiedAt sale en UTC con Z', () => {
+    const r = prepayProofState({ ...base, payment_verified_at: '2026-11-27T10:00:00-05:00' })
+    expect(r.paymentVerifiedAt).toBe('2026-11-27T15:00:00.000Z')
+  })
+  it('sin ingreso ni captura, paymentVerifiedAt y paymentProofStatus son null', () => {
+    const r = prepayProofState(base)
+    expect(r.paymentVerifiedAt).toBeNull()
+    expect(r.paymentProofStatus).toBeNull()
   })
 })

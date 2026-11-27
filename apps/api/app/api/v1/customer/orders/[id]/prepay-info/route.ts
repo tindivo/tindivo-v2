@@ -1,3 +1,4 @@
+import { prepayProofState, prepayTotalText } from '@tindivo/backend/ordering'
 import { DomainError } from '@tindivo/core'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
@@ -7,49 +8,6 @@ import { PAYMENT_QR_COLUMNS, toPaymentQrViews } from '@/lib/mappers/payment-qr'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export const dynamic = 'force-dynamic'
-
-/** Estados en los que el negocio ya aceptó el pedido con entrega (donde el pago único admite captura). */
-const ACCEPTED = [
-  'confirmed',
-  'preparing',
-  'waiting_driver',
-  'heading_to_restaurant',
-  'waiting_at_restaurant',
-  'picked_up',
-]
-
-function centsToText(cents: number): string {
-  return `${Math.trunc(cents / 100)}.${String(cents % 100).padStart(2, '0')}`
-}
-
-/**
- * Qué puede hacer el cliente con la captura. La regla del servidor, no la de la app: en el prepago
- * la captura es obligatoria y solo se sube esperando el pago; en el pago único del cliente de
- * confianza es opcional y se admite con el pedido aceptado, mientras el negocio no confirme el
- * ingreso. En los dos casos, dos intentos.
- */
-function proofState(order: {
-  status: string
-  payment_intent: string
-  delivery_method: string
-  proof_attempt: number | null
-  payment_proof_status: string | null
-  payment_verified_at: string | null
-}) {
-  const attemptsLeft = (order.proof_attempt ?? 0) < 2
-  const single = order.payment_intent === 'pending_yape' && order.delivery_method === 'delivery'
-  const canUploadProof = single
-    ? ACCEPTED.includes(order.status) && order.payment_verified_at === null && attemptsLeft
-    : order.payment_intent === 'prepaid' && order.status === 'awaiting_payment' && attemptsLeft
-  return {
-    proofOptional: single,
-    canUploadProof,
-    paymentProofStatus: order.payment_proof_status ?? null,
-    paymentVerifiedAt: order.payment_verified_at
-      ? new Date(order.payment_verified_at).toISOString()
-      : null,
-  }
-}
 
 export function OPTIONS(req: Request): Response {
   return handleOptions(req)
@@ -103,16 +61,13 @@ export async function GET(
         // `total` sigue siendo número por compatibilidad (invariante 13 lo prohíbe en campos
         // nuevos); el código nuevo lee `totalText`, que se suma en céntimos enteros.
         total: Number(order.order_amount) + Number(order.delivery_fee),
-        totalText: centsToText(
-          Math.round(Number(order.order_amount) * 100) +
-            Math.round(Number(order.delivery_fee) * 100),
-        ),
+        totalText: prepayTotalText(order.order_amount, order.delivery_fee),
         status: order.status,
         hasProof: Boolean(order.comprobante_prepago_url),
         proofAttempt: order.proof_attempt ?? 0,
         comprobantePrepagoUrl: order.comprobante_prepago_url ?? null,
         awaitingPaymentAt: order.updated_at ?? null,
-        ...proofState(order),
+        ...prepayProofState(order),
       },
       { headers: corsHeaders(req) },
     )
