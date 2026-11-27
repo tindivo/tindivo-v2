@@ -1,0 +1,27 @@
+# Borrar la cuenta: Mi cuenta → «Borrar mi cuenta» → pantalla de confirmación con lo que se elimina y se conserva.
+# SE DETIENE ANTES de borrar: con una cuenta de Google real borrar es irreversible. El borrado completo (204, 409 con
+# un pedido en curso, 401 después) lo cubre scripts/e2e/flujo-completo.ts con un cliente descartable (local).
+# ESTADO: NO_EJECUTADO en dispositivo. Uso: maestro --device <serial> test -e GOOGLE_EMAIL=<cuenta> flows/borrar-cuenta-hasta-confirmar.yaml
+appId: com.tindivo.customer.dev
+---
+- launchApp
+- tapOn:
+    text: "Reintentar"
+    optional: true
+- extendedWaitUntil:
+    visible: "Mi cuenta|Entrar"
+    timeout: 30000
+- runFlow: ../subflows/identificarse-google.yaml
+- tapOn: "Mi cuenta"
+- scrollUntilVisible:
+    element: "Borrar mi cuenta"
+    timeout: 10000
+- tapOn: "Borrar mi cuenta"
+- extendedWaitUntil:
+    visible: "Qué se elimina"
+    timeout: 10000
+- assertVisible: "Qué se conserva.*"
+- assertVisible: "Borrar mi cuenta definitivamente"
+- takeScreenshot: b01-confirmacion
+- back
+- assertVisible: "Mi cuenta"

@@ -1,0 +1,36 @@
+# Pedido con pago adelantado hasta la pantalla de subir el comprobante.
+# El prepago nace sin pagar: el negocio debe ACEPTAR el pedido para que aparezca «Paga tu pedido».
+# ESTADO: NO_EJECUTADO en dispositivo. «Yape o Plin adelantado» solo es elegible si el negocio y el cliente lo permiten.
+# Uso (desde apps/android/maestro): maestro --device <serial> test -e GOOGLE_EMAIL=<cuenta> flows/pedido-prepago-hasta-comprobante.yaml
+appId: com.tindivo.customer.dev
+env:
+  NEGOCIO: "La Florencia E2E"
+  PLATO: "Medio pollo"
+  NOMBRE_CLIENTE: "Cliente Maestro"
+---
+- launchApp
+- tapOn:
+    text: "Reintentar"
+    optional: true
+- runFlow: ../subflows/agregar-plato-a-bolsa.yaml
+- runFlow: ../subflows/checkout-hasta-pago.yaml
+- tapOn: "Yape o Plin adelantado"
+- assertVisible: "¿Cómo funciona el pago adelantado?"
+- takeScreenshot: p01-prepago-elegido
+- scrollUntilVisible:
+    element: "Confirmar pedido ·.*"
+    timeout: 10000
+- tapOn: "Confirmar pedido ·.*"
+- extendedWaitUntil:
+    visible: "Pedido recibido|Esperando confirmación.*"
+    timeout: 30000
+- takeScreenshot: p02-seguimiento-sin-pagar
+# El negocio acepta este pedido y recien entonces aparece «Paga tu pedido»: aceptarlo a mano desde la app de negocios;
+# el flujo espera hasta 3 min.
+- extendedWaitUntil:
+    visible: "Paga tu pedido"
+    timeout: 180000
+- assertVisible: "Transfiere exacto"
+- assertVisible: "Ya pagué · Subir captura"
+- takeScreenshot: p03-pantalla-comprobante
+# Tocar «Subir captura» abre el selector del sistema (galeria): no se automatiza (README, lista manual).

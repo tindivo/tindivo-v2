@@ -4,10 +4,9 @@ Maestro maneja la app instalada como lo haría una persona: toca textos que ve e
 se apoyan en los textos de `apps/android/customer/src/main/res/values/strings.xml`. Si cambias un texto, cambia el flujo.
 
 > Estado (2026-11-26): `flows/invitado-hasta-identificacion.yaml` corrió en el emulador `tindivo_phone` (Pixel 7,
-> Android 15 con Google Play) con el APK dev de la rama: EXIT=0. Es el único flujo que hay aquí. Los flujos que
-> necesitan una cuenta de Google (Mis pedidos, pedido contraentrega, pedido prepago hasta el comprobante) se
-> sacaron hasta que haya una cuenta de prueba en el emulador y se puedan ejecutar y corregir: estaban sin ejecutar y
-> sin cotejar con la app actual.
+> Android 15 con Google Play) con el APK dev de la rama: EXIT=0. Los otros 7 flujos de `flows/` necesitan una cuenta de Google de prueba ya añadida al
+> emulador: siguen `NO_EJECUTADO` y sin cotejar con la app actual (pueden fallar por la trampa de abajo) hasta que haya
+> esa cuenta y se corran y corrijan.
 
 > Trampa medida: la app expone los botones con la `content-desc` completa (por ejemplo «Ver mi bolsa, 1 unidad · S/ 25.00»)
 > y Maestro exige que el regex coincida **entero**. Por eso el flujo usa `"Ver mi bolsa.*"` y
@@ -20,7 +19,7 @@ se apoyan en los textos de `apps/android/customer/src/main/res/values/strings.xm
 | Maestro CLI | <https://maestro.mobile.dev> (`maestro --version`). Necesita Java 17+. |
 | Dispositivo | Emulador `tindivo_phone` (Android 15, Google Play) o un dispositivo por USB con depuración activada (`adb devices`). |
 | APK de staging | `cd apps/android && ./gradlew :customer:assembleDevDebug`. Paquete: `com.tindivo.customer.dev` (apunta a `tindivo-dev`). |
-| Datos en staging | Negocio abierto hoy «La Florencia E2E» con el plato «Medio pollo» (salen de `apps/api/scripts/e2e-fixtures.ts` y `seed-world.ts`). Si el negocio está cerrado, el flujo falla en la portada: abre su horario o espera a su turno. |
+| Datos en staging | Negocio abierto hoy «La Florencia E2E» con el plato «Medio pollo» (salen de `apps/api/scripts/e2e-fixtures.ts` y `seed-world.ts`). Si el negocio está cerrado, el flujo falla en la portada: abre su horario o espera a su turno. Los flujos con sesión piden además una cuenta Google de prueba ya añadida al dispositivo, con **celular verificado** (el SMS no se automatiza), y `-e GOOGLE_EMAIL=<cuenta-de-prueba>`; opcionales `NEGOCIO`, `PLATO`, `NOMBRE_CLIENTE`. |
 
 Nunca contra producción: la variante `prod` (`com.tindivo.customer`) no se prueba con Maestro.
 
@@ -60,6 +59,22 @@ El flujo empieza con `clearState`: borra los datos de la app dev en el emulador 
 | Archivo | Cubre | Crea datos |
 |---|---|---|
 | `flows/invitado-hasta-identificacion.yaml` | Sin sesión: portada → carta → plato → bolsa → «Entra para pedir»; volver conserva la bolsa. | No |
+| `flows/pedido-contraentrega.yaml` | Negocio abierto → plato → bolsa → checkout (hojas de nombre y dirección si faltan) → Efectivo → Confirmar → seguimiento inicial («Pedido recibido»). | 1 pedido en `tindivo-dev` |
+| `flows/pedido-prepago-hasta-comprobante.yaml` | Igual, con «Yape o Plin adelantado»; espera a que el negocio acepte y verifica la pantalla «Paga tu pedido» / «Subir captura». | 1 pedido en `tindivo-dev` |
+| `flows/cancelar-pedido.yaml` | Pide en efectivo y cancela dentro de la ventana («Cancelaste tu pedido»). | 1 pedido (queda cancelado) |
+| `flows/recojo-hasta-pago.yaml` | Checkout con «Recojo»: sin domicilio, con «Punto de recojo». No confirma. | No |
+| `flows/mis-pedidos.yaml` | Mi cuenta → Mis pedidos → historial sin error de carga. | No |
+| `flows/entregas-portada-y-solicitud.yaml` | Portada de Tindivo Entregas → «Pedir una entrega» → formulario. No crea nada. | No |
+| `flows/borrar-cuenta-hasta-confirmar.yaml` | Mi cuenta → «Borrar mi cuenta» → pantalla de confirmación. Se detiene antes de borrar. | No |
+| `subflows/` | `identificarse-google`, `agregar-plato-a-bolsa`, `checkout-hasta-pago`: piezas reutilizables. No se lanzan solos. | — |
+
+## Cómo se cierra el ciclo de un pedido hecho por la app
+
+Maestro solo maneja la app del cliente. Para que el negocio valide y acepte y el motorizado entregue, hoy se hace a
+mano desde sus apps. El script `scripts/e2e/flujo-completo.ts` (`pnpm e2e:todo`) lleva por la API REST pedidos que él
+mismo crea, con cuentas e2e; **no continúa un pedido nacido en la app**. Para eso haría falta un modo
+`--order-id`/`--short-id` y que la cuenta de Google de prueba corresponda a un cliente que el script conozca: está en
+la lista de pendientes de `Docs/trabajo/e2e/escenarios.md`.
 
 ## Lo que Maestro no cubre bien: prueba MANUAL
 
@@ -75,3 +90,4 @@ El flujo empieza con `clearState`: borra los datos de la app dev en el emulador 
 
 - Con `--device emulator-5554` Maestro no arranca el emulador: arráncalo antes (paso 1). `adb devices` vacío = nada que probar.
 - Si el emulador muestra «X isn't responding» en el primer arranque, ciérralo (va lento al inicio).
+- Un cliente solo puede tener un pedido activo por negocio: un pedido colgado bloquea la siguiente corrida.

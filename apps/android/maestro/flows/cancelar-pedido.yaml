@@ -1,0 +1,36 @@
+# El cliente pide en efectivo y cancela dentro de la ventana (antes de que el negocio acepte).
+# Cubre el escenario «cancela-cliente» de Docs/trabajo/e2e/escenarios.md. Deja el pedido cancelado: no bloquea la
+# siguiente corrida (un cliente solo puede tener un pedido activo por negocio).
+# ESTADO: NO_EJECUTADO en dispositivo (en este PC no hay SDK de Android ni emulador; corre solo en la CI o a mano).
+# Uso (desde apps/android/maestro): maestro --device <serial> test -e GOOGLE_EMAIL=<cuenta> flows/cancelar-pedido.yaml
+appId: com.tindivo.customer.dev
+env:
+  NEGOCIO: "La Florencia E2E"
+  PLATO: "Medio pollo"
+  NOMBRE_CLIENTE: "Cliente Maestro"
+---
+- launchApp
+- tapOn:
+    text: "Reintentar"
+    optional: true
+- runFlow: ../subflows/agregar-plato-a-bolsa.yaml
+- runFlow: ../subflows/checkout-hasta-pago.yaml
+- tapOn: "Efectivo"
+- tapOn:
+    text: "Exacto"
+    optional: true
+- scrollUntilVisible:
+    element: "Confirmar pedido ·.*"
+    timeout: 10000
+- tapOn: "Confirmar pedido ·.*"
+- extendedWaitUntil:
+    visible: "Estamos confirmando tu pedido"
+    timeout: 30000
+- takeScreenshot: x01-puede-cancelar
+- tapOn: "Cancelar"
+- assertVisible: "¿Cancelar tu pedido?"
+- tapOn: "Sí, cancelar pedido"
+- extendedWaitUntil:
+    visible: "Cancelaste tu pedido"
+    timeout: 15000
+- takeScreenshot: x02-cancelado
