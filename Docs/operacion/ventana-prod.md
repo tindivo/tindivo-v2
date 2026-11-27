@@ -77,7 +77,8 @@ dice «booleano», cada columna debe dar `true`; un `false`, un `null` o cero fi
    efecto de la **0286**, que actúa **en cuanto se aplica** (el directorio viejo deja de dar confianza y quien tuvo un
    strike hace más de 24 meses vuelve a poder pagar contra entrega: aceptado el 2026-11-12; se cuenta antes con C-03b).
    También, por escrito, que la **0293** pondrá `phone_transfer_enabled` en `false` aunque hoy esté encendido (se captura
-   antes con C-03d) y los **conteos de purga** del paso 3-ter, categoría por categoría.
+   antes con C-03d). Los **conteos de purga** no son una precondición: necesitan funciones que nacen con el push y se
+   aceptan en el gate G-1 (después del push, antes de la API; ver «Gates entre fases»).
 5. **Decisión D-A: qué código corre durante y después de la ventana** (la guía no la toma: es de Jesús). Medido:
    `origin/main..origin/develop` = **1041** commits, y `main` tiene migraciones solo hasta la 0271. Hay **dos
    alternativas, con un orden fijo cada una**; nunca «la API antes que la base» (la API nueva lee columnas que solo
@@ -107,16 +108,22 @@ dice «booleano», cada columna debe dar `true`; un `false`, un `null` o cero fi
    | Web del cliente: alta por correo (`supabase.auth.signUp`) | 403 con el hook activo (0279) | Desde el paso 6 | Igual que la fila anterior; el hook no se activa con la web de `main` sirviendo |
    | API de `main`: `phone/verify/route.ts:91-92` | Sella el número sin `phone_assignments`; con la 0277, posible choque con el índice único (sin verificar) | Del push al despliegue de la API (paso 8), en ambas | Verificación de teléfono suspendida en ese intervalo (decisión de Jesús) o ensayo A3 que lo acote |
    | `send-push` de `main` (`origin/main:supabase/functions/send-push/index.ts:587`) | Trata **todo** `OrderExpired` como falta de pago («No llegó el pago a tiempo»); la 0287 emite `OrderExpired` también por no aceptar el negocio (`pending_acceptance_timeout`), por antifraude (`validation_timeout`) y por comprobante sin revisar: el cliente recibe un texto falso | Del push al paso 4 (minutos) y, de volver a `main`, mientras `main` siga viva | Desplegar `send-push` justo tras el push; aceptar el texto erróneo en ese intervalo o, si Jesús no lo acepta, esperar una hora sin cancelaciones (C-06 muestra los pedidos vivos) |
-   | `send-push` de `main`: no llama a `complete_push_event` | Un evento reclamado queda sin `push_done_at` y, con el plazo por defecto (180 s), puede **volver a reclamarse** | Del push al paso 4 y de volver a `main` | Paso 3-bis (`leaseSeconds` = 900) |
+   | `send-push` de `main`: no llama a `complete_push_event` | Un evento reclamado queda sin `push_done_at` y, con el plazo por defecto (180 s), puede **volver a reclamarse** | Desde que la 0272 cambia el reclamo (durante el push), hasta el paso 4 y de volver a `main` | Paso 1-bis: `push_retry` = `{"leaseSeconds": 900}` **antes** del push |
    | Web de `main`: seguimiento (`tracking-driver.tsx:34`) | Sin WhatsApp del motorizado (0292) | Después del push | Aceptado; se corrige con la web del commit firmado |
    | Creadores de pedido (`create_customer_order`, `create_courier_order`) | Recojo solo prepagado (0283) y opciones obligatorias (0275): rechaza pedidos que antes pasaban | Después del push | Dinero: ya aceptado en la precondición 4 |
 6. **Ensayo local del push de avisos** (gate, antes de la ventana; en la base local bajo candado, `pnpm db:cycle`). Con
    la función de `main` simulada (reclama y **no** llama a `complete_push_event`) y la de `develop`, evidencia cruda de
-   ida, vuelta y nueva ida:
-   - **Ida**: tras aplicar la 0272 con `leaseSeconds` = 900 y `ttlMinutes` = 15, un evento reclamado por la función vieja
-     y sin `push_done_at` **no** se vuelve a reclamar: `claim_push_event` del mismo UUID devuelve 0 filas tras más de 180 s
-     y tras más de 900 s (se simula retrasando `push_claimed_at`). Con `leaseSeconds` = 180 el mismo experimento **sí**
-     devuelve la fila (prueba que el riesgo existe y que el 900 lo evita).
+   ida, vuelta y nueva ida. **Cómo se simula el tiempo:** se **avanza el evento entero**, no solo el reclamo:
+   `occurred_at` y `push_claimed_at` se retrasan la **misma** cantidad (el reclamo es posterior al evento por segundos), y
+   `push_claim_since` se pone antes de ese `occurred_at` para **preservar el corte**. Retrasar solo `push_claimed_at`
+   produce un estado imposible (reclamo viejo de un evento reciente) y no vale. Con `ttlMinutes` = 15, resultado esperado
+   de `claim_push_event` del mismo UUID según M0272:279-281:
+   - **Ida, con `push_retry` = `{"leaseSeconds": 900}` puesto antes de aplicar la 0272 (paso 1-bis)**, y la 0272
+     aplicada sobre esa fila (comprobar que no la pisa ni la fusiona): evento a 182 s → **0 filas**; a 600 s (entre
+     lease 180 y TTL) → **0 filas**; a 902 s (después del TTL) → **0 filas**. Y un push que **falla** en una migración
+     posterior a la 0272 deja la fila en 900 (el camino de fallo está cubierto).
+   - **Contraste con `leaseSeconds` = 180**: 182 s → **1 fila**; 600 s → **1 fila**; 902 s → **0 filas** (TTL). Prueba que
+     el riesgo existe y que el 900 lo evita.
    - **Drenaje**: un evento procesado por la versión vieja durante el minuto de drenaje, con `since` puesto después, queda
      **fuera** del cron (`occurred_at < since`) y, con `leaseSeconds` = 900, no es reclamable. Al volver `leaseSeconds` a
      180 **antes** de que pase `ttlMinutes` desde su `occurred_at`, sí lo sería: por eso el paso 5-bis espera.
@@ -136,8 +143,31 @@ dice «booleano», cada columna debe dar `true`; un `false`, un `null` o cero fi
    - Si el CLI respeta un `lock_timeout` de arranque (p. ej. `PGOPTIONS="-c lock_timeout=10s"`): **sin verificar**; solo
      se usa si el ensayo lo mide.
    - Y la recuperación de §3.2-bis, reproducida con esa versión.
-8. **Fuera de 18:00-23:00 de Lima** y con `develop` congelado. Jesús y un acompañante (Claude) en la sesión, con
+8. **Ensayo local de la parada de la purga** (gate; base local con filas vencidas sembradas en cada categoría y con
+   archivos de prueba en un Storage local, nunca producción). El ejecutor (`apps/api/lib/inngest/functions.ts:350-363`)
+   corre **toda** la política dentro de un solo `step.run`, y `applyRetentionPolicy` no recibe señal de cancelación: encadena
+   hasta 20 lotes de 500 filas por categoría (`BATCH_SIZE`, `MAX_BATCHES`), hasta 10 páginas de 100 filas con archivo (una
+   transacción por fila) y hasta 20 páginas de 100 lápidas por llamada a Storage. **Pausar o cancelar en el panel no
+   demuestra que ese trabajo se detenga**: hay que medirlo. Se ensaya (con la versión de Inngest/hosting que se usará, o
+   su equivalente local: sin verificar cuál) la pausa y cancelación **(i) durante un lote** y **(ii) durante el borrado de
+   Storage**, y se registra qué sigue corriendo y cuánto tarda en quedar quieto.
+   **Remanente máximo declarado** (por el código, hasta que el ensayo lo ajuste): un RPC de lote ya enviado termina en la
+   base (hasta **500 filas** de una categoría, `BATCH_SIZE`; la base admite 1000), una fila con archivo ya abierta
+   termina su transacción (1 fila) y las rutas de Storage ya pedidas (hasta **100**, una página de lápidas) se borran;
+   lo que no alcanzó a marcarse queda como lápida pendiente y se reintenta. **Jesús acepta ese remanente por escrito
+   antes de la ventana. Si el ensayo no acredita la detención, la ventana no se inicia.**
+   **Criterio de quiescencia observable** (se usa en el ensayo y en la ventana, tras pausar y cancelar): (1) consulta de
+   solo lectura sin llamadas activas de las funciones de retención:
+   `select count(*) from pg_stat_activity where datname = current_database() and state <> 'idle' and pid <> pg_backend_pid() and query ~* '(anonymize_old_|purge_old_|retention_|report_retention_apply|fraud_claim_retention_apply|list_report_retention_due|list_fraud_claim_retention_due)';` → **0**; (2) dos lecturas de C-31 a C-37 y de lápidas pendientes (`select count(*) from public.retention_storage_tombstones where deleted_at is null;`) **separadas al menos 2 minutos** y **sin cambios** entre ellas. Las tres condiciones juntas = quieto.
+9. **Fuera de 18:00-23:00 de Lima** y con `develop` congelado. Jesús y un acompañante (Claude) en la sesión, con
    `Docs/operacion/deploy.md` abierto.
+
+### Gates entre fases (se cumplen durante la ventana, en este orden; no son precondiciones)
+
+- **G-1 · Aceptación de la purga** (después del push, antes de desplegar la API): Jesús acepta por escrito, categoría por
+  categoría, los conteos C-31 a C-37 del paso 3-ter. Sin G-1 no se despliega la API ni se deja viva la función en Inngest.
+- **G-2 · Protección del reclamo** (antes del push): paso 1-bis hecho y comprobado.
+- **G-3 · Hook antes de Google** (paso 6 antes del 7).
 
 ### Paso 0 · El commit y la lista (sin tocar producción)
 
@@ -161,21 +191,23 @@ Todas son `select`. Se corren en el editor SQL de `tindivo-prod` o con `psql` de
 - **C-01** (la base está donde se cree): `select version from supabase_migrations.schema_migrations order by version desc limit 3;` → la primera fila es **`0271`**. Si es otra, **para**: la guía no aplica.
 - **C-02** (0277 no abortará): `select count(*) from public.customer_profiles where phone_verified_at is not null and (phone is null or phone !~ '^[+]519[0-9]{8}$');` → **0**. Si no es 0, la 0277 falla a propósito; se corrige antes, con decisión de Jesús (es dato de clientes).
 - **C-03** (cuántos números se desverifican): `select count(*) from public.customer_profiles where phone_verified_at is not null and phone in (select phone from public.customer_profiles where phone_verified_at is not null group by phone having count(*) > 1);` → cuenta **perfiles** (no números): son los que se desverifican. Jesús decide si es aceptable. Cada uno **tendrá que volver a verificar su celular** y esto **no se puede deshacer** sin la copia. Efecto en la contraentrega: §3.3.
-- **C-03b** (0286 actúa al aplicarse; antes del push): cuántas filas quedan fuera de la ventana y dejan de contar. El corte es la **medianoche de Lima** del día (hoy en Lima − 24 meses), como `retention_cutoff` (M0284:289-320), escrito sin llamar a esa función (en la 0271 no existe). Si C-03c muestra otros meses para `strikesMonths` o `addressDirectoryMonths`, se cambia el `24` de la consulta:
+- **C-03b** (0286 actúa al aplicarse; antes del push; **se corre después de C-03c**): cuántas filas quedan fuera de la ventana y dejan de contar. `strikesMonths` y `addressDirectoryMonths` son plazos **independientes**: cada categoría lleva **su** corte, la **medianoche de Lima** del día (hoy en Lima − N meses), como `retention_cutoff` (M0284:289-320), escrito sin llamar a esa función (en la 0271 no existe). N sale de C-03c: **24 si la clave `data_retention` no existe o no trae esa clave** (la 0286 la añade con 24, M0286:25-33); si la trae, **su valor**. Si el valor **no es un entero entre 1 y 1200**, la 0286 no lo pisa y `retention_window_start` devuelve `-infinity` (M0286:36-44): la ventana no excluye nada, se cuenta todo y esa tabla no se purga. Eso es **«para»**: se decide con Jesús (corregir el valor, que es una escritura en producción) antes de seguir. Con N de cada una (`<N_STRIKES>` y `<N_DIRECTORIO>`, números):
 
   ```sql
   with c as (
-    select (((now() at time zone 'America/Lima')::date - interval '24 months')::date)::timestamp
-           at time zone 'America/Lima' as corte
+    select (((now() at time zone 'America/Lima')::date - make_interval(months => <N_STRIKES>))::date)::timestamp
+             at time zone 'America/Lima' as corte_strikes,
+           (((now() at time zone 'America/Lima')::date - make_interval(months => <N_DIRECTORIO>))::date)::timestamp
+             at time zone 'America/Lima' as corte_directorio
   )
-  select (select count(*) from public.customer_strikes s, c where s.created_at < c.corte) as strikes_fuera,
+  select (select count(*) from public.customer_strikes s, c where s.created_at < c.corte_strikes) as strikes_fuera,
          (select count(*) from public.address_directory d, c
-           where greatest(d.last_used_at, d.updated_at, d.created_at) < c.corte) as directorio_fuera;
+           where greatest(d.last_used_at, d.updated_at, d.created_at) < c.corte_directorio) as directorio_fuera;
   ```
 
   → con producción operando desde agosto de 2026 se espera **0** en ambas; si no, decide Jesús (cambia a quién se le exige pago adelantado, 0286:177-183).
 - **C-03c** (los plazos que ya existen): `select value from public.app_settings where key = 'data_retention';` → se espera **sin fila** (la crea la 0284). Si existe, se anota **cada valor**: las migraciones 0284, 0285 y 0286 **no pisan** una clave presente (`on conflict do nothing` y `not (value ? '…')`), y la purga usará esos valores, no los de esta guía.
-- **C-03d** (lo que la 0293 sobrescribe): `select value, updated_at from public.app_settings where key = 'phone_transfer_enabled';` → se anota el valor. Si es `true` (o la fila existe con otro valor), Jesús lo acepta **por escrito** antes del push: la 0293 lo fuerza a `false` (M0293:23) y reabrirlo es una decisión posterior y explícita.
+- **C-03d** (lo que la 0293 sobrescribe o conserva): `select key, value, updated_at from public.app_settings where key in ('phone_transfer_enabled','phone_code_max_per_24h') order by key;` → se anota **cada valor** (o su ausencia). Si `phone_transfer_enabled` es `true` (o la fila existe con otro valor), Jesús lo acepta **por escrito** antes del push: la 0293 lo fuerza a `false` (M0293:23) y reabrirlo es una decisión posterior y explícita. `phone_code_max_per_24h`, en cambio, **no se pisa** si ya existe (M0293:19): el valor anotado es el que regirá.
 - **C-04** (cuántas reseñas pierden el comentario, 0284): `select count(*) from public.order_reviews r join public.orders o on o.id = r.order_id join public.users u on u.id = o.customer_user_id where r.customer_user_id is null and r.comment is not null and u.deleted_at is not null;` → Jesús lo acepta (irreversible sin la copia).
 - **C-05** (el corte del push sigue fijado y el despacho tiene la forma que exige la 0272): booleano.
 
@@ -197,6 +229,33 @@ Todas son `select`. Se corren en el editor SQL de `tindivo-prod` o con `psql` de
 - **C-07** (extensiones): `select extname from pg_extension where extname in ('pg_cron','pg_net','unaccent') order by 1;` → las tres. Si falta `pg_cron`, la 0272 falla en `cron.schedule`.
 - **C-08** (ACL de `auth` intacta, 0271): `select count(*) from information_schema.role_table_grants where grantee = 'supabase_auth_admin' and table_schema = 'public';` → **0** (la 0271 y su prueba lo exigen; `supabase/rollbacks/0271_*.acl-prod.txt` guarda el estado anterior). Comprueba permisos de tabla, no toda la ACL ni el trigger que también verifica la 0271.
 - **C-09** (cuentas creadas por correo, sin la protección del hook; `auth.users` y `auth.identities` son del esquema de Supabase Auth, **sin verificar** las columnas en la versión de producción): `select count(*) as por_correo, count(*) filter (where not exists (select 1 from public.user_roles r where r.user_id = u.id and r.role in ('business','driver','admin'))) as por_correo_sin_rol_de_personal, count(*) filter (where exists (select 1 from auth.identities i where i.user_id = u.id and i.provider = 'google')) as ya_con_google from auth.users u where u.raw_app_meta_data ->> 'provider' = 'email';` → se anotan los tres números. Las cuentas «por correo sin rol de personal» son las que se crearon sin la protección de la 0279: el correo figura confirmado (autoconfirm) y quien las creó conoce la contraseña (M0279:5-12). **El hook no las corrige.** Jesús decide, por escrito, qué hacer con ellas antes del paso 6 (revisarlas, resetear su acceso o aceptar el riesgo).
+
+### Paso 1-bis · Proteger el reclamo ANTES del push (gate G-2)
+
+Desde que la 0272 cambia `claim_push_event` (durante el push, no al final), el reclamo **vuelve a abrirse** para un evento
+ya reclamado si pasó `leaseSeconds` (180 por defecto) y tiene menos de `ttlMinutes` (15): M0272:279-281. La función de
+`main` reclama y **no** marca el final (no llama a `complete_push_event`), así que, hasta desplegar la nueva (paso 4),
+cada aviso que envía queda «sin terminar» y, pasados 180 s, quien conozca su UUID podría reclamarlo y repetirlo. Esa
+exposición empieza **dentro del push** (las migraciones 0273 a 0295 siguen después) y existe también si el push falla
+más adelante. Con `leaseSeconds` = 900 y `ttlMinutes` ≤ 15 **ningún evento puede re-reclamarse**: el reclamo es de
+`now()`, posterior a `occurred_at`, y un evento con más de 15 minutos ya no cumple `occurred_at > now() - ttl`.
+
+Por eso la fila se crea **antes** de la 0272. Verificado en el código: la 0272 la inserta con `on conflict (key) do nothing`
+(M0272:66-71), así que **no la pisa ni la fusiona** y su comprobación final solo exige que exista (M0272:478); `push_retry_settings`
+toma el valor por defecto de cada clave que falta o no es válida (M0272:172-217), que coincide con lo que sembraría la
+migración (3 intentos, 15 min, [1, 2, 4], 30 min); `app_settings` no tiene CHECK ni trigger en las migraciones (solo RLS, M0004:47),
+y ninguna migración anterior a la 0272 lee `push_retry` (solo `push_claim_since` y `push_dispatch`). Antes: **C-03e**
+(solo lectura): `select count(*) from public.app_settings where key = 'push_retry';` → **0**. Si no es 0, **para**: la fila
+ya existe, la 0272 no la tocará y se decide con Jesús cómo fijar `leaseSeconds` = 900 en ella. SQL de escritura, ejecutado por Jesús:
+
+```sql
+insert into public.app_settings (key, value)
+values ('push_retry', '{"leaseSeconds": 900}'::jsonb)
+on conflict (key) do nothing;
+```
+
+- **C-19a** (booleano, antes del push; la función aún no existe): `select value = '{"leaseSeconds": 900}'::jsonb as fila_ok from public.app_settings where key = 'push_retry';` → `true`. Cero filas o `false`: **para**.
+- Si el push se hace con la fila ya puesta y luego hay que volver atrás con el rollback de la 0272 (borra la fila), se vuelve a insertar antes de reintentar.
 
 ### Paso 2 · Ensayo del push (sin aplicar nada)
 
@@ -237,31 +296,20 @@ atomicidad medida en el ensayo: §3.2-bis. Después del push:
 - **C-13** (0276: el navegador ya no escribe): `select has_table_privilege('authenticated','public.customer_profiles','INSERT,UPDATE'), has_table_privilege('authenticated','public.terms_acceptance','INSERT'), has_table_privilege('authenticated','public.reports','INSERT'), has_any_column_privilege('authenticated','public.customer_profiles','INSERT,UPDATE'), has_any_column_privilege('authenticated','public.terms_acceptance','INSERT,UPDATE'), has_any_column_privilege('authenticated','public.reports','INSERT,UPDATE');` → las seis `false` (la 0276 revoca también por columna).
 - **C-14** (columnas nuevas): `select table_name, column_name from information_schema.columns where table_schema = 'public' and (table_name, column_name) in (('menu_items','thumbnail_url'),('menu_items','is_featured'),('businesses','featured_title'),('orders','client_platform'),('domain_events','push_attempts'),('domain_events','push_done_at'),('domain_events','push_dead_at'));` → 7 filas.
 - **C-15** (cron de reintento creado y **apagado**): `select jobname, schedule, active from cron.job where jobname = 'retry-push-dispatch';` → una fila, `* * * * *`, activo; y `select value ? 'since' from public.app_settings where key = 'push_retry';` → **`false`** (sin `since` no hace nada).
-- **C-16** (parámetros): `select key, value from public.app_settings where key in ('phone_code_max_per_24h','phone_transfer_enabled','data_retention') order by key;` → `phone_code_max_per_24h` = `3`, `phone_transfer_enabled` = `false`, y `data_retention` con los plazos **solo si la clave no existía** (C-03c; 24/13 meses, `cashRecordsYears` 5, `strikesMonths`, `addressDirectoryMonths`, `phoneAssignmentsMonths`). Si existía, deben salir **los valores anotados en C-03c** más las claves que faltaban.
+- **C-16** (parámetros): `select key, value from public.app_settings where key in ('phone_code_max_per_24h','phone_transfer_enabled','data_retention') order by key;` → `phone_transfer_enabled` = `false` siempre; `phone_code_max_per_24h` = `3` **solo si la clave no existía** (C-03d; si existía, **el valor capturado antes**); y `data_retention` con los plazos **solo si la clave no existía** (C-03c; 24/13 meses, `cashRecordsYears` 5, `strikesMonths`, `addressDirectoryMonths`, `phoneAssignmentsMonths`). Si existía, deben salir **los valores anotados en C-03c** más las claves que faltaban.
 - **C-17** (0277 cerró los duplicados): `select count(*) from (select phone from public.customer_profiles where phone_verified_at is not null group by phone having count(*) > 1) d;` → **0**.
 - **C-18** (el hook existe y está cerrado, 0279): `select has_function_privilege('supabase_auth_admin','auth_hooks.before_user_created(jsonb)','EXECUTE'), has_function_privilege('anon','auth_hooks.before_user_created(jsonb)','EXECUTE');` → `true`, `false`. Comprueba permisos; **no** que el hook esté activado en el panel.
 - **Advisors** del panel (seguridad y rendimiento): sin hallazgos nuevos de RLS ni de `search_path` sobre lo creado.
 
 Si el push **no** terminó en la 0295, o cualquier comprobación falla: §3.
 
-### Paso 3-bis · Alargar el plazo del reclamo (justo después del push, antes de todo lo demás)
+### Paso 3-bis · Comprobar el plazo del reclamo (justo después del push)
 
-Desde que existe la 0272, `claim_push_event` **vuelve a reclamar** un evento ya reclamado si pasó `leaseSeconds` (180 por
-defecto) y tiene menos de `ttlMinutes` (15): M0272:279-281. La función de `main` reclama y **no** marca el final
-(no llama a `complete_push_event`), así que, hasta desplegar la nueva (paso 4), todo aviso que envía queda «sin
-terminar» y, pasados 180 s, quien conozca su UUID podría reclamarlo de nuevo y repetirlo. Con `leaseSeconds` = 900 y
-`ttlMinutes` ≤ 15 **ningún evento puede re-reclamarse**: el reclamo es de `now()`, siempre posterior a `occurred_at`, y
-un evento con más de 15 minutos ya no cumple `occurred_at > now() - ttl`. SQL de escritura, ejecutado por Jesús
-**inmediatamente** tras el push:
-
-```sql
-update public.app_settings
-   set value = jsonb_set(value, '{leaseSeconds}', '900'::jsonb), updated_at = now()
- where key = 'push_retry';
-```
+La protección ya está puesta desde el paso 1-bis; aquí solo se **comprueba** que el push la dejó intacta. Si algo falla,
+**inmediatamente** el SQL de reparación (escritura, Jesús): `update public.app_settings set value = jsonb_set(value, '{leaseSeconds}', '900'::jsonb), updated_at = now() where key = 'push_retry';`
 
 - **C-19** (booleano; `push_retry_settings` es de solo lectura y la corre el editor como `postgres`): `select lease = interval '900 seconds' as lease_900, ttl <= lease as ttl_dentro_del_lease from public.push_retry_settings(false);` y `select not (value ? 'since') as sin_since from public.app_settings where key = 'push_retry';` → `true` en las tres.
-- **Residuo declarado:** los segundos entre el fin del push y este `update` (y los eventos reclamados por `main` justo antes del push, que siguen siendo re-reclamables hasta entonces). Solo los puede abrir quien conozca el UUID del evento; el cron sigue apagado. Se puede cerrar del todo **insertando antes del push** la fila `push_retry` con `leaseSeconds` = 900 (la 0272 la inserta con `on conflict do nothing`, M0272:66-71), pero esa variante **no está ensayada**: si Jesús la elige, entra en el ensayo local de la precondición 6.
+- **Residuo declarado:** el plazo del reclamo queda en 900 hasta el paso 5-bis, así que un `send-push` que cae después de reclamar no se reintenta en ese lapso (aceptado). Ya no queda intervalo sin protección entre la 0272 y el paso 4.
 
 ### Paso 3-ter · Conteos de purga (lo que la API va a borrar), antes de desplegar la API
 
@@ -272,7 +320,7 @@ en el editor (rol `postgres`; los helpers solo dan permiso a `service_role`). Ca
 (producción opera desde agosto de 2026 y los plazos son de 13, 24 meses y 5 años; sin verificar). **Si no es 0: para y
 decide Jesús, por categoría y por escrito**, qué se acepta que se borre o anonimice (irreversible sin la copia).
 
-- **C-30** (los cortes son válidos; si alguno es `null`, esa categoría no se purga y el conteo de abajo da 0 sin significar nada): `select k, public.retention_cutoff(k) is not null as ok from unnest(array['customerIncidentsMonths','reportsMonths','phoneRestrictionsMonths','storeEventsMonths','pushDeliveryLogMonths','adminAlertsMonths','strikesMonths','addressDirectoryMonths','phoneAssignmentsMonths']) k;` y `select public.retention_cash_cutoff() is not null as caja_ok;` → todo `true`. Además `select k, public.retention_cutoff(k) from unnest(array[...los mismos...]) k;` para ver **la fecha** que se aplicará.
+- **C-30** (los cortes son válidos; si alguno es `null`, esa categoría no se purga y su conteo da 0 sin significar nada): `select k, public.retention_cutoff(k) is not null as ok, public.retention_cutoff(k) as corte from unnest(array['customerIncidentsMonths','reportsMonths','phoneRestrictionsMonths','storeEventsMonths','pushDeliveryLogMonths','adminAlertsMonths','strikesMonths','addressDirectoryMonths','phoneAssignmentsMonths']) as k;` y `select public.retention_cash_cutoff() is not null as caja_ok, public.retention_cash_cutoff() as corte_caja;` → todos los `ok` y `caja_ok` en `true`; la columna `corte` es **la fecha que se aplicará** y Jesús la lee. Un `false` o `null`: **para**.
 - **C-31** incidentes (`anonymize_old_customer_incidents`, M0284:742-770): `select count(*) from public.customer_incidents x where x.reviewed_at is not null and greatest(x.created_at, x.reviewed_at) < public.retention_cutoff('customerIncidentsMonths') and (x.customer_phone <> 'eliminado' or x.delivery_reference is not null or x.description is not null or x.customer_user_id is not null);` → 0. Incluye el caso del teléfono `eliminado` con otros campos aún presentes (M0284:764).
 - **C-32** reportes (M0284:785-811): `select count(*) from public.reports r where public.retention_report_due(r, public.retention_cutoff('reportsMonths'));` → 0. Cada uno puede traer una imagen que se borra de Storage.
 - **C-33** restricciones del número (M0284:709-730): `select count(*) from public.phone_restrictions x where (x.lifted_at is not null or (x."until" is not null and x."until" <= now())) and greatest(x.lifted_at, x."until") < public.retention_cutoff('phoneRestrictionsMonths');` → 0 (la tabla es nueva: debe estar vacía).
@@ -281,7 +329,7 @@ decide Jesús, por categoría y por escrito**, qué se acepta que se borre o ano
 - **C-36** antifraude (M0286:192-260): `select (select count(*) from public.customer_strikes x where x.created_at < public.retention_cutoff('strikesMonths') and (x.phone <> 'eliminado' or x.customer_user_id is not null or x.delivery_reference is not null or x.order_id is not null or x.delivery_coordinates_lat is not null or x.delivery_coordinates_lng is not null)) as strikes, (select count(*) from public.address_directory x where greatest(x.last_used_at, x.updated_at, x.created_at) < public.retention_cutoff('addressDirectoryMonths')) as directorio, (select count(*) from public.phone_assignments x where x.ended_at is not null and x.ended_at < public.retention_cutoff('phoneAssignmentsMonths')) as asignaciones, (select count(*) from public.phone_transfer_challenges c where c.assignment_id in (select id from public.phone_assignments x where x.ended_at is not null and x.ended_at < public.retention_cutoff('phoneAssignmentsMonths')) or c.result_assignment_id in (select id from public.phone_assignments x where x.ended_at is not null and x.ended_at < public.retention_cutoff('phoneAssignmentsMonths'))) as desafios;` → `0, 0, 0, 0`. Strikes y directorio ya se contaron antes del push con C-03b (cambian a quién se le exige pago); aquí se repite con el predicado exacto de la purga.
 - **C-37** lápidas pendientes de Storage: `select count(*) from public.retention_storage_tombstones where deleted_at is null;` → **0** (la tabla nace con la 0284: no puede haber lápidas antes de la primera corrida).
 
-**Barrera.** La API (que trae el cron `apply-data-retention-cron`, `apps/api/lib/inngest/functions.ts:350`, cron
+**Gate G-1.** Los conteos C-31 a C-37 los acepta Jesús por escrito, categoría por categoría, **ahora** (después del push; no antes de empezar). **Barrera.** La API (que trae el cron `apply-data-retention-cron`, `apps/api/lib/inngest/functions.ts:350`, cron
 `TZ=America/Lima 45 4 * * *`) **no se despliega** hasta que Jesús haya aceptado por escrito todos estos conteos. Tras
 desplegar y **sincronizar Inngest** (paso 8), se comprueba en el panel que `apply-data-retention-cron` aparece; **si por
 cualquier motivo los conteos no se aceptaron, se pausa allí antes de las 04:45 de Lima** (y se sigue el §3.2, fila de la
@@ -327,8 +375,8 @@ update public.app_settings
 - **C-20** (booleano; `<hora del deploy>` es la anotada en el paso 4, en UTC ISO): `select (value ->> 'since') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T' as forma_iso, isfinite((value ->> 'since')::timestamptz) as finito, (value ->> 'since')::timestamptz > '<hora del deploy>'::timestamptz + interval '60 seconds' as posterior_al_drenaje, (value ->> 'leaseSeconds')::int = 900 as lease_900 from public.app_settings where key = 'push_retry';` y `select ok from public.push_retry_settings(true);` → todo `true`. Un `false` o `null`: **para** y se apaga (`value - 'since'`).
 - Pasados 3 minutos, **C-21** (tres lecturas; no se ejecuta `retry_push_dispatch()` a mano: escribe):
   1. El cron corre: `select status, return_message, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'retry-push-dispatch') order by start_time desc limit 5;` → corridas `succeeded`. **`succeeded` no prueba que se despache nada**: la función retorna 0 sin error si algo falta.
-  2. El outbox después del corte (la de `deploy.md` §2.2.1, acotada): `select count(*) filter (where e.push_done_at is not null) as con_final, count(*) filter (where e.push_done_at is null and e.push_dead_at is null) as sin_final, count(*) filter (where e.push_dead_at is not null) as perdidos from public.domain_events e where e.occurred_at >= (select (value ->> 'since')::timestamptz from public.app_settings where key = 'push_retry') and e.event_type = any (public.push_event_types());`
-  3. Lectura: `con_final` ≥ 1, `perdidos` = 0 y `sin_final` solo con eventos de menos de 3 minutos. **Si no hay ningún evento después del corte, no hay evidencia: no se lee como éxito**; se espera a un pedido real (con Jesús) y se repite.
+  2. El outbox después del corte (la de `deploy.md` §2.2.1, acotada): `select count(*) filter (where e.push_done_at is not null) as con_final, count(*) filter (where e.push_done_at is null and e.push_dead_at is null) as sin_final, count(*) filter (where e.push_dead_at is not null) as perdidos, count(*) filter (where e.push_done_at is null and e.push_dead_at is null and e.occurred_at <= now() - interval '3 minutes') as pendientes_de_3_min_o_mas, max(now() - e.occurred_at) filter (where e.push_done_at is null and e.push_dead_at is null) as antiguedad_maxima_pendiente from public.domain_events e where e.occurred_at >= (select (value ->> 'since')::timestamptz from public.app_settings where key = 'push_retry') and e.event_type = any (public.push_event_types());`
+  3. Lectura: `con_final` ≥ 1, `perdidos` = 0 y **`pendientes_de_3_min_o_mas` = 0**. **Si `pendientes_de_3_min_o_mas` > 0, o `perdidos` > 0, se para**: se apaga `since` (`deploy.md` §2.2.1) y se investiga con la `antiguedad_maxima_pendiente` a la vista (dos salidas con las mismas cantidades pero distinta antigüedad dan decisiones distintas). **Si no hay ningún evento después del corte, no hay evidencia: no se lee como éxito**; se espera a un pedido real (con Jesús) y se repite.
 - Apagarlo es una línea (`deploy.md` §2.2.1, «Cómo apagarlo»).
 
 ### Paso 5-bis · Devolver el plazo del reclamo a 180 s (≥ 16 minutos después de `since`)
@@ -425,7 +473,7 @@ lo irreversible va en §3.3.
 | El reintento duplica avisos | `push_retry.since` puesto | `update public.app_settings set value = value - 'since', updated_at = now() where key = 'push_retry';` (apaga el cron sin tocar nada más). **No** devuelve `leaseSeconds` a 180 mientras haya eventos de menos de 15 minutos sin `push_done_at` |
 | El alta de cuentas falla o un cliente legítimo no entra | Hook activo | **Apagar el hook en el panel** (Authentication > Hooks), con el riesgo del paso 6 (vuelve el alta por correo). La función puede quedarse. **Antes** de ejecutar `rollbacks/0279_*` hay que apagar el hook: si no, GoTrue falla TODA alta |
 | La web del cliente de `main` falla por la 0276 | Permisos revocados | **No hay un rollback de la 0276 en el repo.** La salida es hacia adelante: desplegar la web/API del commit firmado (alternativa b de D-A), o decidir (Jesús) una migración nueva que devuelva los permisos, con revisión de seguridad. Por eso D-A se decide **antes** |
-| La purga de retención borra algo que no debía | Corrida de las 04:45 | **Pausar** `apply-data-retention-cron` en el panel de Inngest **de inmediato**, **cancelar** sus corridas en curso y sus reintentos pendientes (los nombres exactos de los controles del panel: sin verificar) y **comprobar en el panel que no queda ninguna corrida activa ni en cola**. Lo que una transacción ya cerró no se deshace, y una fila en vuelo termina. **Lápidas pendientes:** quedan con `deleted_at is null` y su borrado de Storage se retoma al reanudar (`drainTombstones` en `apply-retention-policy.ts` las reintenta y no mira `data_retention`; `retention_pending_tombstones`, M0284:501-520). **No** se pone `data_retention` inválido: no detiene el borrado desde lápidas, y una ventana antifraude inválida hace que `retention_window_start` devuelva `-infinity` y vuelvan a contarse antecedentes sin límite (M0286:36-44). Cualquier cambio de plazos es decisión de Jesús, con su efecto antifraude por escrito. Lo ya borrado solo vuelve de la copia |
+| La purga de retención borra algo que no debía | Corrida de las 04:45 | **Pausar** `apply-data-retention-cron` en el panel de Inngest **de inmediato** y **cancelar** sus corridas en curso y reintentos (los controles exactos: sin verificar). **El estado del panel no basta**: toda la política corre en un solo `step.run` sin señal de cancelación, así que se exige la **quiescencia observable** de la precondición 8 (sin llamadas activas de las funciones de retención en `pg_stat_activity` y dos lecturas de C-31 a C-37 y de lápidas pendientes, separadas ≥ 2 min, sin cambios). **Remanente aceptado de antemano:** un lote en vuelo (hasta 500 filas de una categoría), la fila con archivo en curso y hasta 100 rutas de Storage ya pedidas; lo que no se marcó queda como lápida pendiente. Lo que una transacción ya cerró no se deshace. **Lápidas pendientes:** quedan con `deleted_at is null` y su borrado de Storage se retoma al reanudar (`drainTombstones` en `apply-retention-policy.ts`; no mira `data_retention`; `retention_pending_tombstones`, M0284:501-520). **No** se pone `data_retention` inválido: no detiene el borrado desde lápidas, y una ventana antifraude inválida hace que `retention_window_start` devuelva `-infinity` y vuelvan a contarse antecedentes sin límite (M0286:36-44). Cualquier cambio de plazos es decisión de Jesús, con su efecto antifraude por escrito. Lo ya borrado solo vuelve de la copia |
 
 ### 3.2-bis Un push a medias: cómo se inspecciona y cómo se sale
 
@@ -442,9 +490,10 @@ lectura**, Jesús ve el estado de N:
 
 - **0277**: los perfiles con el mismo teléfono verificado quedan desverificados (C-03). Las asignaciones quedan en
   `phone_assignments` (`duplicate_cleared`), pero el campo `phone_verified_at` solo vuelve de la copia. **Efecto en la
-  contraentrega** (`customer_contraentrega_decision`, M0286:109-150): un perfil desverificado no tiene teléfono
-  verificado, así que mientras tenga un pedido entregado en **su** cuenta sigue en `trusted` (regla 1); si no lo tiene,
-  queda en `no_history`. Al **volver a verificar**, el número tiene asignaciones ajenas cerradas dentro de la ventana de
+  contraentrega** (`customer_contraentrega_decision`, M0286:109-150): el **veto de riesgo va primero**: si
+  `customer_requires_prepayment` aplica (restricción activa del número, `contraentrega_blocked` del perfil o strikes dentro de la ventana en número suficiente), la decisión es `risk_blocked` aunque
+  haya entregas previas. Sin veto, un perfil desverificado no tiene teléfono verificado, así que mientras tenga un pedido
+  entregado en **su** cuenta sigue en `trusted` (regla 1); si no lo tiene, queda en `no_history`. Al **volver a verificar**, el número tiene asignaciones ajenas cerradas dentro de la ventana de
   24 meses: entonces solo es `trusted` si ya hay una entrega de su propio perfil con ese teléfono **posterior al inicio de
   su asignación actual**; si no, `no_history` (pago adelantado o validación por GPS). No es «24 meses fijos para todos»:
   depende de cada perfil.
@@ -486,7 +535,7 @@ entre el push y su despliegue. **Nunca la API antes que la base.** La decisión 
 ## 4. Lo que esta guía no resuelve (a la vista de todos)
 
 - **La prueba de convivencia de A3** (el código de `main` contra las 21 migraciones, en local con `pnpm db:cycle` o su equivalente) **no está hecha**. La matriz de la precondición 5 dice dónde se ve el choque; el resto de rutas de `main` no se ha probado.
-- Los **ensayos locales** de las precondiciones 6 y 7 (reclamo del push; atomicidad del CLI, bloqueos y recuperación) **no están hechos**.
+- Los **ensayos locales** de las precondiciones 6, 7 y 8 (reclamo del push; atomicidad del CLI, bloqueos y recuperación; cancelación de la purga en vuelo) **no están hechos**.
 - La **fecha** (J3) y **D-A** son de Jesús.
 - **`deploy.md` §2.2.1** (paso 3) sigue diciendo «hora del deploy» para `since`; esta guía manda en la ventana y `deploy.md` está **pendiente de corregir**.
 - La **0296** (pago único, #262) y cualquier migración posterior **no** están en esta guía.
