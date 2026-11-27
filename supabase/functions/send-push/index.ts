@@ -97,7 +97,7 @@ async function deliverNative(
   const devices = must(
     await db
     .from('push_devices')
-    .select('id,platform,token,environment')
+    .select('id,platform,token,environment,install_id')
     .eq('user_id', filter.userId)
     .eq('app', filter.app)
     .is('disabled_at', null)
@@ -113,6 +113,7 @@ async function deliverNative(
     token: d.token as string,
     platform: d.platform as 'ios' | 'android',
     environment: d.environment as 'production' | 'sandbox',
+    installId: d.install_id as string,
   }))
   const res = await deliverToDevices(
     rows,

@@ -13,8 +13,15 @@ sealed interface SessionState {
 
     data object SignedOut : SessionState
 
+    /**
+     * [entry] es el claim `session_id` del access token que guardó la app, decodificado en local SIN verificar la firma.
+     * Se usa SOLO como discriminador local de igualdad («¿es la misma entrada de sesión?»). Nunca para autorizar, nunca
+     * como identidad, y nunca se envía al servidor ni a un log. Es estable entre refrescos de token y nuevo en cada
+     * entrada. `null` si el token no se pudo leer.
+     */
     data class SignedIn(
         val userId: String,
+        val entry: String? = null,
     ) : SessionState
 }
 

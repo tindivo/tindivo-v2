@@ -40,6 +40,10 @@ import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
+import com.tindivo.customer.push.NotificationsEffects
+import com.tindivo.customer.push.NotificationsOffBanner
+import com.tindivo.customer.push.NotificationsViewModel
+import com.tindivo.customer.push.PushOfferSheet
 import com.tindivo.customer.support.CustomerNameViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
@@ -55,14 +59,23 @@ internal fun OrderDetailDestination(
     onBackToMenu: () -> Unit = onBack,
     onOpenOrders: () -> Unit = onBack,
     onSignIn: () -> Unit = onBack,
+    onOpenAccount: () -> Unit = onBack,
     viewModel: OrderDetailViewModel = hiltViewModel(),
     prepayViewModel: PrepayViewModel = hiltViewModel(),
     cancelViewModel: CancelOrderViewModel = hiltViewModel(),
     supportViewModel: SupportViewModel = hiltViewModel(),
     timersViewModel: OrderTimersViewModel = hiltViewModel(),
+    notifications: NotificationsViewModel = hiltViewModel(),
     nameViewModel: CustomerNameViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val push = notifications.state.collectAsStateWithLifecycle().value
+    NotificationsEffects(notifications)
+    // El primer pedido confirmado ofrece los avisos, una sola vez (CUS-NOT-001).
+    LaunchedEffect((state as? OrderDetailUiState.Loaded)?.order?.status) {
+        (state as? OrderDetailUiState.Loaded)?.let { notifications.onOrderStatus(it.order.status) }
+    }
+    PushOfferSheet(visible = push.sheetVisible, onAccept = notifications::accept, onDecline = notifications::decline)
     val acceptanceMinutes = timersViewModel.acceptanceMinutes.collectAsStateWithLifecycle().value
     val prepay = prepayViewModel.state.collectAsStateWithLifecycle().value
     val cancel = cancelViewModel.state.collectAsStateWithLifecycle().value
@@ -125,6 +138,13 @@ internal fun OrderDetailDestination(
             switching = true
             viewModel.switchAccount()
         },
+        notificationsBanner = {
+            NotificationsOffBanner(
+                exit = push.status?.banner,
+                onOpenSettings = notifications::openSettings,
+                onOpenAccount = onOpenAccount,
+            )
+        },
     )
 }
 
@@ -145,6 +165,7 @@ internal fun OrderDetailScreen(
     acceptanceMinutes: Int? = null,
     onOpenOrders: () -> Unit = {},
     onSwitchAccount: () -> Unit = {},
+    notificationsBanner: @Composable () -> Unit = {},
 ) {
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
@@ -167,6 +188,8 @@ internal fun OrderDetailScreen(
 
                 is OrderDetailUiState.Loaded -> {
                     val order = state.order
+                    // Solo con el pedido en curso: en uno terminado ya no hay avisos que esperar.
+                    if (!order.phase.isTerminal()) notificationsBanner()
                     val supportLink = orderHelpLink(supportNumber, order.shortId, order.businessName, customerName)
                     if (order.phase is OrderPhase.Cancelled) {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {

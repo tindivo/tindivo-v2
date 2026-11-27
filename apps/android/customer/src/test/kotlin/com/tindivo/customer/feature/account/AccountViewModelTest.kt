@@ -8,6 +8,8 @@ import com.tindivo.core.network.SystemRepository
 import com.tindivo.core.network.createOkHttpClient
 import com.tindivo.customer.config.ConfigService
 import com.tindivo.customer.feature.checkout.sessionJwt
+import com.tindivo.customer.push.NoPushSignOut
+import com.tindivo.customer.push.PushSignOut
 import com.tindivo.customer.session.FakeSessionStore
 import com.tindivo.customer.session.GatedTokens
 import com.tindivo.customer.session.SessionState
@@ -87,7 +89,7 @@ class AccountViewModelTest {
         runTest {
             server.enqueue(response(200, profile(verified = false)))
 
-            val state = AccountViewModel(customer, store, configService).settled()
+            val state = AccountViewModel(customer, store, configService, NoPushSignOut).settled()
 
             val expected = AccountProfileUi("Rosa Quispe", phoneVerified = false, phone = "+51987654321")
             assertEquals(AccountUiState.Loaded(expected), state)
@@ -98,7 +100,7 @@ class AccountViewModelTest {
         runTest {
             server.enqueue(response(200, profile(verified = true)))
 
-            val state = AccountViewModel(customer, store, configService).settled()
+            val state = AccountViewModel(customer, store, configService, NoPushSignOut).settled()
 
             val expected = AccountProfileUi("Rosa Quispe", phoneVerified = true, phone = "+51987654321")
             assertEquals(AccountUiState.Loaded(expected), state)
@@ -109,7 +111,7 @@ class AccountViewModelTest {
         runTest {
             server.enqueue(response(401, UNAUTHORIZED))
 
-            val state = AccountViewModel(customer, store, configService).settled()
+            val state = AccountViewModel(customer, store, configService, NoPushSignOut).settled()
 
             assertEquals(AccountUiState.LoggedOut, state)
             assertEquals(1, store.signOutCalls)
@@ -121,7 +123,7 @@ class AccountViewModelTest {
         runTest {
             server.enqueue(response(403, FORBIDDEN))
             server.enqueue(response(200, profile(verified = true)))
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
 
             assertTrue(viewModel.settled() is AccountUiState.Failed)
             assertEquals(0, store.signOutCalls)
@@ -134,7 +136,7 @@ class AccountViewModelTest {
     fun `cerrar sesion llama al store y pide salir de la pantalla`() =
         runTest {
             server.enqueue(response(200, profile(verified = true)))
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             viewModel.settled()
 
             viewModel.signOut()
@@ -144,10 +146,45 @@ class AccountViewModelTest {
         }
 
     @Test
+    fun `cerrar sesion da de baja los avisos con la cuenta de la pantalla ANTES de cerrar la sesion`() =
+        runTest {
+            server.enqueue(response(200, profile(verified = true)))
+            val seen = mutableListOf<Pair<String, SessionState>>()
+            val viewModel =
+                AccountViewModel(customer, store, configService, PushSignOut { seen += it to store.state.value })
+            viewModel.settled()
+
+            viewModel.signOut()
+
+            assertEquals(listOf("user-1" to SessionState.SignedIn("user-1")), seen)
+            assertEquals(SessionState.SignedOut, store.state.value)
+        }
+
+    @Test
+    fun `si la limpieza de los avisos falla, cerrar sesion cierra la sesion igual (CAX-010)`() =
+        runTest {
+            server.enqueue(response(200, profile(verified = true)))
+            val viewModel =
+                AccountViewModel(
+                    customer,
+                    store,
+                    configService,
+                    PushSignOut { throw java.io.IOException("disco lleno") },
+                )
+            viewModel.settled()
+
+            viewModel.signOut()
+
+            assertEquals(1, store.signOutCalls)
+            assertEquals(SessionState.SignedOut, store.state.value)
+            assertEquals(AccountUiState.LoggedOut, viewModel.state.value)
+        }
+
+    @Test
     fun `si la sesion se cierra por otra via la pantalla pide salir`() =
         runTest {
             server.enqueue(response(200, profile(verified = true)))
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             viewModel.settled()
 
             store.signOut()
@@ -161,7 +198,7 @@ class AccountViewModelTest {
             server.enqueue(response(404, PROFILE_MISSING))
             server.enqueue(response(404, PROFILE_MISSING))
             server.enqueue(response(200, profile(verified = false)))
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
 
             assertEquals(AccountUiState.ProfileMissing(openNow = true), viewModel.settled())
             viewModel.onProfilePromptOpened()
@@ -181,7 +218,7 @@ class AccountViewModelTest {
         runTest {
             server.enqueue(response(404, NOT_FOUND))
 
-            val state = AccountViewModel(customer, store, configService).settled()
+            val state = AccountViewModel(customer, store, configService, NoPushSignOut).settled()
 
             assertTrue(state is AccountUiState.Failed)
         }
@@ -190,7 +227,7 @@ class AccountViewModelTest {
     fun `CA-ACC-02 editar el nombre guarda el recortado y la cuenta lo muestra`() =
         runTest {
             server.enqueue(response(200, profile(verified = true)))
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             viewModel.settled()
             server.enqueue(response(200, profile(verified = true, name = "Rosa Maria")))
 
@@ -209,7 +246,7 @@ class AccountViewModelTest {
     fun `CA-ACC-02 un nombre invalido no sale a la red ni cambia el perfil`() =
         runTest {
             server.enqueue(response(200, profile(verified = true)))
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             viewModel.settled()
 
             for (bad in listOf("", "R", "Rosa 2", "x".repeat(41))) {
@@ -225,7 +262,7 @@ class AccountViewModelTest {
     fun `CA-ACC-02 si el servidor falla el nombre sigue igual y se puede reintentar`() =
         runTest {
             server.enqueue(response(200, profile(verified = true)))
-            val viewModel = AccountViewModel(customer, store, configService)
+            val viewModel = AccountViewModel(customer, store, configService, NoPushSignOut)
             viewModel.settled()
             server.enqueue(
                 response(

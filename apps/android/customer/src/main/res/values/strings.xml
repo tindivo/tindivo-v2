@@ -712,6 +712,20 @@
     <string name="prepay_error_too_large">La imagen es demasiado pesada. Elige otra captura.</string>
     <string name="prepay_error_heic">No pudimos leer esa foto. Haz una captura de pantalla del pago y súbela de nuevo.</string>
     <string name="prepay_error_generic">No pudimos enviar tu comprobante. Inténtalo de nuevo.</string>
+    <!-- Avisos del pedido (push nativo, spec de notificaciones). El canal se ve en los ajustes de la app. -->
+    <string name="push_channel_orders">Avisos de tus pedidos</string>
+    <string name="push_channel_orders_description">Te avisamos cuando tu pedido cambia de estado.</string>
+    <string name="push_offer_title">¿Activar notificaciones?</string>
+    <string name="push_offer_body">Te avisamos de tus pedidos.</string>
+    <string name="push_offer_accept">Sí, activar</string>
+    <string name="push_offer_decline">Ahora no</string>
+    <string name="push_banner_off">Notificaciones desactivadas</string>
+    <string name="push_banner_open_settings">Abrir Ajustes</string>
+    <string name="push_banner_open_account">Activar en Cuenta</string>
+    <string name="push_toggle_label">Avisos de tus pedidos</string>
+    <string name="push_toggle_on">Activados</string>
+    <string name="push_toggle_off">Desactivados</string>
+
     <!-- Tindivo Entregas (D-62). Textos de la web: apps/customer/features/courier. -->
     <string name="courier_entry_title">Tindivo Entregas</string>
     <string name="courier_entry_subtitle">Llevamos tus cosas de un lugar a otro</string>

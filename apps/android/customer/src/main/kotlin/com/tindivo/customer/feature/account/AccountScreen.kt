@@ -43,6 +43,9 @@ import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
 import com.tindivo.customer.feature.addresses.AddressListUiState
 import com.tindivo.customer.feature.addresses.AddressListViewModel
+import com.tindivo.customer.push.NotificationsEffects
+import com.tindivo.customer.push.NotificationsToggleRow
+import com.tindivo.customer.push.NotificationsViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
 import java.util.UUID
@@ -63,8 +66,11 @@ fun AccountDestination(
     onAddressesChangeHandled: () -> Unit,
     onOpenDiagnostics: (() -> Unit)? = null,
     viewModel: AccountViewModel = hiltViewModel(),
+    notifications: NotificationsViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
+    val push = notifications.state.collectAsStateWithLifecycle().value
+    NotificationsEffects(notifications)
     val addressList = hiltViewModel<AddressListViewModel>()
     val addresses = addressList.state.collectAsStateWithLifecycle().value
     // Volvió del formulario o de la libreta con algo cambiado: la lista que se tenía ya no es la del servidor.
@@ -113,6 +119,15 @@ fun AccountDestination(
         nameEdit = nameEdit,
         onSaveName = viewModel::saveName,
         onDismissNameEdit = viewModel::dismissNameEdit,
+        notificationsToggle = {
+            push.status?.let {
+                TindivoCard(modifier = Modifier.fillMaxWidth()) {
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        NotificationsToggleRow(on = it.on, onToggle = notifications::toggle)
+                    }
+                }
+            }
+        },
         addresses = addresses,
         onAddAddress = onAddAddress,
         onEditAddress = { onEditAddress(it.toString()) },
@@ -141,6 +156,7 @@ internal fun AccountScreen(
     nameEdit: NameEditState = NameEditState.Idle,
     onSaveName: (String) -> Unit = {},
     onDismissNameEdit: () -> Unit = {},
+    notificationsToggle: @Composable () -> Unit = {},
     addresses: AddressListUiState = AddressListUiState.Loading,
     onAddAddress: () -> Unit = {},
     onEditAddress: (UUID) -> Unit = {},
@@ -181,6 +197,7 @@ internal fun AccountScreen(
                         onDeleteAccount = onDeleteAccount,
                         onOpenDiagnostics = onOpenDiagnostics,
                         supportNumber = supportNumber,
+                        notificationsToggle = notificationsToggle,
                     )
                 }
 
@@ -196,6 +213,7 @@ internal fun AccountScreen(
                         nameEdit = nameEdit,
                         onSaveName = onSaveName,
                         onDismissNameEdit = onDismissNameEdit,
+                        notificationsToggle = notificationsToggle,
                     )
                 }
             }
@@ -263,6 +281,7 @@ private fun ColumnScope.ProfileMissing(
     onDeleteAccount: () -> Unit,
     onOpenDiagnostics: (() -> Unit)?,
     supportNumber: String,
+    notificationsToggle: @Composable () -> Unit = {},
 ) {
     AccountColumn {
         TindivoCard(modifier = Modifier.fillMaxWidth()) {
@@ -288,6 +307,7 @@ private fun ColumnScope.ProfileMissing(
         }
         AddressesCard(addresses)
         SettingsCard(supportNumber = supportNumber)
+        notificationsToggle()
         SignOutCard(onSignOut = onSignOut)
         // También sin perfil: Google Play exige poder borrar la cuenta desde la app, haya o no un nombre guardado.
         AccountFooter(onDeleteAccount = onDeleteAccount, onOpenDiagnostics = onOpenDiagnostics)
@@ -306,6 +326,7 @@ private fun ColumnScope.Profile(
     nameEdit: NameEditState,
     onSaveName: (String) -> Unit,
     onDismissNameEdit: () -> Unit,
+    notificationsToggle: @Composable () -> Unit = {},
 ) {
     var editing by remember { mutableStateOf(false) }
     LaunchedEffect(nameEdit) {
@@ -329,6 +350,7 @@ private fun ColumnScope.Profile(
         ProfileCard(profile = profile, onEditName = { editing = true }, onVerifyPhone = onVerifyPhone)
         AddressesCard(addresses)
         SettingsCard(supportNumber = supportNumber)
+        notificationsToggle()
         SignOutCard(onSignOut = onSignOut)
         AccountFooter(onDeleteAccount = onDeleteAccount, onOpenDiagnostics = onOpenDiagnostics)
     }

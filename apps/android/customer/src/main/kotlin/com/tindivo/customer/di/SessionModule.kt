@@ -7,6 +7,7 @@ import com.tindivo.customer.session.EncryptedSessionFile
 import com.tindivo.customer.session.LazyAead
 import com.tindivo.customer.session.SessionFile
 import com.tindivo.customer.session.SessionKeys
+import com.tindivo.customer.session.SessionPublishLock
 import com.tindivo.customer.session.SessionStore
 import com.tindivo.customer.session.createSessionAead
 import com.tindivo.customer.session.createSupabaseSessionStore
@@ -45,6 +46,11 @@ object SessionModule {
         )
     }
 
+    /** UNA sola para toda la app: la comparten la sesión y la puerta de los avisos (CAX-001). */
+    @Provides
+    @Singleton
+    fun providePublishLock(): SessionPublishLock = SessionPublishLock()
+
     @Provides
     @Singleton
     fun provideSessionStore(
@@ -52,6 +58,7 @@ object SessionModule {
         clock: Clock,
         @ApplicationScope scope: CoroutineScope,
         @IoDispatcher io: CoroutineDispatcher,
+        publishLock: SessionPublishLock,
     ): SessionStore =
         createSupabaseSessionStore(
             url = BuildConfig.SUPABASE_URL,
@@ -60,5 +67,6 @@ object SessionModule {
             clock = clock,
             scope = scope,
             io = io,
+            publishLock = publishLock,
         )
 }

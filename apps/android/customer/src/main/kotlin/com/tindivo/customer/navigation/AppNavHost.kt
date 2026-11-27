@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -97,8 +98,12 @@ data object SignInRoute
 data object AccountRoute
 
 @Composable
-fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
+fun AppNavHost(
+    appViewModel: AppViewModel = hiltViewModel(),
+    deepLinkViewModel: DeepLinkViewModel = hiltViewModel(),
+) {
     val navController = rememberNavController()
+    val deepLink = deepLinkViewModel.navigation.collectAsStateWithLifecycle().value
     val upgradeRequired = appViewModel.upgradeRequired.collectAsStateWithLifecycle().value
     val osNoticeVisible = appViewModel.osNoticeVisible.collectAsStateWithLifecycle().value
     val termsGate: TermsGateViewModel = hiltViewModel()
@@ -183,6 +188,13 @@ fun AppNavHost(appViewModel: AppViewModel = hiltViewModel()) {
             if (tab != null) {
                 BottomTabBar(selected = tab, onSelect = { navController.openTab(it, signedIn) })
             }
+        }
+        // Un aviso tocado (KT-11). Solo aquí, con el NavHost armado: con la actualización obligatoria, la restauración
+        // o la puerta de Términos no se abre nada y el destino espera a que la app quede navegable.
+        LaunchedEffect(deepLink) {
+            val target = deepLink ?: return@LaunchedEffect
+            navController.openDeepLink(target)
+            deepLinkViewModel.navigated()
         }
     }
 }
@@ -365,6 +377,7 @@ private fun NavGraphBuilder.ordersGraph(navController: NavHostController) {
             onSignIn = {
                 navController.navigate(SignInRoute) { popUpTo<OrderDetailRoute> { inclusive = true } }
             },
+            onOpenAccount = { navController.navigate(AccountRoute) },
         )
     }
 }
@@ -406,6 +419,7 @@ private fun OrderDetailWithReview(
     onBackToMenu: () -> Unit,
     onOpenOrders: () -> Unit,
     onSignIn: () -> Unit,
+    onOpenAccount: () -> Unit,
 ) {
     val review = rememberReviewController(autoPrompt = false)
     OrderDetailDestination(
@@ -413,6 +427,7 @@ private fun OrderDetailWithReview(
         onBackToMenu = onBackToMenu,
         onOpenOrders = onOpenOrders,
         onSignIn = onSignIn,
+        onOpenAccount = onOpenAccount,
         canRate = { id -> review.state.pending?.orderId == id },
         onRate = review.openForm,
     )

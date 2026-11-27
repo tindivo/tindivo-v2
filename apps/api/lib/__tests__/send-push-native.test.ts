@@ -1024,3 +1024,57 @@ describe('send-push index.ts · cada aviso lleva su app', () => {
     expect(src).toContain('failed += native.failed')
   })
 })
+
+// ── App del cliente en Android: solo-datos y atado a la instalación (spec #202, opción C) ──
+
+describe('send-push native · el cliente en Android recibe solo-datos con su instalación', () => {
+  const INSTALL = '3f2b8c1e-5a4d-4e6f-8a9b-0c1d2e3f4a5b'
+
+  it('nativePayload lleva install cuando hay installId y cumple el contrato', () => {
+    const p = nativePayload(note, 'OrderCreated', INSTALL)
+    expect(p.install).toBe(INSTALL)
+    expect(NativePushPayloadSchema.parse(p)).toEqual(p)
+    expect(nativePayload(note, 'OrderCreated')).not.toHaveProperty('install')
+  })
+
+  it('buildFcmMessage solo-datos: sin notification, con install en data y el tag como collapse_key', () => {
+    const p = nativePayload(note, 'OrderCreated', INSTALL)
+    const m = buildFcmMessage(SECRET_TOKEN_ANDROID, p, { dataOnly: true })
+    expect(m.message).not.toHaveProperty('notification')
+    expect(m.message.data).toEqual({
+      v: '1',
+      type: 'OrderCreated',
+      tag: note.tag,
+      title: note.title,
+      body: note.body,
+      deepLink: note.url,
+      install: INSTALL,
+    })
+    expect(m.message.android).toEqual({ priority: 'HIGH', collapse_key: note.tag })
+  })
+
+  it('sendNative al cliente en Android va solo-datos con el install del dispositivo', async () => {
+    const { env } = await fullEnv()
+    const cfg = await load(env)
+    const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : FCM_OK))
+    const device: NativeDevice = { ...android, installId: INSTALL }
+    const r = await sendNative(device, 'customer', note, 'OrderCreated', await deps(cfg, f))
+    expect(r?.outcome).toBe('ok')
+    const sent = JSON.parse(f.calls[1]?.body ?? '{}').message
+    expect(sent).not.toHaveProperty('notification')
+    expect(sent.android).not.toHaveProperty('notification')
+    expect(sent.data.install).toBe(INSTALL)
+  })
+
+  it('a las otras apps (motorizados) sigue con el bloque notification y sin install', async () => {
+    const { env } = await fullEnv()
+    const cfg = await load(env)
+    const f = fakeFetch((url) => (url === TOKEN_URI ? ACCESS : FCM_OK))
+    const device: NativeDevice = { ...android, installId: INSTALL }
+    await sendNative(device, 'motorizados', note, 'OrderCreated', await deps(cfg, f))
+    const sent = JSON.parse(f.calls[1]?.body ?? '{}').message
+    expect(sent.notification).toEqual({ title: note.title, body: note.body })
+    expect(sent.android.notification).toEqual({ tag: note.tag, channel_id: 'order_updates' })
+    expect(sent.data).not.toHaveProperty('install')
+  })
+})
