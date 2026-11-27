@@ -175,7 +175,9 @@ class PushAuditR1Test {
             }
             assertTrue("el cierre de los avisos tiene tope", boundedClose)
             assertTrue(rig.notifications.clears > 0)
-            // RV-3: con la identidad sin soltar y la sesión aún abierta, el aviso viejo tampoco se pinta.
+            // RV-3: con la identidad sin soltar y la sesión aún abierta (SignedIn("A")), el aviso viejo tampoco se pinta.
+            assertEquals(SessionState.SignedIn("A"), session.state.value)
+            assertFalse(rig.presenter.onPush(payload(oldInstall)))
             session.signOutIf("A")
             assertFalse(rig.presenter.onPush(payload(oldInstall)))
 

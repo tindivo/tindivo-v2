@@ -100,10 +100,12 @@ class PushPresenter(
      * misma cuenta vuelve a entrar. Pone [adoptedGeneration] en un centinela que no coincide con ninguna generación real,
      * así que [onPush] rechaza todo hasta la siguiente [adopt]. No suspende ni toma el `lock`: tiene que poder correr
      * cuando el candado lo tiene un cierre colgado. Un [onPush] que ya pasó la lectura suspendida también lo ve, porque
-     * su comprobación final, bajo el candado de la sesión, exige `adoptedGeneration == generation`.
+     * su comprobación final, bajo el candado de la sesión, exige `adoptedGeneration == generation`; y como [revoke]
+     * escribe bajo ese mismo candado (el último del orden global; nadie lo tiene tomado al llamarlo), un [onPush] que ya
+     * pasó esa comprobación termina de pintar antes, y el vaciado de la bandeja que sigue a [revoke] lo retira.
      */
     fun revoke() {
-        adoptedGeneration = REVOKED
+        publishLock.withLock { adoptedGeneration = REVOKED }
     }
 
     /** La identidad de antes de [generation] ya se invalidó: desde ahora se admiten los avisos de esa entrada. */

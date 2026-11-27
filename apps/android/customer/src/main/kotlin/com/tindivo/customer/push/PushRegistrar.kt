@@ -261,6 +261,8 @@ class PushRegistrar(
                 // token se intenta borrar y la identidad se suelta en el próximo cierre o arranque.
                 presenter.revoke()
                 unreleased = accountId
+                // Un aviso que esperaba el candado pudo pintarse entre el `finally` y `revoke`: se vacía otra vez.
+                presenter.clearTray()
                 deleteTokenAfterFailure(accountId)
                 null
             } ?: return
