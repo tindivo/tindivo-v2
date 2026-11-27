@@ -14,12 +14,14 @@
  *  · El prepago sigue por su camino: sus RPC no atienden a un `pending_yape` ni al revés.
  *  · Permisos: ni `anon` ni `authenticated` pueden llamar a las RPC.
  */
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
+import { setTimeout as espera } from 'node:timers/promises'
 import { createClient } from '@supabase/supabase-js'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   cleanup,
   localClient as db,
+  E2E,
   removeProofObjects,
   type SeededOrder,
   seedPrepaidOrder,
@@ -36,6 +38,88 @@ const OTHER_CUSTOMER = 'e2e00000-0000-4000-8000-000000000004'
 const OTHER_USER = 'e2e00000-0000-4000-8000-000000000002'
 
 const sembrados: SeededOrder[] = []
+
+/** Un pedido entregado de verdad: con motorizado y por el trigger de estados (como `entregar` de borrado de cuenta). */
+async function entregar(id: string) {
+  await db.from('orders').update({ driver_id: E2E.DRIVER_ID }).eq('id', id)
+  await setOrderStatus(id, 'delivered')
+}
+
+type Respuesta = { data: unknown; error: { code?: string; hint?: string } | null }
+
+/**
+ * Retiene la fila del pedido con `FOR UPDATE` en otra sesión durante `segundos`, espera a que la
+ * sesión esté de verdad dentro de `pg_sleep` (con el bloqueo ya tomado) y dispara `llamadas` a la vez.
+ * Comprueba que cada una terminó DESPUÉS de soltarse el bloqueo: sin esa espera la carrera no demuestra nada.
+ */
+async function conFilaRetenida(
+  id: string,
+  llamadas: Array<() => PromiseLike<Respuesta>>,
+  segundos = 2,
+): Promise<Respuesta[]> {
+  const app = `retencion-${id}`
+  const proc = spawn(
+    'docker',
+    [
+      'exec',
+      '-i',
+      DB_CONTAINER,
+      'psql',
+      '-U',
+      'postgres',
+      '-d',
+      'postgres',
+      '-v',
+      'ON_ERROR_STOP=1',
+    ],
+    { stdio: ['pipe', 'ignore', 'pipe'] },
+  )
+  let stderr = ''
+  proc.stderr.on('data', (d) => {
+    stderr += String(d)
+  })
+  const terminado = new Promise<void>((resolve, reject) => {
+    proc.on('error', reject)
+    proc.on('close', (code) =>
+      code === 0 ? resolve() : reject(new Error(`la retención terminó con ${code}: ${stderr}`)),
+    )
+  })
+  proc.stdin.end(
+    `SET application_name = '${app}'; BEGIN; SELECT 1 FROM public.orders WHERE id = '${id}' FOR UPDATE; SELECT pg_sleep(${segundos}); COMMIT;\n`,
+  )
+
+  // Espera (hasta 10 s) a que la sesión esté dormida dentro de la transacción: el bloqueo ya está tomado.
+  let reteniendo = false
+  for (let i = 0; i < 200 && !reteniendo; i++) {
+    const n = execFileSync(
+      'docker',
+      [
+        'exec',
+        DB_CONTAINER,
+        'psql',
+        '-U',
+        'postgres',
+        '-tAc',
+        `select count(*) from pg_stat_activity where application_name = '${app}' and wait_event = 'PgSleep'`,
+      ],
+      { encoding: 'utf8' },
+    ).trim()
+    reteniendo = n === '1'
+    if (!reteniendo) await espera(50)
+  }
+  expect(reteniendo, 'la sesión nunca llegó a retener la fila').toBe(true)
+
+  const t0 = Date.now()
+  const respuestas = await Promise.all(
+    llamadas.map(async (llamar) => {
+      const r = await llamar()
+      return { r, ms: Date.now() - t0 }
+    }),
+  )
+  await terminado
+  for (const { ms } of respuestas) expect(ms).toBeGreaterThanOrEqual(1500)
+  return respuestas.map(({ r }) => r)
+}
 
 type Estado = 'confirmed' | 'preparing' | 'waiting_driver' | 'picked_up'
 
@@ -209,12 +293,74 @@ describe('register_delivery_payment_proof', () => {
     expect(error?.hint).toBe('order_not_accepted')
   })
 
-  it('sobre un pedido entregado o cancelado falla con order_closed y no escribe', async () => {
+  it('sobre un pedido cancelado falla con order_closed y no escribe', async () => {
     const { orderId: id } = await pedido('preparing')
     await setOrderStatus(id, 'cancelled')
+    const antes = await leer(id)
     const { error } = await registrar(id, await subir(id))
+    expect(error?.code).toBe('P0001')
     expect(error?.hint).toBe('order_closed')
+    expect(await leer(id)).toEqual(antes)
     expect(await eventos(id, 'OrderPaymentProofUploaded')).toHaveLength(0)
+  })
+
+  it('sobre un pedido entregado falla con order_closed y no escribe', async () => {
+    const { orderId: id } = await pedido('picked_up')
+    await entregar(id)
+    const antes = await leer(id)
+    const { error } = await registrar(id, await subir(id))
+    expect(error?.code).toBe('P0001')
+    expect(error?.hint).toBe('order_closed')
+    expect(await leer(id)).toEqual(antes)
+    expect(await eventos(id, 'OrderPaymentProofUploaded')).toHaveLength(0)
+  })
+
+  it('dos register de la misma ruta con la fila retenida: un solo evento y un replayed', async () => {
+    const { orderId: id } = await pedido('preparing')
+    const path = await subir(id)
+    const [a, b] = await conFilaRetenida(id, [() => registrar(id, path), () => registrar(id, path)])
+    expect(a?.error).toBeNull()
+    expect(b?.error).toBeNull()
+    const replayed = [a, b].filter((r) => (r?.data as { replayed?: boolean } | null)?.replayed)
+    expect(replayed).toHaveLength(1)
+    expect(await eventos(id, 'OrderPaymentProofUploaded')).toHaveLength(1)
+    expect(await rastro(id, 'order.delivery_payment_proof_uploaded')).toHaveLength(1)
+    expect(await leer(id)).toMatchObject({ status: 'preparing', proof_attempt: 1 })
+    expect(await cargos(id)).toHaveLength(0)
+  })
+
+  it('register del intento 2 y reject del intento 1 a la vez: nunca queda rejected sobre el 2', async () => {
+    const seed = await pedido('preparing')
+    const id = seed.orderId
+    expect((await registrar(id, await subir(id, 1))).error).toBeNull()
+    const segunda = await subir(id, 2)
+    const [reg, rej] = await conFilaRetenida(id, [
+      () => registrar(id, segunda),
+      () => rechazar(id, seed.userId, 1),
+    ])
+    expect(reg?.error).toBeNull()
+    if (rej?.error) expect(rej.error.hint).toBe('proof_attempt_mismatch')
+    expect(await leer(id)).toMatchObject({
+      status: 'preparing',
+      proof_attempt: 2,
+      payment_proof_status: 'pending',
+    })
+    expect(await cargos(id)).toHaveLength(0)
+  })
+
+  it('dos register del intento 3 a la vez: los dos fallan y el contador sigue en 2', async () => {
+    const { orderId: id } = await pedido('preparing')
+    expect((await registrar(id, await subir(id, 1))).error).toBeNull()
+    expect((await registrar(id, await subir(id, 2))).error).toBeNull()
+    const [a, b] = await Promise.all([
+      registrar(id, await subir(id, 3)),
+      registrar(id, await subir(id, 3)),
+    ])
+    for (const r of [a, b]) {
+      expect(r.error?.code).toBe('P0001')
+      expect(['proof_attempts_exhausted', 'invalid_proof_path']).toContain(r.error?.hint)
+    }
+    expect((await leer(id))?.proof_attempt).toBe(2)
   })
 
   it('con el ingreso ya confirmado no admite otra captura (payment_already_confirmed)', async () => {
@@ -292,13 +438,60 @@ describe('confirm_delivery_payment', () => {
     expect((await leer(seed.orderId))?.payment_verified_at).toBeNull()
   })
 
-  it('sobre un pedido entregado falla con order_closed y no lo toca', async () => {
+  it('sobre un pedido cancelado falla con order_closed y no lo toca', async () => {
     const seed = await pedido('preparing')
     await db.from('orders').update({ status: 'cancelled' }).eq('id', seed.orderId)
+    const antes = await leer(seed.orderId)
     const { error } = await confirmar(seed.orderId, seed.userId)
+    expect(error?.code).toBe('P0001')
     expect(error?.hint).toBe('order_closed')
+    expect(await leer(seed.orderId)).toEqual(antes)
     expect((await leer(seed.orderId))?.payment_verified_at).toBeNull()
     expect(await eventos(seed.orderId, 'OrderPaymentConfirmed')).toHaveLength(0)
+  })
+
+  it('sobre un pedido entregado falla con order_closed y no lo toca', async () => {
+    const seed = await pedido('picked_up')
+    await entregar(seed.orderId)
+    const antes = await leer(seed.orderId)
+    const { error } = await confirmar(seed.orderId, seed.userId)
+    expect(error?.code).toBe('P0001')
+    expect(error?.hint).toBe('order_closed')
+    expect(await leer(seed.orderId)).toEqual(antes)
+    expect(await eventos(seed.orderId, 'OrderPaymentConfirmed')).toHaveLength(0)
+  })
+
+  it('dos confirm con la fila retenida: un solo evento y un replayed', async () => {
+    const seed = await pedido('preparing')
+    const id = seed.orderId
+    const [a, b] = await conFilaRetenida(id, [
+      () => confirmar(id, seed.userId),
+      () => confirmar(id, seed.userId),
+    ])
+    expect(a?.error).toBeNull()
+    expect(b?.error).toBeNull()
+    const replayed = [a, b].filter((r) => (r?.data as { replayed?: boolean } | null)?.replayed)
+    expect(replayed).toHaveLength(1)
+    expect(await eventos(id, 'OrderPaymentConfirmed')).toHaveLength(1)
+    expect(await leer(id)).toMatchObject({ status: 'preparing', payment_proof_status: 'verified' })
+    expect(await cargos(id)).toHaveLength(0)
+  })
+
+  it('confirm y reject a la vez: queda verified sea cual sea el orden', async () => {
+    const seed = await pedido('preparing')
+    const id = seed.orderId
+    expect((await registrar(id, await subir(id, 1))).error).toBeNull()
+    const [conf, rej] = await conFilaRetenida(id, [
+      () => confirmar(id, seed.userId),
+      () => rechazar(id, seed.userId, 1),
+    ])
+    expect(conf?.error).toBeNull()
+    if (rej?.error) expect(rej.error.hint).toBe('payment_already_confirmed')
+    const o = await leer(id)
+    expect(o?.payment_verified_at).not.toBeNull()
+    expect(o).toMatchObject({ status: 'preparing', payment_proof_status: 'verified' })
+    expect(await eventos(id, 'OrderPaymentConfirmed')).toHaveLength(1)
+    expect(await cargos(id)).toHaveLength(0)
   })
 
   it('no confirma un pedido que el negocio todavía no aceptó (order_not_accepted)', async () => {
@@ -378,6 +571,32 @@ describe('reject_delivery_payment_proof', () => {
     await registrar(seed.orderId, await subir(seed.orderId, 1))
     const { error } = await rechazar(seed.orderId, OTHER_USER, 1)
     expect(error?.code).toBe('P0002')
+  })
+})
+
+describe('reject_delivery_payment_proof sobre pedidos cerrados', () => {
+  it('sobre un pedido cancelado falla con order_closed y no lo toca', async () => {
+    const seed = await pedido('preparing')
+    expect((await registrar(seed.orderId, await subir(seed.orderId))).error).toBeNull()
+    await setOrderStatus(seed.orderId, 'cancelled')
+    const antes = await leer(seed.orderId)
+    const { error } = await rechazar(seed.orderId, seed.userId, 1)
+    expect(error?.code).toBe('P0001')
+    expect(error?.hint).toBe('order_closed')
+    expect(await leer(seed.orderId)).toEqual(antes)
+    expect(await eventos(seed.orderId, 'OrderPaymentProofRejected')).toHaveLength(0)
+  })
+
+  it('sobre un pedido entregado falla con order_closed y no lo toca', async () => {
+    const seed = await pedido('picked_up')
+    expect((await registrar(seed.orderId, await subir(seed.orderId))).error).toBeNull()
+    await entregar(seed.orderId)
+    const antes = await leer(seed.orderId)
+    const { error } = await rechazar(seed.orderId, seed.userId, 1)
+    expect(error?.code).toBe('P0001')
+    expect(error?.hint).toBe('order_closed')
+    expect(await leer(seed.orderId)).toEqual(antes)
+    expect(await eventos(seed.orderId, 'OrderPaymentProofRejected')).toHaveLength(0)
   })
 })
 
