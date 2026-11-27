@@ -507,6 +507,8 @@ export type PagoUnicoStage =
   | 'captura_por_revisar'
   | 'captura_rechazada'
   | 'confirmado'
+  /** Se pidió confirmar y no se sabe si el servidor lo guardó (se perdió la respuesta). */
+  | 'confirmacion_incierta'
   /** Entregado: el motorizado cobró en la puerta (`paymentReal` dice cómo). */
   | 'cobrado_en_puerta'
   /** Terminal sin ingreso confirmado ni cobro real. */
@@ -542,6 +544,7 @@ export function pagoUnicoView(
     | 'proofAttempt'
     | 'paymentReal'
   >,
+  opts?: { confirmUncertain?: boolean },
 ): PagoUnicoView | null {
   // El manual no tiene app del cliente: su flujo no se toca.
   if (
@@ -570,6 +573,10 @@ export function pagoUnicoView(
       : pendiente
         ? 'captura_por_revisar'
         : 'sin_captura'
+  // Resultado incierto de «Sí, me llegó»: no se afirma nada del cobro en puerta.
+  if (opts?.confirmUncertain) {
+    return { stage: 'confirmacion_incierta', canConfirm: true, canReject: false, attempt }
+  }
   return { stage, canConfirm: true, canReject: pendiente && attempt >= 1, attempt }
 }
 

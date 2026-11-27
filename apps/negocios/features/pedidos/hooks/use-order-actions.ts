@@ -41,7 +41,7 @@ export interface OrderActions {
    * captura. Solo el negocio lo confirma. No cambia el estado del pedido, así
    * que no cierra el detalle.
    */
-  onConfirmDeliveryPayment: () => Promise<void>
+  onConfirmDeliveryPayment: () => Promise<boolean>
   /**
    * PAGO ÚNICO · rechaza la captura del intento vigente (`attempt`); el
    * servidor devuelve 409 si ya no es el vigente. Tampoco cierra el detalle.
@@ -234,12 +234,29 @@ export function useOrderActions({
         await refetchOrders()
       })
     },
+    // Devuelve `true` solo si el servidor respondió bien Y el refresco trajo el
+    // resultado. Si se pierde la respuesta o falla el refresco, `false`: la
+    // tarjeta no puede afirmar nada del cobro (CAX-006). `run` ya pinta el error.
     onConfirmDeliveryPayment: async () => {
+      let ok = false
       await run(async () => {
         if (!selected) return
-        await post(`/business/orders/${selected.rowId}/payment-confirmation`, undefined)
-        await refetchOrders()
+        let posted = false
+        try {
+          await post(`/business/orders/${selected.rowId}/payment-confirmation`, undefined)
+          posted = true
+        } finally {
+          // El servidor pudo guardar la confirmación aunque la respuesta se
+          // perdiera: se relee siempre, sin ocultar el error del POST.
+          try {
+            await refetchOrders()
+            ok = posted
+          } catch {
+            ok = false
+          }
+        }
       })
+      return ok
     },
     onRejectDeliveryProof: async (attempt, reasonCode) => {
       await run(async () => {

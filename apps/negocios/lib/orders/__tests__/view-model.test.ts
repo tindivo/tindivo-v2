@@ -1219,6 +1219,21 @@ describe('pagoUnicoView · la captura del pago único', () => {
     paymentReal: null as 'pending_wallet' | 'pending_cash' | 'pending_mixed' | null,
   }
 
+  it('CAX-006: confirmación incierta sin yaCobrado: stage incierto, se puede reintentar y no rechazar', () => {
+    const v = pagoUnicoView(
+      { ...base, proofUrl: 'p/1.jpg', proofStatus: 'rejected', proofAttempt: 1 },
+      { confirmUncertain: true },
+    )
+    expect(v?.stage).toBe('confirmacion_incierta')
+    expect(v?.canConfirm).toBe(true)
+    expect(v?.canReject).toBe(false)
+  })
+
+  it('CAX-006: confirmación incierta con yaCobrado: ya está confirmado', () => {
+    const v = pagoUnicoView({ ...base, yaCobrado: true }, { confirmUncertain: true })
+    expect(v?.stage).toBe('confirmado')
+  })
+
   it('antes de aceptar no hay acciones', () => {
     const v = pagoUnicoView({ ...base, status: 'pending_acceptance' })
     expect(v?.stage).toBe('antes_de_aceptar')

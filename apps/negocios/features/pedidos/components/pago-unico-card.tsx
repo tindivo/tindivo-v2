@@ -7,7 +7,12 @@ import {
 import { Button, cn, Icon } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { soles } from '@/components/dashboard/primitives'
-import type { OrderVM, PagoUnicoView, UiPayment } from '@/lib/orders/view-model'
+import {
+  type OrderVM,
+  type PagoUnicoView,
+  pagoUnicoView,
+  type UiPayment,
+} from '@/lib/orders/view-model'
 import { getProofUrl } from '../lib/proof-url'
 
 const REJECT_LABELS: Record<DeliveryPaymentRejectReason, string> = {
@@ -35,19 +40,36 @@ const COBRO_EN_PUERTA: Record<UiPayment, string> = {
  */
 export function PagoUnicoCard({
   order,
-  view,
+  view: baseView,
   onConfirm,
   onReject,
   busy,
 }: {
   order: OrderVM
   view: PagoUnicoView
-  onConfirm?: () => void | Promise<void>
+  onConfirm?: () => Promise<boolean>
   onReject?: (attempt: number, reasonCode: DeliveryPaymentRejectReason) => void | Promise<void>
   busy: boolean
 }) {
   const [asking, setAsking] = useState(false)
   const [choosingReason, setChoosingReason] = useState(false)
+  // «Sí, me llegó» sin respuesta clara: no sabemos si el servidor lo guardó.
+  const [confirmUncertain, setConfirmUncertain] = useState(false)
+  const view = pagoUnicoView(order, { confirmUncertain }) ?? baseView
+
+  // Llegó la confirmación: la incertidumbre se resolvió.
+  useEffect(() => {
+    if (order.yaCobrado) setConfirmUncertain(false)
+  }, [order.yaCobrado])
+
+  async function confirm() {
+    if (!onConfirm) return
+    try {
+      setConfirmUncertain(!(await onConfirm()))
+    } catch {
+      setConfirmUncertain(true)
+    }
+  }
 
   // Si cambia el momento del pago (confirmó, rechazó, otro intento), los pasos
   // a medias ya no valen.
@@ -115,6 +137,13 @@ export function PagoUnicoCard({
           </>
         )}
 
+        {stage === 'confirmacion_incierta' && (
+          <p className="text-[13px] font-semibold text-ink">
+            No sabemos si se guardó tu confirmación. Revisa tu Yape o Plin y vuelve a confirmar.
+            Mientras tanto, no le digas al motorizado que cobre ni que no cobre.
+          </p>
+        )}
+
         {stage === 'captura_rechazada' && (
           <p className="text-[13px] text-ink-muted">
             {view.attempt >= 2
@@ -142,7 +171,11 @@ export function PagoUnicoCard({
 
         {view.canConfirm && onConfirm && !asking && !choosingReason && (
           <div className="mt-3 flex flex-col gap-2">
-            {stage === 'captura_por_revisar' ? (
+            {stage === 'confirmacion_incierta' ? (
+              <Button variant="success" disabled={busy} onClick={() => void confirm()}>
+                Volver a confirmar
+              </Button>
+            ) : stage === 'captura_por_revisar' ? (
               <>
                 <Button variant="success" disabled={busy} onClick={() => setAsking(true)}>
                   Confirmar ingreso
@@ -171,7 +204,7 @@ export function PagoUnicoCard({
                 variant="success"
                 className="flex-1"
                 disabled={busy}
-                onClick={() => void onConfirm()}
+                onClick={() => void confirm()}
               >
                 Sí, me llegó
               </Button>
@@ -222,19 +255,32 @@ function ProofThumb({ order }: { order: OrderVM }) {
   const [failed, setFailed] = useState(false)
   const [zoom, setZoom] = useState(false)
   const path = order.proofUrl
-
-  const load = useCallback(() => {
-    if (!path) return
-    setFailed(false)
-    setUrl(null)
-    getProofUrl(order.rowId, path)
-      .then((u) => (u ? setUrl(u) : setFailed(true)))
-      .catch(() => setFailed(true))
-  }, [order.rowId, path])
+  const rowId = order.rowId
+  // La respuesta de una captura anterior (otro pedido u otro archivo) nunca se
+  // pinta: la bandera `cancelled` la descarta al cambiar la identidad.
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    load()
-  }, [load])
+    setFailed(false)
+    setUrl(null)
+    setZoom(false)
+    if (!path) return
+    let cancelled = false
+    getProofUrl(rowId, path)
+      .then((u) => {
+        if (cancelled) return
+        if (u) setUrl(u)
+        else setFailed(true)
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [rowId, path, attempt])
+
+  const load = useCallback(() => setAttempt((n) => n + 1), [])
 
   if (failed) {
     return (

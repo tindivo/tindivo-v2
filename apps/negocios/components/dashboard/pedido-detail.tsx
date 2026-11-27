@@ -61,7 +61,7 @@ export interface DetailActions {
    * PAGO ÚNICO · el negocio confirma que el Yape o Plin entró. Opcional: el
    * historial (solo lectura) no lo pasa y la tarjeta no se pinta.
    */
-  onConfirmDeliveryPayment?: () => void | Promise<void>
+  onConfirmDeliveryPayment?: () => Promise<boolean>
   /** PAGO ÚNICO · rechaza la captura del intento vigente. Opcional, igual. */
   onRejectDeliveryProof?: (
     attempt: number,
@@ -764,6 +764,7 @@ export function DetailScreen({
         {/* Pago único (solo delivery web): el recojo y el manual no pasan por aquí. */}
         {pagoUnico && actions.onConfirmDeliveryPayment && (
           <PagoUnicoCard
+            key={order.rowId}
             order={order}
             view={pagoUnico}
             onConfirm={actions.onConfirmDeliveryPayment}
