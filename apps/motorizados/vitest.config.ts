@@ -17,8 +17,13 @@ import { defineConfig } from 'vitest/config'
  * propagarla. Cuando se añadió aquí había 63 ficheros en `negocios` y 49 en
  * `motorizados` que no se podían cubrir por esto, incluidos los `lib/sign-out.ts`
  * de ambas.
+ *
+ * Además, las pruebas de componentes (`.test.tsx`): `tsconfig.json` deja el JSX en
+ * `preserve` (lo compila Next), y Vitest no sabría transformarlo; se pide el
+ * runtime automático de React solo para las pruebas.
  */
 export default defineConfig({
+  oxc: { jsx: { runtime: 'automatic' } },
   resolve: {
     alias: {
       '@': resolve(__dirname, './'),
