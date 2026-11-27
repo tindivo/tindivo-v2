@@ -31,46 +31,6 @@ struct BusinessRequirementsTests {
         try #require(model.visible?.categories.first?.items.first { $0.id == id })
     }
 
-    // MARK: Hoja de información (CUS-CAT-004, CUS-CAT-027)
-
-    @Test("CUS-CAT-027 la hoja de información se abre y se cierra, y trae la semana y los modos sin contacto")
-    func infoSheet() async throws {
-        let model = await loaded(menu())
-        #expect(!model.isShowingInfo)
-        model.showInfo()
-        #expect(model.isShowingInfo)
-        let info = try #require(model.info)
-        #expect(info.week.count == 7)
-        #expect(info.week.filter(\.isToday).map(\.name) == ["Martes"])
-        #expect(info.modes == [.delivery(eta: nil), .pickup], "Fixture sin plazo: solo el modo")
-        model.hideInfo()
-        #expect(!model.isShowingInfo)
-    }
-
-    @Test("CUS-CAT-027 sin carta cargada no hay hoja que abrir")
-    func infoNeedsMenu() {
-        let model = BusinessScreenModel(
-            id: "x", catalog: StubCatalog(), cartStore: temporaryStore(), clock: .fixed(Fixture.tuesdayEvening)
-        )
-        model.showInfo()
-        #expect(!model.isShowingInfo)
-        #expect(model.info == nil)
-    }
-
-    @Test("CUS-CAT-017 el plazo del negocio acompaña a «Delivery» en la hoja")
-    func etaInInfo() async throws {
-        var raw = menu()
-        raw = BusinessMenu(
-            business: .init(
-                id: "negocio-1", name: "Don Lucho", accentColor: "F97316", primaryCapability: .catalogFull,
-                estimatedEtaMin: 25, estimatedEtaMax: 40
-            ),
-            categories: raw.categories, schedule: raw.schedule
-        )
-        let model = await loaded(raw)
-        #expect(model.info?.modes == [.delivery(eta: "25–40 min"), .pickup])
-    }
-
     // MARK: Barra (CA-CAT-P5)
 
     @Test("CA-CAT-P5 la barra dice «Abierto · cierra 23:00» abierto y «Cerrado · abre …» cerrado")

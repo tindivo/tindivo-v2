@@ -39,9 +39,6 @@ struct BusinessView: View {
                     jump(to: index)
                 }
             }
-            .sheet(isPresented: Binding(get: { model.isShowingInfo }, set: { if !$0 { model.hideInfo() } })) {
-                if let info = model.info { BusinessInfoSheet(info: info, onClose: model.hideInfo) }
-            }
             .fullScreenCover(item: openDish) { item in
                 DishView(
                     model: model.dishModel ?? model.makeDishModel(for: item),

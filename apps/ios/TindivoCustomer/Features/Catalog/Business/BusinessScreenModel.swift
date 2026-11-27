@@ -49,8 +49,6 @@ final class BusinessScreenModel {
     private(set) var hasSearchTerms = false
     /// «Abierto · cierra 23:00» / «Cerrado · abre hoy 18:00»; `nil` sin horario o en modo catálogo (CA-CAT-P5).
     private(set) var statusLine: String?
-    /// La hoja «Información» está abierta (CUS-CAT-027).
-    private(set) var isShowingInfo = false
 
     private let id: String
     private let catalog: any CatalogRepository
@@ -296,28 +294,6 @@ final class BusinessScreenModel {
         )
     }
 
-    // MARK: Información del negocio
-
-    func showInfo() {
-        guard visible != nil else { return }
-        isShowingInfo = true
-    }
-
-    func hideInfo() {
-        isShowingInfo = false
-    }
-
-    /// Lo de la hoja «Información»: el horario semanal con hoy resaltado y cómo se recibe el pedido, sin contacto.
-    var info: BusinessInfo? {
-        visible.map { detail in
-            BusinessInfo(
-                name: detail.name,
-                modes: deliveryModes(capability: detail.capability, etaMin: detail.etaMin, etaMax: detail.etaMax),
-                week: weekSchedule(days: detail.schedule, now: now),
-                status: statusLine
-            )
-        }
-    }
 }
 
 private extension Array {

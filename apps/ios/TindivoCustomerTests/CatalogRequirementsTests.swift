@@ -3,72 +3,10 @@ import Testing
 import TindivoAPI
 @testable import TindivoCustomer
 
-/// Los requisitos del catálogo que no vivían en ninguna prueba: horario semanal, modos de entrega, textos de estado,
-/// plurales, etiquetas y «Desde». El ID del requisito va en el nombre de cada prueba.
-@Suite("Catálogo: horario, estados y textos")
+/// Los requisitos del catálogo que no vivían en ninguna prueba: textos de estado, plurales, etiquetas y «Desde». El ID
+/// del requisito va en el nombre de cada prueba.
+@Suite("Catálogo: estados y textos")
 struct CatalogRequirementsTests {
-    private func day(_ dow: Int, _ s1: (String, String)? = nil, _ s2: (String, String)? = nil) -> ScheduleDay {
-        ScheduleDay(
-            dayOfWeek: dow, isOpen: s1 != nil,
-            shift1Start: s1?.0, shift1End: s1?.1, shift2Start: s2?.0, shift2End: s2?.1
-        )
-    }
-
-    /// Martes a sábado de 18:00 a 23:00; el sábado también de 11:00 a 15:00; lunes y domingo sin turno.
-    private var week: [ScheduleDay] {
-        [
-            day(0),
-            day(1, ("18:00", "23:00")), day(2, ("18:00:00", "23:00:00")), day(3, ("18:00", "23:00")),
-            day(4, ("18:00", "23:00")), day(5, ("11:00", "15:00"), ("18:00", "23:00")),
-        ]
-    }
-
-    // MARK: Horario semanal (CUS-CAT-021, CA-CAT-P6)
-
-    @Test("CA-CAT-P6 la hoja lista los siete días de lunes a domingo, con hoy marcado y «Cerrado» sin turno")
-    func weekHasSevenDays() {
-        let rows = weekSchedule(days: week, now: at("2026-07-07", "20:00"))
-        #expect(rows.map(\.name) == ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-        #expect(rows.filter(\.isToday).map(\.name) == ["Martes"])
-        #expect(rows[0].isClosed)
-        #expect(rows[6].isClosed)
-        #expect(rows[1].shifts == ["18:00 – 23:00"])
-        #expect(rows[2].shifts == ["18:00 – 23:00"], "los segundos del servidor no se muestran")
-        #expect(rows[5].shifts == ["11:00 – 15:00", "18:00 – 23:00"])
-    }
-
-    @Test("CA-CAT-P6 hoy es el de Lima, no el del dispositivo: a las 23:30 de Lima del domingo ya es otro día en UTC")
-    func todayIsLima() {
-        let rows = weekSchedule(days: week, now: at("2026-07-12", "23:30"))
-        #expect(rows.filter(\.isToday).map(\.name) == ["Domingo"])
-    }
-
-    @Test("CUS-CAT-021 sin horario todos los días dicen «Cerrado»; un turno ilegible tampoco inventa horas")
-    func weekWithoutSchedule() {
-        #expect(weekSchedule(days: [], now: at("2026-07-07", "12:00")).allSatisfy { $0.isClosed })
-        let broken = weekSchedule(days: [day(1, ("xx", "23:00"))], now: at("2026-07-07", "12:00"))
-        #expect(broken[1].isClosed)
-    }
-
-    // MARK: Modos de entrega (CUS-CAT-017)
-
-    @Test("CUS-CAT-017 los modos de entrega salen de la capacidad, solo como información")
-    func deliveryModesByCapability() {
-        let eta = "25–40 min"
-        #expect(deliveryModes(capability: .catalogFull, etaMin: 25, etaMax: 40) == [.delivery(eta: eta), .pickup])
-        #expect(deliveryModes(capability: .catalogDelivery, etaMin: 25, etaMax: 40) == [.delivery(eta: eta)])
-        #expect(deliveryModes(capability: .catalogPickup, etaMin: 25, etaMax: 40) == [.pickup])
-        #expect(deliveryModes(capability: .pickupLocal, etaMin: nil, etaMax: nil) == [.pickup])
-    }
-
-    @Test("CUS-CAT-017 modo catálogo, capacidad desconocida o ausente no ofrecen ningún modo ni inventan el envío")
-    func noModes() {
-        #expect(deliveryModes(capability: .catalogOnly, etaMin: 1, etaMax: 2).isEmpty)
-        #expect(deliveryModes(capability: .unknown("nueva"), etaMin: 1, etaMax: 2).isEmpty)
-        #expect(deliveryModes(capability: nil, etaMin: 1, etaMax: 2).isEmpty)
-        #expect(deliveryModes(capability: .catalogDelivery, etaMin: nil, etaMax: nil) == [.delivery(eta: nil)])
-    }
-
     // MARK: Estado de apertura en texto (CA-CAT-P2, CA-CAT-P5)
 
     @Test("CA-CAT-P2 «Cerrado · abre [día] [hora]»: hoy, mañana o el día de la semana")
