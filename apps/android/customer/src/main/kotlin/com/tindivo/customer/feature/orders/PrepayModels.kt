@@ -170,6 +170,9 @@ internal data class PrepayActions(
 private const val AWAITING_PAYMENT = "awaiting_payment"
 private const val PENDING = "pending"
 private const val REJECTED = "rejected"
+
+/** El pedido ya terminó: no queda nada que pagar, ni siquiera «al motorizado» (CAX-002). */
+private val FINISHED_STATUSES = setOf("cancelled", "delivered")
 private const val MILLIS_PER_MINUTE = 60_000L
 
 /**
@@ -178,7 +181,7 @@ private const val MILLIS_PER_MINUTE = 60_000L
  * se reemplaza por otra: sin una de las dos no hay cuenta regresiva.
  */
 internal fun GetPrepayInfo200ResponseData.toPrepayState(paymentMinutes: Int?): PrepayInfoState {
-    if (proofOptional) return optionalState()
+    if (proofOptional) return if (status in FINISHED_STATUSES) PrepayInfoState.NotAwaiting else optionalState()
     if (status != AWAITING_PAYMENT || !canUploadProof) return PrepayInfoState.NotAwaiting
     val started = awaitingPaymentAt?.let(::apiInstantOrNull)
     val deadline = paymentMinutes?.let { started?.plus(Duration.ofMinutes(it.toLong())) }

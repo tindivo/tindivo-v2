@@ -11,6 +11,7 @@ import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -75,9 +76,10 @@ abstract class PrepayHarness {
 
     /** Un ViewModel recién creado con sus falsos; [seen] guarda cada estado publicado, en orden. */
     internal inner class Env(
-        scope: TestScope,
+        private val scope: TestScope,
         session: SessionState = SessionState.SignedIn(PREPAY_ACCOUNT),
         orderId: String? = ORDER_ID.toString(),
+        observe: Boolean = true,
     ) {
         val gates = StepGates()
         val gateway = FakePrepayGateway(gates)
@@ -95,10 +97,25 @@ abstract class PrepayHarness {
             )
         val seen = mutableListOf<PrepayUiState>()
 
+        private var collector: Job? = null
+
         init {
-            scope.backgroundScope.launch(UnconfinedTestDispatcher(scope.testScheduler)) {
-                viewModel.state.collect { seen += it }
-            }
+            if (observe) startObserving()
+        }
+
+        /** Alguien empieza a mirar `state` (la pantalla a la vista). */
+        fun startObserving() {
+            if (collector?.isActive == true) return
+            collector =
+                scope.backgroundScope.launch(UnconfinedTestDispatcher(scope.testScheduler)) {
+                    viewModel.state.collect { seen += it }
+                }
+        }
+
+        /** Nadie mira `state` (la pantalla en segundo plano: `collectAsStateWithLifecycle` se desuscribe). */
+        fun stopObserving() {
+            collector?.cancel()
+            collector = null
         }
 
         val state: PrepayUiState

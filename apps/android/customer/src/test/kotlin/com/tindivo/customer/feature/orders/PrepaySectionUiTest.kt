@@ -150,6 +150,18 @@ class PrepaySectionUiTest {
     }
 
     @Test
+    fun `CAX-001c con el pago confirmado no hay cuenta, monto, Subir captura ni Pagare al motorizado`() {
+        show(details(paymentConfirmed = true), photo = "content://captura/1")
+        count("El negocio confirmó tu pago.").assertCountEquals(1)
+        count("987654321").assertCountEquals(0)
+        count("Rosa P.").assertCountEquals(0)
+        count("S/ 43.50").assertCountEquals(0)
+        count("Subir captura").assertCountEquals(0)
+        count("Pagaré al motorizado al llegar").assertCountEquals(0)
+        count("Enviar comprobante").assertCountEquals(0)
+    }
+
+    @Test
     fun `CA-PAY-12 sin permiso para subir no hay selector y se dice como pagar`() {
         show(details(canUpload = false))
         count("Le pagas al motorizado cuando llegue.").assertCountEquals(1)

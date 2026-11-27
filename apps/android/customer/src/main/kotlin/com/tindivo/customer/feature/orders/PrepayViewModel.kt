@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -134,7 +135,7 @@ internal class PrepayViewModel
             sendJob =
                 viewModelScope.launch {
                     val step = sender.deliver(account, id, photo) { isCurrent(started, account) }
-                    if (isCurrent(started, account)) publish(step, account)
+                    if (isCurrent(started, account)) publish(step, account, started)
                 }
         }
 
@@ -186,29 +187,38 @@ internal class PrepayViewModel
         private suspend fun cachedPaymentMinutes(): Int? =
             paymentMinutes ?: gateway.paymentMinutes().also { paymentMinutes = it }
 
-        /** El pago opcional con la captura a la espera del negocio: lo que dice `prepay-info` aún no es un veredicto. */
-        private fun waitsForBusiness(state: PrepayUiState): Boolean {
+        /**
+         * La tarjeta del pago opcional sigue a la vista y vale la pena preguntar: hay oferta (`Ready` opcional) y el pago
+         * aún no está confirmado. Haya o no captura enviada: una confirmación del negocio debe llegar siempre (CAX-001).
+         */
+        private fun shouldPoll(state: PrepayUiState): Boolean {
             val details = (state.info as? PrepayInfoState.Ready)?.details ?: return false
-            return details.optional && (state.send is SendState.Sent || details.proofInReview)
+            return details.optional && !details.paymentConfirmed
         }
 
         /**
-         * Mientras la captura del pago opcional espera al negocio, vuelve a pedir `prepay-info` cada [ORDER_POLL_MILLIS]
-         * (con [PollingDelay]: no corre con la pantalla en segundo plano),
-         * en silencio: sin pasar por `Loading` y, si falla, dejando el estado como está. Si ya no está en revisión
-         * (confirmado, rechazado o retirado), se olvida la captura enviada y se publica lo nuevo. Va atado a la sesión y
-         * a [infoRequest] como [startLoad]: un [load] nuevo lo reemplaza.
+         * Mientras la tarjeta del pago opcional esté a la vista y el pedido no haya terminado, vuelve a pedir
+         * `prepay-info` cada [ORDER_POLL_MILLIS], en silencio: sin pasar por `Loading` y, si falla, dejando el estado
+         * como está. Lo que diga el servidor se publica con [applyPolled]. Se detiene al confirmarse el pago, al
+         * terminar el pedido, ante un 401 o ante un error que no sea de red; va atado a la sesión y a [infoRequest]
+         * como [startLoad]: un [load] nuevo lo reemplaza.
+         *
+         * Solo pregunta mientras alguien observa [state] (CAX-003): antes de cada petición espera a que haya un
+         * suscriptor. La pantalla usa `collectAsStateWithLifecycle`, que se desuscribe en segundo plano. [PollingDelay]
+         * NO lo detiene: su binding productivo es un `delay` simple (`di/PollingModule.kt`), que corre aunque la
+         * pantalla no se vea; lo que corta el sondeo es la espera del suscriptor.
          */
         private fun startPolling() {
-            if (!waitsForBusiness(mutableState.value) || pollJob?.isActive == true) return
+            if (!shouldPoll(mutableState.value) || pollJob?.isActive == true) return
             val account = accountId ?: return
             val id = orderId ?: return
             val started = generation
             pollJob =
                 viewModelScope.launch {
-                    while (waitsForBusiness(mutableState.value)) {
+                    while (shouldPoll(mutableState.value)) {
                         pollingDelay.await(ORDER_POLL_MILLIS)
-                        if (!isCurrent(started, account) || !waitsForBusiness(mutableState.value)) return@launch
+                        mutableState.subscriptionCount.first { it > 0 }
+                        if (!isCurrent(started, account) || !shouldPoll(mutableState.value)) return@launch
                         val request = infoRequest
                         val result = gateway.info(account, id)
                         val minutes = if (result is ApiResult.Success) cachedPaymentMinutes() else null
@@ -230,12 +240,56 @@ internal class PrepayViewModel
                 }
         }
 
+        /**
+         * Publica lo que dijo el servidor. Una captura en revisión no cambia nada (el estado local ya la espera). Si no,
+         * la foto elegida y sin enviar ([SendState.Idle] o [SendState.Failed]) se conserva salvo que el pago esté
+         * confirmado o la oferta se haya retirado; una captura enviada que ya no está en revisión se olvida. Mientras se
+         * envía no se toca nada. Con la oferta retirada se cancela la cuenta regresiva.
+         */
         private fun applyPolled(info: PrepayInfoState) {
-            val inReview = (info as? PrepayInfoState.Ready)?.details?.let { it.optional && it.proofInReview } == true
-            if (inReview) return
-            sender.forget()
-            mutableState.update { it.copy(info = info, photo = null, send = SendState.Idle) }
-            startCountdown((info as? PrepayInfoState.Ready)?.details?.deadline)
+            val details = (info as? PrepayInfoState.Ready)?.details
+            if (details != null && details.optional && details.proofInReview) return
+            val send = mutableState.value.send
+            if (send is SendState.Sending) return
+            val offerGone = details == null || details.paymentConfirmed
+            val keepsPhoto = !offerGone && (send is SendState.Idle || send is SendState.Failed)
+            if (!keepsPhoto) sender.forget()
+            mutableState.update {
+                if (keepsPhoto) it.copy(info = info) else it.copy(info = info, photo = null, send = SendState.Idle)
+            }
+            startCountdown(details?.deadline)
+        }
+
+        /**
+         * El envío terminó sin saber si el servidor registró la captura (corte de red, 5xx…): se vuelve a leer
+         * `prepay-info` en silencio. Si ya la tiene en revisión, se pasa a esperar al negocio y se sondea; si no, se
+         * publica con [applyPolled] (sin borrar el aviso de fallo ni la foto, para poder reintentar).
+         */
+        private suspend fun reconcileAfterUncertainSend(
+            account: String,
+            started: Int,
+        ) {
+            val id = orderId ?: return
+            val request = infoRequest
+            val result = gateway.info(account, id)
+            val minutes = if (result is ApiResult.Success) cachedPaymentMinutes() else null
+            if (!isCurrent(started, account) || request != infoRequest) return
+            when (result) {
+                is ApiResult.Success -> {
+                    val info = result.data.toPrepayState(minutes)
+                    val details = (info as? PrepayInfoState.Ready)?.details
+                    if (details != null && details.optional && details.proofInReview) {
+                        mutableState.update { it.copy(info = info, send = SendState.Sent) }
+                        startPolling()
+                    } else {
+                        applyPolled(info)
+                    }
+                }
+
+                is ApiResult.Failure -> {
+                    handleSessionErrors(result.error, account)
+                }
+            }
         }
 
         /** Publica los minutos que quedan y se despierta solo cuando cambia el número; al vencer, para. */
@@ -260,6 +314,7 @@ internal class PrepayViewModel
         private suspend fun publish(
             step: SendStep,
             account: String,
+            started: Int,
         ) {
             when (step) {
                 SendStep.Done -> {
@@ -273,6 +328,10 @@ internal class PrepayViewModel
 
                 is SendStep.ApiFailed -> {
                     failApi(step.error, account)
+                    // Sin 4xx, o con un corte de red, no se sabe si el servidor registró la captura: se relee (CAX-001).
+                    val uncertain = step.error !is AppError.Known || step.error.status !in CLIENT_ERRORS
+                    val optional = ((mutableState.value.info as? PrepayInfoState.Ready)?.details?.optional) == true
+                    if (uncertain && optional && !ended) reconcileAfterUncertainSend(account, started)
                 }
 
                 SendStep.Abandoned -> {

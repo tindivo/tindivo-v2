@@ -150,7 +150,7 @@ class PrepayOptionalPollGuardsTest : PrepayHarness() {
         }
 
     @Test
-    fun `tras un rechazo con permiso para subir deja de consultar`() =
+    fun `tras un rechazo con permiso para subir sigue consultando mientras la tarjeta este a la vista`() =
         runTest {
             val env = sent()
             env.gateway.infoResult = optional(paymentProofStatus = "rejected")
@@ -159,7 +159,10 @@ class PrepayOptionalPollGuardsTest : PrepayHarness() {
             passTime(3)
 
             assertTrue(env.state.showsProofPicker)
-            assertEquals(2, env.gateway.count("info"))
+            // CAX-001b: la consulta ya no depende de que haya una captura en revisión.
+            assertEquals(5, env.gateway.count("info"))
+            env.store.signOutLocally(PREPAY_ACCOUNT)
+            runCurrent()
         }
 
     @Test
