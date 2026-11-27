@@ -215,8 +215,9 @@ class PushRegistrar(
         val account = session.userId
         val installation = installations.current()
         val installId = installation?.installId?.toUuidOrNull()
-        // Solo se da de baja la instalación de ESTA sesión (cuenta y entrada): una ajena ya tiene su limpieza pendiente.
-        if (installation == null || installId == null || !installation.belongsTo(session)) {
+        // Se da de baja la instalación de ESTA cuenta, sea de esta entrada o de una anterior que no se pudo rotar: dar de
+        // baja nunca admite un aviso, y el servidor la acepta con la sesión de la misma cuenta. La de otra cuenta, no.
+        if (installation == null || installId == null || installation.accountId != account) {
             prefs.update { it.copy(unregisterPending = false) }
             return
         }
