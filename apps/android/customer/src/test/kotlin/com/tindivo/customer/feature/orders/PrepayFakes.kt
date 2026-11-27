@@ -6,6 +6,8 @@ import com.tindivo.core.network.UploadOutcome
 import com.tindivo.core.network.generated.model.GetPrepayInfo200ResponseData
 import com.tindivo.core.network.generated.model.GetPrepayInfo200ResponseDataPaymentQr
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.math.BigDecimal
 import java.util.UUID
@@ -101,7 +103,7 @@ internal class FakePrepayGateway(
      * controlar cuándo llega cada una, [parkNextInfo]. Sin nada en ellas contesta [infoResult].
      */
     val infoQueue = ArrayDeque<ApiResult<GetPrepayInfo200ResponseData>>()
-    private val parkedInfos = ArrayDeque<CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>>()
+    private val parkedInfos = ArrayDeque<Pair<CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>, Boolean>>()
     var minutes: Int? = PAYMENT_MINUTES
     val slotResults = ArrayDeque<ApiResult<UploadSlot>>()
     val uploadOutcomes = ArrayDeque<UploadOutcome>()
@@ -122,13 +124,22 @@ internal class FakePrepayGateway(
         orderId: UUID,
     ): ApiResult<GetPrepayInfo200ResponseData> {
         enter("info", "info $accountId")
-        parkedInfos.removeFirstOrNull()?.let { return it.await() }
+        parkedInfos.removeFirstOrNull()?.let { (parked, uncancellable) ->
+            return if (uncancellable) withContext(NonCancellable) { parked.await() } else parked.await()
+        }
         return infoQueue.removeFirstOrNull() ?: infoResult
     }
 
     /** La próxima llamada a `info` se queda esperando hasta que la prueba complete lo que devuelve esto. */
     fun parkNextInfo(): CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>> =
-        CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>().also { parkedInfos += it }
+        CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>().also { parkedInfos += it to false }
+
+    /**
+     * Como [parkNextInfo], pero la respuesta se entrega aunque quien preguntó ya esté cancelado: una entrega tardía
+     * que no respeta la cancelación (una respuesta HTTP que ya venía en camino).
+     */
+    fun parkNextInfoUncancellable(): CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>> =
+        CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>().also { parkedInfos += it to true }
 
     override suspend fun paymentMinutes(): Int? = minutes
 

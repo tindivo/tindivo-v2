@@ -71,7 +71,7 @@ class PrepayOptionalReadOrderTest : PrepayHarness() {
         }
 
     @Test
-    fun `CAX-001 mientras se relee la consulta no pregunta y el pago confirmado no se deshace`() =
+    fun `CAX-001 mientras se relee, la consulta no pregunta`() =
         runTest {
             val env = loaded()
             val reread = rereadInFlight(env)
@@ -84,10 +84,58 @@ class PrepayOptionalReadOrderTest : PrepayHarness() {
 
             reread.complete(optional())
             runCurrent()
+            // Justo al llegar la relectura: no hubo otra pregunta, se publicó lo suyo y `reconciling` bajó.
+            assertEquals(2, env.gateway.count("info"))
+            assertFalse(env.state.reconciling)
+            assertFalse((env.state.info as PrepayInfoState.Ready).details.paymentConfirmed)
+            assertTrue(env.state.send is SendState.Failed)
+
             passTime(3)
 
             val details = (env.state.info as PrepayInfoState.Ready).details
             assertTrue(details.paymentConfirmed)
+            assertNoPayInvitation(env)
+            finish(env)
+        }
+
+    @Test
+    fun `R5-2 una consulta cancelada que recibe su respuesta mientras load espera la suya no se publica`() =
+        runTest {
+            val env = loaded()
+            val stalePoll = env.gateway.parkNextInfoUncancellable()
+            passTime(1)
+            val loadRead = env.gateway.parkNextInfo()
+            env.viewModel.load()
+            runCurrent()
+            assertEquals(PrepayInfoState.Loading, env.state.info)
+
+            // La respuesta vieja de la consulta llega tarde (no respeta la cancelación) y antes que la de load.
+            stalePoll.complete(optional())
+            runCurrent()
+            assertEquals(PrepayInfoState.Loading, env.state.info)
+
+            loadRead.complete(optional(paymentVerifiedAt = verified))
+            runCurrent()
+            assertTrue((env.state.info as PrepayInfoState.Ready).details.paymentConfirmed)
+            finish(env)
+        }
+
+    @Test
+    fun `R5-2 una consulta cancelada que recibe su respuesta despues de que load publico no se publica`() =
+        runTest {
+            val env = loaded()
+            val stalePoll = env.gateway.parkNextInfoUncancellable()
+            passTime(1)
+            env.gateway.infoResult = optional(paymentVerifiedAt = verified)
+            env.viewModel.load()
+            runCurrent()
+            assertTrue((env.state.info as PrepayInfoState.Ready).details.paymentConfirmed)
+
+            stalePoll.complete(optional())
+            runCurrent()
+            passTime(3)
+
+            assertTrue((env.state.info as PrepayInfoState.Ready).details.paymentConfirmed)
             assertNoPayInvitation(env)
             finish(env)
         }
