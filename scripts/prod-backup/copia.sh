@@ -18,6 +18,18 @@
 #     Storage) es un motivo en PARCIAL.txt y en RESUMEN.txt. Con un solo motivo, base y Storage salieron enteros.
 #   - LAS CREDENCIALES NO SE GUARDAN. Con --destino prod se escriben a mano en esta terminal (no se ven), viven en
 #     la memoria de este proceso y no pasan por argumentos, archivos ni registros.
+# --- Capa 0, ANTES DE CUALQUIER ORDEN: bash en modo protegido de verdad (bash -p) ----------------------------------
+# Con -p, bash no lee BASH_ENV, no importa funciones del entorno e ignora SHELLOPTS/BASHOPTS heredados. Aquí solo hay
+# palabras reservadas y expansiones (ni `set`, ni `echo`, ni `exit`, que una función importada podría sombrear): si
+# falta -p, o si $- trae la «p» porque SHELLOPTS venía exportado (así bash importa funciones aunque diga -p), la
+# asignación con ${…:?} termina el guion con un mensaje de bash. Con -p real, SHELLOPTS nunca llega exportado.
+_c0=''
+case "$-:${SHELLOPTS@a}" in
+  *p*:*x*) _c0=${_c0:?"SHELLOPTS viene exportado del entorno: abre una ventana nueva de Git Bash y lanza con bash -p"} ;;
+  *p*:*) ;;
+  *) _c0=${_c0:?"lanza el guion con «bash -p» (bash -p scripts/prod-backup/<guion>.sh): así bash no ejecuta BASH_ENV ni funciones heredadas"} ;;
+esac
+unset _c0
 set -euo pipefail
 set +x
 umask 077
@@ -93,8 +105,8 @@ trap 'exit 130' INT TERM
 # ---------------------------------------------------------------------------------------------------------------
 paso "0. Comprobaciones (destino: $DESTINO)"
 comprobar_herramientas
-# Antes de pedir ninguna credencial: el motor de Docker es el de este PC y queda fijado para toda la corrida.
-fijar_motor_docker
+# comprobar_herramientas fija el motor de Docker (el de este PC) antes de su primera llamada a docker y antes de pedir
+# ninguna credencial; queda fijado para toda la corrida.
 log "docker:  $MOTOR_DOCKER"
 
 RAIZ_REPO="$(git -C "$DIR_GUIONES" rev-parse --show-toplevel)"
@@ -225,6 +237,7 @@ LISTA_1="$(lista_de_base "$SALIDA/1-base.verificacion.log")"
 [ "$(manifiesto_de "$SALIDA/1-base.verificacion.log")" = "$M1" ] || fallo 'el manifiesto descifrado no es el que se cifró'
 FASE_EN_CURSO=''
 ESTADO_1="OK · manifiesto $M1"
+[ "${#MOTIVOS[@]}" -eq 1 ] || ESTADO_1="OK CON FALTAS (ver motivos) · manifiesto $M1"
 log "Parte 1: $ESTADO_1"
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -239,7 +252,7 @@ else
   # tubería. La clave service_role viaja en el entorno de node y de nadie más (ni tee, ni tar, ni gpg).
   {
     descifrar <"$SALIDA/1-base.tar.gpg" | tar -xOf - ./storage-objetos.jsonl |
-      TINDIVO_STORAGE_KEY="$STORAGE_KEY" node "$DIR_GUIONES/storage-tar.mjs" "$DESTINO" "$STORAGE_URL" 2>&1 1>&3 |
+      TINDIVO_STORAGE_KEY="$STORAGE_KEY" node "$DIR_GUIONES/storage-tar.mjs" "$DESTINO" "$STORAGE_URL" "$M1" 2>&1 1>&3 |
       tee "$SALIDA/2-storage.copia.log" >&2
   } 3>&1 | cifrar >"$SALIDA/2-storage.tar.gpg"
   M2="$(manifiesto_de "$SALIDA/2-storage.copia.log")"
@@ -247,6 +260,7 @@ else
   verificar_tar_node "$SALIDA/2-storage.tar.gpg" "$SALIDA/2-storage.verificacion.log"
   [ "$(lista_de_storage "$SALIDA/2-storage.verificacion.log")" = "$LISTA_1" ] || fallo 'la parte 2 no corresponde a la lista de objetos de la parte 1'
   [ "$(origen_de_storage "$SALIDA/2-storage.verificacion.log")" = "$STORAGE_URL" ] || fallo 'la parte 2 no viene del Storage esperado'
+  [ "$(base_de_storage "$SALIDA/2-storage.verificacion.log")" = "$M1" ] || fallo 'la parte 2 no está atada al manifiesto de esta parte 1'
   [ "$(manifiesto_de "$SALIDA/2-storage.verificacion.log")" = "$M2" ] || fallo 'el manifiesto de Storage descifrado no es el que se cifró'
   FASE_EN_CURSO=''
   E2="$(estado_de "$SALIDA/2-storage.copia.log")"

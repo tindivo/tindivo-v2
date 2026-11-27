@@ -7,6 +7,18 @@
 # No se conecta a ninguna base ni a internet. Comprueba el sha256 de cada archivo cifrado, lo descifra hacia la
 # memoria (nunca a un archivo) y revisa el contenido: manifiesto interno, y que pg_restore lee el dump entero.
 # Con --conteos imprime además las filas por tabla que quedaron anotadas al sacar la copia.
+# --- Capa 0, ANTES DE CUALQUIER ORDEN: bash en modo protegido de verdad (bash -p) ----------------------------------
+# Con -p, bash no lee BASH_ENV, no importa funciones del entorno e ignora SHELLOPTS/BASHOPTS heredados. Aquí solo hay
+# palabras reservadas y expansiones (ni `set`, ni `echo`, ni `exit`, que una función importada podría sombrear): si
+# falta -p, o si $- trae la «p» porque SHELLOPTS venía exportado (así bash importa funciones aunque diga -p), la
+# asignación con ${…:?} termina el guion con un mensaje de bash. Con -p real, SHELLOPTS nunca llega exportado.
+_c0=''
+case "$-:${SHELLOPTS@a}" in
+  *p*:*x*) _c0=${_c0:?"SHELLOPTS viene exportado del entorno: abre una ventana nueva de Git Bash y lanza con bash -p"} ;;
+  *p*:*) ;;
+  *) _c0=${_c0:?"lanza el guion con «bash -p» (bash -p scripts/prod-backup/<guion>.sh): así bash no ejecuta BASH_ENV ni funciones heredadas"} ;;
+esac
+unset _c0
 set -euo pipefail
 set +x
 set +a
@@ -43,7 +55,6 @@ trap 'exit 130' INT TERM
 
 paso '1. sha256 de los archivos cifrados'
 comprobar_herramientas
-fijar_motor_docker
 [ -s "$CARPETA/SHA256SUMS" ] || fallo "falta $CARPETA/SHA256SUMS"
 [ -s "$CARPETA/1-base.tar.gpg" ] || fallo "falta $CARPETA/1-base.tar.gpg"
 [ ! -e "$CARPETA/INCOMPLETA.txt" ] || fallo 'esta copia quedó marcada como INCOMPLETA'
@@ -89,6 +100,8 @@ if [ -s "$CARPETA/2-storage.tar.gpg" ]; then
   comparar 2-storage "$REG/2-storage.log"
   # La parte 2 tiene que ser la de ESTA base: misma lista de objetos (del mismo snapshot) y un Storage conocido.
   [ "$(lista_de_storage "$REG/2-storage.log")" = "$LISTA_1" ] || fallo 'la parte 2 no corresponde a la lista de objetos de la parte 1 (¿partes de copias distintas?)'
+  # Y a ESTA parte 1, no solo a una lista igual: el manifiesto de la base va dentro del tar cifrado de Storage.
+  [ "$(base_de_storage "$REG/2-storage.log")" = "$(manifiesto_de "$REG/1.log")" ] || fallo 'la parte 2 no está atada al manifiesto de esta parte 1 (¿partes de copias distintas?)'
   case "$(origen_de_storage "$REG/2-storage.log")" in
     "$URL_PROD" | http://127.0.0.1:54321) ;;
     *) fallo 'la parte 2 no viene de un Storage conocido' ;;

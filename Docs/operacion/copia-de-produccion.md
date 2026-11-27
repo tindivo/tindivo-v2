@@ -211,7 +211,8 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
 | `no se pudo limpiar el entorno: siguen exportadas …` | Una variable o función exportada en la terminal no se pudo quitar | Abre una ventana nueva de Git Bash, sin exportar nada, y repite |
 | `son las N h en Lima` | Ventana de servicio | Espera a que pase |
 | `lanza el guion con «bash -p»` | Se lanzó con `bash` a secas | Repite con `bash -p` (copia la orden del runbook) |
-| `el contexto de Docker apunta a «…»` | El contexto de Docker no es el Docker Desktop de este PC | `docker context use default` (o `desktop-linux`) y repite |
+| `SHELLOPTS viene exportado del entorno` | La terminal exporta `SHELLOPTS` (así bash importa funciones aunque diga `-p`) | Abre una ventana nueva de Git Bash, sin exportar nada, y repite |
+| `el contexto de Docker apunta a un motor «…» que no es el de este PC` | El contexto de Docker no es el Docker Desktop de este PC | `docker context use default` (o `desktop-linux`) y repite |
 | `la parte 2 no corresponde a la lista de objetos de la parte 1` | Las partes son de copias distintas | No uses esa carpeta: saca otra copia |
 | `gpg: decryption failed` al verificar | Clave distinta de la usada al cifrar | Prueba la clave correcta; si no la hay, esa copia está perdida: saca otra |
 
@@ -235,7 +236,9 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
   ni etiquetas de roles, permisos sobre parámetros (`pg_parameter_acl`) ni pertenencias de roles `pg_*`; el orden de
   los `GRANT` cubre el caso normal (primero lo que concede un superusuario y lo que da ADMIN), no cadenas largas de
   delegación. Restaurarlo sobre una base vacía es parte de P0.6.
-- `BASH_ENV` y funciones exportadas: con `bash -p` no se ejecutan ni se importan. Sin `-p` el guion se niega,
-  pero bash ya habría leído `BASH_ENV` al arrancar: por eso la orden se copia tal cual del runbook, en una ventana
-  nueva de Git Bash.
+- `BASH_ENV` y funciones exportadas: con `bash -p` no se ejecutan ni se importan (y si `SHELLOPTS` viene exportado,
+  el guion se niega antes de su primera orden). Sin `-p` el guion se niega, pero bash ya habría leído `BASH_ENV` al
+  arrancar: por eso la orden se copia tal cual del runbook, en una ventana nueva de Git Bash.
+- Las copias sacadas con versiones anteriores de estos guiones (sin `faltas.txt` ni el vínculo entre partes) no pasan
+  esta verificación. De producción no hay ninguna.
 - Una copia sin restauración ensayada no es todavía un respaldo probado: eso lo cierra P0.6.

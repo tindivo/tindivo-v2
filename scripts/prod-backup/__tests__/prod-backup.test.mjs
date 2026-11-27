@@ -525,7 +525,7 @@ test('guarda C2-002: sin bash -p no corre; con -p un BASH_ENV existente no se ej
     writeFileSync(join(dir, 'arranque.sh'), `echo ejecutado > "${testigo}"\n`)
     const env = { ...process.env, BASH_ENV: join(dir, 'arranque.sh').replaceAll('\\', '/') }
     const sinP = spawnSync('bash', ['./copia.sh', '--destino', 'local'], { cwd: DIR, input: '', encoding: 'utf8', env })
-    assert.equal(sinP.status, 64)
+    assert.notEqual(sinP.status, 0)
     assert.match(sinP.stderr, /bash -p/)
     rmSync(join(dir, 'ejecutado.txt'), { force: true })
     for (const g of ['copia.sh', 'verificar.sh']) {
@@ -555,9 +555,82 @@ test('guarda C2-004: solo vale el motor de Docker local de este PC', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
-  const copia = sinComentarios(leer('copia.sh'))
-  assert.ok(copia.indexOf('fijar_motor_docker') < copia.indexOf("paso '1. Datos de conexión'"), 'el motor se fija antes de pedir credenciales')
   assert.match(sinComentarios(leer('comun.sh')), /docker -H "\$MOTOR_DOCKER" "\$@"/)
+})
+
+test('guarda C2-004: con un contexto ajeno, la única llamada a docker es leer el contexto; nada va sin motor fijado', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'copia-motor2-'))
+  try {
+    const d = dir.replaceAll('\\', '/')
+    writeFileSync(join(dir, 'docker'), `#!/usr/bin/env bash\necho "$*" >> "${d}/llamadas.txt"\n[ "$1" = context ] && echo 'tcp://usuario:SECRETO_MOTOR@10.0.0.5:2375'\nexit 0\n`)
+    chmodSync(join(dir, 'docker'), 0o755)
+    const env = { ...process.env, PATH: `${dir}${delimiter}${process.env.PATH}` }
+    for (const g of ['copia.sh', 'verificar.sh']) {
+      rmSync(join(dir, 'llamadas.txt'), { force: true })
+      const args = g === 'copia.sh' ? ['--destino', 'local', '--salida', join(dir, 'salida')] : [dir]
+      const r = spawnSync('bash', ['-p', `./${g}`, ...args], { cwd: DIR, input: '', encoding: 'utf8', env })
+      assert.notEqual(r.status, 0, g)
+      assert.match(r.stderr, /no es el de este PC/, g)
+      assert.ok(!r.stderr.includes('SECRETO_MOTOR') && !r.stderr.includes('10.0.0.5'), `${g}: el mensaje no muestra el endpoint`)
+      assert.deepEqual(readFileSync(join(dir, 'llamadas.txt'), 'utf8').trim().split('\n'), ['context inspect --format {{.Endpoints.docker.Host}}'], g)
+    }
+    assert.ok(!existsSync(join(dir, 'salida')))
+    writeFileSync(join(dir, 'probar.sh'), `source "${join(DIR, 'comun.sh').replaceAll('\\', '/')}"\ndk ps\n`)
+    const sinMotor = spawnSync('bash', ['-p', join(dir, 'probar.sh')], { encoding: 'utf8', env })
+    assert.notEqual(sinMotor.status, 0)
+    assert.match(sinMotor.stderr, /no está fijado/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('guarda C2-002: SHELLOPTS=privileged exportado no se hace pasar por bash -p (las funciones ya se importaron)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'copia-shellopts-'))
+  try {
+    const testigo = join(dir, 'ejecutada.txt').replaceAll('\\', '/')
+    const f = `() { echo ejecutada >> "${testigo}"; }`
+    const env = { ...process.env, SHELLOPTS: 'braceexpand:hashall:interactive-comments:privileged',
+      'BASH_FUNC_set%%': f, 'BASH_FUNC_umask%%': f, 'BASH_FUNC_source%%': f, 'BASH_FUNC_echo%%': f, 'BASH_FUNC_exit%%': f }
+    for (const g of ['copia.sh', 'verificar.sh']) {
+      for (const pre of [[], ['-p']]) {
+        const r = spawnSync('bash', [...pre, `./${g}`], { cwd: DIR, input: '', encoding: 'utf8', env })
+        assert.notEqual(r.status, 0, `${g} ${pre}`)
+        assert.match(r.stderr, /SHELLOPTS viene exportado|bash -p/, `${g} ${pre}`)
+      }
+    }
+    assert.ok(!existsSync(join(dir, 'ejecutada.txt')), 'ninguna función importada llegó a ejecutarse')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('C2-003 y C2-005: el host traduce solo códigos conocidos y lee las huellas de los registros de verificación', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'copia-ayudas-'))
+  try {
+    const h = (c) => c.repeat(64)
+    writeFileSync(join(dir, 'base.log'), ['[contenedor] FALTA_BASE=sin_historial_migraciones', '[contenedor] FALTA_BASE=esquema_sin_plataforma',
+      `[contenedor] LISTA_STORAGE_SHA256=${h('a')}`, `[contenedor] MANIFEST_SHA256=${h('b')}`].join('\n'))
+    writeFileSync(join(dir, 'storage.log'), [`[verificar] LISTA_SHA256=${h('a')}`, `[verificar] BASE_MANIFIESTO=${h('b')}`,
+      '[verificar] ORIGEN=http://127.0.0.1:54321'].join('\n'))
+    const d = dir.replaceAll('\\', '/')
+    writeFileSync(join(dir, 'probar.sh'), [`source "${join(DIR, 'comun.sh').replaceAll('\\', '/')}"`,
+      `faltas_base_de "${d}/base.log" | while read -r c; do texto_falta_base "$c"; done`,
+      `echo "lista=$(lista_de_base "${d}/base.log") $(lista_de_storage "${d}/storage.log")"`,
+      `echo "base=$(manifiesto_de "${d}/base.log") $(base_de_storage "${d}/storage.log")"`,
+      `echo "origen=$(origen_de_storage "${d}/storage.log")"`,
+      'texto_falta_base codigo_inventado; echo "desconocida=$?"', ''].join('\n'))
+    const r = spawnSync('bash', ['-p', join(dir, 'probar.sh')], { encoding: 'utf8' })
+    assert.equal(r.status, 0, r.stderr)
+    const l = r.stdout.trim().split('\n')
+    assert.match(l[0], /^base: sin historial de migraciones/)
+    assert.match(l[1], /^base: el esquema completo salió sin los esquemas de la plataforma/)
+    assert.equal(l[2], `lista=${h('a')} ${h('a')}`)
+    assert.equal(l[3], `base=${h('b')} ${h('b')}`)
+    assert.equal(l[4], 'origen=http://127.0.0.1:54321')
+    assert.equal(l[5], 'desconocida=1')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('C2-003: la base declara lo que le falta dentro del tar, con códigos fijos, y el host lo suma a los motivos', () => {
@@ -572,11 +645,13 @@ test('C2-005: la parte 2 lleva la huella de la lista de la parte 1 y el verifica
   const lista = Buffer.from('')
   const { salida, buffer } = sumidero()
   const listaSha256 = sha256(lista)
-  await copiarStorage({ base: 'http://127.0.0.1:54321', clave: SECRETO, lineas: [], listaSha256, salida, fetchImpl: async () => respuesta(500) })
+  const baseManifiesto = 'c'.repeat(64)
+  await copiarStorage({ base: 'http://127.0.0.1:54321', clave: SECRETO, lineas: [], listaSha256, baseManifiesto, salida, fetchImpl: async () => respuesta(500) })
   const r = spawnSync('node', [join(DIR, 'verificar-tar.mjs')], { input: buffer(), encoding: 'utf8' })
   assert.equal(r.status, 0, r.stderr)
   assert.ok(r.stderr.includes(`[verificar] LISTA_SHA256=${listaSha256}`))
   assert.ok(r.stderr.includes('[verificar] ORIGEN=http://127.0.0.1:54321'))
+  assert.ok(r.stderr.includes(`[verificar] BASE_MANIFIESTO=${baseManifiesto}`))
   const otro = sumidero()
   const tar = crearEscritorTar(otro.salida)
   await tar.cerrar({ tipo: 'config', completa: true })

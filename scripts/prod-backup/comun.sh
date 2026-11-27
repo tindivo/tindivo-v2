@@ -2,12 +2,14 @@
 # Copia de producción P0.5: funciones que comparten copia.sh y verificar.sh. Se carga con `source`.
 # Runbook: Docs/operacion/copia-de-produccion.md
 
-# --- Capa 0: bash en modo protegido (-p) ------------------------------------------------------------------------
-# Con -p, bash NO lee BASH_ENV ni ENV, no importa funciones del entorno y no aplica SHELLOPTS/BASHOPTS heredados:
-# nada del entorno se ejecuta antes de la primera línea del guion. Si no vino con -p, BASH_ENV ya pudo correr, así que
-# no se sigue: el runbook manda lanzar siempre `bash -p scripts/prod-backup/<guion>.sh`.
-case "$-" in
-  *p*) ;;
+# --- Capa 0 (segunda comprobación; la primera está al principio de copia.sh y verificar.sh, antes de cualquier orden)
+# Con -p, bash NO lee BASH_ENV ni ENV, no importa funciones del entorno y no aplica SHELLOPTS/BASHOPTS heredados.
+case "$-:${SHELLOPTS@a}" in
+  *p*:*x*)
+    echo 'SHELLOPTS viene exportado del entorno: abre una ventana nueva de Git Bash y lanza con bash -p' >&2
+    exit 64
+    ;;
+  *p*:*) ;;
   *)
     echo 'lanza el guion con «bash -p» (por ejemplo: bash -p scripts/prod-backup/copia.sh …): así bash no ejecuta BASH_ENV ni funciones heredadas' >&2
     exit 64
@@ -114,13 +116,26 @@ fi
 unset _X _F _v
 # Capa 3: el entorno REAL que heredaría un hijo, tal como lo ve /usr/bin/env (también los nombres que bash no admite).
 # Si la marca de la capa 1 se falsificó, aquí aparece lo que no se limpió y el guion no sigue.
-_M=''
-while IFS= read -r -d '' _v; do _permitida "${_v%%=*}" || _M="$_M ${_v%%=*}"; done < <(/usr/bin/env -0)
+# Si /usr/bin/env falla o no imprime nada, la comprobación no pasa: tiene que verse PATH y el cierre «FIN-ENV:0» (una
+# entrada sin «=», que env nunca imprime: no se puede falsificar con una variable).
+_M='' _P='' _FIN=''
+while IFS= read -r -d '' _v; do
+  case "$_v" in
+    PATH=*) _P=1 ;;&
+    *=*) _permitida "${_v%%=*}" || _M="$_M ${_v%%=*}" ;;
+    FIN-ENV:*) _FIN="${_v#FIN-ENV:}" ;;
+    *) _M="$_M (entrada sin nombre)" ;;
+  esac
+done < <(/usr/bin/env -0; printf 'FIN-ENV:%s\0' "$?")
+if [ "$_FIN" != 0 ] || [ -z "$_P" ]; then
+  echo 'ERROR: no se pudo comprobar el entorno con /usr/bin/env' >&2
+  exit 70
+fi
 if [ -n "$_M" ]; then
   printf 'ERROR: no se pudo limpiar el entorno: siguen exportadas%s\n' "$_M" >&2
   exit 70
 fi
-unset _M _v
+unset _M _P _FIN _v
 # Los nombres que el guion usa para sus secretos nacen sin atributo de exportación.
 unset DB_PASS STORAGE_KEY CLAVE GNUPG_TMP
 # ------------------------------------------------------------------------------------------------------------------
@@ -157,11 +172,9 @@ fallo() {
 # el contexto a mitad de la corrida, todo va al mismo motor, y ese motor tiene que ser el de ESTE PC.
 MOTOR_DOCKER=''
 dk() {
-  if [ -n "$MOTOR_DOCKER" ]; then
-    MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker -H "$MOTOR_DOCKER" "$@"
-  else
-    MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker "$@"
-  fi
+  # Sin motor fijado no hay llamada: nada va a un contexto que no se validó.
+  [ -n "$MOTOR_DOCKER" ] || { echo 'ERROR: el motor de Docker no está fijado (fijar_motor_docker)' >&2; return 1; }
+  MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker -H "$MOTOR_DOCKER" "$@"
 }
 # Solo una tubería con nombre de ESTE equipo («//./pipe/…») o un socket unix local. «npipe:////otro-equipo/pipe/…»,
 # tcp://, ssh:// y cualquier otra forma se rechazan.
@@ -169,7 +182,8 @@ motor_es_local() { [[ "$1" =~ ^npipe:////\./pipe/[A-Za-z0-9_.-]+$ ]] || [[ "$1" 
 fijar_motor_docker() {
   local m
   m="$(MSYS_NO_PATHCONV=1 docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null)" || fallo 'no se pudo leer el contexto de Docker (¿Docker Desktop abierto?)'
-  motor_es_local "$m" || fallo "el contexto de Docker apunta a «$m»: solo vale el Docker local de este PC (npipe:////./pipe/…)"
+  # El mensaje dice solo el esquema: el endpoint entero puede llevar un usuario, un host o una credencial.
+  motor_es_local "$m" || fallo "el contexto de Docker apunta a un motor «${m%%://*}://…» que no es el de este PC: solo vale el Docker local (npipe:////./pipe/…)"
   MOTOR_DOCKER="$m"
 }
 
@@ -178,6 +192,7 @@ comprobar_herramientas() {
   for h in docker gpg node sha256sum tar git; do
     command -v "$h" >/dev/null 2>&1 || fallo "falta «$h» en el PATH (abre Git Bash; mira «Antes de empezar» en el runbook)"
   done
+  fijar_motor_docker
   dk info >/dev/null 2>&1 || fallo 'Docker no responde: abre Docker Desktop y espera a que arranque'
   dk image inspect "$IMAGEN_PG" >/dev/null 2>&1 || fallo "falta la imagen de Postgres. Bájala con: docker pull $IMAGEN_PG"
   local mayor
@@ -304,13 +319,14 @@ texto_falta_base() {
 lista_de_base() { grep -o 'LISTA_STORAGE_SHA256=[0-9a-f]\{64\}' "$1" | tail -n 1 | cut -d= -f2; }
 lista_de_storage() { grep -o 'LISTA_SHA256=[0-9a-f]\{64\}' "$1" | tail -n 1 | cut -d= -f2; }
 origen_de_storage() { grep -o 'ORIGEN=[a-z0-9:/.-]*' "$1" | tail -n 1 | cut -d= -f2; }
+base_de_storage() { grep -o 'BASE_MANIFIESTO=[0-9a-f]\{64\}' "$1" | tail -n 1 | cut -d= -f2; }
 
 # Descifra hacia una tubería y comprueba la parte 1 dentro de un contenedor sin red. Deja el registro en $2.
 verificar_base() { # archivo cifrado, registro
   descifrar <"$1" | contenedor none verificar 2>&1 | tee "$2" >&2
 }
 
-# Descifra hacia una tubería y comprueba un tar de Storage o de configuración (manifiesto y sha256 de cada entrada).
+# Descifra hacia una tubería y comprueba el tar de Storage (manifiesto y sha256 de cada entrada).
 verificar_tar_node() { # archivo cifrado, registro
   descifrar <"$1" | node "$DIR_GUIONES/verificar-tar.mjs" 2>&1 | tee "$2" >&2
 }

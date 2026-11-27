@@ -3,6 +3,7 @@
 //
 //   stdin   una línea JSON por objeto de storage.objects: la lista que la parte 1 tomó en SU snapshot
 //           (storage-objetos.jsonl, que copia.sh saca de 1-base.tar.gpg descifrándolo hacia una tubería)
+//   argv    destino, URL de Storage y el sha256 del manifiesto de la parte 1 de ESTA copia (queda en el manifiesto)
 //   stdout  el tar (va directo a gpg: nada en claro toca el disco)
 //   stderr  el avance, en cifras: sin nombres de archivo y sin la credencial; y ESTADO=COMPLETA o ESTADO=PARCIAL
 //
@@ -61,10 +62,11 @@ function rutaEnTar(obj, n) {
 }
 
 /**
- * @param {{ base: string, clave: string, lineas: AsyncIterable<string>, salida: import('node:stream').Writable,
+ * @param {{ base: string, clave: string, lineas: Iterable<string> | AsyncIterable<string>, listaSha256?: string | null,
+ *   baseManifiesto?: string | null, salida: import('node:stream').Writable,
  *   avisar?: (m: string) => void, fetchImpl?: typeof fetch, esperar?: (ms: number) => Promise<void> }} p
  */
-export async function copiarStorage({ base, clave, lineas, listaSha256 = null, salida, avisar = () => {}, fetchImpl, esperar }) {
+export async function copiarStorage({ base, clave, lineas, listaSha256 = null, baseManifiesto = null, salida, avisar = () => {}, fetchImpl, esperar }) {
   const tar = crearEscritorTar(salida)
   const cabeceras = { authorization: `Bearer ${clave}`, apikey: clave }
   const objetos = []
@@ -150,6 +152,8 @@ export async function copiarStorage({ base, clave, lineas, listaSha256 = null, s
     // Huella de la lista de objetos que llegó por stdin (storage-objetos.jsonl de la parte 1, del mismo snapshot):
     // verificar.sh la compara con la de 1-base, así una parte 2 de otra copia no pasa por la de esta.
     lista_sha256: listaSha256,
+    // Y el manifiesto de la parte 1 de esta misma corrida: dos copias con la misma lista tampoco se pueden mezclar.
+    base_manifiesto_sha256: baseManifiesto,
     tomado_utc: new Date().toISOString(),
     completa,
     resumen,
@@ -159,10 +163,11 @@ export async function copiarStorage({ base, clave, lineas, listaSha256 = null, s
 }
 
 async function principal() {
-  const [destino, base] = process.argv.slice(2)
+  const [destino, base, baseManifiesto] = process.argv.slice(2)
   const avisar = (m) => console.error(`[storage] ${m}`)
   try {
     validarBase(destino, base)
+    if (!/^[0-9a-f]{64}$/.test(baseManifiesto ?? '')) throw new Error('falta el manifiesto de la parte 1 (64 hex)')
     const clave = tomarCredencial('TINDIVO_STORAGE_KEY')
     // La lista entera en memoria (una línea JSON por objeto, sin datos de archivos): así se hashean sus bytes exactos.
     const trozos = []
@@ -170,7 +175,7 @@ async function principal() {
     const crudo = Buffer.concat(trozos)
     const listaSha256 = createHash('sha256').update(crudo).digest('hex')
     const lineas = crudo.toString('utf8').split(String.fromCharCode(10))
-    const { resumen, completa, manifiestoSha256 } = await copiarStorage({ base, clave, lineas, listaSha256, salida: process.stdout, avisar })
+    const { resumen, completa, manifiestoSha256 } = await copiarStorage({ base, clave, lineas, listaSha256, baseManifiesto, salida: process.stdout, avisar })
     await new Promise((r) => process.stdout.end(r))
     avisar(
       `RESUMEN listados=${resumen.listados} ok=${resumen.ok} no_encontrados=${resumen.no_encontrados} nombre_no_valido=${resumen.nombre_no_valido} tamano_distinto=${resumen.tamano_distinto} sin_huella=${resumen.sin_huella} huella_distinta=${resumen.huella_distinta} bytes=${resumen.bytes}`,

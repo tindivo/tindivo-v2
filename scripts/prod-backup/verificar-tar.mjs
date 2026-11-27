@@ -20,6 +20,9 @@ try {
   // Vínculo con la parte 1 y origen: solo formas fijas (64 hex; una URL de esquema y host). Si no, no se imprimen y
   // el host, que exige ambos, rechaza la copia.
   if (typeof d.lista_sha256 === 'string' && /^[0-9a-f]{64}$/.test(d.lista_sha256)) console.error(`[verificar] LISTA_SHA256=${d.lista_sha256}`)
+  if (typeof d.base_manifiesto_sha256 === 'string' && /^[0-9a-f]{64}$/.test(d.base_manifiesto_sha256)) {
+    console.error(`[verificar] BASE_MANIFIESTO=${d.base_manifiesto_sha256}`)
+  }
   if (typeof d.origen === 'string' && /^https?:[/][/][a-z0-9.-]+(:[0-9]{1,5})?$/.test(d.origen)) console.error(`[verificar] ORIGEN=${d.origen}`)
   console.error(`[verificar] ESTADO=${d.completa === true ? 'COMPLETA' : 'PARCIAL'}`)
   console.error(`[verificar] MANIFEST_SHA256=${r.manifiestoSha256}`)
