@@ -28,7 +28,7 @@ codigo:
 3. **Selector de secciones**, pegado bajo la barra: «Destacados» y las demás, y un botón de cuadrícula con el total que
    abre «Todas las secciones». Tocar una sección lleva a ella; la visible se resalta sola al hacer scroll.
 4. **Secciones de platos.** Cada una: título, «[N] productos» y sus filas. «Destacados» es una sección reutilizable cuyos
-   productos y nombre elige el restaurante, en carrusel manual (CUS-CAT-028). Una fila: nombre, descripción de una línea,
+   productos y nombre elige el restaurante, en carrusel manual (CUS-CAT-028); su «+» abre la ficha y la tarjeta no dice cuánto hay en la bolsa. Una fila: nombre, descripción de una línea,
    precio y foto, **sin control**: tocarla abre la ficha del plato (CUS-CAT-029). El «+» solo está en «Destacados». Un
    plato con opciones obligatorias dice «Desde S/ [PRECIO]».
 5. **Pastilla «Ver bolsa»** con contador y total, sobre el borde inferior; solo con la bolsa de este negocio.
@@ -77,7 +77,9 @@ rebota. Las hojas suben 250 ms con el scrim en fundido. Con «reducir movimiento
 
 ## Pendiente
 
-- Dónde se ofrece la hoja «Información» ahora que la carta no lleva su fila (CUS-CAT-027, decisión del 2026-11-26).
+- Dónde se ofrece la hoja «Información» ahora que la carta no lleva su fila (CUS-CAT-027, decisión del 2026-11-26). Hasta
+  decidirlo, ninguna app muestra el horario semanal (CUS-CAT-021, CA-CAT-P6): es deuda anotada, defecto 11 de
+  `capacidad.md` (decisión de Jesús, 2026-11-27).
 - «Para compartir» (distintivo): sin definir (DA-17 de `Docs/trabajo/decisiones-abiertas.md`); no entra.
 - «Cómo pagas» mantiene los nombres Yape y Plin: es información, no una opción de pago (decisión de Jesús, 2026-11-19).
 - La referencia «a una cuadra de la plaza» de la maqueta no tiene campo en el negocio.
