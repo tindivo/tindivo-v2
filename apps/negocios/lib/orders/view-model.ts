@@ -544,7 +544,7 @@ export function pagoUnicoView(
     | 'proofAttempt'
     | 'paymentReal'
   >,
-  opts?: { confirmUncertain?: boolean },
+  opts?: { confirmUncertain?: boolean; confirmedByResponse?: boolean },
 ): PagoUnicoView | null {
   // El manual no tiene app del cliente: su flujo no se toca.
   if (
@@ -557,7 +557,8 @@ export function pagoUnicoView(
   const attempt = order.proofAttempt ?? 0
   const sinAcciones = { canConfirm: false, canReject: false, attempt }
 
-  if (order.yaCobrado) return { stage: 'confirmado', ...sinAcciones }
+  // La respuesta del POST manda: el tablero puede no haberse refrescado aún.
+  if (order.yaCobrado || opts?.confirmedByResponse) return { stage: 'confirmado', ...sinAcciones }
   if (order.status === 'delivered' || order.status === 'cancelled') {
     // El motorizado cobró en la puerta (el ingreso no pasó por el negocio).
     if (order.paymentReal != null) return { stage: 'cobrado_en_puerta', ...sinAcciones }

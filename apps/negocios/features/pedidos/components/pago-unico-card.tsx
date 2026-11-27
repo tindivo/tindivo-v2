@@ -47,7 +47,7 @@ export function PagoUnicoCard({
 }: {
   order: OrderVM
   view: PagoUnicoView
-  onConfirm?: () => Promise<boolean>
+  onConfirm?: () => Promise<'confirmed' | 'uncertain'>
   onReject?: (attempt: number, reasonCode: DeliveryPaymentRejectReason) => void | Promise<void>
   busy: boolean
 }) {
@@ -55,7 +55,10 @@ export function PagoUnicoCard({
   const [choosingReason, setChoosingReason] = useState(false)
   // «Sí, me llegó» sin respuesta clara: no sabemos si el servidor lo guardó.
   const [confirmUncertain, setConfirmUncertain] = useState(false)
-  const view = pagoUnicoView(order, { confirmUncertain }) ?? baseView
+  // El POST respondió «verificado»: manda la respuesta, aunque el tablero aún no
+  // haya refrescado el pedido.
+  const [confirmedByResponse, setConfirmedByResponse] = useState(false)
+  const view = pagoUnicoView(order, { confirmUncertain, confirmedByResponse }) ?? baseView
 
   // Llegó la confirmación: la incertidumbre se resolvió.
   useEffect(() => {
@@ -65,7 +68,13 @@ export function PagoUnicoCard({
   async function confirm() {
     if (!onConfirm) return
     try {
-      setConfirmUncertain(!(await onConfirm()))
+      const result = await onConfirm()
+      if (result === 'confirmed') {
+        setConfirmedByResponse(true)
+        setConfirmUncertain(false)
+      } else {
+        setConfirmUncertain(true)
+      }
     } catch {
       setConfirmUncertain(true)
     }

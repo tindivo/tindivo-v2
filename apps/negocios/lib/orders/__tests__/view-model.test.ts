@@ -1234,6 +1234,16 @@ describe('pagoUnicoView · la captura del pago único', () => {
     expect(v?.stage).toBe('confirmado')
   })
 
+  it('CAX-006: la respuesta del servidor confirma aunque el tablero aún no refresque (yaCobrado falso)', () => {
+    const v = pagoUnicoView(
+      { ...base, proofUrl: 'p/1.jpg', proofStatus: 'rejected', proofAttempt: 1 },
+      { confirmedByResponse: true },
+    )
+    expect(v?.stage).toBe('confirmado')
+    expect(v?.canConfirm).toBe(false)
+    expect(v?.canReject).toBe(false)
+  })
+
   it('antes de aceptar no hay acciones', () => {
     const v = pagoUnicoView({ ...base, status: 'pending_acceptance' })
     expect(v?.stage).toBe('antes_de_aceptar')

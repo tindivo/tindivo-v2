@@ -58,11 +58,21 @@ describe('PagoUnicoCard (negocios)', () => {
     const B = pedido({ rowId: 'row-b', proofUrl: 'b/captura.jpg' })
 
     const { rerender } = render(
-      <PagoUnicoCard order={A} view={conVista(A)} onConfirm={async () => true} busy={false} />,
+      <PagoUnicoCard
+        order={A}
+        view={conVista(A)}
+        onConfirm={async () => 'confirmed' as const}
+        busy={false}
+      />,
     )
     // Sin `key`: es justo el caso que la limpieza del efecto debe resolver sola.
     rerender(
-      <PagoUnicoCard order={B} view={conVista(B)} onConfirm={async () => true} busy={false} />,
+      <PagoUnicoCard
+        order={B}
+        view={conVista(B)}
+        onConfirm={async () => 'confirmed' as const}
+        busy={false}
+      />,
     )
 
     b.resolve('https://firmada/b.jpg')
@@ -85,13 +95,13 @@ describe('PagoUnicoCard (negocios)', () => {
   }
   const sinCaptura = () => pedido({ proofUrl: null, proofStatus: null, proofAttempt: 0 })
 
-  it('CAX-006: si la confirmación se pierde (devuelve false) no dice «paga en la puerta»', async () => {
+  it('CAX-006: si la confirmación se pierde (devuelve «uncertain») no dice «paga en la puerta»', async () => {
     const order = sinCaptura()
     render(
       <PagoUnicoCard
         order={order}
         view={conVista(order)}
-        onConfirm={async () => false}
+        onConfirm={async () => 'uncertain' as const}
         busy={false}
       />,
     )
@@ -126,5 +136,21 @@ describe('PagoUnicoCard (negocios)', () => {
     )
     expect(screen.queryByText(/paga en la puerta/i)).toBeNull()
     expect(screen.queryByText(/Puede pagar al motorizado/)).toBeNull()
+  })
+
+  it('CAX-006: el servidor confirmó pero el pedido sigue viejo (captura_rechazada): dice «Ingreso confirmado» y no «paga en la puerta»', async () => {
+    const order = pedido({ proofStatus: 'rejected', proofAttempt: 2 })
+    render(
+      <PagoUnicoCard
+        order={order}
+        view={conVista(order)}
+        onConfirm={async () => 'confirmed' as const}
+        busy={false}
+      />,
+    )
+    expect(screen.getByText(/paga en la puerta/i)).toBeTruthy()
+    await confirmar()
+    await waitFor(() => expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy())
+    expect(screen.queryByText(/paga en la puerta/i)).toBeNull()
   })
 })

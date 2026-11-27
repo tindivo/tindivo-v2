@@ -61,7 +61,7 @@ export interface DetailActions {
    * PAGO ÚNICO · el negocio confirma que el Yape o Plin entró. Opcional: el
    * historial (solo lectura) no lo pasa y la tarjeta no se pinta.
    */
-  onConfirmDeliveryPayment?: () => Promise<boolean>
+  onConfirmDeliveryPayment?: () => Promise<'confirmed' | 'uncertain'>
   /** PAGO ÚNICO · rechaza la captura del intento vigente. Opcional, igual. */
   onRejectDeliveryProof?: (
     attempt: number,

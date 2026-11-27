@@ -41,7 +41,7 @@ export interface OrderActions {
    * captura. Solo el negocio lo confirma. No cambia el estado del pedido, así
    * que no cierra el detalle.
    */
-  onConfirmDeliveryPayment: () => Promise<boolean>
+  onConfirmDeliveryPayment: () => Promise<'confirmed' | 'uncertain'>
   /**
    * PAGO ÚNICO · rechaza la captura del intento vigente (`attempt`); el
    * servidor devuelve 409 si ya no es el vigente. Tampoco cierra el detalle.
@@ -97,6 +97,16 @@ function getStatus(res: unknown): string | undefined {
     return (res as { status?: string }).status
   }
   return undefined
+}
+
+function isPaymentConfirmation(res: unknown): boolean {
+  const body =
+    res && typeof res === 'object' && 'data' in res && res.data && typeof res.data === 'object'
+      ? res.data
+      : res
+  if (!body || typeof body !== 'object') return false
+  const b = body as { paymentProofStatus?: unknown; paymentVerifiedAt?: unknown }
+  return b.paymentProofStatus === 'verified' && typeof b.paymentVerifiedAt === 'string'
 }
 
 export function useOrderActions({
@@ -234,29 +244,32 @@ export function useOrderActions({
         await refetchOrders()
       })
     },
-    // Devuelve `true` solo si el servidor respondió bien Y el refresco trajo el
-    // resultado. Si se pierde la respuesta o falla el refresco, `false`: la
-    // tarjeta no puede afirmar nada del cobro (CAX-006). `run` ya pinta el error.
+    // Manda la respuesta del servidor, no el refresco (CAX-006): `refetchOrders`
+    // no lanza (guarda su error y puede no hacer nada si hay otra lectura en
+    // vuelo), así que no prueba nada. `'confirmed'` solo si el POST respondió
+    // verificado; si lanzó o respondió otra cosa, `'uncertain'`. El refresco va
+    // siempre, pero no cambia el resultado. `run` ya pinta el error del POST.
     onConfirmDeliveryPayment: async () => {
-      let ok = false
+      let result: 'confirmed' | 'uncertain' = 'uncertain'
       await run(async () => {
         if (!selected) return
-        let posted = false
         try {
-          await post(`/business/orders/${selected.rowId}/payment-confirmation`, undefined)
-          posted = true
+          const res = await post(
+            `/business/orders/${selected.rowId}/payment-confirmation`,
+            undefined,
+          )
+          if (isPaymentConfirmation(res)) result = 'confirmed'
         } finally {
           // El servidor pudo guardar la confirmación aunque la respuesta se
           // perdiera: se relee siempre, sin ocultar el error del POST.
           try {
             await refetchOrders()
-            ok = posted
           } catch {
-            ok = false
+            // No cambia el resultado.
           }
         }
       })
-      return ok
+      return result
     },
     onRejectDeliveryProof: async (attempt, reasonCode) => {
       await run(async () => {
