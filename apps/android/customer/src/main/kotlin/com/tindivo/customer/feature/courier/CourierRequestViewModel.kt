@@ -12,6 +12,7 @@ import com.tindivo.customer.feature.addresses.toWireCoordinate
 import com.tindivo.customer.feature.orders.isUnauthorized
 import com.tindivo.customer.session.SessionState
 import com.tindivo.customer.session.SessionStore
+import com.tindivo.customer.ui.fields.normalizePePhoneInput
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable

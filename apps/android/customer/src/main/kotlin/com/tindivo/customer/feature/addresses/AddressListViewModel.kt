@@ -82,7 +82,7 @@ internal class AddressListViewModel
          * Vuelve a pedir la libreta. Con una llamada en curso no lanza otra: recuerda que lo que traiga ya es viejo y,
          * al terminar, lee de nuevo. Con la sesión cerrada no hace nada.
          */
-        fun refresh() {
+        fun refresh(quiet: Boolean = false) {
             if (loggedOut) return
             if (job?.isActive == true) {
                 stale = true
@@ -93,7 +93,11 @@ internal class AddressListViewModel
                 _state.value = AddressListUiState.LoggedOut
                 return
             }
-            _state.value = AddressListUiState.Loading
+            // `quiet`: al volver a una pantalla que ya mostraba la libreta, se queda lo de antes hasta que llegue lo nuevo.
+            val showing = _state.value
+            if (!quiet || (showing !is AddressListUiState.Loaded && showing !is AddressListUiState.Empty)) {
+                _state.value = AddressListUiState.Loading
+            }
             job = viewModelScope.launch { load(account) }
         }
 

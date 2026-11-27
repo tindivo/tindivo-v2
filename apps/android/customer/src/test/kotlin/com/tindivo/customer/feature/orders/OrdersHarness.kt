@@ -36,7 +36,7 @@ abstract class OrdersHarness {
 
     /** El token que lleva cada petición: el de la cuenta de la sesión (`user-1`) hasta que la prueba lo cambie. */
     internal val tokens = SessionTokens(token = sessionJwt("user-1"))
-    private val clock = Clock.fixed(Instant.parse("2026-10-26T15:30:00Z"), ZoneOffset.UTC)
+    protected val clock: Clock = Clock.fixed(Instant.parse("2026-10-26T15:30:00Z"), ZoneOffset.UTC)
     private lateinit var baseUrl: String
     protected lateinit var configService: ConfigService
 
@@ -62,8 +62,12 @@ abstract class OrdersHarness {
             auth = BearerAuthInterceptor(server.url("/"), tokens),
         )
 
-    internal fun viewModel(io: CoroutineDispatcher = dispatcher) =
-        OrdersViewModel(CustomerRepository(baseUrl, client(), io), store, configService, clock)
+    internal fun repository(io: CoroutineDispatcher = dispatcher) = CustomerRepository(baseUrl, client(), io)
+
+    internal fun viewModel(
+        io: CoroutineDispatcher = dispatcher,
+        clock: Clock = this.clock,
+    ) = OrdersViewModel(repository(io), store, configService, clock)
 
     protected fun response(
         code: Int,

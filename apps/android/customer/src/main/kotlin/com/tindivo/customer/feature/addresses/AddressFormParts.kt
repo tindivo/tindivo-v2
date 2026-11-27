@@ -1,12 +1,10 @@
 package com.tindivo.customer.feature.addresses
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -70,33 +68,6 @@ internal fun DeleteSection(
                     )
                 }
             }
-        }
-    }
-}
-
-/** El botón fijo abajo, fuera del scroll: dice qué falta y, cuando no falta nada, guarda. */
-@Composable
-internal fun SaveBar(
-    state: AddressFormState,
-    onSave: () -> Unit,
-) {
-    val label =
-        when {
-            state.saving -> R.string.address_form_saving
-            state.missing == MissingField.Location -> R.string.address_form_missing_location
-            state.missing == MissingField.OutsideZone -> R.string.address_form_missing_outside
-            state.missing == MissingField.Line -> R.string.address_form_missing_line
-            state.missing == MissingField.Reference -> R.string.address_form_missing_reference
-            state.editingId == null -> R.string.address_form_save
-            else -> R.string.address_form_save_changes
-        }
-    Box(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
-        Button(
-            onClick = onSave,
-            enabled = state.canSave,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-        ) {
-            Text(text = stringResource(label))
         }
     }
 }

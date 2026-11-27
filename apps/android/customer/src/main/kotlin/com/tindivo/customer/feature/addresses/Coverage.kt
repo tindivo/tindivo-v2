@@ -82,7 +82,7 @@ private const val FALLBACK_LNG = -78.5042
 private const val FALLBACK_RADIUS_KM = 3.0
 private const val EARTH_RADIUS_KM = 6371.0
 
-private fun haversineKm(
+internal fun haversineKm(
     a: GeoPoint,
     b: GeoPoint,
 ): Double {

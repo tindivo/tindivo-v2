@@ -1,26 +1,37 @@
 package com.tindivo.customer.feature.orders
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tindivo.core.designsystem.TindivoCard
+import com.tindivo.core.designsystem.TindivoIcons
 import com.tindivo.customer.R
 
 /** Lo que la pantalla le pide a [CancelOrderViewModel]. */
@@ -141,6 +152,30 @@ private fun CancelDialog(
     )
 }
 
+/** El panel crema de la tarjeta de un pedido cancelado. Aún sin ilustración propia: un ícono neutro. */
+@Composable
+private fun CancelledPanel() {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(120.dp).background(CancelledPanelCream),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier.size(64.dp).background(Color.White, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                TindivoIcons.Close,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(32.dp),
+            )
+        }
+    }
+}
+
+/** El mismo crema del panel de las ilustraciones de [OrderArtPanel]. */
+private val CancelledPanelCream = Color(color = 0xFFFEF5EB)
+
 /** Lo que salió mal al cancelar; el detalle ya se está volviendo a consultar. */
 @Composable
 internal fun CancelProblemText(problem: CancelProblem) {
@@ -162,6 +197,8 @@ internal fun SupportLink(
 ) {
     if (link == null) return
     TextButton(onClick = { onOpenLink(link) }, modifier = Modifier.heightIn(min = 48.dp)) {
+        Icon(TindivoIcons.Chat, contentDescription = null, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Text(text = stringResource(label))
     }
 }
@@ -181,7 +218,11 @@ internal fun CancelledBody(
         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        OrderHeadlineBlock(headline = order.headline)
+        // Mismo marco que los demás estados: tarjeta con su panel crema y, debajo, el titular.
+        TindivoCard(modifier = Modifier.fillMaxWidth()) {
+            CancelledPanel()
+            Column(modifier = Modifier.padding(16.dp)) { OrderHeadlineBlock(headline = order.headline) }
+        }
         if (order.appealViaSupport && supportLink != null) {
             Button(
                 onClick = { onOpenLink(supportLink) },

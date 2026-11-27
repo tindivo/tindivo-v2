@@ -20,7 +20,16 @@ internal class AddressFormLocateTest : AddressHarness() {
     private suspend fun ready(source: LocationSource): AddressFormViewModel {
         server.enqueue(configOk())
         server.enqueue(addressList())
-        val vm = AddressFormViewModel(null, addressRepo(), catalogRepo(), store, configService, source)
+        val vm =
+            AddressFormViewModel(
+                null,
+                addressRepo(),
+                catalogRepo(),
+                store,
+                configService,
+                source,
+                FakeStreetSuggester(),
+            )
         vm.state.first { !it.loading }
         return vm
     }
@@ -331,6 +340,8 @@ internal class AddressFormLocateTest : AddressHarness() {
                     var calls = 0
 
                     override fun isAvailable(): Boolean = true
+
+                    override fun hasPermission(): Boolean = true
 
                     override suspend fun current(): LocationReading {
                         calls++

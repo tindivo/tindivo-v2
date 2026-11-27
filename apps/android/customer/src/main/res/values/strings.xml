@@ -14,6 +14,31 @@
     <string name="diagnostics_config_api_version">Versión del contrato</string>
     <string name="diagnostics_config_server_time">Hora del servidor</string>
 
+    <string name="nav_home">Inicio</string>
+    <string name="nav_courier">Entregas</string>
+    <string name="nav_orders">Pedidos</string>
+    <string name="nav_account">Cuenta</string>
+    <string name="home_logo_description">Tindivo</string>
+    <string name="home_deliver_to">Entregar en</string>
+    <string name="home_pick_address">Elige tu dirección</string>
+    <string name="home_deliver_to_description">Entregar en %1$s. Cambiar</string>
+    <string name="home_pick_address_description">Elige tu dirección de entrega</string>
+    <string name="home_my_addresses">Mis direcciones</string>
+    <string name="home_my_addresses_description">Entregar en. Abrir mis direcciones</string>
+    <plurals name="home_bag_description">
+        <item quantity="one">Mi bolsa, %1$d producto</item>
+        <item quantity="other">Mi bolsa, %1$d productos</item>
+    </plurals>
+    <plurals name="home_open_now">
+        <item quantity="one">%1$d abierto ahora</item>
+        <item quantity="other">%1$d abiertos ahora</item>
+    </plurals>
+    <string name="home_courier_tagline">De A a B, ya pagado</string>
+    <string name="home_store_tagline">Variedad de productos</string>
+    <string name="home_courier_title">Entregas</string>
+    <string name="home_courier_cta">Pedir una entrega</string>
+    <string name="home_store_title">Store</string>
+    <string name="catalog_open_now">Abierto</string>
     <string name="catalog_home_title">¿Qué pedimos hoy?</string>
     <string name="catalog_home_restaurants">Restaurantes</string>
     <string name="catalog_home_empty">Aún no hay restaurantes disponibles.</string>
@@ -24,11 +49,16 @@
     <string name="catalog_eta">%1$d–%2$d min</string>
     <string name="catalog_loading">Cargando</string>
     <string name="catalog_retry">Reintentar</string>
+    <string name="business_featured_add">Agregar %1$s</string>
     <string name="business_back">Volver</string>
     <string name="business_item_unavailable">No disponible</string>
     <string name="business_loading">Cargando</string>
     <string name="business_retry">Reintentar</string>
     <string name="business_closed_title">Cerrado ahora</string>
+    <plurals name="business_category_count">
+        <item quantity="one">%1$d producto</item>
+        <item quantity="other">%1$d productos</item>
+    </plurals>
     <string name="business_opens_today">Abre hoy a las %1$s</string>
     <string name="business_opens_tomorrow">Abre mañana a las %1$s</string>
     <string name="business_opens_day">Abre el %1$s a las %2$s</string>
@@ -50,8 +80,11 @@
 
     <string name="dish_group_required">Obligatorio</string>
     <string name="dish_group_done">Listo</string>
-    <string name="dish_group_counter">%1$d/%2$d</string>
-    <string name="dish_group_counter_unlimited">%1$d/∞</string>
+    <string name="dish_group_optional">Opcional</string>
+    <plurals name="dish_required_progress">
+        <item quantity="one">%1$d de %2$d lista</item>
+        <item quantity="other">%1$d de %2$d listas</item>
+    </plurals>
     <string name="dish_group_pick_one">Elige una opción</string>
     <string name="dish_group_up_to">Hasta %1$d</string>
     <string name="dish_option_included">Incluido</string>
@@ -63,11 +96,13 @@
     <string name="dish_quantity_less">Una menos</string>
     <string name="dish_quantity_more">Una más</string>
     <string name="dish_add_cta">Agregar · %1$s</string>
-    <plurals name="dish_complete_cta">
-        <item quantity="one">Completa %1$d opción</item>
-        <item quantity="other">Completa %1$d opciones</item>
-    </plurals>
-    <string name="dish_added">Añadido a tu bolsa</string>
+    <string name="dish_choose_cta">Elige tu %1$s</string>
+    <string name="dish_choose_many_cta">Elige %1$s</string>
+    <string name="dish_review_cta">Revisa tus opciones</string>
+    <string name="dish_group_missing">Falta elegir aquí</string>
+    <string name="dish_group_over">Elegiste más opciones de las permitidas</string>
+    <string name="dish_added">Agregado a tu bolsa</string>
+    <string name="dish_back">Volver a la carta</string>
     <string name="dish_bag_full">Tu bolsa ya tiene %1$d platos distintos: es el máximo por pedido</string>
     <string name="dish_added_capped">Ya tienes %1$d de este plato: es el máximo por pedido</string>
     <string name="dish_save_failed">No se pudo guardar tu bolsa. Inténtalo de nuevo.</string>
@@ -89,9 +124,10 @@
     <string name="cart_clear_confirm">Vaciar</string>
     <string name="cart_subtotal">Subtotal</string>
     <string name="cart_shipping_note">El envío y el total final se calculan al confirmar el pedido.</string>
-    <string name="cart_add_more">+ Agregar más</string>
+    <string name="cart_add_more_from">Agregar más de %1$s</string>
     <string name="cart_empty">Tu bolsa está vacía</string>
     <string name="cart_see_businesses">Ver negocios</string>
+    <string name="cart_line_remove">Quitar %1$s</string>
     <string name="cart_remove">Quitar</string>
     <string name="cart_line_less">Quitar una unidad de %1$s</string>
     <string name="cart_line_more">Agregar una unidad de %1$s</string>
@@ -102,14 +138,14 @@
     <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
     <string name="error_code">Código: %1$s</string>
 
-    <string name="signin_entry">Entrar</string>
     <string name="terms_gate_title">Actualizamos los términos</string>
     <string name="terms_gate_message">Léelos y acéptalos para seguir pidiendo.</string>
     <string name="terms_gate_accept">Aceptar y continuar</string>
     <string name="terms_gate_sign_out">Cerrar sesión</string>
     <string name="terms_gate_error">Algo salió mal. Inténtalo de nuevo.</string>
     <string name="signin_not_now">Ahora no</string>
-    <string name="signin_terms_label">Acepto los Términos y la Política de privacidad</string>
+    <string name="signin_terms_intro">"Acepto los "</string>
+    <string name="signin_terms_joiner">" y la "</string>
     <string name="signin_terms_link">Términos</string>
     <string name="signin_privacy_link">Política de privacidad</string>
     <string name="signin_terms_talkback">Acepta los Términos para continuar</string>
@@ -118,27 +154,38 @@
     <string name="signin_close_pending">No pudimos cerrar la sesión anterior en este aparato.</string>
     <string name="signin_close_retry">Reintentar</string>
     <string name="signin_title">Entrar a Tindivo</string>
+    <string name="signin_subtitle">Solo con tu cuenta de Google.</string>
     <string name="signin_google">Continuar con Google</string>
     <string name="signin_error">No se pudo entrar. Inténtalo otra vez.</string>
     <string name="signin_unavailable">El inicio de sesión aún no está disponible en esta versión.</string>
 
-    <string name="account_entry">Mi cuenta</string>
     <string name="account_back">Volver</string>
-    <string name="account_title">Mi cuenta</string>
+    <string name="account_title">Cuenta</string>
     <string name="account_loading">Cargando</string>
     <string name="account_retry">Reintentar</string>
-    <string name="account_phone_verified">Teléfono verificado</string>
     <string name="account_phone_missing">Falta verificar tu teléfono para pedir</string>
     <string name="account_phone_verify">Verificar mi número</string>
     <string name="account_phone_change">Cambiar número</string>
+    <string name="account_edit">Editar</string>
     <string name="account_name_edit">Editar nombre</string>
     <string name="account_name_edit_title">Tu nombre</string>
     <string name="account_name_save">Guardar</string>
     <string name="account_name_cancel">Cancelar</string>
     <string name="account_sign_out">Cerrar sesión</string>
-    <string name="account_orders">Mis pedidos</string>
 
     <string name="account_addresses">Mis direcciones</string>
+    <string name="account_addresses_empty">Aún no tienes direcciones</string>
+    <string name="account_addresses_add_first">Agregar dirección</string>
+    <string name="account_addresses_edit">Editar</string>
+    <string name="account_addresses_add">+ Agregar dirección</string>
+    <string name="account_addresses_see_all">Ver todas (%1$d)</string>
+    <string name="account_addresses_error">No pudimos cargar tus direcciones</string>
+    <string name="account_addresses_retry">Reintentar</string>
+    <string name="account_addresses_loading">Cargando tus direcciones</string>
+    <string name="account_addresses_row">%1$s, %2$s</string>
+    <string name="account_addresses_row_default">%1$s, %2$s, predeterminada</string>
+    <string name="account_verified">Verificado</string>
+    <string name="account_version">Tindivo %1$s</string>
     <string name="addresses_title">Mis direcciones</string>
     <string name="addresses_back">Volver</string>
     <string name="addresses_loading">Cargando</string>
@@ -154,34 +201,57 @@
     <string name="addresses_edit">Editar</string>
     <string name="addresses_make_default">Hacer predeterminada</string>
     <string name="addresses_action_failed">No se pudo cambiar la dirección predeterminada. Inténtalo de nuevo.</string>
+    <string name="field_counter">%1$d/%2$d</string>
+    <string name="field_phone_label">Celular</string>
+    <string name="field_valid">Válido</string>
+    <string name="field_phone_prefix">+51</string>
+    <string name="field_phone_error">Escribe los 9 dígitos de tu celular. Empieza con 9.</string>
+    <string name="field_name_label">Nombre</string>
+    <string name="field_money_label">Monto</string>
+    <string name="field_money_prefix">S/</string>
     <string name="address_form_new_title">Nueva dirección</string>
     <string name="address_form_edit_title">Editar dirección</string>
     <string name="address_form_cancel">Cancelar</string>
-    <string name="address_form_label">Etiqueta</string>
+    <string name="address_form_close">Cerrar</string>
+    <string name="address_form_place">¿Qué lugar es?</string>
     <string name="address_label_casa">Casa</string>
     <string name="address_label_trabajo">Trabajo</string>
     <string name="address_label_otro">Otro</string>
-    <string name="address_form_map_title">Tu ubicación en el mapa *</string>
-    <string name="address_form_map_hint">Mueve el mapa hasta la puerta de tu casa</string>
     <string name="address_form_map_description">Mapa para marcar tu dirección. El pin queda fijo al centro.</string>
     <string name="address_form_outside_zone">Esa ubicación está fuera de nuestra zona de reparto en San Jacinto</string>
     <string name="address_form_line">Calle y número *</string>
     <string name="address_form_line_placeholder">Ej. Jr. Sucre 412</string>
-    <string name="address_form_line_error">Falta calle/número</string>
+    <string name="address_form_line_error">Escribe tu calle y número (mínimo 5 caracteres, no solo números)</string>
     <string name="address_form_reference">Referencia *</string>
-    <string name="address_form_reference_placeholder">Frente a la bodega de don Carlos, casa de reja negra, tocar timbre 2 veces…</string>
-    <string name="address_form_reference_ok">Referencia suficiente</string>
-    <string name="address_form_reference_count">%1$d/%2$d</string>
+    <string name="address_form_reference_error">Cuéntanos cómo reconocer tu puerta (mínimo 15 caracteres)</string>
+    <string name="address_step_map_hint">Mueve el mapa hasta tu puerta</string>
+    <string name="address_map_title">¿Dónde te entregamos?</string>
+    <string name="address_map_subtitle">Marca la puerta de tu casa para que el motorizado llegue sin llamarte.</string>
+    <string name="address_map_mark">Marcar en el mapa</string>
+    <string name="address_map_pill">Mueve el mapa. El pin se queda quieto.</string>
+    <string name="address_map_my_location">Mi ubicación</string>
+    <string name="address_map_idle_button">Mueve el mapa para marcar</string>
+    <string name="address_map_moving">Ubicando…</string>
+    <string name="address_map_settled">¿El pin está en tu puerta?</string>
+    <string name="address_map_confirm">Sí, aquí es mi puerta</string>
+    <string name="address_map_review">Revisa y confirma</string>
+    <string name="address_map_move_inside">Muévelo dentro de la zona</string>
+    <string name="address_map_imprecise">Tu GPS no es exacto (±%1$d m). Mueve el mapa hasta tu puerta.</string>
+    <string name="address_map_type_map">Mapa</string>
+    <string name="address_map_type_satellite">Satélite</string>
+    <string name="address_summary_confirmed">Ubicación confirmada</string>
+    <string name="address_summary_map_description">Mapa con la ubicación que marcaste.</string>
+    <string name="address_street_searching">Buscando tu calle…</string>
+    <string name="address_street_suggested">Sugerida desde el mapa · edítala</string>
+    <string name="address_street_locality">Solo encontramos «%1$s». Escribe tu calle.</string>
+    <string name="address_step_change_point">Cambiar</string>
+    <string name="address_form_reference_placeholder">Ej. Frente a la bodega, reja negra</string>
     <string name="address_form_default_switch">Usar como predeterminada</string>
     <string name="address_form_default_hint">Se seleccionará automáticamente al hacer un pedido.</string>
     <string name="address_form_delete">Eliminar dirección</string>
     <string name="address_form_delete_confirm_title">¿Eliminar esta dirección?</string>
     <string name="address_form_delete_confirm_body">Dejará de aparecer en tu lista. Tus pedidos anteriores no cambian.</string>
     <string name="address_form_delete_confirm">Sí, eliminar</string>
-    <string name="address_form_missing_location">Falta marcar tu ubicación</string>
-    <string name="address_form_missing_outside">Fuera de la zona de reparto</string>
-    <string name="address_form_missing_line">Falta tu dirección</string>
-    <string name="address_form_missing_reference">Falta la referencia</string>
     <string name="address_form_save">Guardar dirección</string>
     <string name="address_form_save_changes">Guardar cambios</string>
     <string name="address_form_saving">Guardando…</string>
@@ -204,6 +274,10 @@
     <string name="orders_load_more">Ver más pedidos</string>
     <string name="orders_empty_title">Sin pedidos todavía</string>
     <string name="orders_empty_action">Hacer un pedido</string>
+    <string name="orders_in_progress">En curso</string>
+    <string name="orders_previous">Anteriores</string>
+    <string name="orders_track">Ver seguimiento</string>
+    <string name="orders_step_progress">Etapa %1$d de %2$d: %3$s</string>
     <string name="order_business_fallback">Restaurante</string>
     <string name="order_short_id">#TDV-%1$s</string>
     <string name="order_card_cancelled">Cancelado</string>
@@ -224,6 +298,7 @@
 
     <string name="order_hero_received">Pedido recibido</string>
     <string name="order_hero_received_sub">Estamos confirmándolo con el restaurante</string>
+    <string name="order_hero_call_to_confirm_sub">Te llamaremos para confirmar tu pedido</string>
     <string name="order_hero_awaiting_availability_sub">Esperando confirmación de disponibilidad</string>
     <string name="order_hero_pay_now_sub">Restaurante confirmó. Paga ahora</string>
     <string name="order_hero_verifying_proof_sub">Verificando tu comprobante de pago</string>
@@ -239,6 +314,7 @@
     <string name="order_hero_unknown">Tu pedido sigue en curso</string>
 
     <string name="order_cancelled_eyebrow">Pedido cancelado</string>
+    <string name="order_cancel_nothing_charged">No se te cobró nada</string>
     <string name="order_cancel_customer_title">Cancelaste tu pedido</string>
     <string name="order_cancel_customer_body">Tu pedido fue cancelado sin costo porque aún no estaba confirmado por el restaurante. Puedes volver a pedir cuando quieras.</string>
     <string name="order_cancel_customer_paid_body">Cancelaste tu pedido. Como ya habías enviado tu pago, escríbenos por WhatsApp para coordinarlo.</string>
@@ -290,11 +366,24 @@
     <string name="order_back_to_menu">Volver al menú</string>
     <string name="order_support_cancelled">¿Problema con este pedido?</string>
     <string name="order_reorder">Volver a pedir</string>
+    <string name="reorder_changes_title">Repusimos tu bolsa con cambios</string>
+    <string name="reorder_changes_open">Ver mi bolsa</string>
+    <string name="reorder_change_removed">%1$s ya no está en la carta.</string>
+    <string name="reorder_change_unavailable">%1$s no está disponible ahora.</string>
+    <string name="reorder_change_price">%1$s cambió de precio: antes %2$s, ahora %3$s.</string>
+    <string name="reorder_change_choose_again">%1$s tiene opciones que cambiaron: elígelas de nuevo en la carta.</string>
+    <string name="reorder_change_unknown">%1$s cambió en la carta.</string>
+    <string name="reorder_nothing_title">No podemos repetir este pedido</string>
+    <string name="reorder_nothing_text">Ninguno de sus platos está disponible hoy. Mira la carta del restaurante para elegir otros.</string>
+    <string name="reorder_failed_title">No pudimos volver a pedir</string>
+    <string name="reorder_failed_text">Inténtalo de nuevo en un momento. Tu bolsa no cambió.</string>
+    <string name="reorder_full_text">Con estos platos tu bolsa superaría el máximo permitido (%1$d platos distintos, o más unidades de un plato de las que se pueden pedir). Quita algunos y vuelve a intentarlo. Tu bolsa no cambió.</string>
+    <string name="reorder_ok">Entendido</string>
     <string name="order_payment_case">Ver caso de pago</string>
 
     <string name="order_driver_label">Tu motorizado</string>
     <string name="order_wait_title">Esperando que el negocio acepte</string>
-    <string name="order_wait_status">Esperando al negocio</string>
+    <string name="order_wait_status">El negocio está revisando tu pedido</string>
     <string name="order_wait_respond">Responde en hasta %1$d min</string>
     <string name="order_wait_confirming">Confirmando…</string>
     <string name="order_eta_range">Llega en %1$d–%2$d min</string>
@@ -304,7 +393,9 @@
     <string name="order_not_yours_title">No puedes abrir este pedido</string>
     <string name="order_not_yours_orders">Mis pedidos</string>
     <string name="order_not_yours_switch">Entrar con otra cuenta</string>
-    <string name="order_driver_arrived">%1$s llegó · Sal a recibir tu pedido</string>
+    <string name="order_driver_arrived_title">%1$s llegó</string>
+    <string name="order_driver_arrived_anonymous">Tu pedido llegó</string>
+    <string name="order_driver_arrived_sub">Sal a recibir tu pedido</string>
     <string name="order_delivery_fee">Delivery</string>
     <string name="order_total">Total</string>
     <string name="order_total_paid">Total pagado</string>
@@ -364,6 +455,8 @@
         <item quantity="one">%1$d producto</item>
         <item quantity="other">%1$d productos</item>
     </plurals>
+    <string name="checkout_bag_show">Ver detalle</string>
+    <string name="checkout_bag_hide">Ocultar detalle</string>
     <string name="checkout_bag_open">Toca para ver el detalle</string>
     <string name="checkout_bag_close">Toca para cerrar el detalle</string>
     <string name="checkout_bag_line">%1$d× %2$s</string>
@@ -372,15 +465,12 @@
     <string name="checkout_delivery_title">Entrega</string>
     <string name="checkout_method_delivery">Delivery</string>
     <string name="checkout_method_pickup">Recojo</string>
-    <string name="checkout_pickup_question">¿Vas al local ahora?</string>
-    <string name="checkout_pickup_now">Sí, voy y espero ahí</string>
-    <string name="checkout_pickup_now_hint">Pagas por adelantado y lo preparamos apenas confirmemos el pago.</string>
-    <string name="checkout_pickup_later">No, paso más tarde</string>
-    <string name="checkout_pickup_later_hint">Te lo guardamos listo hasta que cierre el local. Si no pasas a recogerlo, no se devuelve.</string>
+    <string name="checkout_pickup_policy">Te lo guardamos hasta el cierre. Si no pasas a recogerlo, no se devuelve.</string>
     <string name="checkout_pickup_point">Punto de recojo</string>
+    <string name="checkout_pickup_closes">Cierra a las %1$s</string>
     <string name="checkout_pickup_at">Recoges tu pedido en el local</string>
     <string name="checkout_address_title">Entregar en</string>
-    <string name="checkout_address_default">Por defecto</string>
+    <string name="checkout_address_line_label">%1$s · %2$s</string>
     <string name="checkout_address_change">Cambiar</string>
     <string name="checkout_address_add">Agregar dirección</string>
     <string name="checkout_address_add_hint">Necesitamos saber dónde entregar tu pedido.</string>
@@ -392,6 +482,7 @@
     <string name="checkout_address_fix">Corregir</string>
     <string name="checkout_contact_title">Contacto</string>
     <string name="checkout_name_label">Tu nombre</string>
+    <string name="checkout_name_missing">Agrega tu nombre</string>
     <string name="checkout_phone">Celular: %1$s</string>
     <string name="checkout_phone_missing">Sin teléfono verificado</string>
     <string name="checkout_phone_verify">Verificar celular</string>
@@ -417,7 +508,7 @@
     <string name="checkout_prepay_step3">Ahí pagas y subes tu captura.</string>
     <string name="checkout_prepay_direct">Le transfieres directo a %1$s. El número te llega en el seguimiento del pedido.</string>
 
-    <string name="checkout_cash_total">Tu total es %1$s. ¿Con cuánto pagas?</string>
+    <string name="checkout_cash_question">¿Con cuánto pagas?</string>
     <string name="checkout_cash_exact">Exacto</string>
     <string name="checkout_cash_no_change">sin vuelto</string>
     <string name="checkout_cash_no_change_today">sin vuelto hoy</string>
@@ -445,10 +536,10 @@
     <string name="checkout_totals_loading">Calculando…</string>
 
     <string name="checkout_cta_sending">Enviando tu pedido…</string>
+    <string name="checkout_cta_locating">Verificando tu ubicación…</string>
     <string name="checkout_cta_calculating">Calculando tu pedido…</string>
     <string name="checkout_cta_quote_problem">Calcular de nuevo</string>
     <string name="checkout_cta_name">Agrega tu nombre</string>
-    <string name="checkout_cta_pickup_answer">Responde si vas ahora</string>
     <string name="checkout_cta_address">Agrega tu dirección</string>
     <string name="checkout_cta_fix_address">Completa tu dirección</string>
     <string name="checkout_cta_reference">Agrega una referencia</string>
@@ -457,6 +548,7 @@
     <string name="checkout_cta_pay">Elige cómo pagas</string>
     <string name="checkout_cta_cash">Revisa con cuánto pagas</string>
     <string name="checkout_cta_confirm">Confirmar pedido · %1$s</string>
+    <string name="checkout_cta_confirm_short">Confirmar pedido</string>
     <string name="checkout_cta_do_not_close">No cierres esta pantalla.</string>
     <string name="checkout_sub_prepaid">Todavía no pagas nada. Te avisamos cuando el local confirme.</string>
     <string name="checkout_sub_cash">Pagas al recibir, directo al motorizado.</string>
@@ -480,13 +572,14 @@
     <string name="phone_back">Volver</string>
     <string name="phone_title">Verificar mi número</string>
     <string name="phone_number_hint">Te enviaremos un código por SMS para confirmar que el número es tuyo.</string>
-    <string name="phone_prefix">+51</string>
     <string name="phone_number_label">Celular (9 dígitos)</string>
     <string name="phone_send_code">Enviar código</string>
     <string name="phone_code_sent">Enviamos un código de 6 dígitos al +51 %1$s.</string>
-    <string name="phone_code_label">Código de 6 dígitos</string>
+    <string name="phone_code_progress">Código de %1$d dígitos, %2$d escritos</string>
     <string name="phone_verify">Verificar</string>
     <string name="phone_resend">Reenviar código</string>
+    <string name="phone_resend_in">Reenviar en %1$s</string>
+    <string name="phone_verified_toast">Celular verificado</string>
     <string name="phone_resend_wait">Podrás reenviar el código en %1$d s</string>
     <string name="phone_change_number">Cambiar número</string>
     <string name="phone_sending">Enviando</string>
@@ -508,7 +601,6 @@
     <string name="profile_title">¿Cómo te llamas?</string>
     <string name="profile_support">Así te llamarán el negocio y el motorizado cuando llegue tu pedido.</string>
     <string name="profile_name_label">Tu nombre</string>
-    <string name="profile_name_hint">Mínimo 2 letras · %1$d/%2$d</string>
     <string name="profile_name_error">Escribe tu nombre, solo con letras</string>
     <string name="profile_terms">Al continuar aceptas los Términos y la Política de privacidad de Tindivo.</string>
     <string name="profile_terms_link">Términos</string>
@@ -526,16 +618,26 @@
     <string name="checkout_sheet_choose_title">Elige tu dirección</string>
     <string name="checkout_sheet_add_title">Nueva dirección</string>
     <string name="checkout_sheet_edit_title">Corrige tu dirección</string>
+    <string name="checkout_sheet_name_title">Tu nombre</string>
+    <string name="checkout_sheet_name_save">Guardar</string>
     <string name="checkout_sheet_phone_title">Verifica tu celular</string>
     <string name="checkout_sheet_profile_title">Completa tu perfil</string>
-    <string name="checkout_sheet_add_new">Agregar nueva</string>
+    <string name="checkout_sheet_add_new">+ Agregar nueva</string>
     <string name="checkout_sheet_close">Cerrar</string>
+    <!-- Sin ubicación al pedir a domicilio y pagar al recibir (como GeoBlockSheet de la web). -->
+    <string name="checkout_gps_title">No pudimos leer tu ubicación</string>
+    <string name="checkout_gps_body_permission">Activa el permiso de ubicación en los ajustes del teléfono y vuelve a intentar.</string>
+    <string name="checkout_gps_body_signal">Tu teléfono no dio una ubicación a tiempo: sal al patio o acércate a una ventana.</string>
+    <string name="checkout_gps_after_retry">Sigue sin ubicación o sin conexión. Puedes intentar otra vez, pagar por adelantado o continuar sin ubicación.</string>
+    <string name="checkout_gps_retry">Intentar de nuevo</string>
+    <string name="checkout_gps_prepay">Cambiar a pago por adelantado</string>
+    <string name="checkout_gps_continue">Continuar sin ubicación</string>
     <!-- Borrar mi cuenta: los mismos textos que la web /borrar-cuenta (apps/customer/app/borrar-cuenta/page.tsx). -->
     <string name="account_help_title">Ayuda y legal</string>
     <string name="account_help_whatsapp">Ayuda por WhatsApp</string>
     <string name="account_terms">Términos y condiciones</string>
     <string name="account_privacy">Privacidad</string>
-    <string name="account_arco">Ejercer mis derechos</string>
+    <string name="account_arco">Mis datos personales</string>
     <string name="account_delete">Borrar mi cuenta</string>
     <string name="delete_account_title">Borrar mi cuenta</string>
     <string name="delete_account_back">Volver</string>
@@ -569,8 +671,8 @@
     <string name="prepay_confirmed">%1$s confirmó tu pedido. Ahora te toca pagar para que entre a cocina.</string>
     <string name="prepay_last_try">Tu comprobante no fue válido. Revisa e intenta de nuevo. Te queda 1 intento.</string>
     <plurals name="prepay_time_left">
-        <item quantity="one">Te queda %d min para pagar</item>
-        <item quantity="other">Te quedan %d min para pagar</item>
+        <item quantity="one">Te queda %d min</item>
+        <item quantity="other">Te quedan %d min</item>
     </plurals>
     <string name="prepay_expired_title">Se acabó el tiempo para pagar</string>
     <string name="prepay_expired_body">Estamos revisando en qué quedó tu pedido.</string>
@@ -579,6 +681,12 @@
     <string name="prepay_wallet_plin">Plin</string>
     <string name="prepay_wallet_any">Yape o Plin</string>
     <string name="prepay_wallet_of_business">%1$s del restaurante</string>
+    <string name="prepay_step_copy">Copia el número</string>
+    <string name="prepay_step_pay">Paga %1$s en %2$s</string>
+    <string name="prepay_step_upload">Sube tu captura</string>
+    <string name="prepay_show_qr">Ver QR</string>
+    <string name="prepay_hide_qr">Ocultar QR</string>
+    <string name="prepay_copy_amount_description">Copiar el monto %1$s</string>
     <string name="prepay_copy">Copiar</string>
     <string name="prepay_copied">Copiado</string>
     <string name="prepay_copy_description">Copiar el número %1$s</string>
@@ -602,6 +710,7 @@
     <string name="prepay_error_offline">No pudimos enviarlo: revisa tu conexión. Tu captura sigue aquí.</string>
     <string name="prepay_error_unreadable">No pudimos leer esa imagen. Elige otra captura.</string>
     <string name="prepay_error_too_large">La imagen es demasiado pesada. Elige otra captura.</string>
+    <string name="prepay_error_heic">No pudimos leer esa foto. Haz una captura de pantalla del pago y súbela de nuevo.</string>
     <string name="prepay_error_generic">No pudimos enviar tu comprobante. Inténtalo de nuevo.</string>
     <!-- Avisos del pedido (push nativo, spec de notificaciones). El canal se ve en los ajustes de la app. -->
     <string name="push_channel_orders">Avisos de tus pedidos</string>
@@ -638,6 +747,7 @@
     <string name="courier_load_more_failed">No pudimos cargar más. Toca para reintentar.</string>
     <string name="courier_retry">Reintentar</string>
     <string name="courier_route">%1$s → %2$s</string>
+    <string name="courier_card_meta_short">%1$s · %2$s</string>
     <string name="courier_card_meta">#%1$s · %2$s · %3$s</string>
     <string name="courier_free">Sin cobro</string>
     <string name="courier_loading">Cargando…</string>

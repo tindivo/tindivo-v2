@@ -6,8 +6,10 @@ Uso: python3 scripts/android-size-report.py <budget.json> <informe.md> <todas.cs
 - <todas.csv>: salida de `get-size total --dimensions=ALL` (varias filas): se toma el mínimo de MIN y el máximo de MAX.
 - <gama-baja.csv>: salida de `get-size total --device-spec=gama-baja.json` (una fila): se toma su MAX, el peor caso
   para ese perfil.
-- <budget.json>: {"gama_baja_max_download_bytes": null | <entero positivo en bytes>}. `null` = sin techo (D-57: el
-  techo se fija después de medir). Cualquier otra clave o tipo es un error.
+- <budget.json>: {"gama_baja_max_download_bytes": null | <entero positivo en bytes>,
+  "gama_baja_tope_absoluto_bytes": <entero positivo en bytes>}. `null` = sin techo (D-57: el techo se fija después de
+  medir). El tope absoluto solo lo mueve Jesús: el techo nunca puede superarlo (exit 2). Cualquier otra clave o tipo
+  es un error.
 
 Salida: tabla en $GITHUB_STEP_SUMMARY (si existe) y en <informe.md>. Exit 0 si no hay techo o se cumple; 1 si el techo
 se excede; 2 si algo no se puede leer o no tiene el formato esperado (nunca se «aprueba» por no poder leer). Los
@@ -19,6 +21,7 @@ import os
 import sys
 
 BUDGET_KEY = "gama_baja_max_download_bytes"
+CAP_KEY = "gama_baja_tope_absoluto_bytes"
 
 
 class ReportError(Exception):
@@ -61,21 +64,26 @@ def _no_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return dict(pairs)
 
 
-def read_budget(path: str) -> int | None:
+def read_budget(path: str) -> tuple[int | None, int]:
     try:
         with open(path, encoding="utf-8") as handle:
             # Una clave repetida haría que gane la última en silencio (p. ej. un null tras el techo): se rechaza (CAX-002).
             data = json.load(handle, object_pairs_hook=_no_duplicates)
     except (OSError, UnicodeDecodeError, ValueError) as exc:
         raise ReportError("no se pudo leer budget.json como JSON") from exc
-    if not isinstance(data, dict) or set(data) != {BUDGET_KEY}:
-        raise ReportError(f"budget.json debe ser un objeto con la única clave {BUDGET_KEY}")
+    if not isinstance(data, dict) or set(data) != {BUDGET_KEY, CAP_KEY}:
+        raise ReportError(f"budget.json debe ser un objeto con exactamente las claves {BUDGET_KEY} y {CAP_KEY}")
+    cap = data[CAP_KEY]
+    if isinstance(cap, bool) or not isinstance(cap, int) or cap <= 0:
+        raise ReportError(f"{CAP_KEY} debe ser un entero positivo de bytes")
     value = data[BUDGET_KEY]
     if value is None:
-        return None
+        return None, cap
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ReportError(f"{BUDGET_KEY} debe ser null o un entero positivo de bytes")
-    return value
+    if value > cap:
+        raise ReportError(f"el techo ({BUDGET_KEY}) supera el tope absoluto ({CAP_KEY}); ese tope solo lo mueve Jesús")
+    return value, cap
 
 
 def mb(size: int) -> str:
@@ -108,7 +116,7 @@ def main(argv: list[str]) -> int:
         return 2
     budget_path, report_path, all_csv, low_csv = argv[1:]
     try:
-        budget = read_budget(budget_path)
+        budget, _cap = read_budget(budget_path)
         all_range = read_range(all_csv)
         low_range = read_range(low_csv)
         table = build_table(all_range, low_range, budget)

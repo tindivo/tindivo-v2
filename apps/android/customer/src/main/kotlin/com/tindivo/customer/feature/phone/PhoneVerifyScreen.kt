@@ -3,6 +3,7 @@ package com.tindivo.customer.feature.phone
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -20,6 +21,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
@@ -30,16 +36,24 @@ import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoPrimaryButton
+import com.tindivo.core.designsystem.TindivoTextButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import com.tindivo.customer.support.SupportViewModel
 import com.tindivo.customer.support.generalHelpLink
 import com.tindivo.customer.support.openSafely
+import com.tindivo.customer.ui.fields.OTP_LENGTH
+import com.tindivo.customer.ui.fields.OtpCodeField
+import com.tindivo.customer.ui.fields.PhoneField
+import com.tindivo.customer.ui.fields.formatPePhone
+import com.tindivo.customer.ui.fields.resendClock
 
 /** Une el ViewModel con la pantalla; es lo único de este archivo que conoce Hilt. */
 @Composable
@@ -135,44 +149,60 @@ private fun NumberStep(
     state: PhoneUiState,
     actions: PhoneActions,
 ) {
+    // Tocar «Enviar código» con el número incompleto enseña el error del campo.
+    var tried by rememberSaveable { mutableStateOf(false) }
+    val send = {
+        tried = true
+        if (!state.sending) actions.onSendCode()
+    }
     Text(text = stringResource(R.string.phone_number_hint), style = MaterialTheme.typography.bodyLarge)
-    OutlinedTextField(
+    PhoneField(
         value = state.phone,
-        onValueChange = actions.onPhoneChanged,
-        label = { Text(text = stringResource(R.string.phone_number_label)) },
-        prefix = { Text(text = stringResource(R.string.phone_prefix)) },
-        singleLine = true,
-        isError = state.error != null,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth(),
+        onValueChange = {
+            tried = false
+            actions.onPhoneChanged(it)
+        },
+        label = stringResource(R.string.phone_number_label),
+        submitted = tried,
+        // Un solo error a la vez: si ya hay uno debajo (ErrorLine), el del campo se calla.
+        showValidation = state.error == null,
+        imeAction = ImeAction.Done,
+        onImeAction = send,
+        autoFocus = true,
     )
     ErrorLine(state.error, actions)
     ActionButton(
         text = stringResource(if (state.sending) R.string.phone_sending else R.string.phone_send_code),
         enabled = !state.sending,
-        onClick = actions.onSendCode,
+        onClick = send,
     )
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun CodeStep(
     state: PhoneUiState,
     actions: PhoneActions,
 ) {
-    Text(
-        text = stringResource(R.string.phone_code_sent, state.phone),
-        style = MaterialTheme.typography.bodyLarge,
-    )
-    OutlinedTextField(
+    // «Cambiar número» va junto al número al que se mandó el código.
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.phone_code_sent, formatPePhone(state.phone)),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+        )
+        TindivoTextButton(
+            text = stringResource(R.string.phone_change_number),
+            onClick = actions.onChangeNumber,
+            enabled = !state.sending,
+        )
+    }
+    // Al sexto dígito el ViewModel verifica solo (CUS-AUT-024); «Verificar» queda para quien prefiera tocarlo.
+    OtpCodeField(
         value = state.code,
         onValueChange = actions.onCodeChanged,
-        label = { Text(text = stringResource(R.string.phone_code_label)) },
-        singleLine = true,
+        progress = stringResource(R.string.phone_code_progress, OTP_LENGTH, state.code.length),
         enabled = !state.sending,
         isError = state.error != null,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.SmsOtpCode },
     )
     ErrorLine(state.error, actions)
     ActionButton(
@@ -180,26 +210,18 @@ private fun CodeStep(
         enabled = !state.sending,
         onClick = actions.onVerify,
     )
-    OutlinedButton(
+    val waiting = state.resendSeconds > 0
+    TindivoTextButton(
+        text =
+            if (waiting) {
+                stringResource(R.string.phone_resend_in, resendClock(state.resendSeconds))
+            } else {
+                stringResource(R.string.phone_resend)
+            },
         onClick = actions.onResend,
-        enabled = !state.sending && state.resendSeconds <= 0,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-    ) {
-        Text(text = stringResource(R.string.phone_resend))
-    }
-    if (state.resendSeconds > 0) {
-        Text(
-            text = stringResource(R.string.phone_resend_wait, state.resendSeconds),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-    TextButton(
-        onClick = actions.onChangeNumber,
-        enabled = !state.sending,
-        modifier = Modifier.heightIn(min = 48.dp),
-    ) {
-        Text(text = stringResource(R.string.phone_change_number))
-    }
+        enabled = !state.sending && !waiting,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -255,14 +277,8 @@ private fun ActionButton(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-    ) {
-        Text(text = text)
-    }
+    // El único primario de la hoja: 56 dp, abajo del formulario.
+    TindivoPrimaryButton(text = text, onClick = onClick, enabled = enabled)
 }
 
 @Composable

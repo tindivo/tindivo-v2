@@ -281,9 +281,12 @@ class CheckoutSheetDeliveryTest {
         val addresses = AddressRepository(TEST_BASE_URL, api.client, io)
         val catalog = CatalogRepository(TEST_BASE_URL, api.client, io)
         val customer = CustomerRepository(TEST_BASE_URL, api.client, io)
+        val checkoutRepository = CheckoutRepository(TEST_BASE_URL, api.client, io)
         models =
             ManualSheetModels(
-                newAddress = { id -> AddressFormViewModel(id, addresses, catalog, session, config, NoLocation) },
+                newAddress = { id ->
+                    AddressFormViewModel(id, addresses, catalog, session, config, NoLocation, NoStreets)
+                },
                 newPhone = {
                     val phones = PhoneRepository(TEST_BASE_URL, api.client, io)
                     PhoneVerifyViewModel(phones, session, config, Clock.systemUTC())
@@ -297,13 +300,14 @@ class CheckoutSheetDeliveryTest {
             viewModelFactory {
                 initializer {
                     CheckoutViewModel(
-                        loader = CheckoutLoader(customer, addresses, catalog),
-                        checkout = CheckoutRepository(TEST_BASE_URL, api.client, io),
+                        loader = CheckoutLoader(customer, addresses, catalog, checkoutRepository),
+                        checkout = checkoutRepository,
                         cartStore = cartStore,
                         ledger = OrderAttemptLedger(SheetTestLedgerStore(), NoAttempts),
                         configService = config,
                         sessionStore = session,
                         debounce = QuoteDebounce { },
+                        gps = CheckoutGps { null },
                     )
                 }
             }
@@ -379,7 +383,6 @@ class CheckoutSheetDeliveryTest {
             )
         return CheckoutFormActions(
             onSetMethod = base.onSetMethod,
-            onPickupWhen = base.onPickupWhen,
             onSelectAddress = base.onSelectAddress,
             onName = base.onName,
             onNote = base.onNote,

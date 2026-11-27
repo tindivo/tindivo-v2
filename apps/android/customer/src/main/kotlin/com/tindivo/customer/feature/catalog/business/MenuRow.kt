@@ -14,8 +14,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 internal sealed interface MenuRow {
     val key: String
 
+    /** La portada; [url] `null` pinta el placeholder de marca, en el mismo alto. */
     data class Banner(
-        val url: String,
+        val url: String?,
+        val name: String,
     ) : MenuRow {
         override val key = "banner"
     }
@@ -24,6 +26,13 @@ internal sealed interface MenuRow {
         val business: BusinessDetailUi,
     ) : MenuRow {
         override val key = "header"
+    }
+
+    /** El selector de secciones: va bajo la cabecera y, al bajar, se pega bajo la barra superior. */
+    data class Sections(
+        val categories: List<MenuCategoryUi>,
+    ) : MenuRow {
+        override val key = "sections"
     }
 
     /** Los platos de «Destacados» en un carrusel: una sola fila, no una por plato. */
@@ -48,11 +57,15 @@ internal sealed interface MenuRow {
     }
 }
 
-/** Banner si hay, cabecera del negocio y, por cada categoría, su cabecera seguida de sus platos. */
+/**
+ * Portada (con o sin foto), cabecera del negocio, selector de secciones si hay dos o más y, por cada categoría, su
+ * cabecera seguida de sus platos.
+ */
 internal fun menuRows(business: BusinessDetailUi): List<MenuRow> =
     buildList {
-        business.bannerUrl?.let { add(MenuRow.Banner(it)) }
+        add(MenuRow.Banner(business.bannerUrl, business.name))
         add(MenuRow.Header(business))
+        if (business.sections.size >= 2) add(MenuRow.Sections(business.sections))
         business.featured?.let { featured ->
             add(MenuRow.Category(featured))
             add(MenuRow.Carousel(featured.items))
@@ -67,17 +80,16 @@ internal fun menuRows(business: BusinessDetailUi): List<MenuRow> =
 internal fun categoryHeaderIndices(rows: List<MenuRow>): List<Int> =
     rows.indices.filter { rows[it] is MenuRow.Category }
 
-/** Índice de la cabecera del negocio: lo que queda por encima es la portada. */
-internal fun businessHeaderIndex(rows: List<MenuRow>): Int = rows.indexOfFirst { it is MenuRow.Header }.coerceAtLeast(0)
-
 /**
  * Categoría que se está leyendo: la última cuya cabecera ya pasó o está arriba del todo. Mientras se ve la portada
- * (todavía no llegó la primera cabecera) vale la primera.
+ * (todavía no llegó la primera cabecera) vale la primera. Con [lookahead], la cabecera que sigue a la primera fila
+ * visible también cuenta: es la que queda justo bajo el selector pegado, que tapa lo que queda de esa fila.
  */
 internal fun activeCategoryIndex(
     headerIndices: List<Int>,
     firstVisibleIndex: Int,
-): Int = headerIndices.indexOfLast { it <= firstVisibleIndex }.coerceAtLeast(0)
+    lookahead: Boolean = false,
+): Int = headerIndices.indexOfLast { it <= firstVisibleIndex + if (lookahead) 1 else 0 }.coerceAtLeast(0)
 
 /**
  * [text] con [style] sobre los tramos de [ranges] (índices del texto original, como los entrega `searchMenu`).

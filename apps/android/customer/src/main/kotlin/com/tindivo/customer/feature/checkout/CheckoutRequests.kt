@@ -2,6 +2,7 @@ package com.tindivo.customer.feature.checkout
 
 import com.tindivo.core.network.generated.model.CreateOrderRequest
 import com.tindivo.core.network.generated.model.CreateOrderRequestCoordinates
+import com.tindivo.core.network.generated.model.CreateOrderRequestGpsValidation
 import com.tindivo.core.network.generated.model.CreateOrderRequestItemsInner
 import com.tindivo.core.network.generated.model.QuoteCheckoutRequest
 import com.tindivo.core.network.generated.model.QuoteCheckoutRequestItemsInner
@@ -42,12 +43,6 @@ private fun DeliveryChoice.wire() =
         QuoteCheckoutRequest.DeliveryMethod.delivery
     }
 
-private fun PickupWhen.quoteWire() =
-    if (this == PickupWhen.Now) QuoteCheckoutRequest.PickupTiming.now else QuoteCheckoutRequest.PickupTiming.later
-
-private fun PickupWhen.orderWire() =
-    if (this == PickupWhen.Now) CreateOrderRequest.PickupTiming.now else CreateOrderRequest.PickupTiming.later
-
 private fun AddressUi.coordinates(): CreateOrderRequestCoordinates? {
     val latitude = lat
     val longitude = lng
@@ -55,8 +50,9 @@ private fun AddressUi.coordinates(): CreateOrderRequestCoordinates? {
 }
 
 /**
- * La petición de `POST /customer/checkout/quote`. En un recojo no lleva coordenadas y lleva `pickupTiming`; en un
- * delivery, las de la dirección elegida. `null` si la bolsa trae un id que no es un uuid.
+ * La petición de `POST /customer/checkout/quote`. En un recojo no lleva coordenadas y lleva `pickupTiming = later`
+ * (todo recojo es prepago y la app ya no pregunta «¿vas al local ahora?»); en un delivery, las de la dirección elegida.
+ * `null` si la bolsa trae un id que no es un uuid.
  */
 fun buildQuoteRequest(
     state: CheckoutUiState,
@@ -71,7 +67,7 @@ fun buildQuoteRequest(
         deliveryMethod = state.method.wire(),
         items = items.map { (id, quantity, modifiers) -> QuoteCheckoutRequestItemsInner(id, quantity, modifiers) },
         coordinates = if (pickup) null else state.selectedAddress?.coordinates(),
-        pickupTiming = if (pickup) state.pickupWhen?.quoteWire() else null,
+        pickupTiming = if (pickup) QuoteCheckoutRequest.PickupTiming.later else null,
     )
 }
 
@@ -88,12 +84,14 @@ private fun BigDecimal.toAccuracy(): Int = setScale(0, RoundingMode.CEILING).toI
 /**
  * La petición de `POST /customer/orders`. `customerPhone` va por compatibilidad (el servidor usa el verificado). En un
  * recojo NO viaja nada de la entrega ni el billete (§8). `cashPayingWith` sale del texto del monto, nunca de un
- * `Double`, y solo en delivery con efectivo. `null` si falta algo que la pantalla ya habría pedido.
+ * `Double`, y solo en delivery con efectivo. [gps] es la evidencia de la ubicación (CUS-CHK-009): `null` si no la hay
+ * (permiso negado o sin lectura), y el pedido sale igual. `null` si falta algo que la pantalla ya habría pedido.
  */
 fun buildOrderRequest(
     state: CheckoutUiState,
     cart: Cart,
     quote: QuoteView,
+    gps: CreateOrderRequestGpsValidation? = null,
 ): CreateOrderRequest? {
     val businessId = cart.businessId.toUuidOrNull()
     val items = cart.menuItems()
@@ -112,9 +110,12 @@ fun buildOrderRequest(
             customerName = state.name.trim(),
             customerPhone = phone,
             items = orderItems,
+            gpsValidation = gps,
         )
     return if (state.isPickup) {
-        base.copy(pickupTiming = state.pickupWhen?.orderWire())
+        // CreateOrderRequestSchema exige `pickupTiming` en todo recojo (requests.ts): sin él, el servidor lo rechaza con
+        // 422 antes de llegar al valor por defecto de la base. Todo recojo es prepago, así que siempre es `later`.
+        base.copy(pickupTiming = CreateOrderRequest.PickupTiming.later)
     } else {
         deliveryPart(base, state, quote)
     }

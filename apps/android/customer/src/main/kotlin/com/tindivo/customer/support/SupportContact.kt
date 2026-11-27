@@ -79,27 +79,47 @@ internal class SupportViewModel
 internal fun whatsappDigits(phone: String): String? = phone.filter { it in '0'..'9' }.takeIf { it.isNotEmpty() }
 
 /**
- * «Ayuda con este pedido» (CUS-SUP-006): «Hola, necesito ayuda con mi pedido #TDV-[CÓDIGO] de [NEGOCIO].», prellenado
- * y revisable. Sin nombre de negocio, el mensaje termina en el código.
+ * «Ayuda con este pedido» (CUS-SUP-006): «Hola, soy [NOMBRE]. Necesito ayuda con mi pedido #TDV-[CÓDIGO] de
+ * [NEGOCIO].», prellenado y revisable (decisión de Jesús, 2026-11-23: todo botón de ayuda que menciona un pedido lleva
+ * la firma). Sin nombre: «Hola, necesito ayuda con mi pedido…». Sin nombre de negocio, termina en el código.
  */
 internal fun orderHelpLink(
     number: String,
     shortId: String,
     businessName: String?,
+    customerName: String? = null,
 ): String {
     val name = businessName.orEmpty().trim()
     val business = if (name.isEmpty()) "" else " de $name"
-    return whatsappLink(number, "Hola, necesito ayuda con mi pedido #TDV-$shortId$business.")
+    val who = customerName.orEmpty().trim()
+    val text =
+        if (who.isEmpty()) {
+            "Hola, necesito ayuda con mi pedido #TDV-$shortId$business."
+        } else {
+            "Hola, soy $who. Necesito ayuda con mi pedido #TDV-$shortId$business."
+        }
+    return whatsappLink(number, text)
 }
 
 /**
- * «¿Problema con este pedido?» de un pedido cancelado en el historial: el texto de la web (`pedidos/page.tsx`), que
- * deja el motivo para que la persona lo escriba.
+ * «¿Problema con este pedido?» de un pedido cancelado en el historial (decisión de Jesús, 2026-11-23): «Hola, soy
+ * [NOMBRE]. Tengo un problema con mi pedido #TDV-[CÓDIGO].», sin «Motivo:». Sin nombre, «Hola, tengo un problema con mi
+ * pedido #TDV-[CÓDIGO].».
  */
 internal fun cancelledOrderSupportLink(
     number: String,
     shortId: String,
-): String = whatsappLink(number, "Hola, tengo un problema con mi pedido #TDV-$shortId. Motivo: ")
+    customerName: String? = null,
+): String {
+    val name = customerName.orEmpty().trim()
+    val text =
+        if (name.isEmpty()) {
+            "Hola, tengo un problema con mi pedido #TDV-$shortId."
+        } else {
+            "Hola, soy $name. Tengo un problema con mi pedido #TDV-$shortId."
+        }
+    return whatsappLink(number, text)
+}
 
 /** «Ayuda por WhatsApp» sin pedido (Cuenta): un saludo para que la persona escriba lo suyo. */
 internal fun generalHelpLink(number: String): String = whatsappLink(number, "Hola, necesito ayuda con Tindivo. ")

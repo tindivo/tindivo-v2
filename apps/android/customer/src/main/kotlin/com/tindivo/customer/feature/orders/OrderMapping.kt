@@ -55,7 +55,7 @@ private fun ListCustomerOrders200ResponseDataItemsInner.toCardUi(now: Instant): 
         createdAt = relativeDate(created, now),
         total = totalText,
         businessId = businessId,
-        reorderable = cancelReason != PROOF_REJECTED_FINAL,
+        reorderable = orderPhaseOf(status, cancelReason) == OrderPhase.Delivered,
         paymentCase = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPayment = paymentIntent == PREPAID && status == "awaiting_payment",
     )
@@ -103,7 +103,7 @@ internal fun GetCustomerOrder200ResponseData.toDetailUi(): OrderDetailUi? {
         address = if (pickup) null else deliveryAddress,
         reference = if (pickup) null else deliveryReference,
         customerNotes = customerNotes,
-        driver = driverOf(phase),
+        driver = if (pickup) null else driverOf(phase),
         appealViaSupport = cancelReason == PROOF_REJECTED_FINAL,
         awaitingPrepayment = payment.prepaid && status == "awaiting_payment",
         cancel = cancelOfferOf(status, payment),

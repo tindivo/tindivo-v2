@@ -1,15 +1,19 @@
 package com.tindivo.customer.feature.orders
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -21,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -30,12 +35,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tindivo.core.designsystem.TindivoCard
+import com.tindivo.core.designsystem.TindivoIcons
+import com.tindivo.core.designsystem.TindivoPrimaryButton
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.customer.R
 import com.tindivo.customer.push.NotificationsEffects
 import com.tindivo.customer.push.NotificationsOffBanner
 import com.tindivo.customer.push.NotificationsViewModel
 import com.tindivo.customer.push.PushOfferSheet
+import com.tindivo.customer.support.CustomerNameViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
 import com.tindivo.customer.support.orderHelpLink
@@ -57,6 +66,7 @@ internal fun OrderDetailDestination(
     supportViewModel: SupportViewModel = hiltViewModel(),
     timersViewModel: OrderTimersViewModel = hiltViewModel(),
     notifications: NotificationsViewModel = hiltViewModel(),
+    nameViewModel: CustomerNameViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     val push = notifications.state.collectAsStateWithLifecycle().value
@@ -70,6 +80,7 @@ internal fun OrderDetailDestination(
     val prepay = prepayViewModel.state.collectAsStateWithLifecycle().value
     val cancel = cancelViewModel.state.collectAsStateWithLifecycle().value
     val supportNumber = supportViewModel.number.collectAsStateWithLifecycle().value
+    val customerName = nameViewModel.name.collectAsStateWithLifecycle().value
     val uriHandler = LocalUriHandler.current
     // «Entrar con otra cuenta»: al cerrarse la sesión se va a entrar; en cualquier otro cierre, se vuelve atrás.
     var switching by rememberSaveable { mutableStateOf(false) }
@@ -119,6 +130,7 @@ internal fun OrderDetailDestination(
                     ),
             ),
         supportNumber = supportNumber,
+        customerName = customerName,
         onBackToMenu = onBackToMenu,
         acceptanceMinutes = acceptanceMinutes,
         onOpenOrders = onOpenOrders,
@@ -148,16 +160,17 @@ internal fun OrderDetailScreen(
     prepayActions: PrepayActions = PrepayActions(),
     cancel: CancelSection = CancelSection(),
     supportNumber: String = SUPPORT_FALLBACK_WHATSAPP,
+    customerName: String? = null,
     onBackToMenu: () -> Unit = {},
     acceptanceMinutes: Int? = null,
     onOpenOrders: () -> Unit = {},
     onSwitchAccount: () -> Unit = {},
     notificationsBanner: @Composable () -> Unit = {},
 ) {
-    Scaffold { innerPadding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
-            TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.orders_back))
+            IconButton(onClick = onBack, modifier = Modifier.padding(top = 4.dp).size(48.dp)) {
+                Icon(TindivoIcons.ArrowBack, contentDescription = stringResource(R.string.orders_back))
             }
             when (state) {
                 OrderDetailUiState.Loading, OrderDetailUiState.LoggedOut -> {
@@ -177,7 +190,7 @@ internal fun OrderDetailScreen(
                     val order = state.order
                     // Solo con el pedido en curso: en uno terminado ya no hay avisos que esperar.
                     if (!order.phase.isTerminal()) notificationsBanner()
-                    val supportLink = orderHelpLink(supportNumber, order.shortId, order.businessName)
+                    val supportLink = orderHelpLink(supportNumber, order.shortId, order.businessName, customerName)
                     if (order.phase is OrderPhase.Cancelled) {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             OrderTitle(order = order)
@@ -219,27 +232,68 @@ private fun OrderBody(
     LaunchedEffect(order.awaitingPrepayment) {
         if (order.awaitingPrepayment) prepay.actions.load()
     }
+    val countdown = prepay.state.countdown.takeIf { order.awaitingPrepayment && prepay.state.send !is SendState.Sent }
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Fija arriba, fuera del desplazamiento: el plazo para pagar se ve mientras se copia, se paga y se sube.
+        if (countdown is PrepayCountdown.Remaining) {
+            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), contentAlignment = Alignment.Center) {
+                PrepayCountdownPill(countdown = countdown)
+            }
+        }
+        OrderScrollBody(
+            order = order,
+            onOpenLink = onOpenLink,
+            onRate = onRate,
+            prepay = prepay,
+            cancel = cancel,
+            supportLink = supportLink,
+            acceptanceMinutes = acceptanceMinutes,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun OrderScrollBody(
+    order: OrderDetailUi,
+    onOpenLink: (String) -> Unit,
+    onRate: (() -> Unit)?,
+    prepay: PrepayParts,
+    cancel: CancelSection,
+    supportLink: String?,
+    acceptanceMinutes: Int?,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
+        modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         OrderTitle(order = order)
-        if (order.waitingForBusiness) {
-            AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
-        } else {
-            OrderHeadlineBlock(headline = order.headline)
+        // La tarjeta héroe del tablero «Seguimiento»: el estado, los pasos y la hora estimada juntos.
+        TindivoCard(modifier = Modifier.fillMaxWidth()) {
+            val art = orderArtOf(order.headline, order.waitingForBusiness, driverAtDoor = order.driver?.atDoor == true)
+            art?.let { OrderArtPanel(it) }
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (order.waitingForBusiness) {
+                    AcceptanceWaitBlock(start = order.pendingAcceptanceAt, acceptanceMinutes = acceptanceMinutes)
+                } else {
+                    OrderHeadlineBlock(headline = order.headline, driver = order.driver)
+                }
+                if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
+                    OrderSteps(phase = order.phase, isPickup = order.isPickup)
+                }
+                EtaLine(order = order)
+            }
         }
         CancelRow(offer = order.cancel, section = cancel, supportLink = supportLink, onOpenLink = onOpenLink)
         cancel.state.problem?.let { CancelProblemText(problem = it) }
         if (onRate != null) {
-            Button(onClick = onRate, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                Text(text = stringResource(R.string.review_rate))
-            }
+            TindivoPrimaryButton(
+                text = stringResource(R.string.review_rate),
+                onClick = onRate,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
-        if (order.phase is OrderPhase.Active || order.phase is OrderPhase.Delivered) {
-            OrderSteps(phase = order.phase, isPickup = order.isPickup)
-        }
-        EtaLine(order = order)
         if (order.awaitingPrepayment) {
             PrepaySection(state = prepay.state, amount = order.total, actions = prepay.actions)
         } else if (prepay.state.send is SendState.Sent &&
@@ -248,9 +302,13 @@ private fun OrderBody(
             SentNotice()
         }
         order.driver?.let { DriverBlock(driver = it) }
-        OrderLines(lines = order.lines)
-        OrderTotals(order = order)
-        OrderDelivery(order = order)
+        TindivoCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OrderLines(lines = order.lines)
+                OrderTotals(order = order)
+                OrderDelivery(order = order)
+            }
+        }
         SupportLink(link = supportLink, onOpenLink = onOpenLink)
     }
 }
@@ -287,7 +345,7 @@ private fun OrderTitle(order: OrderDetailUi) {
     Column {
         Text(
             text = order.businessName ?: stringResource(R.string.order_business_fallback),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.semantics { heading() },
         )
         Text(

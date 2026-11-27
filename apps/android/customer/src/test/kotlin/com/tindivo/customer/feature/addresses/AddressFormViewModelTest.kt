@@ -31,6 +31,7 @@ internal class AddressFormViewModelTest : AddressHarness() {
         store,
         configService,
         FakeLocationSource(),
+        FakeStreetSuggester(),
     )
 
     private suspend fun AddressFormViewModel.ready(): AddressFormState = state.first { !it.loading }
@@ -287,7 +288,13 @@ internal class AddressFormViewModelTest : AddressHarness() {
             val vm = viewModel(id = ID_A, io = Dispatchers.IO)
             vm.ready()
             vm.onReference("Otra referencia mas clara")
-            vm.save()
+            // Con `io = Dispatchers.IO` la carga puede seguir activa unos instantes después de que `ready()` despierte:
+            // `save()` la respeta y vuelve sin hacer nada. Se reintenta (con reloj real) hasta que el guardado arranca.
+            val deadline = System.nanoTime() + SAVE_START_TIMEOUT_NS
+            while (!vm.state.value.saving && System.nanoTime() < deadline) {
+                vm.save()
+                if (!vm.state.value.saving) withContext(Dispatchers.IO) { delay(10) }
+            }
             assertTrue(vm.state.value.saving)
             // El guardado ya llegó al servidor, retenido: si la sesión cambiara antes, la cancelación ganaría la carrera
             // y la cuenta de peticiones no probaría nada.
@@ -348,3 +355,5 @@ internal class AddressFormViewModelTest : AddressHarness() {
             assertEquals("Bearer ${sessionJwt("user-1")}", held.headers["Authorization"])
         }
 }
+
+private const val SAVE_START_TIMEOUT_NS = 2_000_000_000L

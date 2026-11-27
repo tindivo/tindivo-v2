@@ -27,7 +27,7 @@ class UseMyLocationLifecycleDeviceTest {
 
     private fun show() {
         compose.setContent {
-            UseMyLocation(
+            rememberLocationRequester(
                 state = AddressFormState(locate = LocateState(available = true)),
                 onPermission = { permissions += it },
                 onLeave = { leaves += Unit },

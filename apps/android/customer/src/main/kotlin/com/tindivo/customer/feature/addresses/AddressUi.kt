@@ -33,6 +33,12 @@ internal fun ListCustomerAddresses200ResponseDataItemsInner.toUi() =
         isDefault = isDefault,
     )
 
+/**
+ * La regla de qué dirección se ofrece primero: la predeterminada, o la primera si ninguna lo es. Una sola para el
+ * checkout y el chip «Entregar en» del Inicio, que usan cada uno su propio modelo de dirección.
+ */
+fun <T> List<T>.preferredAddress(isDefault: (T) -> Boolean): T? = firstOrNull(isDefault) ?: firstOrNull()
+
 private const val HTTP_UNAUTHORIZED = 401
 private const val HTTP_NOT_FOUND = 404
 
