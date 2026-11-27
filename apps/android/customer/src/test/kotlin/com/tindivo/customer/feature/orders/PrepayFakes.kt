@@ -6,6 +6,8 @@ import com.tindivo.core.network.UploadOutcome
 import com.tindivo.core.network.generated.model.GetPrepayInfo200ResponseData
 import com.tindivo.core.network.generated.model.GetPrepayInfo200ResponseDataPaymentQr
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.math.BigDecimal
 import java.util.UUID
@@ -32,6 +34,10 @@ internal fun prepayInfo(
     status: String = "awaiting_payment",
     awaitingPaymentAt: String? = null,
     proofAttempt: Int = 0,
+    proofOptional: Boolean = false,
+    canUploadProof: Boolean = true,
+    paymentProofStatus: String? = null,
+    paymentVerifiedAt: String? = null,
 ) = GetPrepayInfo200ResponseData(
     businessName = "Pollería Rosa",
     yapeNumber = "987654321",
@@ -53,10 +59,10 @@ internal fun prepayInfo(
     awaitingPaymentAt = awaitingPaymentAt,
     totalText = "43.50",
     currency = GetPrepayInfo200ResponseData.Currency.PEN,
-    proofOptional = false,
-    canUploadProof = true,
-    paymentProofStatus = null,
-    paymentVerifiedAt = null,
+    proofOptional = proofOptional,
+    canUploadProof = canUploadProof,
+    paymentProofStatus = paymentProofStatus,
+    paymentVerifiedAt = paymentVerifiedAt,
 )
 
 /**
@@ -91,6 +97,13 @@ internal class FakePrepayGateway(
     val uploaded = mutableListOf<ByteArray>()
 
     var infoResult: ApiResult<GetPrepayInfo200ResponseData> = ApiResult.Success(prepayInfo())
+
+    /**
+     * Respuestas propias para las siguientes llamadas a `info`, en orden de llamada: una cola de resultados y, para
+     * controlar cuándo llega cada una, [parkNextInfo]. Sin nada en ellas contesta [infoResult].
+     */
+    val infoQueue = ArrayDeque<ApiResult<GetPrepayInfo200ResponseData>>()
+    private val parkedInfos = ArrayDeque<Pair<CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>, Boolean>>()
     var minutes: Int? = PAYMENT_MINUTES
     val slotResults = ArrayDeque<ApiResult<UploadSlot>>()
     val uploadOutcomes = ArrayDeque<UploadOutcome>()
@@ -111,8 +124,22 @@ internal class FakePrepayGateway(
         orderId: UUID,
     ): ApiResult<GetPrepayInfo200ResponseData> {
         enter("info", "info $accountId")
-        return infoResult
+        parkedInfos.removeFirstOrNull()?.let { (parked, uncancellable) ->
+            return if (uncancellable) withContext(NonCancellable) { parked.await() } else parked.await()
+        }
+        return infoQueue.removeFirstOrNull() ?: infoResult
     }
+
+    /** La próxima llamada a `info` se queda esperando hasta que la prueba complete lo que devuelve esto. */
+    fun parkNextInfo(): CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>> =
+        CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>().also { parkedInfos += it to false }
+
+    /**
+     * Como [parkNextInfo], pero la respuesta se entrega aunque quien preguntó ya esté cancelado: una entrega tardía
+     * que no respeta la cancelación (una respuesta HTTP que ya venía en camino).
+     */
+    fun parkNextInfoUncancellable(): CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>> =
+        CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>().also { parkedInfos += it to true }
 
     override suspend fun paymentMinutes(): Int? = minutes
 

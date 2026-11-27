@@ -11,6 +11,8 @@ import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
@@ -21,6 +23,8 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
+import org.junit.rules.Timeout
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -33,6 +37,13 @@ import java.time.ZoneOffset
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class PrepayHarness {
+    /**
+     * Una prueba que se cuelga falla en vez de bloquear la corrida: con el tiempo virtual de `runTest`, una consulta
+     * periódica que nadie cancela avanza sin fin (pasó el 2026-11-27 y dejó una JVM de pruebas colgada).
+     */
+    @get:Rule
+    val hangGuard: Timeout = Timeout.seconds(HANG_GUARD_SECONDS)
+
     protected val dispatcher = StandardTestDispatcher()
     protected lateinit var configService: ConfigService
 
@@ -65,9 +76,10 @@ abstract class PrepayHarness {
 
     /** Un ViewModel recién creado con sus falsos; [seen] guarda cada estado publicado, en orden. */
     internal inner class Env(
-        scope: TestScope,
+        private val scope: TestScope,
         session: SessionState = SessionState.SignedIn(PREPAY_ACCOUNT),
         orderId: String? = ORDER_ID.toString(),
+        observe: Boolean = true,
     ) {
         val gates = StepGates()
         val gateway = FakePrepayGateway(gates)
@@ -81,13 +93,29 @@ abstract class PrepayHarness {
                 store,
                 configService,
                 SchedulerClock(scope.testScheduler),
+                PollingDelay { delay(it) },
             )
         val seen = mutableListOf<PrepayUiState>()
 
+        private var collector: Job? = null
+
         init {
-            scope.backgroundScope.launch(UnconfinedTestDispatcher(scope.testScheduler)) {
-                viewModel.state.collect { seen += it }
-            }
+            if (observe) startObserving()
+        }
+
+        /** Alguien empieza a mirar `state` (la pantalla a la vista). */
+        fun startObserving() {
+            if (collector?.isActive == true) return
+            collector =
+                scope.backgroundScope.launch(UnconfinedTestDispatcher(scope.testScheduler)) {
+                    viewModel.state.collect { seen += it }
+                }
+        }
+
+        /** Nadie mira `state` (la pantalla en segundo plano: `collectAsStateWithLifecycle` se desuscribe). */
+        fun stopObserving() {
+            collector?.cancel()
+            collector = null
         }
 
         val state: PrepayUiState
@@ -121,3 +149,5 @@ abstract class PrepayHarness {
         const val PHOTO_B = "content://media/picker/0/foto-b"
     }
 }
+
+private const val HANG_GUARD_SECONDS = 60L

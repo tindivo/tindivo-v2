@@ -209,11 +209,8 @@ class SupportContactTest {
     fun `los textos de la cuenta en pausa y del pago adelantado llevan la frase del error`() {
         val phrase = "Si crees que hubo un error, escríbenos por WhatsApp"
         assertTrue(strings.contains("""name="support_error_phrase">$phrase."""))
-        assertTrue(
-            strings.contains(
-                """name="checkout_pay_reason_required">Por ahora tus pedidos van con pago adelantado. $phrase.""",
-            ),
-        )
+        // El motivo de la fila es el de CUS-CHK-023; la frase va junto al botón de WhatsApp del checkout.
+        assertTrue(strings.contains("""name="checkout_pay_reason_required">Por pedidos anteriores sin recibir<"""))
     }
 
     @Test

@@ -491,16 +491,14 @@
     <string name="checkout_note_support">La verá solo el motorizado, al salir a tu dirección.</string>
 
     <string name="checkout_pay_title">¿Cómo pagas?</string>
-    <string name="checkout_pay_group_receive">Al recibir</string>
-    <string name="checkout_pay_group_before">Antes de recibir</string>
     <string name="checkout_pay_cash">Efectivo</string>
     <string name="checkout_pay_cash_hint">Le pagas al motorizado en tu puerta</string>
     <string name="checkout_pay_yape">Yape o Plin</string>
-    <string name="checkout_pay_yape_hint">Le transfieres al motorizado en tu puerta</string>
-    <string name="checkout_pay_prepaid">Yape o Plin adelantado</string>
-    <string name="checkout_pay_prepaid_hint">Pagas apenas el local confirme. No pagas nada ahora.</string>
-    <string name="checkout_pay_reason_threshold">Tu total con envío pasa de %1$s, así que el pago va adelantado.</string>
-    <string name="checkout_pay_reason_required">Por ahora tus pedidos van con pago adelantado. Si crees que hubo un error, escríbenos por WhatsApp.</string>
+    <string name="checkout_pay_yape_hint">Ves el número cuando el negocio acepte</string>
+    <string name="checkout_pay_prepaid">Yape o Plin por adelantado</string>
+    <string name="checkout_pay_prepaid_hint">Pagas apenas el local acepte</string>
+    <string name="checkout_pay_reason_threshold">Pedido mayor a %1$s</string>
+    <string name="checkout_pay_reason_required">Por pedidos anteriores sin recibir</string>
     <string name="checkout_pay_reason_other">Por ahora no puedes elegir esta opción en este pedido.</string>
     <string name="checkout_prepay_how">¿Cómo funciona el pago adelantado?</string>
     <string name="checkout_prepay_step1">El local confirma tu pedido.</string>
@@ -668,6 +666,14 @@
 
     <!-- Pago adelantado: «Paga tu pedido» en el detalle (textos de la web, apps/customer/components/prepay-proof-section.tsx). -->
     <string name="prepay_title">Paga tu pedido</string>
+    <string name="prepay_title_business">Paga a %1$s</string>
+    <string name="prepay_with_wallets">Con Yape o Plin</string>
+    <string name="prepay_pay_at_door">Pagaré al motorizado al llegar</string>
+    <string name="prepay_pay_at_door_chosen">Listo: le pagas al motorizado cuando llegue.</string>
+    <string name="prepay_pay_at_door_only">Le pagas al motorizado cuando llegue.</string>
+    <string name="prepay_proof_notice">El restaurante y el motorizado asignado podrán ver esta captura. Muestra solo esta operación y oculta información ajena al pago.</string>
+    <string name="prepay_send_needs_photo">Adjunta la captura para enviar</string>
+    <string name="prepay_verified">El negocio confirmó tu pago.</string>
     <string name="prepay_confirmed">%1$s confirmó tu pedido. Ahora te toca pagar para que entre a cocina.</string>
     <string name="prepay_last_try">Tu comprobante no fue válido. Revisa e intenta de nuevo. Te queda 1 intento.</string>
     <plurals name="prepay_time_left">
@@ -695,7 +701,7 @@
     <string name="prepay_no_qr">Esta cuenta no tiene QR: transfiere al número desde %1$s.</string>
     <string name="prepay_no_account">Todavía no vemos a qué número pagar. Vuelve a abrir tu pedido en un momento.</string>
     <string name="prepay_close">Cerrar</string>
-    <string name="prepay_upload">Ya pagué · Subir captura</string>
+    <string name="prepay_upload">Subir captura</string>
     <string name="prepay_upload_hint">Que se vea tu nombre y la hora del pago.</string>
     <string name="prepay_preview_title">Tu captura</string>
     <string name="prepay_preview_description">Vista previa de tu captura de pago</string>

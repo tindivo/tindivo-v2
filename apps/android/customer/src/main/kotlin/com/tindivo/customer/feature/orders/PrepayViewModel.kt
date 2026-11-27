@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,6 +51,7 @@ internal class PrepayViewModel
         private val sessionStore: SessionStore,
         private val configService: ConfigService,
         private val clock: Clock,
+        private val pollingDelay: PollingDelay,
     ) : ViewModel() {
         private val orderId: UUID? = parseOrderId(savedStateHandle.get<String>("id"))
         private val sender = ProofSender(gateway, encoder)
@@ -67,12 +69,21 @@ internal class PrepayViewModel
         private var wanted = false
         private var generation = 0
 
-        /** Sube con cada `prepay-info` pedido y al retirar la oferta: una respuesta de antes ya no se aplica. */
-        private var infoRequest = 0
+        /**
+         * El orden de todas las lecturas de `prepay-info`, sea cual sea su vía ([startLoad], [pollOnce], [reread]):
+         * [readSeq] sube al PEDIR cada una; [appliedSeq] es la última que se aceptó; [floorSeq] es lo último pedido cuando
+         * algo invalidó las que estaban en vuelo (un envío, un `load`, la retirada de la oferta o el fin de la sesión).
+         * Una respuesta solo se publica si se pidió después de la última aceptada y después de la última invalidación
+         * ([isFresh]): una respuesta vieja nunca pisa a una más nueva, llegue cuando llegue.
+         */
+        private var readSeq = 0
+        private var appliedSeq = 0
+        private var floorSeq = 0
         private var paymentMinutes: Int? = null
         private var loadJob: Job? = null
         private var sendJob: Job? = null
         private var countdownJob: Job? = null
+        private var pollJob: Job? = null
 
         init {
             val watch = SessionWatch()
@@ -127,12 +138,14 @@ internal class PrepayViewModel
             if (ended || !current.canSend || photo == null || account == null || id == null) return
             val started = generation
             if (!isCurrent(started, account)) return
-            // `Sending` se fija antes de lanzar nada: un doble toque ya ve el estado nuevo.
+            // `Sending` se fija antes de lanzar nada: un doble toque ya ve el estado nuevo. Y toda lectura de
+            // `prepay-info` en vuelo (la consulta o la relectura) es anterior a este envío: ya no se aplica.
+            dropReadsInFlight()
             mutableState.update { it.copy(send = SendState.Sending) }
             sendJob =
                 viewModelScope.launch {
                     val step = sender.deliver(account, id, photo) { isCurrent(started, account) }
-                    if (isCurrent(started, account)) publish(step, account)
+                    if (isCurrent(started, account)) publish(step, account, started)
                 }
         }
 
@@ -156,19 +169,23 @@ internal class PrepayViewModel
             val id = orderId ?: return
             val started = generation
             if (!isCurrent(started, account)) return
+            pollJob?.cancel()
             loadJob?.cancel()
-            val request = ++infoRequest
+            dropReadsInFlight()
+            val request = newRead()
             mutableState.update { it.copy(info = PrepayInfoState.Loading) }
             loadJob =
                 viewModelScope.launch {
                     val result = gateway.info(account, id)
                     val minutes = if (result is ApiResult.Success) cachedPaymentMinutes() else null
-                    if (!isCurrent(started, account) || request != infoRequest) return@launch
+                    if (!isCurrent(started, account) || !isFresh(request)) return@launch
                     when (result) {
                         is ApiResult.Success -> {
+                            appliedSeq = request
                             val info = result.data.toPrepayState(minutes)
                             mutableState.update { it.copy(info = info) }
                             startCountdown((info as? PrepayInfoState.Ready)?.details?.deadline)
+                            startPolling()
                         }
 
                         is ApiResult.Failure -> {
@@ -179,8 +196,156 @@ internal class PrepayViewModel
                 }
         }
 
+        private fun newRead(): Int = ++readSeq
+
+        /** Lo que ya está en vuelo es anterior a lo que viene: no se aplicará. */
+        private fun dropReadsInFlight() {
+            floorSeq = readSeq
+        }
+
+        private fun isFresh(seq: Int): Boolean = seq > appliedSeq && seq > floorSeq
+
         private suspend fun cachedPaymentMinutes(): Int? =
             paymentMinutes ?: gateway.paymentMinutes().also { paymentMinutes = it }
+
+        /**
+         * La tarjeta del pago opcional sigue a la vista y vale la pena preguntar: hay oferta (`Ready` opcional) y el pago
+         * aún no está confirmado. Haya o no captura enviada: una confirmación del negocio debe llegar siempre (CAX-001).
+         */
+        private fun shouldPoll(state: PrepayUiState): Boolean {
+            val details = (state.info as? PrepayInfoState.Ready)?.details ?: return false
+            return details.optional && !details.paymentConfirmed
+        }
+
+        /**
+         * Mientras la tarjeta del pago opcional esté a la vista y el pedido no haya terminado, vuelve a pedir
+         * `prepay-info` cada [ORDER_POLL_MILLIS], en silencio: sin pasar por `Loading` y, si falla, dejando el estado
+         * como está. Lo que diga el servidor se publica con [applyPolled]. Se detiene al confirmarse el pago, al
+         * terminar el pedido, ante un 401 o ante un 4xx definitivo; va atado a la sesión y al orden de lecturas
+         * ([isFresh]) como [startLoad]: un [load] nuevo lo reemplaza.
+         *
+         * Solo pregunta mientras alguien observa [state] (CAX-003): antes de cada petición espera a que haya un
+         * suscriptor. La pantalla usa `collectAsStateWithLifecycle`, que se desuscribe en segundo plano. [PollingDelay]
+         * NO lo detiene: su binding productivo es un `delay` simple (`di/PollingModule.kt`), que corre aunque la
+         * pantalla no se vea; lo que corta el sondeo es la espera del suscriptor.
+         */
+        private fun startPolling() {
+            if (!shouldPoll(mutableState.value) || pollJob?.isActive == true) return
+            val account = accountId ?: return
+            val id = orderId ?: return
+            val started = generation
+            pollJob =
+                viewModelScope.launch {
+                    while (shouldPoll(mutableState.value)) {
+                        pollingDelay.await(ORDER_POLL_MILLIS)
+                        mutableState.subscriptionCount.first { it > 0 }
+                        if (!pollOnce(started, account, id)) return@launch
+                    }
+                }
+        }
+
+        /**
+         * Una vuelta de la consulta. `false` la corta: sesión terminada, un 401, un 4xx definitivo, el pedido terminado
+         * o el pago confirmado. Todo lo demás (corte de red, 5xx, 426, respuesta ilegible, una respuesta invalidada por
+         * un envío) se descarta y se reintenta en la siguiente vuelta. Mientras se envía no pregunta.
+         */
+        private suspend fun pollOnce(
+            started: Int,
+            account: String,
+            id: UUID,
+        ): Boolean {
+            if (!isCurrent(started, account) || !shouldPoll(mutableState.value)) return false
+            // Mientras se envía o se relee tras un envío incierto, la relectura es la que pregunta.
+            if (mutableState.value.send is SendState.Sending || mutableState.value.reconciling) return true
+            val request = newRead()
+            val result = gateway.info(account, id)
+            val minutes = if (result is ApiResult.Success) cachedPaymentMinutes() else null
+            if (!isCurrent(started, account)) return false
+            // Una respuesta descartada nunca termina la consulta: sigue con la siguiente vuelta.
+            if (!isFresh(request)) return true
+            return when (result) {
+                is ApiResult.Success -> {
+                    appliedSeq = request
+                    applyPolled(result.data.toPrepayState(minutes))
+                    // Solo decide cuándo dejar de preguntar, no qué se permite: lo demás lo dice `canUploadProof`.
+                    result.data.status !in FINISHED_ORDER
+                }
+
+                is ApiResult.Failure -> {
+                    !handleSessionErrors(result.error, account) && !result.error.isDefinitiveClientError()
+                }
+            }
+        }
+
+        /**
+         * Publica lo que dijo el servidor. Una captura en revisión pasa a «enviada» (o no cambia nada si ya lo está). Si no,
+         * la foto elegida y sin enviar ([SendState.Idle] o [SendState.Failed]) se conserva salvo que el pago esté
+         * confirmado o la oferta se haya retirado; una captura enviada que ya no está en revisión se olvida. Mientras se
+         * envía no se toca nada. Con la oferta retirada se cancela la cuenta regresiva.
+         */
+        private fun applyPolled(info: PrepayInfoState) {
+            val details = (info as? PrepayInfoState.Ready)?.details
+            val send = mutableState.value.send
+            if (send is SendState.Sending) return
+            if (details != null && details.optional && details.proofInReview) {
+                // Una captura en revisión manda: ya hay una enviada (de aquí, de otro envío o de otro dispositivo).
+                if (send !is SendState.Sent) {
+                    sender.forget()
+                    mutableState.update { it.copy(info = info, send = SendState.Sent, photo = null) }
+                    startPolling()
+                }
+                return
+            }
+            val offerGone = details == null || details.paymentConfirmed
+            val keepsPhoto = !offerGone && (send is SendState.Idle || send is SendState.Failed)
+            if (!keepsPhoto) sender.forget()
+            mutableState.update {
+                if (keepsPhoto) it.copy(info = info) else it.copy(info = info, photo = null, send = SendState.Idle)
+            }
+            startCountdown(details?.deadline)
+        }
+
+        /**
+         * El envío terminó sin saber si el servidor registró la captura (corte de red, 5xx…): se vuelve a leer
+         * `prepay-info` en silencio. Si ya la tiene en revisión, se pasa a esperar al negocio y se sondea; si no, se
+         * publica con [applyPolled] (sin borrar el aviso de fallo ni la foto, para poder reintentar).
+         */
+        private suspend fun reconcileAfterUncertainSend(
+            account: String,
+            started: Int,
+        ) {
+            val id = orderId ?: return
+            val request = newRead()
+            mutableState.update { it.copy(reconciling = true) }
+            try {
+                reread(account, id, started, request)
+            } finally {
+                if (!ended) mutableState.update { it.copy(reconciling = false) }
+            }
+        }
+
+        private suspend fun reread(
+            account: String,
+            id: UUID,
+            started: Int,
+            request: Int,
+        ) {
+            val result = gateway.info(account, id)
+            val minutes = if (result is ApiResult.Success) cachedPaymentMinutes() else null
+            if (!isCurrent(started, account) || !isFresh(request)) return
+            when (result) {
+                is ApiResult.Success -> {
+                    appliedSeq = request
+                    applyPolled(result.data.toPrepayState(minutes))
+                    // La consulta sigue viva mientras la tarjeta esté a la vista (si ya corre, no hace nada).
+                    startPolling()
+                }
+
+                is ApiResult.Failure -> {
+                    handleSessionErrors(result.error, account)
+                }
+            }
+        }
 
         /** Publica los minutos que quedan y se despierta solo cuando cambia el número; al vencer, para. */
         private fun startCountdown(deadline: Instant?) {
@@ -204,10 +369,12 @@ internal class PrepayViewModel
         private suspend fun publish(
             step: SendStep,
             account: String,
+            started: Int,
         ) {
             when (step) {
                 SendStep.Done -> {
                     mutableState.update { it.copy(send = SendState.Sent, refreshRequests = it.refreshRequests + 1) }
+                    startPolling()
                 }
 
                 is SendStep.Stopped -> {
@@ -215,7 +382,14 @@ internal class PrepayViewModel
                 }
 
                 is SendStep.ApiFailed -> {
-                    failApi(step.error, account)
+                    val optional = ((mutableState.value.info as? PrepayInfoState.Ready)?.details?.optional) == true
+                    failApi(step.error, account, optional)
+                    // Sin 4xx, con un corte de red o con un 409 no se sabe qué quedó en el servidor: se relee, y mientras
+                    // llega no se ofrece subir de nuevo (CAX-001, R3-4). El prepago normal no pasa por aquí.
+                    val unsure = step.error !is AppError.Known || step.error.status !in CLIENT_ERRORS
+                    if (optional && !ended && (unsure || step.error.noLongerAwaitsPayment())) {
+                        reconcileAfterUncertainSend(account, started)
+                    }
                 }
 
                 SendStep.Abandoned -> {
@@ -227,6 +401,7 @@ internal class PrepayViewModel
         private suspend fun failApi(
             error: AppError,
             account: String,
+            optional: Boolean,
         ) {
             if (handleSessionErrors(error, account)) return
             val known = (error as? AppError.Known)?.takeIf { it.status in CLIENT_ERRORS }
@@ -236,8 +411,9 @@ internal class PrepayViewModel
                     known != null -> SendProblem.Rejected(known.fieldMessage ?: known.detail)
                     else -> SendProblem.Generic
                 }
-            // El servidor dijo que no (ya no espera pago, intentos agotados…): el detalle se vuelve a consultar.
-            fail(problem, refresh = known != null, withdraw = error.noLongerAwaitsPayment())
+            // El servidor dijo que no (ya no espera pago, intentos agotados…): el detalle se vuelve a consultar. En el
+            // pago opcional un 409 no retira la oferta a ciegas: se relee `prepay-info` y decide el servidor.
+            fail(problem, refresh = known != null, withdraw = !optional && error.noLongerAwaitsPayment())
         }
 
         /**
@@ -251,7 +427,7 @@ internal class PrepayViewModel
         ) {
             if (withdraw) {
                 loadJob?.cancel()
-                infoRequest++
+                dropReadsInFlight()
                 countdownJob?.cancel()
                 sender.forget()
             }
@@ -312,9 +488,11 @@ internal class PrepayViewModel
         private fun end() {
             ended = true
             generation++
+            dropReadsInFlight()
             loadJob?.cancel()
             sendJob?.cancel()
             countdownJob?.cancel()
+            pollJob?.cancel()
             sender.forget()
             accountId = null
             mutableState.value = PrepayUiState()
@@ -322,10 +500,30 @@ internal class PrepayViewModel
 
         private companion object {
             val CLIENT_ERRORS = 400..499
+            val FINISHED_ORDER = setOf("delivered", "cancelled")
         }
     }
 
 private const val HTTP_CONFLICT = 409
+private const val FIRST_CLIENT_ERROR = 400
+private const val LAST_CLIENT_ERROR = 499
+private const val HTTP_REQUEST_TIMEOUT = 408
+private const val HTTP_TOO_MANY_REQUESTS = 429
+private val CLIENT_ERROR_STATUSES = FIRST_CLIENT_ERROR..LAST_CLIENT_ERROR
+
+/**
+ * Un 4xx que reintentar no arregla. El 408 y el 429 (`rate_limited`) son pasajeros: se reintentan en la siguiente
+ * vuelta. El 401 y el 426 se tratan aparte (el 426 no es un [AppError.Known]).
+ */
+private fun AppError.isDefinitiveClientError(): Boolean {
+    val status =
+        when (this) {
+            is AppError.Known -> status
+            is AppError.Unknown -> status
+            else -> null
+        }
+    return status in CLIENT_ERROR_STATUSES && status != HTTP_REQUEST_TIMEOUT && status != HTTP_TOO_MANY_REQUESTS
+}
 
 /**
  * El servidor dice que el pedido ya no espera el comprobante: `invalid_state_transition` (409 en esta API, sea cual sea

@@ -12,6 +12,7 @@ import com.tindivo.customer.session.TokenSnapshot
 import com.tindivo.customer.session.testClock
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -50,6 +51,7 @@ internal class PrepayLateUnauthorizedTest : PrepayHarness() {
                 store,
                 configService,
                 SchedulerClock(testScheduler),
+                PollingDelay { delay(it) },
             )
         runCurrent()
         return vm

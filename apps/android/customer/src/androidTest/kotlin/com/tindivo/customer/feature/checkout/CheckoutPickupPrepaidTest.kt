@@ -104,7 +104,7 @@ class CheckoutPickupPrepaidTest {
         compose.onNodeWithText(text(R.string.checkout_pay_prepaid)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(text(R.string.checkout_pay_cash)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.checkout_pay_yape)).assertDoesNotExist()
-        compose.onNodeWithText(text(R.string.checkout_pay_group_receive)).assertDoesNotExist()
+        compose.onNodeWithText("Al recibir").assertDoesNotExist()
     }
 
     @Test

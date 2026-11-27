@@ -1,5 +1,6 @@
 package com.tindivo.customer.feature.checkout
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.hasScrollToKeyAction
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.performScrollToKey
@@ -51,10 +52,21 @@ abstract class CheckoutCapturasBase(
         lineTotals = listOf(BigDecimal("45.00"), BigDecimal("8.50")),
     )
 
-    private val todas =
+    // Cliente confiable: lo que manda el servidor es efectivo y Yape o Plin al recibir (CA-CHK-09).
+    private val confiable =
         listOf(
             PayOption(PayMethod.Cash, available = true, unavailableReason = null),
             PayOption(PayMethod.Yape, available = true, unavailableReason = null),
+        )
+
+    // Cliente nuevo: las tres a la vez; la fila digital muestra Prepaid solo si es lo elegido.
+    private val todas = confiable + PayOption(PayMethod.Prepaid, available = true, unavailableReason = null)
+
+    // No confiable (CA-CHK-P2): el efectivo y Yape quedan apagados con su motivo y solo queda pagar por adelantado.
+    private val soloAdelantado =
+        listOf(
+            PayOption(PayMethod.Cash, available = false, unavailableReason = "prepay_required"),
+            PayOption(PayMethod.Yape, available = false, unavailableReason = "prepay_required"),
             PayOption(PayMethod.Prepaid, available = true, unavailableReason = null),
         )
 
@@ -81,7 +93,7 @@ abstract class CheckoutCapturasBase(
                     BagLineUi("Chicha morada 1 L", 1, emptyList(), null),
                 ),
             pay = PayMethod.Yape,
-            quote = cotizacion(envio = "4.00", total = "57.50", opciones = todas),
+            quote = cotizacion(envio = "4.00", total = "57.50", opciones = confiable),
             quoteStatus = QuoteStatus.Ready,
         )
 
@@ -93,12 +105,7 @@ abstract class CheckoutCapturasBase(
                 cotizacion(
                     envio = "0.00",
                     total = "53.50",
-                    opciones =
-                        listOf(
-                            PayOption(PayMethod.Cash, available = false, unavailableReason = "pickup_requires_prepaid"),
-                            PayOption(PayMethod.Yape, available = false, unavailableReason = "pickup_requires_prepaid"),
-                            PayOption(PayMethod.Prepaid, available = true, unavailableReason = null),
-                        ),
+                    opciones = listOf(PayOption(PayMethod.Prepaid, available = true, unavailableReason = null)),
                 ),
         )
 
@@ -131,7 +138,9 @@ abstract class CheckoutCapturasBase(
         escalaDeFuente: Float = 1f,
         antes: ComposeContentTestRule.() -> Unit = {},
     ) = captura("checkout_$nombre", escalaDeFuente = escalaDeFuente, antes = antes) {
-        CheckoutScreen(state = estado, actions = sinAcciones, form = sinFormulario)
+        CompositionLocalProvider(LocalSupportNumber provides "51900000000") {
+            CheckoutScreen(state = estado, actions = sinAcciones, form = sinFormulario)
+        }
     }
 
     @Test
@@ -149,7 +158,26 @@ abstract class CheckoutCapturasBase(
         )
 
     @Test
-    fun `CHK-14 pago adelantado`() = checkout("adelantado", delivery.copy(pay = PayMethod.Prepaid), antes = alPago)
+    fun `CHK-P2 no confiable, solo por adelantado`() =
+        checkout(
+            "no_confiable",
+            delivery.copy(
+                pay = PayMethod.Prepaid,
+                quote = cotizacion(envio = "4.00", total = "57.50", opciones = soloAdelantado),
+            ),
+            antes = alPago,
+        )
+
+    @Test
+    fun `CHK-14 pago adelantado`() =
+        checkout(
+            "adelantado",
+            delivery.copy(
+                pay = PayMethod.Prepaid,
+                quote = cotizacion(envio = "4.00", total = "57.50", opciones = todas),
+            ),
+            antes = alPago,
+        )
 }
 
 @Config(qualifiers = QUALIFIERS_TELEFONO)
