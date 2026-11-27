@@ -95,6 +95,13 @@ internal class FakePrepayGateway(
     val uploaded = mutableListOf<ByteArray>()
 
     var infoResult: ApiResult<GetPrepayInfo200ResponseData> = ApiResult.Success(prepayInfo())
+
+    /**
+     * Respuestas propias para las siguientes llamadas a `info`, en orden de llamada: una cola de resultados y, para
+     * controlar cuándo llega cada una, [parkNextInfo]. Sin nada en ellas contesta [infoResult].
+     */
+    val infoQueue = ArrayDeque<ApiResult<GetPrepayInfo200ResponseData>>()
+    private val parkedInfos = ArrayDeque<CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>>()
     var minutes: Int? = PAYMENT_MINUTES
     val slotResults = ArrayDeque<ApiResult<UploadSlot>>()
     val uploadOutcomes = ArrayDeque<UploadOutcome>()
@@ -115,8 +122,13 @@ internal class FakePrepayGateway(
         orderId: UUID,
     ): ApiResult<GetPrepayInfo200ResponseData> {
         enter("info", "info $accountId")
-        return infoResult
+        parkedInfos.removeFirstOrNull()?.let { return it.await() }
+        return infoQueue.removeFirstOrNull() ?: infoResult
     }
+
+    /** La próxima llamada a `info` se queda esperando hasta que la prueba complete lo que devuelve esto. */
+    fun parkNextInfo(): CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>> =
+        CompletableDeferred<ApiResult<GetPrepayInfo200ResponseData>>().also { parkedInfos += it }
 
     override suspend fun paymentMinutes(): Int? = minutes
 
