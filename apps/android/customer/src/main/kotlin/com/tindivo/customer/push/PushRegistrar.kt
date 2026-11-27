@@ -106,7 +106,11 @@ class PushRegistrar(
                             // Con la cuenta atada, no `null`: una escritura tardía solo puede soltar ESA cuenta (H3).
                             val bound = installations.current()?.accountId
                             // Sin cuenta atada no hay nada que soltar, pero la bandeja se vacía igual (RV-1).
-                            if (bound == null) presenter.clearTray() else closeAccount(accountId = bound, hasSession = false)
+                            if (bound == null) {
+                                presenter.clearTray()
+                            } else {
+                                closeAccount(accountId = bound, hasSession = false)
+                            }
                         }
 
                         is SessionState.SignedIn -> {
