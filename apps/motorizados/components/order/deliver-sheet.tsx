@@ -1,8 +1,15 @@
 'use client'
 
 import { BottomSheet, Button, cn, Icon } from '@tindivo/ui'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { soles } from '@/lib/format'
+import { fetchOrderDetail } from '@/lib/orders/detail-cache'
+import {
+  type DoorPayment,
+  doorPayment,
+  paymentRealForConfirmed,
+  recheckDoorPayment,
+} from '@/lib/orders/door-payment'
 import { moneyLine } from '@/lib/orders/presentation'
 import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
@@ -55,7 +62,39 @@ export function DeliverSheet({
   onClose: () => void
 }) {
   const { order, business } = detail
-  const prepaid = order.paymentIntent === 'prepaid'
+
+  // PAGO ÚNICO, LA CARRERA (dinero). El negocio puede confirmar el ingreso
+  // mientras el motorizado camina, y la hoja se abrió con un detalle de antes:
+  // sin releer, le haría cobrar de nuevo algo que ya entró. Se relee al montar,
+  // con un tope de 4 s: si falla o tarda, se sigue con lo que había, porque la
+  // entrega (y la cola offline) nunca se bloquea por esto.
+  const [door, setDoor] = useState<DoorPayment>(() => doorPayment(order))
+  const [rechecking, setRechecking] = useState(
+    () => order.paymentIntent === 'pending_yape' && doorPayment(order).mode === 'collect',
+  )
+  useEffect(() => {
+    if (!rechecking) return
+    let cancelled = false
+    const stale = doorPayment(order)
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000))
+    const fresh = fetchOrderDetail(order.id, { fresh: true }).then(
+      (d) => doorPayment(d.order),
+      () => null,
+    )
+    Promise.race([fresh, timeout]).then((result) => {
+      if (cancelled) return
+      setDoor(recheckDoorPayment(stale, result))
+      setRechecking(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const prepaid = door.mode === 'prepaid'
+  const confirmedByBusiness = door.mode === 'confirmed_by_business'
+  // Sin nada que cobrar: o ya venía pagado, o el negocio ya confirmó el ingreso.
+  const nothingToCollect = prepaid || confirmedByBusiness
   const total = order.orderAmount + order.deliveryFee
 
   const planned = useMemo(
@@ -110,11 +149,13 @@ export function DeliverSheet({
   const liveChange =
     cashOwed > 0 && paysN > cashOwed ? Math.round((paysN - cashOwed) * 100) / 100 : 0
 
-  const canConfirm = !busy && (kind !== 'changed' || (splitOk && billOk))
+  const canConfirm = !busy && !rechecking && (kind !== 'changed' || (splitOk && billOk))
 
   function submit() {
     if (!canConfirm) return
     if (prepaid) return onConfirm({ paymentReal: 'paid_prepaid' })
+    // El negocio ya vio el dinero: sin importes ni billete.
+    if (confirmedByBusiness) return onConfirm({ paymentReal: paymentRealForConfirmed() })
 
     if (kind === 'changed') {
       return onConfirm({
@@ -141,16 +182,18 @@ export function DeliverSheet({
   }
 
   // Un solo sitio: lo pinta el encabezado y nombra el diálogo.
-  const titulo = prepaid ? 'Confirmar entrega' : '¿Cómo pagó el cliente?'
+  const titulo = nothingToCollect ? 'Confirmar entrega' : '¿Cómo pagó el cliente?'
 
   return (
     <BottomSheet open label={titulo} onClose={onClose}>
       <div className="max-h-[85vh] overflow-y-auto p-5 pb-7">
         <h2 className="font-display text-title font-bold tracking-tight">{titulo}</h2>
 
-        {prepaid ? (
+        {nothingToCollect ? (
           <p className="mt-1 text-body text-ink-muted">
-            Este pedido ya estaba pagado. No cobres nada.
+            {confirmedByBusiness
+              ? 'El restaurante ya confirmó el pago. No cobres nada.'
+              : 'Este pedido ya estaba pagado. No cobres nada.'}
           </p>
         ) : (
           <>
@@ -281,7 +324,7 @@ export function DeliverSheet({
         )}
 
         <Button className="mt-5 w-full" disabled={!canConfirm} onClick={submit}>
-          {busy ? 'Confirmando…' : 'Confirmar entrega'}
+          {rechecking ? 'Comprobando el pago…' : busy ? 'Confirmando…' : 'Confirmar entrega'}
         </Button>
 
         <div className="mt-5 border-t border-ink/10 pt-4">

@@ -2,8 +2,10 @@
 
 import { Card, Icon } from '@tindivo/ui'
 import { soles } from '@/lib/format'
+import { doorPayment } from '@/lib/orders/door-payment'
 import { changeDue } from '@/lib/payment'
 import type { OrderDetailResponse } from '@/lib/types'
+import { PaymentProofViewer } from './payment-proof-viewer'
 import { YapeQr } from './yape-qr'
 
 /**
@@ -67,9 +69,39 @@ export function CollectCard({ detail }: { detail: OrderDetailResponse }) {
     )
   }
 
+  // Pago único: el negocio pudo confirmar el ingreso, y solo él lo confirma.
+  const door = doorPayment(order)
+  if (door.mode === 'confirmed_by_business') {
+    return (
+      <Card className="mt-3 flex items-center gap-2.5 border-none bg-success-soft p-4 text-success shadow-none">
+        <Icon name="check" size={20} />
+        <span className="font-semibold text-body">
+          El restaurante ya confirmó el pago. No cobres nada.
+        </span>
+      </Card>
+    )
+  }
+  const isSingle = order.paymentIntent === 'pending_yape'
+
   // pending_yape | pending_mixed: el cliente paga al Yape del restaurante.
   return (
     <Card className="mt-3 p-[18px]">
+      {isSingle && door.proof === 'rejected' && (
+        <p className="mb-3 rounded-xl bg-warning-soft px-3 py-2 text-body font-semibold text-amber-900">
+          El restaurante rechazó la captura. Cobra en la puerta.
+        </p>
+      )}
+      {isSingle && (door.proof === 'pending' || door.proof === 'verified') && (
+        <div className="mb-3 rounded-xl bg-surface px-3 py-2.5">
+          <p className="text-body font-semibold text-ink">El cliente envió su captura</p>
+          <p className="mt-0.5 text-caption text-ink-muted">
+            Solo el restaurante confirma el pago. Si no lo confirma, cobra con el QR.
+          </p>
+          <div className="mt-2">
+            <PaymentProofViewer orderId={order.id} />
+          </div>
+        </div>
+      )}
       <p className="font-mono text-meta font-semibold uppercase tracking-[0.14em] text-ink-muted">
         El cliente paga al Yape del restaurante
       </p>
