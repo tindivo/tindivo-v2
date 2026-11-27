@@ -136,7 +136,8 @@ Sin lotes todavía: sus precondiciones (`conclusion.md` F4) salen de la Fase 4.
 ## 6. Lo que le toca a Jesús, en orden
 
 1. Aprobar este plan y el commit de P0.1.
-2. P0.5: dónde guardar la copia fuera del PC y presencia para sacarla.
+2. P0.5: dónde guardar la copia fuera del PC y presencia para sacarla. *(Decidido el 2026-11-26: cifrada, en su
+   Google Drive, con una clave que solo guarda él; se saca con él presente. Runbook: `Docs/operacion/copia-de-produccion.md`.)*
 3. D-40 (formatos y tamaño del comprobante) — desbloquea C5 y el cierre de F0.
 4. Aprobar cada despliegue (C1, C6, H4, H5, H9).
 5. H2: leer los paneles conmigo.
