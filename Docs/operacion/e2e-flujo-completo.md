@@ -1,6 +1,6 @@
 # Prueba de punta a punta de un pedido por la API REST
 
-> Verificado: 2026-11-19 · contra `test/e2e-punta-a-punta` sobre `develop@25a6d537`, pila LOCAL (Supabase 127.0.0.1:54321, API en el puerto 3001), con `pnpm e2e:todo --reset` y otra vez sin `--reset`: 82/82 pasos, 13 escenarios
+> Verificado: 2026-11-27 · contra `test/e2e-punta-a-punta` sobre `3e761317` más las correcciones de la revisión, pila LOCAL (Supabase 127.0.0.1:54321, API en el puerto 3001), con `pnpm e2e:todo --reset`: 128/129 pasos, 20 escenarios, 19 ok y 1 rojo esperado (`comprobante-rechazado`). La corrida final tras las correcciones la confirmará el commit
 
 `scripts/e2e/flujo-completo.ts` lleva UN pedido de restaurante por todo su ciclo usando solo `/api/v1`, como las apps:
 el cliente lo crea, la cajera lo valida y lo acepta, y el motorizado lo toma, lo recoge y lo entrega. Inicia sesión con
@@ -19,11 +19,11 @@ Escenarios: **contraentrega** (efectivo; si el cliente no tiene historial nace e
 
 ## Todos los escenarios
 
-`pnpm e2e:todo` arranca la API si hace falta y corre los 13 escenarios bajo el candado (`--reset` hace antes `db reset` y el seed e2e; `--playwright` suma `pnpm test:e2e`). La lista de escenarios está en el script (`SCENARIO_NAMES`). Un escenario se corre solo con `--scenario <nombre>`.
+`pnpm e2e:todo` arranca la API si hace falta y corre los 20 escenarios bajo el candado (`--reset` hace antes `db reset` y el seed e2e; `--playwright` suma `pnpm test:e2e`). La lista de escenarios está en el script (`SCENARIO_NAMES`): `contraentrega`, `prepago`, `rechazo`, `cancela-cliente`, `no-show`, `recojo`, `prepago-heic`, `mis-pedidos`, `prepago-vencido`, `celular-sms`, `entregas`, `borrar-cuenta`, `compat-v1` y, nuevos, `comprobante-rechazado`, `negocio-cancela`, `traspaso`, `admin-negocio`, `admin-caso`, `store` e `invitado`. Un escenario se corre solo con `--scenario <nombre>`. `comprobante-rechazado` termina en un rojo esperado (`KNOWN_DEFECTS`): el servidor no bloquea pedidos nuevos tras el rechazo en firme (fila 20 de la matriz). `store` sale PARCIAL mientras el mundo e2e no tenga artículos. En staging `comprobante-rechazado` deja a cliente2 con un pedido rechazado en firme: la web del cliente lo bloquea 24 h (o hasta resolver la apelación), así que ese cliente no puede pedir ahí durante ese tiempo.
 
 Discusión: [matriz de escenarios](../trabajo/e2e/escenarios.md)
 
-Quedan fuera de staging los que usan la service role (`no-show`, `prepago-vencido`, `celular-sms`, `entregas`, `borrar-cuenta`). `no-show` y los escenarios de cliente nuevo crean sus propios clientes (teléfono y referencia únicos por corrida), así que el strike no envenena a los clientes fijos ni la dirección «Portón azul…» que comparte Playwright. Sin `--reset` se acumulan clientes y pedidos entregados; si algo falla por «primer pedido con pago adelantado» o por un pedido activo, repite con `--reset`.
+Quedan fuera de staging los que usan la service role (`no-show`, `prepago-vencido`, `celular-sms`, `entregas`, `borrar-cuenta`) y los que necesitan cuentas o datos que staging no garantiza (`traspaso`: motorizado2; `admin-negocio` y `admin-caso`: el admin y datos que no se borran). `no-show` y los escenarios de cliente nuevo crean sus propios clientes (teléfono y referencia únicos por corrida), así que el strike no envenena a los clientes fijos ni la dirección «Portón azul…» que comparte Playwright. Sin `--reset` se acumulan clientes y pedidos entregados; si algo falla por «primer pedido con pago adelantado» o por un pedido activo, repite con `--reset`.
 
 ## Local
 

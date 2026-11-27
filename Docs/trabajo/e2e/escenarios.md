@@ -37,6 +37,13 @@ Estados: **existe** (corre y pasa), **escrito** (existe y no se pudo correr aqu�
 | 17 | **La app vieja contra el servidor nuevo** (invariante 11) | app instalada, API | API-3 | **parcial** (`compat-v1`: forma de la lista y de los errores; no hay peticiones congeladas de la versión publicada) | n/a | n/a |
 | 18 | Catálogo: negocio cerrado, plato fuera de franja, bolsa de otro negocio | cliente | CUS-CAT-011/012, CUS-CRT-001 | falta | existe en parte (`store`, `recojo-en-el-local`) | escrito (`invitado-hasta-identificacion` cubre carta y bolsa) |
 | 19 | **Push** al cliente (estado del pedido) | cliente, sistema | CUS-NOT-001, CUS-NOT-004 | bloqueado: FCM real | n/a | bloqueado: prueba manual |
+| 20 | **Comprobante rechazado dos veces**: el primer rechazo vuelve a `awaiting_payment` y deja 1 intento; el segundo cancela por `proof_rejected_final`; un pedido nuevo debe quedar bloqueado | cliente, negocio | CA-PAY-01 ★, CA-PAY-P7 ★ (CUS-PAY-005, CUS-PAY-008) | **existe** (`comprobante-rechazado`); el último paso es un rojo esperado (nota 20) | falta | falta |
+| 21 | El negocio **cancela** un pedido de contraentrega ya aceptado (en `preparing`) con motivo; es terminal | cliente, negocio, motorizado | CUS-TRK-002 (cancelado aparte) | **existe** (`negocio-cancela`) | falta | falta |
+| 22 | **Traspaso** de un pedido entre motorizados: motorizado2 lo pide, el dueño acepta, cambia el `driver_id` y el original ya no lo ve | motorizado, motorizado2, negocio, cliente | sin norma (nota 22) | **existe**, solo local (`traspaso`) | falta | n/a |
+| 23 | El admin da de **alta, bloquea y desbloquea** un negocio | admin, negocio | sin norma en `Docs/producto/` (nota 23); se afirma el estado del bloqueo (columna y resumen del negocio), no su efecto sobre los pedidos | **existe**, solo local (`admin-negocio`) | falta | n/a |
+| 24 | El admin **revisa** el caso de una apelación (bandeja y «en revisión»); `resolve` y `refund` no se ejecutan | cliente, admin | CA-PAY-01 ★ (la apelación), invariante 9 | **existe**, solo local (`admin-caso`); solo lectura de dinero (nota 24) | falta | falta |
+| 25 | **Tindivo Store** público: lista, detalle de un artículo listado y slug inexistente → 404 | invitado | sin CA en `Docs/producto/` (nota 25) | **parcial** (`store`): lista, forma y 404; sin artículos en el mundo e2e no se prueba el detalle ni el filtro (nota 25) | falta | falta |
+| 26 | **Invitado**: el catálogo público responde 200; cotizar y pedir sin Bearer dan 401 con el cuerpo de error del contrato | invitado | API-3 (contrato REST v1) | **existe** (`invitado`) | existe en parte (`store`) | escrito (`invitado-hasta-identificacion`) |
 
 Notas:
 
@@ -45,10 +52,26 @@ Notas:
 17. La invariante 11 pide congelar las peticiones de cada versión publicada y correrlas en `db:cycle`
     (`Docs/README.md` §7.7, «Pruebas entre apps», punto 2). Eso no existe todavía: sin una app publicada no hay nada
     que congelar. Mientras tanto `compat-v1` comprueba que las claves que las apps leen no se pierden.
+20. **Defecto conocido** (`KNOWN_DEFECTS`, paso «tras el rechazo en firme, un pedido nuevo está bloqueado»). CA-PAY-01, CA-PAY-P7 y
+    CUS-PAY-008 piden impedir pedidos nuevos tras el rechazo en firme y dicen que la regla la decide el servidor; el servidor no la tiene
+    (`create_customer_order` solo bloquea por pedido activo, strikes o bloqueo manual) y el bloqueo hoy vive en el cliente web
+    (`apps/customer/lib/payment-block.ts`, ventana de 24 h y apelación). El paso espera el bloqueo del canon y falla hoy porque el
+    servidor crea el pedido; si lo crea, el escenario lo cancela para no dejarlo activo. Decide Jesús: regla en el servidor o se corrige el CA.
+    El «Te queda 1 intento» no lo manda la API: se deriva de `proofAttempt` (2 intentos, `validate_order`).
+22. Sin norma: ningún `Docs/producto/` cubre al motorizado. El escenario afirma lo que hace el código (0043, 0130, 0134): lo pide el
+    receptor (motorizado2), responde el dueño, y quien no es el dueño recibe 422 `validation_error`.
+23. Sin norma: ningún `Docs/producto/` cubre la administración de negocios. Crea una cuenta de Auth y un negocio que la API no sabe
+    borrar (por eso es solo local); el negocio nuevo no publica catálogo ni acepta pedidos web.
+24. `resolve` y `refund` mueven dinero (`business_charges`, devoluciones): no se llaman sin la revisión de Jesús (invariante 9). El
+    escenario crea la apelación, la lee como cliente y como admin y la pasa a `in_review` (`mark_appeal_in_review` no escribe en tablas de dinero).
+    Queda un caso `in_review` sin resolver por corrida.
+25. El mundo e2e no trae artículos de Store y publicar uno exige fotos en Storage. Con la lista vacía el escenario prueba la forma de la
+    lista y el 404, y se registra como PARCIAL (sin artículos: no se probó el detalle ni el filtro `q`); no pone la suite en rojo.
+    Con artículos, busca por un fragmento del nombre, abre el detalle por slug y comprueba que una búsqueda sin coincidencias da vacío.
 
 ## Conteo
 
-Corrida del 2026-11-19 (`pnpm e2e:todo --reset`): 13 escenarios por la API, 82/82 pasos, 0 rojos esperados. Filas de la matriz: 19; con la API "existe" o "parcial": 14; Maestro "escrito" (sin correr): 11; "bloqueado": 5; "falta": el resto.
+Corrida del 2026-11-19 (`pnpm e2e:todo --reset`): 13 escenarios por la API, 82/82 pasos, 0 rojos esperados. Corrida del 2026-11-27, `pnpm e2e:todo --reset` sobre 3e761317 más estos cambios: 20 escenarios por la API, 19 ok y 1 rojo esperado (fila 20), 128/129 pasos; `store` contó como ok porque aún no había «parcial» y desde la corrección sale PARCIAL (nota 25). La corrida final, después de las correcciones de la revisión, la confirmará el commit. Filas de la matriz: 26; con la API "existe" o "parcial": 21; Maestro "escrito" (sin correr): 12; "bloqueado": 5; "falta": el resto.
 
 ## Qué falta para el «punta a punta» completo
 

@@ -47,6 +47,11 @@ const ACCOUNTS = {
   business: 'negocio@e2e.local',
   driver: 'motorizado@e2e.local',
 }
+// Cuentas e ids que solo usan los escenarios nuevos (espejo de apps/api/scripts/e2e-fixtures.ts).
+const ADMIN_EMAIL = 'admin@e2e.local'
+const DRIVER_2_EMAIL = 'motorizado2@e2e.local'
+const DRIVER_1_ID = 'e2e00000-0000-4000-8000-000000000050'
+const DRIVER_2_ID = 'e2e00000-0000-4000-8000-0000000000d2'
 const CUSTOMER_NAME = 'Cliente E2E'
 const CUSTOMER_PHONE = '900000003'
 const PHONES: Partial<Record<string, string>> = {
@@ -95,7 +100,16 @@ function readEnvFile(path: string): Record<string, string> {
 }
 
 type Json = Record<string, unknown>
-type Actor = 'customer' | 'business' | 'driver' | 'customer2' | 'customer3' | 'fresh' | 'fresh2'
+type Actor =
+  | 'customer'
+  | 'business'
+  | 'driver'
+  | 'customer2'
+  | 'customer3'
+  | 'fresh'
+  | 'fresh2'
+  | 'admin'
+  | 'driver2'
 
 class StepFailure extends Error {}
 
@@ -105,6 +119,8 @@ interface Ctx {
   anonKey: string
   isLocal: boolean
   tokens: Partial<Record<Actor, string>>
+  /** Contraseña de una cuenta (local: la del mundo e2e; staging: la del `cuentas.md`). Solo para sesiones perezosas. */
+  pass: (email: string) => string
 }
 
 const secrets: string[] = []
@@ -160,7 +176,7 @@ interface Scenario {
   localOnly?: boolean
   run: () => Promise<void>
 }
-type Outcome = 'ok' | 'falla' | 'rojo-esperado' | 'defecto-corregido' | 'saltado'
+type Outcome = 'ok' | 'falla' | 'rojo-esperado' | 'defecto-corregido' | 'saltado' | 'parcial'
 const outcomes: { name: string; outcome: Outcome; note?: string }[] = []
 
 const SCENARIO_NAMES = [
@@ -177,14 +193,28 @@ const SCENARIO_NAMES = [
   'entregas',
   'borrar-cuenta',
   'compat-v1',
+  'comprobante-rechazado',
+  'negocio-cancela',
+  'traspaso',
+  'admin-negocio',
+  'admin-caso',
+  'store',
+  'invitado',
 ]
 /**
  * Defectos reales del producto que un escenario destapó, atados a UN paso concreto. El escenario sigue
  * corriendo: se espera que falle justo en ese paso; si falla en otro, o si pasa entero, la suite falla y
  * avisa para quitar la marca. `row` es la fila de `Docs/trabajo/e2e/escenarios.md`. No se arregla aquí:
- * es código de producto. Hoy no hay ninguno.
+ * es código de producto. Hoy hay uno (comprobante-rechazado).
  */
-const KNOWN_DEFECTS: Record<string, { step: string; row: string; why: string }> = {}
+const STEP_PAGO_BLOQUEA = 'cliente2: tras el rechazo en firme, un pedido nuevo está bloqueado (CA-PAY-01)'
+const KNOWN_DEFECTS: Record<string, { step: string; row: string; why: string }> = {
+  'comprobante-rechazado': {
+    step: STEP_PAGO_BLOQUEA,
+    row: '20',
+    why: 'CA-PAY-01/P7 y CUS-PAY-008 piden bloquear pedidos nuevos tras el rechazo en firme y dicen que la regla la decide el servidor; el servidor no la tiene (create_customer_order solo bloquea por pedido ACTIVO, strikes o bloqueo manual) y el bloqueo hoy vive en el cliente (apps/customer/lib/payment-block.ts)',
+  },
+}
 async function step<T>(name: string, fn: () => Promise<T>): Promise<T> {
   const t0 = Date.now()
   try {
@@ -284,7 +314,7 @@ async function businessView(ctx: Ctx, id: string): Promise<View & { row: Json }>
   const r = await http(
     ctx,
     'GET',
-    `${ctx.supabase}/rest/v1/orders?id=eq.${id}&select=id,short_id,status,payment_intent,payment_real,order_amount,delivery_fee,cash_owed_at_delivery,client_pays_with,change_to_give,driver_id`,
+    `${ctx.supabase}/rest/v1/orders?id=eq.${id}&select=id,short_id,status,payment_intent,payment_real,order_amount,delivery_fee,cash_owed_at_delivery,client_pays_with,change_to_give,driver_id,cancel_note`,
     { actor: 'business', headers: { apikey: ctx.anonKey } },
   )
   const parsed: unknown = JSON.parse(r.text || '[]')
@@ -1195,6 +1225,618 @@ async function scenarioCompatV1(ctx: Ctx): Promise<void> {
   })
 }
 
+// ── Escenarios del 20 al 26 (ver Docs/trabajo/e2e/escenarios.md) ──────────────────────────────────
+/** Sesión perezosa: solo los escenarios que usan estas cuentas las piden (staging puede no tenerlas). */
+async function ensureLogin(ctx: Ctx, actor: Actor, email: string): Promise<void> {
+  if (ctx.tokens[actor]) return
+  ctx.tokens[actor] = await login(ctx, email, ctx.pass(email))
+}
+
+/** Intentos de comprobante que da el servidor: con `proof_attempt` < 2 un rechazo deja reintentar (`validate_order`). */
+const MAX_PROOF_ATTEMPTS = 2
+
+/** El cliente sube un PNG como comprobante del intento `attempt` y lo confirma: el pedido queda en `validando`. */
+async function submitProof(ctx: Ctx, id: string, who: Actor, attempt: number): Promise<void> {
+  const up = await call(ctx, who, 'POST', `/customer/orders/${id}/prepay-proof/upload-url`, {
+    contentType: 'image/png',
+  })
+  expect(up.status === 200 || up.status === 201, `upload-url del intento ${attempt}: ${describeHttp(up)}`)
+  const u = unwrap(up.body)
+  expect(
+    typeof u.path === 'string' && typeof u.uploadUrl === 'string',
+    `upload-url sin path/uploadUrl: ${up.text.slice(0, 200)}`,
+  )
+  expect(
+    String(u.path).includes(`/attempt-${attempt}-`),
+    `la ruta no es del intento ${attempt}: ${String(u.path)}`,
+  )
+  const put = await putUpload(ctx, String(u.uploadUrl), {
+    method: 'PUT',
+    headers: { 'content-type': 'image/png' },
+    body: new Blob([PNG_1X1], { type: 'image/png' }),
+  })
+  expect(put.ok, `PUT del intento ${attempt}: HTTP ${put.status} ${redact((await put.text()).slice(0, 200))}`)
+  const pp = await call(ctx, who, 'POST', `/customer/orders/${id}/prepay-proof`, { path: String(u.path) })
+  expect(pp.status === 200, `prepay-proof del intento ${attempt}: ${describeHttp(pp)}`)
+}
+
+/** La cajera rechaza el comprobante (`pass: false`, `invalid_proof`) y devuelve la respuesta de `validate_order`. */
+async function rejectProof(ctx: Ctx, id: string, reason: string): Promise<Json> {
+  const r = await call(ctx, 'business', 'POST', `/business/orders/${id}/validate`, {
+    pass: false,
+    reasonCode: 'invalid_proof',
+    reason,
+  })
+  expect(r.status === 200, `validate pass:false: ${describeHttp(r)}`)
+  return unwrap(r.body)
+}
+
+/** Pedido prepagado de `who`, aceptado por el negocio: queda esperando el comprobante. */
+async function prepaidAwaitingPayment(ctx: Ctx, who: Actor): Promise<Created> {
+  const c = await createOrder(ctx, 'prepaid', undefined, who)
+  expect(c.status === 'pending_acceptance', `estado inicial inesperado: ${c.status}`)
+  await transition(ctx, 'business', c.id, { action: 'accept', prepTimeMinutes: 2 }, 'awaiting_payment')
+  return c
+}
+
+/** El pedido tal como lo ve el cliente (el DTO completo, no solo el estado). */
+async function customerOrder(ctx: Ctx, id: string, who: Actor): Promise<Json> {
+  const r = await call(ctx, who, 'GET', `/customer/orders/${id}`)
+  expect(r.status === 200, `GET /customer/orders/{id}: ${describeHttp(r)}`)
+  return unwrap(r.body)
+}
+
+async function scenarioComprobanteRechazado(ctx: Ctx): Promise<string> {
+  console.log('\nEscenario · comprobante rechazado dos veces (CA-PAY-01, CA-PAY-P7)')
+  const who: Actor = 'customer2'
+  const o = await step('cliente2: POST prepago y el negocio acepta → awaiting_payment', () =>
+    prepaidAwaitingPayment(ctx, who),
+  )
+  await step('prepay-info: sin comprobante todavía (proofAttempt 0, hasProof false)', async () => {
+    const r = await call(ctx, who, 'GET', `/customer/orders/${o.id}/prepay-info`)
+    expect(r.status === 200, `prepay-info: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(d.status === 'awaiting_payment', `prepay-info status "${String(d.status)}"`)
+    expect(d.proofAttempt === 0 && d.hasProof === false, `prepay-info: ${r.text.slice(0, 200)}`)
+  })
+  await step('cliente2: primer comprobante (intento 1) → validando, proofAttempt 1', async () => {
+    await submitProof(ctx, o.id, who, 1)
+    await assertViews(ctx, o.id, 'validando', { driverMustSee: false, who })
+    expect((await customerOrder(ctx, o.id, who)).proofAttempt === 1, 'proofAttempt no es 1 tras el primer comprobante')
+  })
+  await step('negocio: rechaza el primero → vuelve a awaiting_payment y al cliente le queda 1 intento', async () => {
+    const d = await rejectProof(ctx, o.id, 'e2e: no se ve el monto')
+    expect(
+      d.status === 'awaiting_payment' && d.outcome === 'retry_allowed',
+      `el rechazo 1 dejó ${JSON.stringify(d).slice(0, 200)}; se esperaba awaiting_payment / retry_allowed`,
+    )
+    await assertViews(ctx, o.id, 'awaiting_payment', { driverMustSee: false, who })
+    const dto = await customerOrder(ctx, o.id, who)
+    expect(dto.paymentProofStatus === 'rejected', `paymentProofStatus "${String(dto.paymentProofStatus)}"`)
+    const info = unwrap((await call(ctx, who, 'GET', `/customer/orders/${o.id}/prepay-info`)).body)
+    expect(info.status === 'awaiting_payment', `prepay-info status "${String(info.status)}"`)
+    // «Te queda 1 intento» se calcula como el tope de intentos menos `proofAttempt`: la API no manda el texto.
+    expect(
+      typeof info.proofAttempt === 'number' && MAX_PROOF_ATTEMPTS - info.proofAttempt === 1,
+      `prepay-info.proofAttempt = ${String(info.proofAttempt)}; quedaría ${MAX_PROOF_ATTEMPTS - Number(info.proofAttempt)} intento(s), se esperaba 1`,
+    )
+  })
+  await step('cliente2: segundo comprobante (intento 2) → validando, proofAttempt 2', async () => {
+    await submitProof(ctx, o.id, who, 2)
+    await assertViews(ctx, o.id, 'validando', { driverMustSee: false, who })
+    expect((await customerOrder(ctx, o.id, who)).proofAttempt === 2, 'proofAttempt no es 2 tras el segundo comprobante')
+  })
+  await step('negocio: rechaza el segundo → cancelled por comprobante rechazado en firme, visto por los tres', async () => {
+    const d = await rejectProof(ctx, o.id, 'e2e: sigue sin verse')
+    expect(
+      d.status === 'cancelled' && d.outcome === 'cancelled_final',
+      `el rechazo 2 dejó ${JSON.stringify(d).slice(0, 200)}; se esperaba cancelled / cancelled_final`,
+    )
+    await assertViews(ctx, o.id, 'cancelled', { driverMustSee: false, who })
+    const dto = await customerOrder(ctx, o.id, who)
+    expect(dto.cancelReason === 'proof_rejected_final', `cancelReason "${String(dto.cancelReason)}"`)
+    expect(dto.paymentProofStatus === 'rejected', `paymentProofStatus "${String(dto.paymentProofStatus)}"`)
+  })
+  await step('un pedido cancelado no admite otro comprobante (upload-url → 409)', async () => {
+    const r = await call(ctx, who, 'POST', `/customer/orders/${o.id}/prepay-proof/upload-url`, {
+      contentType: 'image/png',
+    })
+    expectProblem(r, 409, 'invalid_state_transition', 'tercer comprobante')
+  })
+  // Último paso a propósito: es el que falla hoy (KNOWN_DEFECTS). Si el servidor deja crear el pedido, se cancela para
+  // no dejar un pedido activo y el paso falla igual con el motivo.
+  // Cuando exista el código propio del servidor para este bloqueo (canon de pagos, fila 7), se exigirá ese código exacto.
+  await step(STEP_PAGO_BLOQUEA, async () => {
+    const activos = async (): Promise<Json[]> => {
+      const l = await call(ctx, who, 'GET', '/customer/orders')
+      expect(l.status === 200, `lista de pedidos: ${describeHttp(l)}`)
+      const root = unwrap(l.body)
+      const rows = (Array.isArray(root.items) ? root.items : []) as Json[]
+      return rows.filter((x) => !['delivered', 'cancelled'].includes(String(x.status)))
+    }
+    expect((await activos()).length === 0, 'cliente2 ya tiene un pedido activo: el bloqueo no sería de pago')
+    const r = await http(ctx, 'POST', `${ctx.api}/customer/orders`, {
+      actor: who,
+      body: orderBody('prepaid', undefined, who),
+      headers: { 'idempotency-key': randomUUID() },
+    })
+    if (r.status === 201) {
+      const nuevo = String(unwrap(r.body).id)
+      await call(ctx, 'business', 'POST', `/business/orders/${nuevo}/transition`, {
+        action: 'cancel',
+        reasonCode: 'other',
+      })
+      throw new Error(
+        `el servidor CREÓ un pedido nuevo (HTTP 201, ${nuevo.slice(0, 8)}) tras el rechazo en firme; el canon pide bloquearlo`,
+      )
+    }
+    const code = String(r.body.code)
+    expect(
+      [403, 409, 422].includes(r.status) &&
+        !['active_order_block', 'validation_error', 'unauthorized', 'forbidden'].includes(code),
+      `el rechazo no es un bloqueo de pago (code "${code}"): ${describeHttp(r)}`,
+    )
+    expect((await activos()).length === 0, 'tras el rechazo quedó un pedido activo nuevo')
+    console.log(`        el servidor bloqueó con HTTP ${r.status} ${code}`)
+  })
+  return o.id
+}
+
+const NOTA_CANCELA = 'e2e: el negocio cierra antes de entregar'
+
+async function scenarioNegocioCancela(ctx: Ctx): Promise<string> {
+  console.log('\nEscenario · el negocio cancela un pedido de contraentrega ya aceptado')
+  const who: Actor = 'customer3'
+  const o = await step('cliente3: pedido de efectivo hasta preparing', () => toPreparing(ctx, who))
+  await step('negocio: cancel con motivo desde preparing → cancelled, visto por los tres', async () => {
+    await transition(
+      ctx,
+      'business',
+      o.id,
+      { action: 'cancel', reasonCode: 'other', reasonText: NOTA_CANCELA },
+      'cancelled',
+    )
+    const row = await assertViews(ctx, o.id, 'cancelled', { driverMustSee: false, who })
+    expect(row.cancel_note === NOTA_CANCELA, `cancel_note "${String(row.cancel_note)}"; se esperaba el motivo enviado`)
+    const dto = await customerOrder(ctx, o.id, who)
+    expect(dto.cancelReason === 'business_cancelled', `cancelReason "${String(dto.cancelReason)}"`)
+  })
+  await step('cancelled es terminal: accept, ready y take dan 409 invalid_state_transition', async () => {
+    const accept = await call(ctx, 'business', 'POST', `/business/orders/${o.id}/transition`, {
+      action: 'accept',
+      prepTimeMinutes: 5,
+    })
+    expectProblem(accept, 409, 'invalid_state_transition', 'accept sobre un pedido cancelado')
+    const ready = await call(ctx, 'business', 'POST', `/business/orders/${o.id}/transition`, { action: 'ready' })
+    expectProblem(ready, 409, 'invalid_state_transition', 'ready sobre un pedido cancelado')
+    const take = await call(ctx, 'driver', 'POST', `/driver/orders/${o.id}/transition`, { action: 'take' })
+    expectProblem(take, 409, 'invalid_state_transition', 'take sobre un pedido cancelado')
+    expect((await customerView(ctx, o.id, who)).status === 'cancelled', 'el pedido salió de cancelled')
+  })
+  return o.id
+}
+
+/**
+ * Depende del horario operativo: activar la disponibilidad solo se puede dentro de él (`set_driver_availability`);
+ * el mundo e2e lo deja abierto todo el día. Al terminar, motorizado2 vuelve a no disponible aunque el escenario falle.
+ */
+async function scenarioTraspaso(ctx: Ctx): Promise<string> {
+  try {
+    return await scenarioTraspasoCuerpo(ctx)
+  } finally {
+    if (ctx.tokens.driver2) {
+      await call(ctx, 'driver2', 'POST', '/driver/availability', { available: false }).catch(
+        () => undefined,
+      )
+    }
+  }
+}
+
+async function scenarioTraspasoCuerpo(ctx: Ctx): Promise<string> {
+  console.log('\nEscenario · traspaso de un pedido entre motorizados')
+  // Sin norma en Docs/producto/ para el traspaso: se afirma lo que hace el código (0043, 0130, 0134).
+  const who: Actor = 'customer3'
+  await step('motorizado2: inicia sesión y queda disponible', async () => {
+    await ensureLogin(ctx, 'driver2', DRIVER_2_EMAIL)
+    const r = await call(ctx, 'driver2', 'POST', '/driver/availability', { available: true })
+    expect(r.status === 200, `disponibilidad de motorizado2: ${describeHttp(r)}`)
+    const g = await call(ctx, 'driver2', 'GET', '/driver/availability')
+    expect(unwrap(g.body).available === true, `motorizado2 no quedó disponible: ${g.text.slice(0, 200)}`)
+  })
+  const o = await step('cliente3: pedido en preparing → ready → motorizado1 toma → heading_to_restaurant', async () => {
+    const c = await toPreparing(ctx, who)
+    await transition(ctx, 'business', c.id, { action: 'ready' }, 'waiting_driver')
+    await transition(ctx, 'driver', c.id, { action: 'take' }, 'heading_to_restaurant')
+    const row = await assertViews(ctx, c.id, 'heading_to_restaurant', { driverMustSee: true, who })
+    expect(row.driver_id === DRIVER_1_ID, `driver_id ${String(row.driver_id)}; se esperaba el motorizado 1`)
+    return c
+  })
+  const requestId = await step('motorizado2: transfer-request → solicitud pending; el pedido sigue con el 1', async () => {
+    const r = await call(
+      ctx,
+      'driver2',
+      'POST',
+      `/driver/orders/${o.id}/transfer-request`,
+      { reason: 'e2e: voy cerca del local' },
+      { 'idempotency-key': randomUUID() },
+    )
+    expect(r.status === 200 || r.status === 201, `transfer-request: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(
+      typeof d.id === 'string' && d.status === 'pending' && d.orderId === o.id,
+      `solicitud inesperada: ${r.text.slice(0, 200)}`,
+    )
+    const row = (await businessView(ctx, o.id)).row
+    expect(row.driver_id === DRIVER_1_ID, 'el pedido cambió de manos sin respuesta del dueño')
+    return String(d.id)
+  })
+  await step('motorizado2 no puede responder su propia solicitud (no es el dueño)', async () => {
+    const r = await call(ctx, 'driver2', 'POST', `/driver/transfers/${requestId}/respond`, { accept: true })
+    // Sin norma: el código responde 422 validation_error con «No eres el motorizado de este pedido».
+    expectProblem(r, 422, 'validation_error', 'responder sin ser el dueño')
+    expect(/motorizado/i.test(r.text), `el rechazo no explica el motivo: ${r.text.slice(0, 200)}`)
+    expect((await businessView(ctx, o.id)).row.driver_id === DRIVER_1_ID, 'el pedido cambió de manos')
+  })
+  await step('motorizado1: respond accept → accepted y transferred; el driver_id del pedido pasa al 2', async () => {
+    const r = await call(ctx, 'driver', 'POST', `/driver/transfers/${requestId}/respond`, { accept: true })
+    expect(r.status === 200, `respond: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(d.status === 'accepted' && d.transferred === true, `respuesta: ${r.text.slice(0, 200)}`)
+    const row = await assertViews(ctx, o.id, 'heading_to_restaurant', { driverMustSee: false, who })
+    expect(row.driver_id === DRIVER_2_ID, `driver_id ${String(row.driver_id)}; se esperaba el motorizado 2`)
+  })
+  await step('motorizado1 ya no lo ve como suyo (404) y no puede operarlo (409); motorizado2 sí lo ve', async () => {
+    const viejo = await call(ctx, 'driver', 'GET', `/driver/orders/${o.id}`)
+    expect(viejo.status === 404, `el motorizado 1 aún ve el pedido: ${describeHttp(viejo)}`)
+    const op = await call(ctx, 'driver', 'POST', `/driver/orders/${o.id}/transition`, { action: 'arrived' })
+    expectProblem(op, 409, 'invalid_state_transition', 'el motorizado 1 operando un pedido traspasado')
+    const nuevo = await call(ctx, 'driver2', 'GET', `/driver/orders/${o.id}`)
+    expect(nuevo.status === 200, `el motorizado 2 no ve el pedido: ${describeHttp(nuevo)}`)
+    const ord = unwrap(nuevo.body).order as Json | undefined
+    expect(ord?.status === 'heading_to_restaurant', `motorizado 2 ve "${String(ord?.status)}"`)
+  })
+  await step('motorizado2 lo lleva hasta delivered (efectivo) y el negocio ve su driver_id', async () => {
+    const feeCents = await expectedFeeCents(ctx)
+    const totalCents = SUBTOTAL * 100 + feeCents
+    const go = async (body: Json, status: string): Promise<void> => {
+      const r = await call(ctx, 'driver2', 'POST', `/driver/orders/${o.id}/transition`, body)
+      expect(r.status === 200, `motorizado2 ${String(body.action)}: ${describeHttp(r)}`)
+      const got = unwrap(r.body).status
+      expect(got === status, `${String(body.action)} dejó "${String(got)}", se esperaba "${status}"`)
+    }
+    await go({ action: 'arrived' }, 'waiting_at_restaurant')
+    await go({ action: 'pickup' }, 'picked_up')
+    await go(
+      { action: 'arrived_customer', lat: DELIVERY.lat, lng: DELIVERY.lng, accuracy_m: 10 },
+      'picked_up',
+    )
+    await go(
+      { action: 'deliver', paymentReal: 'paid_cash', clientPaysWith: 50, cashAmount: totalCents / 100 },
+      'delivered',
+    )
+    const row = await assertViews(ctx, o.id, 'delivered', { driverMustSee: false, who })
+    expect(row.driver_id === DRIVER_2_ID, `driver_id ${String(row.driver_id)} tras entregar`)
+    expect(row.payment_real === 'paid_cash', `payment_real "${String(row.payment_real)}"`)
+  })
+  return o.id
+}
+
+async function scenarioAdminNegocio(ctx: Ctx): Promise<void> {
+  console.log('\nEscenario · el admin da de alta, bloquea y desbloquea un negocio')
+  // Crea una cuenta de Auth y un negocio que la API no sabe borrar: por eso corre solo en local y con datos únicos por
+  // corrida. El negocio nuevo no publica catálogo ni acepta pedidos web, para no tocar el mundo de los demás tests.
+  const stamp = Date.now()
+  const email = `e2e-alta-${stamp}@e2e.local`
+  const name = `E2E Alta ${stamp}`
+  await step('admin: inicia sesión', () => ensureLogin(ctx, 'admin', ADMIN_EMAIL))
+  const body = {
+    email,
+    password: E2E_PASSWORD,
+    name,
+    publishesCatalog: false,
+    acceptsWebDelivery: false,
+    acceptsWebPickup: false,
+    usesTindivoDrivers: false,
+  }
+  await step('un negocio (no admin) no puede dar de alta: POST /admin/businesses → 403 forbidden', async () => {
+    const r = await call(ctx, 'business', 'POST', '/admin/businesses', body)
+    expectProblem(r, 403, 'forbidden', 'alta hecha por un negocio')
+  })
+  const businessId = await step('admin: POST /admin/businesses → 201 con el negocio y su usuario', async () => {
+    const r = await call(ctx, 'admin', 'POST', '/admin/businesses', body)
+    expect(r.status === 201, `alta: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    const biz = d.business as Json | undefined
+    expect(
+      typeof d.userId === 'string' && typeof biz?.id === 'string' && biz.name === name,
+      `alta sin userId/negocio con el nombre pedido: ${r.text.slice(0, 300)}`,
+    )
+    return String(biz.id)
+  })
+  await step('admin: GET /admin/businesses/{id} y la lista traen el negocio, sin bloquear', async () => {
+    const r = await call(ctx, 'admin', 'GET', `/admin/businesses/${businessId}`)
+    expect(r.status === 200, `detalle: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(d.name === name && d.is_blocked === false, `detalle: ${r.text.slice(0, 300)}`)
+    const list = await call(ctx, 'admin', 'GET', '/admin/businesses')
+    expect(list.status === 200 && list.text.includes(businessId), 'la lista del admin no trae el negocio nuevo')
+  })
+  await step('admin: repetir el alta con el mismo email → 409 conflict', async () => {
+    const r = await call(ctx, 'admin', 'POST', '/admin/businesses', { ...body, name: `${name} bis` })
+    expectProblem(r, 409, 'conflict', 'alta con email repetido')
+  })
+  let nuevoToken = ''
+  const resumenNegocio = async (): Promise<Json> => {
+    const r = await http(ctx, 'GET', `${ctx.api}/business/account/summary`, {
+      headers: { authorization: `Bearer ${nuevoToken}` },
+    })
+    expect(r.status === 200, `GET /business/account/summary del negocio nuevo: ${describeHttp(r)}`)
+    return unwrap(r.body)
+  }
+  await step('la cuenta del negocio nuevo inicia sesión y su resumen de cuenta responde 200 sin bloqueo', async () => {
+    nuevoToken = await login(ctx, email, E2E_PASSWORD)
+    expect((await resumenNegocio()).isBlocked === false, 'el negocio nuevo nace bloqueado')
+  })
+  await step('un negocio no puede bloquear: POST /block → 403 forbidden', async () => {
+    const r = await call(ctx, 'business', 'POST', `/admin/businesses/${businessId}/block`, { reason: 'e2e' })
+    expectProblem(r, 403, 'forbidden', 'bloqueo hecho por un negocio')
+  })
+  await step('admin: block con motivo → is_blocked, block_reason y sin marca de deuda', async () => {
+    const reason = 'e2e: prueba de bloqueo'
+    const r = await call(ctx, 'admin', 'POST', `/admin/businesses/${businessId}/block`, { reason })
+    expect(r.status === 200, `block: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(d.blocked === true && d.forDebt === false, `respuesta del bloqueo: ${r.text.slice(0, 200)}`)
+    const det = unwrap((await call(ctx, 'admin', 'GET', `/admin/businesses/${businessId}`)).body)
+    expect(
+      det.is_blocked === true && det.block_reason === reason && det.blocked_for_debt === false,
+      `detalle tras bloquear: ${JSON.stringify(det).slice(0, 300)}`,
+    )
+    expect((await resumenNegocio()).isBlocked === true, 'el negocio no ve su propio bloqueo')
+  })
+  await step('admin: unblock → desbloqueado y sin motivo', async () => {
+    const r = await call(ctx, 'admin', 'POST', `/admin/businesses/${businessId}/unblock`)
+    expect(r.status === 200 && unwrap(r.body).blocked === false, `unblock: ${describeHttp(r)}`)
+    const det = unwrap((await call(ctx, 'admin', 'GET', `/admin/businesses/${businessId}`)).body)
+    expect(
+      det.is_blocked === false && det.block_reason === null,
+      `detalle tras desbloquear: ${JSON.stringify(det).slice(0, 300)}`,
+    )
+    expect((await resumenNegocio()).isBlocked === false, 'el negocio sigue viéndose bloqueado')
+  })
+  await step('bloquear un negocio que no existe → 404 not_found', async () => {
+    const r = await call(ctx, 'admin', 'POST', `/admin/businesses/${randomUUID()}/block`, { reason: 'e2e' })
+    expectProblem(r, 404, 'not_found', 'bloqueo de un negocio inexistente')
+  })
+}
+
+/** Busca un caso en la bandeja del admin recorriendo las páginas (la bandeja crece con cada corrida). */
+async function findAppeal(ctx: Ctx, status: string, reportId: string): Promise<Json | undefined> {
+  const PER_PAGE = 100
+  for (let page = 1; page <= 50; page++) {
+    const r = await call(
+      ctx,
+      'admin',
+      'GET',
+      `/admin/appeals?appeal_status=${status}&per_page=${PER_PAGE}&page=${page}`,
+    )
+    expect(r.status === 200, `bandeja ${status}, página ${page}: ${describeHttp(r)}`)
+    const items = (Array.isArray(unwrap(r.body).items) ? unwrap(r.body).items : []) as Json[]
+    const hit = items.find((i) => i.id === reportId)
+    if (hit) return hit
+    if (items.length < PER_PAGE) return undefined
+  }
+  return undefined
+}
+
+async function scenarioAdminCaso(ctx: Ctx): Promise<string> {
+  console.log('\nEscenario · el admin revisa el caso de un comprobante rechazado en firme (solo lectura de dinero)')
+  // `resolve` y `refund` NO se llaman: mueven dinero (business_charges, reembolsos; invariante 9 y revisión de Jesús).
+  // Aquí solo la apelación del cliente, su lectura y el paso a «en revisión», que no escribe en ninguna tabla de dinero.
+  const who: Actor = 'customer3'
+  await step('admin: inicia sesión', () => ensureLogin(ctx, 'admin', ADMIN_EMAIL))
+  const o = await step('cliente3: prepago rechazado dos veces → cancelled (proof_rejected_final)', async () => {
+    const c = await prepaidAwaitingPayment(ctx, who)
+    await submitProof(ctx, c.id, who, 1)
+    const d1 = await rejectProof(ctx, c.id, 'e2e: caso para el admin, 1')
+    expect(d1.outcome === 'retry_allowed', `rechazo 1: ${JSON.stringify(d1).slice(0, 200)}`)
+    await submitProof(ctx, c.id, who, 2)
+    const d2 = await rejectProof(ctx, c.id, 'e2e: caso para el admin, 2')
+    expect(d2.outcome === 'cancelled_final', `rechazo 2: ${JSON.stringify(d2).slice(0, 200)}`)
+    await assertViews(ctx, c.id, 'cancelled', { driverMustSee: false, who })
+    return c
+  })
+  await step('cliente3: aún sin apelación → GET appeal da 404 not_found', async () => {
+    const r = await call(ctx, who, 'GET', `/customer/orders/${o.id}/appeal`)
+    expectProblem(r, 404, 'not_found', 'apelación inexistente')
+  })
+  const reportId = await step('cliente3: POST appeal → ok, alreadyExisted false; repetir devuelve el mismo caso', async () => {
+    const r = await call(ctx, who, 'POST', `/customer/orders/${o.id}/appeal`, {
+      description: 'e2e: el pago sí se hizo',
+    })
+    expect(r.status === 200, `appeal: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(
+      d.ok === true && d.alreadyExisted === false && typeof d.reportId === 'string',
+      `appeal: ${r.text.slice(0, 200)}`,
+    )
+    const again = unwrap((await call(ctx, who, 'POST', `/customer/orders/${o.id}/appeal`, {})).body)
+    expect(
+      again.alreadyExisted === true && again.reportId === d.reportId,
+      `la segunda apelación no devolvió el mismo caso: ${JSON.stringify(again)}`,
+    )
+    return String(d.reportId)
+  })
+  await step('cliente3: GET appeal → pending, sin devolución', async () => {
+    const d = unwrap((await call(ctx, who, 'GET', `/customer/orders/${o.id}/appeal`)).body)
+    expect(
+      d.id === reportId && d.orderId === o.id && d.appealStatus === 'pending' && d.refundStatus === null,
+      `apelación del cliente: ${JSON.stringify(d).slice(0, 300)}`,
+    )
+  })
+  await step('un cliente no puede revisar: POST review → 403 forbidden', async () => {
+    const r = await call(ctx, who, 'POST', `/admin/appeals/${reportId}/review`)
+    expectProblem(r, 403, 'forbidden', 'review hecho por un cliente')
+  })
+  await step('admin: la bandeja lista el caso (pending, pedido y comprobante rechazado dos veces)', async () => {
+    const mine = await findAppeal(ctx, 'pending', reportId)
+    expect(mine, `el caso ${reportId} no está en la bandeja de pendientes`)
+    expect(
+      mine.orderId === o.id &&
+        mine.orderShortId === o.shortId &&
+        mine.appealStatus === 'pending' &&
+        mine.rejectionReasonCode === 'invalid_proof' &&
+        mine.proofAttempt === 2,
+      `caso en la bandeja: ${JSON.stringify(mine).slice(0, 400)}`,
+    )
+  })
+  await step('admin: review → in_review; repetirlo es idempotente; el cliente lo ve en revisión', async () => {
+    const r = await call(ctx, 'admin', 'POST', `/admin/appeals/${reportId}/review`)
+    expect(r.status === 200, `review: ${describeHttp(r)}`)
+    expect(unwrap(r.body).appealStatus === 'in_review', `review: ${r.text.slice(0, 200)}`)
+    const again = unwrap((await call(ctx, 'admin', 'POST', `/admin/appeals/${reportId}/review`)).body)
+    expect(
+      again.alreadyInReviewOrResolved === true && again.status === 'in_review',
+      `segundo review: ${JSON.stringify(again)}`,
+    )
+    const d = unwrap((await call(ctx, who, 'GET', `/customer/orders/${o.id}/appeal`)).body)
+    expect(d.appealStatus === 'in_review' && d.refundStatus === null, `el cliente ve: ${JSON.stringify(d).slice(0, 200)}`)
+    expect(await findAppeal(ctx, 'in_review', reportId), 'el caso no aparece en la bandeja «en revisión»')
+  })
+  console.log('        resolve/refund NO se ejecutan: mueven dinero (business_charges); queda sin resolver a propósito')
+  return o.id
+}
+
+/** Escenarios que corrieron pero no probaron todo lo que dicen: se registran como PARCIAL y no ponen `failed`. */
+const parciales = new Map<string, string>()
+
+async function scenarioStore(ctx: Ctx): Promise<void> {
+  console.log('\nEscenario · Tindivo Store público (sin sesión)')
+  const first: { slug: string | null; title: string | null } = { slug: null, title: null }
+  await step('GET /public/store sin Bearer → 200 con productos, vendidos, categorías y ajustes', async () => {
+    const r = await http(ctx, 'GET', `${ctx.api}/public/store`)
+    expect(r.status === 200, `store: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect(
+      Array.isArray(d.products) &&
+        Array.isArray(d.sold) &&
+        Array.isArray(d.categories) &&
+        typeof d.totalAvailable === 'number' &&
+        typeof d.settings === 'object' &&
+        d.settings !== null,
+      `forma de la lista: ${r.text.slice(0, 300)}`,
+    )
+    if ((d.totalAvailable as number) > 0) {
+      const p = (d.products as Json[]).find((x) => typeof x.slug === 'string' && typeof x.title === 'string')
+      expect(p, 'totalAvailable > 0 pero la lista no trae ningún artículo con slug y título')
+      first.slug = String(p.slug)
+      first.title = String(p.title)
+    }
+  })
+  const { slug, title } = first
+  if (slug && title) {
+    const fragment = title.split(/[ ]+/).find((w) => w.length >= 3) ?? title
+    await step('buscar con un fragmento del nombre del primer artículo lo trae (el filtro q se aplica)', async () => {
+      const r = await http(ctx, 'GET', `${ctx.api}/public/store?q=${encodeURIComponent(fragment)}`)
+      expect(r.status === 200, `store con q: ${describeHttp(r)}`)
+      const products = (unwrap(r.body).products ?? []) as Json[]
+      expect(
+        products.some((x) => x.slug === slug),
+        `la búsqueda "${fragment}" no trae el artículo ${slug}`,
+      )
+    })
+    await step('GET /public/store/{slug} de ese artículo → 200 con el mismo slug', async () => {
+      const r = await http(ctx, 'GET', `${ctx.api}/public/store/${encodeURIComponent(slug)}`)
+      expect(r.status === 200, `detalle: ${describeHttp(r)}`)
+      const d = unwrap(r.body)
+      const p = d.product as Json | undefined
+      expect(p?.slug === slug, `el detalle es de otro artículo: ${r.text.slice(0, 200)}`)
+      expect(
+        ['available', 'reserved', 'sold'].includes(String(p?.status)),
+        `estado público inesperado: ${String(p?.status)}`,
+      )
+      expect(Array.isArray(d.related), 'el detalle no trae related')
+    })
+    await step('una búsqueda que no coincide con nada devuelve products vacío', async () => {
+      const r = await http(ctx, 'GET', `${ctx.api}/public/store?q=zzz-sin-coincidencia-${Date.now()}`)
+      expect(r.status === 200, `store con q: ${describeHttp(r)}`)
+      const products = unwrap(r.body).products
+      expect(
+        Array.isArray(products) && products.length === 0,
+        `la búsqueda sin coincidencias devolvió productos: ${r.text.slice(0, 200)}`,
+      )
+    })
+  } else {
+    // El mundo e2e no trae artículos de Store y un artículo publicado exige fotos subidas a Storage: no se crean aquí.
+    parciales.set('store', 'sin artículos en el mundo e2e: no se probó el detalle ni el filtro')
+    console.log('        sin artículos publicados en la base: el detalle y el filtro q NO se probaron (PARCIAL)')
+  }
+  await step('un slug inexistente → 404 not_found', async () => {
+    const r = await http(ctx, 'GET', `${ctx.api}/public/store/no-existe-${Date.now()}`)
+    expectProblem(r, 404, 'not_found', 'slug de Store inexistente')
+  })
+}
+
+async function scenarioInvitado(ctx: Ctx): Promise<void> {
+  console.log('\nEscenario · invitado: el catálogo es público, pedir exige sesión')
+  const noToken = (status: number, r: { headers: Headers }, what: string): void =>
+    expect(
+      (r.headers.get('content-type') ?? '').includes('application/problem+json'),
+      `${what}: el error de ${status} no es application/problem+json`,
+    )
+  await step('GET /public/businesses sin Bearer → 200 y trae el negocio e2e', async () => {
+    const r = await http(ctx, 'GET', `${ctx.api}/public/businesses`)
+    expect(r.status === 200, `businesses: ${describeHttp(r)}`)
+    const list = r.body.data
+    expect(
+      Array.isArray(list) && (list as Json[]).some((b) => b.id === BUSINESS_ID),
+      `la lista pública no trae el negocio e2e: ${r.text.slice(0, 200)}`,
+    )
+  })
+  await step('GET /public/businesses/{id} sin Bearer → 200 con la carta; uno inexistente → 404', async () => {
+    const r = await http(ctx, 'GET', `${ctx.api}/public/businesses/${BUSINESS_ID}`)
+    expect(r.status === 200, `detalle: ${describeHttp(r)}`)
+    const d = unwrap(r.body)
+    expect((d.business as Json | undefined)?.id === BUSINESS_ID, 'el detalle es de otro negocio')
+    expect(Array.isArray(d.categories) && d.categories.length > 0, 'el detalle no trae la carta')
+    const none = await http(ctx, 'GET', `${ctx.api}/public/businesses/${randomUUID()}`)
+    expectProblem(none, 404, 'not_found', 'negocio público inexistente')
+  })
+  await step('GET /public/config, /public/schedule y /public/landmarks sin Bearer → 200', async () => {
+    const cfg = await http(ctx, 'GET', `${ctx.api}/public/config`)
+    expect(cfg.status === 200 && typeof unwrap(cfg.body) === 'object', `config: ${describeHttp(cfg)}`)
+    const sch = await http(ctx, 'GET', `${ctx.api}/public/schedule`)
+    expect(sch.status === 200, `schedule: ${describeHttp(sch)}`)
+    expect(typeof unwrap(sch.body).isOpen === 'boolean', `schedule sin isOpen: ${sch.text.slice(0, 200)}`)
+    const lm = await http(ctx, 'GET', `${ctx.api}/public/landmarks`)
+    expect(lm.status === 200 && Array.isArray(unwrap(lm.body).items), `landmarks: ${describeHttp(lm)}`)
+  })
+  await step('POST /customer/checkout/quote sin Bearer → 401 unauthorized', async () => {
+    const r = await http(ctx, 'POST', `${ctx.api}/customer/checkout/quote`, {
+      body: { businessId: BUSINESS_ID, items: [{ menuItemId: ITEM_MEDIO_ID, quantity: 1 }] },
+    })
+    expectProblem(r, 401, 'unauthorized', 'cotizar sin sesión')
+    expect(r.body.status === 401, `el cuerpo no repite el status: ${r.text.slice(0, 200)}`)
+    noToken(401, r, 'quote')
+  })
+  await step('POST /customer/orders sin Bearer → 401 unauthorized', async () => {
+    const r = await http(ctx, 'POST', `${ctx.api}/customer/orders`, {
+      body: orderBody('pending_cash', 50),
+      headers: { 'idempotency-key': randomUUID() },
+    })
+    expectProblem(r, 401, 'unauthorized', 'pedir sin sesión')
+    expect(r.body.status === 401, `el cuerpo no repite el status: ${r.text.slice(0, 200)}`)
+    noToken(401, r, 'orders')
+  })
+  await step('un Bearer que no es un JWT válido → 401 unauthorized', async () => {
+    const r = await http(ctx, 'POST', `${ctx.api}/customer/checkout/quote`, {
+      body: { businessId: BUSINESS_ID, items: [{ menuItemId: ITEM_MEDIO_ID, quantity: 1 }] },
+      headers: { authorization: 'Bearer esto-no-es-un-jwt' },
+    })
+    expectProblem(r, 401, 'unauthorized', 'cotizar con un token inválido')
+  })
+}
+
 async function checkEvents(ctx: Ctx, serviceKey: string, id: string, label: string): Promise<void> {
   await step(`domain_events (${label}): ciclo de vida registrado`, async () => {
     const r = await http(
@@ -1298,7 +1940,7 @@ async function main(): Promise<void> {
   if (scenario !== 'all' && !SCENARIO_NAMES.includes(scenario))
     return die(`--scenario: ${SCENARIO_NAMES.join(' | ')} | all`)
 
-  const ctx: Ctx = { api, supabase, anonKey, isLocal, tokens: {} }
+  const ctx: Ctx = { api, supabase, anonKey, isLocal, tokens: {}, pass }
   console.log('Flujo completo de un pedido · API REST')
   console.log(`  destino   ${isLocal ? 'LOCAL' : 'STAGING (tindivo-dev)'}`)
   console.log(`  supabase  ${supabase}`)
@@ -1401,6 +2043,33 @@ async function main(): Promise<void> {
         run: async () => void (await scenarioBorrarCuenta(ctx, serviceKey ?? '')),
       },
       { name: 'compat-v1', run: async () => void (await scenarioCompatV1(ctx)) },
+      {
+        name: 'comprobante-rechazado',
+        run: async () => void (await scenarioComprobanteRechazado(ctx)),
+      },
+      { name: 'negocio-cancela', run: async () => void (await scenarioNegocioCancela(ctx)) },
+      {
+        // Local: la cuenta motorizado2 no está garantizada en el `cuentas.md` de staging.
+        name: 'traspaso',
+        localOnly: true,
+        run: async () => {
+          orders.push({ label: 'traspaso', id: await scenarioTraspaso(ctx) })
+        },
+      },
+      {
+        // Local: crea una cuenta y un negocio que la API no borra.
+        name: 'admin-negocio',
+        localOnly: true,
+        run: async () => void (await scenarioAdminNegocio(ctx)),
+      },
+      {
+        // Local: la cuenta admin no está garantizada en el `cuentas.md` de staging.
+        name: 'admin-caso',
+        localOnly: true,
+        run: async () => void (await scenarioAdminCaso(ctx)),
+      },
+      { name: 'store', run: async () => void (await scenarioStore(ctx)) },
+      { name: 'invitado', run: async () => void (await scenarioInvitado(ctx)) },
     ]
     for (const sc of scenarios) {
       if (!want(sc.name)) continue
@@ -1419,6 +2088,8 @@ async function main(): Promise<void> {
           outcomes.push({ name: sc.name, outcome: 'defecto-corregido' })
           failed = true
           console.log(`  FALLA  ${sc.name} pasó pero estaba marcado como defecto conocido (${knownText}): quita la marca`)
+        } else if (parciales.has(sc.name)) {
+          outcomes.push({ name: sc.name, outcome: 'parcial', note: parciales.get(sc.name) })
         } else outcomes.push({ name: sc.name, outcome: 'ok' })
       } catch (err) {
         if (!(err instanceof StepFailure)) {
@@ -1454,7 +2125,7 @@ async function main(): Promise<void> {
   for (const o of outcomes) console.log(`  ${o.outcome.toUpperCase().padEnd(18)} ${o.name}${o.note ? ` — ${o.note}` : ''}`)
   const count = (k: Outcome): number => outcomes.filter((o) => o.outcome === k).length
   console.log(
-    `\n${failed ? 'FAIL' : 'PASS'} · ${okCount}/${results.length} pasos (${expectedRed} rojos esperados) · escenarios: ${count('ok')} ok, ${count('falla')} fallan, ${count('rojo-esperado')} rojos esperados, ${count('saltado')} saltados · ${((Date.now() - t0) / 1000).toFixed(1)} s`,
+    `\n${failed ? 'FAIL' : 'PASS'} · ${okCount}/${results.length} pasos (${expectedRed} rojos esperados) · escenarios: ${count('ok')} ok, ${count('falla')} fallan, ${count('rojo-esperado')} rojos esperados, ${count('parcial')} parciales, ${count('saltado')} saltados · ${((Date.now() - t0) / 1000).toFixed(1)} s`,
   )
   process.exit(failed ? 1 : 0)
 }
