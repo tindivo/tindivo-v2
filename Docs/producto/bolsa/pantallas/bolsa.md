@@ -2,27 +2,7 @@
 canvas: [Bolsa]
 requisitos: [CUS-CRT-001, CUS-CRT-003, CUS-CRT-005, CUS-CRT-007, CUS-CRT-009, CUS-CRT-010, CUS-CRT-011, CUS-CRT-013, CUS-CRT-014, CUS-CRT-015, CUS-CRT-016]
 operaciones: [getBusiness]
-textos:
-  - clave: bolsa.linea.plato_eliminado
-    es: "Este producto ya no está en la carta"
-  - clave: bolsa.linea.agotado
-    es: "Agotado por ahora"
-  - clave: bolsa.linea.fuera_de_franja
-    es: "Hoy no se sirve a esta hora"
-  - clave: bolsa.linea.precio_cambiado
-    es: "El precio cambió. Quítalo y vuelve a agregarlo."
-  - clave: bolsa.linea.opcion_retirada
-    es: "Una opción que elegiste ya no está disponible"
-  - clave: bolsa.continuar.reintentar
-    es: "Reintentar"
-  - clave: bolsa.carta.no_responde
-    es: "No pudimos revisar la carta. Toca Reintentar."
-  - clave: bolsa.linea.importe_no_mostrable
-    es: "No podemos mostrar el precio por ahora"
-  - clave: bolsa.importe_no_mostrable
-    es: "No podemos mostrar un precio. Intenta de nuevo en un rato."
-  - clave: bolsa.editar.guardar
-    es: "Guardar · %s"
+textos: [bolsa.linea.plato_eliminado, bolsa.linea.agotado, bolsa.linea.fuera_de_franja, bolsa.linea.precio_cambiado, bolsa.linea.opcion_retirada, bolsa.continuar.reintentar, bolsa.carta.no_responde, bolsa.linea.importe_no_mostrable, bolsa.importe_no_mostrable, bolsa.editar.guardar, bolsa.editar.no_disponible]
 tokens: []
 codigo:
   web: [apps/customer/features/cart/components/*.tsx]
@@ -56,7 +36,8 @@ codigo:
 | Validando | La bolsa se ve; «Continuar» dice «Cargando…» hasta que responde la carta | CUS-CRT-005, CUS-CRT-009 |
 | Línea inválida | Aviso en la línea con el texto de `bolsa.linea.*` (plato eliminado, agotado, precio cambiado, fuera de franja, opción retirada) y «Continuar» no avanza | CUS-CRT-005, CA-CRT-05 |
 | Carta no responde | «Continuar» no avanza y dice «Reintentar»; al tocarlo se vuelve a pedir la carta. Aviso: `bolsa.carta.no_responde` (se anuncia al aparecer y otra vez si el reintento vuelve a fallar) | CUS-CRT-005 |
-| Importe no mostrable | Un importe roto del servidor se muestra «—» con la etiqueta hablada «Precio no disponible»; «Agregar» se bloquea. Aviso en la línea: `bolsa.linea.importe_no_mostrable`; aviso en la bolsa: `bolsa.importe_no_mostrable` | CUS-CRT-005 |
+| Importe no mostrable | Un importe roto del servidor se muestra «—» con la etiqueta hablada «Precio no disponible»; «Agregar» y, al editar, «Guardar · —» se bloquean; la línea se puede quitar y «Continuar» no avanza mientras esté. Aviso en la línea: `bolsa.linea.importe_no_mostrable`; aviso en la bolsa: `bolsa.importe_no_mostrable` | CUS-CRT-005, CA-CRT-15 |
+| Editar un plato no disponible | Al tocar «Editar» en una línea agotada o fuera de franja, se avisa: `bolsa.editar.no_disponible` | CUS-CRT-005, CUS-CRT-014 |
 | Negocio cerrado | «Continuar» dice «El restaurante está cerrado ahora» | CUS-CRT-009, CA-CRT-07 |
 | Recojo | Etiqueta «Recojo», sin la fila del envío | CUS-CRT-010, CA-CRT-08 |
 | Quitar una línea | «Quitaste "[plato]"» con «Deshacer» y una raya que se vacía en 5 s | CUS-CRT-013, CA-CRT-10 |
@@ -64,6 +45,24 @@ codigo:
 | Vaciar | «¿Vaciar tu bolsa?» · «Cancelar» / «Vaciar» (rojo) | CUS-CRT-016, CA-CRT-13 |
 | Tope alcanzado | «+» deshabilitado | CUS-CRT-011, CA-CRT-09 |
 | Otro negocio | Hoja «¿Empezar una bolsa nueva?» al agregar desde otro negocio | CUS-CRT-001, CA-CRT-01 |
+
+## Textos
+
+Los de la cabecera; el catálogo (`packages/copy`) los tomará de aquí cuando exista.
+
+| Clave | Texto |
+|---|---|
+| `bolsa.linea.plato_eliminado` | «Este producto ya no está en la carta» |
+| `bolsa.linea.agotado` | «Agotado por ahora» |
+| `bolsa.linea.fuera_de_franja` | «Hoy no se sirve a esta hora» |
+| `bolsa.linea.precio_cambiado` | «El precio cambió. Quítalo y vuelve a agregarlo.» |
+| `bolsa.linea.opcion_retirada` | «Una opción que elegiste ya no está disponible» |
+| `bolsa.continuar.reintentar` | «Reintentar» |
+| `bolsa.carta.no_responde` | «No pudimos revisar la carta. Toca Reintentar.» |
+| `bolsa.linea.importe_no_mostrable` | «No podemos mostrar el precio por ahora» |
+| `bolsa.importe_no_mostrable` | «No podemos mostrar un precio. Intenta de nuevo en un rato.» |
+| `bolsa.editar.guardar` | «Guardar · %s» |
+| `bolsa.editar.no_disponible` | «Este producto ya no está disponible» |
 
 ## Diferencias por plataforma
 
@@ -80,6 +79,7 @@ codigo:
 - **Textos aprobados** (2026-11-26, con propuesta de criterio del asesor de producto): carta caída
   (`bolsa.carta.no_responde`), importe no mostrable en la línea y en la bolsa (`bolsa.linea.importe_no_mostrable`,
   `bolsa.importe_no_mostrable`) y el botón de edición «Guardar · %s» (`bolsa.editar.guardar`, el texto de Android; iOS lo adopta).
-- **Pendiente:** no está dicho si «Continuar» se bloquea cuando hay un importe no mostrable en la bolsa, ni si el
-  cliente puede quitar esa línea. Y «Guardar · —» en la edición de una línea con importe roto: se bloquea como «Agregar»
-  o no. Jesús lo decide antes de cerrar el estado.
+- **Importe no mostrable, el resto** (cerrado el mismo día): «Continuar» se bloquea mientras haya una línea así, el
+  cliente puede quitarla y «Guardar · —» se bloquea al editar, igual que «Agregar».
+- **«Editar» sobre un plato agotado o fuera de horario:** se avisa «Este producto ya no está disponible»
+  (`bolsa.editar.no_disponible`).
