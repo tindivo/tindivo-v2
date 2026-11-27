@@ -41,11 +41,11 @@ import com.tindivo.core.designsystem.TindivoSpacing
 import com.tindivo.core.designsystem.TindivoTheme
 import com.tindivo.core.network.AppError
 import com.tindivo.customer.R
+import com.tindivo.customer.feature.addresses.AddressListUiState
+import com.tindivo.customer.feature.addresses.AddressListViewModel
 import com.tindivo.customer.push.NotificationsEffects
 import com.tindivo.customer.push.NotificationsToggleRow
 import com.tindivo.customer.push.NotificationsViewModel
-import com.tindivo.customer.feature.addresses.AddressListUiState
-import com.tindivo.customer.feature.addresses.AddressListViewModel
 import com.tindivo.customer.support.SUPPORT_FALLBACK_WHATSAPP
 import com.tindivo.customer.support.SupportViewModel
 import java.util.UUID
