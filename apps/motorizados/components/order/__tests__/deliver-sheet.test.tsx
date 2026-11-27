@@ -187,6 +187,28 @@ describe('DeliverSheet (cobro en la puerta)', () => {
     expect(onConfirm).toHaveBeenCalledWith({ paymentReal: 'paid_yape' })
   })
 
+  it('relectura del toque EN VUELO: llegan props confirmadas y la relectura responde collect: no se envía efectivo ni mixto, queda «No cobres nada» y el siguiente toque envía lo confirmado', async () => {
+    const { rerender, onConfirm, ui } = hoja(orden())
+    await act(async () => lecturas[0]?.resolve(detalle(orden())))
+
+    fireEvent.click(confirmar())
+    await flush()
+    expect(lecturas).toHaveLength(2)
+
+    rerender(ui(confirmada()))
+    await act(async () => lecturas[1]?.resolve(detalle(orden())))
+
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(screen.queryByText('Tal cual lo planeado')).toBeNull()
+    expect(screen.queryByText('Cambió el método')).toBeNull()
+    expect(screen.getByText('El restaurante ya confirmó el pago. No cobres nada.')).toBeTruthy()
+
+    fireEvent.click(confirmar())
+    await flush()
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(onConfirm).toHaveBeenCalledWith({ paymentReal: 'paid_yape' })
+  })
+
   it('aviso antes de enviar: si la relectura del toque falla y el aviso no estaba, el primer toque solo lo muestra y el segundo envía', async () => {
     const { onConfirm } = hoja(orden())
     await act(async () => lecturas[0]?.resolve(detalle(orden())))

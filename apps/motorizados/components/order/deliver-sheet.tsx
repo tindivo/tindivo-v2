@@ -63,7 +63,7 @@ export function DeliverSheet({
   // montar y vuelve a leer al pulsar «Confirmar entrega»: si falla o tarda se
   // sigue con lo que había, porque la entrega (y la cola offline) nunca se
   // bloquea por esto.
-  const { door, checking, checkFailed, recheckNow } = useDoorPayment(order)
+  const { door, checking, checkFailed, recheckNow } = useDoorPayment(order, { pollMs: 20000 })
   const [justConfirmed, setJustConfirmed] = useState(false)
 
   const prepaid = door.mode === 'prepaid'
