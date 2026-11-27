@@ -53,8 +53,15 @@ class CatalogUITestCase: XCTestCase {
         card.tap()
     }
 
+    /// Volver de la pantalla de arriba: la carta dibuja su propia flecha (`business.back`); las demás, la barra de
+    /// navegación.
     func goBack() {
-        app.navigationBars.buttons.firstMatch.tap()
+        let own = element("business.back")
+        if own.exists {
+            own.tap()
+        } else {
+            app.navigationBars.buttons.firstMatch.tap()
+        }
     }
 
     func query(_ identifier: String) -> XCUIElementQuery {

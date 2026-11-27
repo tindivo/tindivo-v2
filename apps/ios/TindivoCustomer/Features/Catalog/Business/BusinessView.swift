@@ -8,20 +8,27 @@ struct BusinessView: View {
 
     @State private var position: String?
     @State private var showingIndex = false
-    @FocusState private var searchFocused: Bool
+    /// El alto del selector pegado (0 sin selector) y si ya está pegado: la copia de la fila llegó bajo la barra.
+    @State private var chipsHeight: CGFloat = 0
+    @State private var chipsStuck = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dismiss) private var dismiss
+
+    /// Lo que la hoja de la cabecera sube sobre la portada: 28 de su esquina más los 12 de separación entre filas.
+    private static let headerOverlap: CGFloat = 40
 
     var body: some View {
         content
             .background(Color.tindivo.background)
-            .navigationBarTitleDisplayMode(.inline)
-            // El título siempre está (VoiceOver y el botón «volver» de la pantalla siguiente lo leen); lo que se ve en la
-            // barra es la vista de `.principal`, que solo aparece al pasar la portada.
+            // La carta dibuja su propia barra (círculos sobre la portada): la de navegación se oculta, y con ella el título
+            // que el sistema le daría a VoiceOver, que se deja puesto.
+            .toolbar(.hidden, for: .navigationBar)
+            // Sin la barra del sistema, el gesto de volver lo devuelve `InteractivePopGesture`; mientras se busca queda
+            // apagado: «Volver» primero cierra la búsqueda (como `BackHandler(enabled = searching)` de Android).
+            .background { InteractivePopGesture(enabled: !model.isSearching).frame(width: 0, height: 0) }
             .navigationTitle(model.visible?.name ?? String(localized: "Restaurante"))
-            .navigationBarBackButtonHidden(model.isSearching)
-            .toolbar { toolbar }
             .tindivoToast(model.notices.message)
-            .safeAreaInset(edge: .top, spacing: 0) { chips }
+            .safeAreaInset(edge: .top, spacing: 0) { topInset }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 OrderingBottomBar(ordering: model.ordering, cart: model.cartBarSummary, onOpenCart: onOpenCart)
             }
@@ -39,15 +46,9 @@ struct BusinessView: View {
                 DishView(
                     model: model.dishModel ?? model.makeDishModel(for: item),
                     onClose: model.closeDish,
-                    onAdded: model.dishAdded,
-                    onLineGone: model.lineGone
+                    onAdded: model.dishAdded
                 )
             }
-            // «+» con la bolsa de otro restaurante: la misma pregunta que hace la ficha.
-            .replaceBagAlert(
-                model.replacement, onKeep: model.keepCurrentBag,
-                onReplace: { Task { await model.confirmReplacement() } }
-            )
             .task { await model.load() }
             .task { await model.runClock() }
             .task { await model.observeCart() }
@@ -83,12 +84,17 @@ struct BusinessView: View {
             .overlay {
                 if model.isSearching, model.hasSearchTerms {
                     MenuSearchResultsView(
-                        hits: model.searchResults, query: model.query ?? "", businessName: business.name, onTap: tap,
-                        action: rowAction
+                        hits: model.searchResults, query: model.query ?? "", businessName: business.name, onTap: tap
                     )
                     .background(Color.tindivo.background)
                 }
             }
+    }
+
+    /// El alto que la barra, y el selector si hay, le quitan a la lista: la portada sube ese mismo alto para quedar
+    /// detrás de ellos, desde el borde de la pantalla.
+    private var coveredTop: CGFloat {
+        ScreenInsets.top + BusinessTopBar.height + (model.sectionBar == nil ? 0 : chipsHeight)
     }
 
     private func menuList(tap: ((MenuItem) -> Void)?) -> some View {
@@ -109,42 +115,83 @@ struct BusinessView: View {
     private func rowView(_ row: MenuRow, tap: ((MenuItem) -> Void)?) -> some View {
         switch row {
         case let .banner(url):
-            TindivoAsyncImage(url: url)
-                .frame(maxWidth: .infinity)
-                .frame(height: 160)
+            banner(url: url)
         case .header:
-            if let business = model.visible {
-                BusinessHeaderView(
-                    business: business, status: model.statusLine, modes: model.info?.modes ?? [],
-                    onShowInfo: model.showInfo
-                )
-            }
+            if let business = model.visible { header(business) }
         case let .category(category):
             CategoryHeaderView(category: category)
         case let .carousel(items):
-            FeaturedCarouselView(items: items, onTap: tap, action: rowAction)
+            FeaturedCarouselView(items: items, onTap: tap)
         case let .dish(item, _):
-            MenuItemRowView(item: item, action: rowAction(item), onTap: tap.map { tap in { tap(item) } })
+            MenuItemRowView(item: item, onTap: tap.map { tap in { tap(item) } })
         }
     }
 
-    /// El contador de la tarjeta de un plato y qué hace cada toque (CUS-CAT-029).
-    private func rowAction(_ item: MenuItem) -> DishRowAction? {
-        model.control(for: item).map { control in
-            DishRowAction(
-                control: control,
-                onAdd: { Task { await model.increment(item) } },
-                onDecrease: { Task { await model.decrement(item) } },
-                onChoose: { if model.chooseOptions(item) == .bag { onOpenCart() } }
+    private func banner(url: String?) -> some View {
+        BusinessBannerView(url: url, name: model.visible?.name ?? "", statusBarHeight: ScreenInsets.top)
+            .padding(.top, -coveredTop)
+    }
+
+    /// La hoja con el nombre y, debajo, el selector de secciones en su sitio de la carta. Sin foto de portada, la
+    /// portada de marca va aquí encima.
+    private func header(_ business: BusinessDetail) -> some View {
+        VStack(alignment: .leading, spacing: TindivoTokens.Spacing.spaceInner) {
+            if business.bannerURL == nil { banner(url: nil) }
+            VStack(alignment: .leading, spacing: TindivoTokens.Spacing.spaceInner) {
+                BusinessHeaderView(business: business, status: model.statusLine, closed: model.closedNotice)
+                inFlowChips
+            }
+            .padding(.top, -Self.headerOverlap)
+        }
+    }
+
+    // MARK: Barra superior y selector
+
+    @ViewBuilder private var topInset: some View {
+        if model.isSearching, let business = model.visible {
+            BusinessSearchBar(
+                businessName: business.name, query: model.query ?? "", onQueryChange: model.setQuery,
+                onBack: model.closeSearch
             )
+        } else {
+            VStack(spacing: 0) {
+                BusinessTopBar(
+                    solid: model.visible == nil || model.showTitle, title: model.visible?.name,
+                    status: model.statusLine, onBack: { dismiss() }, onSearch: model.startSearch
+                )
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: model.showTitle)
+                stickyChips
+            }
         }
     }
 
-    // MARK: Barra superior
+    /// El selector en la carta, bajo la cabecera. Cuando sube bajo la barra lo reemplaza `stickyChips`.
+    @ViewBuilder private var inFlowChips: some View {
+        if let bar = model.sectionBar {
+            let threshold = ScreenInsets.top + BusinessTopBar.height
+            SectionChipsBar(bar: bar, onSelect: jump, onShowIndex: { showingIndex = true })
+                .accessibilityHidden(chipsStuck)
+                .onGeometryChange(for: Bool.self) {
+                    $0.frame(in: .global).minY <= threshold + 0.5
+                } action: {
+                    chipsStuck = $0
+                }
+        }
+    }
 
-    @ViewBuilder private var chips: some View {
+    /// La copia del selector pegada bajo la barra: siempre ocupa su sitio (así lo que hay debajo no se mueve al
+    /// pegarse) y solo se ve cuando la fila real ya llegó arriba.
+    @ViewBuilder private var stickyChips: some View {
         if let bar = model.sectionBar {
             SectionChipsBar(bar: bar, onSelect: jump, onShowIndex: { showingIndex = true })
+                .opacity(chipsStuck ? 1 : 0)
+                .allowsHitTesting(chipsStuck)
+                .accessibilityHidden(!chipsStuck)
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    chipsHeight = $0
+                }
         }
     }
 
@@ -155,65 +202,6 @@ struct BusinessView: View {
         } else {
             withAnimation { position = key }
         }
-    }
-
-    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
-        if model.isSearching {
-            ToolbarItem(placement: .topBarLeading) {
-                TindivoIconButton(.back, label: "Volver") { model.closeSearch() }
-            }
-            ToolbarItem(placement: .principal) { searchField }
-            if !(model.query ?? "").isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
-                    TindivoIconButton(.close, label: "Limpiar búsqueda") { model.setQuery("") }
-                }
-            }
-        } else if let business = model.visible {
-            // Al pasar la portada, la barra muestra el nombre y el estado (CA-CAT-P5).
-            // Siempre presente (si no, la barra enseña el título de navegación): invisible y oculto a VoiceOver hasta
-            // que se pasa la portada.
-            ToolbarItem(placement: .principal) {
-                titleBar(business.name)
-                    .opacity(model.showTitle ? 1 : 0)
-                    .accessibilityHidden(!model.showTitle)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                TindivoIconButton(.search, label: "Buscar en la carta") { model.startSearch() }
-                    .accessibilityIdentifier("menu.searchButton")
-            }
-        }
-    }
-
-    private func titleBar(_ name: String) -> some View {
-        VStack(spacing: 0) {
-            Text(name)
-                .tindivoText(TindivoTokens.Typography.chip)
-                .foregroundStyle(Color.tindivo.ink)
-                .lineLimit(1)
-            if let status = model.statusLine {
-                Text(status)
-                    .tindivoText(TindivoTokens.Typography.bodySecondary)
-                    .foregroundStyle(Color.tindivo.inkSecondary)
-                    .lineLimit(1)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("business.titleBar")
-    }
-
-    private var searchField: some View {
-        TextField(
-            "",
-            text: Binding(get: { model.query ?? "" }, set: { model.setQuery($0) }),
-            prompt: Text(String(localized: "Buscar en \(model.visible?.name ?? "")"))
-        )
-        .tindivoText(TindivoTokens.Typography.body)
-        .submitLabel(.search)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .focused($searchFocused)
-        .task { searchFocused = true }
-        .accessibilityIdentifier("menu.searchField")
     }
 
     private var openDish: Binding<MenuItem?> {

@@ -234,6 +234,21 @@ struct DishScreenModelTests {
         #expect(cart?.lines.map(\.itemId) == ["i1"])
     }
 
+    @Test("un segundo «Vaciar y empezar» mientras se guarda el primero no hace nada y la bolsa queda con una línea")
+    func secondReplaceWhileSavingDoesNothing() async throws {
+        let store = temporaryStore()
+        _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("x"))
+        let model = try model(store: store)
+        await model.add()
+        let first = model.confirmReplace()
+        #expect(first != nil)
+        #expect(model.confirmReplace() == nil, "la línea pendiente ya la tomó el primero")
+        await first?.value
+        let cart = await store.current()
+        #expect(cart?.lines.map(\.itemId) == ["i1"])
+        #expect(cart?.lines.first?.quantity == 1)
+    }
+
     @Test("el orden real de SwiftUI: cerrar el diálogo (consume) antes de confirmar no pierde la línea")
     func closingTheDialogBeforeConfirmKeepsThePendingLine() async throws {
         let store = temporaryStore()

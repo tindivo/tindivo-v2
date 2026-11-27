@@ -1,9 +1,10 @@
 import SwiftUI
 import TindivoDesign
 
-/// La fila de chips que sigue a la sección visible, con el botón del índice a la derecha desde 5 secciones. El chip
-/// activo va en negrita y subrayado en el color del texto (no pastilla) y se centra solo. Cuántas secciones hay y desde
-/// cuántas aparece cada cosa lo decide `BusinessScreenModel.sectionBar`; aquí solo se dibuja.
+/// La fila de chips que sigue a la sección visible (`SectionChips.kt`), con el botón del índice a la derecha desde 5
+/// secciones. Cada chip es una píldora de 40 en un toque de 48: la activa, rellena de `ink` con texto blanco; las demás,
+/// blancas con borde de 1 en `outline`. Se centra sola. Cuántas secciones hay y desde cuántas aparece cada cosa lo decide
+/// `BusinessScreenModel.sectionBar`; aquí solo se dibuja.
 struct SectionChipsBar: View {
     let bar: BusinessScreenModel.SectionBar
     let onSelect: (Int) -> Void
@@ -19,6 +20,7 @@ struct SectionChipsBar: View {
                             chip(name, index: index)
                         }
                     }
+                    .padding(.horizontal, 12)
                 }
                 .onChange(of: bar.selected) { _, new in
                     guard let id = bar.ids[safe: new] else { return }
@@ -29,28 +31,40 @@ struct SectionChipsBar: View {
                     }
                 }
             }
-            if bar.showsIndex {
-                Button(action: onShowIndex) {
-                    HStack(spacing: 4) {
-                        Image(tindivo: .index).accessibilityHidden(true)
-                        Text(verbatim: "\(bar.names.count)").monospacedDigit()
-                    }
-                    .tindivoText(TindivoTokens.Typography.chip)
-                    .foregroundStyle(Color.tindivo.ink)
-                    .padding(.horizontal, TindivoTokens.Spacing.spaceInner)
-                    .frame(minHeight: TindivoTokens.Spacing.touchTarget)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Ver las \(bar.names.count) secciones de la carta"))
-                .accessibilityIdentifier("menu.indexButton")
-            }
+            if bar.showsIndex { indexButton }
         }
         // `ScrollViewReader` acepta toda la altura que se le ofrece: dentro de un `safeAreaInset` tapaba la carta
         // entera. La barra mide lo que miden sus chips (y crece con la letra grande).
         .fixedSize(horizontal: false, vertical: true)
         .background(Color.tindivo.surface)
-        .overlay(alignment: .bottom) { Color.tindivo.outlineVariant.frame(height: 1) }
+    }
+
+    /// El índice de secciones: botón redondo de 48 con la cuadrícula y el total en una insignia.
+    private var indexButton: some View {
+        Button(action: onShowIndex) {
+            Image(tindivo: .index)
+                .accessibilityHidden(true)
+                .font(.system(size: 20))
+                .foregroundStyle(Color.tindivo.ink)
+                .frame(width: TindivoTokens.Spacing.touchTarget, height: TindivoTokens.Spacing.touchTarget)
+                .background(Color.tindivo.surface, in: Circle())
+                .overlay { Circle().strokeBorder(Color.tindivo.outline, lineWidth: 1) }
+                .overlay(alignment: .topTrailing) {
+                    Text(verbatim: "\(bar.names.count)")
+                        .tindivoText(TypeToken.labelSmall)
+                        .monospacedDigit()
+                        .foregroundStyle(Color.tindivo.onPrimary)
+                        .padding(.horizontal, 5)
+                        .frame(minWidth: 20, minHeight: 20)
+                        .background(Color.tindivo.ink, in: Capsule())
+                        .offset(x: 4, y: -2)
+                }
+        }
+        .buttonStyle(.plain)
+        .padding(.leading, 4)
+        .padding(.trailing, 12)
+        .accessibilityLabel(Text("Ver las \(bar.names.count) secciones de la carta"))
+        .accessibilityIdentifier("menu.indexButton")
     }
 
     private func chip(_ name: String, index: Int) -> some View {
@@ -59,15 +73,17 @@ struct SectionChipsBar: View {
             onSelect(index)
         } label: {
             Text(name)
-                .tindivoText(TindivoTokens.Typography.chip)
-                .fontWeight(isSelected ? .bold : .regular)
-                .foregroundStyle(Color.tindivo.ink)
+                .tindivoText(TypeToken.bodyMedium)
+                .fontWeight(.semibold)
+                .foregroundStyle(isSelected ? Color.tindivo.surface : Color.tindivo.ink)
                 .lineLimit(1)
-                .padding(.horizontal, TindivoTokens.Spacing.spaceInner)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .frame(minHeight: 40)
+                .background(isSelected ? Color.tindivo.ink : Color.tindivo.surface, in: Capsule())
+                .overlay { if !isSelected { Capsule().strokeBorder(Color.tindivo.outline, lineWidth: 1) } }
+                .padding(.horizontal, 4)
                 .frame(minHeight: TindivoTokens.Spacing.touchTarget)
-                .overlay(alignment: .bottom) {
-                    if isSelected { Color.tindivo.ink.frame(height: 2) }
-                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

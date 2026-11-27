@@ -31,87 +31,6 @@ struct BusinessRequirementsTests {
         try #require(model.visible?.categories.first?.items.first { $0.id == id })
     }
 
-    // MARK: Contador en la tarjeta (CUS-CAT-029)
-
-    @Test("CUS-CAT-029 un plato sin opciones y fuera de la bolsa ofrece «+»; con unidades, «− 1 +»")
-    func simpleDishControl() async throws {
-        let store = temporaryStore()
-        let model = await loaded(menu(), store: store)
-        let simple = try item("simple", in: model)
-        #expect(model.control(for: simple) == .add)
-        await model.increment(simple)
-        #expect(await store.current()?.count == 1)
-        let observer = Task { await model.observeCart() }
-        await eventually { model.control(for: simple) == .stepper(quantity: 1, canIncrease: true) }
-        await model.increment(simple)
-        await eventually { model.control(for: simple) == .stepper(quantity: 2, canIncrease: true) }
-        observer.cancel()
-    }
-
-    @Test("CUS-CAT-029 «−» resta y con la última unidad saca el plato de la bolsa; no hay «En bolsa · 1»")
-    func decrementRemoves() async throws {
-        let store = temporaryStore()
-        let model = await loaded(menu(), store: store)
-        let simple = try item("simple", in: model)
-        let observer = Task { await model.observeCart() }
-        await model.increment(simple)
-        await model.increment(simple)
-        await eventually { model.control(for: simple) == .stepper(quantity: 2, canIncrease: true) }
-        await model.decrement(simple)
-        await eventually { model.control(for: simple) == .stepper(quantity: 1, canIncrease: true) }
-        await model.decrement(simple)
-        await eventually { model.control(for: simple) == .add }
-        #expect(await store.current() == nil)
-        observer.cancel()
-    }
-
-    @Test(
-        "CUS-CAT-029 un plato con opciones dice «Elegir» y, con unidades en la bolsa, «En tu bolsa: N» y «Editar selección»"
-    )
-    func configurableControl() async throws {
-        let store = temporaryStore()
-        let model = await loaded(menu(), store: store)
-        let combo = try item("combo", in: model)
-        #expect(model.control(for: combo) == .choose)
-        let line = CartLine(
-            itemId: "combo", name: "Plato combo", basePrice: dec("12.50"),
-            modifiers: [CartModifier(optionId: "o", groupName: "Grupo g", optionName: "Opción o", price: 0)],
-            note: nil, quantity: 2, imageURL: nil
-        )
-        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line)
-        let observer = Task { await model.observeCart() }
-        await eventually { model.control(for: combo) == .inBag(quantity: 2) }
-        observer.cancel()
-        model.chooseOptions(combo)
-        #expect(model.openDish?.id == "combo")
-    }
-
-    @Test("CUS-CAT-029 la bolsa de otro restaurante no cuenta: «+» pregunta si se vacía")
-    func otherBusinessBag() async throws {
-        let store = temporaryStore()
-        _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("simple"))
-        let model = await loaded(menu(), store: store)
-        let simple = try item("simple", in: model)
-        let observer = Task { await model.observeCart() }
-        await eventually { model.cart != nil }
-        #expect(model.control(for: simple) == .add)
-        await model.increment(simple)
-        #expect(model.replacement?.current == "Chifa")
-        #expect(model.openDish == nil)
-        #expect(await store.current()?.businessId == "otro", "no se tocó la bolsa del otro")
-        observer.cancel()
-    }
-
-    @Test("CUS-CAT-029 cerrado, agotado o en modo catálogo la tarjeta no ofrece nada")
-    func noControlWhenNotOrderable() async throws {
-        let closed = await loaded(menu(), at: at("2026-07-07", "12:00"))
-        #expect(try closed.control(for: item("simple", in: closed)) == nil)
-        let soldOut = await loaded(Fixture.menu([Fixture.category("c", [Fixture.item("a", available: false)])]))
-        #expect(try soldOut.control(for: item("a", in: soldOut)) == nil)
-        let contact = await loaded(Fixture.menu([Fixture.category("c", [Fixture.item("a")])], capability: .catalogOnly))
-        #expect(try contact.control(for: item("a", in: contact)) == nil)
-    }
-
     // MARK: Hoja de información (CUS-CAT-004, CUS-CAT-027)
 
     @Test("CUS-CAT-027 la hoja de información se abre y se cierra, y trae la semana y los modos sin contacto")
@@ -218,123 +137,58 @@ struct BusinessRequirementsTests {
         #expect(model.searchResults.isEmpty)
     }
 
-    // MARK: Una sola línea, la sencilla (B1)
+    // MARK: La ficha del plato (CUS-CAT-029)
 
-    private func noted(_ id: String, quantity: Int = 1, note: String? = "sin hielo") -> CartLine {
-        CartLine(
-            itemId: id, name: "Plato \(id)", basePrice: dec("12.50"), modifiers: [], note: note, quantity: quantity,
-            imageURL: nil)
-    }
-
-    @Test(
-        "B1 CUS-CAT-029 un plato sin opciones cuya línea lleva nota no muestra «− N +»: «En tu bolsa: N» y «Editar selección»"
-    )
-    func lineWithNoteIsNotPlain() async throws {
-        let store = temporaryStore()
-        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: noted("simple", quantity: 2))
-        let model = await loaded(menu(), store: store)
-        let simple = try item("simple", in: model)
-        let observer = Task { await model.observeCart() }
-        await eventually { model.control(for: simple) == .inBag(quantity: 2) }
-        // «+» y «−» no tocan una línea con nota: la bolsa queda igual.
-        await model.increment(simple)
-        await model.decrement(simple)
-        #expect(await store.current()?.lines.map(\.quantity) == [2])
-        observer.cancel()
-    }
-
-    @Test(
-        "B1 con varias líneas del mismo plato la tarjeta suma y no muestra «− N +»; «Editar selección» lleva a la bolsa"
-    )
-    func severalLines() async throws {
-        let store = temporaryStore()
-        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: Fixture.line("simple"))
-        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: noted("simple", quantity: 2))
-        let model = await loaded(menu(), store: store)
-        let simple = try item("simple", in: model)
-        let observer = Task { await model.observeCart() }
-        await eventually { model.control(for: simple) == .inBag(quantity: 3) }
-        #expect(model.chooseOptions(simple) == .bag)
-        #expect(model.openDish == nil)
-        observer.cancel()
-    }
-
-    @Test("B1 «+» y «−» actúan de forma atómica sobre la firma concreta: dos toques seguidos suman los dos")
-    func atomicSteps() async throws {
-        let store = temporaryStore()
-        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: Fixture.line("simple"))
-        let model = await loaded(menu(), store: store)
-        let simple = try item("simple", in: model)
-        let observer = Task { await model.observeCart() }
-        await eventually { model.control(for: simple) == .stepper(quantity: 1, canIncrease: true) }
-        async let first: Void = model.increment(simple)
-        async let second: Void = model.increment(simple)
-        _ = await (first, second)
-        #expect(await store.current()?.lines.first?.quantity == 3)
-        observer.cancel()
-    }
-
-    // MARK: «Editar selección» (la bolsa ya sabe editar)
-
-    @Test("«Editar selección» con UNA línea del plato abre esa línea en modo edición")
-    func editSingleLine() async throws {
-        let store = temporaryStore()
-        let model = await loaded(menu(), store: store)
-        let combo = try item("combo", in: model)
-        let line = CartLine(
-            itemId: "combo", name: "Plato combo", basePrice: dec("12.50"),
-            modifiers: [CartModifier(optionId: "o", groupName: "Grupo g", optionName: "Opción o", price: 0)],
-            note: nil, quantity: 1, imageURL: nil
-        )
-        _ = try await store.add(businessId: "negocio-1", businessName: "Don Lucho", line: line)
-        let observer = Task { await model.observeCart() }
-        await eventually { model.control(for: combo) == .inBag(quantity: 1) }
-        #expect(model.chooseOptions(combo) == .dish)
-        #expect(model.dishModel?.isEditing == true)
-        #expect(model.dishModel?.selection.selectedIds == ["o"], "la ficha trae lo elegido")
-        model.closeDish()
-        #expect(model.dishModel == nil)
-        observer.cancel()
-    }
-
-    @Test("«Elegir» abre la ficha en blanco, y el modelo de la ficha se arma una sola vez al abrir")
-    func chooseOpensFreshDish() async throws {
+    @Test("CUS-CAT-029 tocar un plato abre su ficha en blanco, y el modelo de la ficha se arma una sola vez al abrir")
+    func openingADishBuildsItsModelOnce() async throws {
         let model = await loaded(menu())
         let combo = try item("combo", in: model)
-        #expect(model.chooseOptions(combo) == .dish)
+        model.open(combo)
+        #expect(model.openDish?.id == "combo")
         let first = try #require(model.dishModel)
         #expect(!first.isEditing)
         #expect(model.dishModel === first, "no se rearma al leerlo")
     }
 
-    // MARK: «+» con la bolsa de otro negocio (A8)
-
-    @Test(
-        "A8 «+» con la bolsa de otro restaurante pregunta aquí mismo; «Vaciar y empezar» deja el plato en la bolsa nueva"
-    )
-    func replacementFromTheMenu() async throws {
-        let store = temporaryStore()
-        _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("x"))
-        let model = await loaded(menu(), store: store)
-        let simple = try item("simple", in: model)
-        await model.increment(simple)
-        #expect(model.replacement == DishScreenModel.Replacement(current: "Chifa", new: "Don Lucho"))
-        #expect(model.openDish == nil, "no abre la ficha")
-        await model.confirmReplacement()
-        #expect(model.replacement == nil)
-        let cart = await store.current()
-        #expect(cart?.businessId == "negocio-1")
-        #expect(cart?.lines.map(\.itemId) == ["simple"])
+    @Test("CUS-CAT-029 cerrado, agotado o en modo catálogo tocar el plato no abre nada")
+    func tappingANonOrderableDishDoesNothing() async throws {
+        let closed = await loaded(menu(), at: at("2026-07-07", "12:00"))
+        closed.open(try item("simple", in: closed))
+        #expect(closed.openDish == nil)
+        let soldOut = await loaded(Fixture.menu([Fixture.category("c", [Fixture.item("a", available: false)])]))
+        soldOut.open(try item("a", in: soldOut))
+        #expect(soldOut.openDish == nil)
+        let contact = await loaded(Fixture.menu([Fixture.category("c", [Fixture.item("a")])], capability: .catalogOnly))
+        contact.open(try item("a", in: contact))
+        #expect(contact.openDish == nil)
     }
 
-    @Test("A8 «Mantener» deja la bolsa del otro restaurante y no agrega nada")
-    func keepFromTheMenu() async throws {
-        let store = temporaryStore()
-        _ = try await store.add(businessId: "otro", businessName: "Chifa", line: Fixture.line("x"))
-        let model = await loaded(menu(), store: store)
-        await model.increment(try item("simple", in: model))
-        model.keepCurrentBag()
-        #expect(model.replacement == nil)
-        #expect(await store.current()?.businessId == "otro")
+    // MARK: Negocio cerrado (CUS-CAT-012, CUS-CAT-013)
+
+    @Test("CUS-CAT-012 cerrado, la cabecera dice «Cerrado ahora» y la barra de abajo, «Abre hoy a las 18:00»")
+    func closedNoticeWithHour() async {
+        let closed = await loaded(menu(), at: at("2026-07-07", "12:00"))
+        #expect(closed.closedNotice == .init(pill: "Cerrado ahora"))
+        #expect(closed.ordering.closedDetail == "Abre hoy a las 18:00")
+        let open = await loaded(menu())
+        #expect(open.closedNotice == nil)
+    }
+
+    @Test("CUS-CAT-013 sin jornada confirmada la píldora dice «Cerrado ahora» y la barra explica por qué")
+    func closedNoticeWithoutConfirmation() async {
+        let unconfirmed = await loaded(
+            Fixture.menu(
+                [Fixture.category("c", [Fixture.item("a")])], schedule: Fixture.nightSchedule, openingConfirmed: false))
+        #expect(unconfirmed.closedNotice == .init(pill: "Cerrado ahora"))
+        #expect(unconfirmed.ordering.closedDetail == "Hoy este restaurante no ha confirmado que atiende")
+    }
+
+    @Test("CUS-CAT-015 en modo catálogo no hay aviso de cerrado")
+    func noClosedNoticeInCatalogMode() async {
+        let model = await loaded(
+            Fixture.menu(
+                [Fixture.category("c", [Fixture.item("a")])], schedule: Fixture.nightSchedule, capability: .catalogOnly)
+        )
+        #expect(model.closedNotice == nil)
     }
 }

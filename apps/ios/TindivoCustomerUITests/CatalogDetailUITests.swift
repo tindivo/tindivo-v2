@@ -1,7 +1,7 @@
 import XCTest
 
-/// Las pantallas del catálogo con su detalle: la barra de Inicio, la hoja de información, los modos de entrega, las
-/// tarjetas cerradas, «Elige tu [grupo]», el «+» de la carta y «Editar» con VoiceOver. El flujo crítico está en
+/// Las pantallas del catálogo con su detalle: la barra de Inicio, la cabecera de la carta sin información ni modos, las
+/// tarjetas cerradas, «Elige tu [grupo]», el «+» de «Destacados» y «Editar» con VoiceOver. El flujo crítico está en
 /// `CatalogFlowUITests`.
 @MainActor
 final class CatalogDetailUITests: CatalogUITestCase {
@@ -23,48 +23,38 @@ final class CatalogDetailUITests: CatalogUITestCase {
             app.staticTexts["Tu bolsa está vacía"].waitForExistence(timeout: 10), "Tocar la bolsa no abrió la bolsa")
         goBack()
 
-        // Una unidad en la bolsa (el «+» de la tarjeta de «Chicha morada») y la insignia lo cuenta.
+        // Una unidad en la bolsa (el «+» de «Destacados» abre la ficha de «Chicha morada»; «Agregar» la guarda) y la
+        // insignia lo cuenta.
         openDonLucho()
-        let plus = element("menu.add")
-        XCTAssertTrue(plus.waitForExistence(timeout: 20), "No está el «+» de la tarjeta")
+        let plus = app.buttons["Agregar Chicha morada"]
+        XCTAssertTrue(plus.waitForExistence(timeout: 20), "No está el «+» de «Destacados»")
         plus.tap()
-        XCTAssertTrue(element("menu.increase").waitForExistence(timeout: 10), "La tarjeta no pasó a «− 1 +»")
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10), "El «+» no abrió la ficha")
+        element("dish.add").tap()
+        XCTAssertTrue(element("business.cartBar").waitForExistence(timeout: 10), "No apareció «Ver bolsa»")
         goBack()
         XCTAssertTrue(element("home.bag.badge").waitForExistence(timeout: 10), "No apareció la insignia de la bolsa")
         XCTAssertEqual(element("home.bag").label, "Bolsa, 1 producto")
         attach("cus-cat-030-barra-con-bolsa")
     }
 
-    /// CUS-CAT-027 y CA-CAT-P6: la fila «Información del negocio ›» abre la hoja con los siete días, hoy resaltado y
-    /// «Cerrado» el día sin turno; sin contacto.
-    func testBusinessInfoSheetListsTheWeek() throws {
+    /// CUS-CAT-017, CUS-CAT-027 y CUS-CAT-029: la cabecera de la carta no lleva «Información del negocio ›» ni los modos
+    /// de entrega, y las filas de plato no llevan control: el «+» solo está en «Destacados».
+    func testBusinessPageHasNoInfoRowNoModesAndNoRowControls() throws {
         launch(fakeCatalog: true)
         openDonLucho()
-        let row = element("business.infoRow")
-        XCTAssertTrue(row.waitForExistence(timeout: 20), "No está la fila «Información del negocio»")
-        row.tap()
-        XCTAssertTrue(element("info.day.today").waitForExistence(timeout: 10), "La hoja no marca el día de hoy")
-        XCTAssertEqual(query("info.day").count + query("info.day.today").count, 7)
-        XCTAssertTrue(element("info.day.today").label.contains("Martes"), "El reloj fijado es martes")
-        XCTAssertFalse(app.buttons["Llamar"].exists, "La hoja no lleva datos de contacto")
-        // «Cómo pagas» con el texto fijo de la ficha.
-        XCTAssertTrue(element("info.payments").exists, "Falta «Cómo pagas»")
-        XCTAssertTrue(app.staticTexts["Pagas directo al negocio. Tindivo no retiene tu dinero"].exists)
-        attach("info-del-negocio")
-    }
-
-    /// CUS-CAT-017 en la página del negocio: una fila informativa con los modos que acepta, sin selector.
-    func testBusinessPageShowsTheDeliveryModesWithoutASelector() throws {
-        launch(fakeCatalog: true)
-        openDonLucho()
-        let modes = element("business.modes")
-        XCTAssertTrue(modes.waitForExistence(timeout: 20), "No está la fila de modos de entrega")
-        XCTAssertTrue(modes.label.contains("Delivery · 25–40 min"), modes.label)
-        XCTAssertTrue(modes.label.contains("Recojo · En el local"), modes.label)
+        XCTAssertTrue(dishRow("Chicha morada").waitForExistence(timeout: 20), "La carta no cargó")
+        XCTAssertTrue(element("business.status").exists, "Falta el estado bajo el nombre")
+        XCTAssertFalse(element("business.infoRow").exists, "Sobra la fila «Información del negocio»")
+        XCTAssertFalse(element("business.modes").exists, "Sobran las líneas de modos de entrega")
         XCTAssertEqual(app.segmentedControls.count, 0, "No debe haber selector")
         XCTAssertFalse(app.buttons["Delivery"].exists)
         XCTAssertFalse(app.buttons["Recojo"].exists)
-        attach("cus-cat-017-modos")
+        for identifier in ["menu.choose", "menu.edit", "menu.increase", "menu.decrease"] {
+            XCTAssertFalse(element(identifier).exists, "Sobra el control de fila \(identifier)")
+        }
+        XCTAssertEqual(query("menu.add").count, 2, "Solo «Destacados» (2 platos) lleva «+»")
+        attach("cus-cat-017-029-cabecera-y-filas")
     }
 
     /// CA-CAT-P2: la tarjeta de un negocio cerrado dice «Cerrado · abre [día] [hora]» (con el horario de su carta).
@@ -77,6 +67,44 @@ final class CatalogDetailUITests: CatalogUITestCase {
         expectation(for: predicate, evaluatedWith: closed)
         waitForExpectations(timeout: 20)
         attach("ca-cat-p2-tarjeta-cerrada")
+    }
+
+    /// CUS-CAT-012, como `ClosedBar` de Android: la carta de un negocio cerrado lleva «Cerrado ahora» bajo el nombre y,
+    /// abajo, la barra que dice cuándo abre.
+    func testClosedBusinessShowsThePillAndWhenItOpens() throws {
+        launch(fakeCatalog: true)
+        XCTAssertTrue(app.staticTexts["¿Qué pedimos hoy?"].waitForExistence(timeout: 30), "Inicio no cargó")
+        let card = element("home.business.closed")
+        XCTAssertTrue(card.waitForExistence(timeout: 20), "No hay tarjeta cerrada")
+        card.tap()
+        let pill = element("business.status")
+        XCTAssertTrue(pill.waitForExistence(timeout: 20), "Falta la píldora de cerrado")
+        XCTAssertEqual(pill.label, "Cerrado ahora")
+        let bar = element("business.closedBar")
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "Falta la barra de cerrado")
+        XCTAssertTrue(bar.label.contains("Cerrado ahora"), "La barra dice: \(bar.label)")
+        XCTAssertTrue(bar.label.contains("Abre mañana a las 12:00"), "La barra dice: \(bar.label)")
+    }
+
+    /// El gesto de volver desde el borde funciona sin la barra del sistema, pero no mientras se busca: ahí «Volver»
+    /// cierra primero la búsqueda (`BackHandler(enabled = searching)` de Android).
+    func testEdgeSwipeGoesBackExceptWhileSearching() throws {
+        launch(fakeCatalog: true)
+        openDonLucho()
+        XCTAssertTrue(dishRow("Chicha morada").waitForExistence(timeout: 20), "La carta no cargó")
+        element("menu.searchButton").tap()
+        XCTAssertTrue(element("menu.searchField").waitForExistence(timeout: 10), "No se abrió la búsqueda")
+        swipeFromLeftEdge()
+        XCTAssertTrue(element("menu.searchField").waitForExistence(timeout: 3), "El gesto cerró la carta buscando")
+        app.buttons["Volver"].firstMatch.tap()
+        XCTAssertTrue(dishRow("Chicha morada").waitForExistence(timeout: 10), "No volvió a la carta")
+        swipeFromLeftEdge()
+        XCTAssertTrue(app.staticTexts["¿Qué pedimos hoy?"].waitForExistence(timeout: 10), "El gesto no volvió a Inicio")
+    }
+
+    private func swipeFromLeftEdge() {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)))
     }
 
     /// CA-CAT-P7, «Elige tu [grupo]»: con letra grande el grupo que falta queda fuera de pantalla; al tocar el
@@ -97,7 +125,7 @@ final class CatalogDetailUITests: CatalogUITestCase {
         attach("ax5-elige-grupo-visible")
     }
 
-    /// CA-CRT-05b: con la carta caída la bolsa avisa «No pudimos revisar la carta. Toca Reintentar.»; un reintento que
+    /// CA-CRT-14: con la carta caída la bolsa avisa «No pudimos revisar la carta. Toca Reintentar.»; un reintento que
     /// vuelve a fallar (el gancho cuenta un intento más) deja el aviso, y uno que funciona lo quita sin perder la línea.
     /// Que «Continuar» no avance con la carta sin revisar se prueba solo en el modelo: ese botón aún no existe en iOS.
     func testBagWithTheMenuDownOffersRetryAndRecovers() throws {
@@ -121,7 +149,7 @@ final class CatalogDetailUITests: CatalogUITestCase {
         XCTAssertEqual(notice.label, "No pudimos revisar la carta. Toca Reintentar.")
         let retry = element("cart.retry")
         XCTAssertTrue(retry.exists, "Falta «Reintentar»")
-        attach("ca-crt-05b-reintentar")
+        attach("ca-crt-14-reintentar")
 
         // Reintento con la carta aún caída: el gancho suma un byte por cada intento fallido, así que el toque tiene que
         // subir la cuenta (si no hiciera nada, la prueba falla aquí) y el aviso sigue.
@@ -144,21 +172,23 @@ final class CatalogDetailUITests: CatalogUITestCase {
         XCTAssertTrue(element("cart.line").exists, "La línea de la bolsa debe seguir a la vista")
     }
 
-    /// A8: «+» en la carta con la bolsa de otro restaurante pregunta ahí mismo.
-    func testPlusWithAnotherBagAsksFromTheMenu() throws {
+    /// A8: el «+» de «Destacados» con la bolsa de otro restaurante abre la ficha, y es «Agregar» quien pregunta.
+    func testFeaturedPlusWithAnotherBagAsksFromTheDish() throws {
         launch(fakeCatalog: true, seedOtherBag: true)
         openDonLucho()
-        let plus = element("menu.add")
+        let plus = app.buttons["Agregar Chicha morada"]
         XCTAssertTrue(plus.waitForExistence(timeout: 30))
         plus.tap()
+        XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10), "El «+» debe abrir la ficha")
+        XCTAssertFalse(app.alerts.buttons["Vaciar y empezar"].exists, "Pregunta antes de «Agregar»")
+        element("dish.add").tap()
         let replace = app.alerts.buttons["Vaciar y empezar"]
         XCTAssertTrue(replace.waitForExistence(timeout: 10), "No apareció la pregunta de la bolsa nueva")
-        XCTAssertFalse(element("dish.add").exists, "No debe abrir la ficha")
         replace.tap()
         XCTAssertTrue(element("business.cartBar").waitForExistence(timeout: 10), "No quedó el plato en la bolsa nueva")
     }
 
-    /// Recorre Inicio, Negocio (con la hoja de información) y Plato y deja una captura de cada uno, en tamaño normal y en
+    /// Recorre Inicio, Negocio y Plato y deja una captura de cada uno, en tamaño normal y en
     /// AX5, para revisarlas a ojo.
     func testCatalogScreens() throws {
         launch(fakeCatalog: true)
@@ -175,23 +205,16 @@ final class CatalogDetailUITests: CatalogUITestCase {
         XCTAssertTrue(element("home.bag").waitForExistence(timeout: 10))
         attach("\(prefix)-1-inicio")
         openDonLucho()
-        let row = element("business.infoRow")
-        XCTAssertTrue(row.waitForExistence(timeout: 30), "No está la fila de información")
-        attach("\(prefix)-2-negocio")
-        row.tap()
-        XCTAssertTrue(element("info.day.today").waitForExistence(timeout: 10))
-        attach("\(prefix)-3-informacion")
-        let close = element("info.close")
-        if close.waitForExistence(timeout: 5) { close.tap() }
         let dish = dishRow("1/4 de pollo")
-        XCTAssertTrue(dish.waitForExistence(timeout: 20), "No está «1/4 de pollo»")
+        XCTAssertTrue(dish.waitForExistence(timeout: 30), "No está «1/4 de pollo»")
+        attach("\(prefix)-2-negocio")
         dish.tap()
         XCTAssertTrue(element("dish.add").waitForExistence(timeout: 10))
-        attach("\(prefix)-4-plato-incompleto")
+        attach("\(prefix)-3-plato-incompleto")
         element("dish.add").tap()
-        attach("\(prefix)-5-plato-tras-tocar-el-boton")
+        attach("\(prefix)-4-plato-tras-tocar-el-boton")
         app.staticTexts["Pecho"].firstMatch.tap()
-        attach("\(prefix)-6-plato-completo")
+        attach("\(prefix)-5-plato-completo")
     }
 
     /// Con VoiceOver, abrir «Editar» (una ficha a pantalla completa) y cerrarla sin guardar NO borra el aviso de

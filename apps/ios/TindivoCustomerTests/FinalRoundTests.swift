@@ -4,40 +4,6 @@ import TindivoAPI
 
 @testable import TindivoCustomer
 
-/// Una bolsa cuyo `replace` espera la puerta: así un segundo «Vaciar y empezar» llega con el primero a medias.
-private actor GatedReplaceStore: CartStore {
-    private let inner: FileCartStore
-    private let gate: Gate
-    private(set) var replaceCalls = 0
-
-    init(inner: FileCartStore, gate: Gate) {
-        self.inner = inner
-        self.gate = gate
-    }
-
-    func current() async -> Cart? { await inner.current() }
-    func updates() async -> AsyncStream<Cart?> { await inner.updates() }
-    func add(businessId: String, businessName: String, line: CartLine) async throws(CartError) -> AddResult {
-        try await inner.add(businessId: businessId, businessName: businessName, line: line)
-    }
-    func replace(businessId: String, businessName: String, line: CartLine) async throws(CartError) {
-        replaceCalls += 1
-        await gate.wait()
-        try await inner.replace(businessId: businessId, businessName: businessName, line: line)
-    }
-    func changeQuantity(signature: String, by delta: Int) async throws(CartError) {
-        try await inner.changeQuantity(signature: signature, by: delta)
-    }
-    func replaceLine(signature: String, with line: CartLine) async throws(CartError) -> LineEditResult {
-        try await inner.replaceLine(signature: signature, with: line)
-    }
-    func remove(signature: String) async throws(CartError) -> RemovedLine? {
-        try await inner.remove(signature: signature)
-    }
-    func restore(_ removed: RemovedLine) async throws(CartError) -> RestoreResult { try await inner.restore(removed) }
-    func clear() async throws(CartError) { try await inner.clear() }
-}
-
 /// La última ronda de la integración: «Editar» y «Deshacer», dinero, caché de cartas, sección elegida y avisos.
 @MainActor
 @Suite("Ronda final")
@@ -155,14 +121,14 @@ struct FinalRoundTests {
         #expect(rows.lines[0].total.plain == "S/ 12.50")
         #expect(rows.lines[1].total == "—")
         #expect(rows.subtotal == "—")
-        // CA-CRT-05c: la línea y la bolsa avisan con los textos aprobados el 2026-11-26.
+        // CA-CRT-15: la línea y la bolsa avisan con los textos aprobados el 2026-11-26.
         #expect(rows.lines[1].issues == ["No podemos mostrar el precio por ahora"])
         #expect(rows.amountNotice == "No podemos mostrar un precio. Intenta de nuevo en un rato.")
         #expect(!rows.amountsAreValid)
         #expect(!rows.allowsContinue)
     }
 
-    @Test("CA-CRT-05b 6 con importes válidos y la carta caída no se puede continuar")
+    @Test("CA-CRT-14 6 con importes válidos y la carta caída no se puede continuar")
     func validAmountsWithTheMenuDownDoNotContinue() throws {
         let cart = Cart(businessId: "negocio-1", businessName: "N", lines: [line("ok")])
         guard case let .filled(rows) = CartScreenModel.state(for: cart, validation: .checkFailed) else {
@@ -209,92 +175,7 @@ struct FinalRoundTests {
         #expect(menus.calls == 2)
     }
 
-    // MARK: 7, 8, 10, 15. Carta
-
-    private func businessModel(
-        _ menu: BusinessMenu, store: any CartStore, clock: AppClock = .fixed(Fixture.tuesdayEvening)
-    )
-        async -> BusinessScreenModel
-    {
-        let model = makeBusinessModel(menu, clock: clock, cartStore: store)
-        await model.load()
-        return model
-    }
-
-    @Test("7 «Vaciar y empezar» desde la carta dice «Agregado a tu bolsa» y un segundo toque no lo repite")
-    func replacementFromTheMenuSaysAdded() async throws {
-        let store = temporaryStore()
-        _ = try await store.add(businessId: "otro", businessName: "Chifa", line: line("x"))
-        // Un reloj que no deja pasar los 3 s del aviso: el mensaje se queda para poder leerlo.
-        let model = await businessModel(
-            Fixture.menu([Fixture.category("c", [Fixture.item("simple")])]), store: store,
-            clock: .fixed(Fixture.tuesdayEvening, sleepsUntil: Gate()))
-        let item = try #require(model.visible?.categories.first?.items.first)
-        await model.increment(item)
-        async let first: Void = model.confirmReplacement()
-        async let second: Void = model.confirmReplacement()
-        _ = await (first, second)
-        #expect(model.notices.message == "Agregado a tu bolsa")
-        let cart = await store.current()
-        #expect(cart?.lines.map(\.itemId) == ["simple"])
-        #expect(cart?.lines.first?.quantity == 1)
-    }
-
-    @Test("7 isReplacing: con «Vaciar y empezar» a medias, otra pregunta confirmada no lanza un segundo replace")
-    func replacementGuardWhileSaving() async throws {
-        let inner = temporaryStore()
-        _ = try await inner.add(businessId: "otro", businessName: "Chifa", line: line("x"))
-        let gate = Gate()
-        let store = GatedReplaceStore(inner: inner, gate: gate)
-        let model = await businessModel(
-            Fixture.menu([Fixture.category("c", [Fixture.item("simple"), Fixture.item("otro-plato", order: 2)])]),
-            store: store, clock: .fixed(Fixture.tuesdayEvening, sleepsUntil: Gate()))
-        let items = try #require(model.visible?.categories.first?.items)
-        await model.increment(items[0])
-        let first = Task { await model.confirmReplacement() }
-        for _ in 0..<10_000 where await store.replaceCalls < 1 { await Task.yield() }
-        #expect(await store.replaceCalls == 1, "el primero está a medias, esperando la puerta")
-
-        // Mientras tanto la persona toca otro plato: vuelve a salir la pregunta y la confirma.
-        await model.increment(items[1])
-        #expect(model.replacement != nil, "hay otra pregunta pendiente")
-        await model.confirmReplacement()
-        #expect(await store.replaceCalls == 1, "la guarda isReplacing no deja lanzar otro replace")
-
-        gate.open()
-        await first.value
-        #expect(await store.replaceCalls == 1)
-        #expect(await inner.current()?.lines.map(\.itemId) == ["simple"])
-    }
-
-    @Test("8 si la línea que se edita desde «Editar selección» ya no está, se dice «Este plato ya no está en tu bolsa»")
-    func lineGoneFromTheMenu() async throws {
-        let store = temporaryStore()
-        let model = await businessModel(
-            Fixture.menu([
-                Fixture.category(
-                    "c", [Fixture.item("combo", groups: [Fixture.group("g", options: [Fixture.option("o")])])])
-            ]),
-            store: store)
-        let item = try #require(model.visible?.categories.first?.items.first)
-        model.open(item)
-        #expect(model.openDish != nil)
-        model.lineGone()
-        #expect(model.openDish == nil)
-        #expect(model.notices.message == "Este plato ya no está en tu bolsa")
-    }
-
-    @Test("15 el plato se reconoce en la bolsa sin distinguir mayúsculas en el id, como hace la bolsa")
-    func linesMatchIgnoringCase() async throws {
-        let store = temporaryStore()
-        _ = try await store.add(businessId: "NEGOCIO-1", businessName: "N", line: line("SIMPLE"))
-        let model = await businessModel(
-            Fixture.menu([Fixture.category("c", [Fixture.item("simple")])]), store: store)
-        let item = try #require(model.visible?.categories.first?.items.first)
-        let observer = Task { await model.observeCart() }
-        await eventually { model.control(for: item) == .stepper(quantity: 1, canIncrease: true) }
-        observer.cancel()
-    }
+    // MARK: 10. Carta
 
     @Test("10 la sección elegida se recuerda por su id: si «Destacados» desaparece, no salta a otra")
     func selectedSectionSurvivesFeaturedLeaving() async throws {

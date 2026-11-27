@@ -8,7 +8,6 @@ struct MenuSearchResultsView: View {
     let query: String
     let businessName: String
     let onTap: ((MenuItem) -> Void)?
-    var action: (MenuItem) -> DishRowAction? = { _ in nil }
 
     var body: some View {
         if hits.isEmpty {
@@ -34,7 +33,6 @@ struct MenuSearchResultsView: View {
                             name: highlighted(hit.item.name, hit.nameRanges),
                             description: hit.item.description.map { highlighted($0, hit.descriptionRanges) },
                             categoryName: hit.categoryName,
-                            action: action(hit.item),
                             onTap: onTap.map { tap in { tap(hit.item) } }
                         )
                     }
