@@ -42,7 +42,10 @@ internal fun OptionalContent(
     }
     if (details.lastTry) LastTryNotice()
     PrepayPayeeCard(amount = amount, payee = details.payee)
-    if (details.canUpload && state.showsProofPicker) {
+    if (!details.canUpload) {
+        Text(text = stringResource(R.string.prepay_pay_at_door_only), style = MaterialTheme.typography.bodyLarge)
+    }
+    if (state.showsProofPicker) {
         var atDoor by rememberSaveable { mutableStateOf(false) }
         if (atDoor) {
             Text(text = stringResource(R.string.prepay_pay_at_door_chosen), style = MaterialTheme.typography.bodyLarge)

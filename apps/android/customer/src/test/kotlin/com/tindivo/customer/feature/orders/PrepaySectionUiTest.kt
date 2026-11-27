@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.tindivo.core.designsystem.TindivoTheme
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -109,6 +110,19 @@ class PrepaySectionUiTest {
             "El restaurante y el motorizado asignado podrán ver esta captura. " +
                 "Muestra solo esta operación y oculta información ajena al pago.",
         ).assertCountEquals(1)
+        val notice =
+            composeRule
+                .onNodeWithText(
+                    "El restaurante y el motorizado asignado podrán ver esta captura. " +
+                        "Muestra solo esta operación y oculta información ajena al pago.",
+                ).fetchSemanticsNode()
+                .boundsInRoot.top
+        val send =
+            composeRule
+                .onNodeWithText("Enviar comprobante")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        assertTrue("el aviso va encima de Enviar comprobante", notice < send)
     }
 
     @Test
@@ -136,8 +150,9 @@ class PrepaySectionUiTest {
     }
 
     @Test
-    fun `CA-PAY-P3 sin permiso para subir no hay selector ni la opcion del motorizado`() {
+    fun `CA-PAY-12 sin permiso para subir no hay selector y se dice como pagar`() {
         show(details(canUpload = false))
+        count("Le pagas al motorizado cuando llegue.").assertCountEquals(1)
         count("Subir captura").assertCountEquals(0)
         count("Pagaré al motorizado al llegar").assertCountEquals(0)
     }

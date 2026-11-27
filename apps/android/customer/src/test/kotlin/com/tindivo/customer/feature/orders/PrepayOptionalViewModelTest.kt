@@ -35,5 +35,7 @@ class PrepayOptionalViewModelTest : PrepayHarness() {
                 listOf("info", "uploadSlot", "upload", "confirm"),
                 env.gateway.calls.map { it.substringBefore(' ') },
             )
+            env.store.signOutLocally(PREPAY_ACCOUNT)
+            runCurrent()
         }
 }

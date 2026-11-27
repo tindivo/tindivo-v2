@@ -73,6 +73,7 @@ internal class PrepayViewModel
         private var loadJob: Job? = null
         private var sendJob: Job? = null
         private var countdownJob: Job? = null
+        private var pollJob: Job? = null
 
         init {
             val watch = SessionWatch()
@@ -156,6 +157,7 @@ internal class PrepayViewModel
             val id = orderId ?: return
             val started = generation
             if (!isCurrent(started, account)) return
+            pollJob?.cancel()
             loadJob?.cancel()
             val request = ++infoRequest
             mutableState.update { it.copy(info = PrepayInfoState.Loading) }
@@ -169,6 +171,7 @@ internal class PrepayViewModel
                             val info = result.data.toPrepayState(minutes)
                             mutableState.update { it.copy(info = info) }
                             startCountdown((info as? PrepayInfoState.Ready)?.details?.deadline)
+                            startPolling()
                         }
 
                         is ApiResult.Failure -> {
@@ -181,6 +184,47 @@ internal class PrepayViewModel
 
         private suspend fun cachedPaymentMinutes(): Int? =
             paymentMinutes ?: gateway.paymentMinutes().also { paymentMinutes = it }
+
+        /** El pago opcional con la captura a la espera del negocio: lo que dice `prepay-info` aún no es un veredicto. */
+        private fun waitsForBusiness(state: PrepayUiState): Boolean {
+            val details = (state.info as? PrepayInfoState.Ready)?.details ?: return false
+            return details.optional && (state.send is SendState.Sent || details.proofInReview)
+        }
+
+        /**
+         * Mientras la captura del pago opcional espera al negocio, vuelve a pedir `prepay-info` cada [ORDER_POLL_MILLIS],
+         * en silencio: sin pasar por `Loading` y, si falla, dejando el estado como está. Si ya no está en revisión
+         * (confirmado, rechazado o retirado), se olvida la captura enviada y se publica lo nuevo. Va atado a la sesión y
+         * a [infoRequest] como [startLoad]: un [load] nuevo lo reemplaza.
+         */
+        private fun startPolling() {
+            if (!waitsForBusiness(mutableState.value) || pollJob?.isActive == true) return
+            val account = accountId ?: return
+            val id = orderId ?: return
+            val started = generation
+            pollJob =
+                viewModelScope.launch {
+                    while (waitsForBusiness(mutableState.value)) {
+                        delay(ORDER_POLL_MILLIS)
+                        if (!isCurrent(started, account)) return@launch
+                        val request = infoRequest
+                        val result = gateway.info(account, id)
+                        val minutes = if (result is ApiResult.Success) cachedPaymentMinutes() else null
+                        if (!isCurrent(started, account) || request != infoRequest) return@launch
+                        when (result) {
+                            is ApiResult.Success -> applyPolled(result.data.toPrepayState(minutes))
+                            is ApiResult.Failure -> if (handleSessionErrors(result.error, account)) return@launch
+                        }
+                    }
+                }
+        }
+
+        private fun applyPolled(info: PrepayInfoState) {
+            val inReview = (info as? PrepayInfoState.Ready)?.details?.let { it.optional && it.proofInReview } == true
+            if (inReview) return
+            sender.forget()
+            mutableState.update { it.copy(info = info, photo = null, send = SendState.Idle) }
+        }
 
         /** Publica los minutos que quedan y se despierta solo cuando cambia el número; al vencer, para. */
         private fun startCountdown(deadline: Instant?) {
@@ -208,6 +252,7 @@ internal class PrepayViewModel
             when (step) {
                 SendStep.Done -> {
                     mutableState.update { it.copy(send = SendState.Sent, refreshRequests = it.refreshRequests + 1) }
+                    startPolling()
                 }
 
                 is SendStep.Stopped -> {
@@ -315,6 +360,7 @@ internal class PrepayViewModel
             loadJob?.cancel()
             sendJob?.cancel()
             countdownJob?.cancel()
+            pollJob?.cancel()
             sender.forget()
             accountId = null
             mutableState.value = PrepayUiState()

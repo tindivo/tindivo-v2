@@ -670,6 +670,7 @@
     <string name="prepay_with_wallets">Con Yape o Plin</string>
     <string name="prepay_pay_at_door">Pagaré al motorizado al llegar</string>
     <string name="prepay_pay_at_door_chosen">Listo: le pagas al motorizado cuando llegue.</string>
+    <string name="prepay_pay_at_door_only">Le pagas al motorizado cuando llegue.</string>
     <string name="prepay_proof_notice">El restaurante y el motorizado asignado podrán ver esta captura. Muestra solo esta operación y oculta información ajena al pago.</string>
     <string name="prepay_send_needs_photo">Adjunta la captura para enviar</string>
     <string name="prepay_verified">El negocio confirmó tu pago.</string>
