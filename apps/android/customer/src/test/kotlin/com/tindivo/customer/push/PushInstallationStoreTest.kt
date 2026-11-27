@@ -1,7 +1,7 @@
 package com.tindivo.customer.push
 
 import androidx.datastore.core.CorruptionException
-import androidx.datastore.core.ReplaceFileCorruptionHandler
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.tindivo.customer.support.testDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
