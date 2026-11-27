@@ -3,6 +3,7 @@ package com.tindivo.customer.push
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
+import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -14,12 +15,24 @@ import java.util.UUID
  * La identidad de esta instalación ante `PUT /push/devices/{installId}`. [accountId] es la cuenta con la que se usó
  * [installId] (`null` = aún con ninguna). Un [installId] usado con una cuenta nunca se usa con otra: al cerrar sesión
  * o al cambiar de cuenta se genera uno nuevo (el servidor respondería 409 a un `installId` ajeno).
+ *
+ * [entry] es la entrada de sesión ([SessionState.SignedIn.entry]) con la que se ató: el mismo [accountId] con otra entrada
+ * ya no es esta instalación (PS202-001). Solo se compara por igualdad (con `null == null`); es opcional en disco, así que lo
+ * guardado antes de este campo se lee igual.
  */
 @Serializable
 data class PushInstallation(
     val installId: String,
     val accountId: String? = null,
+    val entry: String? = null,
 )
+
+/**
+ * Falla cerrada (PS202-001): la instalación es «de esta sesión» solo si la cuenta Y la entrada de sesión coinciden, con
+ * igualdad de nulos. Instalación con entrada y sesión sin ella (o al revés) es ajena.
+ */
+fun PushInstallation.belongsTo(session: SessionState.SignedIn): Boolean =
+    accountId == session.userId && entry == session.entry
 
 /**
  * La limpieza que quedó pendiente al cerrar sesión de [accountId]: la baja de [installId] en el servidor (necesita la
@@ -59,10 +72,14 @@ interface PushInstallationStore {
     suspend fun current(): PushInstallation?
 
     /**
-     * El `installId` para registrar [accountId]: el guardado si es de esa cuenta o de ninguna (y queda atado a ella);
-     * uno nuevo si no había o si era de otra cuenta.
+     * El `installId` para registrar [accountId] en la entrada de sesión [entry]: el guardado si es de ninguna cuenta, o de
+     * esa cuenta Y esa misma entrada (con `null == null`); uno nuevo si no había o si era de otra cuenta u otra entrada.
+     * Si lo viejo estaba atado a una cuenta, su baja queda anotada como limpieza pendiente.
      */
-    suspend fun bindTo(accountId: String): PushBinding
+    suspend fun bindTo(
+        accountId: String,
+        entry: String? = null,
+    ): PushBinding
 
     /**
      * Tras un 409: si [rejected] sigue siendo el guardado Y sigue atado a [accountId], lo cambia por uno nuevo atado a
@@ -108,14 +125,30 @@ class DataStorePushInstallationStore(
 ) : PushInstallationStore {
     override suspend fun current(): PushInstallation? = store.data.first().installation
 
-    override suspend fun bindTo(accountId: String): PushBinding {
+    override suspend fun bindTo(
+        accountId: String,
+        entry: String?,
+    ): PushBinding {
         var binding: PushBinding? = null
         store.updateData { snapshot ->
             val saved = snapshot.installation
-            val owned = saved?.takeIf { it.accountId == null || it.accountId == accountId }?.installId?.toUuidOrNull()
-            val id = owned ?: newId()
-            binding = PushBinding(id, replacedOther = saved?.accountId != null && saved.accountId != accountId)
-            snapshot.copy(installation = PushInstallation(id.toString(), accountId))
+            val savedAccount = saved?.accountId
+            // Se conserva solo lo de ninguna cuenta, o de esta cuenta Y esta misma entrada (null == null).
+            val mine = saved != null && (savedAccount == null || (savedAccount == accountId && saved.entry == entry))
+            val id = (if (saved != null && mine) saved.installId.toUuidOrNull() else null) ?: newId()
+            val replacedOther = saved != null && savedAccount != null && !mine
+            binding = PushBinding(id, replacedOther = replacedOther)
+            // Lo que estaba atado a una cuenta y se cambia deja su baja pendiente.
+            val cleanup = if (replacedOther) PendingCleanup(saved.installId, checkNotNull(savedAccount)) else null
+            val pending =
+                if (cleanup ==
+                    null
+                ) {
+                    snapshot.pending
+                } else {
+                    snapshot.pending.filter { it.installId != cleanup.installId } + cleanup
+                }
+            snapshot.copy(installation = PushInstallation(id.toString(), accountId, entry), pending = pending)
         }
         return checkNotNull(binding)
     }
@@ -132,7 +165,7 @@ class DataStorePushInstallationStore(
             } else {
                 val id = newId()
                 result = id
-                snapshot.copy(installation = PushInstallation(id.toString(), accountId))
+                snapshot.copy(installation = PushInstallation(id.toString(), accountId, saved.entry))
             }
         }
         return result

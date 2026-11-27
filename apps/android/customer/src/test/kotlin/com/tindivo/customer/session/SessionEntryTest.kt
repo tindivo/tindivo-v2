@@ -12,7 +12,8 @@ internal fun testJwt(payloadJson: String): String {
     return "$header.${encoder.encodeToString(payloadJson.encodeToByteArray())}.firma-falsa"
 }
 
-internal fun testJwtWithEntry(entry: String): String = testJwt("""{"sub":"user-1","session_id":"$entry","exp":2000000}""")
+internal fun testJwtWithEntry(entry: String): String =
+    testJwt("""{"sub":"user-1","session_id":"$entry","exp":2000000}""")
 
 /** El decodificador de la `entry` (PS202-001): ante cualquier fallo devuelve `null`, nunca lanza. */
 class SessionEntryTest {

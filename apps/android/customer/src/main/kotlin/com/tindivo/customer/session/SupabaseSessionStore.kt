@@ -286,7 +286,7 @@ internal class SupabaseSessionStore(
             termsRestricted = snapshot.termsUnknown || snapshot.termsPending
             termsPending.value = snapshot.termsPending
             if (countsAsChange) generation.incrementAndGet()
-            mutableState.value = SessionState.SignedIn(snapshot.userId)
+            mutableState.value = SessionState.SignedIn(snapshot.userId, sessionEntry(snapshot.accessToken))
             if (entering) signIns.value += 1
         }
         return snapshot

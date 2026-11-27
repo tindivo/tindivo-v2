@@ -68,7 +68,7 @@ class PushEntryBindingTest {
     private fun newDisk() = DataStorePushInstallationStore(MemoryDataStore(PushInstallationSnapshot()))
 
     @Test
-    fun `PS202-001 ter tras fallar la liberacion de A, reentrar A y reiniciar el proceso, el aviso viejo no se pinta`() =
+    fun `PS202-001 ter tras fallar la liberacion de A, reentrar A y reiniciar, el aviso viejo no se pinta`() =
         runTest {
             // El almacén de la instalación sobrevive al proceso (es el archivo en disco).
             val disk = newDisk()
@@ -187,7 +187,11 @@ class PushEntryBindingTest {
         runTest {
             val session = FakeSessionStore(SessionState.SignedIn("A"))
             val rig = PresenterRig(session, prefs = prefs)
-            val old = rig.installations.bindTo("A", "e1").installId.toString()
+            val old =
+                rig.installations
+                    .bindTo("A", "e1")
+                    .installId
+                    .toString()
             assertFalse(rig.presenter.onPush(payload(old)))
 
             registrar(session, rig).start()
@@ -206,7 +210,11 @@ class PushEntryBindingTest {
         runTest {
             val session = FakeSessionStore(SessionState.SignedIn("A", "e1"))
             val rig = PresenterRig(session, prefs = prefs)
-            val old = rig.installations.bindTo("A", null).installId.toString()
+            val old =
+                rig.installations
+                    .bindTo("A", null)
+                    .installId
+                    .toString()
             assertFalse(rig.presenter.onPush(payload(old)))
 
             registrar(session, rig).start()
@@ -224,14 +232,18 @@ class PushEntryBindingTest {
         runTest {
             val session = FakeSessionStore(SessionState.SignedIn("A"))
             val rig = PresenterRig(session, prefs = prefs)
-            val id = rig.installations.bindTo("A", null).installId.toString()
+            val id =
+                rig.installations
+                    .bindTo("A", null)
+                    .installId
+                    .toString()
             assertTrue(rig.presenter.onPush(payload(id)))
             assertEquals(listOf(id), rig.notifications.shows.map { it.install })
         }
 
     // PS202-002 bis: una lectura de la instalación que no responde tras fallar el cierre no deja la sesión abierta.
     @Test
-    fun `PS202-002 bis una lectura de la instalacion colgada tras fallar el cierre no deja la sesion abierta ni borra el token`() =
+    fun `PS202-002 bis una lectura colgada tras fallar el cierre no deja la sesion abierta ni borra el token`() =
         runTest {
             val failing = FailingCloseInstallations(newDisk())
             val session = FakeSessionStore(SessionState.SignedIn("A", "e1"))

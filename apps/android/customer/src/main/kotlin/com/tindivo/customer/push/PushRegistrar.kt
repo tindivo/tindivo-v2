@@ -122,10 +122,11 @@ class PushRegistrar(
                             val sameAccount = seenAccount == session.userId
                             seenAccount = session.userId
                             val before = installations.current()
-                            if (adoptGeneration(session.userId, generation, entryAt)) entryAt = null
+                            if (adoptGeneration(session, generation, entryAt)) entryAt = null
                             // Solo subió la generación de una entrada ya registrada: la identidad no cambió, no se repite.
+                            // Con otra entrada de sesión no está «sin cambios»: se registra y la instalación rota (PS202-001).
                             val unchanged =
-                                sameAccount && before?.accountId == session.userId && installations.current() == before
+                                sameAccount && before?.belongsTo(session) == true && installations.current() == before
                             // Sin la generación adoptada (no se pudo soltar la identidad vieja) no se registra: se reintenta en el
                             // próximo `refresh`, al volver a primer plano.
                             val adopted = presenter.adoptedGeneration == generation
@@ -141,10 +142,11 @@ class PushRegistrar(
     override fun refresh() {
         scope.launch {
             val generation = sessionStore.signInGeneration.value
-            val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return@launch
+            val session = sessionStore.state.value as? SessionState.SignedIn ?: return@launch
+            val account = session.userId
             // Una adopción que quedó pendiente (el disco falló al soltar la identidad vieja) se reintenta aquí, sin
             // historial: la identidad que haya se suelta antes de adoptar. Sin adoptar, no se registra.
-            if (generation != presenter.adoptedGeneration && !adoptGeneration(account, generation, entryAt = null)) {
+            if (generation != presenter.adoptedGeneration && !adoptGeneration(session, generation, entryAt = null)) {
                 return@launch
             }
             mutex.withLock {
@@ -152,7 +154,7 @@ class PushRegistrar(
                 // (también desde Ajustes), la baja vieja ya no se quiere y se registra.
                 val current = prefs.current()
                 if (!current.enabled) {
-                    if (current.unregisterPending) optOutServerLocked(account)
+                    if (current.unregisterPending) optOutServerLocked(session)
                 } else {
                     if (current.unregisterPending) prefs.update { it.copy(unregisterPending = false) }
                     registerLocked(account)
@@ -166,16 +168,22 @@ class PushRegistrar(
      * saltado los estados intermedios, A -> B -> A), la identidad que haya es de una sesión anterior y se invalida
      * (PS202-001). Solo con la identidad ya suelta se adopta la generación; si no se pudo soltar, los avisos siguen
      * rechazados (fail-closed) hasta el siguiente intento.
+     *
+     * Una identidad es ajena si es de otra cuenta O de otra entrada de sesión de la misma ([belongsTo]): la revocación de
+     * [PushPresenter] vive en memoria, así que tras un reinicio solo la entrada guardada en disco distingue una sesión
+     * de otra (PS202-001 ter).
      */
     private suspend fun adoptGeneration(
-        account: String,
+        session: SessionState.SignedIn,
         generation: Long,
         entryAt: Long?,
     ): Boolean {
-        val bound = installations.current()?.accountId
+        val installation = installations.current()
+        val bound = installation?.accountId
+        val foreign = installation != null && bound != null && !installation.belongsTo(session)
         if (generation == presenter.adoptedGeneration) {
-            // Otra cuenta sin pasar por SignedOut (un StateFlow puede saltárselo): lo de la anterior se cierra igual.
-            if (bound != null && bound != account) closeAccount(accountId = bound, hasSession = false)
+            // Otra cuenta o entrada sin pasar por SignedOut (un StateFlow puede saltárselo): lo anterior se cierra igual.
+            if (bound != null && foreign) closeAccount(accountId = bound, hasSession = false)
             return false
         }
         // La subida de generación de la entrada que sí se vio (la sesión publica el estado y luego la generación).
@@ -183,9 +191,9 @@ class PushRegistrar(
         val seenEntry =
             entryAt != null && (generation == entryAt || generation == entryAt + 1) &&
                 !(bound != null && bound == unreleased)
-        if (bound != null && (bound != account || !seenEntry)) closeAccount(accountId = bound, hasSession = false)
-        val now = installations.current()?.accountId
-        if (now != null && !(seenEntry && now == account)) return false
+        if (bound != null && (foreign || !seenEntry)) closeAccount(accountId = bound, hasSession = false)
+        val now = installations.current()
+        if (now?.accountId != null && !(seenEntry && now.belongsTo(session))) return false
         presenter.adopt(generation)
         return true
     }
@@ -194,8 +202,8 @@ class PushRegistrar(
     override suspend fun optOut() {
         mutex.withLock {
             presenter.silence { prefs.update { it.copy(enabled = false, unregisterPending = true) } }
-            val account = (sessionStore.state.value as? SessionState.SignedIn)?.userId ?: return
-            optOutServerLocked(account)
+            val session = sessionStore.state.value as? SessionState.SignedIn ?: return
+            optOutServerLocked(session)
         }
     }
 
@@ -203,10 +211,12 @@ class PushRegistrar(
      * La baja de este aparato por estar apagado, con el [mutex] tomado. Solo se da por hecha con un 2xx; si no, queda
      * pendiente para el siguiente [refresh]. Si ya no hay nada que dar de baja (cerró sesión, otra cuenta), tampoco.
      */
-    private suspend fun optOutServerLocked(account: String) {
+    private suspend fun optOutServerLocked(session: SessionState.SignedIn) {
+        val account = session.userId
         val installation = installations.current()
         val installId = installation?.installId?.toUuidOrNull()
-        if (installation == null || installId == null || installation.accountId != account) {
+        // Solo se da de baja la instalación de ESTA sesión (cuenta y entrada): una ajena ya tiene su limpieza pendiente.
+        if (installation == null || installId == null || !installation.belongsTo(session)) {
             prefs.update { it.copy(unregisterPending = false) }
             return
         }
@@ -280,12 +290,15 @@ class PushRegistrar(
     /**
      * El borrado de emergencia del token cuando no se pudo guardar el cierre (CAX-009): bajo el mismo [mutex] que los
      * registros, para que no se cruce con el de otra cuenta, y solo si ninguna OTRA cuenta tiene ya la sesión o la
-     * instalación (su token es el vigente y borrarlo lo invalidaría). Si no se puede comprobar, no se borra.
+     * instalación (su token es el vigente y borrarlo lo invalidaría). Si no se puede comprobar, no se borra: la lectura
+     * lleva el mismo tope que la baja (PS202-002 bis), y vencer cuenta como «otra cuenta», porque el cierre no se cancela
+     * y una lectura colgada de la instalación no puede impedir que la sesión llegue a cerrarse.
      */
     private suspend fun deleteTokenAfterFailure(closing: String?) {
         if (withTimeoutOrNull(registrationWaitMs) { mutex.lock() } == null) return
         try {
-            if (!otherAccountHolds(closing)) withTimeoutOrNull(unregisterTimeoutMs) { tokens.delete() }
+            val other = withTimeoutOrNull(unregisterTimeoutMs) { otherAccountHolds(closing) } ?: true
+            if (!other) withTimeoutOrNull(unregisterTimeoutMs) { tokens.delete() }
         } finally {
             mutex.unlock()
         }
@@ -360,11 +373,13 @@ class PushRegistrar(
         if (!tokens.enabled || !access.permissionGranted() || !prefs.current().enabled || !live(account)) return
         // Antes de atar la instalación: un borrado de token pendiente no puede correr después y llevarse el nuevo.
         cleanTokenLocked()
-        val binding = installations.bindTo(account)
+        // La entrada de sesión vigente: una instalación atada a otra entrada de esta cuenta rota (PS202-001).
+        val entry = (sessionStore.state.value as? SessionState.SignedIn)?.takeIf { it.userId == account }?.entry
+        val binding = installations.bindTo(account, entry)
         // El installId era de otra cuenta: el token de FCM también se renueva antes de registrar esta.
         if (binding.replacedOther) tokens.delete()
         val token = tokens.token()
-        if (token != null && live(account)) putDevice(account, binding.installId, description.describe(token))
+        if (token != null && live(account)) putDevice(account, entry, binding.installId, description.describe(token))
     }
 
     /**
@@ -377,6 +392,7 @@ class PushRegistrar(
      */
     private suspend fun putDevice(
         account: String,
+        entry: String?,
         installId: UUID,
         device: PushDeviceInfo,
     ) {
@@ -390,7 +406,7 @@ class PushRegistrar(
             result = devices.register(next, device, account)
         }
         if (result is ApiResult.Success) {
-            installations.tokenDone(covered, PushInstallation(registered.toString(), account))
+            installations.tokenDone(covered, PushInstallation(registered.toString(), account, entry))
         }
     }
 

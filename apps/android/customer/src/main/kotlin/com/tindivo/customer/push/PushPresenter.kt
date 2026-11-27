@@ -53,18 +53,19 @@ class PushPresenter(
             val generation = sessionStore.signInGeneration.value
             if (generation != adoptedGeneration) return false
             // Al arrancar desde un aviso la sesión guardada puede no haberse leído aún.
-            val account =
-                (sessionStore.state.first { it != SessionState.Unknown } as? SessionState.SignedIn)?.userId
+            val session =
+                sessionStore.state.first { it != SessionState.Unknown } as? SessionState.SignedIn
                     ?: return false
             // Apagados en Cuenta (CA-NOT-06): no se pinta nada, aunque el aviso ya viniera en camino.
             if (!prefs.current().enabled) return false
             val installation = installations.current() ?: return false
             val install = payload.install
-            if (installation.accountId != account || install == null || install != installation.installId) return false
+            // Falla cerrada (PS202-001): la cuenta Y la entrada de sesión tienen que coincidir.
+            if (!installation.belongsTo(session) || install == null || install != installation.installId) return false
             // Tras la lectura suspendida la sesión pudo cerrarse, cambiar de cuenta o ser A -> B -> A: se vuelve a
             // comprobar aquí y, bajo el candado de la sesión, no puede cambiar hasta que se haya pintado.
             publishLock.withLock {
-                if (!stillCurrent(account, generation) || adoptedGeneration != generation) return@withLock false
+                if (!stillCurrent(session, generation) || adoptedGeneration != generation) return@withLock false
                 notifications.show(payload)
                 true
             }
@@ -112,11 +113,9 @@ class PushPresenter(
     suspend fun adopt(generation: Long) = lock.withLock { adoptedGeneration = generation }
 
     private fun stillCurrent(
-        account: String,
+        session: SessionState.SignedIn,
         generation: Long,
-    ): Boolean =
-        (sessionStore.state.value as? SessionState.SignedIn)?.userId == account &&
-            sessionStore.signInGeneration.value == generation
+    ): Boolean = sessionStore.state.value == session && sessionStore.signInGeneration.value == generation
 
     private companion object {
         /** Generación imposible: la admisión revocada por [revoke]. */
