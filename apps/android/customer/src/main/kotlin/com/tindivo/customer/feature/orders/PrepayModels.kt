@@ -120,12 +120,15 @@ internal data class PrepayUiState(
     val photo: String? = null,
     val send: SendState = SendState.Idle,
     val refreshRequests: Int = 0,
+    /** Se está releyendo `prepay-info` tras un envío incierto o un 409: hasta que llegue no hay selector ni envío. */
+    val reconciling: Boolean = false,
 ) {
     /** Se puede tocar «Enviar comprobante». */
     val canSend: Boolean
         get() =
             info is PrepayInfoState.Ready &&
                 info.details.allowsProof &&
+                !reconciling &&
                 photo != null &&
                 send !is SendState.Sending &&
                 send !is SendState.Sent &&
@@ -139,6 +142,7 @@ internal data class PrepayUiState(
         get() =
             info is PrepayInfoState.Ready &&
                 info.details.allowsProof &&
+                !reconciling &&
                 send !is SendState.Sent &&
                 countdown != PrepayCountdown.Expired
 
@@ -149,7 +153,7 @@ internal data class PrepayUiState(
     /** Sin el `Uri` de la foto: dice si hay una elegida, no cuál (CAX-003). */
     override fun toString(): String =
         "PrepayUiState(info=$info, countdown=$countdown, photo=${photo?.let { REDACTED }}, send=$send, " +
-            "refreshRequests=$refreshRequests)"
+            "refreshRequests=$refreshRequests, reconciling=$reconciling)"
 }
 
 /** El servidor deja subir captura, y no hay ya una en revisión ni el pago confirmado. */
