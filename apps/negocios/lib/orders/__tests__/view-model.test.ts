@@ -1216,6 +1216,7 @@ describe('pagoUnicoView · la captura del pago único', () => {
     proofStatus: null as string | null,
     proofUrl: null as string | null,
     proofAttempt: 0,
+    paymentReal: null as 'pending_wallet' | 'pending_cash' | 'pending_mixed' | null,
   }
 
   it('antes de aceptar no hay acciones', () => {
@@ -1283,6 +1284,31 @@ describe('pagoUnicoView · la captura del pago único', () => {
     expect(v?.stage).toBe('cerrado')
     expect(v?.canConfirm).toBe(false)
     expect(v?.canReject).toBe(false)
+  })
+
+  it('entregado que el motorizado cobró en la puerta: cobrado_en_puerta y sin acciones', () => {
+    for (const paymentReal of ['pending_wallet', 'pending_cash', 'pending_mixed'] as const) {
+      const v = pagoUnicoView({ ...base, status: 'delivered', paymentReal })
+      expect(v?.stage).toBe('cobrado_en_puerta')
+      expect(v?.canConfirm).toBe(false)
+      expect(v?.canReject).toBe(false)
+    }
+  })
+
+  it('confirmado por el negocio gana a paymentReal', () => {
+    const v = pagoUnicoView({
+      ...base,
+      status: 'delivered',
+      yaCobrado: true,
+      paymentReal: 'pending_wallet',
+    })
+    expect(v?.stage).toBe('confirmado')
+  })
+
+  it('terminal sin confirmar y sin cobro real: cerrado', () => {
+    expect(pagoUnicoView({ ...base, status: 'delivered', paymentReal: null })?.stage).toBe(
+      'cerrado',
+    )
   })
 
   it('cancelado sin confirmar: cerrado', () => {

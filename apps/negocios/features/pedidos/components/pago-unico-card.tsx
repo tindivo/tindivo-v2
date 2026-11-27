@@ -7,7 +7,7 @@ import {
 import { Button, cn, Icon } from '@tindivo/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { soles } from '@/components/dashboard/primitives'
-import type { OrderVM, PagoUnicoView } from '@/lib/orders/view-model'
+import type { OrderVM, PagoUnicoView, UiPayment } from '@/lib/orders/view-model'
 import { getProofUrl } from '../lib/proof-url'
 
 const REJECT_LABELS: Record<DeliveryPaymentRejectReason, string> = {
@@ -15,6 +15,13 @@ const REJECT_LABELS: Record<DeliveryPaymentRejectReason, string> = {
   wrong_amount: 'Monto distinto',
   unreadable: 'No se lee',
   other: 'Otro',
+}
+
+const COBRO_EN_PUERTA: Record<UiPayment, string> = {
+  pending_wallet: 'Yape o Plin',
+  pending_cash: 'efectivo',
+  pending_mixed: 'pago mixto',
+  prepaid: 'Yape o Plin',
 }
 
 /**
@@ -79,7 +86,9 @@ export function PagoUnicoCard({
 
       <div className="bg-white p-3 px-3.5">
         {stage === 'antes_de_aceptar' && (
-          <p className="text-[13px] text-ink-muted">La captura llega cuando aceptes el pedido.</p>
+          <p className="text-[13px] text-ink-muted">
+            Si el cliente envía captura, la verás aquí después de aceptar.
+          </p>
         )}
 
         {stage === 'sin_captura' && (
@@ -121,8 +130,14 @@ export function PagoUnicoCard({
           </div>
         )}
 
+        {stage === 'cobrado_en_puerta' && (
+          <p className="text-[13px] text-ink-muted">
+            Cobrado en la puerta: {COBRO_EN_PUERTA[order.paymentReal ?? 'pending_wallet']}
+          </p>
+        )}
+
         {stage === 'cerrado' && (
-          <p className="text-[13px] text-ink-muted">El ingreso no se confirmó.</p>
+          <p className="text-[13px] text-ink-muted">No se confirmó el ingreso de este pedido.</p>
         )}
 
         {view.canConfirm && onConfirm && !asking && !choosingReason && (

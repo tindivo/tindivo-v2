@@ -507,6 +507,9 @@ export type PagoUnicoStage =
   | 'captura_por_revisar'
   | 'captura_rechazada'
   | 'confirmado'
+  /** Entregado: el motorizado cobró en la puerta (`paymentReal` dice cómo). */
+  | 'cobrado_en_puerta'
+  /** Terminal sin ingreso confirmado ni cobro real. */
   | 'cerrado'
 
 export interface PagoUnicoView {
@@ -537,6 +540,7 @@ export function pagoUnicoView(
     | 'proofStatus'
     | 'proofUrl'
     | 'proofAttempt'
+    | 'paymentReal'
   >,
 ): PagoUnicoView | null {
   // El manual no tiene app del cliente: su flujo no se toca.
@@ -552,6 +556,8 @@ export function pagoUnicoView(
 
   if (order.yaCobrado) return { stage: 'confirmado', ...sinAcciones }
   if (order.status === 'delivered' || order.status === 'cancelled') {
+    // El motorizado cobró en la puerta (el ingreso no pasó por el negocio).
+    if (order.paymentReal != null) return { stage: 'cobrado_en_puerta', ...sinAcciones }
     return { stage: 'cerrado', ...sinAcciones }
   }
   if (!ESTADOS_ACEPTADOS.has(order.status)) return { stage: 'antes_de_aceptar', ...sinAcciones }
