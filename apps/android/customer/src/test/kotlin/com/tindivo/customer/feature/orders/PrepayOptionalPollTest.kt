@@ -47,10 +47,15 @@ class PrepayOptionalPollTest : PrepayHarness() {
         return env
     }
 
-    /** Termina el ViewModel: si no, la consulta periódica sigue y `runTest` no deja de avanzar el tiempo virtual. */
+    /** Termina el ViewModel (si no, `runTest` no deja de avanzar el tiempo virtual) y comprueba que no queda nada. */
     private suspend fun TestScope.closeSession(env: Env) {
+        val asked = env.gateway.count("info")
         env.store.signOutLocally(PREPAY_ACCOUNT)
         runCurrent()
+        advanceTimeBy(ORDER_POLL_MILLIS * 2)
+        runCurrent()
+        assertEquals(asked, env.gateway.count("info"))
+        assertEquals(PrepayUiState(), env.state)
     }
 
     private fun details(env: Env) = (env.state.info as PrepayInfoState.Ready).details

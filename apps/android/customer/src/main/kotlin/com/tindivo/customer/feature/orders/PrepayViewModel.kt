@@ -50,6 +50,7 @@ internal class PrepayViewModel
         private val sessionStore: SessionStore,
         private val configService: ConfigService,
         private val clock: Clock,
+        private val pollingDelay: PollingDelay,
     ) : ViewModel() {
         private val orderId: UUID? = parseOrderId(savedStateHandle.get<String>("id"))
         private val sender = ProofSender(gateway, encoder)
@@ -192,7 +193,8 @@ internal class PrepayViewModel
         }
 
         /**
-         * Mientras la captura del pago opcional espera al negocio, vuelve a pedir `prepay-info` cada [ORDER_POLL_MILLIS],
+         * Mientras la captura del pago opcional espera al negocio, vuelve a pedir `prepay-info` cada [ORDER_POLL_MILLIS]
+         * (con [PollingDelay]: no corre con la pantalla en segundo plano),
          * en silencio: sin pasar por `Loading` y, si falla, dejando el estado como está. Si ya no está en revisión
          * (confirmado, rechazado o retirado), se olvida la captura enviada y se publica lo nuevo. Va atado a la sesión y
          * a [infoRequest] como [startLoad]: un [load] nuevo lo reemplaza.
@@ -205,15 +207,24 @@ internal class PrepayViewModel
             pollJob =
                 viewModelScope.launch {
                     while (waitsForBusiness(mutableState.value)) {
-                        delay(ORDER_POLL_MILLIS)
-                        if (!isCurrent(started, account)) return@launch
+                        pollingDelay.await(ORDER_POLL_MILLIS)
+                        if (!isCurrent(started, account) || !waitsForBusiness(mutableState.value)) return@launch
                         val request = infoRequest
                         val result = gateway.info(account, id)
                         val minutes = if (result is ApiResult.Success) cachedPaymentMinutes() else null
                         if (!isCurrent(started, account) || request != infoRequest) return@launch
                         when (result) {
-                            is ApiResult.Success -> applyPolled(result.data.toPrepayState(minutes))
-                            is ApiResult.Failure -> if (handleSessionErrors(result.error, account)) return@launch
+                            is ApiResult.Success -> {
+                                applyPolled(result.data.toPrepayState(minutes))
+                                // Solo decide cuándo dejar de preguntar, no qué se permite: lo demás lo dice `canUploadProof`.
+                                if (result.data.status in FINISHED_ORDER) return@launch
+                            }
+
+                            is ApiResult.Failure -> {
+                                if (handleSessionErrors(result.error, account)) return@launch
+                                // Solo un corte de red se reintenta; cualquier otro error es definitivo.
+                                if (result.error !is AppError.Network) return@launch
+                            }
                         }
                     }
                 }
@@ -224,6 +235,7 @@ internal class PrepayViewModel
             if (inReview) return
             sender.forget()
             mutableState.update { it.copy(info = info, photo = null, send = SendState.Idle) }
+            startCountdown((info as? PrepayInfoState.Ready)?.details?.deadline)
         }
 
         /** Publica los minutos que quedan y se despierta solo cuando cambia el número; al vencer, para. */
@@ -368,6 +380,7 @@ internal class PrepayViewModel
 
         private companion object {
             val CLIENT_ERRORS = 400..499
+            val FINISHED_ORDER = setOf("delivered", "cancelled")
         }
     }
 

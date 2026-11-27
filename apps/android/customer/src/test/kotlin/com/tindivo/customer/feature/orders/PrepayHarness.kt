@@ -11,6 +11,7 @@ import com.tindivo.customer.session.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
@@ -81,6 +82,7 @@ abstract class PrepayHarness {
                 store,
                 configService,
                 SchedulerClock(scope.testScheduler),
+                PollingDelay { delay(it) },
             )
         val seen = mutableListOf<PrepayUiState>()
 
