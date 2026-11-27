@@ -88,8 +88,11 @@ export function buildComandaHtml({
   } else if (effectivePayment === 'pending_wallet') {
     paymentText = 'BILLETERA (YAPE / PLIN)'
     if (order.yaCobrado) {
-      paymentDetails =
-        '<div class="bold text-center" style="margin-top: 3px; font-size: 13px;">*** [ ✓ YA PAGÓ EN CAJA ] ***</div>'
+      // En delivery solo el negocio confirma el ingreso del pago único (0296);
+      // en recojo, quien lo marca es la cajera al cobrar en el mostrador.
+      const yaPago =
+        order.method === 'delivery' ? 'YA PAGÓ CON YAPE/PLIN - NO COBRAR' : 'YA PAGÓ EN CAJA'
+      paymentDetails = `<div class="bold text-center" style="margin-top: 3px; font-size: 13px;">*** [ ✓ ${yaPago} ] ***</div>`
     } else {
       paymentDetails = `<div class="bold text-center" style="margin-top: 3px; font-size: 14px;">*** COBRAR AL ENTREGAR: ${fmtMoney(order.total)} ***</div>`
     }

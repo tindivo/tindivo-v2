@@ -175,6 +175,44 @@ describe('buildComandaHtml', () => {
     expect(html).toContain('*** COBRAR AL ENTREGAR: S/ 35.50 ***')
   })
 
+  it('pago único con entrega confirmado por el negocio: el motorizado no cobra', () => {
+    const html = buildComandaHtml({
+      order: { ...baseOrder, method: 'delivery', payment: 'pending_wallet', yaCobrado: true },
+      items,
+      bizName: 'Al Punto',
+    })
+
+    expect(html).toContain('*** [ ✓ YA PAGÓ CON YAPE/PLIN - NO COBRAR ] ***')
+    expect(html).not.toContain('COBRAR AL ENTREGAR')
+  })
+
+  it('pago único con entrega sin confirmar: se cobra al entregar', () => {
+    const html = buildComandaHtml({
+      order: { ...baseOrder, method: 'delivery', payment: 'pending_wallet', yaCobrado: false },
+      items,
+      bizName: 'Al Punto',
+    })
+
+    expect(html).toContain('COBRAR AL ENTREGAR')
+    expect(html).not.toContain('NO COBRAR')
+  })
+
+  it('recojo con Yape cobrado en caja sigue diciendo «EN CAJA»', () => {
+    const html = buildComandaHtml({
+      order: {
+        ...baseOrder,
+        method: 'pickup',
+        pickupTiming: 'now',
+        payment: 'pending_wallet',
+        yaCobrado: true,
+      },
+      items,
+      bizName: 'Al Punto',
+    })
+
+    expect(html).toContain('*** [ ✓ YA PAGÓ EN CAJA ] ***')
+  })
+
   it('escapa caracteres especiales contra XSS', () => {
     const maliciousOrder: OrderVM = {
       ...baseOrder,
