@@ -12,7 +12,7 @@
  * si la corrida muere); la zona lejana lleva el prefijo `ZZ Test MV4b`.
  */
 import { createClient } from '@supabase/supabase-js'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
   DELETE as deleteAddress,
   PATCH as patchAddress,
@@ -21,7 +21,7 @@ import { GET as getAddresses, POST as postAddress } from '../../app/api/v1/custo
 import { POST as postQuote } from '../../app/api/v1/customer/checkout/quote/route'
 import { GET as getCourierHistory } from '../../app/api/v1/customer/courier-orders/route'
 import { GET as getOrder } from '../../app/api/v1/customer/orders/[id]/route'
-import { GET as getOrders } from '../../app/api/v1/customer/orders/route'
+import { GET as getOrders, POST as postOrder } from '../../app/api/v1/customer/orders/route'
 import { POST as postTerms } from '../../app/api/v1/customer/terms-acceptance/route'
 import { E2E as FIXTURES } from '../../scripts/e2e-fixtures'
 import { localClient as db } from './helpers/local-db'
@@ -30,6 +30,85 @@ import {
   COURIER_POINT_B,
   callCreateCourierOrder,
 } from './helpers/local-db-courier'
+
+/**
+ * Fallos de lectura inyectados (CAX-002). Por defecto no hace nada: los clientes de
+ * Supabase que crean las rutas pasan tal cual. Una prueba apunta una lectura
+ * (`reads`: tabla, columnas del `select` y filtros `eq`) o una RPC (`rpcs`) y esa
+ * llamada, y solo esa, devuelve un error.
+ */
+const faults = vi.hoisted(() => {
+  interface ReadFault {
+    table: string
+    select?: string
+    eq?: [string, unknown]
+  }
+  const state = { reads: [] as ReadFault[], rpcs: [] as string[] }
+  const error = { message: 'lectura inyectada', code: 'XX000', details: '', hint: '' }
+  type Fn = (...args: unknown[]) => unknown
+  const builder = (
+    real: object,
+    table: string,
+    seen: { select?: string; eq: Array<[string, unknown]> },
+  ): object =>
+    new Proxy(real, {
+      get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver) as unknown
+        if (typeof value !== 'function') return value
+        return (...args: unknown[]) => {
+          if (prop === 'select') seen.select = String(args[0])
+          if (prop === 'eq') seen.eq.push([String(args[0]), args[1]])
+          if (prop === 'maybeSingle' || prop === 'single' || prop === 'then') {
+            const hit = state.reads.some(
+              (f) =>
+                f.table === table &&
+                (f.select === undefined || f.select === seen.select) &&
+                (f.eq === undefined ||
+                  seen.eq.some(([c, v]) => c === f.eq?.[0] && v === f.eq?.[1])),
+            )
+            if (hit) {
+              const failed = Promise.resolve({ data: null, error })
+              return prop === 'then' ? failed.then(...(args as [Fn, Fn])) : failed
+            }
+          }
+          const next = (value as Fn).apply(target, args)
+          if (prop === 'then') return next
+          return next === target
+            ? receiver
+            : typeof next === 'object' && next !== null && 'then' in next
+              ? builder(next, table, seen)
+              : next
+        }
+      },
+    })
+  const wrap = <T extends object>(client: T): T =>
+    new Proxy(client, {
+      get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver) as unknown
+        if (prop === 'from' && typeof value === 'function') {
+          return (table: string) =>
+            builder((value as Fn).call(target, table) as object, table, { eq: [] })
+        }
+        if (prop === 'rpc' && typeof value === 'function') {
+          return (name: string, ...rest: unknown[]) =>
+            state.rpcs.includes(name)
+              ? Promise.resolve({ data: null, error })
+              : (value as Fn).call(target, name, ...rest)
+        }
+        return value
+      },
+    }) as T
+  return { state, wrap }
+})
+
+vi.mock('@/lib/supabase/service', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/supabase/service')>()
+  return { ...real, createServiceClient: () => faults.wrap(real.createServiceClient()) }
+})
+vi.mock('@/lib/supabase/user', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/supabase/user')>()
+  return { ...real, createUserClient: (token: string) => faults.wrap(real.createUserClient(token)) }
+})
 
 const LOCAL_URL = 'http://127.0.0.1:54321'
 const LOCAL_ANON_KEY =
@@ -91,12 +170,14 @@ async function pedir(
     bearer?: string
     method?: string
     body?: unknown
+    headers?: Record<string, string>
     params?: Record<string, string>
     qs?: string
   } = {},
 ): Promise<{ status: number; body: any; headers: Headers }> {
   const headers: Record<string, string> = { 'content-type': 'application/json' }
   if (opts.bearer) headers.authorization = `Bearer ${opts.bearer}`
+  Object.assign(headers, opts.headers)
   const res = await (handler as Handler)(
     new Request(`http://localhost:3001/api/v1/x${opts.qs ?? ''}`, {
       method: opts.method ?? 'GET',
@@ -921,7 +1002,7 @@ describe('POST /customer/checkout/quote · payment', () => {
   const cotizar = async (c: Cliente, extra: Record<string, unknown> = {}) =>
     pedir(postQuote, { bearer: c.token, method: 'POST', body: bolsa(extra) })
 
-  it('cliente de confianza en delivery: las tres disponibles y el efectivo declara billete', async () => {
+  it('cliente de confianza en delivery: solo las dos de al recibir (sin prepaid) y el efectivo declara billete', async () => {
     const c = await clienteDeConfianza()
     const r = await cotizar(c)
     expect(r.status).toBe(200)
@@ -929,7 +1010,6 @@ describe('POST /customer/checkout/quote · payment', () => {
     expect(r.body.data.payment.options).toEqual([
       { intent: 'pending_cash', available: true, unavailableReason: null },
       { intent: 'pending_yape', available: true, unavailableReason: null },
-      { intent: 'prepaid', available: true, unavailableReason: null },
     ])
     const { data: ajuste } = await db
       .from('app_settings')
@@ -943,7 +1023,72 @@ describe('POST /customer/checkout/quote · payment', () => {
     })
   })
 
-  it('cliente sin historial: la contraentrega sigue disponible (la creación decide con GPS o mostrador)', async () => {
+  it('API-3 · POST con prepaid de un confiable sigue aceptándose (201), aunque la cotización ya no lo ofrezca', async () => {
+    const c = await clienteDeConfianza()
+    const cot = await cotizar(c)
+    expect(cot.body.data.payment.options.map((o: { intent: string }) => o.intent)).not.toContain(
+      'prepaid',
+    )
+    const r = await pedir(postOrder, {
+      bearer: c.token,
+      method: 'POST',
+      headers: { 'idempotency-key': crypto.randomUUID() },
+      body: {
+        businessId: FIXTURES.BUSINESS_ID,
+        deliveryMethod: 'delivery',
+        paymentIntent: 'prepaid',
+        customerName: NOMBRE,
+        customerPhone: c.tel9,
+        deliveryAddress: 'Jr. Prueba 1',
+        deliveryReference: REF,
+        coordinates: PIN,
+        items: [
+          {
+            menuItemId: FIXTURES.ITEM_POLLO_ID,
+            quantity: 1,
+            modifiers: [FIXTURES.MODOPT_QUESO_ID],
+          },
+        ],
+      },
+    })
+    expect(r.status, JSON.stringify(r.body)).toBe(201)
+  })
+
+  /** POST /customer/orders con la misma bolsa de 48.00 que cotiza `bolsa`. */
+  const crear = async (
+    c: Cliente,
+    paymentIntent: 'prepaid' | 'pending_cash' | 'pending_yape',
+    extra: Record<string, unknown> = {},
+  ) =>
+    pedir(postOrder, {
+      bearer: c.token,
+      method: 'POST',
+      headers: { 'idempotency-key': crypto.randomUUID() },
+      body: {
+        businessId: FIXTURES.BUSINESS_ID,
+        deliveryMethod: 'delivery',
+        paymentIntent,
+        customerName: NOMBRE,
+        customerPhone: c.tel9,
+        deliveryAddress: 'Jr. Prueba 1',
+        deliveryReference: REF,
+        coordinates: PIN,
+        items: [
+          {
+            menuItemId: FIXTURES.ITEM_POLLO_ID,
+            quantity: 1,
+            modifiers: [FIXTURES.MODOPT_QUESO_ID],
+          },
+        ],
+        ...extra,
+      },
+    })
+
+  const intents = (r: {
+    body: { data: { payment: { options: Array<{ intent: string }> } } }
+  }): string[] => r.body.data.payment.options.map((o) => o.intent)
+
+  it('cliente sin historial: la cotización conserva las tres opciones (CAX-001, igual que develop)', async () => {
     const c = await crearCliente()
     const r = await cotizar(c)
     expect(r.body.data.payment.options).toEqual([
@@ -952,6 +1097,978 @@ describe('POST /customer/checkout/quote · payment', () => {
       { intent: 'prepaid', available: true, unavailableReason: null },
     ])
     expect(r.body.data.payment.cash).not.toBeNull()
+  })
+
+  // CAX-001: sin GPS local válido la creación exige prepago; la cotización no puede
+  // quitarle esa salida al cliente sin historial.
+  describe.each([
+    ['GPS ausente', {}],
+    ['GPS fallido', { gpsValidation: { method: 'failed' } }],
+    [
+      'GPS fuera de cobertura',
+      { gpsValidation: { method: 'gps_high_accuracy', lat: -9.0, lng: -78.0, accuracyM: 10 } },
+    ],
+  ])('cliente sin historial · %s', (_nombre, gps) => {
+    it('se ofrece prepaid, la contraentrega al recibir se rechaza y prepaid crea el pedido', async () => {
+      const c = await crearCliente()
+      const cot = await cotizar(c)
+      expect(intents(cot)).toContain('prepaid')
+      const cash = await crear(c, 'pending_cash', gps)
+      expect(cash.status, JSON.stringify(cash.body)).toBe(422)
+      expect(cash.body.detail).toContain('Pago adelantado requerido')
+      const prepago = await crear(c, 'prepaid', gps)
+      expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+    })
+  })
+
+  it('cliente sin historial · GPS local: se ofrece prepaid y la contraentrega entra a `validando`', async () => {
+    const c = await crearCliente()
+    const cot = await cotizar(c)
+    expect(intents(cot)).toContain('prepaid')
+    const r = await crear(c, 'pending_cash', {
+      gpsValidation: {
+        method: 'gps_high_accuracy',
+        lat: PIN.lat,
+        lng: PIN.lng,
+        accuracyM: 10,
+      },
+    })
+    expect(r.status, JSON.stringify(r.body)).toBe(201)
+    expect(r.body.data.status).toBe('validando')
+  })
+
+  // CAX-002: la guardia HTTP de la creación y la cotización calculan el MISMO total
+  // (envío gratis, banda cercana o lejana) y coinciden en cada umbral.
+  describe('umbral de prepago: cotización y creación coinciden', () => {
+    const leerBandas = async (): Promise<{ near: number; far: number }> =>
+      (await db.from('app_settings').select('value').eq('key', 'delivery_bands').single()).data
+        ?.value as { near: number; far: number }
+
+    async function conUmbral(umbral: number, fn: () => Promise<void>): Promise<void> {
+      const { data: previo } = await db
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'prepay_threshold')
+        .single()
+      await db.from('app_settings').update({ value: umbral }).eq('key', 'prepay_threshold')
+      try {
+        await fn()
+      } finally {
+        await db
+          .from('app_settings')
+          .update({ value: previo?.value as never })
+          .eq('key', 'prepay_threshold')
+      }
+    }
+
+    /** Total que quedó guardado en el pedido (subtotal + envío), en céntimos. */
+    async function totalDelPedido(orderId: string): Promise<number> {
+      const { data } = await db
+        .from('orders')
+        .select('order_amount,delivery_fee')
+        .eq('id', orderId)
+        .single()
+      return Math.round((Number(data?.order_amount) + Number(data?.delivery_fee)) * 100)
+    }
+
+    /** `cuenta` = total en céntimos de la cotización; igualdad pasa, un céntimo menos de umbral no. */
+    async function verificar(cuenta: number, etiqueta: string): Promise<void> {
+      const c1 = await clienteDeConfianza()
+      await conUmbral(cuenta / 100, async () => {
+        const cot = await cotizar(c1, { coordinates: PIN })
+        expect(cot.body.data.total, etiqueta).toBe((cuenta / 100).toFixed(2))
+        expect(cot.body.data.exceedsPrepayThreshold, etiqueta).toBe(false)
+        const r = await crear(c1, 'pending_cash')
+        expect(r.status, `${etiqueta} igualdad: ${JSON.stringify(r.body)}`).toBe(201)
+        expect(await totalDelPedido(r.body.data.id), etiqueta).toBe(cuenta)
+      })
+      const c2 = await clienteDeConfianza()
+      await conUmbral((cuenta - 1) / 100, async () => {
+        const cot = await cotizar(c2, { coordinates: PIN })
+        expect(cot.body.data.exceedsPrepayThreshold, etiqueta).toBe(true)
+        expect(intents(cot), etiqueta).toEqual(['pending_cash', 'pending_yape', 'prepaid'])
+        const r = await crear(c2, 'pending_cash')
+        // La guardia HTTP (403), no la RPC (422): con todo leído, corta ella.
+        expect(r.status, `${etiqueta} +1 céntimo: ${JSON.stringify(r.body)}`).toBe(403)
+        expect(r.body.detail, etiqueta).toContain(`(S/ ${(cuenta / 100).toFixed(2)}) pasa de`)
+        const prepago = await crear(c2, 'prepaid')
+        expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+      })
+    }
+
+    it('plato de 48.00 con envío gratis: total 48.00; umbral 49.00 deja pasar la contraentrega', async () => {
+      await db
+        .from('menu_items')
+        .update({ free_delivery_until: '2099-12-31' })
+        .eq('id', FIXTURES.ITEM_POLLO_ID)
+      try {
+        const c = await clienteDeConfianza()
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: true, reason: 'dish' })
+          expect(cot.body.data.total).toBe('48.00')
+          expect(cot.body.data.exceedsPrepayThreshold).toBe(false)
+          const r = await crear(c, 'pending_cash')
+          expect(r.status, JSON.stringify(r.body)).toBe(201)
+        })
+        await verificar(4800, 'envío gratis')
+      } finally {
+        await db
+          .from('menu_items')
+          .update({ free_delivery_until: null })
+          .eq('id', FIXTURES.ITEM_POLLO_ID)
+      }
+    })
+
+    it('banda cercana sin promoción: igualdad al umbral y un céntimo por encima', async () => {
+      const { near } = await leerBandas()
+      await verificar(4800 + Math.round(near * 100), 'banda cercana')
+    })
+
+    it('banda lejana: igualdad al umbral y un céntimo por encima', async () => {
+      const { far } = await leerBandas()
+      const { error } = await db.from('delivery_zones').insert({
+        name: ZONA,
+        polygon: [
+          { lat: PIN.lat - 0.004, lng: PIN.lng - 0.004 },
+          { lat: PIN.lat - 0.004, lng: PIN.lng + 0.004 },
+          { lat: PIN.lat + 0.004, lng: PIN.lng + 0.004 },
+          { lat: PIN.lat + 0.004, lng: PIN.lng - 0.004 },
+        ],
+      })
+      if (error) throw new Error(error.message)
+      try {
+        await verificar(4800 + Math.round(far * 100), 'banda lejana')
+      } finally {
+        await db.from('delivery_zones').delete().eq('name', ZONA)
+      }
+    })
+
+    // CAX-002 (R2): si falla CUALQUIER lectura del cálculo, la guardia HTTP no corta y
+    // decide la RPC (422 si el total pasa del umbral, 201 si no). Sin el fallo, corta
+    // la guardia con 403. Ejemplo de Codex: plato de 48.00, banda cercana 2.00, tarifa
+    // del negocio 3.00 y umbral 50.00 (total real 50.00, que la RPC acepta).
+    describe('lecturas fallidas: la guardia no corta y decide la RPC', () => {
+      interface Fallo {
+        reads?: Array<{ table: string; select?: string; eq?: [string, unknown] }>
+        rpcs?: string[]
+      }
+      const BANDAS = { table: 'app_settings', eq: ['key', 'delivery_bands'] as [string, unknown] }
+      const TARIFA_NEGOCIO = { table: 'businesses', select: 'delivery_fee' }
+      const PROMO = 'current_customer_promo_free_delivery'
+      const PLATO = 'cart_item_free_delivery'
+      let tarifaPrevia: unknown = null
+
+      beforeAll(async () => {
+        const { data } = await db
+          .from('businesses')
+          .select('delivery_fee')
+          .eq('id', FIXTURES.BUSINESS_ID)
+          .single()
+        tarifaPrevia = data?.delivery_fee ?? null
+        await db.from('businesses').update({ delivery_fee: 3 }).eq('id', FIXTURES.BUSINESS_ID)
+      })
+      afterAll(async () => {
+        await db
+          .from('businesses')
+          .update({ delivery_fee: tarifaPrevia as never })
+          .eq('id', FIXTURES.BUSINESS_ID)
+        faults.state.reads = []
+        faults.state.rpcs = []
+      })
+
+      /**
+       * Escribe `app_settings.<key>` con JSON CRUDO (PostgREST, sin pasar por `JSON.stringify`):
+       * es la única forma de dejar un número como `1e309`, que el cliente de JS reescribiría.
+       * Restaura el valor previo al terminar.
+       */
+      async function conSettingCrudo(key: string, crudo: string, fn: () => Promise<void>) {
+        const { data: previo } = await db
+          .from('app_settings')
+          .select('value')
+          .eq('key', key)
+          .single()
+        const servicio = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+        const res = await fetch(`${LOCAL_URL}/rest/v1/app_settings?key=eq.${key}`, {
+          method: 'PATCH',
+          headers: {
+            apikey: servicio,
+            Authorization: `Bearer ${servicio}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: `{"value": ${crudo}}`,
+        })
+        if (!res.ok)
+          throw new Error(`no se pudo escribir ${key}: ${res.status} ${await res.text()}`)
+        try {
+          await fn()
+        } finally {
+          await db
+            .from('app_settings')
+            .update({ value: previo?.value as never })
+            .eq('key', key)
+        }
+      }
+      const conUmbralCrudo = (crudo: string, fn: () => Promise<void>) =>
+        conSettingCrudo('prepay_threshold', crudo, fn)
+      const conBandasCrudo = (near: string, fn: () => Promise<void>) =>
+        conSettingCrudo('delivery_bands', `{"near": ${near}, "far": 2.5}`, fn)
+      const pedidosDe = async (c: Cliente) =>
+        (await db.from('orders').select('id').eq('customer_user_id', c.id)).data?.length ?? 0
+
+      /** Crea con `pending_cash` con el fallo puesto SOLO durante el POST (la cotización va limpia). */
+      async function crearConFallo(
+        umbral: number,
+        fallo: Fallo,
+        carrito: Record<string, unknown> = {},
+      ) {
+        const c = await clienteDeConfianza()
+        let r: Awaited<ReturnType<typeof crear>> | undefined
+        await conUmbral(umbral, async () => {
+          const cot = await cotizar(c, { coordinates: PIN, ...carrito })
+          expect(cot.status).toBe(200)
+          faults.state.reads = fallo.reads ?? []
+          faults.state.rpcs = fallo.rpcs ?? []
+          try {
+            r = await crear(c, 'pending_cash', carrito)
+          } finally {
+            faults.state.reads = []
+            faults.state.rpcs = []
+          }
+        })
+        if (!r) throw new Error('sin respuesta')
+        return r
+      }
+
+      const sinDescuento: Array<[string, Fallo]> = [
+        ['tarifas por banda', { reads: [BANDAS] }],
+        ['tarifa del negocio', { reads: [TARIFA_NEGOCIO] }],
+        ['promoción de lanzamiento', { rpcs: [PROMO] }],
+        ['envío gratis por plato', { rpcs: [PLATO] }],
+      ]
+
+      it.each(
+        sinDescuento,
+      )('falla %s, sin descuento real: total real 50.00, umbral 50.00 -> 201 (la guardia no corta)', async (_n, fallo) => {
+        const r = await crearConFallo(50, fallo)
+        expect(r.status, JSON.stringify(r.body)).toBe(201)
+        expect(await totalDelPedido(r.body.data.id)).toBe(5000)
+      })
+
+      it.each(
+        sinDescuento,
+      )('falla %s, sin descuento real: total real 50.00, umbral 49.99 -> 422 de la RPC, no 403', async (_n, fallo) => {
+        const r = await crearConFallo(49.99, fallo)
+        expect(r.status, JSON.stringify(r.body)).toBe(422)
+        // El texto lo pone la RPC con SU total: 50.00 y el umbral 49.99.
+        expect(r.body.detail).toContain('(S/ 50.00) pasa de S/ 49.99')
+      })
+
+      // CIERRE ESTRUCTURAL (CAX-005, ciclo 3): la guardia solo rechaza con 403 si el umbral es
+      // un número JSON finito ordinario (o null/ausente: respaldo 80). Con CUALQUIER otro valor
+      // (cadena, aunque parezca un número; booleano; objeto; desbordado) se abstiene y decide
+      // la RPC. Estado y total esperados = lo que hace SQL con ese mismo valor
+      // (`(value #>> '{}')::numeric`), medido en la base local. Total del carrito: 98.00.
+      describe('umbral presente y no ordinario: la guardia se abstiene y decide SQL', () => {
+        const dos = {
+          items: [
+            {
+              menuItemId: FIXTURES.ITEM_POLLO_ID,
+              quantity: 2,
+              modifiers: [FIXTURES.MODOPT_QUESO_ID],
+            },
+          ],
+        }
+        // [etiqueta, JSON crudo del umbral, estado esperado (lo que hace SQL), total guardado]
+        const casos: Array<[string, string, number, number | null]> = [
+          ['cadena "1e309" (finita en SQL, Infinity en JS)', '"1e309"', 201, 9800],
+          ['número JSON 1e309 (Infinity al leerlo en JS)', '1e309', 201, 9800],
+          ['cadena numérica "80"', '"80"', 422, null],
+          ['cadena numérica con espacios " 80 "', '" 80 "', 422, null],
+          ['cadena "1e3" (= 1000)', '"1e3"', 201, 9800],
+          ['hexadecimal "0x10" (SQL: 16)', '"0x10"', 422, null],
+          ['coma decimal "1,5"', '"1,5"', 500, null],
+          ['booleano true', 'true', 500, null],
+          ['objeto {}', '{}', 500, null],
+          ['texto "abc"', '"abc"', 500, null],
+          ['cadena vacía', '""', 500, null],
+          ['cadena "NaN" (SQL: 98 > NaN es falso)', '"NaN"', 201, 9800],
+          ['cadena "Infinity" (SQL: 98 > Infinity es falso)', '"Infinity"', 201, 9800],
+        ]
+        it.each(
+          casos,
+        )('%s [%s] -> exactamente %i (como SQL), sin 403 de la guardia', async (_n, crudo, estado, total) => {
+          const c = await clienteDeConfianza()
+          await conUmbralCrudo(crudo, async () => {
+            const r = await crear(c, 'pending_cash', dos)
+            expect(r.status, JSON.stringify(r.body)).toBe(estado)
+            if (total !== null) expect(await totalDelPedido(r.body.data.id)).toBe(total)
+            else expect(await pedidosDe(c)).toBe(0)
+            if (estado === 422) expect(r.body.detail).toContain('(S/ 98.00) pasa de')
+          })
+        })
+
+        // Controles con números normales (y el respaldo documentado): 403 exacto de la guardia.
+        it.each([
+          ['número 80', '80', 403],
+          ['número 97.99', '97.99', 403],
+          ['número 98 (98 > 98 es falso)', '98', 201],
+          ['número 150', '150', 201],
+        ])('control, umbral %s [%s] -> %i', async (_n, crudo, estado) => {
+          const c = await clienteDeConfianza()
+          await conUmbralCrudo(crudo, async () => {
+            const r = await crear(c, 'pending_cash', dos)
+            expect(r.status, JSON.stringify(r.body)).toBe(estado)
+            if (estado === 403) expect(r.body.detail).toContain('(S/ 98.00) pasa de')
+            else expect(await totalDelPedido(r.body.data.id)).toBe(9800)
+          })
+        })
+      })
+
+      // CAX-006 y su cierre estructural: una tarifa de banda PRESENTE que no es un número JSON
+      // finito ordinario (cadena, booleano, objeto, desbordado) no habilita el 403 de la
+      // guardia; la RPC decide con SU conversión (`(v_bands ->> banda)::numeric`). Carrito de
+      // 48.00, tarifa del negocio 3.00 (el respaldo, que daría 51.00), umbral 50.00.
+      describe('tarifa de banda presente y no ordinaria: la guardia se abstiene (CAX-006)', () => {
+        // [etiqueta, JSON crudo de near, estado esperado (lo que hace SQL), total guardado | 0 = sin pedido | texto del 422]
+        const casos: Array<[string, string, number, number | string]> = [
+          ['cadena "1e309" (finita en SQL, desborda numeric(10,2))', '"1e309"', 500, 0],
+          ['número JSON 1e309 (Infinity al leerlo en JS)', '1e309', 500, 0],
+          [
+            'número finito 1e8: no cabe en numeric(10,2), antes daba 403 con "S/ 100000051"',
+            '1e8',
+            500,
+            0,
+          ],
+          ['cadena numérica "2.50": SQL la acepta, total 50.50', '"2.50"', 422, '(S/ 50.50)'],
+          ['cadena numérica " 2.5 "', '" 2.5 "', 422, '(S/ 50.50)'],
+          ['cadena numérica "1.5": SQL la acepta, total 49.50', '"1.5"', 201, 4950],
+          ['hexadecimal "0x10" (SQL: 16, total 64.00)', '"0x10"', 422, '(S/ 64.00)'],
+          ['coma decimal "1,5"', '"1,5"', 500, 0],
+          ['texto "abc"', '"abc"', 500, 0],
+          ['cadena vacía', '""', 500, 0],
+          ['booleano true', 'true', 500, 0],
+          ['objeto {}', '{}', 500, 0],
+          ['cadena "NaN": SQL la acepta y NaN > 50.00 es verdadero', '"NaN"', 422, '(S/ NaN)'],
+          ['cadena "Infinity": no cabe en numeric(10,2)', '"Infinity"', 500, 0],
+        ]
+        it.each(
+          casos,
+        )('near = %s [%s] -> exactamente %i (como SQL), sin 403 con 51.00', async (_n, crudo, estado, esperado) => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo(crudo, async () => {
+            await conUmbral(50, async () => {
+              const r = await crear(c, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).toBe(estado)
+              expect(JSON.stringify(r.body)).not.toContain('51.00')
+              if (typeof esperado === 'string') expect(r.body.detail).toContain(esperado)
+              else if (esperado === 0) expect(await pedidosDe(c)).toBe(0)
+              else expect(await totalDelPedido(r.body.data.id)).toBe(esperado)
+            })
+          })
+        })
+
+        it.each([
+          ['near = null', '{"near": null, "far": 2.5}'],
+          ['sin la clave near', '{"far": 2.5}'],
+        ])('%s (ausente de verdad): cae a la tarifa del negocio 3.00, total 51.00 y la guardia sí corta con 403', async (_n, objeto) => {
+          const c = await clienteDeConfianza()
+          await conSettingCrudo('delivery_bands', objeto, async () => {
+            await conUmbral(50, async () => {
+              const r = await crear(c, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).toBe(403)
+              expect(r.body.detail).toContain('(S/ 51.00) pasa de')
+            })
+          })
+        })
+
+        it('control, tarifa numérica normal 3.00: total 51.00, 403 exacto de la guardia', async () => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo('3', async () => {
+            await conUmbral(50, async () => {
+              const r = await crear(c, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).toBe(403)
+              expect(r.body.detail).toContain('(S/ 51.00) pasa de')
+            })
+          })
+        })
+
+        it('control, bandas válidas (cercana 2.00): total 50.00 con umbral 50.00 -> 201', async () => {
+          const c = await clienteDeConfianza()
+          await conUmbral(50, async () => {
+            const r = await crear(c, 'pending_cash')
+            expect(r.status, JSON.stringify(r.body)).toBe(201)
+            expect(await totalDelPedido(r.body.data.id)).toBe(5000)
+          })
+        })
+
+        // CAX-007 (ciclo 3, R1): `"0x10"` vale 16 para SQL y para `Number()`. La cotización debe
+        // PINTAR lo mismo que SQL cobra (64.00) y NO retirar el prepago, que es lo único que SQL
+        // acepta con el umbral en 60.00. Antes pintaba el respaldo (51.00) y ofrecía solo las dos
+        // contraentregas, que SQL rechaza.
+        it('CAX-007 · banda "0x10", umbral 60: cotiza 64.00 con prepago, las dos contraentregas dan 422 y el prepago 201 por 64.00', async () => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo('"0x10"', async () => {
+            await conUmbral(60, async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              expect(cot.body.data.nominalDeliveryFee).toBe('16.00')
+              expect(cot.body.data.total).toBe('64.00')
+              expect(cot.body.data.exceedsPrepayThreshold).toBe(true)
+              // Las dos de al recibir salen no disponibles (umbral) y `prepaid` queda disponible.
+              expect(
+                cot.body.data.payment.options
+                  .filter((o: { available: boolean }) => o.available)
+                  .map((o: { intent: string }) => o.intent),
+              ).toEqual(['prepaid'])
+              for (const intent of ['pending_cash', 'pending_yape'] as const) {
+                const r = await crear(c, intent)
+                expect(r.status, `${intent}: ${JSON.stringify(r.body)}`).toBe(422)
+                expect(r.body.detail).toContain('(S/ 64.00) pasa de')
+              }
+              expect(await pedidosDe(c)).toBe(0)
+              const prepago = await crear(c, 'prepaid')
+              expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+              expect(await totalDelPedido(prepago.body.data.id)).toBe(6400)
+            })
+          })
+        })
+
+        // CAX-007 (revisión limpia): una tarifa JSON NUMÉRICA con fracción de céntimo (16.005) se pinta
+        // con su valor, como en develop, y no con el respaldo: con umbral 60 SQL (64.005 > 60) solo
+        // acepta el prepago, y la cotización no puede retirarlo.
+        it('CAX-007 · banda numérica 16.005, umbral 60: la cotización conserva el prepago y la contraentrega da 422', async () => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo('16.005', async () => {
+            await conUmbral(60, async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              expect(cot.body.data.exceedsPrepayThreshold).toBe(true)
+              expect(
+                cot.body.data.payment.options
+                  .filter((o: { available: boolean }) => o.available)
+                  .map((o: { intent: string }) => o.intent),
+              ).toEqual(['prepaid'])
+              const r = await crear(c, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).toBe(422)
+              const prepago = await crear(c, 'prepaid')
+              expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+            })
+          })
+        })
+
+        // CAX-010 (ciclo 3, R2): `prepaid` solo se retira si TODO lo que decide el umbral es cierto
+        // para JavaScript. Con una tarifa o un umbral que SQL lee distinto, la cotización conserva
+        // `prepaid` (como develop), SQL rechaza las dos contraentregas y el prepago crea el pedido con
+        // los importes que SQL midió (E15, `select (...)::numeric`). Carrito de 48.00, tarifa del
+        // negocio 3.00 (el respaldo que pintaría JavaScript: total 51.00), umbral 60.00.
+        const prepagoPresente = (cot: { body: { data: { payment: { options: unknown[] } } } }) =>
+          expect(cot.body.data.payment.options).toContainEqual({
+            intent: 'prepaid',
+            available: true,
+            unavailableReason: null,
+          })
+        async function importesGuardados(orderId: string) {
+          const { data } = await db
+            .from('orders')
+            .select('order_amount,delivery_fee')
+            .eq('id', orderId)
+            .single()
+          return { subtotal: Number(data?.order_amount), envio: Number(data?.delivery_fee) }
+        }
+        // [etiqueta, JSON crudo de near, estado de las contraentregas (SQL), detalle del 422, envío guardado, total guardado en céntimos]
+        const tarifasInciertas: Array<[string, string, number, string | null, number, number]> = [
+          ['"+0x10" (SQL: 16)', '"+0x10"', 422, '(S/ 64.00) pasa de', 16, 6400],
+          ['"-0x10" (SQL: -16)', '"-0x10"', 201, null, -16, 3200],
+          ['"1_000" (SQL: 1000)', '"1_000"', 422, '(S/ 1048.00) pasa de', 1000, 104800],
+          [
+            '"99999999.994999999999" (SQL: se guarda 99999999.99)',
+            '"99999999.994999999999"',
+            422,
+            ' pasa de',
+            99999999.99,
+            10000004799,
+          ],
+        ]
+        it.each(
+          tarifasInciertas,
+        )('CAX-010 · tarifa %s, umbral 60: la cotización conserva prepaid, SQL decide y el prepago crea el pedido', async (_n, crudo, estado, detalle, envio, total) => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo(crudo, async () => {
+            await conUmbral(60, async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              prepagoPresente(cot)
+              for (const intent of ['pending_cash', 'pending_yape'] as const) {
+                const r = await crear(c, intent)
+                expect(r.status, `${intent}: ${JSON.stringify(r.body)}`).toBe(estado)
+                if (detalle) expect(r.body.detail).toContain(detalle)
+                if (estado !== 201) expect(await pedidosDe(c)).toBe(0)
+                else break
+              }
+              if (estado === 201) return
+              const prepago = await crear(c, 'prepaid')
+              expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+              expect(await importesGuardados(prepago.body.data.id)).toEqual({ subtotal: 48, envio })
+              expect(await totalDelPedido(prepago.body.data.id)).toBe(total)
+            })
+          })
+        })
+
+        // Umbral que JavaScript lee distinto: `"+0x10"` (JavaScript: 80; SQL: 16) y 49.995
+        // (JavaScript redondea a 5000 céntimos; SQL compara 50.00 > 49.995). Total real 50.00.
+        it.each([
+          ['"+0x10" (SQL: 16)', '"+0x10"', '(S/ 50.00) pasa de'],
+          ['49.995 (SQL compara exacto)', '49.995', '(S/ 50.00) pasa de'],
+          [
+            '49.99999999999999999 (JavaScript lo lee como 50; SQL compara exacto, CAX-012)',
+            '49.99999999999999999',
+            '(S/ 50.00) pasa de',
+          ],
+        ])('CAX-010 · umbral %s: la cotización conserva prepaid; SQL rechaza la contraentrega y el prepago crea el pedido', async (_n, crudo, detalle) => {
+          const c = await clienteDeConfianza()
+          await conUmbralCrudo(crudo, async () => {
+            const cot = await cotizar(c, { coordinates: PIN })
+            expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+            prepagoPresente(cot)
+            for (const intent of ['pending_cash', 'pending_yape'] as const) {
+              const r = await crear(c, intent)
+              expect(r.status, `${intent}: ${JSON.stringify(r.body)}`).toBe(422)
+              expect(r.body.detail).toContain(detalle)
+            }
+            expect(await pedidosDe(c)).toBe(0)
+            const prepago = await crear(c, 'prepaid')
+            expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+            expect(await importesGuardados(prepago.body.data.id)).toEqual({
+              subtotal: 48,
+              envio: 2,
+            })
+            expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
+          })
+        })
+
+        // CAX-012: una tarifa con más dígitos de los que caben en un double (JavaScript la lee como 2;
+        // SQL conserva 2.0000000000000000001 y 50.0000000000000000001 > 50) no es cierta: prepaid se conserva.
+        it.each([
+          ['plano', '{"near": 2.0000000000000000001, "far": 2.5}'],
+          [
+            'con un objeto anidado antes (jsonb ordena las claves por longitud)',
+            '{"a": {"near": 1}, "far": 2.5, "near": 2.0000000000000000001}',
+          ],
+        ])('CAX-012 · tarifa 2.0000000000000000001 (%s), umbral 50: la cotización conserva prepaid; SQL rechaza la contraentrega', async (_n, crudoBandas) => {
+          const c = await clienteDeConfianza()
+          await conSettingCrudo('delivery_bands', crudoBandas, async () => {
+            await conUmbral(50, async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              prepagoPresente(cot)
+              for (const intent of ['pending_cash', 'pending_yape'] as const) {
+                const r = await crear(c, intent)
+                expect(r.status, `${intent}: ${JSON.stringify(r.body)}`).toBe(422)
+                expect(r.body.detail).toContain('(S/ 50.00) pasa de')
+              }
+              expect(await pedidosDe(c)).toBe(0)
+              const prepago = await crear(c, 'prepaid')
+              expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+              expect(await importesGuardados(prepago.body.data.id)).toEqual({
+                subtotal: 48,
+                envio: 2,
+              })
+              expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
+            })
+          })
+        })
+
+        // Control: con todo cierto (tarifa y umbral ordinarios) el confiable NO ve `prepaid`.
+        it('CAX-010 · control: tarifa y umbral ordinarios, el confiable no ve prepaid', async () => {
+          const c = await clienteDeConfianza()
+          await conUmbral(60, async () => {
+            const cot = await cotizar(c, { coordinates: PIN })
+            expect(intents(cot)).toEqual(['pending_cash', 'pending_yape'])
+          })
+        })
+
+        // CAX-011: el umbral se compara SIN acotar. Subtotal 48.00 + tarifa 99999999.99 = 100000047.99,
+        // bajo el umbral 100000048: contraentrega disponible y SQL la acepta. El texto del umbral no se acota.
+        it('CAX-011 · umbral 100000048 con total 100000047.99: contraentrega disponible y pending_yape se crea', async () => {
+          const c = await clienteDeConfianza()
+          await conBandasCrudo('99999999.99', async () => {
+            await conUmbralCrudo('100000048', async () => {
+              const cot = await cotizar(c, { coordinates: PIN })
+              expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+              expect(cot.body.data.total).toBe('100000047.99')
+              expect(cot.body.data.exceedsPrepayThreshold).toBe(false)
+              expect(cot.body.data.prepayThreshold).toBe('100000048.00')
+              expect(
+                cot.body.data.payment.options.find(
+                  (o: { intent: string }) => o.intent === 'pending_yape',
+                ),
+              ).toEqual({ intent: 'pending_yape', available: true, unavailableReason: null })
+              const r = await crear(c, 'pending_yape')
+              expect(r.status, JSON.stringify(r.body)).toBe(201)
+              expect(await importesGuardados(r.body.data.id)).toEqual({
+                subtotal: 48,
+                envio: 99999999.99,
+              })
+              expect(await totalDelPedido(r.body.data.id)).toBe(10000004799)
+            })
+          })
+        })
+
+        // CAX-008: una cadena finita cuyo producto por 100 desborda ("1e308") no puede dar
+        // `Infinity` en ningún importe de la cotización: respaldo (3.00 del negocio), con el
+        // formato decimal del contrato. Lo mismo con el umbral "1e308" (se acota al tope).
+        it.each([
+          ['tarifa de banda "1e308"', 'bandas', '"1e308"'],
+          ['umbral "1e308"', 'umbral', '"1e308"'],
+        ])('CAX-008 · %s: todos los importes de la cotización son decimales finitos', async (_n, donde, crudo) => {
+          const c = await clienteDeConfianza()
+          const decimal = /^-?\d+\.\d{2}$/
+          const fn = async () => {
+            const cot = await cotizar(c, { coordinates: PIN })
+            expect(cot.status, JSON.stringify(cot.body)).toBe(200)
+            const d = cot.body.data
+            for (const campo of [
+              'subtotal',
+              'nominalDeliveryFee',
+              'deliveryFee',
+              'total',
+              'maxChange',
+              'prepayThreshold',
+            ]) {
+              expect(String(d[campo]), `${campo}: ${JSON.stringify(d)}`).toMatch(decimal)
+            }
+          }
+          if (donde === 'bandas') await conBandasCrudo(crudo, fn)
+          else await conUmbralCrudo(crudo, fn)
+        })
+
+        // CAX-009: un umbral con fracción de céntimo ya no es un valor ordinario: la guardia se
+        // abstiene (antes, con la tolerancia 1e-6, `49.990000001` daba 403 con total 50.00) y
+        // decide SQL, que compara el valor exacto: 50.00 > 49.990000001 y 50.00 > 49.999999999.
+        it.each([
+          ['49.990000001'],
+          ['49.999999999'],
+        ])('CAX-009 · umbral %s con total 50.00: 422 de la RPC, no 403 de la guardia', async (crudo) => {
+          const c = await clienteDeConfianza()
+          await conUmbralCrudo(crudo, async () => {
+            const r = await crear(c, 'pending_cash')
+            expect(r.status, JSON.stringify(r.body)).toBe(422)
+            expect(r.body.detail).toContain('(S/ 50.00) pasa de')
+            expect(await pedidosDe(c)).toBe(0)
+          })
+        })
+      })
+
+      it('falla la lectura del umbral (respaldo 80): umbral real 100, dos platos (98.00) -> 201, no 403', async () => {
+        const dos = {
+          items: [
+            {
+              menuItemId: FIXTURES.ITEM_POLLO_ID,
+              quantity: 2,
+              modifiers: [FIXTURES.MODOPT_QUESO_ID],
+            },
+          ],
+        }
+        const r = await crearConFallo(
+          100,
+          { reads: [{ table: 'app_settings', eq: ['key', 'prepay_threshold'] }] },
+          dos,
+        )
+        expect(r.status, JSON.stringify(r.body)).toBe(201)
+        expect(await totalDelPedido(r.body.data.id)).toBe(9800)
+      })
+
+      it('falla la banda del punto en la creación (zona lejana, umbral 49.99): 422 de la RPC, no 500 ni 403', async () => {
+        const { error } = await db.from('delivery_zones').insert({
+          name: ZONA,
+          polygon: [
+            { lat: PIN.lat - 0.004, lng: PIN.lng - 0.004 },
+            { lat: PIN.lat - 0.004, lng: PIN.lng + 0.004 },
+            { lat: PIN.lat + 0.004, lng: PIN.lng + 0.004 },
+            { lat: PIN.lat + 0.004, lng: PIN.lng - 0.004 },
+          ],
+        })
+        if (error) throw new Error(error.message)
+        try {
+          const r = await crearConFallo(49.99, { rpcs: ['delivery_band_for_point'] })
+          expect(r.status, JSON.stringify(r.body)).toBe(422)
+          // La RPC sí ve la zona lejana: 48.00 + 2.50.
+          expect(r.body.detail).toContain('(S/ 50.50) pasa de S/ 49.99')
+        } finally {
+          await db.from('delivery_zones').delete().eq('name', ZONA)
+        }
+      })
+
+      it('control: sin fallo, total 50.00 y umbral 49.99 -> 403 de la guardia', async () => {
+        const r = await crearConFallo(49.99, {})
+        expect(r.status, JSON.stringify(r.body)).toBe(403)
+        expect(r.body.detail).toContain('(S/ 50.00) pasa de')
+      })
+
+      describe('con descuento real por plato (total real 48.00)', () => {
+        const gratis = async (fn: () => Promise<void>) => {
+          await db
+            .from('menu_items')
+            .update({ free_delivery_until: '2099-12-31' })
+            .eq('id', FIXTURES.ITEM_POLLO_ID)
+          try {
+            await fn()
+          } finally {
+            await db
+              .from('menu_items')
+              .update({ free_delivery_until: null })
+              .eq('id', FIXTURES.ITEM_POLLO_ID)
+          }
+        }
+
+        const todos: Array<[string, Fallo]> = [
+          ['promoción de lanzamiento', { rpcs: [PROMO] }],
+          ['envío gratis por plato', { rpcs: [PLATO] }],
+          ['tarifas por banda', { reads: [BANDAS] }],
+          ['tarifa del negocio', { reads: [TARIFA_NEGOCIO] }],
+        ]
+
+        it.each(
+          todos,
+        )('falla %s: umbral 48.00 -> 201 y el pedido queda en 48.00', async (_n, fallo) => {
+          await gratis(async () => {
+            const r = await crearConFallo(48, fallo)
+            expect(r.status, JSON.stringify(r.body)).toBe(201)
+            expect(await totalDelPedido(r.body.data.id)).toBe(4800)
+          })
+        })
+
+        it.each(
+          todos.slice(0, 2),
+        )('falla %s: umbral 47.99 -> 422 de la RPC, no 403', async (_n, fallo) => {
+          await gratis(async () => {
+            const r = await crearConFallo(47.99, fallo)
+            expect(r.status, JSON.stringify(r.body)).toBe(422)
+            expect(r.body.detail).toContain('(S/ 48.00) pasa de S/ 47.99')
+          })
+        })
+
+        it('control: sin fallo, umbral 47.99 -> 403 de la guardia', async () => {
+          await gratis(async () => {
+            const r = await crearConFallo(47.99, {})
+            expect(r.status, JSON.stringify(r.body)).toBe(403)
+            expect(r.body.detail).toContain('(S/ 48.00) pasa de')
+          })
+        })
+      })
+
+      describe('promoción de lanzamiento real (0187)', () => {
+        const CODIGO = 'mv4b-lanzamiento-test'
+        let previa: unknown = null
+        let habia = false
+
+        beforeAll(async () => {
+          const { data } = await db
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'promo_free_delivery')
+            .maybeSingle()
+          habia = data !== null
+          previa = data?.value ?? null
+          await db.from('app_settings').upsert(
+            {
+              key: 'promo_free_delivery',
+              value: {
+                code: CODIGO,
+                active: true,
+                from: '2000-01-01',
+                to: '2099-12-31',
+                max_redemptions: 100,
+              },
+            },
+            { onConflict: 'key' },
+          )
+        })
+        afterAll(async () => {
+          await db.from('promo_redemptions').delete().eq('promo_code', CODIGO)
+          if (habia) {
+            await db
+              .from('app_settings')
+              .update({ value: previa as never })
+              .eq('key', 'promo_free_delivery')
+          } else {
+            await db.from('app_settings').delete().eq('key', 'promo_free_delivery')
+          }
+        })
+
+        it('la cotización la aplica y la guardia deja pasar el total ya sin envío (umbral 48.00 -> 201)', async () => {
+          const c = await clienteDeConfianza()
+          await conUmbral(48, async () => {
+            const cot = await cotizar(c, { coordinates: PIN })
+            expect(cot.body.data.freeDelivery).toEqual({ applies: true, reason: 'launch_promo' })
+            expect(cot.body.data.total).toBe('48.00')
+            const r = await crear(c, 'pending_cash')
+            expect(r.status, JSON.stringify(r.body)).toBe(201)
+            expect(await totalDelPedido(r.body.data.id)).toBe(4800)
+          })
+        })
+
+        it('sin fallo, umbral 47.99 -> 403 de la guardia; con la promoción caída -> 422 de la RPC', async () => {
+          const c1 = await clienteDeConfianza()
+          await conUmbral(47.99, async () => {
+            const r = await crear(c1, 'pending_cash')
+            expect(r.status, JSON.stringify(r.body)).toBe(403)
+            expect(r.body.detail).toContain('(S/ 48.00) pasa de')
+          })
+          const c2 = await clienteDeConfianza()
+          await conUmbral(47.99, async () => {
+            faults.state.rpcs = [PROMO]
+            try {
+              const r = await crear(c2, 'pending_cash')
+              expect(r.status, JSON.stringify(r.body)).toBe(422)
+              expect(r.body.detail).toContain('(S/ 48.00) pasa de S/ 47.99')
+            } finally {
+              faults.state.rpcs = []
+            }
+          })
+        })
+      })
+    })
+
+    // CAX-004 (0295): una promoción de lanzamiento activa, con código y cupo, pero sin la ventana
+    // completa (`from` o `to` ausentes o null) NO es elegible: la creación no la aplica (0283:377),
+    // así que la cotización no puede anunciarla. Ejemplo de Codex: plato de 48.00, envío 2.00 y
+    // umbral 49.00 (total real 50.00).
+    describe('promoción de lanzamiento sin ventana completa (0295)', () => {
+      const CODIGO = 'mv4b-ventana-test'
+      const base = { code: CODIGO, active: true, max_redemptions: 100 }
+      let previa: unknown = null
+      let habia = false
+
+      beforeAll(async () => {
+        const { data } = await db
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'promo_free_delivery')
+          .maybeSingle()
+        habia = data !== null
+        previa = data?.value ?? null
+      })
+      afterAll(async () => {
+        await db.from('promo_redemptions').delete().eq('promo_code', CODIGO)
+        if (habia) {
+          await db
+            .from('app_settings')
+            .update({ value: previa as never })
+            .eq('key', 'promo_free_delivery')
+        } else {
+          await db.from('app_settings').delete().eq('key', 'promo_free_delivery')
+        }
+      })
+
+      /** La RPC tal como la llama la cotización: con el JWT del cliente (responde por `auth.uid()`). */
+      const rpcPromo = async (c: Cliente) => {
+        const comoCliente = createClient(LOCAL_URL, LOCAL_ANON_KEY, {
+          auth: { persistSession: false },
+          global: { headers: { Authorization: `Bearer ${c.token}` } },
+        })
+        const { data, error } = await comoCliente.rpc('current_customer_promo_free_delivery')
+        if (error) throw new Error(error.message)
+        return data
+      }
+
+      const configurar = async (value: Record<string, unknown>) => {
+        const { error } = await db
+          .from('app_settings')
+          .upsert({ key: 'promo_free_delivery', value }, { onConflict: 'key' })
+        if (error) throw new Error(error.message)
+      }
+
+      it.each([
+        ['from y to ausentes', {}],
+        ['from null', { from: null, to: '2099-12-31' }],
+        ['to null', { from: '2000-01-01', to: null }],
+        ['from y to null', { from: null, to: null }],
+        ['solo from ausente', { to: '2099-12-31' }],
+        ['solo to ausente', { from: '2000-01-01' }],
+      ])('%s: no se anuncia envío gratis y cotización y creación coinciden (48.00 + 2.00)', async (_n, ventana) => {
+        await configurar({ ...base, ...ventana })
+        const c = await clienteDeConfianza()
+        // La RPC misma: sin ventana completa no es elegible (0295), con el motivo y sin código.
+        expect(await rpcPromo(c)).toEqual({ eligible: false, reason: 'inactive', code: null })
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: false, reason: null })
+          expect(cot.body.data.deliveryFee).toBe('2.00')
+          expect(cot.body.data.total).toBe('50.00')
+          expect(cot.body.data.exceedsPrepayThreshold).toBe(true)
+          // Sin opción al recibir disponible, el trusted conserva prepaid.
+          expect(cot.body.data.payment.options).toEqual([
+            { intent: 'pending_cash', available: false, unavailableReason: 'exceeds_threshold' },
+            { intent: 'pending_yape', available: false, unavailableReason: 'exceeds_threshold' },
+            { intent: 'prepaid', available: true, unavailableReason: null },
+          ])
+          // La creación calcula lo mismo: la guardia corta con el total real...
+          const cash = await crear(c, 'pending_cash')
+          expect(cash.status, JSON.stringify(cash.body)).toBe(403)
+          expect(cash.body.detail).toContain('(S/ 50.00) pasa de')
+          const yape = await crear(c, 'pending_yape')
+          expect(yape.status, JSON.stringify(yape.body)).toBe(403)
+          expect(yape.body.detail).toContain('(S/ 50.00) pasa de')
+          // ...y el prepago, la única opción ofrecida, crea el pedido por 50.00.
+          const prepago = await crear(c, 'prepaid')
+          expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+          expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
+        })
+      })
+
+      it('from mayor que to (ventana completa pero imposible): outside_window, sin descuento y el prepago crea por 50.00', async () => {
+        await configurar({ ...base, from: '2099-01-01', to: '2000-01-01' })
+        const c = await clienteDeConfianza()
+        expect(await rpcPromo(c)).toEqual({
+          eligible: false,
+          reason: 'outside_window',
+          code: CODIGO,
+        })
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: false, reason: null })
+          expect(cot.body.data.total).toBe('50.00')
+          const cash = await crear(c, 'pending_cash')
+          expect(cash.status, JSON.stringify(cash.body)).toBe(403)
+          const prepago = await crear(c, 'prepaid')
+          expect(prepago.status, JSON.stringify(prepago.body)).toBe(201)
+          expect(await totalDelPedido(prepago.body.data.id)).toBe(5000)
+        })
+      })
+
+      it('control, ventana completa y vigente: se anuncia el envío gratis y la contraentrega pasa (48.00)', async () => {
+        await configurar({ ...base, from: '2000-01-01', to: '2099-12-31' })
+        const c = await clienteDeConfianza()
+        expect(await rpcPromo(c)).toEqual({ eligible: true, reason: 'active', code: CODIGO })
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: true, reason: 'launch_promo' })
+          expect(cot.body.data.total).toBe('48.00')
+          expect(intents(cot)).toEqual(['pending_cash', 'pending_yape'])
+          const r = await crear(c, 'pending_cash')
+          expect(r.status, JSON.stringify(r.body)).toBe(201)
+          expect(await totalDelPedido(r.body.data.id)).toBe(4800)
+        })
+      })
+
+      it('control, ventana completa pero vencida: la RPC dice outside_window, no se anuncia y el total es 50.00', async () => {
+        await configurar({ ...base, from: '2000-01-01', to: '2001-01-01' })
+        const c = await clienteDeConfianza()
+        expect(await rpcPromo(c)).toEqual({
+          eligible: false,
+          reason: 'outside_window',
+          code: CODIGO,
+        })
+        await conUmbral(49, async () => {
+          const cot = await cotizar(c, { coordinates: PIN })
+          expect(cot.body.data.freeDelivery).toEqual({ applies: false, reason: null })
+          expect(cot.body.data.total).toBe('50.00')
+        })
+      })
+    })
   })
 
   it('cuenta con contraentrega bloqueada (risk_blocked): prepay_required y cash null', async () => {

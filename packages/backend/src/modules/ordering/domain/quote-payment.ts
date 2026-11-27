@@ -19,6 +19,19 @@ export interface QuotePaymentInput {
   pickupTiming: PickupTiming | null
   /** `false` si `customer_contraentrega_decision` da `risk_blocked` o falla; `no_history` cuenta como `true`. */
   contraentregaAllowed: boolean
+  /**
+   * `true` solo si la decisión es `trusted`. El `no_history` puede necesitar prepago
+   * (sin GPS local, la creación lo exige) y la cotización no lo sabe: a ese cliente no
+   * se le quita `prepaid`.
+   */
+  customerTrusted: boolean
+  /**
+   * `true` solo si TODO lo que decide el umbral es cierto para JavaScript: la tarifa del envío (sin
+   * lecturas fallidas ni valores que SQL lee distinto) y el umbral (ausente, `null` o un número con
+   * céntimos completos). Si es `false`, `prepaid` NO se retira aunque haya opciones al recibir:
+   * SQL puede exigir el prepago donde JavaScript cree que basta la contraentrega (CAX-010).
+   */
+  amountsCertain: boolean
   exceedsPrepayThreshold: boolean
   /**
    * `false` si falló la lectura de `app_settings` o de `effective_max_change`
@@ -42,7 +55,8 @@ export interface QuotePaymentPlan {
 
 /**
  * Qué métodos de pago puede usar el cliente en este pedido (H-7). Pura: la ruta
- * reúne los datos. `prepaid` siempre; la contraentrega solo en delivery, si el
+ * reúne los datos. `prepaid` se oculta solo al cliente `trusted` con alguna opción
+ * al recibir disponible y los importes ciertos (`amountsCertain`); la contraentrega solo en delivery, si el
  * cliente es de confianza y el total no pasa del umbral. Un recojo solo ofrece
  * `prepaid` (0283). El motivo no distingue riesgo de falta de historial
  * (antifraude).
@@ -52,7 +66,7 @@ export interface QuotePaymentPlan {
  */
 export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
   const intents = customerPaymentIntents(input.deliveryMethod, null)
-  const options = intents.map((intent) => {
+  const all = intents.map((intent) => {
     if (intent === 'prepaid') {
       return { intent, available: true, unavailableReason: null }
     }
@@ -64,6 +78,17 @@ export function planQuotePayment(input: QuotePaymentInput): QuotePaymentPlan {
           : null
     return { intent, available: unavailableReason === null, unavailableReason }
   })
+  // Un confiable (`trusted`, no `no_history`) con alguna opción al recibir disponible
+  // no ve `prepaid`: la app instalada pinta el grupo «Antes de recibir» con lo que
+  // llegue. `POST /customer/orders` sigue aceptándolo (API-3). Si falta toda opción
+  // al recibir (riesgo, umbral, ajustes dudosos, recojo), el cliente no es
+  // `trusted` o los importes no son ciertos (`amountsCertain`, CAX-010), `prepaid`
+  // sale como siempre.
+  const receiveAvailable = all.some((o) => o.intent !== 'prepaid' && o.available)
+  const options =
+    input.customerTrusted && input.amountsCertain && receiveAvailable
+      ? all.filter((o) => o.intent !== 'prepaid')
+      : all
   const cashAvailable = options.some((o) => o.intent === 'pending_cash' && o.available)
   return {
     options,
