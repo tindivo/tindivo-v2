@@ -11,7 +11,7 @@
 // completo de Storage y así queda dicho en el manifiesto, en el registro y en el resumen.
 //
 // La service role llega por la variable TINDIVO_STORAGE_KEY y solo viaja en la cabecera de un GET.
-import { createInterface } from 'node:readline'
+import { createHash } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { soloGet, tomarCredencial } from './solo-get.mjs'
 import { crearEscritorTar } from './tar-lib.mjs'
@@ -64,7 +64,7 @@ function rutaEnTar(obj, n) {
  * @param {{ base: string, clave: string, lineas: AsyncIterable<string>, salida: import('node:stream').Writable,
  *   avisar?: (m: string) => void, fetchImpl?: typeof fetch, esperar?: (ms: number) => Promise<void> }} p
  */
-export async function copiarStorage({ base, clave, lineas, salida, avisar = () => {}, fetchImpl, esperar }) {
+export async function copiarStorage({ base, clave, lineas, listaSha256 = null, salida, avisar = () => {}, fetchImpl, esperar }) {
   const tar = crearEscritorTar(salida)
   const cabeceras = { authorization: `Bearer ${clave}`, apikey: clave }
   const objetos = []
@@ -147,6 +147,9 @@ export async function copiarStorage({ base, clave, lineas, salida, avisar = () =
   const manifiestoSha256 = await tar.cerrar({
     tipo: 'storage',
     origen: base,
+    // Huella de la lista de objetos que llegó por stdin (storage-objetos.jsonl de la parte 1, del mismo snapshot):
+    // verificar.sh la compara con la de 1-base, así una parte 2 de otra copia no pasa por la de esta.
+    lista_sha256: listaSha256,
     tomado_utc: new Date().toISOString(),
     completa,
     resumen,
@@ -161,8 +164,13 @@ async function principal() {
   try {
     validarBase(destino, base)
     const clave = tomarCredencial('TINDIVO_STORAGE_KEY')
-    const lineas = createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY })
-    const { resumen, completa, manifiestoSha256 } = await copiarStorage({ base, clave, lineas, salida: process.stdout, avisar })
+    // La lista entera en memoria (una línea JSON por objeto, sin datos de archivos): así se hashean sus bytes exactos.
+    const trozos = []
+    for await (const trozo of process.stdin) trozos.push(trozo)
+    const crudo = Buffer.concat(trozos)
+    const listaSha256 = createHash('sha256').update(crudo).digest('hex')
+    const lineas = crudo.toString('utf8').split(String.fromCharCode(10))
+    const { resumen, completa, manifiestoSha256 } = await copiarStorage({ base, clave, lineas, listaSha256, salida: process.stdout, avisar })
     await new Promise((r) => process.stdout.end(r))
     avisar(
       `RESUMEN listados=${resumen.listados} ok=${resumen.ok} no_encontrados=${resumen.no_encontrados} nombre_no_valido=${resumen.nombre_no_valido} tamano_distinto=${resumen.tamano_distinto} sin_huella=${resumen.sin_huella} huella_distinta=${resumen.huella_distinta} bytes=${resumen.bytes}`,

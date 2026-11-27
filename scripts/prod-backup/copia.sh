@@ -4,8 +4,8 @@
 # del panel. Por eso el resultado es siempre «COPIA PARCIAL» con ese motivo declarado (código 3).
 # Runbook (léelo antes): Docs/operacion/copia-de-produccion.md
 #
-#   bash scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha> --ca <archivo.crt> [--salida <carpeta>]
-#   bash scripts/prod-backup/copia.sh --destino local                       (ensayo contra la base local)
+#   bash -p scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha> --ca <archivo.crt> [--salida <carpeta>]
+#   bash -p scripts/prod-backup/copia.sh --destino local                       (ensayo contra la base local)
 #
 # Lo que garantiza, por construcción:
 #   - SOLO LECTURA. Contra la base: pg_dump y consultas de lectura (SELECT y SHOW), en sesiones que llegan con
@@ -41,8 +41,8 @@ TERMINADO=0
 
 uso() {
   printf '%s\n' 'Uso:' \
-    '  bash scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha> --ca <archivo.crt> [--salida <carpeta>]' \
-    '  bash scripts/prod-backup/copia.sh --destino local                       (ensayo contra la base local)' \
+    '  bash -p scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha> --ca <archivo.crt> [--salida <carpeta>]' \
+    '  bash -p scripts/prod-backup/copia.sh --destino local                       (ensayo contra la base local)' \
     'Runbook: Docs/operacion/copia-de-produccion.md' >&2
   exit 64
 }
@@ -93,6 +93,9 @@ trap 'exit 130' INT TERM
 # ---------------------------------------------------------------------------------------------------------------
 paso "0. Comprobaciones (destino: $DESTINO)"
 comprobar_herramientas
+# Antes de pedir ninguna credencial: el motor de Docker es el de este PC y queda fijado para toda la corrida.
+fijar_motor_docker
+log "docker:  $MOTOR_DOCKER"
 
 RAIZ_REPO="$(git -C "$DIR_GUIONES" rev-parse --show-toplevel)"
 COMMIT="$(git -C "$DIR_GUIONES" rev-parse HEAD)"
@@ -105,9 +108,6 @@ if [ "$DESTINO" = prod ]; then
   [ "${#COMMIT_FIRMADO}" -ge 12 ] || fallo 'falta --commit-firmado <sha> (al menos 12 caracteres del commit que firmó Codex)'
   [ "${COMMIT#"$COMMIT_FIRMADO"}" != "$COMMIT" ] || fallo "este checkout está en $COMMIT y no en el commit firmado $COMMIT_FIRMADO"
   [ "$IMAGEN_PG" = "$IMAGEN_PG_FIJADA" ] || fallo 'contra prod solo se usa la imagen fijada (quita TINDIVO_COPIA_IMAGEN)'
-  # La contraseña entra a un contenedor: el motor de Docker tiene que ser el de este PC, no uno remoto.
-  MOTOR="$(dk context inspect --format '{{.Endpoints.docker.Host}}')"
-  case "$MOTOR" in npipe://* | unix://*) ;; *) fallo "el contexto de Docker apunta a «$MOTOR»: usa el Docker local de este PC" ;; esac
   # La identidad del servidor se comprueba siempre: sin el certificado de la CA no hay copia.
   [ -n "$ARCHIVO_CA" ] || fallo 'contra prod hace falta --ca <certificado de la CA de Supabase> (panel: Database → Settings → SSL Configuration)'
   # La memoria puede acabar en el archivo de paginación de Windows: los discos tienen que estar cifrados.
@@ -214,6 +214,14 @@ M1="$(manifiesto_de "$SALIDA/1-base.copia.log")"
 [ -n "$M1" ] || fallo 'la parte 1 no entregó su manifiesto'
 log 'cifrada. Ahora se descifra hacia la memoria y se comprueba…'
 verificar_base "$SALIDA/1-base.tar.gpg" "$SALIDA/1-base.verificacion.log"
+# Lo que le falte a la base (dentro del tar, verificado) es un motivo más: nunca «solo falta la configuración externa».
+while IFS= read -r c; do
+  [ -n "$c" ] || continue
+  t="$(texto_falta_base "$c")" || fallo 'la verificación de la parte 1 anunció una falta desconocida'
+  MOTIVOS+=("$t")
+done < <(faltas_base_de "$SALIDA/1-base.verificacion.log")
+LISTA_1="$(lista_de_base "$SALIDA/1-base.verificacion.log")"
+[ -n "$LISTA_1" ] || fallo 'la verificación de la parte 1 no dio la huella de la lista de objetos de Storage'
 [ "$(manifiesto_de "$SALIDA/1-base.verificacion.log")" = "$M1" ] || fallo 'el manifiesto descifrado no es el que se cifró'
 FASE_EN_CURSO=''
 ESTADO_1="OK · manifiesto $M1"
@@ -237,6 +245,8 @@ else
   M2="$(manifiesto_de "$SALIDA/2-storage.copia.log")"
   [ -n "$M2" ] || fallo 'la parte 2 no entregó su manifiesto'
   verificar_tar_node "$SALIDA/2-storage.tar.gpg" "$SALIDA/2-storage.verificacion.log"
+  [ "$(lista_de_storage "$SALIDA/2-storage.verificacion.log")" = "$LISTA_1" ] || fallo 'la parte 2 no corresponde a la lista de objetos de la parte 1'
+  [ "$(origen_de_storage "$SALIDA/2-storage.verificacion.log")" = "$STORAGE_URL" ] || fallo 'la parte 2 no viene del Storage esperado'
   [ "$(manifiesto_de "$SALIDA/2-storage.verificacion.log")" = "$M2" ] || fallo 'el manifiesto de Storage descifrado no es el que se cifró'
   FASE_EN_CURSO=''
   E2="$(estado_de "$SALIDA/2-storage.copia.log")"

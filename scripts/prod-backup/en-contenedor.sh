@@ -324,7 +324,13 @@ copiar() {
     contiene "$s" "${ESQUEMAS_PLATAFORMA[@]}" || esquemas+=("$s")
   done
   log "esquemas con datos en la copia: ${esquemas[*]}"
-  contiene supabase_migrations "${esquemas[@]}" || log 'aviso: no existe supabase_migrations; la copia no lleva historial de migraciones'
+  # Lo que le falte a la base viaja DENTRO del tar (faltas.txt, en el manifiesto), con códigos fijos: la verificación
+  # lo anuncia y el host lo suma a los motivos de PARCIAL. Nunca se queda en un aviso que nadie vuelve a leer.
+  : >faltas.txt
+  if ! contiene supabase_migrations "${esquemas[@]}"; then
+    log 'aviso: no existe supabase_migrations; la copia no lleva historial de migraciones'
+    echo sin_historial_migraciones >>faltas.txt
+  fi
   for s in "${esquemas[@]}"; do lista="${lista:+$lista, }'$s'"; done
   printf '%s\n' "${esquemas[@]}" >esquemas-con-datos.txt
 
@@ -371,7 +377,8 @@ copiar() {
     for s in "${ESQUEMAS_PLATAFORMA[@]}"; do excl+=(--exclude-schema="$s"); done
     if pg pg_dump --no-password --snapshot="$snap" --schema-only "${excl[@]}" --file="$W/esquema-completo.sql" </dev/null 2>>"$W/.esq.err"; then
       echo "esquema-completo.sql: sin los esquemas de la plataforma (${ESQUEMAS_PLATAFORMA[*]}); el primer intento falló" >partes.txt
-      log 'aviso: el esquema completo salió sin los esquemas de la plataforma (queda anotado en partes.txt)'
+      log 'aviso: el esquema completo salió sin los esquemas de la plataforma (queda anotado en partes.txt y faltas.txt)'
+      echo esquema_sin_plataforma >>faltas.txt
     else
       cat "$W/.esq.err" >&2
       fallo 'pg_dump del esquema completo falló en los dos intentos'
@@ -419,7 +426,7 @@ verificar() {
   [ -s MANIFEST.sha256 ] || fallo 'falta MANIFEST.sha256'
   sha256sum -c MANIFEST.sha256 >/dev/null || fallo 'algún archivo no coincide con el manifiesto'
   local f
-  for f in datos.dump roles.sql esquema-completo.sql conteos.tsv datos.toc.txt partes.txt storage-objetos.jsonl; do
+  for f in datos.dump roles.sql esquema-completo.sql conteos.tsv datos.toc.txt partes.txt faltas.txt storage-objetos.jsonl; do
     grep -q " \./$f\$" MANIFEST.sha256 || fallo "el manifiesto no incluye $f"
   done
   local fuera
@@ -438,6 +445,16 @@ verificar() {
     log 'conteos por tabla (esquema, tabla, filas, suma):'
     awk -F'\t' '$1 ~ /^[a-z_][a-z0-9_]*$/ && $2 ~ /^[A-Za-z_][A-Za-z0-9_]*$/ && $3 ~ /^[0-9]+$/ && $4 ~ /^[0-9]+$/ { print m "   " $1 "." $2 " " $3 " " $4 }' m="$MARCA" conteos.tsv >&2
   fi
+  # Faltas de la base: solo códigos conocidos (el host los traduce); cualquier otra cosa invalida la copia.
+  local c
+  while IFS= read -r c; do
+    case "$c" in
+      sin_historial_migraciones | esquema_sin_plataforma) log "FALTA_BASE=$c" ;;
+      *) fallo 'faltas.txt trae algo que no es un código conocido' ;;
+    esac
+  done <faltas.txt
+  # Huella de la lista de objetos de Storage de ESTE snapshot: la parte 2 tiene que traer la misma.
+  log "LISTA_STORAGE_SHA256=$(sha256sum <storage-objetos.jsonl | cut -c1-64)"
   log "MANIFEST_SHA256=$(sha256sum <MANIFEST.sha256 | cut -c1-64)"
   log 'verificación del contenedor: OK'
 }

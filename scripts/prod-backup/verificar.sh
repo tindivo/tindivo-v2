@@ -2,7 +2,7 @@
 # Copia de producción P0.5: comprueba una copia ya hecha (por ejemplo, recién bajada de Google Drive).
 # Runbook: Docs/operacion/copia-de-produccion.md
 #
-#   bash scripts/prod-backup/verificar.sh <carpeta-de-la-copia> [--conteos]
+#   bash -p scripts/prod-backup/verificar.sh <carpeta-de-la-copia> [--conteos]
 #
 # No se conecta a ninguna base ni a internet. Comprueba el sha256 de cada archivo cifrado, lo descifra hacia la
 # memoria (nunca a un archivo) y revisa el contenido: manifiesto interno, y que pg_restore lee el dump entero.
@@ -24,7 +24,7 @@ source "$_aqui/comun.sh"
 
 CARPETA="${1:-}"
 [ -n "$CARPETA" ] && [ -d "$CARPETA" ] || {
-  printf '%s\n' 'Uso: bash scripts/prod-backup/verificar.sh <carpeta-de-la-copia> [--conteos]' >&2
+  printf '%s\n' 'Uso: bash -p scripts/prod-backup/verificar.sh <carpeta-de-la-copia> [--conteos]' >&2
   exit 64
 }
 [ "${2:-}" != --conteos ] || export TINDIVO_MOSTRAR_CONTEOS=1
@@ -43,6 +43,7 @@ trap 'exit 130' INT TERM
 
 paso '1. sha256 de los archivos cifrados'
 comprobar_herramientas
+fijar_motor_docker
 [ -s "$CARPETA/SHA256SUMS" ] || fallo "falta $CARPETA/SHA256SUMS"
 [ -s "$CARPETA/1-base.tar.gpg" ] || fallo "falta $CARPETA/1-base.tar.gpg"
 [ ! -e "$CARPETA/INCOMPLETA.txt" ] || fallo 'esta copia quedó marcada como INCOMPLETA'
@@ -74,11 +75,24 @@ FALTAS=()
 paso '3. Parte 1 · base'
 verificar_base "$CARPETA/1-base.tar.gpg" "$REG/1.log"
 comparar 1-base "$REG/1.log"
+while IFS= read -r c; do
+  [ -n "$c" ] || continue
+  t="$(texto_falta_base "$c")" || fallo 'la parte 1 anuncia una falta desconocida'
+  FALTAS+=("$t")
+done < <(faltas_base_de "$REG/1.log")
+LISTA_1="$(lista_de_base "$REG/1.log")"
+[ -n "$LISTA_1" ] || fallo 'la parte 1 no dio la huella de la lista de objetos de Storage'
 
 if [ -s "$CARPETA/2-storage.tar.gpg" ]; then
   paso 'Parte 2 · Storage'
   verificar_tar_node "$CARPETA/2-storage.tar.gpg" "$REG/2-storage.log"
   comparar 2-storage "$REG/2-storage.log"
+  # La parte 2 tiene que ser la de ESTA base: misma lista de objetos (del mismo snapshot) y un Storage conocido.
+  [ "$(lista_de_storage "$REG/2-storage.log")" = "$LISTA_1" ] || fallo 'la parte 2 no corresponde a la lista de objetos de la parte 1 (¿partes de copias distintas?)'
+  case "$(origen_de_storage "$REG/2-storage.log")" in
+    "$URL_PROD" | http://127.0.0.1:54321) ;;
+    *) fallo 'la parte 2 no viene de un Storage conocido' ;;
+  esac
 else
   log '2-storage: no está en esta copia'
   FALTAS+=('2-storage no está en esta copia')

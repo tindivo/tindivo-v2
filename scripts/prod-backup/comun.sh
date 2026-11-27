@@ -2,11 +2,26 @@
 # Copia de producción P0.5: funciones que comparten copia.sh y verificar.sh. Se carga con `source`.
 # Runbook: Docs/operacion/copia-de-produccion.md
 
+# --- Capa 0: bash en modo protegido (-p) ------------------------------------------------------------------------
+# Con -p, bash NO lee BASH_ENV ni ENV, no importa funciones del entorno y no aplica SHELLOPTS/BASHOPTS heredados:
+# nada del entorno se ejecuta antes de la primera línea del guion. Si no vino con -p, BASH_ENV ya pudo correr, así que
+# no se sigue: el runbook manda lanzar siempre `bash -p scripts/prod-backup/<guion>.sh`.
+case "$-" in
+  *p*) ;;
+  *)
+    echo 'lanza el guion con «bash -p» (por ejemplo: bash -p scripts/prod-backup/copia.sh …): así bash no ejecuta BASH_ENV ni funciones heredadas' >&2
+    exit 64
+    ;;
+esac
+
 # --- Lo primero, antes de cualquier proceso hijo: el entorno se reduce a una lista de variables PERMITIDAS ---------
 # No se enumeran las credenciales que podrían venir exportadas (siempre faltaría alguna): se quita del entorno TODO lo
 # que no haga falta para que arranquen bash, git, docker, gpg, node y powershell. La lista lleva NOMBRES EXACTOS, sin
 # prefijos ni comodines: una variable BASH_LO_QUE_SEA o MSYSTEM_LO_QUE_SEA exportada también se quita. Solo órdenes
-# internas de bash y /usr/bin/env (capa 1): ningún otro programa arranca antes de terminar la limpieza.
+# internas de bash y /usr/bin/env (capas 1 y 3): ningún otro programa arranca antes de terminar la limpieza.
+# Las permitidas no llevan credenciales: las tres credenciales de ENSAYO (TINDIVO_COPIA_LOCAL_CLAVE, _SERVICE_KEY y
+# _CONTRASENA) no están en la lista y nunca van como argumento: viajan por un descriptor (ver _relanzar_limpio).
+# Lo que la lista no puede validar es el VALOR de una permitida (un PATH con un secreto dentro seguiría pasando).
 set +a
 _permitida() {
   case "$1" in
@@ -17,8 +32,7 @@ _permitida() {
     CommonProgramFiles | CommonProgramW6432 | NUMBER_OF_PROCESSORS | PROCESSOR_ARCHITECTURE | PROCESSOR_IDENTIFIER) return 0 ;;
     MSYSTEM | MSYSTEM_CARCH | MSYSTEM_CHOST | MSYSTEM_PREFIX | MSYS | MSYS2_PATH_TYPE | MINGW_PREFIX | MINGW_CHOST | MINGW_PACKAGE_PREFIX) return 0 ;;
     EXEPATH | ORIGINAL_PATH) return 0 ;;
-    TINDIVO_COPIA_IMAGEN | TINDIVO_COPIA_TMPFS_MB | TINDIVO_COPIA_LOCAL_CLAVE | TINDIVO_COPIA_LOCAL_SERVICE_KEY) return 0 ;;
-    TINDIVO_COPIA_LOCAL_CONTRASENA | TINDIVO_COPIA_LOCAL_PUERTO | TINDIVO_COPIA_LOCAL_SCRAM) return 0 ;;
+    TINDIVO_COPIA_IMAGEN | TINDIVO_COPIA_TMPFS_MB | TINDIVO_COPIA_LOCAL_PUERTO | TINDIVO_COPIA_LOCAL_SCRAM) return 0 ;;
   esac
   return 1
 }
@@ -28,11 +42,13 @@ _nombres() { # escribe en _N los nombres de todas las variables (bash solo ve la
     "${!a@}" "${!b@}" "${!c@}" "${!d@}" "${!e@}" "${!f@}" "${!g@}" "${!h@}" "${!i@}" "${!j@}" "${!k@}" "${!l@}" "${!m@}"
     "${!n@}" "${!o@}" "${!p@}" "${!q@}" "${!r@}" "${!s@}" "${!t@}" "${!u@}" "${!v@}" "${!w@}" "${!x@}" "${!y@}" "${!z@}" "${!_@}")
 }
+_SECRETOS_ENSAYO=(TINDIVO_COPIA_LOCAL_CLAVE TINDIVO_COPIA_LOCAL_SERVICE_KEY TINDIVO_COPIA_LOCAL_CONTRASENA)
 # Capa 1: el guion se relanza a sí mismo con `env -i` y SOLO las variables permitidas. Es la única forma de quitar las
 # entradas del entorno cuyo nombre no es válido para bash (`MI-TOKEN`, `npm_config_//registro/:_authToken`…): bash
 # no las ve ni las puede borrar, pero las pasaría tal cual a cada hijo. Antes del relanzamiento no arranca ningún
-# programa salvo /usr/bin/env, que no reenvía nada fuera de lo que recibe en sus argumentos. `exec` conserva el PID:
-# la marca vale el PID, así que una marca heredada del entorno no sirve para saltarse este paso.
+# programa salvo /usr/bin/env, que no reenvía nada fuera de lo que recibe en sus argumentos (y en ellos no hay
+# credenciales). Las de ensayo pasan por el descriptor 5, una tubería que llena una subcapa de bash (solo printf).
+# La marca vale el PID (exec lo conserva); si alguien la falsifica, la capa 3 lo detecta y el guion no sigue.
 _relanzar_limpio() {
   local - _n _a=()
   set +u
@@ -41,7 +57,18 @@ _relanzar_limpio() {
     case "$_n" in '' | _n | _a | _N | _GUION | _TINDIVO_LIMPIO) continue ;; esac
     if [[ "${!_n@a}" == *x* ]] && _permitida "$_n"; then _a+=("$_n=${!_n}"); fi
   done
-  exec /usr/bin/env -i "${_a[@]}" _TINDIVO_LIMPIO="$$" "$BASH" "$_GUION" "$@"
+  exec 5< <(for _n in "${_SECRETOS_ENSAYO[@]}"; do if [ -n "${!_n+x}" ]; then printf '1:%s\0' "${!_n}"; else printf '0:\0'; fi; done)
+  exec /usr/bin/env -i "${_a[@]}" _TINDIVO_LIMPIO="$$" "$BASH" -p "$_GUION" "$@"
+}
+_leer_secretos_ensayo() { # del descriptor 5 a variables SIN exportar; si no hay descriptor, no hay secretos de ensayo
+  local _n _v
+  unset "${_SECRETOS_ENSAYO[@]}"
+  { true <&5; } 2>/dev/null || return 0
+  for _n in "${_SECRETOS_ENSAYO[@]}"; do
+    IFS= read -r -d '' -u 5 _v || break
+    [ "${_v:0:2}" != '1:' ] || printf -v "$_n" '%s' "${_v:2}"
+  done
+  exec 5<&-
 }
 # El guion que cargó este archivo es el que se relanza. Si no lo cargó un archivo (bash -c, terminal), no se sigue.
 _GUION="${BASH_SOURCE[1]:-}"
@@ -51,6 +78,7 @@ if [ -z "$_GUION" ] || [ ! -f "$_GUION" ]; then
 fi
 [ "${_TINDIVO_LIMPIO:-}" = "$$" ] || _relanzar_limpio "$@"
 unset _TINDIVO_LIMPIO _N _GUION
+_leer_secretos_ensayo
 # Capa 2: lo que el propio bash haya creado o importado al arrancar se vuelve a filtrar, y se comprueba.
 _exportadas() { # escribe en _X los nombres de todas las variables exportadas que no están en la lista
   # `local -` devuelve las opciones al salir; sin -u, ${!_n@a} no falla con las declaradas sin valor (BASH_ARGV…).
@@ -84,6 +112,15 @@ if [ "${#_X[@]}" -gt 0 ] || [ -n "$_F" ]; then
   exit 70
 fi
 unset _X _F _v
+# Capa 3: el entorno REAL que heredaría un hijo, tal como lo ve /usr/bin/env (también los nombres que bash no admite).
+# Si la marca de la capa 1 se falsificó, aquí aparece lo que no se limpió y el guion no sigue.
+_M=''
+while IFS= read -r -d '' _v; do _permitida "${_v%%=*}" || _M="$_M ${_v%%=*}"; done < <(/usr/bin/env -0)
+if [ -n "$_M" ]; then
+  printf 'ERROR: no se pudo limpiar el entorno: siguen exportadas%s\n' "$_M" >&2
+  exit 70
+fi
+unset _M _v
 # Los nombres que el guion usa para sus secretos nacen sin atributo de exportación.
 unset DB_PASS STORAGE_KEY CLAVE GNUPG_TMP
 # ------------------------------------------------------------------------------------------------------------------
@@ -116,7 +153,25 @@ fallo() {
 }
 
 # Git Bash convierte los argumentos que parecen rutas (/work → C:/Program Files/Git/work): se apaga solo para docker.
-dk() { MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker "$@"; }
+# El motor de Docker se fija al principio (fijar_motor_docker) y se pasa con -H en cada llamada: aunque alguien cambie
+# el contexto a mitad de la corrida, todo va al mismo motor, y ese motor tiene que ser el de ESTE PC.
+MOTOR_DOCKER=''
+dk() {
+  if [ -n "$MOTOR_DOCKER" ]; then
+    MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker -H "$MOTOR_DOCKER" "$@"
+  else
+    MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' docker "$@"
+  fi
+}
+# Solo una tubería con nombre de ESTE equipo («//./pipe/…») o un socket unix local. «npipe:////otro-equipo/pipe/…»,
+# tcp://, ssh:// y cualquier otra forma se rechazan.
+motor_es_local() { [[ "$1" =~ ^npipe:////\./pipe/[A-Za-z0-9_.-]+$ ]] || [[ "$1" =~ ^unix:///[A-Za-z0-9_./-]+$ ]]; }
+fijar_motor_docker() {
+  local m
+  m="$(MSYS_NO_PATHCONV=1 docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null)" || fallo 'no se pudo leer el contexto de Docker (¿Docker Desktop abierto?)'
+  motor_es_local "$m" || fallo "el contexto de Docker apunta a «$m»: solo vale el Docker local de este PC (npipe:////./pipe/…)"
+  MOTOR_DOCKER="$m"
+}
 
 comprobar_herramientas() {
   local h
@@ -235,6 +290,20 @@ discos_bitlocker() {
 }
 
 manifiesto_de() { grep -o 'MANIFEST_SHA256=[0-9a-f]\{64\}' "$1" | tail -n 1 | cut -d= -f2; }
+# Lo que la verificación de la parte 1 leyó DENTRO del tar cifrado (faltas.txt y la huella de storage-objetos.jsonl)
+# y lo que la de la parte 2 leyó dentro de su MANIFEST.json. Los registros en claro no deciden nada por sí solos:
+# estas líneas salen de la verificación que se acaba de hacer, descifrando.
+faltas_base_de() { grep -o 'FALTA_BASE=[a-z_]*' "$1" | cut -d= -f2 || true; }
+texto_falta_base() {
+  case "$1" in
+    sin_historial_migraciones) echo 'base: sin historial de migraciones (no existe supabase_migrations)' ;;
+    esquema_sin_plataforma) echo 'base: el esquema completo salió sin los esquemas de la plataforma (el primer intento falló)' ;;
+    *) return 1 ;;
+  esac
+}
+lista_de_base() { grep -o 'LISTA_STORAGE_SHA256=[0-9a-f]\{64\}' "$1" | tail -n 1 | cut -d= -f2; }
+lista_de_storage() { grep -o 'LISTA_SHA256=[0-9a-f]\{64\}' "$1" | tail -n 1 | cut -d= -f2; }
+origen_de_storage() { grep -o 'ORIGEN=[a-z0-9:/.-]*' "$1" | tail -n 1 | cut -d= -f2; }
 
 # Descifra hacia una tubería y comprueba la parte 1 dentro de un contenedor sin red. Deja el registro en $2.
 verificar_base() { # archivo cifrado, registro

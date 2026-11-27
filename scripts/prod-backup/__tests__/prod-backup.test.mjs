@@ -248,14 +248,14 @@ test('guarda: en toda la carpeta solo hay una llamada HTTP, y es un GET', () => 
 })
 
 test('guarda: contra prod no corre sin terminal, ni con argumentos raros', () => {
-  const sinTty = spawnSync('bash', [join(DIR, 'copia.sh'), '--destino', 'prod', '--commit-firmado', '0'.repeat(40)], {
+  const sinTty = spawnSync('bash', ['-p', join(DIR, 'copia.sh'), '--destino', 'prod', '--commit-firmado', '0'.repeat(40)], {
     input: '',
     encoding: 'utf8',
   })
   assert.notEqual(sinTty.status, 0)
   assert.match(sinTty.stderr, /hace falta una terminal/)
-  assert.equal(spawnSync('bash', [join(DIR, 'copia.sh')], { input: '', encoding: 'utf8' }).status, 64)
-  assert.equal(spawnSync('bash', [join(DIR, 'copia.sh'), '--destino', 'staging'], { input: '', encoding: 'utf8' }).status, 64)
+  assert.equal(spawnSync('bash', ['-p', join(DIR, 'copia.sh')], { input: '', encoding: 'utf8' }).status, 64)
+  assert.equal(spawnSync('bash', ['-p', join(DIR, 'copia.sh'), '--destino', 'staging'], { input: '', encoding: 'utf8' }).status, 64)
 })
 
 test('guarda: reglas de la clave de cifrado', () => {
@@ -263,13 +263,13 @@ test('guarda: reglas de la clave de cifrado', () => {
   const dir = mkdtempSync(join(tmpdir(), 'copia-clave-'))
   try {
     writeFileSync(join(dir, 'probar.sh'), `source "${join(DIR, 'comun.sh').replaceAll('\\', '/')}"\nvalidar_clave "$1"\n`)
-    const probar = (clave) => spawnSync('bash', [join(dir, 'probar.sh'), clave], { encoding: 'utf8' }).status
+    const probar = (clave) => spawnSync('bash', ['-p', join(dir, 'probar.sh'), clave], { encoding: 'utf8' }).status
     assert.equal(probar('una clave larga de verdad 2026'), 0)
     assert.notEqual(probar('corta'), 0)
     assert.notEqual(probar('clave con eñe y tilde larguísima'), 0)
     assert.notEqual(probar(' empieza con espacio y es larga'), 0)
     // Cargado desde bash -c (sin archivo) no sigue: no habría a quién relanzar con el entorno limpio.
-    assert.equal(spawnSync('bash', ['-c', 'source ./comun.sh; echo siguio'], { cwd: DIR, encoding: 'utf8' }).status, 64)
+    assert.equal(spawnSync('bash', ['-p', '-c', 'source ./comun.sh; echo siguio'], { cwd: DIR, encoding: 'utf8' }).status, 64)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -458,17 +458,18 @@ test('guarda: una credencial heredada del entorno no llega ni al primer proceso 
     // Una marca de «ya relanzado» que venga del entorno no evita el relanzamiento (vale el PID, no un 1).
     env._TINDIVO_LIMPIO = '1'
     const correr = (guion, args, extra = {}) =>
-      spawnSync('bash', [`./${guion}`, ...args], { cwd: DIR, input: '', encoding: 'utf8', env: { ...env, ...extra } })
+      spawnSync('bash', ['-p', `./${guion}`, ...args], { cwd: DIR, input: '', encoding: 'utf8', env: { ...env, ...extra } })
 
-    correr('copia.sh', ['--destino', 'local'])
-    correr('copia.sh', ['--destino', 'local', '--salida', join(DIR, 'no-debe-crearse')])
-    correr('copia.sh', [])
-    correr('copia.sh', ['--destino', 'staging'])
-    correr('verificar.sh', [dir])
-    correr('verificar.sh', [])
-    // Contra prod, además, las credenciales de ENSAYO se borran antes de lanzar nada.
+    // C2-001: las credenciales de ENSAYO no son variables permitidas ni van como argumento de env: viajan por un
+    // descriptor y quedan sin exportar. Ningún hijo las recibe, ni en local ni contra prod.
     const local = { TINDIVO_COPIA_LOCAL_CLAVE: 'MARCADOR_HEREDADO', TINDIVO_COPIA_LOCAL_SERVICE_KEY: 'MARCADOR_HEREDADO',
       TINDIVO_COPIA_LOCAL_CONTRASENA: 'MARCADOR_HEREDADO' }
+    correr('copia.sh', ['--destino', 'local'], local)
+    correr('copia.sh', ['--destino', 'local', '--salida', join(DIR, 'no-debe-crearse')], local)
+    correr('copia.sh', [], local)
+    correr('copia.sh', ['--destino', 'staging'])
+    correr('verificar.sh', [dir], local)
+    correr('verificar.sh', [])
     const prod = correr('copia.sh', ['--destino', 'prod', '--commit-firmado', '0'.repeat(40), '--ca', 'x'], local)
     assert.match(prod.stderr, /hace falta una terminal/)
 
@@ -494,4 +495,92 @@ test('guarda: roles.sql sale del snapshot con consultas de solo lectura sobre pg
   assert.ok(!/pg_authid|rolpassword|pg_shadow/.test(guion))
   assert.ok(!/pg_dumpall/.test(sinComentarios(guion)), 'pg_dumpall no admite snapshot: no se usa')
   assert.match(guion, /\\\\o \$W\/roles\.sql\n\\\\qecho[^\n]*\n\$SQL_ROLES\n\\\\o\n/)
+})
+
+// --- Ciclo 2, Ronda 1 (C2-001 a C2-005) -------------------------------------------------------------------------
+
+test('guarda C2-001: las credenciales de ensayo nunca son argumento de env ni variable permitida', () => {
+  const comun = leer('comun.sh')
+  const permitidas = comun.slice(comun.indexOf('_permitida() {'), comun.indexOf('\n}\n', comun.indexOf('_permitida() {')))
+  for (const n of ['TINDIVO_COPIA_LOCAL_CLAVE', 'TINDIVO_COPIA_LOCAL_SERVICE_KEY', 'TINDIVO_COPIA_LOCAL_CONTRASENA']) {
+    assert.ok(!permitidas.includes(n), `${n} no puede ser permitida`)
+  }
+  const linea = comun.split('\n').find((l) => l.includes('exec /usr/bin/env -i'))
+  assert.equal(linea.trim(), 'exec /usr/bin/env -i "${_a[@]}" _TINDIVO_LIMPIO="$$" "$BASH" -p "$_GUION" "$@"')
+  assert.match(comun, /exec 5< <\(for _n in "\$\{_SECRETOS_ENSAYO\[@\]\}"/)
+})
+
+test('guarda C2-001: una marca de relanzamiento igual al PID (lanzado con exec) no salta la limpieza: el guion para', () => {
+  const r = spawnSync('bash', ['-c', 'exec /usr/bin/env _TINDIVO_LIMPIO=$$ "A.B=MARCADOR_HEREDADO" "$BASH" -p ./copia.sh --destino local'],
+    { cwd: DIR, input: '', encoding: 'utf8' })
+  assert.equal(r.status, 70)
+  assert.match(r.stderr, /no se pudo limpiar el entorno: siguen exportadas.* A[.]B/)
+  assert.ok(!r.stderr.includes('MARCADOR_HEREDADO'), 'el mensaje nombra la variable, nunca su valor')
+})
+
+test('guarda C2-002: sin bash -p no corre; con -p un BASH_ENV existente no se ejecuta', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'copia-bashenv-'))
+  try {
+    const testigo = join(dir, 'ejecutado.txt').replaceAll('\\', '/')
+    writeFileSync(join(dir, 'arranque.sh'), `echo ejecutado > "${testigo}"\n`)
+    const env = { ...process.env, BASH_ENV: join(dir, 'arranque.sh').replaceAll('\\', '/') }
+    const sinP = spawnSync('bash', ['./copia.sh', '--destino', 'local'], { cwd: DIR, input: '', encoding: 'utf8', env })
+    assert.equal(sinP.status, 64)
+    assert.match(sinP.stderr, /bash -p/)
+    rmSync(join(dir, 'ejecutado.txt'), { force: true })
+    for (const g of ['copia.sh', 'verificar.sh']) {
+      spawnSync('bash', ['-p', `./${g}`], { cwd: DIR, input: '', encoding: 'utf8', env })
+      assert.ok(!existsSync(join(dir, 'ejecutado.txt')), `${g}: con -p, BASH_ENV no se ejecuta`)
+    }
+    // Una función exportada con el nombre de una orden tampoco se importa.
+    const f = spawnSync('bash', ['-p', '-c', 'type -t git'], { encoding: 'utf8', env: { ...process.env, 'BASH_FUNC_git%%': '() { echo FALSA; }' } })
+    assert.equal(f.stdout.trim(), 'file')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('guarda C2-004: solo vale el motor de Docker local de este PC', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'copia-motor-'))
+  try {
+    writeFileSync(join(dir, 'probar.sh'), `source "${join(DIR, 'comun.sh').replaceAll('\\', '/')}"\nmotor_es_local "$1"\n`)
+    const probar = (m) => spawnSync('bash', ['-p', join(dir, 'probar.sh'), m], { encoding: 'utf8' }).status
+    assert.equal(probar('npipe:////./pipe/dockerDesktopLinuxEngine'), 0)
+    assert.equal(probar('npipe:////./pipe/docker_engine'), 0)
+    assert.equal(probar('unix:///var/run/docker.sock'), 0)
+    for (const malo of ['npipe:////otro-equipo/pipe/docker_engine', 'npipe://otro/pipe/x', 'tcp://10.0.0.5:2375', 'ssh://u@h',
+      'npipe:////./pipe/x/../../otro', 'unix://host/x', '']) {
+      assert.notEqual(probar(malo), 0, malo)
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+  const copia = sinComentarios(leer('copia.sh'))
+  assert.ok(copia.indexOf('fijar_motor_docker') < copia.indexOf("paso '1. Datos de conexión'"), 'el motor se fija antes de pedir credenciales')
+  assert.match(sinComentarios(leer('comun.sh')), /docker -H "\$MOTOR_DOCKER" "\$@"/)
+})
+
+test('C2-003: la base declara lo que le falta dentro del tar, con códigos fijos, y el host lo suma a los motivos', () => {
+  const g = leer('en-contenedor.sh')
+  assert.match(g, /echo sin_historial_migraciones >>faltas\.txt/)
+  assert.match(g, /echo esquema_sin_plataforma >>faltas\.txt/)
+  assert.match(g, /partes\.txt faltas\.txt storage-objetos\.jsonl; do/)
+  for (const h of ['copia.sh', 'verificar.sh']) assert.match(leer(h), /faltas_base_de /, h)
+})
+
+test('C2-005: la parte 2 lleva la huella de la lista de la parte 1 y el verificador la imprime; un tar de otro tipo no pasa', async () => {
+  const lista = Buffer.from('')
+  const { salida, buffer } = sumidero()
+  const listaSha256 = sha256(lista)
+  await copiarStorage({ base: 'http://127.0.0.1:54321', clave: SECRETO, lineas: [], listaSha256, salida, fetchImpl: async () => respuesta(500) })
+  const r = spawnSync('node', [join(DIR, 'verificar-tar.mjs')], { input: buffer(), encoding: 'utf8' })
+  assert.equal(r.status, 0, r.stderr)
+  assert.ok(r.stderr.includes(`[verificar] LISTA_SHA256=${listaSha256}`))
+  assert.ok(r.stderr.includes('[verificar] ORIGEN=http://127.0.0.1:54321'))
+  const otro = sumidero()
+  const tar = crearEscritorTar(otro.salida)
+  await tar.cerrar({ tipo: 'config', completa: true })
+  const r2 = spawnSync('node', [join(DIR, 'verificar-tar.mjs')], { input: otro.buffer(), encoding: 'utf8' })
+  assert.notEqual(r2.status, 0)
+  for (const h of ['copia.sh', 'verificar.sh']) assert.match(leer(h), /lista_de_storage .*= "\$LISTA_1"/, h)
 })

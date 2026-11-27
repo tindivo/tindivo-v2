@@ -53,10 +53,20 @@ Lo que garantiza, y cómo:
 - **Las credenciales no se guardan.** Se escriben a mano en la terminal (no se ven), viven en la memoria del proceso y
   no pasan por argumentos, archivos ni registros; cada una llega solo al proceso que la usa (la contraseña, a `psql`
   y `pg_dump`; la `service_role`, a Node). Con `--destino prod` el guion se niega a correr sin
-  una terminal. Antes de lanzar ningún programa, el guion se relanza a sí mismo con `env -i` y solo una lista corta
-  de variables permitidas, con nombres exactos (`PATH`, `HOME`, las del sistema); después vuelve a filtrar y, si
-  algo queda exportado, no sigue: cualquier credencial que estuviera exportada en la terminal no llega a nadie. Una terminal no demuestra que haya una persona:
+  una terminal. **Siempre se lanza con `bash -p`** (si no, se niega): así bash no ejecuta `BASH_ENV` ni importa
+  funciones del entorno antes de la primera línea. Antes de lanzar ningún programa, el guion se relanza a sí mismo con
+  `env -i` y solo una lista corta de variables permitidas, con nombres exactos (`PATH`, `HOME`, las del sistema), y
+  vuelve a comprobar con `/usr/bin/env` que no quede nada más; si queda, no sigue (código 70). Una variable con otro
+  nombre exportada en la terminal no llega a nadie; lo que la lista no puede validar es el *valor* de una permitida
+  (un `PATH` con un secreto dentro seguiría pasando). Las credenciales de ensayo (`TINDIVO_COPIA_LOCAL_*`) no son
+  permitidas: viajan por un descriptor, quedan sin exportar y contra prod se borran. Una terminal no demuestra que haya una persona:
   la garantía de que ningún agente ve las credenciales es que **solo Jesús las conoce y las escribe en su propia ventana**.
+- **Docker de este PC.** Antes de pedir credenciales, el guion fija el motor de Docker: solo una tubería local
+  (`npipe:////./pipe/…`) o un socket unix local; cualquier otro (otro equipo, `tcp://`, `ssh://`) se rechaza, y todas
+  las llamadas usan ese motor con `-H` aunque alguien cambie el contexto a mitad.
+- **Las partes son de la misma copia.** Lo que le falte a la base (historial de migraciones, esquema completo) va
+  dentro del archivo cifrado y la verificación lo suma a los motivos. La parte 2 lleva la huella de la lista de
+  objetos de la parte 1: una parte 2 de otra copia no se acepta.
 - **Corre lo firmado.** Contra prod exige `--commit-firmado` y se niega si el checkout no está en ese commit o tiene
   cambios sin commit en `scripts/prod-backup/`.
 - **Horario.** De 18:00 a 23:00, hora de Lima, se niega (nivel B).
@@ -96,7 +106,7 @@ Abre **tu propia ventana de Git Bash** (no la terminal de Claude: las credencial
 
 ```bash
 cd "/d/Tinkuy Creativo/Proyectos/Tindivo/Code/tindivo-v2-copia-prod"
-bash scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha-firmado> --ca ~/Downloads/prod-ca-2021.crt
+bash -p scripts/prod-backup/copia.sh --destino prod --commit-firmado <sha-firmado> --ca ~/Downloads/prod-ca-2021.crt
 ```
 
 Lo que vas a ver, en orden:
@@ -123,7 +133,7 @@ La copia de una base como la nuestra tarda uno o dos minutos; Storage depende de
 2. **Comprueba lo subido.** Lo seguro: descarga la carpeta desde Drive a otra ruta y corre
 
    ```bash
-   bash scripts/prod-backup/verificar.sh ~/Downloads/prod-<fecha>Z
+   bash -p scripts/prod-backup/verificar.sh ~/Downloads/prod-<fecha>Z
    ```
 
    Debe terminar en `== PARCIAL ESPERADA` (antes lista **un solo** motivo, el de la configuración
@@ -148,7 +158,7 @@ la cubre todavía).
 ## 6. Ensayar sin tocar producción
 
 ```bash
-pnpm db:lock run -- "TINDIVO_COPIA_LOCAL_CLAVE='una clave de ensayo bien larga' bash scripts/prod-backup/copia.sh --destino local"
+pnpm db:lock run -- "TINDIVO_COPIA_LOCAL_CLAVE='una clave de ensayo bien larga' bash -p scripts/prod-backup/copia.sh --destino local"
 node --test scripts/prod-backup/__tests__/prod-backup.test.mjs
 ```
 
@@ -161,7 +171,7 @@ toma bloqueos de lectura que frenarían un `db reset` de otra sesión.
 **Nunca se restaura sobre `tindivo-prod` desde este runbook.** Restaurar en producción es otra operación de nivel B,
 con su propio plan firmado. Lo que sigue es para un contenedor aislado.
 
-1. Baja la carpeta de Drive y corre `verificar.sh <carpeta> --conteos`: confirma que está entera e imprime las filas por tabla.
+1. Baja la carpeta de Drive y corre `bash -p scripts/prod-backup/verificar.sh <carpeta> --conteos`: confirma que está entera e imprime las filas por tabla.
 2. Levanta un Postgres aislado con la misma imagen, **sin red** (`--network none`): así cron, `pg_net` y los webhooks
    no pueden llamar a nada real. P0.6 exige además neutralizar cron y Vault antes de arrancar.
 3. Mete la copia **directo al contenedor**, sin pasar por una carpeta de Windows. Ojo: dentro del contenedor sí queda
@@ -196,10 +206,13 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
 | `diagnostico: no se pudo conectar: el certificado del servidor no lo firma la CA indicada` (o `…es de otro nombre`) | El certificado descargado no es el que firma al servidor, o alguien se interpuso | **Para.** No hay modo sin comprobar el certificado. Vuelve a bajarlo del panel; si sigue fallando, se investiga antes de repetir |
 | `no se pudo acreditar que los discos estén cifrados` | BitLocker apagado, suspendido o no consultable | Actívalo y repite. `--acepto-disco-sin-cifrar` es una decisión de Jesús: queda escrita en `RESUMEN.txt` |
 | `N linea(s) de diagnostico omitidas` | Un error de Postgres que el filtro no sabe clasificar (podría citar datos) | Ningún mensaje del servidor se muestra tal cual: los conocidos salen como `diagnostico: …` con un texto fijo y el resto se cuenta. El motivo exacto no se muestra a propósito. Reproduce el fallo contra la base local (§6) para verlo |
-| Termina en `COPIA PARCIAL` (código 3) con **más** motivos que el de la configuración externa | Se omitió la parte 2 o faltó un archivo de Storage | Lee `PARCIAL.txt`. Se puede repetir entera, o guardar la parcial sabiendo qué le falta; P0.5 no se cierra |
+| Termina en `COPIA PARCIAL` (código 3) con **más** motivos que el de la configuración externa | Se omitió la parte 2, faltó un archivo de Storage, o a la base le falta algo (`base: sin historial de migraciones`, `base: el esquema completo salió sin los esquemas de la plataforma`) | Lee `PARCIAL.txt`. Se puede repetir entera, o guardar la parcial sabiendo qué le falta; P0.5 no se cierra |
 | `Storage respondió HTTP 401/403` | `service_role` equivocada | Repite; la parte 1 se vuelve a sacar (es rápida) |
 | `no se pudo limpiar el entorno: siguen exportadas …` | Una variable o función exportada en la terminal no se pudo quitar | Abre una ventana nueva de Git Bash, sin exportar nada, y repite |
 | `son las N h en Lima` | Ventana de servicio | Espera a que pase |
+| `lanza el guion con «bash -p»` | Se lanzó con `bash` a secas | Repite con `bash -p` (copia la orden del runbook) |
+| `el contexto de Docker apunta a «…»` | El contexto de Docker no es el Docker Desktop de este PC | `docker context use default` (o `desktop-linux`) y repite |
+| `la parte 2 no corresponde a la lista de objetos de la parte 1` | Las partes son de copias distintas | No uses esa carpeta: saca otra copia |
 | `gpg: decryption failed` al verificar | Clave distinta de la usada al cifrar | Prueba la clave correcta; si no la hay, esa copia está perdida: saca otra |
 
 ## 9. Lo que este procedimiento no resuelve
@@ -222,6 +235,7 @@ con su propio plan firmado. Lo que sigue es para un contenedor aislado.
   ni etiquetas de roles, permisos sobre parámetros (`pg_parameter_acl`) ni pertenencias de roles `pg_*`; el orden de
   los `GRANT` cubre el caso normal (primero lo que concede un superusuario y lo que da ADMIN), no cadenas largas de
   delegación. Restaurarlo sobre una base vacía es parte de P0.6.
-- `BASH_ENV`: si la terminal lo trae exportado, bash lee ese archivo al arrancar el guion, antes de cualquier
-  limpieza (es como bash arranca). Por eso la copia se saca en una ventana nueva de Git Bash, sin exportar nada.
+- `BASH_ENV` y funciones exportadas: con `bash -p` no se ejecutan ni se importan. Sin `-p` el guion se niega,
+  pero bash ya habría leído `BASH_ENV` al arrancar: por eso la orden se copia tal cual del runbook, en una ventana
+  nueva de Git Bash.
 - Una copia sin restauración ensayada no es todavía un respaldo probado: eso lo cierra P0.6.
