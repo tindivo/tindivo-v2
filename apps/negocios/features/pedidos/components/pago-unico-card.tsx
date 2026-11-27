@@ -13,6 +13,12 @@ import {
   pagoUnicoView,
   type UiPayment,
 } from '@/lib/orders/view-model'
+import {
+  effectiveOutcome,
+  forgetConfirmation,
+  rememberConfirmation,
+  useConfirmationOutcome,
+} from '../lib/payment-confirmation-memory'
 import { getProofUrl } from '../lib/proof-url'
 
 const REJECT_LABELS: Record<DeliveryPaymentRejectReason, string> = {
@@ -53,31 +59,32 @@ export function PagoUnicoCard({
 }) {
   const [asking, setAsking] = useState(false)
   const [choosingReason, setChoosingReason] = useState(false)
-  // «Sí, me llegó» sin respuesta clara: no sabemos si el servidor lo guardó.
-  const [confirmUncertain, setConfirmUncertain] = useState(false)
-  // El POST respondió «verificado»: manda la respuesta, aunque el tablero aún no
-  // haya refrescado el pedido.
-  const [confirmedByResponse, setConfirmedByResponse] = useState(false)
-  const view = pagoUnicoView(order, { confirmUncertain, confirmedByResponse }) ?? baseView
+  // Lo que respondió «Sí, me llegó» vive por pedido, fuera de esta tarjeta:
+  // reabrir el pedido con el tablero viejo no lo borra (CAX-006).
+  const attemptNow = order.proofAttempt ?? 0
+  const outcome = effectiveOutcome(useConfirmationOutcome(order.rowId), attemptNow)
+  const view =
+    pagoUnicoView(order, {
+      confirmUncertain: outcome === 'uncertain',
+      confirmedByResponse: outcome === 'confirmed',
+    }) ?? baseView
 
-  // Llegó la confirmación: la incertidumbre se resolvió.
+  // El tablero ya trae el pago confirmado: la memoria se reconcilia.
   useEffect(() => {
-    if (order.yaCobrado) setConfirmUncertain(false)
-  }, [order.yaCobrado])
+    if (order.yaCobrado) forgetConfirmation(order.rowId)
+  }, [order.yaCobrado, order.rowId])
 
   async function confirm() {
     if (!onConfirm) return
+    const rowId = order.rowId
+    const attempt = attemptNow
+    let result: 'confirmed' | 'uncertain'
     try {
-      const result = await onConfirm()
-      if (result === 'confirmed') {
-        setConfirmedByResponse(true)
-        setConfirmUncertain(false)
-      } else {
-        setConfirmUncertain(true)
-      }
+      result = await onConfirm()
     } catch {
-      setConfirmUncertain(true)
+      result = 'uncertain'
     }
+    rememberConfirmation(rowId, result, attempt)
   }
 
   // Si cambia el momento del pago (confirmó, rechazó, otro intento), los pasos

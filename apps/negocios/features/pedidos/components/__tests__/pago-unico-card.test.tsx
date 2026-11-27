@@ -2,6 +2,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type OrderVM, pagoUnicoView } from '@/lib/orders/view-model'
+import {
+  confirmationOutcome,
+  rememberConfirmation,
+  resetConfirmationMemoryForTests,
+} from '../../lib/payment-confirmation-memory'
 import { PagoUnicoCard } from '../pago-unico-card'
 
 const getProofUrl = vi.fn<(rowId: string, path: string) => Promise<string | null>>()
@@ -12,6 +17,7 @@ vi.mock('../../lib/proof-url', () => ({
 afterEach(() => {
   cleanup()
   getProofUrl.mockReset()
+  resetConfirmationMemoryForTests()
 })
 
 function pedido(over: Partial<OrderVM> = {}): OrderVM {
@@ -152,5 +158,108 @@ describe('PagoUnicoCard (negocios)', () => {
     await confirmar()
     await waitFor(() => expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy())
     expect(screen.queryByText(/paga en la puerta/i)).toBeNull()
+  })
+
+  // CAX-006 (R2): el resultado vive por pedido, fuera de la tarjeta. Cerrar y
+  // reabrir, o pasar A→B→A con el tablero viejo, no lo borra.
+  function tarjeta(order: OrderVM, onConfirm: () => Promise<'confirmed' | 'uncertain'>) {
+    return (
+      <PagoUnicoCard
+        key={order.rowId}
+        order={order}
+        view={conVista(order)}
+        onConfirm={onConfirm}
+        onReject={() => {}}
+        busy={false}
+      />
+    )
+  }
+
+  it('CAX-006: confirmado por la respuesta, cerrar y reabrir con el tablero viejo sigue diciendo «Ingreso confirmado»', async () => {
+    const viejo = pedido({ proofStatus: 'rejected', proofAttempt: 2 })
+    const first = render(tarjeta(viejo, async () => 'confirmed' as const))
+    await confirmar()
+    await waitFor(() => expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy())
+    first.unmount()
+
+    render(tarjeta(viejo, async () => 'confirmed' as const))
+    expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy()
+    expect(screen.queryByText(/paga en la puerta/i)).toBeNull()
+  })
+
+  it('CAX-006: confirmado en A, pasar a B y volver a A con el tablero viejo no reaparece «paga en la puerta»', async () => {
+    const a = pedido({ proofStatus: 'rejected', proofAttempt: 2 })
+    const b = pedido({ rowId: 'row-b', id: 'BBBBBBBB', proofStatus: 'rejected', proofAttempt: 2 })
+    const { rerender } = render(tarjeta(a, async () => 'confirmed' as const))
+    await confirmar()
+    await waitFor(() => expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy())
+
+    rerender(tarjeta(b, async () => 'confirmed' as const))
+    // B no hereda la confirmación de A.
+    expect(screen.getByText(/paga en la puerta/i)).toBeTruthy()
+
+    rerender(tarjeta(a, async () => 'confirmed' as const))
+    expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy()
+    expect(screen.queryByText(/paga en la puerta/i)).toBeNull()
+  })
+
+  it('CAX-006: incierto, cerrar y reabrir sigue sin instrucción de cobro; volver a confirmar lo resuelve', async () => {
+    const viejo = sinCaptura()
+    const first = render(tarjeta(viejo, async () => 'uncertain' as const))
+    await confirmar()
+    await waitFor(() =>
+      expect(screen.getByText(/No sabemos si se guardó tu confirmación/)).toBeTruthy(),
+    )
+    first.unmount()
+
+    render(tarjeta(viejo, async () => 'confirmed' as const))
+    expect(screen.getByText(/No sabemos si se guardó tu confirmación/)).toBeTruthy()
+    expect(screen.queryByText(/Puede pagar al motorizado/)).toBeNull()
+    expect(screen.queryByText(/paga en la puerta/i)).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Volver a confirmar' }))
+    await waitFor(() => expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy())
+    expect(confirmationOutcome(viejo.rowId)).toBe('confirmed')
+  })
+
+  it('CAX-006: cuando el tablero ya trae el pago confirmado, la memoria se reconcilia y se borra', async () => {
+    const viejo = sinCaptura()
+    const { rerender } = render(tarjeta(viejo, async () => 'uncertain' as const))
+    await confirmar()
+    await waitFor(() => expect(confirmationOutcome(viejo.rowId)).toBe('uncertain'))
+
+    rerender(tarjeta({ ...viejo, yaCobrado: true }, async () => 'confirmed' as const))
+    await waitFor(() => expect(confirmationOutcome(viejo.rowId)).toBeUndefined())
+    expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy()
+  })
+
+  it('CAX-006: una respuesta incierta posterior no rebaja lo ya confirmado', () => {
+    rememberConfirmation('row-a', 'confirmed', 1)
+    rememberConfirmation('row-a', 'uncertain', 1)
+    rememberConfirmation('row-a', 'uncertain', 2)
+    expect(confirmationOutcome('row-a')).toBe('confirmed')
+    const viejo = pedido({ proofStatus: 'rejected', proofAttempt: 2 })
+    render(tarjeta(viejo, async () => 'uncertain' as const))
+    expect(screen.getByText(/Ingreso confirmado/)).toBeTruthy()
+    expect(screen.queryByText(/paga en la puerta/i)).toBeNull()
+  })
+
+  it('CAX-006: lo incierto de un intento no tapa la captura nueva: se puede revisar y rechazar', async () => {
+    const intento1 = pedido({ proofStatus: 'rejected', proofAttempt: 1 })
+    const { rerender } = render(tarjeta(intento1, async () => 'uncertain' as const))
+    await confirmar()
+    await waitFor(() =>
+      expect(screen.getByText(/No sabemos si se guardó tu confirmación/)).toBeTruthy(),
+    )
+    getProofUrl.mockResolvedValue('https://firmada/b.jpg')
+    rerender(
+      tarjeta(
+        pedido({ proofStatus: 'pending', proofAttempt: 2, proofUrl: 'a/captura-2.jpg' }),
+        async () => 'uncertain' as const,
+      ),
+    )
+    expect(screen.getByText('El cliente envió su captura')).toBeTruthy()
+    expect(screen.queryByText(/No sabemos si se guardó tu confirmación/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Rechazar captura' })).toBeTruthy()
   })
 })
