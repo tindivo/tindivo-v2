@@ -92,6 +92,35 @@ class PushAuditR1Test {
             assertTrue(rig.presenter.onPush(payload(current?.installId)))
         }
 
+    // RV-4 (PS202-001): la identidad de A que no se pudo soltar no se reutiliza cuando A vuelve a entrar.
+    @Test
+    fun `PS202-001 si no se pudo soltar la identidad de A y A vuelve a entrar, su aviso viejo no se pinta`() =
+        runTest {
+            val hanging = HangingSignOutInstallations(PresenterRig(session).installations, backgroundScope)
+            val rig = PresenterRig(session, installations = hanging, prefs = prefs)
+            val registrar = registrar(rig)
+            val oldInstall = puts().single().installId.toString()
+
+            // Un 401: la sesión se cierra sin `beforeSignOut`; el disco cuelga y el tope vence.
+            session.switchToSignedOut()
+            advanceTimeBy(30_000)
+            runCurrent()
+            // A vuelve a entrar y el cierre vuelve a vencer.
+            session.switchTo("A")
+            advanceTimeBy(30_000)
+            runCurrent()
+            assertFalse(rig.presenter.onPush(payload(oldInstall)))
+
+            hanging.gate.complete(Unit)
+            registrar.refresh()
+            runCurrent()
+            val current = rig.installations.current()
+            assertEquals("A", current?.accountId)
+            assertNotEquals(oldInstall, current?.installId)
+            assertFalse(rig.presenter.onPush(payload(oldInstall)))
+            assertTrue(rig.presenter.onPush(payload(current?.installId)))
+        }
+
     // PS202-002: una escritura de identidad que no termina no puede impedir que se cierre la sesión.
     @Test
     fun `PS202-002 un disco colgado no deja la sesion abierta y la escritura tardia no toca a la cuenta siguiente`() =
@@ -113,6 +142,8 @@ class PushAuditR1Test {
             }
             assertTrue("el cierre de los avisos tiene tope", boundedClose)
             assertTrue(rig.notifications.clears > 0)
+            // RV-3: con la identidad sin soltar y la sesión aún abierta, el aviso viejo tampoco se pinta.
+            assertFalse(rig.presenter.onPush(payload(oldInstall)))
             session.signOutIf("A")
             assertFalse(rig.presenter.onPush(payload(oldInstall)))
 
@@ -120,11 +151,14 @@ class PushAuditR1Test {
             // escrituras pedidas se aplican tarde: ninguna deshace la vinculación de B.
             session.switchTo("B")
             advanceTimeBy(30_000)
+            registrar.refresh()
             runCurrent()
             assertEquals("B", rig.installations.current()?.accountId)
             assertFalse("nunca se pide soltar «cualquier cuenta»", hanging.asked.contains(null))
+            val clearsBefore = rig.notifications.clears
             hanging.gate.complete(Unit)
             runCurrent()
+            assertTrue("la bandeja se vació tras la última escritura tardía", rig.notifications.clears > clearsBefore)
             assertEquals("B", rig.installations.current()?.accountId)
             assertTrue(rig.presenter.onPush(payload(rig.installations.current()?.installId)))
         }
