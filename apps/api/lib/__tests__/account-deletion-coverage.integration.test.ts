@@ -996,6 +996,11 @@ const INVENTARIO_PRODUCTORES: Record<string, ClaseProductor> = {
     n: 1,
     claves: ['amount', 'businessId', 'driverId'],
   },
+  // Pago único del cliente de confianza: el agregado es el pedido (se redacta por `aggregate_id`); el
+  // payload solo lleva estado, intento y ruta de la captura, sin datos de personas.
+  'confirm_delivery_payment|order|OrderPaymentConfirmed': PA(),
+  'register_delivery_payment_proof|order|OrderPaymentProofUploaded': PA(),
+  'reject_delivery_payment_proof|order|OrderPaymentProofRejected': PA(),
   'courier_event_to_outbox|courier_order|CourierStepped': PA(),
   'create_appeal_report|order|order/appeal.created': PA(),
   'create_business_manual_order|order|OrderCreated': PA(),

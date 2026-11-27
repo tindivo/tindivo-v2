@@ -1,3 +1,4 @@
+import { registerDeliveryPaymentProof } from '@tindivo/backend/ordering'
 import { PrepayProofRequestSchema } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
 import { requireRole } from '@/lib/http/auth'
@@ -39,8 +40,14 @@ export async function POST(
     if (error) {
       if (error.code === 'P0002') throw new DomainError('Pedido no encontrado', 'not_found')
       if (error.code === 'P0001') {
-        if (error.hint === 'order_not_awaiting_proof')
+        if (error.hint === 'order_not_awaiting_proof') {
+          // No espera un prepago. Si es el pago único del cliente de confianza (0296), la captura
+          // se registra sin cambiar el estado del pedido y sin los avisos del prepago (los
+          // decide otro cambio); si no, vale la negativa del prepago.
+          const delivery = await registerDeliveryPaymentProof(service, id, user.id, body.path)
+          if (delivery) return ok({ ok: true }, { headers: corsHeaders(req) })
           throw new DomainError(error.message, 'invalid_state_transition')
+        }
         if (error.hint === 'proof_file_missing')
           throw new DomainError(error.message, 'validation_error')
         // Ruta ajena o intentos agotados: lo mismo que respondía antes.

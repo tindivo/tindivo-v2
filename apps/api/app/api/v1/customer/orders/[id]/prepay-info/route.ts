@@ -1,3 +1,4 @@
+import { prepayProofState, prepayTotalText } from '@tindivo/backend/ordering'
 import { DomainError } from '@tindivo/core'
 import { requireRole } from '@/lib/http/auth'
 import { corsHeaders, handleOptions } from '@/lib/http/cors'
@@ -25,7 +26,7 @@ export async function GET(
     const { data: order } = await service
       .from('orders')
       .select(
-        'order_amount,delivery_fee,business_id,customer_user_id,status,comprobante_prepago_url,proof_attempt,updated_at',
+        'order_amount,delivery_fee,business_id,customer_user_id,status,comprobante_prepago_url,proof_attempt,updated_at,payment_intent,delivery_method,payment_proof_status,payment_verified_at',
       )
       .eq('id', id)
       .maybeSingle()
@@ -57,12 +58,17 @@ export async function GET(
         yapeNumber: paymentQr?.accountNumber ?? biz?.yape_number ?? biz?.plin_number ?? null,
         qrUrl: paymentQr?.qrUrl ?? null,
         paymentQr,
+        // `total` sigue siendo número por compatibilidad (invariante 13 lo prohíbe en campos
+        // nuevos); el código nuevo lee `totalText`, que se suma en céntimos enteros.
         total: Number(order.order_amount) + Number(order.delivery_fee),
+        totalText: prepayTotalText(order.order_amount, order.delivery_fee),
+        currency: 'PEN' as const,
         status: order.status,
         hasProof: Boolean(order.comprobante_prepago_url),
         proofAttempt: order.proof_attempt ?? 0,
         comprobantePrepagoUrl: order.comprobante_prepago_url ?? null,
         awaitingPaymentAt: order.updated_at ?? null,
+        ...prepayProofState(order),
       },
       { headers: corsHeaders(req) },
     )

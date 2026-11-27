@@ -13,7 +13,7 @@ export function OPTIONS(req: Request): Response {
 }
 
 const ORDER_COLUMNS =
-  'id,short_id,order_number,status,source,delivery_method,delivery_distance_band,customer_name,customer_phone,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,delivery_coordinates_accuracy_m,delivery_location_confirmed_at,address_directory_id,order_amount,delivery_fee,payment_intent,payment_real,cash_owed_at_delivery,yape_amount,cash_amount,client_pays_with,change_to_give,occupancy_slots,urgent_since,prep_time_minutes,estimated_ready_at,appears_in_queue_at,confirmed_at,preparing_at,waiting_driver_at,heading_at,waiting_at_restaurant_at,picked_up_at,arrived_at_customer_at,arrived_at_customer_lat,arrived_at_customer_lng,arrived_at_customer_accuracy_m,delivered_at,cancelled_at,cancel_reason,customer_notes,business_notes,driver_notes,driver_id,business_id,ready_early_used,created_at' as const
+  'id,short_id,order_number,status,source,delivery_method,delivery_distance_band,customer_name,customer_phone,delivery_address,delivery_reference,delivery_coordinates_lat,delivery_coordinates_lng,delivery_coordinates_accuracy_m,delivery_location_confirmed_at,address_directory_id,order_amount,delivery_fee,payment_intent,payment_real,cash_owed_at_delivery,yape_amount,cash_amount,client_pays_with,change_to_give,occupancy_slots,urgent_since,prep_time_minutes,estimated_ready_at,appears_in_queue_at,confirmed_at,preparing_at,waiting_driver_at,heading_at,waiting_at_restaurant_at,picked_up_at,arrived_at_customer_at,arrived_at_customer_lat,arrived_at_customer_lng,arrived_at_customer_accuracy_m,delivered_at,cancelled_at,cancel_reason,customer_notes,business_notes,driver_notes,driver_id,business_id,ready_early_used,created_at,comprobante_prepago_url,payment_proof_status,payment_verified_at' as const
 
 /**
  * Detalle completo del pedido para el motorizado: order + items con modifiers
@@ -168,6 +168,15 @@ export async function GET(
           // salir ya o esperar. El board ya lo tenía; el detalle no.
           readyEarlyUsed: order.ready_early_used ?? false,
           createdAt: order.created_at,
+          // La captura del pago único (0296): solo el motorizado asignado sabe que existe y en
+          // qué estado está. Nunca la aprueba; la imagen se pide aparte (`prepay-proof`).
+          hasPaymentProof: isMine && order.comprobante_prepago_url !== null,
+          paymentProofStatus: isMine ? order.payment_proof_status : null,
+          paymentVerifiedAt: isMine
+            ? order.payment_verified_at
+              ? new Date(order.payment_verified_at).toISOString()
+              : null
+            : null,
         },
         items: (items ?? []).map((i) => ({
           id: i.id,

@@ -106,6 +106,27 @@ export const PrepayInfoSchema = z.object({
   awaitingPaymentAt: timestampOut.nullable().meta({
     description: 'Hoy es `orders.updated_at`, no el reloj de `awaiting_payment`',
   }),
+  totalText: moneyText.meta({
+    description:
+      'Total (comida + envío) como texto decimal, D-39. `total` sigue siendo número por compatibilidad y no debe usarse en código nuevo',
+  }),
+  currency: z
+    .literal('PEN')
+    .meta({ description: 'Moneda de `totalText` (D-39): siempre soles, `PEN`' }),
+  proofOptional: z.boolean().meta({
+    description:
+      'Verdadero en el pago único del cliente de confianza (`pending_yape`): la captura es opcional y no frena al pedido',
+  }),
+  canUploadProof: z.boolean().meta({
+    description:
+      'Si ahora se puede subir una captura (estado del pedido, ingreso sin confirmar e intentos). Las apps no deben deducirlo de `status`',
+  }),
+  paymentProofStatus: openEnum(PAYMENT_PROOF_STATUSES).nullable().meta({
+    description: 'Estado de la captura según el negocio; null si no hay ninguna',
+  }),
+  paymentVerifiedAt: timestampOut.nullable().meta({
+    description: 'Cuándo el negocio confirmó el ingreso; null si no lo ha confirmado',
+  }),
 })
 
 /** POST /customer/orders/{id}/prepay-proof */

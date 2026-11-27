@@ -145,8 +145,11 @@ export async function seedFraudClaim(amount = 20.0): Promise<SeedResult> {
 //   validation_context -> CHECK (validation_context IN ('antifraud','proof'))
 export interface SeedOrderOptions {
   status?: 'pending_acceptance' | 'awaiting_payment' | 'validando'
-  /** Por defecto 'prepaid'. 'pending_cash' siembra una contraentrega (bloque 3 del barrido). */
-  paymentIntent?: 'prepaid' | 'pending_cash'
+  /**
+   * Por defecto 'prepaid'. 'pending_cash' siembra una contraentrega (bloque 3 del barrido);
+   * 'pending_yape' el pago único del cliente de confianza.
+   */
+  paymentIntent?: 'prepaid' | 'pending_cash' | 'pending_yape'
   paymentProofStatus?: 'pending'
   validationContext?: 'antifraud' | 'proof'
   proofAttempt?: number

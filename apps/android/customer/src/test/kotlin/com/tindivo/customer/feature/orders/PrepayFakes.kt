@@ -51,6 +51,12 @@ internal fun prepayInfo(
     proofAttempt = proofAttempt,
     comprobantePrepagoUrl = null,
     awaitingPaymentAt = awaitingPaymentAt,
+    totalText = "43.50",
+    currency = GetPrepayInfo200ResponseData.Currency.PEN,
+    proofOptional = false,
+    canUploadProof = true,
+    paymentProofStatus = null,
+    paymentVerifiedAt = null,
 )
 
 /**
