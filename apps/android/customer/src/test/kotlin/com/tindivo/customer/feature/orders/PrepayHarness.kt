@@ -22,6 +22,8 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
+import org.junit.rules.Timeout
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -34,6 +36,13 @@ import java.time.ZoneOffset
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class PrepayHarness {
+    /**
+     * Una prueba que se cuelga falla en vez de bloquear la corrida: con el tiempo virtual de `runTest`, una consulta
+     * periódica que nadie cancela avanza sin fin (pasó el 2026-11-27 y dejó una JVM de pruebas colgada).
+     */
+    @get:Rule
+    val hangGuard: Timeout = Timeout.seconds(HANG_GUARD_SECONDS)
+
     protected val dispatcher = StandardTestDispatcher()
     protected lateinit var configService: ConfigService
 
@@ -123,3 +132,5 @@ abstract class PrepayHarness {
         const val PHOTO_B = "content://media/picker/0/foto-b"
     }
 }
+
+private const val HANG_GUARD_SECONDS = 60L
