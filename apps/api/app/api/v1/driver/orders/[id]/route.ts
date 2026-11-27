@@ -168,7 +168,7 @@ export async function GET(
           // salir ya o esperar. El board ya lo tenía; el detalle no.
           readyEarlyUsed: order.ready_early_used ?? false,
           createdAt: order.created_at,
-          // La captura del pago único (0294): solo el motorizado asignado sabe que existe y en
+          // La captura del pago único (0296): solo el motorizado asignado sabe que existe y en
           // qué estado está. Nunca la aprueba; la imagen se pide aparte (`prepay-proof`).
           hasPaymentProof: isMine && order.comprobante_prepago_url !== null,
           paymentProofStatus: isMine ? order.payment_proof_status : null,

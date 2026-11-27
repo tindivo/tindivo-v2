@@ -2,7 +2,7 @@ import { DomainError } from '@tindivo/core'
 import type { TypedSupabaseClient } from '@tindivo/supabase'
 
 /**
- * El pago único del cliente de confianza (0294) habla con SQL por cuatro RPC; aquí solo se
+ * El pago único del cliente de confianza (0296) habla con SQL por cuatro RPC; aquí solo se
  * traducen sus errores. La regla (dueño, estado, intentos, ruta, archivo) vive en SQL y no se
  * copia: `hint` es el contrato interno entre la función y la API (DB-16).
  */

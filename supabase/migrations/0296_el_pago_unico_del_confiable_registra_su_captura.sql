@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0294 · El pago único del cliente de confianza registra su captura y el negocio confirma el ingreso
+-- 0296 · El pago único del cliente de confianza registra su captura y el negocio confirma el ingreso
 -- =============================================================================
 --
 -- QUÉ CAMBIA

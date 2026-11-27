@@ -1,5 +1,5 @@
 /**
- * Pago único del cliente de confianza (0294): `delivery_payment_proof_next_attempt`,
+ * Pago único del cliente de confianza (0296): `delivery_payment_proof_next_attempt`,
  * `register_delivery_payment_proof`, `confirm_delivery_payment` y
  * `reject_delivery_payment_proof`.
  *

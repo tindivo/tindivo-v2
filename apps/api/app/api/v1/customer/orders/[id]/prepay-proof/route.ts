@@ -41,7 +41,7 @@ export async function POST(
       if (error.code === 'P0002') throw new DomainError('Pedido no encontrado', 'not_found')
       if (error.code === 'P0001') {
         if (error.hint === 'order_not_awaiting_proof') {
-          // No espera un prepago. Si es el pago único del cliente de confianza (0294), la captura
+          // No espera un prepago. Si es el pago único del cliente de confianza (0296), la captura
           // se registra sin cambiar el estado del pedido y sin los avisos del prepago (los
           // decide otro cambio); si no, vale la negativa del prepago.
           const delivery = await registerDeliveryPaymentProof(service, id, user.id, body.path)

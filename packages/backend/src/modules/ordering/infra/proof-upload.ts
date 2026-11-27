@@ -24,7 +24,7 @@ export async function nextProofAttempt(
     if (error.code === 'P0002') throw new DomainError('Pedido no encontrado', 'not_found')
     if (error.code === 'P0001') {
       if (error.hint === 'order_not_awaiting_proof') {
-        // No espera un prepago: puede ser el pago único del cliente de confianza (0294), que
+        // No espera un prepago: puede ser el pago único del cliente de confianza (0296), que
         // sube su captura con las mismas rutas. Si tampoco lo es, vale la negativa del prepago.
         const attempt = await deliveryProofNextAttempt(db, orderId, customerUserId)
         if (attempt !== null) return attempt

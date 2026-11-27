@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { PAYMENT_PROOF_STATUSES } from './enums'
 
 /**
- * Pago único del cliente de confianza (0294): lo que el negocio y el motorizado
+ * Pago único del cliente de confianza (0296): lo que el negocio y el motorizado
  * mandan y reciben cuando el cliente paga con «Yape o Plin» un pedido con entrega
  * (`payment_intent = 'pending_yape'`). La captura es opcional y NO frena al pedido;
  * solo el negocio confirma el ingreso.
