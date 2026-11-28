@@ -10,7 +10,7 @@
 | Capacidad | Nombre | Actores | Líneas | Depende de | Dinero | Pantallas | Requisitos | Criterios |
 |---|---|---|---|---|---|---|---|---|
 | [acceso](acceso/capacidad.md) | Acceso, términos y celular | CUS | pedidos-restaurante, entregas | — | no | 3 | 24 | 25 |
-| [bolsa](bolsa/capacidad.md) | Bolsa | CUS | pedidos-restaurante | — | sí | 1 | 15 | 13 |
+| [bolsa](bolsa/capacidad.md) | Bolsa | CUS | pedidos-restaurante | — | sí | 1 | 15 | 16 |
 | [catalogo](catalogo/capacidad.md) | Catálogo y negocio | CUS | pedidos-restaurante | bolsa, direcciones | sí | 3 | 31 | 7 |
 | [checkout](checkout/capacidad.md) | Confirmar pedido | CUS | pedidos-restaurante | bolsa, direcciones, pagos | sí | 1 | 31 | 12 |
 | [cuenta](cuenta/capacidad.md) | Cuenta y borrado de cuenta | CUS | pedidos-restaurante, entregas | acceso, direcciones | no | 1 | 12 | 10 |

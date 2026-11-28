@@ -44,7 +44,7 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
 | CUS-CRT-002 | Cuando se agrega una línea idéntica (mismo plato, mismas opciones en cualquier orden, misma nota recortada), la app debe fusionarla sumando la cantidad. | `apps/customer/lib/cart.ts` · `feature/cart/Cart.kt` | |
 | CUS-CRT-003 | La app debe permitir cambiar la cantidad o quitar una línea; con cantidad 1, «−» quita la línea. Al quedar vacía, la bolsa se reinicia (negocio, validación y método). | Canvas v3.1, tablero «4 · Bolsa» · Decisión de Jesús, 2026-11-18 | |
 | CUS-CRT-004 | La app debe guardar la bolsa en el dispositivo entre sesiones, sin guardar la validación. | `apps/customer/lib/cart.ts` · `feature/cart/CartStore.kt` | |
-| CUS-CRT-005 | Al abrir la bolsa, la app debe validarla contra la carta vigente (plato eliminado, agotado, fuera de franja, precio cambiado) y no dejar continuar hasta que se quiten las líneas inválidas. | `apps/customer/lib/cart-validation.ts` · `getBusiness` | ★ |
+| CUS-CRT-005 | Al abrir la bolsa, la app debe validarla contra la carta vigente (plato eliminado, agotado, fuera de franja, precio cambiado, opción retirada) y no dejar continuar hasta que se quiten las líneas inválidas. Si la carta no responde, «Continuar» no avanza y se ofrece «Reintentar» (decisión de Jesús, 2026-11-26). Si un importe del servidor no se puede mostrar, la línea muestra «—», y mientras haya una línea así el «Subtotal» y la píldora de «Continuar» también muestran «—», nunca un total parcial (decisión de Jesús, 2026-11-27); la línea se puede quitar, la bolsa avisa y no se continúa hasta resolverlo. En la ficha de un plato con un importe así, «Agregar» y «Guardar» se bloquean (decisión de Jesús, 2026-11-26). | `apps/customer/lib/cart-validation.ts` · `getBusiness` | ★ |
 | CUS-CRT-006 | La app debe calcular el subtotal de forma exacta, sin redondear ningún precio; un precio con más de dos decimales se rechaza. | Decisión de Jesús, 2026-11-18 · `feature/cart/Money.kt` | |
 | CUS-CRT-007 | La app debe recordar el método de entrega por bolsa (por defecto delivery) y mostrarlo como etiqueta; se elige en el checkout. | Decisión de Jesús, 2026-11-18 | |
 | CUS-CRT-009 | Cuando «Continuar» no se pueda tocar, la app debe decir por qué. | Incidente del 2026-09-09 · `apps/customer/features/cart/components/cart-ctas.tsx` | |
@@ -73,6 +73,9 @@ reglas: [CART_MAX_LINES, CART_MAX_QUANTITY, CART_MAX_MODIFIERS, checkModifierSel
 | CA-CRT-11 | Dado una línea con opciones, cuando se edita y se guardan otras opciones, entonces la línea cambia en su sitio; si queda idéntica a otra, se fusionan. | CUS-CRT-014, CUS-CRT-002 |
 | CA-CRT-12 | Dado cualquier cambio de cantidad, quitar o deshacer, entonces el monto de «Continuar» es igual al subtotal. | CUS-CRT-015 |
 | CA-CRT-13 | Dado una bolsa con líneas, cuando se toca «Vaciar» y se confirma, entonces queda vacía; si se cancela, no cambia. | CUS-CRT-016 |
+| CA-CRT-14 | Dado que la carta no responde al abrir la bolsa, cuando se toca «Continuar», entonces no avanza y se ofrece «Reintentar»; al responder la carta, la validación se repite. | CUS-CRT-005 |
+| CA-CRT-15 | Dado una bolsa con una línea cuyo importe del servidor no se puede mostrar, cuando se abre la bolsa, entonces esa línea muestra «—» con la etiqueta «Precio no disponible», el «Subtotal» y la píldora de «Continuar» muestran «—», la línea se puede quitar y «Continuar» no avanza mientras siga en la bolsa. | CUS-CRT-005, CUS-CRT-015 |
+| CA-CRT-16 | Dado un plato cuyo importe del servidor no se puede mostrar, cuando se abre su ficha (desde la carta, o con «Editar» desde la bolsa), entonces «Agregar» o «Guardar · —» está bloqueado. | CUS-CRT-005, CUS-CRT-014 |
 
 ## Reglas
 
