@@ -8,7 +8,9 @@ Se suma al `AGENTS.md` raíz. La norma es `Docs/arquitectura/estandares/swift.md
   interfaz de Xcode se pierde en la siguiente generación. Del `.xcodeproj` solo se versiona su `Package.resolved`.
 - **Comandos:** `pnpm ios:gen`, `pnpm ios:build`, `pnpm ios:test` (los dos últimos regeneran antes). Simulador sin
   firma; otro destino con `IOS_DESTINATION`. Herramientas fijadas (XcodeGen y SwiftLint con sha256, swift-openapi-generator
-  con versión exacta en `Tools/Package.swift`) en `~/Library/Caches/tindivo-ios`, compartida entre worktrees.
+  con versión exacta en `Tools/Package.swift`) en `~/Library/Caches/tindivo-ios`, compartida entre worktrees. `tools.sh` vuelve
+  a comprobar el zip y el binario en cada uso (no se fía de la caché). Un workflow que firme o suba a TestFlight **no**
+  restaura esa caché con `actions/cache` (auditoría de #260, CAX-C02).
 - **Estilo (SW-14):** `pnpm ios:lint` corre SwiftLint (`.swiftlint.yml`, sobre las carpetas de `included`, también lo no
   versionado; falla con errores) y `swift format lint --strict` (`.swift-format`, solo lo versionado y no generado; falla si
   el formato no es el suyo); `pnpm ios:format` aplica `swift-format` y reescribe archivos.

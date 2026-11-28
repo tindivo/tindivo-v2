@@ -21,7 +21,9 @@ API="$IOS/Packages/TindivoAPI"
 WORK="$IOS/build/openapi"
 mkdir -p "$WORK"
 node "$ROOT/scripts/ios-openapi-tolerant.mjs" "$API/openapi/v1.json" "$WORK/openapi.json"
-swift run --package-path "$IOS/Tools" --scratch-path "$TINDIVO_IOS_CACHE/tools" \
+# Solo las versiones de Tools/Package.resolved: si el manifiesto y el resolved dejan de coincidir, falla en vez de
+# resolver por red sin avisar (auditoría de #260, CAX-C03; la app ya compila con -onlyUsePackageVersionsFromResolvedFile).
+swift run --force-resolved-versions --package-path "$IOS/Tools" --scratch-path "$TINDIVO_IOS_CACHE/tools" \
   swift-openapi-generator generate "$WORK/openapi.json" \
   --config "$API/openapi-generator-config.yaml" \
   --output-directory "$API/Sources/TindivoAPI/Generated"
