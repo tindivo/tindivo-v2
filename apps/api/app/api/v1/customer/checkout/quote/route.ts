@@ -1,8 +1,14 @@
-import { planQuotePayment } from '@tindivo/backend/ordering'
+import {
+  cents,
+  isExactCentsText,
+  isMoneyNumber,
+  MAX_MONEY,
+  planQuotePayment,
+  quoteDelivery,
+} from '@tindivo/backend/ordering'
 import {
   CheckoutQuoteRequestSchema,
   checkModifierSelection,
-  type DISTANCE_BANDS,
   modifierSelectionMessage,
 } from '@tindivo/contracts'
 import { DomainError } from '@tindivo/core'
@@ -21,8 +27,6 @@ export function OPTIONS(req: Request): Response {
   return handleOptions(req)
 }
 
-/** Soles -> céntimos enteros: la suma no arrastra error de coma flotante. */
-const cents = (soles: number): number => Math.round(soles * 100)
 const text = (c: number): string => (c / 100).toFixed(2)
 
 /**
@@ -166,71 +170,54 @@ export async function POST(req: Request): Promise<Response> {
     })
 
     // ── Envío ────────────────────────────────────────────────────────────────
+    // La misma función que usa la guardia del umbral de `POST /customer/orders`.
     const isDelivery = body.deliveryMethod === 'delivery'
-    let deliveryBand: (typeof DISTANCE_BANDS)[number] | null = null
-    let nominalCents = 0
-    if (isDelivery) {
-      // Sin punto: banda cercana, igual que el checkout web. La creación exige
-      // las coordenadas, así que esto es solo para pintar antes de elegirlas.
-      deliveryBand = 'near'
-      if (body.coordinates) {
-        const { data: band, error } = await service.rpc('delivery_band_for_point', {
-          p_lat: body.coordinates.lat,
-          p_lng: body.coordinates.lng,
-        })
-        if (error) throw new Error(error.message)
-        if (band === 'far') deliveryBand = 'far'
-      }
-      const { data: bandsSetting } = await service
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'delivery_bands')
-        .maybeSingle()
-      const bands = (bandsSetting?.value ?? {}) as Record<string, unknown>
-      const fromBands = Number(bands[deliveryBand])
-      // Mismo orden que `create_customer_order`: banda, tarifa del negocio, S/ 2.00.
-      const fee = Number.isFinite(fromBands)
-        ? fromBands
-        : biz.delivery_fee != null
-          ? Number(biz.delivery_fee)
-          : 2
-      nominalCents = cents(fee)
-    }
-
-    // ── Envío gratis: promo de lanzamiento primero, luego por plato ───────────
-    let freeReason: 'launch_promo' | 'dish' | null = null
-    if (isDelivery && nominalCents > 0) {
-      const { data: promo, error: promoErr } = await asUser.rpc(
-        'current_customer_promo_free_delivery',
-      )
-      if (promoErr) console.error('[checkout/quote] promo de envío:', promoErr.message)
-      else if ((promo as { eligible?: boolean } | null)?.eligible === true) {
-        freeReason = 'launch_promo'
-      }
-      if (!freeReason) {
-        const { data: dish, error: dishRpcErr } = await asUser.rpc('cart_item_free_delivery', {
-          p_business_id: body.businessId,
-          p_item_ids: body.items.map((i) => i.menuItemId),
-        })
-        if (dishRpcErr)
-          console.error('[checkout/quote] envío gratis por plato:', dishRpcErr.message)
-        else if (dish === true) freeReason = 'dish'
-      }
-    }
-    const deliveryCents = freeReason ? 0 : nominalCents
+    const {
+      deliveryBand,
+      nominalCents,
+      freeReason,
+      deliveryCents,
+      reliable: deliveryReliable,
+    } = await quoteDelivery(service, asUser, {
+      businessId: body.businessId,
+      isDelivery,
+      coordinates: body.coordinates,
+      itemIds: body.items.map((i) => i.menuItemId),
+      businessDeliveryFee: biz.delivery_fee,
+      logScope: 'checkout/quote',
+    })
     const totalCents = subtotalCents + deliveryCents
 
     // ── Vuelto máximo y umbral de prepago ────────────────────────────────────
     const { data: settings, error: settingsErr } = await service
       .from('app_settings')
-      .select('key,value')
+      .select('key,value,raw:value::text')
       .in('key', ['prepay_threshold', 'max_change', 'max_cash_bill'])
     // Lectura fallida ≠ clave ausente: con la lectura rota los respaldos (80 / 100)
     // podrían ofrecer más que los ajustes reales, así que `payment` va al lado seguro.
     if (settingsErr) console.error('[checkout/quote] ajustes:', settingsErr.message)
     const setting = (key: string): unknown => settings?.find((s) => s.key === key)?.value
-    const threshold = Number(setting('prepay_threshold') ?? 80)
+    const rawThreshold = setting('prepay_threshold')
+    // El texto crudo (`value::text`) conserva todos los dígitos que `JSON.parse` redondea (CAX-012).
+    const rawThresholdText = settings?.find((s) => s.key === 'prepay_threshold')?.raw
+    const threshold = Number(rawThreshold ?? 80)
+    // La decisión usa los céntimos SIN acotar, igual que develop (CAX-011): subtotal y envío caben cada
+    // uno en numeric(10,2) pero su suma puede pasar de MAX_MONEY, y acotar el umbral cambiaría el resultado.
     const thresholdCents = cents(Number.isFinite(threshold) ? threshold : 80)
+    // Solo el TEXTO se acota, y solo si los céntimos no son un entero seguro (`"1e308"` daría
+    // `Infinity`, CAX-008).
+    const maxCents = cents(MAX_MONEY)
+    const thresholdText = Number.isSafeInteger(thresholdCents)
+      ? text(thresholdCents)
+      : text(thresholdCents < 0 ? -maxCents : maxCents)
+    // CAX-010: `prepaid` solo se retira si todo lo que decide el umbral es cierto para JavaScript: la
+    // tarifa del envío y un umbral ausente, null o con céntimos completos. Un umbral como `"+0x10"`
+    // (JavaScript usa 80, SQL 16) o `49.995` (JavaScript redondea) deja la decisión a SQL.
+    const amountsCertain =
+      deliveryReliable &&
+      (rawThreshold === undefined ||
+        rawThreshold === null ||
+        (isMoneyNumber(rawThreshold) && isExactCentsText(rawThresholdText)))
 
     const { data: change, error: changeErr } = await asUser.rpc('effective_max_change', {
       p_business_id: body.businessId,
@@ -255,6 +242,8 @@ export async function POST(req: Request): Promise<Response> {
       deliveryMethod: body.deliveryMethod,
       pickupTiming: body.pickupTiming ?? null,
       contraentregaAllowed: decisionErr === null && decision !== 'risk_blocked',
+      customerTrusted: decisionErr === null && decision === 'trusted',
+      amountsCertain,
       settingsReliable: settingsErr === null && changeErr === null,
       exceedsPrepayThreshold: totalCents > thresholdCents,
       // Mismo respaldo que `create_customer_order`: S/ 100 si el ajuste falta.
@@ -274,7 +263,7 @@ export async function POST(req: Request): Promise<Response> {
         freeDelivery: { applies: freeReason !== null, reason: freeReason },
         total: text(totalCents),
         maxChange: maxChangeText,
-        prepayThreshold: text(thresholdCents),
+        prepayThreshold: thresholdText,
         exceedsPrepayThreshold: totalCents > thresholdCents,
         payment,
       },
