@@ -12,6 +12,7 @@
       "!**/database.types.ts",
       "!packages/contracts/openapi",
       "!apps/android",
+      "!apps/ios",
       "!**/brand-assets.ts",
       "!**/next-env.d.ts",
       "!**/*.css",
