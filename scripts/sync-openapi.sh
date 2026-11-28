@@ -9,9 +9,9 @@ ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
 SRC="packages/contracts/openapi/v1.json"
-# El nombre del archivo en iOS sigue la documentación de swift-openapi-generator: verificar al montarlo.
+# En iOS la copia fiel vive fuera de Sources/: el generador lee el documento tolerante que deriva apps/ios/scripts/gen.sh (SW-7).
 TARGETS=(
-  "apps/ios/Packages/TindivoAPI/Sources/TindivoAPI/openapi.json"
+  "apps/ios/Packages/TindivoAPI/openapi/v1.json"
   "apps/android/core/network/openapi/v1.json"
 )
 

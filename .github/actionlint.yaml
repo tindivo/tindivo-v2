@@ -1,0 +1,10 @@
+# actionlint (CI: «Docs · referencias a git · shellcheck · actionlint», versión fijada en ci.yml).
+#
+# `xcode-27` NO es un runner propio: es la etiqueta oficial del runner alojado de GitHub con la imagen de Xcode 27
+# (macOS arm64), en disponibilidad general desde octubre de 2026
+# (https://github.blog/changelog/2026-10-16-xcode-27-runner-image-generally-available/). actionlint 1.7.7 es anterior
+# y no la conoce; la única forma de declararla es esta lista. No hay ningún runner self-hosted en el repo: si se agrega
+# una etiqueta aquí, tiene que ser de un runner alojado, con su fuente.
+self-hosted-runner:
+  labels:
+    - xcode-27

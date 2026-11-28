@@ -1,0 +1,11 @@
+// Staging. Mismos valores que la variante dev de Android (apps/android/customer/build.gradle.kts).
+// Nada de aquí es secreto: la clave publicable de Supabase va en el cliente por diseño (SW-15).
+// En un .xcconfig `//` abre comentario: las URL se escriben `https:/$()/host`.
+APP_BUNDLE_ID = com.tindivo.customer.dev
+APP_DISPLAY_NAME = Tindivo Dev
+API_BASE_URL = https:/$()/tindivo-api-staging.vercel.app/api/v1
+SUPABASE_URL = https:/$()/jgziumvrtogguljhpdos.supabase.co
+SUPABASE_PUBLISHABLE_KEY = sb_publishable_PXkU-RVUbJmzcg2uJRoHXA_nl02PVBd
+// Id numérico de la ficha en la App Store (solo dígitos). Vacío hasta crear la ficha: la pantalla de actualización
+// obligatoria deja su botón deshabilitado mientras esté vacío.
+APP_STORE_ID =

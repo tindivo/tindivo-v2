@@ -15,7 +15,7 @@ Una app por actor, nativa en cada plataforma (Jesús, 2026-11-17). Todas hablan 
 
 | Actor | Hoy | Hasta fin de 2026 |
 |---|---|---|
-| Cliente | `apps/android` (módulo `:customer`) y `apps/customer` (web, se apagará: D-27) | Android + iOS (sin carpeta aún) |
+| Cliente | `apps/android` (módulo `:customer`), `apps/ios` (en construcción) y `apps/customer` (web, se apagará: D-27) | Android + iOS |
 | Negocio | `apps/negocios` (web) | web + Android |
 | Admin y motorizado | `apps/admin`, `apps/motorizados` (web) | web; a móvil en 2027 |
 
@@ -47,6 +47,7 @@ anidados. Todos deben seguir este mapa, independientemente de la carga automáti
 | `e2e/` (Playwright) | `e2e/AGENTS.md` |
 | código de una capacidad que ya tiene `Docs/producto/<capacidad>/` | su `capacidad.md`, bloque «Antes de tocar» |
 | `apps/android/` | `Docs/arquitectura/estandares/kotlin.md` y las trampas de Android en `Docs/operacion/trampas.md` |
+| `apps/ios/` | `apps/ios/AGENTS.md` y `Docs/arquitectura/estandares/swift.md` |
 | un encargo para Codex, retomar su auditoría o cerrar o integrar lo que auditó | `Docs/operacion/codex-auditor.md`, entero |
 | un encargo para Antigravity | `Docs/operacion/antigravity-worker.md`, entero |
 

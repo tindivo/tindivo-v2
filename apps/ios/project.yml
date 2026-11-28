@@ -1,0 +1,110 @@
+# Proyecto Xcode de la app iOS del cliente. El .xcodeproj se GENERA desde aquí con XcodeGen (versión fijada en
+# scripts/tools.sh) y no se versiona, salvo su Package.resolved. Regenerar: apps/ios/scripts/gen.sh (pnpm ios:gen).
+name: TindivoCustomer
+options:
+  minimumXcodeGenVersion: 2.46.0
+  developmentLanguage: es
+  deploymentTarget: { iOS: "17.0" }
+  createIntermediateGroups: true
+  defaultConfig: Release-Prod
+# Como KT-15 en Android: no existe «prod en debug».
+configs:
+  Debug-Dev: debug
+  Release-Dev: release
+  Release-Prod: release
+configFiles:
+  Debug-Dev: TindivoCustomer/Config/Dev.xcconfig
+  Release-Dev: TindivoCustomer/Config/Dev.xcconfig
+  Release-Prod: TindivoCustomer/Config/Prod.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1 # la CI lo sobrescribe (SW-15)
+    DEVELOPMENT_TEAM: ""
+packages:
+  TindivoAPI: { path: Packages/TindivoAPI }
+  TindivoDesign: { path: Packages/TindivoDesign }
+targets:
+  TindivoCustomer:
+    type: application
+    platform: iOS
+    sources:
+      - path: TindivoCustomer
+        excludes: [Info.plist]
+    dependencies:
+      - package: TindivoAPI
+      - package: TindivoDesign
+    info:
+      path: TindivoCustomer/Info.plist # generado; no se versiona
+      properties:
+        CFBundleDisplayName: $(APP_DISPLAY_NAME)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: es
+        UILaunchScreen: { UIColorName: LaunchBackground } # generado desde los tokens (scripts/ios-colorsets.mjs)
+        ITSAppUsesNonExemptEncryption: false # solo HTTPS del sistema
+        UIUserInterfaceStyle: Light # el canon solo define tema claro
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        TindivoAPIBaseURL: $(API_BASE_URL)
+        TindivoSupabaseURL: $(SUPABASE_URL)
+        TindivoSupabasePublishableKey: $(SUPABASE_PUBLISHABLE_KEY)
+        TindivoAppStoreID: $(APP_STORE_ID)
+    # Antes de publicar en Prod, APP_STORE_ID debe tener el id de la ficha. Hoy no existe y el build Prod debe seguir
+    # compilando en CI, así que es un AVISO (warning), no un error. Cuando exista el id, cambiar `warning:` por `error:`.
+    preBuildScripts:
+      - name: Comprobar APP_STORE_ID
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ -z "$APP_STORE_ID" ] && [ "$CONFIGURATION" = "Release-Prod" ]; then
+            echo "warning: APP_STORE_ID está vacío en Prod.xcconfig: la pantalla de actualización obligatoria no tiene adónde mandar. Pon el id de la ficha antes de publicar."
+          fi
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
+        TARGETED_DEVICE_FAMILY: "1" # solo iPhone
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  TindivoCustomerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [{ path: TindivoCustomerTests }]
+    dependencies: [{ target: TindivoCustomer }]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tests
+  # SW-13: el flujo crítico contra staging. Solo corre con el esquema Dev (Prod no tiene destino de pruebas).
+  TindivoCustomerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [{ path: TindivoCustomerUITests }]
+    dependencies: [{ target: TindivoCustomer }]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).uitests
+        TEST_TARGET_NAME: TindivoCustomer
+schemes:
+  TindivoCustomer-Dev:
+    build: { targets: { TindivoCustomer: all, TindivoCustomerTests: [test], TindivoCustomerUITests: [test] } }
+    run: { config: Debug-Dev }
+    test:
+      config: Debug-Dev
+      targets:
+        - TindivoCustomerTests
+        - TindivoCustomerUITests
+        - package: TindivoAPI/TindivoAPITests
+        - package: TindivoDesign/TindivoDesignTests
+    profile: { config: Release-Dev }
+    analyze: { config: Debug-Dev }
+    archive: { config: Release-Dev }
+  TindivoCustomer-Prod:
+    build: { targets: { TindivoCustomer: all } }
+    run: { config: Release-Prod }
+    profile: { config: Release-Prod }
+    analyze: { config: Release-Prod }
+    archive: { config: Release-Prod }
