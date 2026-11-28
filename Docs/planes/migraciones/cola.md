@@ -84,6 +84,16 @@ mientras se construye el resto.
 - `db:types` contra prod destapó que `database.types.ts` estaba atrasado (le faltaban 59 líneas de 0256, 0259, 0263 y 0264). El PR #68 que lo corregía chocó con la pila que entró después; se cierra y los tipos se regeneran contra prod cuando esté en la `0271`. Los advisors no muestran avisos nuevos inesperados.
 - Lo que no se comprobó en el smoke: un pedido real con comprobante, la subida de un PDF o de más de 15 MB (el bucket quedó así configurado), la apertura del día con sesión y el push real (C7).
 
+## Auditorías de contingencia pendientes de Codex
+
+- [!] **[PENDIENTE_AUDITORIA_CODEX_POST_CUOTA]** · PR #258 (canon de la bolsa, solo `Docs/producto/bolsa/` y el índice).
+  Auditado por un subagente Claude Opus con esfuerzo high, no por Codex, por decisión de Jesús del 2026-11-27 («al menos en
+  esta sesión las auditorías la haga opus high»); no hubo error de cuota. Ronda 2: `firmo` sobre `cb276682`, 0 condiciones;
+  la Ronda 3 revalida la integración con `develop`. Excepción aprobada por Jesús el 2026-11-27 (§10 de
+  `Docs/operacion/codex-auditor.md`): estado `EXCEPCION_HUMANA_SIN_CODEX`. Expediente:
+  `tindivo-auditorias/2026-11-27-bolsa-decisiones-pr258/`. Lo desbloquea: que Codex audite lo integrado y firme.
+  Responsable del seguimiento: Jesús.
+
 ## Para retomar (sesión nueva) — 2026-10-11 (los puntos 2 y 3 están superados: el estado vigente es el de las casillas de arriba)
 
 Nada depende de una conversación: todo está en el repo.
