@@ -12,7 +12,7 @@ func cartBar(for cart: Cart?, businessId: String) -> CartBarSummary? {
     guard let cart, !cart.isEmpty, cart.businessId.caseInsensitiveCompare(businessId) == .orderedSame else {
         return nil
     }
-    return CartBarSummary(count: cart.count, subtotal: displayAmount(cart.subtotal))
+    return CartBarSummary(count: cart.count, subtotal: displaySubtotal(of: cart))
 }
 
 /// «3 unidades» / «1 unidad»: el plural lo decide el catálogo de cadenas (variaciones de plural).

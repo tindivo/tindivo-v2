@@ -547,7 +547,7 @@ extension CartScreenModel {
                         imageURL: line.imageURL
                     )
                 },
-                subtotal: displayAmount(cart.subtotal),
+                subtotal: displaySubtotal(of: cart),
                 amountsAreValid: formatAmount(cart.subtotal) != nil
                     && cart.lines.allSatisfy { formatAmount($0.total) != nil },
                 method: cart.method,

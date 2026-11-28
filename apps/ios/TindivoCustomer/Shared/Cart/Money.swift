@@ -51,6 +51,14 @@ func displayAmount(_ amount: Decimal) -> String {
     formatAmount(amount) ?? invalidAmountText
 }
 
+/// El subtotal de la bolsa tal como se muestra (CA-CRT-15; decisión de Jesús, 2026-11-27): «—» si el total de alguna
+/// línea, o la suma, no se puede mostrar. Nunca un total parcial, aunque la suma de líneas rotas dé un número que «se
+/// puede mostrar» (0.005 + 0.005 = 0.01). No cambia ningún cálculo: el subtotal sigue siendo la suma exacta.
+func displaySubtotal(of cart: Cart) -> String {
+    guard cart.lines.allSatisfy({ formatAmount($0.total) != nil }) else { return invalidAmountText }
+    return displayAmount(cart.subtotal)
+}
+
 /// `S/ 12.50` en soles de Perú (SW-8).
 func formatSoles(_ exact: Decimal) -> String {
     Money.format(exact)

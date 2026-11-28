@@ -16,6 +16,42 @@ struct AmountDisplayTests {
         #expect(spokenAmountText("Agregar · —") == "Agregar · Precio no disponible")
     }
 
+    private func cartLine(_ id: String, price: String, quantity: Int = 1) -> CartLine {
+        CartLine(
+            itemId: id, name: "Plato \(id)", basePrice: dec(price), modifiers: [], note: nil, quantity: quantity,
+            imageURL: nil)
+    }
+
+    @Test("CA-CRT-15 con una línea en «—» el subtotal también es «—», aunque la suma dé un número que se puede mostrar")
+    func subtotalWithABrokenLine() {
+        // 0.005 + 0.005 = 0.01: la suma «se puede mostrar», pero cada línea es un dato roto (decisión de Jesús, 2026-11-27).
+        let broken = Cart(
+            businessId: "negocio-1", businessName: "N",
+            lines: [cartLine("a", price: "0.005"), cartLine("b", price: "0.005")])
+        #expect(displaySubtotal(of: broken) == invalidAmountText)
+        let mixed = Cart(
+            businessId: "negocio-1", businessName: "N",
+            lines: [cartLine("a", price: "12.50"), cartLine("b", price: "0.005")])
+        #expect(displaySubtotal(of: mixed) == invalidAmountText)
+    }
+
+    @Test("CUS-CRT-015 sin líneas rotas el subtotal es la suma exacta, igual que antes")
+    func subtotalWithValidLines() {
+        let cart = Cart(
+            businessId: "negocio-1", businessName: "N",
+            lines: [cartLine("a", price: "12.50", quantity: 2), cartLine("b", price: "5.00")])
+        #expect(displaySubtotal(of: cart) == displayAmount(dec("30.00")))
+    }
+
+    @Test("CA-CRT-15 la barra «Ver bolsa» de la carta tampoco muestra un total parcial")
+    func cartBarWithABrokenLine() throws {
+        let broken = Cart(
+            businessId: "negocio-1", businessName: "N",
+            lines: [cartLine("a", price: "0.005"), cartLine("b", price: "0.005")])
+        let bar = try #require(cartBar(for: broken, businessId: "negocio-1"))
+        #expect(bar.subtotal == invalidAmountText)
+    }
+
     /// La carta ya descarta los precios rotos: para probar el dato roto se arma el plato a mano.
     private func store(price: String) -> DishScreenModel {
         let dish = Dish(id: "i1", name: "Plato", basePrice: dec(price), imageURL: nil, groups: [])
