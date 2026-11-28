@@ -93,6 +93,13 @@ mientras se construye el resto.
   `Docs/operacion/codex-auditor.md`): estado `EXCEPCION_HUMANA_SIN_CODEX`. Expediente:
   `tindivo-auditorias/2026-11-27-bolsa-decisiones-pr258/`. Lo desbloquea: que Codex audite lo integrado y firme.
   Responsable del seguimiento: Jesús.
+- [!] **[PENDIENTE_AUDITORIA_CODEX_POST_CUOTA]** · PR #260 (app iOS del cliente, fase 0 y 1). Codex sin cuota (declaración
+  de Jesús, 2026-11-27): auditado en contingencia §10 por tres subagentes Claude Opus con esfuerzo high, en partes
+  (dinero, seguridad y configuración, control y CI). Ronda 3 (última): `firmo` en las tres sobre `17fbb3d8`, 0
+  condiciones. Estado al integrar: `EXCEPCION_HUMANA_SIN_CODEX`, solo con aprobación de Jesús para ese commit exacto.
+  Tarea posterior (CAX-C01): correr `ios.yml` por `workflow_dispatch` cuando llegue a `main`, guardar el enlace del run
+  verde y borrar el puente de `scripts/generate-mobile-models.mjs`. Expediente: `tindivo-auditorias/2026-11-28-ios-fase1-pr260/`.
+  Lo desbloquea: que Codex audite lo integrado y firme. Responsable del seguimiento: Jesús.
 
 ## Para retomar (sesión nueva) — 2026-10-11 (los puntos 2 y 3 están superados: el estado vigente es el de las casillas de arriba)
 
