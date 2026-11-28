@@ -37,7 +37,7 @@ codigo:
 | Validando | La bolsa se ve; «Continuar» dice «Cargando…» hasta que responde la carta | CUS-CRT-005, CUS-CRT-009 |
 | Línea inválida | Aviso en la línea con el texto de `bolsa.linea.*` (plato eliminado, agotado, precio cambiado, fuera de franja, opción retirada) y «Continuar» no avanza | CUS-CRT-005, CA-CRT-05 |
 | Carta no responde | «Continuar» no avanza y dice «Reintentar»; al tocarlo se vuelve a pedir la carta. Aviso: `bolsa.carta.no_responde` (se anuncia al aparecer y otra vez si el reintento vuelve a fallar) | CUS-CRT-005 |
-| Importe no mostrable | Un importe roto del servidor se muestra «—» con la etiqueta hablada «Precio no disponible»; «Agregar» y, al editar, «Guardar · —» se bloquean; la línea se puede quitar y «Continuar» no avanza mientras esté. Aviso en la línea: `bolsa.linea.importe_no_mostrable`; aviso en la bolsa: `bolsa.importe_no_mostrable` | CUS-CRT-005, CA-CRT-15 |
+| Importe no mostrable | Un importe roto del servidor se muestra «—» con la etiqueta hablada «Precio no disponible». Mientras haya una línea así, el «Subtotal» y la píldora de «Continuar» también muestran «—» (nunca un total parcial); la línea se puede quitar y «Continuar» no avanza. Aviso en la línea: `bolsa.linea.importe_no_mostrable`; aviso en la bolsa: `bolsa.importe_no_mostrable`. En la ficha del plato, «Agregar» y, al editar, «Guardar · —» se bloquean | CUS-CRT-005, CA-CRT-15, CA-CRT-16 |
 | Editar un plato no disponible | Al tocar «Editar» en una línea agotada o fuera de franja, se avisa: `bolsa.editar.no_disponible` | CUS-CRT-005, CUS-CRT-014 |
 | Negocio cerrado | «Continuar» dice «El restaurante está cerrado ahora» | CUS-CRT-009, CA-CRT-07 |
 | Negocio en modo catálogo | Una bolsa guardada de un negocio que pasó a modo catálogo: «Continuar» no avanza y dice `bolsa.continuar.solo_whatsapp`; la bolsa se puede vaciar (decisión de Jesús, 2026-11-27). Va antes que «cerrado»: el modo catálogo no depende del horario | CUS-CRT-009, CUS-CAT-015 |
@@ -90,5 +90,7 @@ Los de la cabecera; el catálogo (`packages/copy`) los tomará de aquí cuando e
 ## Decisiones de Jesús del 2026-11-27
 
 - **«Vaciar»** va al final de la lista, como en Android v3.1; ya no está en la barra fija.
+- **Importe no mostrable y totales:** mientras haya una línea con «—», el «Subtotal» y la píldora de «Continuar» también
+  muestran «—»; nunca un total parcial.
 - **Negocio en modo catálogo:** una bolsa guardada no avanza; «Continuar» dice «Este restaurante solo recibe pedidos por
   WhatsApp» (`bolsa.continuar.solo_whatsapp`).
