@@ -54,7 +54,7 @@ extension TindivoBottomBar where Leading == EmptyView {
         .safeAreaInset(edge: .bottom) {
             TindivoBottomBar {
                 TindivoStepper(
-                    style: .pill, quantity: 2, label: "Cantidad", canDecrease: true, canIncrease: true,
+                    style: .filledPill, quantity: 2, label: "Cantidad", canDecrease: true, canIncrease: true,
                     decreaseLabel: "Una menos", increaseLabel: "Una más", onDecrease: {}, onIncrease: {}
                 )
             } content: {

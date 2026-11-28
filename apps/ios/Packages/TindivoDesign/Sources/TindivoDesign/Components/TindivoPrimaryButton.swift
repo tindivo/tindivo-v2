@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// El CTA de la pantalla: relleno `primary`, 56 pt de alto, texto `cta` en blanco y sombra `elevation3` (canon §2–§5).
-/// El texto es `cta` (18 pt, negrita): blanco sobre `#EE6417` da 3,25:1 y solo cuenta como texto grande si va en negrita
-/// y a 14 pt o más (decisión de Jesús, 2026-11-22; HIG, tabla de contraste: negrita, 3:1). Por eso no se encoge: con
-/// letra grande pasa a dos líneas en un rectángulo redondeado.
+/// El CTA de la pantalla, como el `TindivoPrimaryButton` de Android: relleno `primaryText` (`#C2410C`), 56 pt de alto y
+/// texto `cta` en blanco, sin sombra; al pulsar, `onPrimaryContainer` (`#9A3412`, el `primaryPressed` de Android). Es el
+/// mismo color de «Ver bolsa» y «Continuar» (decisión de Jesús, 2026-11-27). Blanco sobre `#C2410C` da 5,2:1. El
+/// texto es `cta` (18 pt, negrita) y no se encoge: con letra grande pasa a dos líneas en un rectángulo redondeado.
 ///
 /// Mientras `loading` es `true`, el botón deja de responder pero conserva su color, y VoiceOver sigue leyendo la
 /// etiqueta y anuncia que está en curso: una segunda pulsación no repite la acción (paridad con Android).
@@ -81,12 +81,11 @@ public struct TindivoCTAButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
         let fill =
             enabled
-            ? (configuration.isPressed ? Color.tindivo.primaryPressed : Color.tindivo.primary)
+            ? (configuration.isPressed ? Color.tindivo.onPrimaryContainer : Color.tindivo.primaryText)
             : Color.tindivo.disabled
         configuration.label
             .foregroundStyle(enabled ? Color.tindivo.onPrimary : Color.tindivo.onDisabled)
             .background(fill, in: shape)
-            .tindivoElevation(enabled ? TindivoTokens.Elevation.elevation3 : [])
             .contentShape(shape)
     }
 }

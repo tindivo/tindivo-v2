@@ -170,6 +170,32 @@ struct DishRequirementsTests {
         #expect(model.statusText(for: groups[2]) == "Opcional")
     }
 
+    @Test("CUS-CAT-033 la ayuda bajo el título: «Elige N», «Elige N · hasta M», «Hasta M»")
+    func groupHint() throws {
+        let model = try model()
+        let groups = model.item.dish.groups
+        #expect(model.hint(for: groups[0]) == "Elige 1")
+        try choose("papas", in: model)
+        #expect(model.hint(for: groups[0]) == "Elige 1", "resuelto, la ayuda sigue: lo que cambia es la píldora")
+        #expect(model.hint(for: groups[2]) == "Hasta 1", "un opcional de una sola elección también lo dice")
+        let raw = Fixture.item(
+            "i1",
+            groups: [
+                Fixture.group("tope", max: 3, options: [Fixture.option("a"), Fixture.option("b")]),
+                Fixture.group("sin-tope", options: [Fixture.option("x")]),
+                Fixture.group("sin-tope-obl", required: true, min: 2, options: [Fixture.option("p")]),
+                Fixture.group("dos-tres", required: true, min: 2, max: 3, options: [Fixture.option("q")]),
+                Fixture.group("dos-dos", required: true, min: 2, max: 2, options: [Fixture.option("r")]),
+            ])
+        let multi = try self.model(raw)
+        let gs = multi.item.dish.groups
+        #expect(multi.hint(for: gs[0]) == "Hasta 3")
+        #expect(multi.hint(for: gs[1]) == nil, "opcional sin tope: nada que decir")
+        #expect(multi.hint(for: gs[2]) == "Elige 2", "obligatorio de varias sin tope")
+        #expect(multi.hint(for: gs[3]) == "Elige 2 · hasta 3")
+        #expect(multi.hint(for: gs[4]) == "Elige 2", "mínimo igual al máximo: no se repite")
+    }
+
     @Test("M3 los contadores se leen en voz alta con palabras: «2 de 3 elegidas», «12 de 140 caracteres»")
     func spokenCounters() throws {
         let raw = Fixture.item(
@@ -183,9 +209,8 @@ struct DishRequirementsTests {
         let groups = model.item.dish.groups
         try choose("a", in: model)
         try choose("b", in: model)
-        #expect(model.counter(for: groups[0])?.text == "2/3")
-        #expect(model.counter(for: groups[0])?.spoken == "2 de 3 elegidas")
-        #expect(model.counter(for: groups[1]) == nil, "un grupo sin tope no enseña «2/∞»")
+        #expect(model.spokenCount(for: groups[0]) == "2 de 3 elegidas")
+        #expect(model.spokenCount(for: groups[1]) == nil, "un grupo sin tope no dice «2 de ∞»")
         model.setNote("sin cebolla")
         #expect(model.noteCounter.text == "11/\(CartLimits.maxNoteLength)")
         #expect(model.noteCounter.spoken == "11 de \(CartLimits.maxNoteLength) caracteres")

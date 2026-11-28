@@ -23,43 +23,27 @@ struct DishView: View {
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     @AccessibilityFocusState private var focusedGroup: String?
+    /// Cuánto se ha bajado la ficha, para volver sólida la barra de arriba (como `rememberBarProgress` de Android).
+    @State private var scrolled: CGFloat = 0
+
+    /// Alto de la foto, sin contar la barra de estado, que queda bajo ella (`DISH_PHOTO_HEIGHT` de Android).
+    private static let photoHeight: CGFloat = 220
+    private static let scrollSpace = "dish.scroll"
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        header
-                        ForEach(model.item.dish.groups, id: \.id) { group in
-                            DishGroupSection(group: group, model: model, focus: $focusedGroup)
-                        }
-                        note
-                        quantity
-                    }
-                    .padding(.bottom, TindivoTokens.Spacing.spaceScreen)
-                }
-                .scrollDismissesKeyboard(.interactively)
-                // «Elige [grupo]»: lleva la vista al primer grupo que falta (el resaltado lo pone el propio grupo).
-                .onChange(of: model.attention) { _, attention in
-                    guard let attention else { return }
-                    focusedGroup = attention.groupID
-                    if let message = model.attentionAnnouncement {
-                        AccessibilityNotification.Announcement(message).post()
-                    }
-                    if reduceMotion {
-                        proxy.scrollTo(attention.groupID, anchor: .top)
-                    } else {
-                        withAnimation { proxy.scrollTo(attention.groupID, anchor: .top) }
-                    }
-                }
+            ZStack(alignment: .top) {
+                scroll
+                DishTopBar(name: model.item.name, progress: barProgress, onBack: onClose)
+                    .accessibilitySortPriority(1)
             }
-            addBar
+            bottomBar
         }
         .background(Color.tindivo.background)
-        .overlay(alignment: .topTrailing) { closeButton }
         .tindivoToast(model.notices.message)
-        // El gesto de escape de VoiceOver (dos dedos en «Z») cierra la ficha, como el botón «Cerrar».
+        // El gesto de escape de VoiceOver (dos dedos en «Z») cierra la ficha, como el botón «Volver».
         .accessibilityAction(.escape, onClose)
         .replaceBagAlert(
             model.replacement, onKeep: model.keepCurrentBag, onReplace: { model.confirmReplace() }
@@ -75,39 +59,120 @@ struct DishView: View {
 
     // MARK: Piezas
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Con o sin foto el recuadro está: sin foto se ve el isotipo sobre `#FFF7ED` (CUS-CAT-007).
-            TindivoAsyncImage(url: model.item.heroURL)
-                .frame(maxWidth: .infinity)
-                .frame(height: 220)
-            Group {
-                Text(model.item.name)
-                    .tindivoText(TindivoTokens.Typography.titleScreen)
-                    .foregroundStyle(Color.tindivo.ink)
-                    .accessibilityAddTraits(.isHeader)
-                if let description = model.item.description {
-                    Text(description)
-                        .tindivoText(TindivoTokens.Typography.body)
-                        .foregroundStyle(Color.tindivo.inkSecondary)
-                }
-                Text(model.item.priceText)
-                    .tindivoText(TindivoTokens.Typography.titleSection)
-                    .monospacedDigit()
-                    .fixedSize(horizontal: false, vertical: true)
-                    .foregroundStyle(Color.tindivo.ink)
-                badges
-                if let progress = model.progressText {
-                    Text(progress)
-                        .tindivoText(TindivoTokens.Typography.body)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.tindivo.ink)
-                        .padding(.top, 4)
-                        .accessibilityIdentifier("dish.progress")
+    /// 0 con la foto a la vista, 1 con la barra ya sólida: de 108 a 164 de scroll, como en Android.
+    private var barProgress: Double {
+        let end = Self.photoHeight - DishTopBar.height
+        let range = DishTopBar.height
+        return Double(min(max((scrolled - (end - range)) / range, 0), 1))
+    }
+
+    private var scroll: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    photo
+                        .onGeometryChange(for: CGFloat.self) {
+                            -$0.frame(in: .named(Self.scrollSpace)).minY
+                        } action: {
+                            scrolled = $0
+                        }
+                    VStack(alignment: .leading, spacing: TindivoTokens.Spacing.spaceScreen) {
+                        header
+                        ForEach(model.item.dish.groups, id: \.id) { group in
+                            DishGroupSection(group: group, model: model, focus: $focusedGroup)
+                        }
+                        DishNoteField(model: model)
+                    }
+                    .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
+                    .padding(.bottom, TindivoTokens.Spacing.spaceScreen)
                 }
             }
-            .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
-            .padding(.top, 4)
+            // La foto llega hasta el borde de arriba, bajo la barra de estado.
+            .ignoresSafeArea(edges: .top)
+            .scrollDismissesKeyboard(.interactively)
+            .coordinateSpace(name: Self.scrollSpace)
+            // «Elige [grupo]»: lleva la vista al primer grupo que falta, justo bajo la barra de arriba: cada grupo
+            // trae un marcador de alto cero puesto más arriba lo que mide la barra (el resaltado lo pone el grupo).
+            .onChange(of: model.attention) { _, attention in
+                guard let attention else { return }
+                focusedGroup = attention.groupID
+                if let message = model.attentionAnnouncement {
+                    AccessibilityNotification.Announcement(message).post()
+                }
+                let target = DishGroupSection.anchorID(attention.groupID)
+                if reduceMotion {
+                    proxy.scrollTo(target, anchor: .top)
+                } else {
+                    withAnimation { proxy.scrollTo(target, anchor: .top) }
+                }
+            }
+        }
+    }
+
+    /// Con o sin foto el recuadro está: sin foto se ve el isotipo sobre `#FFF7ED` (CUS-CAT-007). El velo de arriba
+    /// deja ver los iconos de la barra de estado y el botón.
+    private var photo: some View {
+        let top = ScreenInsets.top
+        return TindivoAsyncImage(url: model.item.heroURL)
+            .frame(maxWidth: .infinity)
+            .frame(height: Self.photoHeight + top)
+            .overlay(alignment: .top) {
+                // El velo solo va sobre una foto real: sobre el isotipo en crema ensuciaría la marca.
+                if model.item.heroURL != nil {
+                    LinearGradient(colors: [.black.opacity(0.35), .clear], startPoint: .top, endPoint: .bottom)
+                        .frame(height: top + 24)
+                        .allowsHitTesting(false)
+                }
+            }
+            .clipped()
+    }
+
+    /// Nombre, descripción y precio en color de marca, con la píldora de avance de lo obligatorio.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(model.item.name)
+                .tindivoText(TindivoTokens.Typography.titleScreen)
+                .foregroundStyle(Color.tindivo.ink)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.top, 16)
+            if let description = model.item.description {
+                Text(description)
+                    .tindivoText(TypeToken.bodyLarge)
+                    .foregroundStyle(Color.tindivo.inkSecondary)
+            }
+            priceAndProgress
+                .padding(.top, 4)
+            badges
+        }
+        .padding(.horizontal, 4)
+    }
+
+    /// El precio y «N de M listas» en una fila; con letra grande, uno sobre otro.
+    private var priceAndProgress: some View {
+        let price = Text(model.item.priceText.replacingOccurrences(of: "S/ ", with: "S/\u{00A0}"))
+            .tindivoText(TypeToken.greeting)
+            .monospacedDigit()
+            .fixedSize(horizontal: false, vertical: true)
+            .foregroundStyle(Color.tindivo.primaryText)
+            .amountAccessibility(model.item.priceText)
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                price
+                Spacer(minLength: 8)
+                progressPill
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                price
+                progressPill
+            }
+        }
+    }
+
+    @ViewBuilder private var progressPill: some View {
+        if let progress = model.progressText {
+            TindivoStatusPill(progress, tone: .brand)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("dish.progress")
         }
     }
 
@@ -124,79 +189,50 @@ struct DishView: View {
         }
     }
 
-    private var note: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Nota (opcional)")
-                .tindivoText(TindivoTokens.Typography.titleSection)
-                .foregroundStyle(Color.tindivo.ink)
-            TextField(
-                "",
-                text: Binding(get: { model.selection.note }, set: { model.setNote($0) }),
-                prompt: Text("Ej. sin cebolla, bien cocido, tocar timbre 2 veces…"),
-                axis: .vertical
-            )
-            .lineLimit(2...4)
-            .tindivoText(TindivoTokens.Typography.body)
-            .padding(TindivoTokens.Spacing.spaceInner)
-            .background(
-                Color.tindivo.surfaceSunken, in: RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField)
-            )
-            .accessibilityLabel(Text("Nota (opcional)"))
-            .accessibilityIdentifier("dish.note")
-            Text(model.noteCounter.text)
-                .tindivoText(TindivoTokens.Typography.bodySecondary)
-                .monospacedDigit()
-                .foregroundStyle(Color.tindivo.inkSecondary)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .accessibilityLabel(model.noteCounter.spoken)
-        }
-        .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
-        .padding(.top, TindivoTokens.Spacing.spaceGroup)
-    }
-
-    private var quantity: some View {
-        HStack {
-            Text("Cantidad")
-                .tindivoText(TindivoTokens.Typography.titleSection)
-                .foregroundStyle(Color.tindivo.ink)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            TindivoStepper(
-                quantity: model.selection.quantity,
-                label: String(localized: "Cantidad de \(model.item.name)"),
-                canDecrease: model.canDecrease,
-                canIncrease: model.canIncrease,
-                decreaseLabel: String(localized: "Una menos"),
-                increaseLabel: String(localized: "Una más"),
-                onDecrease: { model.setQuantity(model.selection.quantity - 1) },
-                onIncrease: { model.setQuantity(model.selection.quantity + 1) }
-            )
-        }
-        .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
-        .padding(.top, TindivoTokens.Spacing.spaceGroup)
-    }
-
-    private var addBar: some View {
-        TindivoBottomBar {
-            // Nunca en gris (decisión de Jesús, 2026-11-23): con algo obligatorio sin elegir dice qué falta y, tocado, lleva
-            // al grupo (CA-CAT-P7).
-            TindivoPrimaryButton(
-                verbatim: model.ctaTitle, loading: model.isAdding,
-                hint: model.ctaBlocked ? "Te lleva al grupo que falta" : nil
-            ) {
-                Task { await model.tapAdd() }
+    /// Abajo y fija: la cantidad en su píldora y el botón. Con letra de accesibilidad la píldora pasa sobre el botón
+    /// (en una fila no caben), y la barra no crece más de `accessibility2` para no tapar media pantalla.
+    @ViewBuilder private var bottomBar: some View {
+        Group {
+            if typeSize.isAccessibilitySize {
+                TindivoBottomBar {
+                    VStack(spacing: TindivoTokens.Spacing.spaceInner) {
+                        stepper
+                        addButton
+                    }
+                }
+            } else {
+                TindivoBottomBar(leading: { stepper }, content: { addButton })
             }
-            .disabled(model.ctaDisabled)
-            .amountAccessibility(model.ctaTitle)
-            .accessibilityIdentifier("dish.add")
         }
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
 
-    private var closeButton: some View {
-        TindivoIconButton(.close, label: "Cerrar", action: onClose)
-            .background(Color.tindivo.surface.opacity(0.92), in: Circle())
-            .tindivoElevation(TindivoTokens.Elevation.elevation1)
-            .padding(TindivoTokens.Spacing.spaceInner)
-            .accessibilityIdentifier("dish.close")
+    private var stepper: some View {
+        TindivoStepper(
+            style: .filledPill,
+            quantity: model.selection.quantity,
+            label: String(localized: "Cantidad de \(model.item.name)"),
+            canDecrease: model.canDecrease,
+            canIncrease: model.canIncrease,
+            decreaseLabel: String(localized: "Una menos"),
+            increaseLabel: String(localized: "Una más"),
+            onDecrease: { model.setQuantity(model.selection.quantity - 1) },
+            onIncrease: { model.setQuantity(model.selection.quantity + 1) }
+        )
+    }
+
+    private var addButton: some View {
+        // Nunca en gris (decisión de Jesús, 2026-11-23): con algo obligatorio sin elegir dice qué falta y, tocado, lleva
+        // al grupo (CA-CAT-P7).
+        TindivoPrimaryButton(
+            verbatim: model.ctaTitle, loading: model.isAdding,
+            hint: model.ctaBlocked ? "Te lleva al grupo que falta" : nil
+        ) {
+            Task { await model.tapAdd() }
+        }
+        .disabled(model.ctaDisabled)
+        .amountAccessibility(model.ctaTitle)
+        .accessibilityIdentifier("dish.add")
     }
 }
 

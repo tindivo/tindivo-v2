@@ -150,11 +150,10 @@ final class DishScreenModel {
         return String(localized: "Opcional · hasta \(max)")
     }
 
-    /// El contador de un grupo de varias opciones con tope: «2/3» a la vista y «2 de 3 elegidas» para VoiceOver.
-    func counter(for group: DishGroup) -> (text: String, spoken: String)? {
+    /// Lo que VoiceOver dice del avance de un grupo de varias opciones con tope: «2 de 3 elegidas».
+    func spokenCount(for group: DishGroup) -> String? {
         guard !group.isSingle, let max = group.maxSelections else { return nil }
-        let count = selection.progress(of: group).count
-        return ("\(count)/\(max)", String(localized: "\(count) de \(max) elegidas"))
+        return String(localized: "\(selection.progress(of: group).count) de \(max) elegidas")
     }
 
     /// El contador de la nota: «12/140» a la vista y «12 de 140 caracteres» para VoiceOver.

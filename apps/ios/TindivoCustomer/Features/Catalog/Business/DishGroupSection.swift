@@ -1,132 +1,124 @@
 import SwiftUI
 import TindivoDesign
 
-/// Un grupo de opciones del plato: su cabecera con el avance y una fila por opción (radio o casilla).
+/// Un grupo de opciones del plato en su tarjeta blanca (`DishSheetGroups.kt`): nombre, ayuda («Elige 1», «Hasta 2») y una
+/// píldora («Obligatorio», «Listo», «Opcional»), y debajo una fila con borde por opción (radio o casilla).
 struct DishGroupSection: View {
     let group: DishGroup
     let model: DishScreenModel
     /// El foco de VoiceOver: al tocar «Elige …» se lleva al título del grupo que falta.
     let focus: AccessibilityFocusState<String?>.Binding
     @Environment(\.dynamicTypeSize) private var typeSize
-    @ScaledMetric(relativeTo: .body) private var markSize: CGFloat = 22
 
     var body: some View {
         let progress = model.selection.progress(of: group)
         let highlighted = model.isHighlighted(group)
-        VStack(alignment: .leading, spacing: 0) {
-            header(progress)
-            if highlighted {
-                // CA-CAT-P7: mientras el grupo siga sin resolver, borde de error y «Falta elegir aquí».
-                Text("Falta elegir aquí")
-                    .tindivoText(TindivoTokens.Typography.bodySecondary)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.tindivo.error)
-                    .padding(.bottom, 4)
-                    .accessibilityIdentifier("dish.group.missing")
+        let inset = ScreenInsets.top + DishTopBar.height + 8
+        VStack(spacing: 0) {
+            // Marcador de alto cero, `inset` más arriba que el grupo: `scrollTo(anchor: .top)` lo deja bajo la barra.
+            Color.clear.frame(height: inset).id(Self.anchorID(group.id))
+                .accessibilityHidden(true)
+            TindivoCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    header(progress)
+                    if highlighted {
+                        // CA-CAT-P7: mientras el grupo siga sin resolver, borde de error y «Falta elegir aquí».
+                        Text("Falta elegir aquí")
+                            .tindivoText(TypeToken.bodyMedium)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.tindivo.error)
+                            .padding(.horizontal, 4)
+                            .accessibilityIdentifier("dish.group.missing")
+                    }
+                    ForEach(group.options, id: \.id) { option in
+                        optionRow(option)
+                    }
+                }
+                .padding(.init(top: 16, leading: 12, bottom: 12, trailing: 12))
             }
-            ForEach(group.options, id: \.id) { option in
-                optionRow(option)
+            .overlay {
+                if highlighted {
+                    RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusCard, style: .continuous)
+                        .strokeBorder(Color.tindivo.error, lineWidth: 2)
+                        .allowsHitTesting(false)
+                }
             }
         }
-        .overlay {
-            if highlighted {
-                // Un poco hacia fuera del contenido, para que el borde no pegue al texto.
-                RoundedRectangle(cornerRadius: TindivoTokens.Radius.radiusField)
-                    .stroke(Color.tindivo.error, lineWidth: 2)
-                    .padding(-6)
-                    .allowsHitTesting(false)
-            }
-        }
-        .padding(.horizontal, TindivoTokens.Spacing.spaceScreen)
-        .padding(.top, TindivoTokens.Spacing.spaceGroup)
-        .id(group.id)
+        // El marcador queda `inset` sobre el grupo sin ocupar sitio: el relleno negativo se come su alto.
+        .padding(.top, -inset)
     }
+
+    /// El marcador al que `DishView` lleva la vista para mostrar el grupo `id` bajo la barra de arriba.
+    static func anchorID(_ id: String) -> String { "\(id).anchor" }
 
     private func header(_ progress: GroupProgress) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(group.name)
-                    .tindivoText(TindivoTokens.Typography.titleSection)
-                    .foregroundStyle(Color.tindivo.ink)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityFocused(focus, equals: group.id)
-                if let counter = model.counter(for: group) {
-                    Text(counter.text)
-                        .tindivoText(TindivoTokens.Typography.bodySecondary)
-                        .monospacedDigit()
-                        .fixedSize()
-                        .foregroundStyle(Color.tindivo.inkSecondary)
-                        .accessibilityLabel(counter.spoken)
-                }
-            }
-            // «Obligatorio · elige 1» → «Listo ✓»; «Opcional · hasta 2».
-            HStack(spacing: 4) {
-                if progress.required && progress.done {
-                    Image(tindivo: .done).accessibilityHidden(true)
-                }
-                Text(model.statusText(for: group))
+        let title = VStack(alignment: .leading, spacing: 0) {
+            Text(group.name)
+                .tindivoText(TindivoTokens.Typography.titleSection)
+                .foregroundStyle(Color.tindivo.ink)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityFocused(focus, equals: group.id)
+            if let hint = model.hint(for: group) {
+                Text(hint)
                     .tindivoText(TindivoTokens.Typography.bodySecondary)
-                    .fontWeight(progress.required ? .bold : .regular)
+                    .foregroundStyle(Color.tindivo.inkSecondary)
+                    // La píldora ya dice lo mismo para VoiceOver («Obligatorio · elige 1»).
+                    .accessibilityHidden(true)
             }
-            .foregroundStyle(statusColor(progress))
         }
-        .padding(.bottom, 4)
+        return Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    title
+                    pill(progress)
+                }
+            } else {
+                HStack(alignment: .top, spacing: 8) {
+                    title.frame(maxWidth: .infinity, alignment: .leading)
+                    pill(progress)
+                }
+            }
+        }
+        .padding(.init(top: 0, leading: 4, bottom: 2, trailing: 4))
     }
 
-    private func statusColor(_ progress: GroupProgress) -> Color {
-        guard progress.required else { return Color.tindivo.inkSecondary }
-        return progress.done ? Color.tindivo.primaryText : Color.tindivo.error
+    /// «Obligatorio» en ámbar mientras falta, «Listo» en verde con el visto, «Opcional» en gris.
+    private func pill(_ progress: GroupProgress) -> some View {
+        let text: String
+        let tone: TindivoStatusPill.Tone
+        if progress.required && progress.done {
+            (text, tone) = (String(localized: "Listo"), .success)
+        } else if progress.required {
+            (text, tone) = (String(localized: "Obligatorio"), .warning)
+        } else {
+            (text, tone) = (String(localized: "Opcional"), .neutral)
+        }
+        return TindivoStatusPill(text, tone: tone, icon: progress.required && progress.done ? .done : nil)
+            .fixedSize(horizontal: false, vertical: true)
+            // Lo que dice por voz es el estado completo, con lo que hay que elegir y cuánto va.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(model.statusText(for: group))
+            .accessibilityValue(model.spokenCount(for: group) ?? "")
     }
 
-    private func price(of option: DishOption, enabled: Bool) -> some View {
+    private func price(of option: DishOption) -> some View {
         let text = model.selection.optionPrice(of: option, in: group).displayText
-        return Text(text)
+        return Text(text.replacingOccurrences(of: "S/ ", with: "S/\u{00A0}"))
             .amountAccessibility(text)
-            .tindivoText(TindivoTokens.Typography.bodySecondary)
+            .tindivoText(TypeToken.labelLarge)
+            .fontWeight(.semibold)
             .monospacedDigit()
-            .lineLimit(1)
-            .fixedSize()
+            .fixedSize(horizontal: false, vertical: true)
             .foregroundStyle(Color.tindivo.inkSecondary)
-            .opacity(enabled ? 1 : MenuItemRowView.dimmedOpacity)
     }
 
     private func optionRow(_ option: DishOption) -> some View {
-        let selected = model.selection.isSelected(option)
-        let enabled = !model.selection.isDisabled(option, in: group)
-        return Button {
-            model.toggle(option, in: group)
-        } label: {
-            HStack(spacing: 8) {
-                Image(tindivo: group.isSingle ? (selected ? .radioOn : .radioOff) : (selected ? .checkOn : .checkOff))
-                    // La marca es decorativa: «seleccionado» lo dice el rasgo del botón, no el nombre del símbolo.
-                    .accessibilityHidden(true)
-                    .font(.system(size: markSize))
-                    .foregroundStyle(selected ? Color.tindivo.primary : Color.tindivo.outline)
-                    .opacity(enabled ? 1 : MenuItemRowView.dimmedOpacity)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(option.name)
-                        .tindivoText(TindivoTokens.Typography.body)
-                        .foregroundStyle(Color.tindivo.ink)
-                        .opacity(enabled ? 1 : MenuItemRowView.dimmedOpacity)
-                    if let description = option.description {
-                        Text(description)
-                            .tindivoText(TindivoTokens.Typography.bodySecondary)
-                            .foregroundStyle(Color.tindivo.inkSecondary)
-                    }
-                    // Con letra grande el precio pasa debajo del nombre: el nombre no se parte a mitad de palabra.
-                    if typeSize.isAccessibilitySize { price(of: option, enabled: enabled) }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .layoutPriority(1)
-                if !typeSize.isAccessibilitySize { price(of: option, enabled: enabled) }
-            }
-            .frame(minHeight: TindivoTokens.Spacing.touchTarget)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .accessibilityAddTraits(selected ? [.isSelected] : [])
+        TindivoSelectableRow(
+            option.name, subtitle: option.description, selected: model.selection.isSelected(option),
+            multiple: !group.isSingle, enabled: !model.selection.isDisabled(option, in: group),
+            action: { model.toggle(option, in: group) },
+            trailing: { price(of: option) }
+        )
         .accessibilityIdentifier("dish.option")
     }
 }
